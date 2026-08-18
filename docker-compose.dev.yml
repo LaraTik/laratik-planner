@@ -1,0 +1,33 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# laratik-planner — LOCAL dev override
+# Only the infra runs in Docker (Postgres). The app runs natively via
+# `pnpm dev` for HMR speed. Production compose is docker-compose.yml.
+# Usage:
+#   docker compose -f docker-compose.dev.yml up -d
+#   pnpm dev
+# ─────────────────────────────────────────────────────────────────────────────
+name: laratik-planner-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: laratik-planner-pg-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: planner
+      POSTGRES_PASSWORD: planner_dev_only
+      POSTGRES_DB: planner
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./tmp/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U planner -d planner"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"

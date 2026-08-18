@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-flight runs of the same branch / PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: planner
+          POSTGRES_PASSWORD: planner_ci
+          POSTGRES_DB: planner_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U planner -d planner_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
+      AUTH_SECRET: ci_secret_only_not_for_production_xxxxxxxxxxxxxxxx
+      AUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      SMTP_HOST: localhost
+      SMTP_PORT: 1025
+      SMTP_FROM: "ci <ci@planner.test>"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Generate Drizzle types
+        run: pnpm db:generate
+
+      - name: Apply migrations
+        run: pnpm db:migrate
+
+      - name: Unit tests
+        run: pnpm test:unit -- --reporter=verbose
+
+      - name: Build
+        run: pnpm build
+
+      - name: Build Docker image
+        run: docker build -t laratik-planner:ci-${{ github.sha }} .
+
+      - name: Smoke e2e (health)
+        run: |
+          docker run -d --rm \
+            -p 3000:3000 \
+            -e NODE_ENV=production \
+            -e AUTH_SECRET=$AUTH_SECRET \
+            -e DATABASE_URL=$DATABASE_URL \
+            -e AUTH_URL=http://localhost:3000 \
+            --network host \
+            --name laratik-planner-smoke \
+            laratik-planner:ci-${{ github.sha }}
+          # Wait for the container to start
+          for i in {1..30}; do
+            if curl -fsS http://localhost:3000/api/health > /dev/null 2>&1; then
+              echo "Health endpoint OK after ${i}s"
+              curl -fsS http://localhost:3000/api/health
+              docker stop laratik-planner-smoke
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Smoke test failed: /api/health never responded"
+          docker logs laratik-planner-smoke
+          docker stop laratik-planner-smoke
+          exit 1

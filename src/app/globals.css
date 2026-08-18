@@ -1,26 +1,143 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────────────────
+ * StudioFlow design tokens — ported from STUDIOFLOW_MASTER_PROMPT.md §3.
+ * Bound to Tailwind 4's @theme so they appear as utility classes
+ * (bg-canvas, text-fg-primary, border-border, etc.) automatically.
+ * ──────────────────────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces */
+  --canvas: #f7f7f5;
+  --surface: #ffffff;
+  --surface-subtle: #f1f3f5;
+
+  /* Borders */
+  --border: #dde1e6;
+
+  /* Text */
+  --fg-primary: #172033;
+  --fg-secondary: #5d6678;
+  --fg-muted: #7b8495;
+
+  /* Brand */
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-subtle: #eef2ff;
+  --focus-ring: #6366f1;
+
+  /* Status */
+  --success: #15803d;
+  --success-subtle: #ecfdf3;
+  --warning: #b45309;
+  --warning-subtle: #fff7e6;
+  --danger: #b91c1c;
+  --danger-subtle: #fef2f2;
+  --info: #0369a1;
+  --info-subtle: #f0f9ff;
+
+  /* Radii */
+  --radius-card: 10px;
+  --radius-control: 8px;
+
+  /* Controls */
+  --control-standard: 40px;
+  --control-compact: 36px;
+  --control-touch: 44px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-border: var(--border);
+  --color-fg-primary: var(--fg-primary);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-muted: var(--fg-muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-focus-ring: var(--focus-ring);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-info: var(--info);
+  --color-info-subtle: var(--info-subtle);
+
+  --radius-card: var(--radius-card);
+  --radius-control: var(--radius-control);
+
+  /* Typography scale from §3 */
+  --text-title-page: 28px;
+  --text-title-page--line-height: 36px;
+  --text-title-page--font-weight: 600;
+
+  --text-title-section: 20px;
+  --text-title-section--line-height: 28px;
+  --text-title-section--font-weight: 600;
+
+  --text-title-card: 16px;
+  --text-title-card--line-height: 24px;
+  --text-title-card--font-weight: 600;
+
+  --text-body: 14px;
+  --text-body--line-height: 21px;
+
+  --text-table-dense: 13px;
+  --text-table-dense--line-height: 18px;
+
+  --text-label: 12px;
+  --text-label--line-height: 16px;
+
+  --text-button: 14px;
+  --text-button--line-height: 20px;
+  --text-button--font-weight: 600;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ─── Base layer ──────────────────────────────────────────────────────── */
+html,
+body {
+  height: 100%;
+  background: var(--canvas);
+  color: var(--fg-primary);
+  font-family:
+    var(--font-inter),
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Focus ring — always visible for keyboard users (§18) */
+*:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Reduced motion — respect OS preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Touch targets — at least 44px on mobile (§18) */
+@media (max-width: 767px) {
+  button,
+  [role="button"],
+  a {
+    min-height: var(--control-touch);
+  }
 }

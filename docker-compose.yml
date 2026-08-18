@@ -1,0 +1,86 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# laratik-planner — PRODUCTION compose
+# Used on laratik-vps (217.154.124.83). Source of truth for the live stack.
+# The app container is published to planner.laratik.com via the existing
+# Traefik instance (network: traefik-public, labels below).
+# Postgres is on a private internal network — never exposed to Traefik.
+# ─────────────────────────────────────────────────────────────────────────────
+name: laratik-planner
+
+services:
+  app:
+    image: ghcr.io/laratik/laratik-planner:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+      - traefik-public
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.laratik-planner.rule=Host(`planner.laratik.com`)
+      - traefik.http.routers.laratik-planner.entrypoints=websecure
+      - traefik.http.routers.laratik-planner.tls=true
+      - traefik.http.routers.laratik-planner.tls.certresolver=letsencrypt
+      - traefik.http.services.laratik-planner.loadbalancer.server.port=3000
+      - traefik.http.middlewares.laratik-plancer-secure.headers.stsSeconds=31536000
+      - traefik.http.middlewares.laratik-plancer-secure.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.laratik-plancer-secure.headers.stsPreload=true
+      - traefik.http.routers.laratik-planner.middlewares=laratik-plancer-secure@docker
+      - autoheal=true
+      - autoheal.timeout=30
+      - autoheal.restart=true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    # Bind mount for the SQLite Sentry cache (if used) and any local files
+    volumes:
+      - app-data:/app/data
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  pgdata:
+    name: laratik-planner-pgdata
+  app-data:
+    name: laratik-planner-app-data
+
+networks:
+  internal:
+    driver: bridge
+  traefik-public:
+    external: true
+    name: traefik-public
