@@ -16,10 +16,12 @@ import { serverEnv } from "@/lib/validation/env";
 export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
-  // Static assets + Next internals — pass through
+  // Static assets + Next internals + public API — pass through
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/auth/") ||
+    pathname === "/api/health" ||
+    pathname === "/api/bootstrap/status" ||
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt"
   ) {
