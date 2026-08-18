@@ -30,20 +30,42 @@
    sudo chmod 600 .env
    sudo -e .env  # set AUTH_SECRET, GOOGLE_CLIENT_ID, SMTP_PASSWORD, etc.
    ```
-4. Generate `AUTH_SECRET`:
+4. Generate `AUTH_SECRET` and `BOOTSTRAP_SETUP_TOKEN`:
    ```bash
-   openssl rand -base64 32
+   openssl rand -base64 32  # AUTH_SECRET
+   openssl rand -hex 32      # BOOTSTRAP_SETUP_TOKEN (one-time admin token)
+   openssl rand -base64 24  # POSTGRES_PASSWORD
    ```
-5. Boot the stack:
+5. **Important:** any `+`, `/`, or `=` characters in `POSTGRES_PASSWORD` must be percent-encoded in `DATABASE_URL`:
    ```bash
-   sudo docker compose pull
+   # Example: MuRWMSVPWZ3YaE+sF8aJY/4jGq3Y8M1P becomes MuRWMSVPWZ3YaE%2BsF8aJY%2F4jGq3Y8M1P
+   PASSWORD=$(grep ^POSTGRES_PASSWORD= .env | cut -d= -f2-)
+   ENC=$(printf "%s" "$PASSWORD" | sed "s|+|%2B|g; s|/|%2F|g; s|=|%3D|g")
+   sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://planner:${ENC}@postgres:5432/planner|" .env
+   ```
+6. Build the Docker image (locally, on the VPS — pnpm 10.10 is used, Node 20 compatible):
+   ```bash
+   sudo docker build -t laratik-planner:latest .
+   ```
+7. Apply the database migration (the runner container has no pnpm, so apply via the postgres container):
+   ```bash
+   cat src/lib/db/migrations/0000_*.sql > /tmp/migration.sql
+   sudo docker compose cp /tmp/migration.sql postgres:/tmp/migration.sql
+   sudo docker compose exec -T postgres psql -U planner -d planner -v ON_ERROR_STOP=1 -f /tmp/migration.sql
+   ```
+8. Boot the stack:
+   ```bash
    sudo docker compose up -d
    ```
-6. Verify health:
+9. Verify health:
    ```bash
-   curl -sS https://planner.laratik.com/api/health | jq
+   curl -sS http://localhost:3100/api/health | jq   # until DNS is set up; or https://planner.laratik.com/api/health
    ```
-7. Install the backup cron (see below).
+   Expected: `{"ok":true,"db":"up","env":"production",...}`
+10. Install the backup cron (see below).
+11. Set up Google OAuth: in Google Cloud Console, add `https://planner.laratik.com/api/auth/callback/google` as an authorized redirect URI, then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env` and `docker compose up -d app`.
+12. Set up Mailcow mailbox `no-reply@planner.laratik.com` (Mailcow admin → Mailboxes → Add), then set `SMTP_PASSWORD` in `.env` and `docker compose up -d app`.
+13. First sign-in: visit `https://planner.laratik.com/signin`, sign in with Google, then go to `/setup` and enter the agency name + slug + `BOOTSTRAP_SETUP_TOKEN`.
 
 ## Deploying a new version
 
