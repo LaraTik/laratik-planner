@@ -10,10 +10,7 @@ import { pgEnum } from "drizzle-orm/pg-core";
  */
 
 // ─── Identity & tenancy ─────────────────────────────────────────────────────
-export const agencyMemberStatusEnum = pgEnum("agency_member_status", [
-  "active",
-  "deactivated",
-]);
+export const agencyMemberStatusEnum = pgEnum("agency_member_status", ["active", "deactivated"]);
 
 export const workspaceStatusEnum = pgEnum("workspace_status", ["active", "archived"]);
 

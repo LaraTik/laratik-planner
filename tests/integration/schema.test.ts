@@ -11,7 +11,6 @@ import {
   socialChannels,
   contentItemChannels,
   publicationRecords,
-  invitations,
 } from "@/lib/db/schema";
 
 /**
@@ -55,9 +54,9 @@ describe.skipIf(SKIP)("schema invariants (Goal 1)", () => {
   describe("singleton agency", () => {
     it("allows exactly one agency row", async () => {
       await db.insert(agencies).values({ name: "Acme", slug: "acme" });
-      await expect(
-        db.insert(agencies).values({ name: "Other", slug: "other" }),
-      ).rejects.toThrow(/agency_singleton_unique/);
+      await expect(db.insert(agencies).values({ name: "Other", slug: "other" })).rejects.toThrow(
+        /agency_singleton_unique/,
+      );
     });
   });
 
@@ -156,7 +155,10 @@ describe.skipIf(SKIP)("schema invariants (Goal 1)", () => {
   describe("social_channel url", () => {
     it("rejects non-http(s) URLs", async () => {
       const [agency] = await db.insert(agencies).values({ name: "A", slug: "a" }).returning();
-      const [user] = await db.insert(users).values({ email: "a@x.io", displayName: "A" }).returning();
+      const [user] = await db
+        .insert(users)
+        .values({ email: "a@x.io", displayName: "A" })
+        .returning();
       const [ws] = await db
         .insert(workspaces)
         .values({ agencyId: agency!.id, slug: "w", name: "W", createdBy: user!.id })
@@ -176,7 +178,10 @@ describe.skipIf(SKIP)("schema invariants (Goal 1)", () => {
   describe("publication_record", () => {
     it("published requires url + time + publisher", async () => {
       const [agency] = await db.insert(agencies).values({ name: "A", slug: "a" }).returning();
-      const [user] = await db.insert(users).values({ email: "a@x.io", displayName: "A" }).returning();
+      const [user] = await db
+        .insert(users)
+        .values({ email: "a@x.io", displayName: "A" })
+        .returning();
       const [ws] = await db
         .insert(workspaces)
         .values({ agencyId: agency!.id, slug: "w", name: "W", createdBy: user!.id })

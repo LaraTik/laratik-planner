@@ -9,7 +9,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { idColumn, jsonb, timestamps } from "./_helpers";
+import { idColumn, jsonb } from "./_helpers";
 import { notificationKindEnum } from "./enums";
 import { users } from "./identity";
 import { contentItems } from "./content";

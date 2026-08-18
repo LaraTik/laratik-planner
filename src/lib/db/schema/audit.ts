@@ -1,8 +1,7 @@
 import { sql } from "drizzle-orm";
 import { bigserial, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { jsonb, timestamps } from "./_helpers";
+import { jsonb } from "./_helpers";
 import { users } from "./identity";
-import { workspaces } from "./workspaces";
 
 /**
  * STUDIOFLOW_MASTER_PROMPT.md §8 — Security audit + rate limits.
@@ -51,7 +50,5 @@ export const rateLimitEvents = pgTable(
       .notNull()
       .default(sql`now()`),
   },
-  (t) => [
-    index("rate_limit_scope_subject_time_idx").on(t.scope, t.subjectHash, t.occurredAt),
-  ],
+  (t) => [index("rate_limit_scope_subject_time_idx").on(t.scope, t.subjectHash, t.occurredAt)],
 );

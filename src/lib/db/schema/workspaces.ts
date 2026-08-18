@@ -14,7 +14,12 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { archivedAt, citext, idColumn, jsonb, timestamps } from "./_helpers";
-import { agencyMemberStatusEnum, invitationStatusEnum, workspaceRoleEnum, workspaceStatusEnum } from "./enums";
+import {
+  agencyMemberStatusEnum,
+  invitationStatusEnum,
+  workspaceRoleEnum,
+  workspaceStatusEnum,
+} from "./enums";
 import { agencies, users } from "./identity";
 
 /**

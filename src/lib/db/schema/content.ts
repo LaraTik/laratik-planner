@@ -11,7 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { archivedAt, idColumn, jsonb, timestamps } from "./_helpers";
-import { contentFormatEnum, contentStatusEnum, reviewGateEnum, socialPlatformEnum } from "./enums";
+import { contentFormatEnum, contentStatusEnum, reviewGateEnum } from "./enums";
 import { users } from "./identity";
 import { workspaces } from "./workspaces";
 import { campaigns, contentPillars } from "./planning";
@@ -65,10 +65,9 @@ export const contentItems = pgTable(
     contentReviewerId: uuid("content_reviewer_id").references(() => users.id, {
       onDelete: "set null",
     }),
-    internalCreativeReviewerId: uuid("internal_creative_reviewer_id").references(
-      () => users.id,
-      { onDelete: "set null" },
-    ),
+    internalCreativeReviewerId: uuid("internal_creative_reviewer_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     clientReviewerId: uuid("client_reviewer_id").references(() => users.id, {
       onDelete: "set null",
     }),
@@ -96,7 +95,10 @@ export const contentItems = pgTable(
       .on(t.contentOwnerId, t.status)
       .where(sql`archived_at IS NULL`),
     // DB-level invariant enforcement (per §8 constraints)
-    check("content_item_blocked_needs_reason", sql`status <> 'blocked' OR blocked_reason IS NOT NULL`),
+    check(
+      "content_item_blocked_needs_reason",
+      sql`status <> 'blocked' OR blocked_reason IS NOT NULL`,
+    ),
     check(
       "content_item_cancelled_needs_reason",
       sql`status <> 'cancelled' OR cancellation_reason IS NOT NULL`,
@@ -109,10 +111,7 @@ export const contentItems = pgTable(
       "content_item_other_statuses_no_gate",
       sql`status = 'changes_requested' OR change_request_gate IS NULL`,
     ),
-    check(
-      "content_item_priority_valid",
-      sql`priority IN ('low', 'normal', 'high', 'urgent')`,
-    ),
+    check("content_item_priority_valid", sql`priority IN ('low', 'normal', 'high', 'urgent')`),
   ],
 );
 

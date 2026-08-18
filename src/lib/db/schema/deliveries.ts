@@ -79,10 +79,7 @@ export const deliveryLinks = pgTable(
   (t) => [
     index("delivery_link_version_idx").on(t.deliveryVersionId),
     // "Require https URLs and reject script, data, file, and javascript schemes."
-    check(
-      "delivery_link_url_https",
-      sql`${t.url} ~* '^https://'`,
-    ),
+    check("delivery_link_url_https", sql`${t.url} ~* '^https://'`),
   ],
 );
 

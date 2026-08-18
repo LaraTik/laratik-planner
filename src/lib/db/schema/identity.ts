@@ -11,7 +11,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { archivedAt, idColumn, jsonb, timestamps } from "./_helpers";
+import { idColumn, jsonb, timestamps } from "./_helpers";
 import { agencyMemberStatusEnum } from "./enums";
 
 /**

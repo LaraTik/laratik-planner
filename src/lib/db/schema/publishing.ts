@@ -63,7 +63,10 @@ export const publicationRecords = pgTable(
       )`,
     ),
     check("publication_skipped_needs_note", sql`${t.status} <> 'skipped' OR ${t.note} IS NOT NULL`),
-    check("publication_failed_needs_reason", sql`${t.status} <> 'failed' OR ${t.failureReason} IS NOT NULL`),
+    check(
+      "publication_failed_needs_reason",
+      sql`${t.status} <> 'failed' OR ${t.failureReason} IS NOT NULL`,
+    ),
     check(
       "publication_pending_clears_published_fields",
       sql`${t.status} <> 'pending' OR (

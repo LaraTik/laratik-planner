@@ -1,13 +1,5 @@
 import { sql } from "drizzle-orm";
-import {
-  boolean,
-  check,
-  index,
-  pgTable,
-  text,
-  uniqueIndex,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { boolean, check, index, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { archivedAt, idColumn, jsonb, timestamps } from "./_helpers";
 import { socialPlatformEnum } from "./enums";
 import { users } from "./identity";
@@ -45,10 +37,7 @@ export const socialChannels = pgTable(
     index("social_channel_workspace_active_idx")
       .on(t.workspaceId)
       .where(sql`archived_at IS NULL`),
-    check(
-      "social_channel_url_https",
-      sql`${t.url} IS NULL OR ${t.url} ~* '^https?://'`,
-    ),
+    check("social_channel_url_https", sql`${t.url} IS NULL OR ${t.url} ~* '^https?://'`),
   ],
 );
 

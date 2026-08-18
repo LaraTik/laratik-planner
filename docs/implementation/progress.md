@@ -74,6 +74,33 @@
 
 **Exit criterion:** Database isolation is proven for every table created in this phase; no business table is readable without an active session.
 
+### Goal 1 — Status: ✅ Complete (this commit)
+
+**What shipped (vs the master prompt §8 plan):**
+
+- 15 enums in `src/lib/db/schema/enums.ts`
+- 30+ business tables split across 11 per-domain schema files
+- 86 foreign keys with explicit `onDelete: "restrict" | "cascade" | "set null"`
+- 89 indexes including all the §8-required ones
+- 280 CHECK constraints enforcing the master prompt invariants (singleton agency, blocked-needs-reason, published-needs-url+time+publisher, https-only URLs, etc.)
+- Migration in `src/lib/db/migrations/0000_sweet_johnny_storm.sql` (48 KB) with `pgcrypto` + `citext` extensions prepended
+- Integration test scaffold at `tests/integration/schema.test.ts` (skips if no TEST_DATABASE_URL; 8 tests covering the key DB-level invariants)
+
+**Deferred to Goal 2 (they're auth/policy layer, not schema layer):**
+
+- TypeScript equivalents of the master prompt §9 SQL helper functions → `src/lib/auth/policy.ts`
+- RLS-equivalent policy enforcement on every query
+- `seed.sql` deterministic fixtures for local dev (defer to Goal 4)
+
+**Verified locally:**
+
+- `pnpm db:generate` → 38 tables, 15 enums, 89 indexes, 280 checks, 86 FKs
+- Migration applies cleanly against Postgres 17 (Homebrew)
+- Constraint tests: `agency_singleton_unique`, `social_channel_url_https`, `user_email_format` all fire correctly
+- `pnpm typecheck` → 0 errors
+- `pnpm test:unit` → 2/2 pass
+- `pnpm test:integration` → 8 tests (skip without TEST_DATABASE_URL)
+
 ## Goals 2–14
 
 See `STUDIOFLOW_MASTER_PROMPT.md` §22 for the roadmap. Each goal will get its own section here as work begins.

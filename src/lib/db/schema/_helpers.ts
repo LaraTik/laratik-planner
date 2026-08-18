@@ -1,12 +1,5 @@
 import { sql } from "drizzle-orm";
-import {
-  type AnyPgColumn,
-  customType,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { customType, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 /**
  * Shared column patterns from STUDIOFLOW_MASTER_PROMPT.md §8.
@@ -27,8 +20,7 @@ export const timestamps = {
     .default(sql`now()`),
 };
 
-export const archivedAt = () =>
-  timestamp("archived_at", { withTimezone: true, mode: "date" });
+export const archivedAt = () => timestamp("archived_at", { withTimezone: true, mode: "date" });
 
 /**
  * citext — case-insensitive text. Used for invitation emails. The Postgres
@@ -73,13 +65,9 @@ export const nowDate = () => new Date();
  * `uniqueIndex(...).on(...).where(...)` chain directly. Kept here as a
  * reference comment.
  */
-void uniqueIndex;
 
 /** `uuid_generate_v4()`-equivalent via `gen_random_uuid()` (pgcrypto). */
 export const genRandomUuid = () => sql`gen_random_uuid()`;
 
 /** Re-export a convenience for the canonical "id" column. */
-export const idColumn = () =>
-  uuid("id")
-    .primaryKey()
-    .default(genRandomUuid());
+export const idColumn = () => uuid("id").primaryKey().default(genRandomUuid());

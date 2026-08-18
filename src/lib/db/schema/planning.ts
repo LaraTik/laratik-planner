@@ -1,13 +1,5 @@
 import { sql } from "drizzle-orm";
-import {
-  check,
-  date,
-  index,
-  pgTable,
-  text,
-  uniqueIndex,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { check, date, index, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { archivedAt, idColumn, jsonb, timestamps } from "./_helpers";
 import { contentFormatEnum } from "./enums";
 import { users } from "./identity";
