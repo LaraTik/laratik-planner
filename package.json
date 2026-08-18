@@ -22,7 +22,8 @@
     "db:migrate": "tsx src/lib/db/migrate.ts",
     "db:reset": "drizzle-kit drop && pnpm db:migrate",
     "db:studio": "drizzle-kit studio",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit && pnpm build"
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit && pnpm build",
+    "test:integration": "vitest run tests/integration"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.7.4",
