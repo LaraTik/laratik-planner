@@ -20,6 +20,12 @@ const nextConfig: NextConfig = {
   // Disable powered-by header (Traefik already adds its own).
   poweredByHeader: false,
 
+  // Standalone output omits some transitive deps that the server actually
+  // needs at runtime. Force-include them in the file trace.
+  outputFileTracingIncludes: {
+    "**": ["./node_modules/@swc/helpers/**/*", "./node_modules/@next/swc-*/**/*"],
+  },
+
   // Sentry is wired later (Goal 13). Skipped here to keep Goal 0 dependency-light.
   // Sentry: {} block belongs in the build phase.
 };

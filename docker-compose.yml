@@ -9,7 +9,10 @@ name: laratik-planner
 
 services:
   app:
-    image: ghcr.io/laratik/laratik-planner:${IMAGE_TAG:-latest}
+    image: laratik-planner:${IMAGE_TAG:-latest}
+    pull_policy: never
+    ports:
+      - "3100:3000"
     restart: unless-stopped
     env_file: .env
     depends_on:
