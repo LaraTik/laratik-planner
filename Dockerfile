@@ -4,20 +4,21 @@
 # Multi-stage build → ~150 MB final image on Alpine.
 # Used by both CI (build + push to GHCR) and the VPS (pull + recreate).
 # Mirrors the laratik-social-platform / mavis-trader pattern in vps-ops.
+# Note: pinned to pnpm 10.x because pnpm 11 uses node:sqlite (Node 22+).
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ─── Stage 1: deps ──────────────────────────────────────────────────────────
 FROM node:20-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
+RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml .npmrc pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm config set store-dir /pnpm/store && \
     pnpm install --frozen-lockfile
 
 # ─── Stage 2: builder ───────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
+RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
