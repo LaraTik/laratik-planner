@@ -2,12 +2,20 @@ import Link from "next/link";
 import { auth } from "@/lib/auth/config";
 import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
 import { redirect } from "next/navigation";
-import { EmptyState } from "@/components/feedback/empty-state";
-import { Users } from "lucide-react";
+import { db } from "@/lib/db";
+import { workspaces } from "@/lib/db/schema";
+import { and, eq } from "drizzle-orm";
+import { listAgencyMembers, listInvitations } from "@/lib/auth/invitations";
+import { SendInviteForm } from "./send-invite-form";
+import { InvitationList } from "./invitation-list";
+import { MemberList } from "./member-list";
+import { Badge } from "@/components/ui/badge";
 
 /**
- * User Management (admin only). Stubbed for Goal 3; Goal 4 wires
- * invitations, role management, and deactivation.
+ * User Management (admin only).
+ *  - Active members list
+ *  - Pending invitations with resend / revoke
+ *  - Send new invitation form
  */
 export const metadata = { title: "User Management" };
 
@@ -28,6 +36,15 @@ export default async function UsersPage() {
     );
   }
 
+  const [members, pending, allWorkspaces] = await Promise.all([
+    listAgencyMembers(),
+    listInvitations(),
+    db
+      .select({ id: workspaces.id, name: workspaces.name })
+      .from(workspaces)
+      .where(and(eq(workspaces.agencyId, agencyId))),
+  ]);
+
   return (
     <div className="space-y-6">
       <header>
@@ -36,11 +53,44 @@ export default async function UsersPage() {
           Invite team members, assign workspace roles, deactivate departures.
         </p>
       </header>
-      <EmptyState
-        icon={<Users className="h-8 w-8" aria-hidden="true" />}
-        title="User management lands in Goal 4"
-        description="Invitation flow, role assignment per workspace, deactivation, and per-user activity. Coming next."
-      />
+
+      <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
+        <h2 className="text-title-card text-fg-primary mb-3 font-semibold">Send an invitation</h2>
+        <SendInviteForm workspaces={allWorkspaces.map((w) => ({ id: w.id, name: w.name }))} />
+      </section>
+
+      <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
+        <header className="mb-3 flex items-center justify-between">
+          <h2 className="text-title-card text-fg-primary font-semibold">Pending invitations</h2>
+          <Badge variant="info">{pending.length}</Badge>
+        </header>
+        <InvitationList
+          invitations={pending.map((i) => ({
+            id: i.id,
+            email: i.email,
+            expiresAt: i.expiresAt.toISOString().slice(0, 10),
+            grantsAgencyAdmin: i.grantsAgencyAdmin,
+          }))}
+        />
+      </section>
+
+      <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
+        <header className="mb-3 flex items-center justify-between">
+          <h2 className="text-title-card text-fg-primary font-semibold">Members</h2>
+          <Badge variant="info">{members.length}</Badge>
+        </header>
+        <MemberList
+          members={members.map((m) => ({
+            id: m.userId,
+            name: m.name ?? m.email,
+            email: m.email,
+            isAgencyAdmin: m.isAgencyAdmin,
+            status: m.status,
+            role: m.role,
+            joinedAt: m.joinedAt.toISOString().slice(0, 10),
+          }))}
+        />
+      </section>
     </div>
   );
 }

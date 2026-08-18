@@ -1,0 +1,76 @@
+import { auth } from "@/lib/auth/config";
+import { acceptInvitation } from "@/lib/auth/invitations";
+import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+
+/**
+ * Invitation accept page. Signed-out users get bounced through sign-in
+ * (callbackUrl=/accept-invitation?token=...) and land back here.
+ */
+export const metadata = { title: "Accept invitation" };
+
+export default async function AcceptInvitationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ token?: string }>;
+}) {
+  const sp = await searchParams;
+  const session = await auth();
+  const token = sp.token;
+
+  if (!token) {
+    return (
+      <main className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-16 text-center">
+        <h1 className="text-title-page text-fg-primary font-semibold">Invalid invitation</h1>
+        <p className="text-body text-fg-secondary mt-2">
+          The link is missing the invitation token. Please check the link in your email.
+        </p>
+      </main>
+    );
+  }
+
+  if (!session?.user?.id) {
+    redirect(`/signin?callbackUrl=${encodeURIComponent(`/accept-invitation?token=${token}`)}`);
+  }
+
+  const result = await acceptInvitation({ rawToken: token, userId: session.user.id });
+
+  if (result.status === "invalid") {
+    return (
+      <main className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-16 text-center">
+        <h1 className="text-title-page text-fg-primary font-semibold">Invalid invitation</h1>
+        <p className="text-body text-fg-secondary mt-2">
+          The link is invalid or has been revoked. Ask your admin to send a new one.
+        </p>
+      </main>
+    );
+  }
+
+  if (result.status === "expired") {
+    return (
+      <main className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-16 text-center">
+        <h1 className="text-title-page text-fg-primary font-semibold">Invitation expired</h1>
+        <p className="text-body text-fg-secondary mt-2">
+          The link has expired. Ask your admin to resend.
+        </p>
+      </main>
+    );
+  }
+
+  // success
+  return (
+    <main className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-16 text-center">
+      <h1 className="text-title-page text-fg-primary font-semibold">You&apos;re in</h1>
+      <p className="text-body text-fg-secondary mt-2">
+        {result.workspaceIds.length > 0
+          ? `You've been added to ${result.workspaceIds.length} workspace${result.workspaceIds.length === 1 ? "" : "s"}.`
+          : "Your agency membership is active."}
+      </p>
+      <div className="mt-6 flex gap-3">
+        <Button asChild>
+          <a href="/app">Go to My Work</a>
+        </Button>
+      </div>
+    </main>
+  );
+}
