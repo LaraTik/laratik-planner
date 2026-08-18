@@ -1,0 +1,32 @@
+import { Bell, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { UserMenu } from "./user-menu";
+import { WorkspaceSwitcher } from "./workspace-switcher";
+
+/**
+ * Topbar — search, notifications, workspace switcher, user menu.
+ * Per master prompt §3: 64px tall, 24-32px horizontal padding on desktop.
+ */
+export function Topbar({
+  user,
+}: {
+  user: { id: string; name: string; email: string; image: string | null; isAdmin: boolean };
+}) {
+  return (
+    <div className="flex h-full items-center justify-between gap-4 px-6">
+      <div className="flex items-center gap-3">
+        <WorkspaceSwitcher />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" aria-label="Search">
+          <Search className="h-4 w-4" aria-hidden="true" />
+        </Button>
+        <Button variant="ghost" size="icon" aria-label="Notifications">
+          <Bell className="h-4 w-4" aria-hidden="true" />
+        </Button>
+        <UserMenu user={user} />
+      </div>
+    </div>
+  );
+}
