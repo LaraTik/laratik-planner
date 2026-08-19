@@ -52,7 +52,7 @@ export default defineConfig({
         "src/lib/workspaces/**/*.ts": { statements: 20, branches: 50, functions: 0, lines: 20 },
         "src/lib/ai/**/*.ts": { statements: 0, branches: 0, functions: 0, lines: 0 },
         "src/lib/email/**/*.ts": { statements: 0, branches: 0, functions: 0, lines: 0 },
-        "src/lib/validation/**/*.ts": { statements: 80, branches: 67, functions: 80, lines: 80 },
+        "src/lib/validation/**/*.ts": { statements: 80, branches: 80, functions: 80, lines: 80 },
         "src/**/*.ts": { statements: 34, branches: 50, functions: 20, lines: 34 },
       },
     },
