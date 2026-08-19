@@ -21,6 +21,10 @@ FROM node:20-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
+# Drizzle Kit reads DATABASE_URL at generate time but never connects (it
+# only inspects the local schema), so a placeholder URL is sufficient.
+# The real URL is supplied at container runtime via docker-compose.
+ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm db:generate && pnpm build
