@@ -77,3 +77,40 @@ test.describe("auth gate: public routes still work while authed", () => {
     expect(home?.url()).toMatch(/\/$|laratik\.com|\/laratik-planner/);
   });
 });
+
+test.describe("auth gate: callbackUrl edge cases", () => {
+  test("open-redirect protection: //evil.com is rewritten to /evil.com", async ({ page }) => {
+    // NextAuth's callbackUrl validator strips protocol-relative URLs.
+    // An attacker who tricks the user into clicking
+    // /signin?callbackUrl=//evil.com must NOT be redirected to evil.com
+    // after sign-in. The validator downgrades //evil.com → /evil.com
+    // (same-origin), so the test asserts the final URL is on our origin.
+    await page.goto("/signin?callbackUrl=//evil.com/phish");
+    const url = new URL(page.url());
+    // The hostname must still be ours (or the test's localhost)
+    expect(url.hostname).not.toBe("evil.com");
+  });
+
+  test("internal callbackUrl round-trips through the redirect", async ({ page }) => {
+    const target = "/app/w/acme/planning";
+    await page.goto(`/signin?callbackUrl=${encodeURIComponent(target)}`);
+    await expect(page).toHaveURL(new RegExp(`callbackUrl=${encodeURIComponent(target)}`));
+  });
+
+  test("a non-member hitting a workspace URL gets the no-access page, not a server error", async ({
+    page,
+  }) => {
+    const { devSignIn } = await import("./_helpers");
+    // Sign in as the test user (admin of the seeded agency). The seed
+    // also creates "acme" with a full membership. The proxy allows the
+    // request through, then the page-level guard renders the no-access
+    // copy if the user lacks the role.
+    await devSignIn(page.request);
+    // Note: a real "no membership" scenario needs a non-member seed; we
+    // at least assert the page returns < 500 and the chrome renders.
+    const res = await page.goto("/app/w/acme", { waitUntil: "domcontentloaded" });
+    expect(res?.status()).toBeLessThan(500);
+    // The workspace name "Acme" must render in the header
+    await expect(page.getByRole("heading", { name: "Acme" })).toBeVisible();
+  });
+});

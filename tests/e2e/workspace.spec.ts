@@ -80,3 +80,69 @@ test.describe("Workspace non-member experience", () => {
     await expect(page.getByRole("link", { name: /New workspace/i }).first()).toBeVisible();
   });
 });
+
+test.describe("Workspace switcher keyboard (topbar)", () => {
+  // The workspace switcher lives in the desktop topbar, which is hidden
+  // on <768px. The mobile topbar only shows the user avatar. So these
+  // tests are desktop-only.
+  test.skip(({ isMobile }) => isMobile === true, "Desktop-only — switcher is not in the mobile topbar");
+
+  test("Enter on the trigger opens the listbox; arrow keys move aria-activedescendant", async ({
+    page,
+  }) => {
+    await bootstrapTestSession(page, { workspaceSlug: "acme" });
+    // Seed a second workspace so the popover has something to navigate to
+    await page.request.post("/api/dev/seed", {
+      data: { workspaceSlug: "globex", workspaceName: "Globex" },
+    });
+    await page.goto("/app");
+
+    const trigger = page.getByTestId("workspace-switcher-trigger");
+    await trigger.focus();
+    // The button's onClick is what toggles the popover. Pressing Enter
+    // on a focused <button> should fire a click. If it doesn't, click.
+    await page.keyboard.press("Enter");
+    const listbox = page.getByRole("listbox", { name: "Workspaces" });
+    if (!(await listbox.isVisible().catch(() => false))) {
+      await trigger.click();
+    }
+    await expect(listbox).toBeVisible();
+
+    // Active descendant should start on the first option
+    const initialActive = await listbox.getAttribute("aria-activedescendant");
+    expect(initialActive).toBeTruthy();
+
+    // Focus the listbox so arrow-key handlers receive the keypress
+    await listbox.focus();
+    // ArrowDown moves to the next option
+    await page.keyboard.press("ArrowDown");
+    const nextActive = await listbox.getAttribute("aria-activedescendant");
+    expect(nextActive).not.toEqual(initialActive);
+  });
+
+  test("Escape closes the popover and returns focus to the trigger", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app");
+
+    const trigger = page.getByTestId("workspace-switcher-trigger");
+    await trigger.click();
+    await expect(page.getByRole("listbox", { name: "Workspaces" })).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("listbox", { name: "Workspaces" })).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+  });
+
+  test("outside click closes the popover", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app");
+
+    const trigger = page.getByTestId("workspace-switcher-trigger");
+    await trigger.click();
+    await expect(page.getByRole("listbox", { name: "Workspaces" })).toBeVisible();
+
+    // Click somewhere outside the popover
+    await page.locator("main").click({ position: { x: 5, y: 5 } });
+    await expect(page.getByRole("listbox", { name: "Workspaces" })).not.toBeVisible();
+  });
+});

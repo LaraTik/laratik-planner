@@ -70,7 +70,7 @@ test.describe("Discussions (Goal 8)", () => {
     await expect(page.getByText(/\(1 open\)/)).toBeVisible({ timeout: 10_000 });
   });
 
-  test("the visibility selector defaults to 'Internal only' for an internal role", async ({
+  test("the visibility selector defaults to 'Client visible' for an admin/planner who can post both", async ({
     page,
   }) => {
     await bootstrapTestSession(page);
@@ -78,7 +78,9 @@ test.describe("Discussions (Goal 8)", () => {
 
     await page.getByRole("button", { name: /Add comment/i }).click();
     const select = page.locator('select[name="visibility"]');
-    await expect(select).toHaveValue("internal");
+    // Round 2 UX: agency-side users default to client-visible (their
+    // thread is more useful for client sharing). They can still switch.
+    await expect(select).toHaveValue("client");
     // The form should offer both options because the test user is a workspace admin
     await expect(select.locator('option[value="internal"]')).toHaveCount(1);
     await expect(select.locator('option[value="client"]')).toHaveCount(1);
@@ -101,6 +103,11 @@ test.describe("Discussions (Goal 8)", () => {
 });
 
 test.describe("Notifications bell (Goal 8)", () => {
+  // The notifications bell lives in the desktop topbar, which is hidden
+  // on <768px. The mobile topbar only shows the user avatar. So these
+  // tests are desktop-only — mobile gets its own nav below.
+  test.skip(({ isMobile }) => isMobile === true, "Desktop-only — bell is not in the mobile topbar");
+
   test("renders on the app shell with no badge for users with no notifications", async ({
     page,
   }) => {
@@ -109,5 +116,101 @@ test.describe("Notifications bell (Goal 8)", () => {
 
     const bell = page.getByRole("button", { name: /^Notifications$/i });
     await expect(bell).toBeVisible();
+  });
+
+  test("shows the unread badge when the user has notifications", async ({ page, request }) => {
+    const email = `notifs-badge-${Date.now()}@laratik.local`;
+    await bootstrapTestSession(page, { email });
+    await request.post("/api/dev/notifications", { data: { email, count: 3, readCount: 0 } });
+    await page.goto("/app");
+
+    const badge = page.getByTestId("unread-badge");
+    await expect(badge).toBeVisible();
+    await expect(badge).toHaveText("3");
+  });
+
+  test("shows '9+' once unread count exceeds 9", async ({ page, request }) => {
+    const email = `notifs-overflow-${Date.now()}@laratik.local`;
+    await bootstrapTestSession(page, { email });
+    await request.post("/api/dev/notifications", { data: { email, count: 12, readCount: 0 } });
+    await page.goto("/app");
+
+    const badge = page.getByTestId("unread-badge");
+    await expect(badge).toBeVisible();
+    await expect(badge).toHaveText("9+");
+  });
+
+  test("clicking the bell opens the popover; Escape closes it and restores focus", async ({
+    page,
+    request,
+  }) => {
+    const email = `notifs-open-${Date.now()}@laratik.local`;
+    await bootstrapTestSession(page, { email });
+    await request.post("/api/dev/notifications", { data: { email, count: 2, readCount: 0 } });
+    await page.goto("/app");
+
+    const bell = page.getByRole("button", { name: /^Notifications/i });
+    await bell.focus();
+    await bell.click();
+
+    const dialog = page.getByRole("dialog", { name: "Notifications" });
+    await expect(dialog).toBeVisible();
+
+    // Esc closes
+    await page.keyboard.press("Escape");
+    await expect(dialog).not.toBeVisible();
+
+    // Focus returns to the bell
+    await expect(bell).toBeFocused();
+  });
+
+  test("'Mark all read' clears the badge and dims all rows", async ({ page, request }) => {
+    const email = `notifs-mark-all-${Date.now()}@laratik.local`;
+    await bootstrapTestSession(page, { email });
+    await request.post("/api/dev/notifications", { data: { email, count: 3, readCount: 0 } });
+    await page.goto("/app");
+
+    const bell = page.getByRole("button", { name: /^Notifications/i });
+    await bell.click();
+
+    const markAll = page.getByRole("button", { name: /Mark all read/i });
+    await markAll.click();
+
+    // Badge disappears (revalidatePath + nav refresh)
+    await expect(page.getByTestId("unread-badge")).not.toBeVisible({ timeout: 10_000 });
+  });
+
+  test("outside click closes the popover", async ({ page, request }) => {
+    const email = `notifs-outside-${Date.now()}@laratik.local`;
+    await bootstrapTestSession(page, { email });
+    await request.post("/api/dev/notifications", { data: { email, count: 1, readCount: 0 } });
+    await page.goto("/app");
+
+    await page.getByRole("button", { name: /^Notifications/i }).click();
+    await expect(page.getByRole("dialog", { name: "Notifications" })).toBeVisible();
+
+    // Click on the main content area (outside the dialog)
+    await page.locator("main").click({ position: { x: 5, y: 5 } });
+    await expect(page.getByRole("dialog", { name: "Notifications" })).not.toBeVisible();
+  });
+
+  test("popover is positioned within the viewport on a narrow desktop (1024px) — no overflow", async ({
+    page,
+    request,
+  }) => {
+    const email = `notifs-narrow-${Date.now()}@laratik.local`;
+    await bootstrapTestSession(page, { email });
+    await request.post("/api/dev/notifications", { data: { email, count: 1, readCount: 0 } });
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.goto("/app");
+
+    await page.getByRole("button", { name: /^Notifications/i }).click();
+    const dialog = page.getByRole("dialog", { name: "Notifications" });
+    await expect(dialog).toBeVisible();
+
+    const box = await dialog.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(1024);
   });
 });

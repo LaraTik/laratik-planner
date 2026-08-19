@@ -1,9 +1,31 @@
 import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+/**
+ * Tailwind-merge with the project-specific typography utilities
+ * registered as font-size (NOT text-color) classes. Without this, twMerge
+ * treats `text-body`, `text-label`, `text-button`, `text-title-card`,
+ * `text-title-page` as conflicting with `text-white` / `text-fg-primary` /
+ * etc. and silently drops the color class — leaving the body color
+ * (#172033) inheriting onto the element, which fails WCAG AA contrast on
+ * the primary/danger backgrounds.
+ *
+ * The token names here MUST match the `--text-*` declarations in
+ * `src/app/globals.css` under `@theme`.
+ */
+const customTwMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      "font-size": [
+        { text: ["body", "label", "button", "title-card", "title-page"] },
+      ],
+    },
+  },
+});
 
 /** shadcn/ui helper: combine class names with Tailwind-aware dedup. */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return customTwMerge(clsx(inputs));
 }
 
 /**

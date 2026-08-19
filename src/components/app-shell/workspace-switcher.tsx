@@ -115,6 +115,7 @@ export function WorkspaceSwitcher({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={`Active workspace: ${active.name}. Click to switch.`}
+        data-testid="workspace-switcher-trigger"
         className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-focus-ring inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none"
       >
         <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
