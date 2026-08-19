@@ -109,47 +109,53 @@ See `STUDIOFLOW_MASTER_PROMPT.md` §22 for the roadmap. Each goal will get its o
 
 ## Overall progress (live)
 
-| # | Goal | Status | Notes |
-|---|---|---|---|
-| 0 | Repository, design foundation, quality harness | ✅ | Foundation + health + CI + deploy scripts |
-| 1 | Database foundation, tenancy, RLS, generated types | ✅ | 38 tables, 15 enums, 89 indexes, 280 CHECK constraints |
-| 2 | Closed auth, bootstrap, reset, invitation onboarding | ✅ | NextAuth v5 + Google + Mailcow magic link + bootstrap admin |
-| 3 | App shell, My Work, workspace creation, Overview dashboard | ✅ | Sidebar + topbar + mobile nav + 8 routes |
-| 4 | Workspace admin, users, channels, Brand Kit, defaults | ✅ | Invitations, accept page, deactivation, User Management UI |
-| 5 | Content model, Quick Create, format editors, campaigns, templates | ✅ | Quick Create + 4 fields + auto-channel selection |
-| 6 | Monthly planning list, Batch Add, board, FullCalendar, KPI coverage | ✅ (basic) | Planning list + Quick Create; Calendar + KPI deferred |
-| 7 | Workflow state machine, assignments, claim/release, approval reset, audit | ✅ | Full state machine + 12 transition actions |
-| 8 | Threaded discussion, mentions, attachments, notifications, outbox events | ⏳ | Schema ready, UI not built (lower priority) |
-| 9 | Delivery versions, two-stage creative review (internal then client) | ✅ | submit_delivery + decide_approval + version number allocation |
-| 10 | Manual per-channel publishing, partial completion, failure recovery, history | ✅ | record_publication + per-channel status + state derivation |
-| 11 | Optional MiniMax (M3) AI assistance, never bypasses human control | ✅ | MiniMax client + draft_caption API route, disabled by default |
-| 12 | Responsive completion, WCAG 2.2 AA, axe-core per route, perf budget | ✅ (basic) | axe-core per-route test scaffolded, WCAG 2.2 AA tags |
-| 13 | Security hardening, Sentry, restic offsite backups, CI hardening, recovery drills | ⏳ | Skipped for v1 — needs Sentry DSN + restic repo |
-| 14 | UAT, production deployment to laratik-vps, DNS, final 234-check proof | ✅ (partial) | Container running on VPS, DB migrated, DNS+OAuth+SMTP need user setup |
+| #   | Goal                                                                              | Status       | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --- | --------------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0   | Repository, design foundation, quality harness                                    | ✅           | Foundation + health + CI + deploy scripts                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 1   | Database foundation, tenancy, RLS, generated types                                | ✅           | 38 tables, 15 enums, 89 indexes, 280 CHECK constraints                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 2   | Closed auth, bootstrap, reset, invitation onboarding                              | ✅           | NextAuth v5 + Google + Mailcow magic link + bootstrap admin                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 3   | App shell, My Work, workspace creation, Overview dashboard                        | ✅           | Sidebar + topbar + mobile nav + 8 routes                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 4   | Workspace admin, users, channels, Brand Kit, defaults                             | ✅           | Invitations, accept page, deactivation, User Management UI                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 5   | Content model, Quick Create, format editors, campaigns, templates                 | ✅           | Quick Create + 4 fields + auto-channel selection                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 6   | Monthly planning list, Batch Add, board, FullCalendar, KPI coverage               | ✅ (basic)   | Planning list + Quick Create; Calendar + KPI deferred                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 7   | Workflow state machine, assignments, claim/release, approval reset, audit         | ✅           | Full state machine + 12 transition actions                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 8   | Threaded discussion, mentions, attachments, notifications, outbox events          | ⏳           | Schema ready, UI not built (lower priority)                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 9   | Delivery versions, two-stage creative review (internal then client)               | ✅           | submit_delivery + decide_approval + version number allocation                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 10  | Manual per-channel publishing, partial completion, failure recovery, history      | ✅           | record_publication + per-channel status + state derivation                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 11  | Optional MiniMax (M3) AI assistance, never bypasses human control                 | ✅           | MiniMax client + draft_caption API route, disabled by default                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 12  | Responsive completion, WCAG 2.2 AA, axe-core per route, perf budget               | ✅ (basic)   | axe-core per-route test scaffolded, WCAG 2.2 AA tags; full E2E suite (40 tests) covers public, auth-gate, workspace, content, a11y; **3 production bugs caught + fixed** during the e2e pass: (1) `user_email_format` CHECK rejected real emails (`\s` serialised as `s` by Drizzle — switched to `[[:space:]]`), (2) `createWorkspaceAction` silently rolled back writes because `redirect()` was inside a transaction, (3) `--fg-muted` failed WCAG AA contrast (3.51:1 on canvas → fixed to 5.71:1). |
+| 13  | Security hardening, Sentry, restic offsite backups, CI hardening, recovery drills | ⏳           | Skipped for v1 — needs Sentry DSN + restic repo                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 14  | UAT, production deployment to laratik-vps, DNS, final 234-check proof             | ✅ (partial) | Container running on VPS, DB migrated, DNS+OAuth+SMTP need user setup                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
-**Production state (verified 2026-08-18):**
+**Production state (verified 2026-08-19):**
+
 - Container `laratik-planner-app-1` + `laratik-planner-postgres-1` running on laratik-vps
 - `/api/health` → `{"ok":true,"db":"up","env":"production",...}`
-- 38 tables + 15 enums migrated
+- 38 tables + 15 enums migrated (incl. the `user_email_format` CHECK fix from the e2e pass)
 - 7,663 lines of TypeScript across 77 files
 - Image size: ~1.07 GB (Node 20 + pnpm 10 + all deps; can be slimmed with a multi-stage refactor in Goal 13)
+- **40 Playwright E2E tests, all green in ~5s** (public + auth-gate + workspace + content-flow + a11y)
 
 **Remaining for full public access (operational setup by the user):**
+
 - Cloudflare DNS A record: `planner.laratik.com` → `217.154.124.83`
 - Google OAuth client: redirect URI `https://planner.laratik.com/api/auth/callback/google`, set `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` in `/opt/laratik-planner/.env`
 - Mailcow mailbox: `no-reply@planner.laratik.com`, set `SMTP_PASSWORD` in `/opt/laratik-planner/.env`
 - Optional AI: set `MINIMAX_API_KEY` + `AI_FEATURE_ENABLED=true` in `/opt/laratik-planner/.env`
 
 **Remaining for full Goal 8 (discussions/notifications):**
+
 - Threaded comments UI under `/app/w/[slug]/planning/[id]`
 - @mention extraction from comment body
 - Outbox-event worker that sends notifications + emails
 
 **Remaining for full Goal 13 (security/observability):**
+
 - Sentry: `SENTRY_DSN` in `/opt/laratik-planner/.env` + `@sentry/nextjs` wiring in `next.config.ts`
 - restic offsite backups: uncomment the restic block in `scripts/vps/backup.sh`, configure `/root/.config/restic/env`
 - GitHub Actions deploy: set `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` repository secrets
 
 **Remaining for full Goal 14 (final 234-check proof):**
+
 - Run UAT script against the live app once OAuth + SMTP are wired
 - Capture screenshots per `STUDIOFLOW_MASTER_PROMPT.md §23`

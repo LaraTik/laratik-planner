@@ -162,10 +162,7 @@ async function seedInternal(f: {
     });
 
   // ─── Bootstrap lock ─────────────────────────────────────────────────────
-  await db
-    .insert(bootstrapLocks)
-    .values({ agencyId, completedBy: userId })
-    .onConflictDoNothing();
+  await db.insert(bootstrapLocks).values({ agencyId, completedBy: userId }).onConflictDoNothing();
 
   // ─── Workspace ──────────────────────────────────────────────────────────
   let workspaceId: string;

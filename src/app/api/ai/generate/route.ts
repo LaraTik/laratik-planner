@@ -53,10 +53,12 @@ export async function POST(req: NextRequest) {
     .limit(1);
   if (!ws) return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
 
-  if (!(await hasWorkspaceRole({ id: session.user.id }, ws.id, [
-    "workspace_manager",
-    "content_planner",
-  ]))) {
+  if (
+    !(await hasWorkspaceRole({ id: session.user.id }, ws.id, [
+      "workspace_manager",
+      "content_planner",
+    ]))
+  ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -10,7 +10,7 @@ import {
   workspaceMemberships,
   workspaces,
 } from "@/lib/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

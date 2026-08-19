@@ -44,7 +44,10 @@ export const users = pgTable(
   },
   (t) => [
     uniqueIndex("user_email_lower_unique").on(sql`lower(${t.email})`),
-    check("user_email_format", sql`${t.email} ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'`),
+    check(
+      "user_email_format",
+      sql`${t.email} ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'`,
+    ),
   ],
 );
 

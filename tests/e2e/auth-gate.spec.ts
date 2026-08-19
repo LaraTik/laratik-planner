@@ -26,10 +26,7 @@ const PROTECTED_APP_ROUTES = [
   "/app/w/acme/calendar",
 ];
 
-const PROTECTED_API_ROUTES = [
-  "/api/bootstrap/admin",
-  "/api/ai/generate",
-];
+const PROTECTED_API_ROUTES = ["/api/bootstrap/admin", "/api/ai/generate"];
 
 test.describe("auth gate: protected /app/* routes redirect to /signin", () => {
   for (const route of PROTECTED_APP_ROUTES) {

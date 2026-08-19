@@ -56,9 +56,7 @@ test.describe("Workspace navigation (admin)", () => {
     await expect(page.getByRole("link", { name: /My New Brand/ }).first()).toBeVisible();
   });
 
-  test("create-workspace form rejects invalid slugs with a validation error", async ({
-    page,
-  }) => {
+  test("create-workspace form rejects invalid slugs with a validation error", async ({ page }) => {
     await bootstrapTestSession(page);
 
     await page.goto("/app/workspaces/new");
@@ -73,9 +71,7 @@ test.describe("Workspace navigation (admin)", () => {
 });
 
 test.describe("Workspace non-member experience", () => {
-  test("a user with no memberships sees the empty state and a Create button", async ({
-    page,
-  }) => {
+  test("a user with no memberships sees the empty state and a Create button", async ({ page }) => {
     await bootstrapTestSession(page, { email: "viewer@laratik.local" });
 
     await page.goto("/app/workspaces");

@@ -54,9 +54,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     await expect(page.getByText(title).first()).toBeVisible();
   });
 
-  test("full happy path: draft → content_review → approved_for_design", async ({
-    page,
-  }) => {
+  test("full happy path: draft → content_review → approved_for_design", async ({ page }) => {
     const seeded: SeedResult = await bootstrapTestSession(page);
 
     // ─── Create a draft via the Quick Create UI ───
@@ -70,7 +68,10 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     expect(itemId).toMatch(/^[0-9a-f-]{36}$/);
 
     // ─── draft → content_review (the "Submit for review" button) ───
-    await page.getByRole("button", { name: /submit.*review/i }).first().click();
+    await page
+      .getByRole("button", { name: /submit.*review/i })
+      .first()
+      .click();
     await expect(page.getByText(/content review/i).first()).toBeVisible({ timeout: 10_000 });
 
     // ─── content_review → approved_for_design (the "Approve" button) ───
@@ -93,9 +94,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     expect(seeded.channelIds.length).toBe(3);
   });
 
-  test("the seeded workspace has the expected 3 channels in the channel list", async ({
-    page,
-  }) => {
+  test("the seeded workspace has the expected 3 channels in the channel list", async ({ page }) => {
     await bootstrapTestSession(page);
     // Channels aren't directly visible in the UI yet (v1), but the
     // Quick Create form auto-selects all of them and the detail page

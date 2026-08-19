@@ -35,12 +35,32 @@
 pnpm test                # vitest watch (unit + component + integration)
 pnpm test:unit           # vitest run, no watch
 pnpm test:coverage       # with v8 coverage report
-pnpm test:e2e            # Playwright (boots dev server first)
+
+# E2E
+pnpm test:e2e            # Playwright (boots dev server first via webServer)
+pnpm test:e2e:run        # Chromium only, no dev-UI
 pnpm test:e2e:ui         # Playwright UI mode (local only)
+pnpm test:e2e:smoke      # public + auth-gate + health (fast, ~3s)
+pnpm test:e2e:public     # public.spec.ts only
+pnpm test:e2e:auth       # auth-gate.spec.ts only
+pnpm test:e2e:workspace  # workspace.spec.ts only
+pnpm test:e2e:content    # content-flow.spec.ts only
 pnpm test:a11y           # Playwright grep @a11y
 
 pnpm verify              # format:check + lint + typecheck + test:unit + build
 ```
+
+## E2E auth bypass (dev-only)
+
+The Playwright suite needs to bypass Google OAuth + Mailcow magic-link to run in CI. The test fixtures are wired through three dev-only API endpoints — all guarded by `NODE_ENV !== "production"` (in the route handler AND the proxy allowlist):
+
+| Endpoint                 | Purpose                                                                 |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `POST /api/dev/seed`     | Idempotent: creates a test agency + workspace + 3 channels + admin user |
+| `POST /api/dev/sign-in`  | Sets the `authjs.session-token` JWT cookie for a given email            |
+| `POST /api/dev/sign-out` | Clears the cookie                                                       |
+
+Use them via `bootstrapTestSession(page)` in `tests/e2e/_helpers.ts` — that single call seeds + signs in, ready for the `/app/*` shell.
 
 ## Per-feature fixture strategy
 
