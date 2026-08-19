@@ -38,10 +38,7 @@ export default async function AccountPage() {
     .from(agencyMemberships)
     .innerJoin(agencies, eq(agencies.id, agencyMemberships.agencyId))
     .where(
-      and(
-        eq(agencyMemberships.userId, session.user.id),
-        eq(agencyMemberships.status, "active"),
-      ),
+      and(eq(agencyMemberships.userId, session.user.id), eq(agencyMemberships.status, "active")),
     )
     .limit(1);
 
@@ -100,10 +97,7 @@ export default async function AccountPage() {
         aria-labelledby="agency-heading"
         className="border-border bg-surface rounded-[var(--radius-card)] border p-5"
       >
-        <h2
-          id="agency-heading"
-          className="text-title-card text-fg-primary font-semibold"
-        >
+        <h2 id="agency-heading" className="text-title-card text-fg-primary font-semibold">
           Agency
         </h2>
         {profile ? (
@@ -128,8 +122,8 @@ export default async function AccountPage() {
           </dl>
         ) : (
           <p className="text-body text-fg-muted mt-2">
-            You&apos;re not yet a member of any agency. If this is your first sign-in, the
-            bootstrap flow will assign you as the agency admin on the next page load.
+            You&apos;re not yet a member of any agency. If this is your first sign-in, the bootstrap
+            flow will assign you as the agency admin on the next page load.
           </p>
         )}
       </section>

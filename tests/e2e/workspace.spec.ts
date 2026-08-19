@@ -85,7 +85,10 @@ test.describe("Workspace switcher keyboard (topbar)", () => {
   // The workspace switcher lives in the desktop topbar, which is hidden
   // on <768px. The mobile topbar only shows the user avatar. So these
   // tests are desktop-only.
-  test.skip(({ isMobile }) => isMobile === true, "Desktop-only — switcher is not in the mobile topbar");
+  test.skip(
+    ({ isMobile }) => isMobile === true,
+    "Desktop-only — switcher is not in the mobile topbar",
+  );
 
   test("Enter on the trigger opens the listbox; arrow keys move aria-activedescendant", async ({
     page,

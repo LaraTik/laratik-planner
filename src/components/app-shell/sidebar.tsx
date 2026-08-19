@@ -29,7 +29,7 @@ export function Sidebar({ user }: { user: { name: string; isAdmin: boolean } }) 
       <div className="border-border flex h-16 items-center border-b px-4">
         <Link
           href="/app"
-          className="focus-visible:ring-2 focus-visible:ring-focus-ring flex items-center gap-2 rounded-[var(--radius-control)] focus:outline-none"
+          className="focus-visible:ring-focus-ring flex items-center gap-2 rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2"
         >
           <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] text-white">
             <Briefcase className="h-4 w-4" aria-hidden="true" />
@@ -82,7 +82,7 @@ export function Sidebar({ user }: { user: { name: string; isAdmin: boolean } }) 
           href="/app/account"
           aria-current={isActivePath("/app/account", pathname) ? "page" : undefined}
           className={cn(
-            "flex items-center gap-3 rounded-[var(--radius-control)] px-2 py-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring",
+            "focus-visible:ring-focus-ring flex items-center gap-3 rounded-[var(--radius-control)] px-2 py-2 transition focus:outline-none focus-visible:ring-2",
             isActivePath("/app/account", pathname)
               ? "bg-primary-subtle text-primary"
               : "hover:bg-surface-subtle",
@@ -91,7 +91,9 @@ export function Sidebar({ user }: { user: { name: string; isAdmin: boolean } }) 
           <div
             className={cn(
               "border-border text-label flex h-8 w-8 items-center justify-center rounded-full border font-semibold",
-              isActivePath("/app/account", pathname) ? "bg-primary text-white" : "bg-surface-subtle",
+              isActivePath("/app/account", pathname)
+                ? "bg-primary text-white"
+                : "bg-surface-subtle",
             )}
           >
             {user.name.charAt(0).toUpperCase()}
@@ -132,14 +134,11 @@ function SidebarLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "text-body flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring",
+        "text-body focus-visible:ring-focus-ring flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 font-semibold transition focus-visible:ring-2 focus-visible:outline-none",
         active ? "bg-primary-subtle text-primary" : "text-fg-primary hover:bg-surface-subtle",
       )}
     >
-      <span
-        className={cn(active ? "text-primary" : "text-fg-secondary")}
-        aria-hidden="true"
-      >
+      <span className={cn(active ? "text-primary" : "text-fg-secondary")} aria-hidden="true">
         {icon}
       </span>
       {children}

@@ -134,10 +134,31 @@ See `STUDIOFLOW_MASTER_PROMPT.md` §22 for the roadmap. Each goal will get its o
 - 38 tables + 15 enums migrated (incl. the `user_email_format` CHECK fix from the e2e pass + the `outbox_event.payload` jsonb cast from the Goal 8 pass)
 - 7,663 lines of TypeScript across 77 files
 - Image size: ~1.07 GB (Node 20 + pnpm 10 + all deps; can be slimmed with a multi-stage refactor in Goal 13)
-- **50 tests total, all green**:
-  - 46 Playwright E2E tests in ~9s (public + auth-gate + workspace + content-flow + a11y + discussions + notifications)
+- **154 tests total, all green** (Round 2 expansion from 50):
+  - 144 Playwright E2E tests in ~25s, 10 skipped on mobile-chrome (desktop-only topbar specs):
+    - 6 new specs (mobile, error-states, boundaries, a11y-routes, plus expansions to discussions, workspace, auth-gate)
+    - New `/api/dev/notifications` endpoint for seeding the notifications bell in tests
   - 4 Vitest integration tests (discussions service — comment create / resolve / visibility / outbox fan-out)
-  - 6 unit tests (env validation + Sentry wrapper)
+  - 10 unit tests (env validation + Sentry wrapper)
+
+**Round 2 review (this commit, 2026-08-19):**
+
+- Code review + UX polish (Round 2A):
+  - Real `/app/account` page (name/email/agency/role + sign out) — replaces the 404 trap from the sidebar footer link.
+  - Signin: real `authError()` code lookup, Google icon, autofocus email, the long-missing `auth-error-codes.ts` module.
+  - Loading + error boundaries at both the root and `(app)` segments.
+  - Skip-to-content link, mobile topbar with initials, shared `isActivePath` helper.
+  - Workspace switcher: keyboard-friendly popover (arrow keys + Enter + Esc), outside click + Esc close + focus return.
+  - Notifications bell: focus moves into the dialog on open, returns on close; Esc closes; mark-read is **optimistic** with rollback on action failure.
+  - Discussion section: form clears on success, stays populated on error; visibility/label selects wrap cleanly on mobile; `<time>` element on the created-at stamp; action returns `{ error }` instead of throwing.
+  - Content format: extracted `humanFormat()` so the planning list/detail show "Short Form Video" not "short_form_video".
+  - Home page now has `<title>` metadata.
+- Test coverage round 2 (Round 2B):
+  - **+26 E2E tests across 6 new files** + extensions to 2 existing files.
+  - Per-route axe-core scan (6 authed routes, every page audited for WCAG 2.2 AA).
+  - Mobile viewport, error states, loading/error boundaries, workspace switcher keyboard, auth-gate edge cases (open-redirect protection, callbackUrl preservation, signed-in workspace gate).
+  - New `/api/dev/notifications` endpoint (dev/test-only, gated by NODE_ENV).
+  - **Critical contrast bug fixed**: tailwind-merge was dropping `text-white` from primary/destructive Button variants because it treated the project's custom `text-body` / `text-label` / `text-button` / `text-title-*` utilities as text-color conflicts. Registered the 5 tokens as font-size in `extendTailwindMerge`, so the buttons now render with proper white text (5.94:1 / 6.21:1 on primary / danger, both pass AA). The a11y route scan caught this — without it, the regression would have shipped.
 
 **Remaining for full public access (operational setup by the user):**
 

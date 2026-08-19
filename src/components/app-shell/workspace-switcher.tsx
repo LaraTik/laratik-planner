@@ -71,7 +71,11 @@ export function WorkspaceSwitcher({
     // If the user is on a workspace-scoped page, swap the slug; otherwise
     // go to the workspace overview.
     const isWorkspacePage = /^\/app\/w\/[^/]+/.test(pathname);
-    router.push(isWorkspacePage ? pathname.replace(/^\/app\/w\/[^/]+/, `/app/w/${w.slug}`) : `/app/w/${w.slug}`);
+    router.push(
+      isWorkspacePage
+        ? pathname.replace(/^\/app\/w\/[^/]+/, `/app/w/${w.slug}`)
+        : `/app/w/${w.slug}`,
+    );
   };
 
   const onListKeyDown = (e: React.KeyboardEvent<HTMLUListElement>) => {
@@ -98,7 +102,7 @@ export function WorkspaceSwitcher({
     return (
       <Link
         href="/app/workspaces/new"
-        className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-focus-ring inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none"
+        className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
         Create your first workspace
@@ -116,7 +120,7 @@ export function WorkspaceSwitcher({
         aria-expanded={open}
         aria-label={`Active workspace: ${active.name}. Click to switch.`}
         data-testid="workspace-switcher-trigger"
-        className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-focus-ring inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none"
+        className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2"
       >
         <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
           {active.name.charAt(0).toUpperCase()}
@@ -137,7 +141,9 @@ export function WorkspaceSwitcher({
             ref={listRef}
             role="listbox"
             aria-label="Workspaces"
-            aria-activedescendant={options[activeIndex] ? `ws-${options[activeIndex]!.id}` : undefined}
+            aria-activedescendant={
+              options[activeIndex] ? `ws-${options[activeIndex]!.id}` : undefined
+            }
             tabIndex={0}
             onKeyDown={onListKeyDown}
             className="max-h-72 overflow-y-auto py-1 focus:outline-none"

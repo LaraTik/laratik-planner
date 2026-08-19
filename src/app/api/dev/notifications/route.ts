@@ -43,7 +43,11 @@ export async function POST(req: NextRequest) {
   const count = Math.min(Math.max(body.count ?? 1, 0), 50);
   const readCount = Math.min(Math.max(body.readCount ?? 0, 0), count);
 
-  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, body.email)).limit(1);
+  const [user] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, body.email))
+    .limit(1);
   if (!user) {
     return NextResponse.json({ error: `User not found: ${body.email}` }, { status: 404 });
   }

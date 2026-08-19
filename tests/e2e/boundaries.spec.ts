@@ -40,9 +40,7 @@ test.describe("Loading + error boundaries", () => {
     await page.unroute("**/api/**");
   });
 
-  test("a non-existent content item renders the not-found page (no 500 page)", async ({
-    page,
-  }) => {
+  test("a non-existent content item renders the not-found page (no 500 page)", async ({ page }) => {
     await bootstrapTestSession(page);
     const fakeId = "00000000-0000-0000-0000-000000000000";
     const res = await page.goto(`/app/w/acme/planning/${fakeId}`, {

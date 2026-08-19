@@ -99,12 +99,7 @@ export default async function SignInPage({
               placeholder="you@company.com"
             />
           </FormField>
-          <Button
-            type="submit"
-            variant="secondary"
-            className="w-full"
-            size="lg"
-          >
+          <Button type="submit" variant="secondary" className="w-full" size="lg">
             <Mail className="h-4 w-4" aria-hidden="true" />
             Email me a sign-in link
           </Button>
@@ -115,14 +110,14 @@ export default async function SignInPage({
         By continuing you agree to our{" "}
         <Link
           href="/legal/terms"
-          className="text-primary underline underline-offset-4 hover:no-underline focus-visible:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded"
+          className="text-primary focus-visible:ring-focus-ring rounded underline underline-offset-4 hover:no-underline focus-visible:no-underline focus-visible:ring-2 focus-visible:outline-none"
         >
           terms
         </Link>{" "}
         and{" "}
         <Link
           href="/legal/privacy"
-          className="text-primary underline underline-offset-4 hover:no-underline focus-visible:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded"
+          className="text-primary focus-visible:ring-focus-ring rounded underline underline-offset-4 hover:no-underline focus-visible:no-underline focus-visible:ring-2 focus-visible:outline-none"
         >
           privacy policy
         </Link>

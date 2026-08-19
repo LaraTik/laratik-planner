@@ -75,9 +75,7 @@ const ALL_FORMATS: readonly ContentFormat[] = [
  */
 export function humanize(s: string): string {
   if (!s) return s;
-  return s
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /** "ready_to_publish" → "Ready To Publish" (alias of humanize for status). */

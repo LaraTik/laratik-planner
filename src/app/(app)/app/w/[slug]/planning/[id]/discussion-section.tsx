@@ -105,7 +105,7 @@ function CommentForm({
         rows={3}
         disabled={pending}
         placeholder={parentCommentId ? "Write a reply…" : "Add a comment. Use @name to mention."}
-        className="border-border bg-surface text-fg-primary text-body disabled:opacity-60 w-full rounded-[var(--radius-control)] border px-3 py-2"
+        className="border-border bg-surface text-fg-primary text-body w-full rounded-[var(--radius-control)] border px-3 py-2 disabled:opacity-60"
       />
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <label className="text-label text-fg-secondary flex items-center gap-2">

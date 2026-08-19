@@ -26,9 +26,7 @@ export function MobileNav({ canCreate }: { canCreate: boolean }) {
       className="bg-surface border-border fixed inset-x-0 bottom-0 z-30 border-t md:hidden"
       aria-label="Primary"
     >
-      <ul
-        className={cn("grid gap-1 px-2 py-2", canCreate ? "grid-cols-4" : "grid-cols-3")}
-      >
+      <ul className={cn("grid gap-1 px-2 py-2", canCreate ? "grid-cols-4" : "grid-cols-3")}>
         {items.map((item) => {
           const isAdminOnly = "admin" in item && item.admin;
           if (isAdminOnly && !canCreate) return null;
@@ -40,8 +38,10 @@ export function MobileNav({ canCreate }: { canCreate: boolean }) {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "text-label flex min-h-[var(--control-touch)] flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-2 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring",
-                  active ? "bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface-subtle",
+                  "text-label focus-visible:ring-focus-ring flex min-h-[var(--control-touch)] flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-2 font-semibold transition focus-visible:ring-2 focus-visible:outline-none",
+                  active
+                    ? "bg-primary-subtle text-primary"
+                    : "text-fg-secondary hover:bg-surface-subtle",
                 )}
               >
                 <Icon className="h-5 w-5" aria-hidden="true" />
@@ -54,7 +54,7 @@ export function MobileNav({ canCreate }: { canCreate: boolean }) {
           <li>
             <Link
               href="/app/workspaces/new"
-              className="text-label text-fg-secondary hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-focus-ring flex min-h-[var(--control-touch)] flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-2 font-semibold focus:outline-none"
+              className="text-label text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-[var(--control-touch)] flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-2 font-semibold focus:outline-none focus-visible:ring-2"
             >
               <Plus className="h-5 w-5" aria-hidden="true" />
               <span>New</span>

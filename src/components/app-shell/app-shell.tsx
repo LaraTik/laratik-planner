@@ -46,7 +46,7 @@ export function AppShell({
           until focused, then snaps to the top. */}
       <a
         href="#main-content"
-        className="bg-primary text-label text-on-primary focus-visible:ring-2 focus-visible:ring-focus-ring absolute top-2 left-2 z-50 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold opacity-0 focus:opacity-100 focus:outline-none"
+        className="bg-primary text-label text-on-primary focus-visible:ring-focus-ring absolute top-2 left-2 z-50 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold opacity-0 focus:opacity-100 focus:outline-none focus-visible:ring-2"
       >
         Skip to main content
       </a>
@@ -80,7 +80,7 @@ export function AppShell({
       <main
         id="main-content"
         tabIndex={-1}
-        className="focus:outline-none pb-16 md:ml-60 md:pt-16 md:pb-0"
+        className="pb-16 focus:outline-none md:ml-60 md:pt-16 md:pb-0"
       >
         <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8 md:py-8">{children}</div>
       </main>

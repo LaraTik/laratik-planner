@@ -10,7 +10,7 @@ from 2026-08-18 evening), then do a second pass on test coverage.
 - 50 tests green (Playwright E2E + integration + unit).
 - `pnpm lint` is clean.
 - `pnpm typecheck` is **broken** — one error: `src/app/signin/page.tsx(7,27): Cannot find
-  module './auth-error-codes'`. The module was referenced but never created.
+module './auth-error-codes'`. The module was referenced but never created.
 - 18 files uncommitted in the working tree (9 modified, 9 new) from the previous turn's
   UX/quality pass — sidebar/switcher/signin rewrites, shared status helpers, loading/error
   boundaries, etc.
@@ -22,12 +22,14 @@ switcher keyboard, signin error UI, loading/error boundaries, shared status help
 Work fixed). What's left:
 
 ### A1. Fix the typecheck break (BLOCKER, ~5 min)
+
 - Create `src/app/signin/auth-error-codes.ts` with the lookup used by `signin/page.tsx`.
   Mirror the actual NextAuth v5 error codes we can produce (Configuration, AccessDenied,
   Verification, Default). Keep it pure, no I/O.
 - Re-run `pnpm typecheck` to confirm green.
 
 ### A2. Finish UX round on the live surface (medium, ~1h)
+
 Three surfaces were noted as "in progress" but never finished:
 
 1. **Notifications bell** — focus trap on open (move focus into the dialog, restore to
@@ -45,6 +47,7 @@ Three surfaces were noted as "in progress" but never finished:
    and removes a broken-link smell. If it expands scope too much, do (b) and add a TODO.
 
 ### A3. Code quality / dead code sweep (small, ~30 min)
+
 - `humanStatus(item.format)` in My Work + Planning detail is wrong semantically (the
   function is for workflow status, not content format). Add a tiny `humanFormat()` or
   inline a `format.replace(/_/g, " ")` and rename. Same for "format" rendering — the
@@ -61,6 +64,7 @@ Three surfaces were noted as "in progress" but never finished:
   component (shadcn pattern). If not, swap to `<Link>` wrapping `<Button>` everywhere.
 
 ### A4. Best practices / consistency (small, ~30 min)
+
 - All public pages should have `<title>` via `metadata`. Sign-in already has it. Add
   for `/legal/terms`, `/legal/privacy` (or remove the links if the pages don't exist).
 - All `useState` setters in client components should be typed where the inferred type
@@ -74,11 +78,13 @@ Three surfaces were noted as "in progress" but never finished:
   startsWith). Unify on one helper exported from `src/lib/utils/nav.ts`.
 
 ### A5. Final lint + typecheck + unit tests (gate, ~5 min)
+
 - `pnpm lint --max-warnings=0` — must pass
 - `pnpm typecheck` — must pass (currently fails)
 - `pnpm test:unit` — must pass
 
 ### A6. Round 2A commit + push (small, ~5 min)
+
 - One commit per logical group: A1+A3 (fixes), A2 (UX), A4+A5 (quality). Or one big
   commit if it's easier to review. Default: one commit with a structured message.
 
@@ -86,23 +92,24 @@ Three surfaces were noted as "in progress" but never finished:
 
 Current coverage (50 tests, all green):
 
-| Suite | Count | Covers |
-|-------|-------|--------|
-| `e2e/public.spec.ts` | 11 | root, /signin, /signin/verify, /api/health, /api/bootstrap, /api/dev/* |
-| `e2e/auth-gate.spec.ts` | 14 | 10 protected /app/* → 307, signed-in bypass, public-while-authed |
-| `e2e/workspace.spec.ts` | 5 | seeded nav, create-via-form, invalid-slug rejection, non-member |
-| `e2e/content-flow.spec.ts` | 4 | Quick Create, list, draft→content_review→approved_for_design, channel auto-select |
-| `e2e/a11y.spec.ts` | 4 | axe-core on public pages |
-| `e2e/health.spec.ts` | 2 | /api/health checks |
-| `e2e/discussions.spec.ts` | 6 | comment list, post, visibility, resolve, optimistic states |
-| `integration/discussions.test.ts` | 4 | service-level comments + notifs + outbox |
-| `integration/schema.test.ts` | ? | (not seen) |
-| `unit/sentry.test.ts` | 4 | Sentry wrapper |
-| **Total** | **50** | |
+| Suite                             | Count  | Covers                                                                            |
+| --------------------------------- | ------ | --------------------------------------------------------------------------------- |
+| `e2e/public.spec.ts`              | 11     | root, /signin, /signin/verify, /api/health, /api/bootstrap, /api/dev/*            |
+| `e2e/auth-gate.spec.ts`           | 14     | 10 protected /app/* → 307, signed-in bypass, public-while-authed                  |
+| `e2e/workspace.spec.ts`           | 5      | seeded nav, create-via-form, invalid-slug rejection, non-member                   |
+| `e2e/content-flow.spec.ts`        | 4      | Quick Create, list, draft→content_review→approved_for_design, channel auto-select |
+| `e2e/a11y.spec.ts`                | 4      | axe-core on public pages                                                          |
+| `e2e/health.spec.ts`              | 2      | /api/health checks                                                                |
+| `e2e/discussions.spec.ts`         | 6      | comment list, post, visibility, resolve, optimistic states                        |
+| `integration/discussions.test.ts` | 4      | service-level comments + notifs + outbox                                          |
+| `integration/schema.test.ts`      | ?      | (not seen)                                                                        |
+| `unit/sentry.test.ts`             | 4      | Sentry wrapper                                                                    |
+| **Total**                         | **50** |                                                                                   |
 
 Gaps to close in Round 2B:
 
 ### B1. Notifications E2E (new file: `tests/e2e/notifications.spec.ts`, 6 tests)
+
 - Bell renders 0 badge when empty
 - After `markNotificationsRead` insert, bell shows N>0
 - Click bell → popover opens → list shows items
@@ -113,12 +120,14 @@ Gaps to close in Round 2B:
 - Outside click closes popover
 
 ### B2. Mobile viewport tests (new file: `tests/e2e/mobile.spec.ts`, 4 tests)
+
 - Bottom nav visible at 375px
 - Sidebar hidden at 375px, visible at 1280px
 - Topbar (mobile variant) shows initials at 375px, name+email at 1280px
 - Touch targets on bottom nav are ≥44px (use `getBoundingClientRect`)
 
 ### B3. Error states (extend `e2e/public.spec.ts` or new `e2e/error-states.spec.ts`, 4 tests)
+
 - 404 route → renders not-found page (not blank screen)
 - /app without session → 307 to /signin (already covered, but assert the page is the
   signin page, not just a 307)
@@ -126,12 +135,14 @@ Gaps to close in Round 2B:
 - Signin with `?error=Configuration` → different copy shown
 
 ### B4. Workspace switcher keyboard (extend `e2e/workspace.spec.ts`, 3 tests)
+
 - Tab to switcher → Enter → popover open → focus on first item
 - ArrowDown moves aria-activedescendant
 - Enter selects → navigates to new workspace
 - Escape closes + returns focus to trigger
 
 ### B5. A11y per-route scan (new file: `tests/e2e/a11y-routes.spec.ts`, ~5 tests)
+
 - For each authenticated route, sign in, navigate, run `@axe-core/playwright`.cover()
   and assert no serious/critical violations.
 - Routes: /app, /app/workspaces, /app/w/[slug], /app/w/[slug]/planning, /app/w/[slug]/planning/[id]
@@ -139,31 +150,37 @@ Gaps to close in Round 2B:
   branches)
 
 ### B6. Loading + error boundary render (new file: `tests/e2e/loading-error.spec.ts`, 2 tests)
+
 - Mock a slow route (e.g. /api/health → 5s delay) → assert skeleton renders
 - Force a server error on /app → assert error boundary shows "Try again" button
 
 ### B7. Auth-gate edge cases (extend `e2e/auth-gate.spec.ts`, 3 tests)
+
 - `?callbackUrl=//evil.com` → must not redirect to off-origin URL
 - `?callbackUrl=/app/w/secret` → redirects to that path fine
 - Expired/missing session token → redirect with `?callbackUrl` preserved
 
 ### B8. Final test gate (~5 min)
+
 - `pnpm test:unit`
 - `pnpm test:e2e` (the existing 40+ tests + ~26 new)
 - `pnpm test:integration`
 - All must pass
 
 ### B9. Commit + push (~5 min)
+
 - One commit per logical group: B1-B4, B5, B6, B7.
 - Total new tests: ~26. New total: ~76.
 
 ## Round 2C — Deploy + smoke (small, ~10 min)
+
 - Deploy to laratik-vps (`mavis-trader.sh`-style): `git pull && pnpm build && docker compose up -d --build`
 - Smoke test https://planner.laratik.com (root + /signin + /api/health via curl)
 - Update `docs/operations/runbook.md` and `docs/implementation/progress.md` with the
   round-2 results.
 
 ## Out of scope (deferred)
+
 - OAuth provider setup (Google, Mailcow SMTP) — user-owned, not engineering
 - /app/account page build (option a in A2) — punted to a follow-up if needed
 - React 19 `useActionState` migration — punt to a dedicated refactor turn
@@ -171,6 +188,7 @@ Gaps to close in Round 2B:
 - Sentry DSN wiring — env-gated, ready when user has the DSN
 
 ## Estimated total time
+
 - A1: 5 min
 - A2: 60 min
 - A3: 30 min
@@ -184,6 +202,7 @@ Gaps to close in Round 2B:
 - **Total: ~4 hours of focused engineering**
 
 ## Acceptance bar
+
 - `pnpm lint --max-warnings=0` passes
 - `pnpm typecheck` passes
 - `pnpm test` (unit + integration + e2e) passes — ~76 tests

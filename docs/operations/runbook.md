@@ -69,24 +69,52 @@
 
 ## Deploying a new version
 
+The container is built **on the VPS** (the GHCR pull pattern in the deploy
+script is a future option — the current image uses `pull_policy: never`
+and is built locally with the multi-stage Dockerfile). The deploy flow
+is therefore:
+
 From your **local** machine:
 
 ```bash
-# 1. Push to main (triggers CI build + push to GHCR)
+# 1. Push to main (triggers CI: lint + typecheck + unit + e2e + build)
 git push origin main
 
-# 2. Wait for the deploy workflow to finish (Actions tab)
-# 3. (Optional) Manual deploy if auto-deploy is paused
-./scripts/deploy.sh <sha-or-tag>
+# 2. SSH to the VPS, pull + rebuild + restart
+ssh laratik-vps
+sudo bash -c '
+  cd /opt/laratik-planner
+  git pull origin main
+  docker build -t laratik-planner:latest .
+  docker compose -f docker-compose.yml up -d app
+'
+# 3. Smoke test
+curl -sS https://planner.laratik.com/api/health
+# Expected: {"ok":true,"db":"up","env":"production",...}
 ```
 
-The deploy script:
+The local build can be slow (~3 min for the multi-stage Node 20-alpine
+build on a 2-vCPU VM); the smoke test should pass within 30s of the
+`up -d` finishing. If `pnpm` is missing on the VPS (fresh install),
+one-shot: `corepack enable && corepack prepare pnpm@10.10.0 --activate`.
 
-1. SSHes to `laratik-vps`.
-2. Runs `docker compose pull app` (pulls the new image).
-3. Runs `docker compose up -d --no-deps app` (rolling restart of the app only — Postgres is never touched).
-4. Runs `docker compose exec -T app pnpm db:migrate` (idempotent; safe on no-op).
-5. Hits `/api/health` and exits non-zero if the app is not healthy.
+### Deploy verification checklist (post-deploy)
+
+- [ ] `https://planner.laratik.com/` returns 200 with the new home-page `<title>`.
+- [ ] `https://planner.laratik.com/api/health` returns `{"ok":true,"db":"up","env":"production",...}`.
+- [ ] `https://planner.laratik.com/signin` returns 200 (renders the sign-in form).
+- [ ] `https://planner.laratik.com/app` redirects (307) to `/signin?callbackUrl=%2Fapp`.
+- [ ] `docker ps` shows `laratik-planner-app-1` as `(healthy)`.
+- [ ] No new errors in `docker logs laratik-planner-app-1 --tail 200`.
+
+### Rollback
+
+The image tag is fixed (`laratik-planner:latest`) and rebuilt on every
+deploy, so a rollback is: revert the commit in this repo, push, then
+re-run the deploy flow. The Postgres schema is forward-only — Drizzle
+migrations are append-only, so a rollback to an older commit is safe
+as long as the older commit's migration set has already been applied
+to the DB.
 
 ## Backup
 
