@@ -14,6 +14,7 @@
  * and lenient in development (only NEXT_PUBLIC_APP_URL is required).
  */
 import { z } from "zod";
+import { validateProviderConfiguration } from "./provider-configuration";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 /**
@@ -104,6 +105,8 @@ const serverSchema = z.object({
   // Sentry (Goal 13)
   SENTRY_DSN: stringOrEmpty,
   SENTRY_AUTH_TOKEN: stringOrEmpty,
+  SENTRY_ORG: stringOrEmpty,
+  SENTRY_PROJECT: stringOrEmpty,
 
   // Cron + bootstrap
   CRON_SECRET: stringOrEmpty,
@@ -121,6 +124,24 @@ if (!_serverParsed.success) {
 }
 
 export const serverEnv = _serverParsed.data;
+
+if (!skipValidation) {
+  const providerIssues = validateProviderConfiguration({
+    nodeEnv: serverEnv.NODE_ENV,
+    googleClientId: serverEnv.GOOGLE_CLIENT_ID,
+    googleClientSecret: serverEnv.GOOGLE_CLIENT_SECRET,
+    smtpHost: serverEnv.SMTP_HOST,
+    smtpUser: serverEnv.SMTP_USER,
+    smtpPassword: serverEnv.SMTP_PASSWORD,
+    smtpFrom: serverEnv.SMTP_FROM,
+    aiEnabled: serverEnv.AI_FEATURE_ENABLED,
+    minimaxApiKey: serverEnv.MINIMAX_API_KEY,
+  });
+  if (providerIssues.length > 0) {
+    console.error("[env] Invalid provider configuration:", providerIssues);
+    throw new Error("Invalid provider configuration");
+  }
+}
 
 // ─── Type exports ───────────────────────────────────────────────────────────
 export type ClientEnv = z.infer<typeof clientSchema>;

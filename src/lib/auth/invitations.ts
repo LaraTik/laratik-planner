@@ -6,6 +6,7 @@ import {
   agencyMemberships,
   invitationWorkspaceRoles,
   invitations,
+  securityAuditEvents,
   users,
   workspaceMemberships,
   workspaceMembershipRoles,
@@ -14,6 +15,10 @@ import {
 import { activeAgencyId } from "@/lib/auth/policy";
 import { sendEmail } from "@/lib/email";
 import { clientEnv, serverEnv } from "@/lib/validation/env";
+import { invitationIdentityMatches, normalizeEmailAddress } from "@/lib/auth/invitation-identity";
+import { assertCanDeactivateAgencyMember } from "@/lib/auth/member-safety";
+import type { InvitationCommand } from "@/lib/auth/invitation-command";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 /**
  * Invitation service — per master prompt §13:
@@ -26,14 +31,7 @@ import { clientEnv, serverEnv } from "@/lib/validation/env";
 const EXPIRY_DAYS = 7;
 const APP_URL = serverEnv.AUTH_URL || clientEnv.NEXT_PUBLIC_APP_URL;
 
-export type InviteInput = {
-  email: string;
-  inviteeName?: string;
-  /** Whether to grant agency_admin on accept. Only an active Agency Admin may set this. */
-  grantsAgencyAdmin?: boolean;
-  /** Workspace role grants (workspace_id + role). */
-  workspaceRoles: { workspaceId: string; role: string }[];
-};
+export type InviteInput = InvitationCommand;
 
 function generateToken(): { raw: string; hash: string } {
   const raw = randomBytes(32).toString("base64url");
@@ -50,50 +48,79 @@ export async function createInvitation(
 ): Promise<{ id: string; acceptUrl: string; expiresAt: Date }> {
   const agencyId = await activeAgencyId();
   if (!agencyId) throw new Error("Agency not configured");
-
-  // Invalidate any existing pending invitation for the same email
-  await db
-    .update(invitations)
-    .set({ status: "revoked", revokedAt: new Date(), updatedAt: new Date() })
-    .where(
-      and(
-        eq(invitations.agencyId, agencyId),
-        eq(invitations.email, input.email),
-        eq(invitations.status, "pending"),
-      ),
-    );
+  const normalizedEmail = normalizeEmailAddress(input.email);
 
   const { raw, hash } = generateToken();
   const expiresAt = new Date(Date.now() + EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const created = await db.transaction(async (tx) => {
+    const requestedWorkspaceIds = [
+      ...new Set(input.workspaceRoles.map((role) => role.workspaceId)),
+    ];
+    if (requestedWorkspaceIds.length > 0) {
+      const owned = await tx
+        .select({ id: workspaces.id })
+        .from(workspaces)
+        .where(
+          and(eq(workspaces.agencyId, agencyId), inArray(workspaces.id, requestedWorkspaceIds)),
+        );
+      if (owned.length !== requestedWorkspaceIds.length) {
+        throw new Error("Invalid workspace access selection");
+      }
+    }
 
-  const [created] = await db
-    .insert(invitations)
-    .values({
-      agencyId,
-      email: input.email,
-      ...(input.inviteeName ? { inviteeName: input.inviteeName } : {}),
-      tokenHash: hash,
-      expiresAt,
-      invitedBy: input.invitedBy,
-      grantsAgencyAdmin: input.grantsAgencyAdmin ?? false,
-    })
-    .returning({ id: invitations.id });
+    await tx
+      .update(invitations)
+      .set({ status: "revoked", revokedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(invitations.agencyId, agencyId),
+          eq(invitations.email, normalizedEmail),
+          eq(invitations.status, "pending"),
+        ),
+      );
 
-  if (input.workspaceRoles.length > 0) {
-    await db.insert(invitationWorkspaceRoles).values(
-      input.workspaceRoles.map((wr) => ({
-        invitationId: created!.id,
-        workspaceId: wr.workspaceId,
-        role: wr.role as never,
-      })),
-    );
-  }
+    const [row] = await tx
+      .insert(invitations)
+      .values({
+        agencyId,
+        email: normalizedEmail,
+        ...(input.inviteeName ? { inviteeName: input.inviteeName } : {}),
+        tokenHash: hash,
+        expiresAt,
+        invitedBy: input.invitedBy,
+        grantsAgencyAdmin: input.grantsAgencyAdmin,
+      })
+      .returning({ id: invitations.id });
+    if (!row) throw new Error("Invitation could not be created");
+
+    if (input.workspaceRoles.length > 0) {
+      await tx.insert(invitationWorkspaceRoles).values(
+        input.workspaceRoles.map((wr) => ({
+          invitationId: row.id,
+          workspaceId: wr.workspaceId,
+          role: wr.role,
+        })),
+      );
+    }
+    await tx.insert(securityAuditEvents).values({
+      actorId: input.invitedBy,
+      action: "invitation_create",
+      targetType: "invitation",
+      targetId: row.id,
+      outcome: "success",
+      metadata: {
+        workspaceGrantCount: input.workspaceRoles.length,
+        grantsAgencyAdmin: input.grantsAgencyAdmin,
+      },
+    });
+    return row;
+  });
 
   const acceptUrl = `${APP_URL}/accept-invitation?token=${raw}`;
 
   // Best-effort email send (drop if SMTP not configured in dev)
   const sent = await sendEmail({
-    to: input.email,
+    to: normalizedEmail,
     subject: `You're invited to laratik-planner`,
     text: `You've been invited to join the agency on laratik-planner.
 
@@ -120,10 +147,32 @@ export async function acceptInvitation(input: {
   rawToken: string;
   userId: string;
 }): Promise<{ status: "accepted" | "expired" | "invalid"; workspaceIds: string[] }> {
+  const limit = await enforceRateLimit({
+    scope: "invitation_accept",
+    subject: input.rawToken,
+    actorId: input.userId,
+  });
+  if (!limit.allowed) return { status: "invalid", workspaceIds: [] };
   const hash = createHash("sha256").update(input.rawToken).digest("hex");
 
   const [inv] = await db.select().from(invitations).where(eq(invitations.tokenHash, hash)).limit(1);
   if (!inv) return { status: "invalid", workspaceIds: [] };
+
+  const [acceptingUser] = await db
+    .select({ email: users.email, emailVerifiedAt: users.emailVerified })
+    .from(users)
+    .where(eq(users.id, input.userId))
+    .limit(1);
+  if (
+    !acceptingUser ||
+    !invitationIdentityMatches({
+      invitedEmail: inv.email,
+      signedInEmail: acceptingUser.email,
+      emailVerifiedAt: acceptingUser.emailVerifiedAt,
+    })
+  ) {
+    return { status: "invalid", workspaceIds: [] };
+  }
 
   if (inv.status === "revoked") return { status: "invalid", workspaceIds: [] };
   if (inv.status === "accepted") {
@@ -194,6 +243,14 @@ export async function acceptInvitation(input: {
         updatedAt: new Date(),
       })
       .where(eq(invitations.id, inv.id));
+    await tx.insert(securityAuditEvents).values({
+      actorId: input.userId,
+      action: "invitation_accept",
+      targetType: "invitation",
+      targetId: inv.id,
+      outcome: "success",
+      metadata: { workspaceGrantCount: grantRoles.length },
+    });
   });
 
   return {
@@ -272,29 +329,110 @@ export async function revokeInvitation(invitationId: string) {
  * Deactivate a user (set is_active=false on workspace_membership + agency_membership).
  * The user's auth account stays (so existing content attribution remains).
  */
-export async function deactivateUser(userId: string) {
-  await db
-    .update(agencyMemberships)
-    .set({ status: "deactivated", deactivatedAt: new Date(), updatedAt: new Date() })
-    .where(eq(agencyMemberships.userId, userId));
-  await db
-    .update(workspaceMemberships)
-    .set({ status: "deactivated", deactivatedAt: new Date() })
-    .where(eq(workspaceMemberships.userId, userId));
+export async function deactivateUser(input: {
+  actorUserId: string;
+  targetUserId: string;
+  agencyId: string;
+}) {
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(7342892)`);
+
+    const [target] = await tx
+      .select({ isAgencyAdmin: agencyMemberships.isAgencyAdmin })
+      .from(agencyMemberships)
+      .where(
+        and(
+          eq(agencyMemberships.agencyId, input.agencyId),
+          eq(agencyMemberships.userId, input.targetUserId),
+          eq(agencyMemberships.status, "active"),
+        ),
+      )
+      .limit(1);
+    if (!target) throw new Error("Active agency member not found");
+
+    const [adminCount] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(agencyMemberships)
+      .where(
+        and(
+          eq(agencyMemberships.agencyId, input.agencyId),
+          eq(agencyMemberships.status, "active"),
+          eq(agencyMemberships.isAgencyAdmin, true),
+        ),
+      );
+
+    assertCanDeactivateAgencyMember({
+      actorUserId: input.actorUserId,
+      targetUserId: input.targetUserId,
+      targetIsAgencyAdmin: target.isAgencyAdmin,
+      activeAgencyAdminCount: adminCount?.count ?? 0,
+    });
+
+    await tx
+      .update(agencyMemberships)
+      .set({ status: "deactivated", deactivatedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(agencyMemberships.agencyId, input.agencyId),
+          eq(agencyMemberships.userId, input.targetUserId),
+        ),
+      );
+    await tx
+      .update(workspaceMemberships)
+      .set({ status: "deactivated", deactivatedAt: new Date() })
+      .where(eq(workspaceMemberships.userId, input.targetUserId));
+    await tx.insert(securityAuditEvents).values({
+      actorId: input.actorUserId,
+      action: "member_deactivate",
+      targetType: "user",
+      targetId: input.targetUserId,
+      outcome: "success",
+    });
+  });
 }
 
 /**
  * Reactivate a user.
  */
-export async function reactivateUser(userId: string) {
+export async function reactivateUser(input: {
+  userId: string;
+  agencyId: string;
+  actorUserId: string;
+}) {
+  const workspaceRows = await db
+    .select({ id: workspaces.id })
+    .from(workspaces)
+    .where(eq(workspaces.agencyId, input.agencyId));
   await db
     .update(agencyMemberships)
     .set({ status: "active", deactivatedAt: null, updatedAt: new Date() })
-    .where(eq(agencyMemberships.userId, userId));
-  await db
-    .update(workspaceMemberships)
-    .set({ status: "active", deactivatedAt: null })
-    .where(eq(workspaceMemberships.userId, userId));
+    .where(
+      and(
+        eq(agencyMemberships.agencyId, input.agencyId),
+        eq(agencyMemberships.userId, input.userId),
+      ),
+    );
+  if (workspaceRows.length > 0) {
+    await db
+      .update(workspaceMemberships)
+      .set({ status: "active", deactivatedAt: null })
+      .where(
+        and(
+          eq(workspaceMemberships.userId, input.userId),
+          inArray(
+            workspaceMemberships.workspaceId,
+            workspaceRows.map((row) => row.id),
+          ),
+        ),
+      );
+  }
+  await db.insert(securityAuditEvents).values({
+    actorId: input.actorUserId,
+    action: "member_reactivate",
+    targetType: "user",
+    targetId: input.userId,
+    outcome: "success",
+  });
 }
 
 /**
@@ -318,7 +456,3 @@ export async function listAgencyMembers() {
     .innerJoin(users, eq(users.id, agencyMemberships.userId))
     .where(eq(agencyMemberships.agencyId, agencyId));
 }
-
-// avoid unused warning
-void inArray;
-void workspaces;
