@@ -94,14 +94,12 @@ test.describe("Workspace switcher keyboard (topbar)", () => {
 
     const trigger = page.locator('[data-testid^="workspace-switcher-trigger"]:visible');
     await trigger.focus();
-    // The button's onClick is what toggles the popover. Pressing Enter
-    // on a focused <button> should fire a click. If it doesn't, click.
     await page.keyboard.press("Enter");
     const listbox = page.getByRole("listbox", { name: "Workspaces" });
-    if (!(await listbox.isVisible().catch(() => false))) {
-      await trigger.click();
-    }
-    await expect(listbox).toBeVisible();
+    // Keyboard Enter on a focused <button> must open the listbox — assert it
+    // without falling back to a click. If this fails, the keyboard
+    // affordance is broken, not a test race.
+    await expect(listbox).toBeVisible({ timeout: 5_000 });
 
     // Active descendant should start on the first option
     const initialActive = await listbox.getAttribute("aria-activedescendant");
