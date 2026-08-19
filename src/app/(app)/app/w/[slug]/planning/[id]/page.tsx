@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
-import { db } from "@/lib/db";
-import { workspaces } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import { getContentItem } from "@/lib/content/service";
 import { listApprovalsForItem } from "@/lib/deliveries/service";
 import { listPublicationsForItem } from "@/lib/publishing/service";
@@ -16,6 +13,7 @@ import { DeliverySection } from "./delivery-section";
 import { PublishingSection } from "./publishing-section";
 import { DiscussionSection } from "./discussion-section";
 import { Button } from "@/components/ui/button";
+import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 
 export async function generateMetadata({
   params,
@@ -34,7 +32,7 @@ export default async function ContentDetailPage({
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
 
-  const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, slug)).limit(1);
+  const ws = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!ws) notFound();
 
   const item = await getContentItem({ id: session.user.id }, id);

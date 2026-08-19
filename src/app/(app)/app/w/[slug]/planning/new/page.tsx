@@ -1,12 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
-import { socialChannels, workspaces } from "@/lib/db/schema";
+import { socialChannels } from "@/lib/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
-import { isWorkspaceMember } from "@/lib/auth/policy";
+import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { QuickCreateForm } from "./quick-create-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   return { title: `Quick Create · ${(await params).slug}` };
@@ -17,14 +18,20 @@ export default async function QuickCreatePage({ params }: { params: Promise<{ sl
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
 
-  const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, slug)).limit(1);
+  const ws = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!ws) notFound();
-
-  if (!(await isWorkspaceMember({ id: session.user.id }, ws.id))) {
+  if (
+    !(await hasWorkspaceRole({ id: session.user.id }, ws.id, [
+      "workspace_manager",
+      "content_planner",
+    ]))
+  ) {
     return (
       <div className="space-y-4">
-        <h1 className="text-title-page text-fg-primary font-semibold">No access</h1>
-        <p className="text-body text-fg-secondary">You&apos;re not a member of this workspace.</p>
+        <h1 className="text-title-page font-semibold">Creation access required</h1>
+        <p className="text-body text-fg-secondary">
+          Only workspace managers and content planners can create ideas.
+        </p>
         <Button asChild variant="ghost">
           <Link href={`/app/w/${slug}/planning`}>← Back to Planning</Link>
         </Button>

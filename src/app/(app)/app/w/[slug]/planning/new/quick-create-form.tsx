@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
@@ -26,7 +27,7 @@ export function QuickCreateForm({
   channels: { id: string; accountName: string; platform: string }[];
 }) {
   const boundAction = quickCreateAction.bind(null, workspaceSlug);
-  const [state, formAction] = useFormState(boundAction, initial);
+  const [state, formAction] = useActionState(boundAction, initial);
 
   // Default the planned date to tomorrow 9am
   const tomorrow = new Date();

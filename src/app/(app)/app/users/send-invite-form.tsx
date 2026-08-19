@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
@@ -19,7 +20,7 @@ function SubmitButton() {
 }
 
 export function SendInviteForm({ workspaces }: { workspaces: { id: string; name: string }[] }) {
-  const [state, formAction] = useFormState(sendInviteAction, initialState);
+  const [state, formAction] = useActionState(sendInviteAction, initialState);
   const [selectedRoles, setSelectedRoles] = React.useState<Record<string, string>>({});
 
   const workspaceRolesJson = React.useMemo(

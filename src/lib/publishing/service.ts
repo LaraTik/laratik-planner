@@ -1,10 +1,16 @@
 import "server-only";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { contentItemChannels, contentItems, publicationRecords } from "@/lib/db/schema";
+import {
+  activityEvents,
+  contentItemChannels,
+  contentItems,
+  publicationRecords,
+} from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { derivePublicationAggregate } from "@/lib/publishing/aggregate";
 
 /**
  * Publishing service (Goal 10 — master prompt §8 + §10).
@@ -54,11 +60,16 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
   if (!chan) throw new Error("Channel link not found");
 
   const [item] = await db
-    .select({ workspaceId: contentItems.workspaceId })
+    .select({ workspaceId: contentItems.workspaceId, status: contentItems.status })
     .from(contentItems)
     .where(eq(contentItems.id, chan.contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
+  if (
+    !(["ready_to_publish", "partially_published", "published"] as string[]).includes(item.status)
+  ) {
+    throw new Error(`Cannot record publication while content is ${item.status}`);
+  }
 
   await requirePolicy(
     hasWorkspaceRole(actor, item.workspaceId, ["publisher", "workspace_manager"]),
@@ -66,6 +77,21 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
   );
 
   await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM content_item WHERE id = ${chan.contentItemId} FOR UPDATE`);
+    const [lockedItem] = await tx
+      .select({ status: contentItems.status })
+      .from(contentItems)
+      .where(eq(contentItems.id, chan.contentItemId))
+      .limit(1);
+    if (
+      !lockedItem ||
+      !(["ready_to_publish", "partially_published", "published"] as string[]).includes(
+        lockedItem.status,
+      )
+    ) {
+      throw new Error("Content is no longer ready for publication updates");
+    }
+
     // Upsert publication record for this channel
     const existing = await tx
       .select({ id: publicationRecords.id })
@@ -107,28 +133,26 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
       .from(contentItemChannels)
       .where(eq(contentItemChannels.contentItemId, chan.contentItemId));
 
-    const recordedCount = all.length;
-    const closedCount = all.filter(
-      (r) => r.status === "published" || r.status === "skipped",
-    ).length;
+    const newStatus = derivePublicationAggregate(
+      allChannelCount.length,
+      all.map((record) => record.status),
+    );
 
-    let newStatus: string | null = null;
-    if (recordedCount === 0) {
-      newStatus = null; // no recordings yet
-    } else if (closedCount === 0) {
-      newStatus = null; // still all pending/failed
-    } else if (closedCount === allChannelCount.length && recordedCount === allChannelCount.length) {
-      newStatus = "published";
-    } else if (closedCount > 0 && closedCount < allChannelCount.length) {
-      newStatus = "partially_published";
-    }
+    await tx
+      .update(contentItems)
+      .set({ status: newStatus, updatedAt: new Date() })
+      .where(eq(contentItems.id, chan.contentItemId));
 
-    if (newStatus) {
-      await tx
-        .update(contentItems)
-        .set({ status: newStatus as never, updatedAt: new Date() })
-        .where(eq(contentItems.id, chan.contentItemId));
-    }
+    await tx.insert(activityEvents).values({
+      workspaceId: item.workspaceId,
+      contentItemId: chan.contentItemId,
+      actorId: actor.id,
+      kind: "publication",
+      summary: `Publication marked ${input.status}`,
+      beforeData: { status: lockedItem.status },
+      afterData: { status: newStatus, channelStatus: input.status },
+      metadata: { contentItemChannelId: input.contentItemChannelId },
+    });
 
     revalidatePath(`/app/w/`);
   });

@@ -2,16 +2,33 @@ import "server-only";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
+  activityEvents,
+  approvalDecisions,
+  approvalRequests,
   contentAssignments,
   contentItemChannels,
   contentItems,
   socialChannels,
   workspaceMembershipRoles,
   workspaceMemberships,
+  workspaceSettings,
 } from "@/lib/db/schema";
-import { hasWorkspaceRole, isWorkspaceMember, requirePolicy, type Actor } from "@/lib/auth/policy";
+import {
+  canAccessInternalWorkspace,
+  hasWorkspaceRole,
+  INTERNAL_WORKSPACE_ROLES,
+  requirePolicy,
+  type Actor,
+} from "@/lib/auth/policy";
+import {
+  WORKFLOW_RULES,
+  resolveWorkflowTransition,
+  type WorkflowAction,
+  type WorkspaceRole,
+} from "@/lib/content/workflow";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { BatchCreateSchema, type BatchCreateInput } from "@/lib/content/batch";
 
 /**
  * Content service — the heart of the app.
@@ -55,6 +72,12 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
     "create_content",
   );
 
+  const [settings] = await db
+    .select()
+    .from(workspaceSettings)
+    .where(eq(workspaceSettings.workspaceId, input.workspaceId))
+    .limit(1);
+
   // Auto-select active channels if not provided
   let channelIds = input.channelIds;
   if (!channelIds || channelIds.length === 0) {
@@ -84,7 +107,18 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
         createdBy: actor.id,
         ...(input.campaignId ? { campaignId: input.campaignId } : {}),
         ...(input.contentPillarId ? { contentPillarId: input.contentPillarId } : {}),
-        ...(input.designerId ? { designerId: input.designerId } : {}),
+        ...(input.designerId || settings?.defaultDesignerId
+          ? { designerId: input.designerId ?? settings?.defaultDesignerId }
+          : {}),
+        ...(settings?.defaultContentReviewerId
+          ? { contentReviewerId: settings.defaultContentReviewerId }
+          : {}),
+        ...(settings?.defaultInternalCreativeReviewerId
+          ? { internalCreativeReviewerId: settings.defaultInternalCreativeReviewerId }
+          : {}),
+        ...(settings?.defaultClientReviewerId
+          ? { clientReviewerId: settings.defaultClientReviewerId }
+          : {}),
       })
       .returning({ id: contentItems.id, slug: contentItems.title });
 
@@ -110,6 +144,83 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
   });
 }
 
+/** Create an entire pasted batch atomically; one invalid row rolls back all rows. */
+export async function batchCreateContentItems(actor: Actor, input: BatchCreateInput) {
+  const parsed = BatchCreateSchema.parse(input);
+  await requirePolicy(
+    hasWorkspaceRole(actor, parsed.workspaceId, ["workspace_manager", "content_planner"]),
+    "batch_create_content",
+  );
+  const [channels, settingsRows] = await Promise.all([
+    db
+      .select({ id: socialChannels.id })
+      .from(socialChannels)
+      .where(
+        and(
+          eq(socialChannels.workspaceId, parsed.workspaceId),
+          eq(socialChannels.isActive, true),
+          isNull(socialChannels.archivedAt),
+        ),
+      ),
+    db
+      .select()
+      .from(workspaceSettings)
+      .where(eq(workspaceSettings.workspaceId, parsed.workspaceId))
+      .limit(1),
+  ]);
+  const settings = settingsRows[0];
+  return db.transaction(async (tx) => {
+    const ids: string[] = [];
+    for (const item of parsed.items) {
+      const [created] = await tx
+        .insert(contentItems)
+        .values({
+          workspaceId: parsed.workspaceId,
+          title: item.title,
+          format: item.format,
+          brief: item.brief,
+          plannedPublishAt: item.plannedPublishAt,
+          contentOwnerId: actor.id,
+          createdBy: actor.id,
+          ...(settings?.defaultDesignerId ? { designerId: settings.defaultDesignerId } : {}),
+          ...(settings?.defaultContentReviewerId
+            ? { contentReviewerId: settings.defaultContentReviewerId }
+            : {}),
+          ...(settings?.defaultInternalCreativeReviewerId
+            ? { internalCreativeReviewerId: settings.defaultInternalCreativeReviewerId }
+            : {}),
+          ...(settings?.defaultClientReviewerId
+            ? { clientReviewerId: settings.defaultClientReviewerId }
+            : {}),
+        })
+        .returning({ id: contentItems.id });
+      if (!created) throw new Error("Batch row could not be created");
+      ids.push(created.id);
+      if (channels.length)
+        await tx
+          .insert(contentItemChannels)
+          .values(
+            channels.map((channel) => ({ contentItemId: created.id, socialChannelId: channel.id })),
+          );
+      await tx.insert(contentAssignments).values({
+        contentItemId: created.id,
+        assignmentType: "owner",
+        userId: actor.id,
+        active: true,
+      });
+      if (settings?.defaultDesignerId)
+        await tx.insert(contentAssignments).values({
+          contentItemId: created.id,
+          assignmentType: "designer",
+          userId: settings.defaultDesignerId,
+          assignedBy: actor.id,
+          active: true,
+        });
+    }
+    return ids;
+  });
+}
+
 // ─── Read helpers ────────────────────────────────────────────────────────
 export async function getContentItem(actor: Actor, contentItemId: string) {
   const [row] = await db
@@ -119,10 +230,9 @@ export async function getContentItem(actor: Actor, contentItemId: string) {
     .limit(1);
   if (!row) return null;
 
-  // Authorization: any active workspace member can view (includes
-  // viewers). Agency admins are short-circuited inside hasWorkspaceRole.
-  // Use isWorkspaceMember for "any role" instead of listing all 7 roles.
-  await requirePolicy(isWorkspaceMember(actor, row.workspaceId), "view_content");
+  // Internal detail includes private strategy, assignments and review data.
+  // Client reviewers use dedicated, allow-listed queries in the client portal.
+  await requirePolicy(canAccessInternalWorkspace(actor, row.workspaceId), "view_content");
 
   const [channels, assignments] = await Promise.all([
     db
@@ -161,15 +271,7 @@ export async function listWorkspaceContent(
   } = {},
 ) {
   await requirePolicy(
-    hasWorkspaceRole(actor, workspaceId, [
-      "workspace_manager",
-      "content_planner",
-      "designer",
-      "internal_reviewer",
-      "client_reviewer",
-      "publisher",
-      "viewer",
-    ]),
+    hasWorkspaceRole(actor, workspaceId, [...INTERNAL_WORKSPACE_ROLES]),
     "list_content",
   );
 
@@ -187,81 +289,7 @@ export async function listWorkspaceContent(
 }
 
 // ─── Workflow transitions (master prompt §10) ──────────────────────────
-const TRANSITION_GUARD: Record<string, { roles: string[]; from: string[]; to: string }> = {
-  submit_content_review: {
-    roles: ["workspace_manager", "content_planner"],
-    from: ["draft"],
-    to: "content_review",
-  },
-  approve_content: {
-    roles: ["internal_reviewer", "workspace_manager"],
-    from: ["content_review"],
-    to: "approved_for_design",
-  },
-  request_content_changes: {
-    roles: ["internal_reviewer"],
-    from: ["content_review"],
-    to: "changes_requested",
-  },
-  resubmit_content: {
-    roles: ["workspace_manager", "content_planner"],
-    from: ["changes_requested"],
-    to: "content_review",
-  },
-  assign_designer: { roles: ["workspace_manager"], from: ["approved_for_design"], to: "in_design" },
-  submit_delivery: {
-    roles: ["designer", "workspace_manager"],
-    from: ["in_design"],
-    to: "creative_review",
-  },
-  approve_internal_creative: {
-    roles: ["internal_reviewer"],
-    from: ["creative_review"],
-    to: "ready_to_publish",
-  },
-  request_creative_changes: {
-    roles: ["internal_reviewer", "client_reviewer"],
-    from: ["creative_review"],
-    to: "changes_requested",
-  },
-  approve_client_creative: {
-    roles: ["client_reviewer"],
-    from: ["creative_review"],
-    to: "ready_to_publish",
-  },
-  record_published: {
-    roles: ["publisher", "workspace_manager"],
-    from: ["ready_to_publish", "partially_published"],
-    to: "published",
-  },
-  cancel: {
-    roles: ["workspace_manager"],
-    from: [
-      "draft",
-      "content_review",
-      "approved_for_design",
-      "in_design",
-      "creative_review",
-      "ready_to_publish",
-    ],
-    to: "cancelled",
-  },
-  block: {
-    roles: ["workspace_manager"],
-    from: [
-      "draft",
-      "content_review",
-      "approved_for_design",
-      "in_design",
-      "creative_review",
-      "ready_to_publish",
-    ],
-    to: "blocked",
-  },
-  unblock: { roles: ["workspace_manager"], from: ["blocked"], to: "draft" },
-};
-
-export type WorkflowAction = keyof typeof TRANSITION_GUARD;
+export type { WorkflowAction } from "@/lib/content/workflow";
 
 export async function transitionContent(
   actor: Actor,
@@ -280,53 +308,96 @@ export async function transitionContent(
     .limit(1);
   if (!item) throw new Error("Content item not found");
 
-  const guard = TRANSITION_GUARD[input.action];
-  if (!guard) throw new Error(`Unknown action: ${input.action}`);
+  const allowedRoles =
+    input.action === "unblock"
+      ? (["workspace_manager"] as const)
+      : WORKFLOW_RULES[input.action].roles;
+  const actorRoles = (
+    await Promise.all(
+      allowedRoles.map(async (role) =>
+        (await hasWorkspaceRole(actor, item.workspaceId, [role])) ? role : null,
+      ),
+    )
+  ).filter((role): role is WorkspaceRole => role !== null);
 
-  if (!guard.from.includes(item.status)) {
-    throw new Error(`Cannot ${input.action} from status ${item.status}`);
-  }
+  const transition = resolveWorkflowTransition({
+    action: input.action,
+    currentStatus: item.status,
+    actorRoles,
+    ...(input.reason ? { reason: input.reason } : {}),
+    statusReturnTarget: item.statusReturnTarget,
+  });
 
-  await requirePolicy(hasWorkspaceRole(actor, item.workspaceId, guard.roles), input.action);
-
-  // Required reason for cancel / block
-  if ((input.action === "cancel" || input.action === "block") && !input.reason) {
-    throw new Error(`${input.action} requires a reason`);
-  }
-  // Required reason for changes_requested
-  if (input.action === "request_content_changes" && !input.reason) {
-    throw new Error("request_content_changes requires a reason (feedback)");
-  }
-  if (input.action === "request_creative_changes" && !input.reason) {
-    throw new Error("request_creative_changes requires a reason (feedback)");
+  if (input.action === "assign_designer" && !item.designerId) {
+    throw new Error("Assign a designer before moving the item into design");
   }
 
   return await db.transaction(async (tx) => {
     const update: Record<string, unknown> = {
-      status: guard.to,
+      status: transition.to,
       updatedAt: new Date(),
+      changeRequestGate: transition.changeRequestGate ?? null,
+      statusReturnTarget: transition.statusReturnTarget ?? null,
     };
-    if (input.action === "cancel") update.cancellationReason = input.reason;
-    if (input.action === "block") {
-      update.blockedReason = input.reason;
-      update.statusReturnTarget = item.status as never;
+    if (transition.cancellationReason !== undefined) {
+      update.cancellationReason = transition.cancellationReason;
     }
-    if (input.action === "unblock") {
-      update.blockedReason = null;
-      update.statusReturnTarget = null;
-    }
-    if (input.action === "request_content_changes" || input.action === "request_creative_changes") {
-      update.changeRequestGate = "content";
-      update.statusReturnTarget = item.status as never;
-    }
-    if (input.action === "resubmit_content") {
-      update.changeRequestGate = null;
-    }
+    if (transition.blockedReason !== undefined) update.blockedReason = transition.blockedReason;
 
     await tx.update(contentItems).set(update).where(eq(contentItems.id, input.contentItemId));
 
+    if (input.action === "submit_content_review" || input.action === "resubmit_content") {
+      await tx.insert(approvalRequests).values({
+        contentItemId: input.contentItemId,
+        gate: "content",
+        requestedBy: actor.id,
+        sequence: 1,
+      });
+    }
+
+    if (input.action === "approve_content" || input.action === "request_content_changes") {
+      const [pendingRequest] = await tx
+        .select({ id: approvalRequests.id })
+        .from(approvalRequests)
+        .where(
+          and(
+            eq(approvalRequests.contentItemId, input.contentItemId),
+            eq(approvalRequests.gate, "content"),
+            eq(approvalRequests.status, "pending"),
+          ),
+        )
+        .limit(1);
+      if (!pendingRequest) throw new Error("Pending content approval request not found");
+      const decision = input.action === "approve_content" ? "approved" : "changes_requested";
+      await tx.insert(approvalDecisions).values({
+        approvalRequestId: pendingRequest.id,
+        reviewerId: actor.id,
+        decision,
+        ...(input.reason ? { feedback: input.reason } : {}),
+      });
+      await tx
+        .update(approvalRequests)
+        .set({
+          status: decision,
+          invalidatedAt: decision === "changes_requested" ? new Date() : null,
+          updatedAt: new Date(),
+        })
+        .where(eq(approvalRequests.id, pendingRequest.id));
+    }
+
+    await tx.insert(activityEvents).values({
+      workspaceId: item.workspaceId,
+      contentItemId: item.id,
+      actorId: actor.id,
+      kind: "status_transition",
+      summary: `${item.status} → ${transition.to}`,
+      beforeData: { status: item.status },
+      afterData: { status: transition.to },
+      metadata: { action: input.action },
+    });
+
     revalidatePath(`/app/w/`);
-    return { from: item.status, to: guard.to };
+    return { from: item.status, to: transition.to };
   });
 }
 

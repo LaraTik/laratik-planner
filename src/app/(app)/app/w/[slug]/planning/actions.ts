@@ -12,7 +12,9 @@ import {
   transitionContent,
   claimAsDesigner,
   type WorkflowAction,
+  batchCreateContentItems,
 } from "@/lib/content/service";
+import { BatchCreateSchema, parseBatchRows } from "@/lib/content/batch";
 import {
   SubmitDeliverySchema,
   submitDelivery,
@@ -59,6 +61,19 @@ export async function quickCreateAction(workspaceSlug: string, _prev: unknown, f
   const id = await quickCreateContentItem(actor, parsed.data);
   revalidatePath(`/app/w/${workspaceSlug}/planning`);
   redirect(`/app/w/${workspaceSlug}/planning/${id}`);
+}
+
+export async function batchCreateAction(workspaceSlug: string, _prev: unknown, formData: FormData) {
+  const { actor, workspace } = await requireWorkspaceContext(workspaceSlug);
+  const parsed = BatchCreateSchema.safeParse({
+    workspaceId: workspace.id,
+    items: parseBatchRows(String(formData.get("rows") ?? "")),
+  });
+  if (!parsed.success)
+    return { error: "Use 1–50 rows: Title | format | ISO date/time | optional brief." };
+  await batchCreateContentItems(actor, parsed.data);
+  revalidatePath(`/app/w/${workspaceSlug}/planning`);
+  redirect(`/app/w/${workspaceSlug}/planning`);
 }
 
 export async function transitionAction(input: {

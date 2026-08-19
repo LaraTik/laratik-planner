@@ -10,14 +10,8 @@ import {
   resendInvitation,
   revokeInvitation,
 } from "@/lib/auth/invitations";
-import { z } from "zod";
-
-const InviteSchema = z.object({
-  email: z.string().email(),
-  inviteeName: z.string().optional(),
-  grantsAgencyAdmin: z.union([z.literal("on"), z.literal("off")]).optional(),
-  workspaceRoles: z.string().optional(), // JSON: [{ workspaceId, role }]
-});
+import { invitationCommandSchema } from "@/lib/auth/invitation-command";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export async function sendInviteAction(_prev: unknown, formData: FormData) {
   const session = await auth();
@@ -28,30 +22,33 @@ export async function sendInviteAction(_prev: unknown, formData: FormData) {
     throw new PermissionDeniedError("send_invite");
   }
 
-  const parsed = InviteSchema.safeParse({
+  let workspaceRoles: unknown = [];
+  try {
+    const raw = formData.get("workspaceRoles");
+    workspaceRoles = typeof raw === "string" && raw ? JSON.parse(raw) : [];
+  } catch {
+    return { error: "Invalid workspace access selection" };
+  }
+  const parsed = invitationCommandSchema.safeParse({
     email: formData.get("email"),
-    inviteeName: formData.get("inviteeName") ?? undefined,
-    grantsAgencyAdmin: formData.get("grantsAgencyAdmin") ? "on" : "off",
-    workspaceRoles: formData.get("workspaceRoles") ?? undefined,
+    inviteeName: formData.get("inviteeName") || undefined,
+    grantsAgencyAdmin: formData.get("grantsAgencyAdmin") === "on",
+    workspaceRoles,
   });
-  if (!parsed.success) {
-    return { error: parsed.error.issues.map((i) => i.message).join("; ") };
-  }
+  if (!parsed.success) return { error: "Check the email address and workspace roles." };
 
-  let workspaceRoles: { workspaceId: string; role: string }[] = [];
-  if (parsed.data.workspaceRoles) {
-    try {
-      workspaceRoles = JSON.parse(parsed.data.workspaceRoles);
-    } catch {
-      return { error: "Invalid workspaceRoles JSON" };
-    }
-  }
+  const rateLimit = await enforceRateLimit({
+    scope: "invitation_create",
+    subject: session.user.id,
+    actorId: session.user.id,
+  });
+  if (!rateLimit.allowed) return { error: "Too many invitations. Please try again later." };
 
   const result = await createInvitation({
     email: parsed.data.email,
     ...(parsed.data.inviteeName ? { inviteeName: parsed.data.inviteeName } : {}),
-    grantsAgencyAdmin: parsed.data.grantsAgencyAdmin === "on",
-    workspaceRoles,
+    grantsAgencyAdmin: parsed.data.grantsAgencyAdmin,
+    workspaceRoles: parsed.data.workspaceRoles,
     invitedBy: session.user.id,
   });
 
@@ -73,6 +70,12 @@ export async function resendInviteAction(invitationId: string) {
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
     throw new PermissionDeniedError("resend_invite");
   }
+  const rateLimit = await enforceRateLimit({
+    scope: "invitation_resend",
+    subject: session.user.id,
+    actorId: session.user.id,
+  });
+  if (!rateLimit.allowed) return { error: "Too many resend attempts. Please try again later." };
   await resendInvitation(invitationId, session.user.id);
   revalidatePath("/app/users");
   return { success: true };
@@ -100,9 +103,19 @@ export async function toggleDeactivationAction(userId: string, currentlyActive: 
     throw new PermissionDeniedError("toggle_user_status");
   }
   if (currentlyActive) {
-    await deactivateUser(userId);
+    try {
+      await deactivateUser({ actorUserId: session.user.id, targetUserId: userId, agencyId });
+    } catch (error) {
+      const message =
+        error instanceof Error &&
+        (error.message === "You cannot deactivate your own account" ||
+          error.message === "The final active agency administrator cannot be deactivated")
+          ? error.message
+          : "The member could not be deactivated.";
+      return { error: message };
+    }
   } else {
-    await reactivateUser(userId);
+    await reactivateUser({ userId, agencyId, actorUserId: session.user.id });
   }
   revalidatePath("/app/users");
   return { success: true };

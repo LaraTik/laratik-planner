@@ -3,9 +3,14 @@ import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { activeAgencyId, hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
-import { contentItems, workspaces } from "@/lib/db/schema";
+import { aiUsageEvents, contentItems, workspaces } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { draftCaption, isAiEnabled } from "@/lib/ai";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { publicProviderError } from "@/lib/security/public-error";
+import { randomUUID } from "node:crypto";
+import { serverEnv } from "@/lib/validation/env";
+import { logError } from "@/lib/observability/logger";
 
 /**
  * POST /api/ai/generate
@@ -38,6 +43,20 @@ export async function POST(req: NextRequest) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
+  const requestId = req.headers.get("x-request-id") ?? undefined;
+  const limit = await enforceRateLimit({
+    scope: "ai_generation",
+    subject: session.user.id,
+    actorId: session.user.id,
+    ...(requestId ? { requestId } : {}),
+  });
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many AI requests. Please try again shortly." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+    );
+  }
+
   const [item] = await db
     .select()
     .from(contentItems)
@@ -63,6 +82,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const usageRequestId = requestId ?? randomUUID();
     const caption = await draftCaption({
       title: item.title,
       brief: item.brief,
@@ -72,8 +92,25 @@ export async function POST(req: NextRequest) {
     if (!caption) {
       return NextResponse.json({ error: "AI returned no result" }, { status: 502 });
     }
+    await db.insert(aiUsageEvents).values({
+      agencyId,
+      workspaceId: ws.id,
+      contentItemId: item.id,
+      userId: session.user.id,
+      capability: "caption_draft",
+      model: serverEnv.MINIMAX_MODEL,
+      requestId: usageRequestId,
+      succeeded: true,
+      contextManifest: { categories: ["title", "brief", "format", "workspace_name"] },
+    });
     return NextResponse.json({ caption });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 502 });
+    logError("ai.provider_failed", {
+      cause: e,
+      requestId,
+      userId: session.user.id,
+      workspaceId: ws.id,
+    });
+    return NextResponse.json({ error: publicProviderError("ai", e).message }, { status: 502 });
   }
 }

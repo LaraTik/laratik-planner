@@ -1,12 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach } from "vitest";
-import { config as loadEnv } from "dotenv";
-import { resolve } from "node:path";
-loadEnv({ path: resolve(process.cwd(), ".env") });
+if (!process.env.TEST_DATABASE_URL) {
+  throw new Error("TEST_DATABASE_URL is required for integration tests");
+}
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
 
-// Skip the entire suite if no test database is configured.
-const HAS_DB = !!process.env.DATABASE_URL;
-
-(HAS_DB ? describe : describe.skip)("discussions service", () => {
+describe("discussions service", () => {
   let createComment: typeof import("@/lib/discussions/service").createComment;
   let listCommentsForItem: typeof import("@/lib/discussions/service").listCommentsForItem;
   let resolveComment: typeof import("@/lib/discussions/service").resolveComment;
@@ -27,29 +25,39 @@ const HAS_DB = !!process.env.DATABASE_URL;
     const { db } = await import("@/lib/db");
     const { users, workspaces, workspaceMemberships, workspaceMembershipRoles } =
       await import("@/lib/db/schema");
-    const { sql, eq } = await import("drizzle-orm");
+    const { sql } = await import("drizzle-orm");
 
-    // Use the singleton agency from dev/seed
-    const agencyRows = await db
-      .select({ id: workspaces.agencyId })
-      .from(workspaces)
-      .where(sql`true`)
-      .limit(1);
-    if (!agencyRows[0]) throw new Error("No agency found — run /api/dev/seed first");
-
-    // Use the seeded "acme" workspace
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, "acme")).limit(1);
-    if (!ws) throw new Error("No 'acme' workspace found — run /api/dev/seed first");
-    workspaceId = ws.id;
-
-    // Use the seeded test@laratik.local user
+    const { agencies, agencyMemberships } = await import("@/lib/db/schema");
+    await db.execute(sql`TRUNCATE agency, "user" CASCADE`);
     const [actorRow] = await db
-      .select()
-      .from(users)
-      .where(sql`lower(${users.email}) = 'test@laratik.local'`)
-      .limit(1);
-    if (!actorRow) throw new Error("No test user found — run /api/dev/seed first");
+      .insert(users)
+      .values({
+        email: "test@laratik.local",
+        name: "Test User",
+        displayName: "Test User",
+        role: "agency_admin",
+        emailVerified: new Date(),
+      })
+      .returning();
+    if (!actorRow) throw new Error("Failed to create integration-test actor");
     actor = { id: actorRow.id };
+    const [agency] = await db
+      .insert(agencies)
+      .values({ name: "Test Agency", slug: "test-agency" })
+      .returning();
+    if (!agency) throw new Error("Failed to create integration-test agency");
+    await db.insert(agencyMemberships).values({
+      agencyId: agency.id,
+      userId: actor.id,
+      status: "active",
+      isAgencyAdmin: true,
+    });
+    const [ws] = await db
+      .insert(workspaces)
+      .values({ agencyId: agency.id, slug: "acme", name: "Acme", createdBy: actor.id })
+      .returning();
+    if (!ws) throw new Error("Failed to create integration-test workspace");
+    workspaceId = ws.id;
 
     // Create a second user + add them to the workspace so we can test @mentions
     const secondEmail = `e2e-mention-${Date.now()}@laratik.local`;
