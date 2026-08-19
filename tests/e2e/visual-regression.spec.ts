@@ -86,10 +86,7 @@ test.describe("visual regression (canonical routes)", () => {
       // this spec can compare against them. Run:
       //   npx playwright test --update-snapshots visual-regression.spec.ts
       // once after seed/UX changes, then re-enable.
-      test.skip(
-        true,
-        "visual baselines need to be captured first — run with --update-snapshots",
-      );
+      test.skip(true, "visual baselines need to be captured first — run with --update-snapshots");
 
       await page.setViewportSize(VIEWPORT);
       await bootstrapTestSession(page);
