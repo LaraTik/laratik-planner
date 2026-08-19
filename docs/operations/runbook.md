@@ -69,34 +69,30 @@
 
 ## Deploying a new version
 
-The container is built **on the VPS** (the GHCR pull pattern in the deploy
-script is a future option — the current image uses `pull_policy: never`
-and is built locally with the multi-stage Dockerfile). The deploy flow
-is therefore:
+Deployment is fully automated by the M3a pipeline. CI builds the
+`laratik-planner` (app) and `laratik-planner-migrator` (migrator)
+images, tags each by the exact commit SHA, and pushes them to GHCR. A
+separate `deploy` workflow triggers on `workflow_run` CI success, checks
+out the same `head_sha`, and SSHes to the VPS to run `scripts/deploy.sh`,
+which performs `backup → migrate → recreate app → health check →
+rollback on failure` without any manual Docker commands.
 
 From your **local** machine:
 
 ```bash
-# 1. Push to main (triggers CI: lint + typecheck + unit + e2e + build)
 git push origin main
-
-# 2. SSH to the VPS, pull + rebuild + restart
-ssh laratik-vps
-sudo bash -c '
-  cd /opt/laratik-planner
-  git pull origin main
-  docker build -t laratik-planner:latest .
-  docker compose -f docker-compose.yml up -d app
-'
-# 3. Smoke test
-curl -sS https://planner.laratik.com/api/health
-# Expected: {"ok":true,"db":"up","env":"production",...}
+# CI: quality + e2e (test:e2e:isolated) on the head_sha.
+# On green: deploy workflow SSHes to the VPS and runs scripts/deploy.sh.
+# On red health check: the deploy script rolls back to the previous image automatically.
 ```
 
-The local build can be slow (~3 min for the multi-stage Node 20-alpine
-build on a 2-vCPU VM); the smoke test should pass within 30s of the
-`up -d` finishing. If `pnpm` is missing on the VPS (fresh install),
-one-shot: `corepack enable && corepack prepare pnpm@10.10.0 --activate`.
+```bash
+# Manual deploy — only when CI is unavailable:
+ssh laratik-vps 'cd /opt/laratik-planner && sudo ./scripts/deploy.sh'
+```
+
+If `pnpm` is missing on the VPS (fresh install), one-shot:
+`corepack enable && corepack prepare pnpm@10.10.0 --activate`.
 
 ### Deploy verification checklist (post-deploy)
 
@@ -109,12 +105,19 @@ one-shot: `corepack enable && corepack prepare pnpm@10.10.0 --activate`.
 
 ### Rollback
 
-The image tag is fixed (`laratik-planner:latest`) and rebuilt on every
-deploy, so a rollback is: revert the commit in this repo, push, then
-re-run the deploy flow. The Postgres schema is forward-only — Drizzle
-migrations are append-only, so a rollback to an older commit is safe
-as long as the older commit's migration set has already been applied
-to the DB.
+`scripts/deploy.sh` captures the previous application image before
+recreating the app. If the post-migration health check fails, the
+script automatically recreates the app from the captured previous
+image — no manual operator action is required for a health-check
+rollback. The migrator runs in a separate container and aborts the
+deploy on any non-zero exit; it never suppresses migration errors.
+
+For a manual rollback of a bad release that passed health but is
+otherwise broken, push a revert (or the last known-good commit) to
+`main` and let the automated pipeline re-apply the previous image.
+The Postgres schema is forward-only — Drizzle migrations are
+append-only, so reverting application code is safe as long as the
+revert's migration set has already been applied to the DB.
 
 ## Backup
 
@@ -190,20 +193,24 @@ ssh laratik-vps 'cd /opt/laratik-planner && docker image prune -f'
 
 ## End-to-end tests
 
-40 Playwright tests live in `tests/e2e/` and run against a real Next.js dev server + Postgres. They cover every URL the master prompt defines (public landing, sign-in, sign-in/verify, the entire `/app/*` auth-gate, the workspace shell, the content-flow state machine) and the WCAG 2.2 AA accessibility contract via axe-core.
+The Playwright suite in `tests/e2e/` runs against a real Next.js dev server + Postgres. The most recent CI run on the `head_sha` reports **144 pass / 10 skip**; current numbers and per-spec evidence are kept in [`../production-readiness/TEST_EVIDENCE.md`](../production-readiness/TEST_EVIDENCE.md). CI invokes `pnpm test:e2e:isolated` on Chromium, Firefox, WebKit, and mobile Chrome. Mobile Safari and per-viewport visual baselines remain under UI-010 (Partial) in the production tracker.
 
-### What's covered
+### Spec files
 
-| Spec                             | Tests | What it covers                                                                                 |
-| -------------------------------- | ----- | ---------------------------------------------------------------------------------------------- |
-| `tests/e2e/public.spec.ts`       | 11    | `/`, `/signin`, `/signin/verify`, `/api/health`, `/api/bootstrap/status`, `/api/dev/*`         |
-| `tests/e2e/auth-gate.spec.ts`    | 14    | 10 protected `/app/*` → 307 `/signin?callbackUrl=`, signed-in bypass, public-while-authed      |
-| `tests/e2e/workspace.spec.ts`    | 5     | Seeded workspace nav, create-workspace form, invalid-slug rejection, non-member experience     |
-| `tests/e2e/content-flow.spec.ts` | 4     | Quick Create, planning list, draft → content_review → approved_for_design, channel auto-select |
-| `tests/e2e/a11y.spec.ts`         | 4     | axe-core WCAG 2.2 AA on `/`, `/signin`, `/signin/verify`, `/app` redirect                      |
-| `tests/e2e/health.spec.ts`       | 2     | `/api/health` JSON shape, secret-leak guard                                                    |
-
-Total: **40 tests, all green in ~5s on a warm server**.
+| Spec file                              | What it covers                                                                                                          |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `tests/e2e/public.spec.ts`             | `/`, `/signin`, `/signin/verify`, `/api/health`, `/api/bootstrap/status`                                                |
+| `tests/e2e/auth-gate.spec.ts`          | Auth-gate behaviour across `/app/*` and the public-while-authed redirect                                                |
+| `tests/e2e/workspace.spec.ts`          | Workspace shell, create-workspace form, slug validation, non-member experience                                          |
+| `tests/e2e/content-flow.spec.ts`       | Quick Create, planning list, draft → content_review → approved_for_design, channel auto-select                          |
+| `tests/e2e/a11y.spec.ts`               | axe-core WCAG 2.2 AA on `/`, `/signin`, `/signin/verify`, `/app` redirect                                               |
+| `tests/e2e/health.spec.ts`             | `/api/health` JSON shape, secret-leak guard                                                                             |
+| `tests/e2e/a11y-routes.spec.ts`        | Per-authenticated-route axe scan (M3b)                                                                                  |
+| `tests/e2e/boundaries.spec.ts`         | Client-review data-shape denial — internal fields never enter client results (M3b)                                      |
+| `tests/e2e/discussions.spec.ts`        | Discussion mention/attachment/realtime happy paths (M3b)                                                                |
+| `tests/e2e/error-states.spec.ts`       | Operational states (loading / empty / error / denied / archived) (M3b)                                                  |
+| `tests/e2e/mobile.spec.ts`             | Mobile responsive baseline (M3b)                                                                                        |
+| `tests/e2e/role-authorization.spec.ts` | Role-by-route matrix for admin, manager, planner, designer, internal reviewer, client reviewer, publisher, viewer (M3b) |
 
 ### Run locally
 
@@ -224,9 +231,12 @@ pnpm test:e2e:public
 pnpm test:e2e:auth
 pnpm test:e2e:workspace
 pnpm test:e2e:content
-pnpm test:a11y  # WCAG 2.2 AA only
+pnpm test:a11y           # WCAG 2.2 AA
+pnpm test:e2e:isolated   # the exact CI command
+```
 
-# 5. Against a non-default base URL (e.g. the prod container on 3100)
+```bash
+# Against a non-default base URL (e.g. the prod container on 3100)
 PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e:smoke
 ```
 
@@ -241,25 +251,16 @@ PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e:smoke
 3. They do not bypass authorization in production — they simply do not exist.
 4. They never accept or return secrets; the seed uses the same Drizzle inserts the real bootstrap path uses.
 
-### Running on CI (VPS smoke)
+### Running on CI
 
-A 30-second smoke against the live container (no real auth needed because the dev endpoints aren't required for the public/auth-gate specs):
+CI runs the full isolated suite on every push and PR to `main`:
 
-```bash
-ssh laratik-vps 'cd /opt/laratik-planner && \
-  PLAYWRIGHT_BASE_URL=http://localhost:3100 \
-  pnpm test:e2e:smoke'
+```yaml
+# .github/workflows/ci.yml
+- run: pnpm test:e2e:isolated
 ```
 
-### Why this matters
-
-The E2E suite caught three production bugs that the type checker, linter, and unit tests missed:
-
-1. **`user_email_format` CHECK constraint rejected real emails.** Drizzle's SQL emitter serialises `\s` as just `s` in raw `sql` template literals. The regex became `^[^@s]+@[^@s]+...$` and rejected `test@laratik.local`. Fixed in `src/lib/db/schema/identity.ts:47` by switching to the portable `[[:space:]]` POSIX class.
-2. **`createWorkspaceAction` silently dropped writes.** The `redirect()` call was inside a `db.transaction()` — the throw from `redirect()` rolled back the entire transaction, so the form returned 200 with a redirect to a non-existent workspace. Fixed in `src/app/(app)/app/workspaces/new/page.tsx:65` by hoisting `redirect()` outside the transaction.
-3. **`--fg-muted` failed WCAG AA contrast (3.51:1 on canvas).** Darkened to `#5b6270` (5.71:1) in `src/app/globals.css:25`.
-
-All three were caught the first time the test was run, not in production.
+`test:e2e:isolated` provisions its own ephemeral Postgres via Docker, applies migrations, boots `pnpm dev`, and runs the entire Playwright matrix. The deploy workflow only fires after this job is green; it does not re-run e2e against the VPS.
 
 ## Troubleshooting
 
