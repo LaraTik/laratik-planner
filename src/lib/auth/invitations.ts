@@ -155,46 +155,55 @@ export async function acceptInvitation(input: {
   if (!limit.allowed) return { status: "invalid", workspaceIds: [] };
   const hash = createHash("sha256").update(input.rawToken).digest("hex");
 
-  const [inv] = await db.select().from(invitations).where(eq(invitations.tokenHash, hash)).limit(1);
-  if (!inv) return { status: "invalid", workspaceIds: [] };
+  return await db.transaction(async (tx) => {
+    // Lock the invitation row for the duration of the transaction so two parallel
+    // acceptInvitation calls (same token, same user) serialize. The second caller
+    // re-reads the row, sees status === "accepted", and returns idempotently
+    // without inserting a second workspace_membership, role, or audit event.
+    const [inv] = await tx
+      .select()
+      .from(invitations)
+      .where(eq(invitations.tokenHash, hash))
+      .for("update")
+      .limit(1);
+    if (!inv) return { status: "invalid", workspaceIds: [] };
 
-  const [acceptingUser] = await db
-    .select({ email: users.email, emailVerifiedAt: users.emailVerified })
-    .from(users)
-    .where(eq(users.id, input.userId))
-    .limit(1);
-  if (
-    !acceptingUser ||
-    !invitationIdentityMatches({
-      invitedEmail: inv.email,
-      signedInEmail: acceptingUser.email,
-      emailVerifiedAt: acceptingUser.emailVerifiedAt,
-    })
-  ) {
-    return { status: "invalid", workspaceIds: [] };
-  }
+    const [acceptingUser] = await tx
+      .select({ email: users.email, emailVerifiedAt: users.emailVerified })
+      .from(users)
+      .where(eq(users.id, input.userId))
+      .limit(1);
+    if (
+      !acceptingUser ||
+      !invitationIdentityMatches({
+        invitedEmail: inv.email,
+        signedInEmail: acceptingUser.email,
+        emailVerifiedAt: acceptingUser.emailVerifiedAt,
+      })
+    ) {
+      return { status: "invalid", workspaceIds: [] };
+    }
 
-  if (inv.status === "revoked") return { status: "invalid", workspaceIds: [] };
-  if (inv.status === "accepted") {
-    // Idempotent return — list the workspaces the user is now a member of
-    const wsIds = await workspaceIdsForInvitation(inv.id);
-    return { status: "accepted", workspaceIds: wsIds };
-  }
-  if (inv.expiresAt.getTime() < Date.now()) {
-    await db
-      .update(invitations)
-      .set({ status: "expired", updatedAt: new Date() })
-      .where(eq(invitations.id, inv.id));
-    return { status: "expired", workspaceIds: [] };
-  }
+    if (inv.status === "revoked") return { status: "invalid", workspaceIds: [] };
+    if (inv.status === "accepted") {
+      // Idempotent return — list the workspaces the user is now a member of
+      const wsIds = await workspaceIdsForInvitationInTx(tx, inv.id);
+      return { status: "accepted", workspaceIds: wsIds };
+    }
+    if (inv.expiresAt.getTime() < Date.now()) {
+      await tx
+        .update(invitations)
+        .set({ status: "expired", updatedAt: new Date() })
+        .where(eq(invitations.id, inv.id));
+      return { status: "expired", workspaceIds: [] };
+    }
 
-  // Apply the grant
-  const grantRoles = await db
-    .select()
-    .from(invitationWorkspaceRoles)
-    .where(eq(invitationWorkspaceRoles.invitationId, inv.id));
+    // Apply the grant
+    const grantRoles = await tx
+      .select()
+      .from(invitationWorkspaceRoles)
+      .where(eq(invitationWorkspaceRoles.invitationId, inv.id));
 
-  await db.transaction(async (tx) => {
     // Ensure the user has an agency_membership
     await tx
       .insert(agencyMemberships)
@@ -251,16 +260,27 @@ export async function acceptInvitation(input: {
       outcome: "success",
       metadata: { workspaceGrantCount: grantRoles.length },
     });
-  });
 
-  return {
-    status: "accepted",
-    workspaceIds: grantRoles.map((g) => g.workspaceId),
-  };
+    return {
+      status: "accepted",
+      workspaceIds: grantRoles.map((g) => g.workspaceId),
+    };
+  });
 }
 
 async function workspaceIdsForInvitation(invitationId: string): Promise<string[]> {
   const rows = await db
+    .select({ workspaceId: invitationWorkspaceRoles.workspaceId })
+    .from(invitationWorkspaceRoles)
+    .where(eq(invitationWorkspaceRoles.invitationId, invitationId));
+  return rows.map((r) => r.workspaceId);
+}
+
+async function workspaceIdsForInvitationInTx(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  invitationId: string,
+): Promise<string[]> {
+  const rows = await tx
     .select({ workspaceId: invitationWorkspaceRoles.workspaceId })
     .from(invitationWorkspaceRoles)
     .where(eq(invitationWorkspaceRoles.invitationId, invitationId));
