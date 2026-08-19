@@ -32,9 +32,11 @@ type NotificationRow = {
 export function NotificationsBell({
   initial,
   initialUnread,
+  badgeTestId,
 }: {
   initial: NotificationRow[];
   initialUnread: number;
+  badgeTestId?: string;
 }) {
   const [open, setOpen] = React.useState(false);
   const [items, setItems] = React.useState<NotificationRow[]>(initial);
@@ -143,7 +145,7 @@ export function NotificationsBell({
         {unread > 0 ? (
           <span
             aria-hidden="true"
-            data-testid="unread-badge"
+            data-testid={badgeTestId}
             className="bg-danger text-label text-on-danger absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-bold text-white"
           >
             {unread > 9 ? "9+" : unread}

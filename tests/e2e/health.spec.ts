@@ -28,9 +28,9 @@ test.describe("GET /api/health", () => {
     }
   });
 
-  test("home page renders the Goal 0 landing", async ({ page }) => {
+  test("home page renders the production entry point", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "laratik-planner" })).toBeVisible();
-    await expect(page.getByText("Goal 0 · Production foundation")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
   });
 });

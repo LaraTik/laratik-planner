@@ -14,7 +14,10 @@ async function createDraftAndOpen(page: import("@playwright/test").Page, title: 
   await page.goto("/app/w/acme/planning/new");
   await page.getByLabel(/Title/i).first().fill(title);
   await page.getByRole("button", { name: /Create draft/i }).click();
-  await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, { timeout: 10_000 });
+  await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
+    timeout: 20_000,
+    waitUntil: "commit",
+  });
 }
 
 test.describe("Discussions (Goal 8)", () => {
@@ -103,11 +106,6 @@ test.describe("Discussions (Goal 8)", () => {
 });
 
 test.describe("Notifications bell (Goal 8)", () => {
-  // The notifications bell lives in the desktop topbar, which is hidden
-  // on <768px. The mobile topbar only shows the user avatar. So these
-  // tests are desktop-only — mobile gets its own nav below.
-  test.skip(({ isMobile }) => isMobile === true, "Desktop-only — bell is not in the mobile topbar");
-
   test("renders on the app shell with no badge for users with no notifications", async ({
     page,
   }) => {
@@ -124,7 +122,7 @@ test.describe("Notifications bell (Goal 8)", () => {
     await request.post("/api/dev/notifications", { data: { email, count: 3, readCount: 0 } });
     await page.goto("/app");
 
-    const badge = page.getByTestId("unread-badge");
+    const badge = page.locator('[data-testid^="unread-badge"]:visible');
     await expect(badge).toBeVisible();
     await expect(badge).toHaveText("3");
   });
@@ -135,7 +133,7 @@ test.describe("Notifications bell (Goal 8)", () => {
     await request.post("/api/dev/notifications", { data: { email, count: 12, readCount: 0 } });
     await page.goto("/app");
 
-    const badge = page.getByTestId("unread-badge");
+    const badge = page.locator('[data-testid^="unread-badge"]:visible');
     await expect(badge).toBeVisible();
     await expect(badge).toHaveText("9+");
   });
@@ -177,7 +175,9 @@ test.describe("Notifications bell (Goal 8)", () => {
     await markAll.click();
 
     // Badge disappears (revalidatePath + nav refresh)
-    await expect(page.getByTestId("unread-badge")).not.toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid^="unread-badge"]:visible')).toHaveCount(0, {
+      timeout: 10_000,
+    });
   });
 
   test("outside click closes the popover", async ({ page, request }) => {

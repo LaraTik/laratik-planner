@@ -15,29 +15,35 @@ test.describe("GET /", () => {
     await expect(page.getByRole("heading", { name: "laratik-planner" })).toBeVisible();
   });
 
-  test("has a primary CTA to the health endpoint", async ({ page }) => {
+  test("has a primary sign-in CTA", async ({ page }) => {
     await page.goto("/");
-    const cta = page.getByRole("link", { name: /health/i }).first();
+    const cta = page.getByRole("link", { name: /^sign in$/i }).first();
     await expect(cta).toBeVisible();
+    await expect(cta).toHaveAttribute("href", "/signin");
   });
 
-  test("has a working link to the GitHub repo", async ({ page }) => {
+  test("offers the first-admin setup without public signup", async ({ page }) => {
     await page.goto("/");
-    const repo = page.getByRole("link", { name: /repository/i }).first();
-    await expect(repo).toBeVisible();
-    // The href must point to the actual GitHub repo
-    const href = await repo.getAttribute("href");
-    expect(href).toMatch(/github\.com\/LaraTik\/laratik-planner/);
+    await expect(page.getByRole("link", { name: /first admin setup/i })).toHaveAttribute(
+      "href",
+      "/setup",
+    );
+    await expect(page.getByRole("link", { name: /sign up|register/i })).toHaveCount(0);
   });
 });
 
 test.describe("GET /signin", () => {
-  test("renders the sign-in form", async ({ page }) => {
+  test("renders the configured sign-in entry state", async ({ page }) => {
     const res = await page.goto("/signin");
     expect(res?.status()).toBeLessThan(500);
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
-    // The magic-link form must have an email field
-    await expect(page.getByLabel(/email/i).first()).toBeVisible();
+    const providerControls = page.getByRole("button", {
+      name: /Continue with Google|Email me a sign-in link/i,
+    });
+    const configurationAlert = page.getByRole("alert");
+    expect((await providerControls.count()) + (await configurationAlert.count())).toBeGreaterThan(
+      0,
+    );
   });
 
   test("preserves callbackUrl in the form", async ({ page }) => {

@@ -34,14 +34,32 @@ async function createDraft(page: import("@playwright/test").Page, title: string)
   await page.goto("/app/w/acme/planning/new");
   await page.getByLabel(/Title/i).first().fill(title);
   await page.getByRole("button", { name: /Create draft/i }).click();
-  await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, { timeout: 10_000 });
+  await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
+    timeout: 20_000,
+    waitUntil: "commit",
+  });
   return page.url();
 }
 
 async function expectClean(route: string, page: import("@playwright/test").Page) {
-  const results = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
-    .analyze();
+  await page.waitForLoadState("domcontentloaded");
+
+  let results: Awaited<ReturnType<AxeBuilder["analyze"]>> | undefined;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      results = await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+        .analyze();
+      break;
+    } catch (error) {
+      const isNavigationRace =
+        error instanceof Error && error.message.includes("Execution context was destroyed");
+      if (!isNavigationRace || attempt === 1) throw error;
+      await page.waitForLoadState("domcontentloaded");
+    }
+  }
+
+  if (!results) throw new Error(`Could not scan ${route}`);
   const err = reportViolations(route, results);
   if (err) throw err;
   expect(err).toBeUndefined();

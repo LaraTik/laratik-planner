@@ -1,6 +1,9 @@
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { MobileNav } from "./mobile-nav";
+import { WorkspaceSwitcherServer } from "./workspace-switcher.server";
+import { NotificationsBell } from "./notifications-bell";
+import { RouteScrollReset } from "./route-scroll-reset";
 
 /**
  * App shell — sidebar (left, persistent on desktop) + topbar (right
@@ -42,11 +45,12 @@ export function AppShell({
 }) {
   return (
     <div className="bg-canvas flex min-h-screen flex-col">
+      <RouteScrollReset />
       {/* Skip-to-content link for keyboard / screen-reader users. Hidden
           until focused, then snaps to the top. */}
       <a
         href="#main-content"
-        className="bg-primary text-label text-on-primary focus-visible:ring-focus-ring absolute top-2 left-2 z-50 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold opacity-0 focus:opacity-100 focus:outline-none focus-visible:ring-2"
+        className="bg-primary text-label text-on-primary focus-visible:ring-focus-ring pointer-events-none absolute top-2 left-2 z-50 inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3 py-1.5 font-semibold opacity-0 focus:pointer-events-auto focus:opacity-100 focus:outline-none focus-visible:ring-2"
       >
         Skip to main content
       </a>
@@ -63,17 +67,20 @@ export function AppShell({
 
       {/* Mobile topbar (md:hidden) */}
       <header className="bg-surface border-border sticky top-0 z-20 flex h-14 items-center justify-between border-b px-4 md:hidden">
-        <h2 className="text-title-card text-fg-primary font-semibold">
-          <a href="/app" className="focus:outline-none">
-            laratik-planner
-          </a>
-        </h2>
-        <span
-          className="border-border bg-surface text-fg-primary text-label flex h-9 w-9 items-center justify-center rounded-full border font-semibold"
-          aria-label={`Signed in as ${user.name}`}
-        >
-          {user.name.charAt(0).toUpperCase()}
-        </span>
+        <WorkspaceSwitcherServer testId="workspace-switcher-trigger-mobile" />
+        <div className="flex items-center gap-1">
+          <NotificationsBell
+            initial={notifications}
+            initialUnread={unreadCount}
+            badgeTestId="unread-badge-mobile"
+          />
+          <span
+            className="border-border bg-surface text-fg-primary text-label flex h-9 w-9 items-center justify-center rounded-full border font-semibold"
+            aria-label={`Signed in as ${user.name}`}
+          >
+            {user.name.charAt(0).toUpperCase()}
+          </span>
+        </div>
       </header>
 
       {/* Main content area */}

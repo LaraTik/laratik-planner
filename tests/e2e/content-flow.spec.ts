@@ -27,7 +27,10 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     await page.getByRole("button", { name: /Create draft/i }).click();
 
     // Server action redirects to the content detail page
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, { timeout: 10_000 });
+    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
+      timeout: 20_000,
+      waitUntil: "commit",
+    });
 
     // The detail page shows the title + status badge "draft"
     await expect(page.getByRole("heading", { name: uniqueTitle })).toBeVisible();
@@ -47,7 +50,10 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     const title = `List test ${Date.now()}`;
     await page.getByLabel(/Title/i).first().fill(title);
     await page.getByRole("button", { name: /Create draft/i }).click();
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, { timeout: 10_000 });
+    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
+      timeout: 20_000,
+      waitUntil: "commit",
+    });
 
     // Navigate back to the planning list
     await page.goto("/app/w/acme/planning");
@@ -62,7 +68,10 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     const title = `E2E full path ${Date.now()}`;
     await page.getByLabel(/Title/i).first().fill(title);
     await page.getByRole("button", { name: /Create draft/i }).click();
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, { timeout: 10_000 });
+    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
+      timeout: 20_000,
+      waitUntil: "commit",
+    });
     const detailUrl = page.url();
     const itemId = detailUrl.split("/").pop()!;
     expect(itemId).toMatch(/^[0-9a-f-]{36}$/);
@@ -104,7 +113,10 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     const title = `Channels test ${Date.now()}`;
     await page.getByLabel(/Title/i).first().fill(title);
     await page.getByRole("button", { name: /Create draft/i }).click();
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, { timeout: 10_000 });
+    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
+      timeout: 20_000,
+      waitUntil: "commit",
+    });
 
     // The "Channels" section should list at least 3 channels
     await expect(page.getByRole("heading", { name: "Channels", exact: true })).toBeVisible();

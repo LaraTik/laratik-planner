@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CalendarDays, CheckCircle2, MessagesSquare, Workflow } from "lucide-react";
 
 export const metadata = {
   title: "laratik-planner",
@@ -7,51 +8,71 @@ export const metadata = {
 };
 
 /**
- * Goal 0 placeholder landing page.
- * Replaced by the real `(marketing)` route group in Goal 3 (app shell).
- *
- * Goal 0 only needs a visible "the app is up" surface so we can curl the
- * health endpoint + visit the page in the browser smoke test.
+ * Public product entry point. Account creation remains intentionally disabled;
+ * invited users sign in passwordlessly and the first admin uses /setup.
  */
 export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-6 px-6 py-16">
-      <div className="flex flex-col items-center gap-3 text-center">
-        <p className="border-border bg-surface text-label text-fg-muted rounded-full border px-3 py-1">
-          Goal 0 · Production foundation
+    <main className="mx-auto flex min-h-screen max-w-5xl flex-col justify-center gap-10 px-6 py-16">
+      <div className="flex flex-col items-center gap-4 text-center">
+        <p className="border-primary/20 bg-primary-subtle text-label text-primary rounded-full border px-3 py-1">
+          Social content operations, in one place
         </p>
         <h1 className="text-title-page text-fg-primary font-semibold tracking-tight">
           laratik-planner
         </h1>
         <p className="text-body text-fg-secondary max-w-prose">
-          Social media planning, design, and approvals for one agency. Ported from the StudioFlow
-          master prompt to a self-hosted Next.js + Drizzle + Postgres stack on the LaraTik VPS.
+          Plan every brand, coordinate design and review, and publish with a clear audit trail. One
+          workspace keeps each brand focused and easy to manage.
         </p>
       </div>
 
-      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="flex justify-center gap-3">
         <Link
-          href="/api/health"
-          className="border-border bg-surface text-body text-fg-primary hover:bg-surface-subtle rounded-[var(--radius-control)] border px-4 py-3 font-semibold transition"
+          href="/signin"
+          className="bg-primary hover:bg-primary-hover text-body rounded-[var(--radius-control)] px-5 py-3 font-semibold text-white"
         >
-          Health endpoint →
+          Sign in
         </Link>
-        <a
-          href="https://github.com/LaraTik/laratik-planner"
-          className="border-border bg-surface text-body text-fg-primary hover:bg-surface-subtle rounded-[var(--radius-control)] border px-4 py-3 font-semibold transition"
+        <Link
+          href="/setup"
+          className="border-border bg-surface text-body text-fg-primary hover:bg-surface-subtle rounded-[var(--radius-control)] border px-5 py-3 font-semibold"
         >
-          Repository →
-        </a>
+          First admin setup
+        </Link>
       </div>
-
-      <p className="text-label text-fg-muted">
-        Next steps: see <code className="bg-surface-subtle rounded px-1.5 py-0.5">AGENTS.md</code>{" "}
-        and{" "}
-        <code className="bg-surface-subtle rounded px-1.5 py-0.5">
-          docs/implementation/progress.md
-        </code>
-        .
-      </p>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Feature
+          icon={<CalendarDays className="h-5 w-5" />}
+          title="Monthly planning"
+          text="Lists, boards, and calendars stay aligned."
+        />
+        <Feature
+          icon={<Workflow className="h-5 w-5" />}
+          title="Clear workflow"
+          text="Every idea always has a next action."
+        />
+        <Feature
+          icon={<MessagesSquare className="h-5 w-5" />}
+          title="Review together"
+          text="Internal and client feedback stays separated."
+        />
+        <Feature
+          icon={<CheckCircle2 className="h-5 w-5" />}
+          title="Publish confidently"
+          text="Track every selected channel to completion."
+        />
+      </div>
     </main>
+  );
+}
+
+function Feature({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+  return (
+    <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
+      <div className="text-primary">{icon}</div>
+      <h2 className="text-title-card mt-3 font-semibold">{title}</h2>
+      <p className="text-body text-fg-secondary mt-1">{text}</p>
+    </section>
   );
 }
