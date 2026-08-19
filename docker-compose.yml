@@ -25,14 +25,18 @@ services:
       - traefik.enable=true
       - traefik.docker.network=traefik-public
       - traefik.http.routers.laratik-planner.rule=Host(`planner.laratik.com`)
-      - traefik.http.routers.laratik-planner.entrypoints=websecure
+      # Traefik v3 names: entrypoint is `https` (not `websecure`), cert
+      # resolver is `le` (not `letsencrypt`). Matching the v2 names silently
+      # dropped the router so https://planner.laratik.com returned 404 even
+      # with valid DNS + a working container.
+      - traefik.http.routers.laratik-planner.entrypoints=https
       - traefik.http.routers.laratik-planner.tls=true
-      - traefik.http.routers.laratik-planner.tls.certresolver=letsencrypt
+      - traefik.http.routers.laratik-planner.tls.certresolver=le
       - traefik.http.services.laratik-planner.loadbalancer.server.port=3000
-      - traefik.http.middlewares.laratik-plancer-secure.headers.stsSeconds=31536000
-      - traefik.http.middlewares.laratik-plancer-secure.headers.stsIncludeSubdomains=true
-      - traefik.http.middlewares.laratik-plancer-secure.headers.stsPreload=true
-      - traefik.http.routers.laratik-planner.middlewares=laratik-plancer-secure@docker
+      - traefik.http.middlewares.laratik-planner-secure.headers.stsSeconds=31536000
+      - traefik.http.middlewares.laratik-planner-secure.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.laratik-planner-secure.headers.stsPreload=true
+      - traefik.http.routers.laratik-planner.middlewares=laratik-planner-secure@docker
       - autoheal=true
       - autoheal.timeout=30
       - autoheal.restart=true
