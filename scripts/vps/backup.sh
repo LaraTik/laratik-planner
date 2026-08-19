@@ -15,10 +15,17 @@ cd /opt/laratik-planner
 docker compose exec -T postgres pg_dump -U "${POSTGRES_USER:-planner}" -d "${POSTGRES_DB:-planner}" \
   | gzip > "$FILE"
 
+gzip -t "$FILE"
+if [ ! -s "$FILE" ]; then
+  echo "Backup is empty" >&2
+  exit 1
+fi
+sha256sum "$FILE" > "${FILE}.sha256"
+
 echo "[$(date -Iseconds)] $(du -h "$FILE" | cut -f1) written"
 
 # Prune old local backups
-find "$BACKUP_DIR" -type f -mtime "+${KEEP_DAYS}" -name "*.sql.gz" -delete
+find "$BACKUP_DIR" -type f -mtime "+${KEEP_DAYS}" \( -name "*.sql.gz" -o -name "*.sql.gz.sha256" \) -delete
 
 # Optional: restic offsite (uncomment + configure when repo is set up)
 # if command -v restic >/dev/null 2>&1 && [ -f /root/.config/restic/env ]; then

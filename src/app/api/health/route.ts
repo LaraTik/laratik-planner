@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { serverEnv } from "@/lib/validation/env";
 import { db } from "@/lib/db";
+import { sql } from "drizzle-orm";
 
 /**
  * GET /api/health
@@ -31,16 +32,31 @@ async function checkDatabase(): Promise<"up" | "down" | "disabled"> {
   }
 }
 
+async function checkSchema(): Promise<"ready" | "missing" | "disabled"> {
+  if (!serverEnv.DATABASE_URL) return "disabled";
+  try {
+    const result = await db.execute(
+      sql`SELECT to_regclass('drizzle.__drizzle_migrations')::text AS migration_table`,
+    );
+    const rows = (result as unknown as { rows?: Array<{ migration_table: string | null }> }).rows;
+    return rows?.[0]?.migration_table ? "ready" : "missing";
+  } catch {
+    return "missing";
+  }
+}
+
 export async function GET() {
   const dbStatus = await checkDatabase();
-  const ok = dbStatus === "up" || dbStatus === "disabled";
+  const schemaStatus = await checkSchema();
+  const ok = dbStatus === "up" && schemaStatus === "ready";
 
   return NextResponse.json(
     {
       ok,
-      version: process.env.npm_package_version ?? "0.0.0",
+      version: process.env.APP_VERSION ?? process.env.npm_package_version ?? "unknown",
       env: serverEnv.NODE_ENV,
       db: dbStatus,
+      schema: schemaStatus,
       uptime: Math.floor((Date.now() - startedAt) / 1000),
       timestamp: new Date().toISOString(),
     },

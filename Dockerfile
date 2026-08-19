@@ -25,6 +25,13 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm db:generate && pnpm build
 
+# ─── Migration runner ───────────────────────────────────────────────────────
+# Kept separate from the runtime image so production migrations have the
+# schema, migration journal, CLI runtime and exact lockfile dependencies.
+FROM builder AS migrator
+ENV NODE_ENV=production
+CMD ["pnpm", "db:migrate"]
+
 # ─── Stage 3: runner ────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -32,6 +39,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
