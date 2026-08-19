@@ -21,14 +21,12 @@ export default defineConfig({
         "src/app/**/page.tsx",
         "src/app/**/layout.tsx",
       ],
-      // Per-glob thresholds per PRODUCTION_READINESS_TRACKER.md QA-003:
-      //   - critical domains (auth, security, content, deliveries,
-      //     publishing, observability) → 95% statements / 90% branches
-      //   - other application services (channels, dashboard,
-      //     workspaces, ai) → 85% statements / 80% branches
-      //   - everything else under src/ → 60% statements / 50% branches
-      //     (UI primitives + DB schema — exercised through integration
-      //     tests, not the unit suite)
+      // Per-glob thresholds per PRODUCTION_READINESS_TRACKER.md QA-003.
+      // The unit suite alone does not exercise the DB-touching service
+      // files in content/deliveries/publishing/workspaces/ai/email, so
+      // those rows are expected to fail until integration-test coverage
+      // is folded in (tracked as Partial). The cron watchdog will
+      // surface the gap and the user's follow-up will close it.
       thresholds: {
         "src/lib/auth/**/*.ts": { statements: 95, branches: 90, functions: 95, lines: 95 },
         "src/lib/security/**/*.ts": { statements: 95, branches: 90, functions: 95, lines: 95 },
