@@ -18,8 +18,8 @@ An item may be marked `Tested` only when its evidence column contains the exact 
 | Browser tests                        | 144 pass, 10 skip                                                                               | `pnpm test:e2e`                              |
 | Vitest                               | 10 pass, 8 database tests skip                                                                  | `pnpm test:coverage`                         |
 | Coverage                             | 26.88% statements; core content/delivery/publishing/invitation/AI services effectively untested | `pnpm test:coverage`                         |
-| Dependency audit                     | 23 advisories: 3 critical, 5 high, 12 moderate, 3 low → **post-M3: 0 advisories**                 | `pnpm audit --prod` (2026-08-19 → post-M3)  |
-| Production health                    | HTTP 200, DB up, version incorrectly reports `0.0.0` → **post-M3a: real release SHA**            | `https://planner.laratik.com/api/health`     |
+| Dependency audit                     | 23 advisories: 3 critical, 5 high, 12 moderate, 3 low → **post-M3: 0 advisories**               | `pnpm audit --prod` (2026-08-19 → post-M3)   |
+| Production health                    | HTTP 200, DB up, version incorrectly reports `0.0.0` → **post-M3a: real release SHA**           | `https://planner.laratik.com/api/health`     |
 | Screen completeness                  | Numerous canonical routes absent; placeholder and Goal copy remain                              | `docs/production-readiness/SCREEN_PARITY.md` |
 
 ## P0 release blockers
