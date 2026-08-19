@@ -268,14 +268,6 @@ export async function acceptInvitation(input: {
   });
 }
 
-async function workspaceIdsForInvitation(invitationId: string): Promise<string[]> {
-  const rows = await db
-    .select({ workspaceId: invitationWorkspaceRoles.workspaceId })
-    .from(invitationWorkspaceRoles)
-    .where(eq(invitationWorkspaceRoles.invitationId, invitationId));
-  return rows.map((r) => r.workspaceId);
-}
-
 async function workspaceIdsForInvitationInTx(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   invitationId: string,

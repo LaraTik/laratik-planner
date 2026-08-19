@@ -176,11 +176,6 @@ function runShell(
   });
 }
 
-function shellStdout(r: SpawnSyncReturns<Buffer>): string {
-  const b = r.stdout;
-  return typeof b === "string" ? b : (b?.toString("utf8") ?? "");
-}
-
 function shellStderr(r: SpawnSyncReturns<Buffer>): string {
   const b = r.stderr;
   return typeof b === "string" ? b : (b?.toString("utf8") ?? "");
