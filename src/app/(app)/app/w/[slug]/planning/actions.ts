@@ -164,9 +164,9 @@ export async function recordPublicationAction(input: {
 // ─── Discussion actions (Goal 8) ────────────────────────────────────────
 export async function createCommentAction(
   workspaceSlug: string,
-  _prev: unknown,
+  _prev: { error?: string } | null,
   formData: FormData,
-) {
+): Promise<{ error?: string } | null> {
   const { actor, workspace } = await requireWorkspaceContext(workspaceSlug);
   const parsed = CreateCommentSchema.safeParse({
     contentItemId: formData.get("contentItemId"),
@@ -176,11 +176,14 @@ export async function createCommentAction(
     label: formData.get("label") ?? "general",
   });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
+    return {
+      error: parsed.error.issues.map((i) => i.message).join("; "),
+    };
   }
   await createComment(actor, parsed.data);
   revalidatePath(`/app/w/${workspaceSlug}/planning/${formData.get("contentItemId")}`);
   void workspace;
+  return null;
 }
 
 export async function resolveCommentAction(input: {

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
-import { contentAssignments, contentItems, workspaces } from "@/lib/db/schema";
-import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { contentItems, workspaces } from "@/lib/db/schema";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { statusBadgeVariant, humanStatus } from "@/lib/content/status";
 import { Calendar, FileText, Plus } from "lucide-react";
 
 /**
@@ -46,10 +48,6 @@ export default async function MyWorkPage() {
     .orderBy(desc(contentItems.plannedPublishAt))
     .limit(50);
 
-  // Quiet unused import
-  void contentAssignments;
-  void sql;
-
   if (myItems.length === 0) {
     return (
       <div className="space-y-6">
@@ -64,13 +62,12 @@ export default async function MyWorkPage() {
           title="Nothing assigned yet"
           description="Once a planner creates content and assigns it to you, it'll show up here. You can also start by creating a workspace."
           action={
-            <Link
-              href="/app/workspaces/new"
-              className="bg-primary hover:bg-primary-hover text-body inline-flex items-center gap-2 rounded-[var(--radius-control)] px-4 py-2 font-semibold text-white"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Create a workspace
-            </Link>
+            <Button asChild>
+              <Link href="/app/workspaces/new">
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Create a workspace
+              </Link>
+            </Button>
           }
         />
       </div>
@@ -79,7 +76,7 @@ export default async function MyWorkPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-title-page text-fg-primary font-semibold">My Work</h1>
           <p className="text-body text-fg-secondary mt-1">
@@ -87,56 +84,46 @@ export default async function MyWorkPage() {
             planned publish time.
           </p>
         </div>
-        <Link
-          href="/app/workspaces/new"
-          className="text-body text-primary border-primary/20 bg-primary-subtle hover:bg-primary/10 inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          New workspace
-        </Link>
+        <Button asChild variant="secondary" size="sm">
+          <Link href="/app/workspaces/new">
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            New workspace
+          </Link>
+        </Button>
       </header>
 
       <ul className="border-border bg-surface divide-border divide-y overflow-hidden rounded-[var(--radius-card)] border">
         {myItems.map((item) => (
           <li
             key={item.id}
-            className="hover:bg-surface-subtle flex items-center gap-4 px-4 py-3 transition"
+            className="hover:bg-surface-subtle focus-within:bg-surface-subtle transition"
           >
-            <div className="min-w-0 flex-1">
-              <Link
-                href={`/app/w/${item.workspaceSlug}/content/${item.id}`}
-                className="text-body text-fg-primary block truncate font-semibold"
-              >
-                {item.title}
-              </Link>
-              <div className="text-label text-fg-muted mt-0.5 flex items-center gap-2">
-                <span>{item.workspaceName}</span>
-                <span aria-hidden="true">·</span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" aria-hidden="true" />
-                  {item.plannedPublishAt.toLocaleDateString()}
+            <Link
+              href={`/app/w/${item.workspaceSlug}/planning/${item.id}`}
+              className="flex items-center gap-3 px-4 py-3 sm:gap-4"
+            >
+              <FileText
+                className="text-fg-muted hidden h-4 w-4 shrink-0 sm:block"
+                aria-hidden="true"
+              />
+              <div className="min-w-0 flex-1">
+                <span className="text-body text-fg-primary block truncate font-semibold">
+                  {item.title}
                 </span>
+                <div className="text-label text-fg-muted mt-0.5 flex items-center gap-2">
+                  <span className="truncate">{item.workspaceName}</span>
+                  <span aria-hidden="true">·</span>
+                  <span className="flex shrink-0 items-center gap-1">
+                    <Calendar className="h-3 w-3" aria-hidden="true" />
+                    {item.plannedPublishAt.toLocaleDateString()}
+                  </span>
+                </div>
               </div>
-            </div>
-            <Badge variant={statusVariant(item.status)}>{humanStatus(item.status)}</Badge>
+              <Badge variant={statusBadgeVariant(item.status)}>{humanStatus(item.status)}</Badge>
+            </Link>
           </li>
         ))}
       </ul>
     </div>
   );
-}
-
-function humanStatus(s: string): string {
-  return s.replace(/_/g, " ");
-}
-
-function statusVariant(
-  s: string,
-): "default" | "primary" | "success" | "warning" | "danger" | "info" {
-  if (s === "published" || s === "ready_to_publish") return "success";
-  if (s === "blocked" || s === "cancelled") return "danger";
-  if (s === "changes_requested") return "warning";
-  if (s === "in_design" || s === "creative_review" || s === "content_review") return "info";
-  if (s === "partially_published" || s === "approved_for_design") return "primary";
-  return "default";
 }

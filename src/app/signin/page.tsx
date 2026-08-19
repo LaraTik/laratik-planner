@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
+import { Mail, AlertCircle } from "lucide-react";
+import { authError } from "./auth-error-codes";
 
 /**
  * Sign-in page (Goal 2).
@@ -14,6 +16,12 @@ import { FormField } from "@/components/forms/form-field";
  * After successful sign-in, the NextAuth callback redirects to:
  *  - /setup if no agency exists yet (first admin)
  *  - /app otherwise
+ *
+ * UX details:
+ *  - The email field autoFocuses so the user can start typing immediately
+ *  - Submitting the form via Enter works (no JS required — pure form action)
+ *  - The Google button is keyboard-accessible (real <button>)
+ *  - Server-side errors (e.g. wrong email) are rendered above the form
  */
 export const metadata = { title: "Sign in" };
 
@@ -29,10 +37,7 @@ export default async function SignInPage({
 }) {
   const sp = await searchParams;
   const callbackUrl = sp.callbackUrl ?? "/app";
-  const error = sp.error;
-
-  // The form actions below use NextAuth's server action (`signIn`) — no
-  // need to call `auth()` here since the proxy redirects signed-in users.
+  const errorCode = sp.error;
 
   return (
     <main className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 py-16">
@@ -46,12 +51,13 @@ export default async function SignInPage({
         </p>
       </header>
 
-      {error ? (
+      {errorCode ? (
         <div
           role="alert"
-          className="border-danger/20 bg-danger-subtle text-danger text-body w-full rounded-[var(--radius-card)] border px-4 py-3"
+          className="border-danger/20 bg-danger-subtle text-danger flex items-start gap-2 rounded-[var(--radius-card)] border px-4 py-3 text-sm"
         >
-          {decodeAuthError(error)}
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>{authError(errorCode)}</span>
         </div>
       ) : null}
 
@@ -68,7 +74,7 @@ export default async function SignInPage({
           </Button>
         </form>
 
-        <div className="flex items-center gap-3 py-2">
+        <div className="flex items-center gap-3 py-2" role="separator" aria-label="or">
           <hr className="border-border flex-1" />
           <span className="text-label text-fg-muted">or</span>
           <hr className="border-border flex-1" />
@@ -88,11 +94,18 @@ export default async function SignInPage({
               type="email"
               name="email"
               autoComplete="email"
+              autoFocus
               required
               placeholder="you@company.com"
             />
           </FormField>
-          <Button type="submit" variant="secondary" className="w-full" size="lg">
+          <Button
+            type="submit"
+            variant="secondary"
+            className="w-full"
+            size="lg"
+          >
+            <Mail className="h-4 w-4" aria-hidden="true" />
             Email me a sign-in link
           </Button>
         </form>
@@ -102,14 +115,14 @@ export default async function SignInPage({
         By continuing you agree to our{" "}
         <Link
           href="/legal/terms"
-          className="text-primary underline underline-offset-4 hover:no-underline"
+          className="text-primary underline underline-offset-4 hover:no-underline focus-visible:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded"
         >
           terms
         </Link>{" "}
         and{" "}
         <Link
           href="/legal/privacy"
-          className="text-primary underline underline-offset-4 hover:no-underline"
+          className="text-primary underline underline-offset-4 hover:no-underline focus-visible:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded"
         >
           privacy policy
         </Link>
@@ -117,25 +130,6 @@ export default async function SignInPage({
       </p>
     </main>
   );
-}
-
-function decodeAuthError(code: string): string {
-  switch (code) {
-    case "AccessDenied":
-      return "Access denied. Ask an admin to invite you.";
-    case "Verification":
-      return "The sign-in link is invalid or has expired.";
-    case "Configuration":
-      return "Auth is misconfigured. Contact an admin.";
-    case "OAuthSignin":
-    case "OAuthCallback":
-    case "OAuthCreateAccount":
-    case "EmailCreateAccount":
-    case "Callback":
-      return "Something went wrong with the sign-in. Please try again.";
-    default:
-      return "Could not sign you in. Please try again.";
-  }
 }
 
 function GoogleIcon({ className }: { className?: string }) {

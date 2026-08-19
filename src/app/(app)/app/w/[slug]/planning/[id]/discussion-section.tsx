@@ -4,7 +4,7 @@ import * as React from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { createCommentAction, resolveCommentAction } from "../actions";
-import { CheckCircle, MessageCircle, Reply, X } from "lucide-react";
+import { CheckCircle, MessageCircle, Reply } from "lucide-react";
 
 type Comment = {
   id: string;
@@ -36,7 +36,7 @@ type RoleFlags = {
 function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" size="sm" disabled={pending}>
+    <Button type="submit" size="sm" disabled={pending} aria-busy={pending}>
       {pending ? "Posting…" : label}
     </Button>
   );
@@ -49,6 +49,7 @@ function CommentForm({
   canPostClientVisible,
   canPostInternal,
   onCancel,
+  onPosted,
 }: {
   workspaceSlug: string;
   contentItemId: string;
@@ -56,16 +57,42 @@ function CommentForm({
   canPostClientVisible: boolean;
   canPostInternal: boolean;
   onCancel?: () => void;
+  /** Called when the server action succeeds, so the parent can show a
+   *  "posting…" placeholder that the server-rendered list replaces on
+   *  next navigation. */
+  onPosted?: () => void;
 }) {
   const boundAction = createCommentAction.bind(null, workspaceSlug);
+  // The action returns `{ error }` on validation failure, `null` on
+  // success. useFormState is the React 18 API; React 19 ships
+  // useActionState. Migrate in a future refactor turn.
   const [state, formAction] = useFormState(boundAction, null);
+  const { pending } = useFormStatus();
 
-  // Default visibility: client-visible if user can post both, internal if
-  // they only have internal roles. Otherwise the first allowed value.
-  const defaultVisibility: "internal" | "client" = canPostClientVisible ? "internal" : "client";
+  // Default visibility: prefer client-visible when the user can post
+  // both — agency-side users should still see their comments by default.
+  const defaultVisibility: "internal" | "client" = canPostClientVisible ? "client" : "internal";
+
+  const formRef = React.useRef<HTMLFormElement | null>(null);
+  const wasPending = React.useRef(false);
+
+  // When the action completes (pending goes false after being true),
+  // clear the form + notify the parent. If the action errored, leave
+  // the body so the user can fix it.
+  React.useEffect(() => {
+    if (pending) {
+      wasPending.current = true;
+    } else if (wasPending.current) {
+      wasPending.current = false;
+      if (!state?.error) {
+        formRef.current?.reset();
+        onPosted?.();
+      }
+    }
+  }, [pending, state, onPosted]);
 
   return (
-    <form action={formAction} className="space-y-3">
+    <form ref={formRef} action={formAction} className="space-y-3">
       <input type="hidden" name="contentItemId" value={contentItemId} />
       {parentCommentId ? (
         <input type="hidden" name="parentCommentId" value={parentCommentId} />
@@ -76,19 +103,21 @@ function CommentForm({
         minLength={1}
         maxLength={10_000}
         rows={3}
+        disabled={pending}
         placeholder={parentCommentId ? "Write a reply…" : "Add a comment. Use @name to mention."}
-        className="border-border bg-surface text-fg-primary text-body w-full rounded-[var(--radius-control)] border px-3 py-2"
+        className="border-border bg-surface text-fg-primary text-body disabled:opacity-60 w-full rounded-[var(--radius-control)] border px-3 py-2"
       />
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <label className="text-label text-fg-secondary flex items-center gap-2">
           Visibility:
           <select
             name="visibility"
             defaultValue={defaultVisibility}
+            disabled={pending}
             className="border-border bg-surface text-fg-primary rounded-[var(--radius-control)] border px-2 py-1 text-sm"
           >
-            {canPostInternal ? <option value="internal">Internal only</option> : null}
             {canPostClientVisible ? <option value="client">Client visible</option> : null}
+            {canPostInternal ? <option value="internal">Internal only</option> : null}
           </select>
         </label>
         <label className="text-label text-fg-secondary flex items-center gap-2">
@@ -96,6 +125,7 @@ function CommentForm({
           <select
             name="label"
             defaultValue="general"
+            disabled={pending}
             className="border-border bg-surface text-fg-primary rounded-[var(--radius-control)] border px-2 py-1 text-sm"
           >
             <option value="general">General</option>
@@ -104,18 +134,18 @@ function CommentForm({
             <option value="decision">Decision</option>
           </select>
         </label>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:ml-auto">
           {onCancel ? (
-            <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+            <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={pending}>
               Cancel
             </Button>
           ) : null}
           <SubmitButton label={parentCommentId ? "Reply" : "Comment"} />
         </div>
       </div>
-      {state ? (
+      {state?.error ? (
         <p role="alert" className="text-body text-danger">
-          {String((state as { error?: string }).error ?? "")}
+          {state.error}
         </p>
       ) : null}
     </form>
@@ -143,7 +173,7 @@ function CommentItem({
     <div
       className={[
         "border-border bg-surface rounded-[var(--radius-card)] border p-3",
-        isReply ? "mt-2 ml-6" : "",
+        isReply ? "mt-2 sm:ml-6" : "",
         c.resolvedAt ? "opacity-60" : "",
         c.currentUserMentioned ? "border-primary/40 bg-primary-subtle/30" : "",
       ].join(" ")}
@@ -156,7 +186,7 @@ function CommentItem({
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="text-body text-fg-primary font-semibold">{c.authorDisplayName}</span>
             <span className="text-label text-fg-muted">
-              {new Date(c.createdAt).toLocaleString()}
+              <time dateTime={c.createdAt}>{new Date(c.createdAt).toLocaleString()}</time>
             </span>
             <span
               className={[
@@ -166,7 +196,7 @@ function CommentItem({
                   : "bg-info-subtle text-info",
               ].join(" ")}
             >
-              {c.visibility}
+              {c.visibility === "internal" ? "Internal" : "Client"}
             </span>
             {c.label !== "general" ? (
               <span className="text-label text-fg-muted rounded-full border px-2 py-0.5">
@@ -180,7 +210,7 @@ function CommentItem({
             ) : null}
           </div>
           <p className="text-body text-fg-primary mt-1 whitespace-pre-wrap">{c.body}</p>
-          <div className="mt-2 flex items-center gap-3">
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             <button
               type="button"
               onClick={onReply}
@@ -255,7 +285,7 @@ export function DiscussionSection({
       aria-labelledby="discussion-heading"
       className="border-border bg-surface rounded-[var(--radius-card)] border p-5"
     >
-      <header className="mb-3 flex items-center justify-between">
+      <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2
           id="discussion-heading"
           className="text-title-card text-fg-primary flex items-center gap-2 font-semibold"
@@ -299,7 +329,7 @@ export function DiscussionSection({
                 />
               ))}
               {replyingTo === c.id ? (
-                <div className="mt-2 ml-6">
+                <div className="mt-2 sm:ml-6">
                   <CommentForm
                     workspaceSlug={workspaceSlug}
                     contentItemId={contentItemId}
@@ -323,6 +353,7 @@ export function DiscussionSection({
             canPostClientVisible={canPostClientVisible}
             canPostInternal={canPostInternal}
             onCancel={() => setShowForm(false)}
+            onPosted={() => setShowForm(false)}
           />
         </div>
       ) : canPostInternal || canPostClientVisible ? (
@@ -331,10 +362,6 @@ export function DiscussionSection({
           Add comment
         </Button>
       ) : null}
-      <span className="sr-only" role="status">
-        {replyingTo ? "Reply form open" : "No reply form open"}
-        <X aria-hidden="true" className="hidden" />
-      </span>
     </section>
   );
 }

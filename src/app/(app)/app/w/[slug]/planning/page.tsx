@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { workspaces } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { listWorkspaceContent } from "@/lib/content/service";
+import { statusBadgeVariant, humanStatus, humanFormat } from "@/lib/content/status";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/feedback/empty-state";
@@ -91,36 +92,30 @@ export default async function PlanningPage({ params }: { params: Promise<{ slug:
           {items.map((it) => (
             <li
               key={it.id}
-              className="hover:bg-surface-subtle flex items-center gap-4 px-4 py-3 transition"
+              className="hover:bg-surface-subtle focus-within:bg-surface-subtle transition"
             >
-              <FileText className="text-fg-muted h-4 w-4" aria-hidden="true" />
-              <div className="min-w-0 flex-1">
-                <Link
-                  href={`/app/w/${slug}/planning/${it.id}`}
-                  className="text-body text-fg-primary block truncate font-semibold"
-                >
-                  {it.title}
-                </Link>
-                <p className="text-label text-fg-muted">
-                  {it.format.replace(/_/g, " ")} · {it.plannedPublishAt.toLocaleDateString()}
-                </p>
-              </div>
-              <Badge variant={statusVariant(it.status)}>{it.status.replace(/_/g, " ")}</Badge>
+              <Link
+                href={`/app/w/${slug}/planning/${it.id}`}
+                className="flex items-center gap-3 px-4 py-3 sm:gap-4"
+              >
+                <FileText
+                  className="text-fg-muted hidden h-4 w-4 shrink-0 sm:block"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0 flex-1">
+                  <span className="text-body text-fg-primary block truncate font-semibold">
+                    {it.title}
+                  </span>
+                  <p className="text-label text-fg-muted">
+                    {humanFormat(it.format)} · {it.plannedPublishAt.toLocaleDateString()}
+                  </p>
+                </div>
+                <Badge variant={statusBadgeVariant(it.status)}>{humanStatus(it.status)}</Badge>
+              </Link>
             </li>
           ))}
         </ul>
       )}
     </div>
   );
-}
-
-function statusVariant(
-  s: string,
-): "default" | "primary" | "success" | "warning" | "danger" | "info" {
-  if (s === "published" || s === "ready_to_publish") return "success";
-  if (s === "blocked" || s === "cancelled") return "danger";
-  if (s === "changes_requested") return "warning";
-  if (s === "in_design" || s === "creative_review" || s === "content_review") return "info";
-  if (s === "partially_published" || s === "approved_for_design") return "primary";
-  return "default";
 }

@@ -1,7 +1,7 @@
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "./user-menu";
-import { WorkspaceSwitcher } from "./workspace-switcher";
+import { WorkspaceSwitcherServer } from "./workspace-switcher.server";
 import { NotificationsBell } from "./notifications-bell";
 
 /**
@@ -26,13 +26,13 @@ export function Topbar({
   unreadCount: number;
 }) {
   return (
-    <div className="flex h-full items-center justify-between gap-4 px-6">
-      <div className="flex items-center gap-3">
-        <WorkspaceSwitcher />
+    <div className="flex h-full items-center justify-between gap-3 px-4 sm:px-6">
+      <div className="flex min-w-0 items-center gap-2">
+        <WorkspaceSwitcherServer />
       </div>
 
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" aria-label="Search">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        <Button variant="ghost" size="icon" aria-label="Search (coming soon)">
           <Search className="h-4 w-4" aria-hidden="true" />
         </Button>
         <NotificationsBell initial={notifications} initialUnread={unreadCount} />

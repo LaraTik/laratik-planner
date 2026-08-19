@@ -1,5 +1,11 @@
 import Link from "next/link";
 
+export const metadata = {
+  title: "laratik-planner",
+  description:
+    "Social media planning, design, and approvals for one agency. Self-hosted Next.js + Drizzle + Postgres on the LaraTik VPS.",
+};
+
 /**
  * Goal 0 placeholder landing page.
  * Replaced by the real `(marketing)` route group in Goal 3 (app shell).

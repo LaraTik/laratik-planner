@@ -1,65 +1,104 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
-import { ChevronDown, Plus } from "lucide-react";
-import { auth } from "@/lib/auth/config";
-import { db } from "@/lib/db";
-import { agencyMemberships, workspaceMemberships, workspaces } from "@/lib/db/schema";
-import { and, eq, sql } from "drizzle-orm";
-import { isAgencyAdmin } from "@/lib/auth/policy";
-import { activeAgencyId } from "@/lib/auth/policy";
+import { usePathname, useRouter } from "next/navigation";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+type Workspace = { id: string; name: string; slug: string };
 
 /**
- * Workspace switcher — shows the user's active workspace, with a quick
- * link to the workspaces list and a "+" to create a new one (admin only).
+ * Workspace switcher — opens a popover listing the user's workspaces
+ * (or all agency workspaces for admins), with a "+ New workspace"
+ * affordance and a keyboard-friendly popover (arrow keys + Enter +
+ * Escape).
  *
- * For Goal 3, the active workspace is the first workspace the user is
- * a member of (or the first workspace in the agency for admins). Goal 4
- * adds a workspace selector cookie / URL state.
+ * Server-renders the workspace list as a prop, so the initial paint
+ * is instant; the popover only opens on user interaction.
  */
-export async function WorkspaceSwitcher() {
-  const session = await auth();
-  if (!session?.user?.id) return null;
+export function WorkspaceSwitcher({
+  active,
+  options,
+  canCreate,
+}: {
+  active: Workspace | null;
+  options: Workspace[];
+  canCreate: boolean;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [activeIndex, setActiveIndex] = React.useState(0);
+  const triggerRef = React.useRef<HTMLButtonElement | null>(null);
+  const listRef = React.useRef<HTMLUListElement | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
 
-  const agencyId = await activeAgencyId();
-  if (!agencyId) return null;
+  // Close on outside click + Escape
+  React.useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (
+        triggerRef.current?.contains(e.target as Node) ||
+        listRef.current?.contains(e.target as Node)
+      )
+        return;
+      setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
-  const isAdmin = await isAgencyAdmin({ id: session.user.id }, agencyId);
+  // Focus the active item when the popover opens
+  React.useEffect(() => {
+    if (open && listRef.current) {
+      const idx = options.findIndex((w) => w.id === active?.id);
+      setActiveIndex(idx >= 0 ? idx : 0);
+    }
+  }, [open, options, active?.id]);
 
-  // Find the user's first workspace, or the agency's first if admin
-  let activeWorkspace: { id: string; name: string; slug: string } | null = null;
+  const choose = (w: Workspace) => {
+    setOpen(false);
+    // If the user is on a workspace-scoped page, swap the slug; otherwise
+    // go to the workspace overview.
+    const isWorkspacePage = /^\/app\/w\/[^/]+/.test(pathname);
+    router.push(isWorkspacePage ? pathname.replace(/^\/app\/w\/[^/]+/, `/app/w/${w.slug}`) : `/app/w/${w.slug}`);
+  };
 
-  const memberRows = await db
-    .select({ id: workspaces.id, name: workspaces.name, slug: workspaces.slug })
-    .from(workspaceMemberships)
-    .innerJoin(workspaces, eq(workspaces.id, workspaceMemberships.workspaceId))
-    .where(
-      and(
-        eq(workspaceMemberships.userId, session.user.id),
-        eq(workspaceMemberships.status, "active"),
-        eq(workspaces.status, "active"),
-      ),
-    )
-    .limit(1);
+  const onListKeyDown = (e: React.KeyboardEvent<HTMLUListElement>) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((i) => Math.min(i + 1, options.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      setActiveIndex(0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      setActiveIndex(options.length - 1);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const w = options[activeIndex];
+      if (w) choose(w);
+    }
+  };
 
-  if (memberRows[0]) {
-    activeWorkspace = memberRows[0];
-  } else if (isAdmin) {
-    const [any] = await db
-      .select({ id: workspaces.id, name: workspaces.name, slug: workspaces.slug })
-      .from(workspaces)
-      .where(and(eq(workspaces.agencyId, agencyId), eq(workspaces.status, "active")))
-      .limit(1);
-    activeWorkspace = any ?? null;
-  }
-
-  // Quiet "use" of the import to avoid the unused warning
-  void sql;
-  void agencyMemberships;
-
-  if (!activeWorkspace) {
+  if (!active) {
     return (
       <Link
         href="/app/workspaces/new"
-        className="text-body text-fg-primary hover:bg-surface-subtle flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold transition"
+        className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-focus-ring inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
         Create your first workspace
@@ -68,15 +107,85 @@ export async function WorkspaceSwitcher() {
   }
 
   return (
-    <Link
-      href={`/app/w/${activeWorkspace.slug}`}
-      className="text-body text-fg-primary hover:bg-surface-subtle flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold transition"
-    >
-      <span className="bg-primary-subtle text-primary text-label flex h-6 w-6 items-center justify-center rounded font-bold">
-        {activeWorkspace.name.charAt(0).toUpperCase()}
-      </span>
-      <span className="hidden sm:inline">{activeWorkspace.name}</span>
-      <ChevronDown className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />
-    </Link>
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`Active workspace: ${active.name}. Click to switch.`}
+        className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-focus-ring inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none"
+      >
+        <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
+          {active.name.charAt(0).toUpperCase()}
+        </span>
+        <span className="hidden sm:inline">{active.name}</span>
+        <ChevronsUpDown className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+
+      {open ? (
+        <div
+          className="border-border bg-surface absolute left-0 z-50 mt-1.5 w-72 overflow-hidden rounded-[var(--radius-card)] border shadow-lg"
+          role="presentation"
+        >
+          <div className="text-label text-fg-muted border-border border-b px-3 py-2 font-semibold tracking-wide uppercase">
+            Switch workspace
+          </div>
+          <ul
+            ref={listRef}
+            role="listbox"
+            aria-label="Workspaces"
+            aria-activedescendant={options[activeIndex] ? `ws-${options[activeIndex]!.id}` : undefined}
+            tabIndex={0}
+            onKeyDown={onListKeyDown}
+            className="max-h-72 overflow-y-auto py-1 focus:outline-none"
+          >
+            {options.length === 0 ? (
+              <li className="text-body text-fg-muted px-3 py-2">No workspaces yet.</li>
+            ) : (
+              options.map((w, i) => {
+                const isActive = active.id === w.id;
+                const isHighlighted = i === activeIndex;
+                return (
+                  <li
+                    key={w.id}
+                    id={`ws-${w.id}`}
+                    role="option"
+                    aria-selected={isActive}
+                    onMouseEnter={() => setActiveIndex(i)}
+                    className={cn(
+                      "text-body flex cursor-pointer items-center gap-2 px-3 py-2 transition",
+                      isHighlighted && "bg-surface-subtle",
+                    )}
+                    onClick={() => choose(w)}
+                  >
+                    <span className="bg-primary-subtle text-primary flex h-6 w-6 shrink-0 items-center justify-center rounded font-bold">
+                      {w.name.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-semibold">{w.name}</span>
+                    {isActive ? (
+                      <Check className="text-primary h-4 w-4 shrink-0" aria-hidden="true" />
+                    ) : null}
+                  </li>
+                );
+              })
+            )}
+          </ul>
+          {canCreate ? (
+            <div className="border-border border-t p-1.5">
+              <Link
+                href="/app/workspaces/new"
+                onClick={() => setOpen(false)}
+                className="text-body text-fg-primary hover:bg-surface-subtle flex items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 font-semibold"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                New workspace
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }

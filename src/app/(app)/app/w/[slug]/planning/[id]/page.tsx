@@ -9,6 +9,7 @@ import { listApprovalsForItem } from "@/lib/deliveries/service";
 import { listPublicationsForItem } from "@/lib/publishing/service";
 import { listCommentsForItem } from "@/lib/discussions/service";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { statusBadgeVariant, humanStatus, humanFormat } from "@/lib/content/status";
 import { Badge } from "@/components/ui/badge";
 import { WorkflowBar } from "./workflow-bar";
 import { DeliverySection } from "./delivery-section";
@@ -59,16 +60,16 @@ export default async function ContentDetailPage({
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="text-label text-fg-muted">{ws.name}</p>
           <h1 className="text-title-page text-fg-primary font-semibold">{item.title}</h1>
           <p className="text-body text-fg-secondary mt-1">
-            {item.format.replace(/_/g, " ")} · {item.plannedPublishAt.toLocaleString()}
+            {humanFormat(item.format)} · {item.plannedPublishAt.toLocaleString()}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={statusVariant(item.status)}>{item.status.replace(/_/g, " ")}</Badge>
-          <Button variant="ghost" asChild>
+        <div className="flex shrink-0 items-center gap-2">
+          <Badge variant={statusBadgeVariant(item.status)}>{humanStatus(item.status)}</Badge>
+          <Button variant="ghost" size="sm" asChild>
             <Link href={`/app/w/${slug}/planning`}>← Planning</Link>
           </Button>
         </div>
@@ -173,15 +174,4 @@ export default async function ContentDetailPage({
       />
     </div>
   );
-}
-
-function statusVariant(
-  s: string,
-): "default" | "primary" | "success" | "warning" | "danger" | "info" {
-  if (s === "published" || s === "ready_to_publish") return "success";
-  if (s === "blocked" || s === "cancelled") return "danger";
-  if (s === "changes_requested") return "warning";
-  if (s === "in_design" || s === "creative_review" || s === "content_review") return "info";
-  if (s === "partially_published" || s === "approved_for_design") return "primary";
-  return "default";
 }
