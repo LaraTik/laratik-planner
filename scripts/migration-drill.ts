@@ -45,8 +45,7 @@ loadEnv({ path: resolve(process.cwd(), ".env") });
 // "test" or "ci" — otherwise we'd silently target a production DB.
 // The gate below also requires NODE_ENV=test or a "test"/"ci" substring
 // in the resolved URL.
-const DEFAULT_TEST_DB_URL =
-  "postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test";
+const DEFAULT_TEST_DB_URL = "postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test";
 
 const TEST_DB_URL = (() => {
   if (process.env.TEST_DATABASE_URL) return process.env.TEST_DATABASE_URL;
@@ -230,9 +229,7 @@ async function applyMigrations(
   }
   // Deduplicate by tag (extra files would shadow same-named base files)
   const seen = new Set<string>();
-  const uniqueFiles = files.filter((f) =>
-    seen.has(f.tag) ? false : (seen.add(f.tag), true),
-  );
+  const uniqueFiles = files.filter((f) => (seen.has(f.tag) ? false : (seen.add(f.tag), true)));
   // Apply maxTag cutoff (lexicographic, inclusive)
   const filtered = maxTag ? uniqueFiles.filter((f) => f.tag <= maxTag) : uniqueFiles;
 
@@ -385,18 +382,7 @@ async function drillBackupRestore(): Promise<void> {
 
     const restore = runShell(
       "psql",
-      [
-        "-h",
-        "127.0.0.1",
-        "-U",
-        "planner",
-        "-d",
-        dbName,
-        "-v",
-        "ON_ERROR_STOP=1",
-        "-f",
-        dumpFile,
-      ],
+      ["-h", "127.0.0.1", "-U", "planner", "-d", dbName, "-v", "ON_ERROR_STOP=1", "-f", dumpFile],
       { env: { ...process.env, PGPASSWORD: "planner_dev_only" } },
     );
     if (restore.status !== 0) {
@@ -520,14 +506,16 @@ async function main(): Promise<void> {
   const sep = "─".repeat(drillWidth + resultWidth + 4);
   console.log("");
   console.log("┌" + sep + "┐");
-  console.log(
-    "│ " + "Drill".padEnd(drillWidth) + " │ " + "PASS".padEnd(resultWidth) + " │ Detail",
-  );
+  console.log("│ " + "Drill".padEnd(drillWidth) + " │ " + "PASS".padEnd(resultWidth) + " │ Detail");
   console.log("├" + sep + "┤");
   for (const r of results) {
     const mark = r.result === "PASS" ? "✓" : "✗";
     console.log(
-      "│ " + r.drill.padEnd(drillWidth) + " │ " + r.result.padEnd(resultWidth) + ` │ ${mark} ${r.detail}`,
+      "│ " +
+        r.drill.padEnd(drillWidth) +
+        " │ " +
+        r.result.padEnd(resultWidth) +
+        ` │ ${mark} ${r.detail}`,
     );
   }
   console.log("└" + sep + "┘");

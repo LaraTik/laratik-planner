@@ -48,12 +48,37 @@ describe("primary acceptance journey (§23, service-level)", () => {
     const all = await db
       .insert(users)
       .values([
-        { email: "maya@journey.test", displayName: "Maya", emailVerified: new Date(), role: "agency_admin" },
-        { email: "omar@journey.test", displayName: "Omar", emailVerified: new Date(), role: "user" },
-        { email: "elena@journey.test", displayName: "Elena", emailVerified: new Date(), role: "user" },
+        {
+          email: "maya@journey.test",
+          displayName: "Maya",
+          emailVerified: new Date(),
+          role: "agency_admin",
+        },
+        {
+          email: "omar@journey.test",
+          displayName: "Omar",
+          emailVerified: new Date(),
+          role: "user",
+        },
+        {
+          email: "elena@journey.test",
+          displayName: "Elena",
+          emailVerified: new Date(),
+          role: "user",
+        },
         { email: "jon@journey.test", displayName: "Jon", emailVerified: new Date(), role: "user" },
-        { email: "sophie@journey.test", displayName: "Sophie", emailVerified: new Date(), role: "user" },
-        { email: "daniel@journey.test", displayName: "Daniel", emailVerified: new Date(), role: "user" },
+        {
+          email: "sophie@journey.test",
+          displayName: "Sophie",
+          emailVerified: new Date(),
+          role: "user",
+        },
+        {
+          email: "daniel@journey.test",
+          displayName: "Daniel",
+          emailVerified: new Date(),
+          role: "user",
+        },
       ])
       .returning();
     maya = { id: all[0]!.id, email: all[0]!.email };
@@ -101,7 +126,10 @@ describe("primary acceptance journey (§23, service-level)", () => {
     // Each non-admin actor needs a workspace_membership_role. Maya is
     // agency_admin so she bypasses the role check entirely.
     const { workspaceMemberships, workspaceMembershipRoles } = await import("@/lib/db/schema");
-    const roleForUser: Record<string, "content_planner" | "designer" | "internal_reviewer" | "client_reviewer" | "publisher"> = {
+    const roleForUser: Record<
+      string,
+      "content_planner" | "designer" | "internal_reviewer" | "client_reviewer" | "publisher"
+    > = {
       omar: "content_planner",
       elena: "designer",
       jon: "internal_reviewer",
@@ -109,7 +137,9 @@ describe("primary acceptance journey (§23, service-level)", () => {
       daniel: "publisher",
     };
     for (const [key, role] of Object.entries(roleForUser)) {
-      const user = { omar, elena, jon, sophie, daniel }[key as "omar" | "elena" | "jon" | "sophie" | "daniel"]!;
+      const user = { omar, elena, jon, sophie, daniel }[
+        key as "omar" | "elena" | "jon" | "sophie" | "daniel"
+      ]!;
       const [wm] = await db
         .insert(workspaceMemberships)
         .values({ workspaceId, userId: user.id, status: "active" })

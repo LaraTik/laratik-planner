@@ -72,7 +72,7 @@ failure (including an unreachable database).
 ### 3. backup + restore — drill 3/4
 
 - `pg_dump --no-owner --no-privileges --clean --if-exists -d planner_test
-  -f <tmp>.sql` (plain SQL format, restored with `psql`)
+-f <tmp>.sql` (plain SQL format, restored with `psql`)
 - `DROP DATABASE` + `CREATE DATABASE planner_test`
 - `psql -v ON_ERROR_STOP=1 -f <tmp>.sql` (fails fast on any SQL error)
 - Post-restore: 39 tables present, `rate_limit_event` present
