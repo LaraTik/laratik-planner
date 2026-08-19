@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { customType, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { customType, jsonb as drizzleJsonb, timestamp, uuid } from "drizzle-orm/pg-core";
 
 /**
  * Shared column patterns from STUDIOFLOW_MASTER_PROMPT.md §8.
@@ -36,9 +36,15 @@ export const citext = customType<{ data: string }>({
  * JSONB with default empty object. The `$type<Record<string, unknown>>()`
  * keeps the inferred TypeScript shape honest without forcing a per-call
  * generic; callers that need a narrower shape should `.$type<MyShape>()`.
+ *
+ * Note: we MUST use Drizzle's `jsonb()` column builder, not `text(name)`.
+ * The previous custom helper used `text()` which silently mapped to a
+ * `text` column in the migration, so the outbox dispatch worker
+ * received payload as a string and couldn't read the fields. Same
+ * Drizzle-emit issue as the `\s` regex bug.
  */
 export const jsonb = (name: string) =>
-  text(name)
+  drizzleJsonb(name)
     .$type<Record<string, unknown>>()
     .notNull()
     .default(sql`'{}'::jsonb`);

@@ -30,6 +30,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // "server-only" is a Next.js convention that throws if imported
+      // into a client bundle. For Vitest we just want it to be a no-op
+      // so server-only service files can be imported in tests.
+      "server-only": path.resolve(__dirname, "tests/stubs/server-only.ts"),
     },
   },
 });

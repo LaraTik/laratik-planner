@@ -7,11 +7,13 @@ import { eq } from "drizzle-orm";
 import { getContentItem } from "@/lib/content/service";
 import { listApprovalsForItem } from "@/lib/deliveries/service";
 import { listPublicationsForItem } from "@/lib/publishing/service";
+import { listCommentsForItem } from "@/lib/discussions/service";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { Badge } from "@/components/ui/badge";
 import { WorkflowBar } from "./workflow-bar";
 import { DeliverySection } from "./delivery-section";
 import { PublishingSection } from "./publishing-section";
+import { DiscussionSection } from "./discussion-section";
 import { Button } from "@/components/ui/button";
 
 export async function generateMetadata({
@@ -37,9 +39,10 @@ export default async function ContentDetailPage({
   const item = await getContentItem({ id: session.user.id }, id);
   if (!item || item.workspaceId !== ws.id) notFound();
 
-  const [approvals, publications] = await Promise.all([
+  const [approvals, publications, discussionComments] = await Promise.all([
     listApprovalsForItem({ id: session.user.id }, id),
     listPublicationsForItem({ id: session.user.id }, id).catch(() => []),
+    listCommentsForItem({ id: session.user.id }, id).catch(() => []),
   ]);
 
   const actorRoles = {
@@ -139,6 +142,34 @@ export default async function ContentDetailPage({
         }))}
         isPublisher={actorRoles.isPublisher}
         isManager={actorRoles.isManager}
+      />
+
+      <DiscussionSection
+        workspaceSlug={slug}
+        contentItemId={item.id}
+        comments={discussionComments.map((c) => ({
+          ...c,
+          createdAt: c.createdAt.toISOString(),
+          editedAt: c.editedAt ? c.editedAt.toISOString() : null,
+          resolvedAt: c.resolvedAt ? c.resolvedAt.toISOString() : null,
+        }))}
+        currentUserId={session.user.id}
+        roles={actorRoles}
+        canPostInternal={
+          actorRoles.isManager ||
+          actorRoles.isPlanner ||
+          actorRoles.isDesigner ||
+          actorRoles.isInternalReviewer ||
+          actorRoles.isPublisher
+        }
+        canPostClientVisible={
+          actorRoles.isClientReviewer ||
+          actorRoles.isManager ||
+          actorRoles.isPlanner ||
+          actorRoles.isDesigner ||
+          actorRoles.isInternalReviewer ||
+          actorRoles.isPublisher
+        }
       />
     </div>
   );

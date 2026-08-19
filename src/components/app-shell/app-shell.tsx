@@ -14,6 +14,8 @@ import { MobileNav } from "./mobile-nav";
  */
 export function AppShell({
   user,
+  notifications,
+  unreadCount,
   children,
 }: {
   user: {
@@ -23,6 +25,16 @@ export function AppShell({
     image: string | null;
     isAdmin: boolean;
   };
+  notifications: {
+    id: string;
+    kind: string;
+    title: string;
+    body: string;
+    actionUrl: string | null;
+    readAt: string | null;
+    createdAt: string;
+  }[];
+  unreadCount: number;
   children: React.ReactNode;
 }) {
   return (
@@ -34,7 +46,7 @@ export function AppShell({
 
       {/* Topbar (desktop + tablet) */}
       <header className="bg-surface border-border sticky top-0 z-20 ml-0 hidden h-16 border-b md:ml-60 md:block">
-        <Topbar user={user} />
+        <Topbar user={user} notifications={notifications} unreadCount={unreadCount} />
       </header>
 
       {/* Mobile topbar */}

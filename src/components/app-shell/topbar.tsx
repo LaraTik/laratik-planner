@@ -1,7 +1,8 @@
-import { Bell, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "./user-menu";
 import { WorkspaceSwitcher } from "./workspace-switcher";
+import { NotificationsBell } from "./notifications-bell";
 
 /**
  * Topbar — search, notifications, workspace switcher, user menu.
@@ -9,8 +10,20 @@ import { WorkspaceSwitcher } from "./workspace-switcher";
  */
 export function Topbar({
   user,
+  notifications,
+  unreadCount,
 }: {
   user: { id: string; name: string; email: string; image: string | null; isAdmin: boolean };
+  notifications: {
+    id: string;
+    kind: string;
+    title: string;
+    body: string;
+    actionUrl: string | null;
+    readAt: string | null;
+    createdAt: string;
+  }[];
+  unreadCount: number;
 }) {
   return (
     <div className="flex h-full items-center justify-between gap-4 px-6">
@@ -22,9 +35,7 @@ export function Topbar({
         <Button variant="ghost" size="icon" aria-label="Search">
           <Search className="h-4 w-4" aria-hidden="true" />
         </Button>
-        <Button variant="ghost" size="icon" aria-label="Notifications">
-          <Bell className="h-4 w-4" aria-hidden="true" />
-        </Button>
+        <NotificationsBell initial={notifications} initialUnread={unreadCount} />
         <UserMenu user={user} />
       </div>
     </div>

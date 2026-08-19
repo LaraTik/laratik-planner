@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   agencies,
@@ -66,13 +66,11 @@ export async function isWorkspaceMember(actor: Actor, workspaceId: string): Prom
   const [m] = await db
     .select({ x: sql<number>`1` })
     .from(workspaceMemberships)
-    .innerJoin(workspaces, eq(workspaces.id, workspaceId))
     .where(
       and(
         eq(workspaceMemberships.workspaceId, workspaceId),
         eq(workspaceMemberships.userId, actor.id),
         eq(workspaceMemberships.status, "active"),
-        eq(workspaces.agencyId, workspaces.agencyId), // self-join no-op (forces planner)
       ),
     )
     .limit(1);
@@ -196,6 +194,3 @@ export async function requirePolicy(predicate: Promise<boolean>, action: string)
     throw new PermissionDeniedError(action);
   }
 }
-
-// Avoid the unused-import warning
-void or;

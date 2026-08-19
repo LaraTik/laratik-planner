@@ -15,6 +15,13 @@
       "when": 1787088593076,
       "tag": "0001_thick_vin_gonzales",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787116935004,
+      "tag": "0002_sturdy_caretaker",
+      "breakpoints": true
     }
   ]
 }

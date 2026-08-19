@@ -9,7 +9,7 @@ import {
   workspaceMembershipRoles,
   workspaceMemberships,
 } from "@/lib/db/schema";
-import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import { hasWorkspaceRole, isWorkspaceMember, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
@@ -119,19 +119,10 @@ export async function getContentItem(actor: Actor, contentItemId: string) {
     .limit(1);
   if (!row) return null;
 
-  // Authorization: must be in the same workspace
-  await requirePolicy(
-    hasWorkspaceRole(actor, row.workspaceId, [
-      "workspace_manager",
-      "content_planner",
-      "designer",
-      "internal_reviewer",
-      "client_reviewer",
-      "publisher",
-      "viewer",
-    ]),
-    "view_content",
-  );
+  // Authorization: any active workspace member can view (includes
+  // viewers). Agency admins are short-circuited inside hasWorkspaceRole.
+  // Use isWorkspaceMember for "any role" instead of listing all 7 roles.
+  await requirePolicy(isWorkspaceMember(actor, row.workspaceId), "view_content");
 
   const [channels, assignments] = await Promise.all([
     db

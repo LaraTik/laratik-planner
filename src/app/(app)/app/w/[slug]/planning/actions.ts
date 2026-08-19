@@ -20,6 +20,12 @@ import {
   decideApproval,
 } from "@/lib/deliveries/service";
 import { RecordPublicationSchema, recordPublication } from "@/lib/publishing/service";
+import {
+  createComment,
+  CreateCommentSchema,
+  resolveComment,
+  ResolveCommentSchema,
+} from "@/lib/discussions/service";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 
 async function requireWorkspaceContext(workspaceSlug: string) {
@@ -153,6 +159,45 @@ export async function recordPublicationAction(input: {
   }
   await recordPublication(actor, parsed.data);
   revalidatePath(`/app/w/${input.workspaceSlug}/planning`);
+}
+
+// ─── Discussion actions (Goal 8) ────────────────────────────────────────
+export async function createCommentAction(
+  workspaceSlug: string,
+  _prev: unknown,
+  formData: FormData,
+) {
+  const { actor, workspace } = await requireWorkspaceContext(workspaceSlug);
+  const parsed = CreateCommentSchema.safeParse({
+    contentItemId: formData.get("contentItemId"),
+    parentCommentId: formData.get("parentCommentId") || undefined,
+    body: formData.get("body"),
+    visibility: formData.get("visibility") ?? "internal",
+    label: formData.get("label") ?? "general",
+  });
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+  await createComment(actor, parsed.data);
+  revalidatePath(`/app/w/${workspaceSlug}/planning/${formData.get("contentItemId")}`);
+  void workspace;
+}
+
+export async function resolveCommentAction(input: {
+  workspaceSlug: string;
+  commentId: string;
+  resolved: boolean;
+}) {
+  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  const parsed = ResolveCommentSchema.safeParse({
+    commentId: input.commentId,
+    resolved: input.resolved,
+  });
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+  await resolveComment(actor, parsed.data);
+  revalidatePath(`/app/w/${input.workspaceSlug}/planning/`);
 }
 
 // silence

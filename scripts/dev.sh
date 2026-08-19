@@ -48,9 +48,17 @@ case "$cmd" in
     ;;
 
   reset)
-    echo "→ Dropping Postgres volume and recreating…"
-    docker compose -f docker-compose.dev.yml down -v
-    docker compose -f docker-compose.dev.yml up -d postgres
+    # NOTE: NEVER use `docker compose down -v` here — destroys the
+    # data volume and we lose everything. Per the AGENTS.md hard rule.
+    # We use a SQL-level reset instead: drop + recreate the public schema.
+    # The data volume is preserved.
+    echo "→ Resetting Postgres schema (data volume preserved)…"
+    docker compose -f docker-compose.dev.yml exec -T postgres \
+      psql -U planner -d planner -c "drop schema public cascade; create schema public; grant all on schema public to planner;"
+    docker compose -f docker-compose.dev.yml exec -T postgres \
+      psql -U planner -d planner -c "grant all on schema public to public;"
+    echo "→ Reapplying migrations…"
+    pnpm db:migrate
     echo "→ Done. Run scripts/dev.sh to start the app."
     ;;
 
