@@ -92,7 +92,7 @@ function redactUrl(url: string): string {
 
 function parseDbName(url: string): string {
   const m = url.match(/\/([^/?]+)(?:\?|$)/);
-  return m ? m[1] : "planner_test";
+  return m?.[1] ?? "planner_test";
 }
 
 function fmtMs(ms: number): string {
@@ -126,7 +126,7 @@ async function countTables(client: Client): Promise<number> {
   const r = await client.query<{ count: string }>(
     "SELECT count(*)::text AS count FROM information_schema.tables WHERE table_schema = 'public'",
   );
-  return Number(r.rows[0].count);
+  return Number(r.rows[0]?.count ?? "0");
 }
 
 async function listTables(client: Client): Promise<string[]> {
@@ -445,16 +445,16 @@ async function drillFailedMigration(): Promise<void> {
     writeFileSync(brokenFile, broken);
 
     // Run the broken migration via the custom runner, expect a throw.
-    let caught: Error | null = null;
+    let caught: unknown = null;
     await withClient(TEST_DB_URL, async (c) => {
       try {
         await applyMigrations(c, MIGRATIONS_DIR, [DRILL_TMP_DIR]);
       } catch (err) {
-        caught = err as Error;
+        caught = err;
       }
     });
 
-    if (!caught) {
+    if (!(caught instanceof Error)) {
       record(
         "4. failed-migration abort",
         false,
