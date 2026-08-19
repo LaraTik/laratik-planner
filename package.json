@@ -30,7 +30,8 @@
     "db:reset": "drizzle-kit drop && pnpm db:migrate",
     "db:studio": "drizzle-kit studio",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit && pnpm build",
-    "test:integration": "tsx scripts/run-integration-tests.ts"
+    "test:integration": "tsx scripts/run-integration-tests.ts",
+    "migration-drill": "tsx scripts/migration-drill.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
