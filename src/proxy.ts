@@ -22,6 +22,10 @@ export async function proxy(req: NextRequest) {
     pathname.startsWith("/api/auth/") ||
     pathname === "/api/health" ||
     pathname === "/api/bootstrap/status" ||
+    // Dev/test-only helpers — guarded server-side by NODE_ENV !== "production".
+    // The dev/* endpoints refuse to run in production builds, so allowing
+    // them through the proxy is safe (they just 404 in prod).
+    (pathname.startsWith("/api/dev/") && serverEnv.NODE_ENV !== "production") ||
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt"
   ) {

@@ -57,7 +57,7 @@ async function createWorkspaceAction(formData: FormData) {
     throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
   }
 
-  await db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     // Ensure the current user is agency member + admin
     const [agency] = await tx
       .select({ id: agencies.id })
@@ -94,14 +94,13 @@ async function createWorkspaceAction(formData: FormData) {
       role: "workspace_manager",
     });
 
-    // touch agency updated_at (no-op update to keep the count fresh)
-    await tx.execute(sql`SELECT 1`);
-
-    revalidatePath("/app/workspaces");
-    revalidatePath(`/app/w/${created!.slug}`);
-
-    redirect(`/app/w/${created!.slug}`);
+    return { workspaceId: created!.id, slug: created!.slug };
   });
+
+  revalidatePath("/app/workspaces");
+  revalidatePath(`/app/w/${result.slug}`);
+
+  redirect(`/app/w/${result.slug}`);
 }
 
 export default async function NewWorkspacePage() {

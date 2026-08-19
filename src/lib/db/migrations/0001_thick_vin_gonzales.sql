@@ -1,0 +1,2 @@
+ALTER TABLE "user" DROP CONSTRAINT "user_email_format";--> statement-breakpoint
+ALTER TABLE "user" ADD CONSTRAINT "user_email_format" CHECK ("user"."email" ~* '^[^@[:space:]]+@[^@[:space:]]+.[^@[:space:]]+$');

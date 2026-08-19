@@ -100,11 +100,17 @@ export default async function SignInPage({
 
       <p className="text-label text-fg-muted text-center">
         By continuing you agree to our{" "}
-        <Link href="/legal/terms" className="text-primary underline-offset-4 hover:underline">
+        <Link
+          href="/legal/terms"
+          className="text-primary underline underline-offset-4 hover:no-underline"
+        >
           terms
         </Link>{" "}
         and{" "}
-        <Link href="/legal/privacy" className="text-primary underline-offset-4 hover:underline">
+        <Link
+          href="/legal/privacy"
+          className="text-primary underline underline-offset-4 hover:no-underline"
+        >
           privacy policy
         </Link>
         .

@@ -153,6 +153,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^2.1.8
         version: 2.1.9(vitest@2.1.9(@types/node@22.20.1)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.50.0))
+      dotenv:
+        specifier: ^16.6.1
+        version: 16.6.1
       drizzle-kit:
         specifier: ^0.30.0
         version: 0.30.6

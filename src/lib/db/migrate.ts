@@ -3,8 +3,19 @@
  * Goal 0: no migrations exist yet, this script just verifies the
  * connection and exits 0.
  */
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { db, pool } from "./index";
+import { config as loadEnv } from "dotenv";
+import { resolve } from "node:path";
+
+// Load .env from the project root before importing any modules that
+// read process.env at module-evaluation time.
+loadEnv({ path: resolve(process.cwd(), ".env") });
+
+// Use dynamic require so the top-level await ESM/CJS interop stays
+// portable across Node 20 (VPS) and Node 24 (local dev).
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { migrate } = require("drizzle-orm/node-postgres/migrator") as typeof import("drizzle-orm/node-postgres/migrator");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { db, pool } = require("./index") as typeof import("./index");
 
 async function main() {
   console.log("[migrate] starting…");

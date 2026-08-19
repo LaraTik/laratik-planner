@@ -22,7 +22,10 @@ export default function VerifyRequestPage() {
       </p>
       <p className="text-label text-fg-muted">
         Didn&apos;t get it? Check spam, or{" "}
-        <Link href="/signin" className="text-primary underline-offset-4 hover:underline">
+        <Link
+          href="/signin"
+          className="text-primary underline underline-offset-4 hover:no-underline"
+        >
           try again
         </Link>
         .

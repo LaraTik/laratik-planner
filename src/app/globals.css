@@ -17,7 +17,12 @@
   /* Text */
   --fg-primary: #172033;
   --fg-secondary: #5d6678;
-  --fg-muted: #7b8495;
+  /* fg-muted darkened from #7b8495 → #5b6270 to meet WCAG AA 4.5:1
+     contrast on the canvas/surface/surface-subtle backgrounds. The
+     original was 3.51:1 (canvas) / 3.39:1 (surface-subtle), both
+     below the WCAG 2.2 AA threshold for normal text. Now:
+     5.71:1 on canvas, 5.51:1 on surface-subtle. */
+  --fg-muted: #5b6270;
 
   /* Brand */
   --primary: #4f46e5;
