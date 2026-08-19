@@ -45,7 +45,14 @@ services:
       - autoheal.timeout=30
       - autoheal.restart=true
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      # 127.0.0.1 (NOT localhost — IPv6 trap). Next.js binds 0.0.0.0
+      # (IPv4), so a wget against "localhost" resolves to ::1 first and
+      # gets connection-refused. Traefik's docker provider then
+      # filters the container as "unhealthy or starting" and never
+      # creates a router — so the planner subdomain 404s with no
+      # visible error. Same trap called out in the vps-ops evolution /
+      # whatsapp-bot compose files.
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
