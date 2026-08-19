@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { createCommentAction, resolveCommentAction } from "../actions";
 import { CheckCircle, MessageCircle, Reply } from "lucide-react";
@@ -64,9 +65,7 @@ function CommentForm({
 }) {
   const boundAction = createCommentAction.bind(null, workspaceSlug);
   // The action returns `{ error }` on validation failure, `null` on
-  // success. useFormState is the React 18 API; React 19 ships
-  // useActionState. Migrate in a future refactor turn.
-  const [state, formAction] = useFormState(boundAction, null);
+  const [state, formAction] = useActionState(boundAction, null);
   const { pending } = useFormStatus();
 
   // Default visibility: prefer client-visible when the user can post

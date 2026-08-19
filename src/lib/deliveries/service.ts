@@ -2,14 +2,18 @@ import "server-only";
 import { and, eq, max, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
+  activityEvents,
   approvalDecisions,
   approvalRequests,
+  contentItems,
   deliveryLinks,
   deliveryVersions,
+  workspaceSettings,
 } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { deriveCreativeApprovalOutcome } from "@/lib/deliveries/approval-workflow";
 
 /**
  * Delivery service (Goal 9 — master prompt §8 + §10).
@@ -54,9 +58,13 @@ export type SubmitDeliveryInput = z.infer<typeof SubmitDeliverySchema>;
 
 export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
   const [item] = await db
-    .select({ workspaceId: contentItemsView.workspaceId, status: contentItemsView.status })
-    .from(contentItemsView)
-    .where(eq(contentItemsView.id, input.contentItemId))
+    .select({
+      workspaceId: contentItems.workspaceId,
+      status: contentItems.status,
+      changeRequestGate: contentItems.changeRequestGate,
+    })
+    .from(contentItems)
+    .where(eq(contentItems.id, input.contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
 
@@ -64,8 +72,33 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
     hasWorkspaceRole(actor, item.workspaceId, ["designer", "workspace_manager"]),
     "submit_delivery",
   );
+  const isCreativeRevision =
+    item.status === "changes_requested" &&
+    (item.changeRequestGate === "creative_internal" ||
+      item.changeRequestGate === "creative_client");
+  if (item.status !== "in_design" && !isCreativeRevision) {
+    throw new Error(`Cannot submit a delivery while content is ${item.status}`);
+  }
 
   return await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM content_item WHERE id = ${input.contentItemId} FOR UPDATE`);
+
+    await tx
+      .update(approvalRequests)
+      .set({
+        status: "cancelled",
+        invalidatedAt: new Date(),
+        invalidationReason: "Superseded by a new delivery version",
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(approvalRequests.contentItemId, input.contentItemId),
+          eq(approvalRequests.status, "pending"),
+          sql`${approvalRequests.gate} IN ('creative_internal', 'creative_client')`,
+        ),
+      );
+
     // Allocate the next version number
     const versionRows = await tx
       .select({ max: max(deliveryVersions.versionNumber) })
@@ -104,6 +137,27 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
       sequence: 1,
     });
 
+    await tx
+      .update(contentItems)
+      .set({
+        status: "creative_review",
+        changeRequestGate: null,
+        statusReturnTarget: null,
+        approvedDeliveryVersionId: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(contentItems.id, input.contentItemId));
+
+    await tx.insert(activityEvents).values({
+      workspaceId: item.workspaceId,
+      contentItemId: input.contentItemId,
+      actorId: actor.id,
+      kind: "delivery",
+      summary: `Submitted delivery V${nextVersion}`,
+      beforeData: { status: item.status },
+      afterData: { status: "creative_review", deliveryVersionId: created!.id },
+    });
+
     revalidatePath(`/app/w/`);
     return { deliveryVersionId: created!.id, versionNumber: nextVersion };
   });
@@ -132,9 +186,9 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
 
   // Resolve workspace for policy check
   const [item] = await db
-    .select({ workspaceId: contentItemsView.workspaceId })
-    .from(contentItemsView)
-    .where(eq(contentItemsView.id, req.contentItemId))
+    .select({ workspaceId: contentItems.workspaceId })
+    .from(contentItems)
+    .where(eq(contentItems.id, req.contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
 
@@ -148,8 +202,26 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
   await requirePolicy(hasWorkspaceRole(actor, item.workspaceId, role), "decide_approval");
 
   return await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM approval_request WHERE id = ${req.id} FOR UPDATE`);
+    const [lockedRequest] = await tx
+      .select()
+      .from(approvalRequests)
+      .where(eq(approvalRequests.id, req.id))
+      .limit(1);
+    if (!lockedRequest || lockedRequest.status !== "pending") {
+      throw new Error("Approval request is no longer pending");
+    }
+
+    const [settings] = await tx
+      .select({ approvalMode: workspaceSettings.approvalMode })
+      .from(workspaceSettings)
+      .where(eq(workspaceSettings.workspaceId, item.workspaceId))
+      .limit(1);
+    const approvalMode =
+      settings?.approvalMode === "internal_then_client" ? "internal_then_client" : "simple";
+
     await tx.insert(approvalDecisions).values({
-      approvalRequestId: req!.id,
+      approvalRequestId: lockedRequest.id,
       reviewerId: actor.id,
       decision: input.decision,
       ...(input.feedback ? { feedback: input.feedback } : {}),
@@ -163,13 +235,62 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
       })
       .where(eq(approvalRequests.id, req!.id));
 
-    // Mark the delivery as final-approved on green light
-    if (input.decision === "approved" && req.deliveryVersionId) {
+    if (lockedRequest.gate === "content") {
+      throw new Error("Content approvals must use the content workflow command");
+    }
+
+    const outcome = deriveCreativeApprovalOutcome({
+      gate: lockedRequest.gate,
+      decision: input.decision,
+      approvalMode,
+    });
+
+    if (outcome.createClientRequest) {
+      if (!lockedRequest.deliveryVersionId) throw new Error("Delivery version is required");
+      await tx.insert(approvalRequests).values({
+        contentItemId: lockedRequest.contentItemId,
+        gate: "creative_client",
+        deliveryVersionId: lockedRequest.deliveryVersionId,
+        requestedBy: actor.id,
+        sequence: 2,
+      });
+    }
+
+    if (outcome.markDeliveryFinal && lockedRequest.deliveryVersionId) {
+      await tx
+        .update(deliveryVersions)
+        .set({ isFinalApproved: false })
+        .where(eq(deliveryVersions.contentItemId, lockedRequest.contentItemId));
       await tx
         .update(deliveryVersions)
         .set({ isFinalApproved: true })
-        .where(eq(deliveryVersions.id, req.deliveryVersionId));
+        .where(eq(deliveryVersions.id, lockedRequest.deliveryVersionId));
     }
+
+    await tx
+      .update(contentItems)
+      .set({
+        status: outcome.contentStatus,
+        changeRequestGate: outcome.changeRequestGate,
+        statusReturnTarget: outcome.statusReturnTarget,
+        approvedDeliveryVersionId: outcome.markDeliveryFinal
+          ? lockedRequest.deliveryVersionId
+          : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(contentItems.id, lockedRequest.contentItemId));
+
+    await tx.insert(activityEvents).values({
+      workspaceId: item.workspaceId,
+      contentItemId: lockedRequest.contentItemId,
+      actorId: actor.id,
+      kind: "review",
+      summary: `${lockedRequest.gate} ${input.decision}`,
+      afterData: {
+        status: outcome.contentStatus,
+        deliveryVersionId: lockedRequest.deliveryVersionId,
+      },
+    });
 
     revalidatePath(`/app/w/`);
     return { ok: true };
@@ -178,9 +299,9 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
 
 export async function listApprovalsForItem(actor: Actor, contentItemId: string) {
   const [item] = await db
-    .select({ workspaceId: contentItemsView.workspaceId })
-    .from(contentItemsView)
-    .where(eq(contentItemsView.id, contentItemId))
+    .select({ workspaceId: contentItems.workspaceId })
+    .from(contentItems)
+    .where(eq(contentItems.id, contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
   await requirePolicy(
@@ -209,9 +330,3 @@ export async function listApprovalsForItem(actor: Actor, contentItemId: string) 
     .where(eq(approvalRequests.contentItemId, contentItemId))
     .orderBy(sql`${approvalRequests.requestedAt} DESC`);
 }
-
-// import contentItems lazily to avoid circular import
-import { contentItems as contentItemsView } from "@/lib/db/schema";
-
-// silence unused
-void and;

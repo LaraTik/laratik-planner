@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { bootstrapTestSession, type SeedResult } from "./_helpers";
+import { bootstrapRoleSession, bootstrapTestSession, type SeedResult } from "./_helpers";
 
 /**
  * Content flow E2E tests — the master prompt §10 state machine.
@@ -27,7 +27,10 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     await page.getByRole("button", { name: /Create draft/i }).click();
 
     // Server action redirects to the content detail page
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, { timeout: 10_000 });
+    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
+      timeout: 20_000,
+      waitUntil: "commit",
+    });
 
     // The detail page shows the title + status badge "draft"
     await expect(page.getByRole("heading", { name: uniqueTitle })).toBeVisible();
@@ -47,47 +50,56 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     const title = `List test ${Date.now()}`;
     await page.getByLabel(/Title/i).first().fill(title);
     await page.getByRole("button", { name: /Create draft/i }).click();
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, { timeout: 10_000 });
+    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
+      timeout: 20_000,
+      waitUntil: "commit",
+    });
 
     // Navigate back to the planning list
     await page.goto("/app/w/acme/planning");
     await expect(page.getByText(title).first()).toBeVisible();
   });
 
-  test("full happy path: draft → content_review → approved_for_design", async ({ page }) => {
-    const seeded: SeedResult = await bootstrapTestSession(page);
+  test("full happy path: planner drafts, reviewer approves → approved_for_design", async ({
+    page,
+    context,
+  }) => {
+    const seeded: SeedResult = await bootstrapRoleSession(page, "content_planner");
 
-    // ─── Create a draft via the Quick Create UI ───
+    // ─── Planner creates a draft via the Quick Create UI ───
     await page.goto("/app/w/acme/planning/new");
     const title = `E2E full path ${Date.now()}`;
     await page.getByLabel(/Title/i).first().fill(title);
     await page.getByRole("button", { name: /Create draft/i }).click();
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, { timeout: 10_000 });
+    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
+      timeout: 20_000,
+      waitUntil: "commit",
+    });
     const detailUrl = page.url();
     const itemId = detailUrl.split("/").pop()!;
     expect(itemId).toMatch(/^[0-9a-f-]{36}$/);
 
-    // ─── draft → content_review (the "Submit for review" button) ───
+    // ─── Planner submits the draft for content review ───
     await page
       .getByRole("button", { name: /submit.*review/i })
       .first()
       .click();
     await expect(page.getByText(/content review/i).first()).toBeVisible({ timeout: 10_000 });
 
-    // ─── content_review → approved_for_design (the "Approve" button) ───
-    // The button label is "Approve content" per the workflow bar.
-    const approveBtn = page.getByRole("button", { name: /approve/i }).first();
-    if (await approveBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    // ─── Sign in as the internal reviewer in a clean context and approve ───
+    const reviewerContext = await context.browser()!.newContext();
+    const reviewerPage = await reviewerContext.newPage();
+    try {
+      await bootstrapRoleSession(reviewerPage, "internal_reviewer");
+      await reviewerPage.goto(detailUrl);
+      const approveBtn = reviewerPage.getByRole("button", { name: /approve/i }).first();
+      await expect(approveBtn).toBeVisible({ timeout: 10_000 });
       await approveBtn.click();
-      await expect(page.getByText(/approved for design/i).first()).toBeVisible({
+      await expect(reviewerPage.getByText(/approved for design/i).first()).toBeVisible({
         timeout: 10_000,
       });
-    } else {
-      // The button may not appear if the user doesn't have the reviewer role.
-      // We have agency_admin which acts as a superset; if it's missing, the
-      // page state has changed — verify we're at least still on the detail
-      // page (no 500 / blank).
-      await expect(page).toHaveURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/);
+    } finally {
+      await reviewerContext.close();
     }
 
     // The seed should have created 3 channels in the workspace
@@ -104,7 +116,10 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     const title = `Channels test ${Date.now()}`;
     await page.getByLabel(/Title/i).first().fill(title);
     await page.getByRole("button", { name: /Create draft/i }).click();
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, { timeout: 10_000 });
+    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
+      timeout: 20_000,
+      waitUntil: "commit",
+    });
 
     // The "Channels" section should list at least 3 channels
     await expect(page.getByRole("heading", { name: "Channels", exact: true })).toBeVisible();

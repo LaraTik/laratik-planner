@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { bootstrapFirstAdmin } from "@/lib/auth/bootstrap";
 import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const Body = z.object({
   agencyName: z.string().min(2).max(100),
@@ -29,11 +30,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
-  const parsed = Body.safeParse(await req.json().catch(() => null));
+  const contentType = req.headers.get("content-type") ?? "";
+  const rawBody = contentType.includes("application/json")
+    ? await req.json().catch(() => null)
+    : Object.fromEntries(await req.formData().catch(() => new FormData()));
+  const parsed = Body.safeParse(rawBody);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid request", issues: parsed.error.flatten().fieldErrors },
       { status: 400 },
+    );
+  }
+
+  const subject = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || session.user.id;
+  const requestId = req.headers.get("x-request-id") ?? undefined;
+  const limit = await enforceRateLimit({
+    scope: "bootstrap",
+    subject,
+    actorId: session.user.id,
+    ...(requestId ? { requestId } : {}),
+  });
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many setup attempts. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
     );
   }
 

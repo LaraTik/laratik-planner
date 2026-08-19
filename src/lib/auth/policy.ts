@@ -27,6 +27,15 @@ import {
 
 export type Actor = { id: string };
 
+export const INTERNAL_WORKSPACE_ROLES = [
+  "workspace_manager",
+  "content_planner",
+  "designer",
+  "internal_reviewer",
+  "publisher",
+  "viewer",
+] as const;
+
 // ─── Agency-level ──────────────────────────────────────────────────────────
 /** Is the user an active admin of the given agency? */
 export async function isAgencyAdmin(actor: Actor, agencyId: string): Promise<boolean> {
@@ -75,6 +84,33 @@ export async function isWorkspaceMember(actor: Actor, workspaceId: string): Prom
     )
     .limit(1);
   return !!m;
+}
+
+/** Effective workspace access, including the agency-admin override. */
+export async function canAccessWorkspace(actor: Actor, workspaceId: string): Promise<boolean> {
+  const [ws] = await db
+    .select({ agencyId: workspaces.agencyId })
+    .from(workspaces)
+    .where(eq(workspaces.id, workspaceId))
+    .limit(1);
+  if (!ws) return false;
+  return (await isAgencyAdmin(actor, ws.agencyId)) || isWorkspaceMember(actor, workspaceId);
+}
+
+/** Access to agency-internal workspace data and screens. */
+export async function canAccessInternalWorkspace(
+  actor: Actor,
+  workspaceId: string,
+): Promise<boolean> {
+  return hasWorkspaceRole(actor, workspaceId, [...INTERNAL_WORKSPACE_ROLES]);
+}
+
+/** Access to the deliberately restricted client review surface. */
+export async function canAccessClientWorkspace(
+  actor: Actor,
+  workspaceId: string,
+): Promise<boolean> {
+  return hasWorkspaceRole(actor, workspaceId, ["client_reviewer"]);
 }
 
 /**

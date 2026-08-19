@@ -32,23 +32,31 @@ export const authConfig: NextAuthConfig = {
   trustHost: serverEnv.AUTH_TRUST_HOST,
 
   providers: [
-    Google({
-      clientId: serverEnv.GOOGLE_CLIENT_ID,
-      clientSecret: serverEnv.GOOGLE_CLIENT_SECRET,
-      // Allow linking: if a user signs in with Google using the same email
-      // they previously used for magic link, link the accounts.
-      allowDangerousEmailAccountLinking: true,
-    }),
-    Nodemailer({
-      server: {
-        host: serverEnv.SMTP_HOST,
-        port: serverEnv.SMTP_PORT,
-        ...(serverEnv.SMTP_USER && serverEnv.SMTP_PASSWORD
-          ? { auth: { user: serverEnv.SMTP_USER, pass: serverEnv.SMTP_PASSWORD } }
-          : {}),
-      },
-      from: serverEnv.SMTP_FROM,
-    }),
+    ...(serverEnv.GOOGLE_CLIENT_ID && serverEnv.GOOGLE_CLIENT_SECRET
+      ? [
+          Google({
+            clientId: serverEnv.GOOGLE_CLIENT_ID,
+            clientSecret: serverEnv.GOOGLE_CLIENT_SECRET,
+            // Do not link accounts solely because an untrusted provider returns the
+            // same email. Existing users sign in through their already-linked method.
+            allowDangerousEmailAccountLinking: false,
+          }),
+        ]
+      : []),
+    ...(serverEnv.SMTP_HOST && serverEnv.SMTP_USER && serverEnv.SMTP_PASSWORD && serverEnv.SMTP_FROM
+      ? [
+          Nodemailer({
+            server: {
+              host: serverEnv.SMTP_HOST,
+              port: serverEnv.SMTP_PORT,
+              ...(serverEnv.SMTP_USER && serverEnv.SMTP_PASSWORD
+                ? { auth: { user: serverEnv.SMTP_USER, pass: serverEnv.SMTP_PASSWORD } }
+                : {}),
+            },
+            from: serverEnv.SMTP_FROM,
+          }),
+        ]
+      : []),
   ] as NextAuthConfig["providers"],
 
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 /* 30 days */ },

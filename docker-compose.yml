@@ -9,12 +9,14 @@ name: laratik-planner
 
 services:
   app:
-    image: laratik-planner:${IMAGE_TAG:-latest}
-    pull_policy: never
+    image: ${APP_IMAGE:-ghcr.io/laratik/laratik-planner:${IMAGE_TAG:-latest}}
+    pull_policy: always
     ports:
       - "3100:3000"
     restart: unless-stopped
     env_file: .env
+    environment:
+      APP_VERSION: ${IMAGE_TAG:-latest}
     depends_on:
       postgres:
         condition: service_healthy
@@ -65,6 +67,17 @@ services:
     # Bind mount for the SQLite Sentry cache (if used) and any local files
     volumes:
       - app-data:/app/data
+
+  migrate:
+    image: ${MIGRATOR_IMAGE:-ghcr.io/laratik/laratik-planner-migrator:${IMAGE_TAG:-latest}}
+    pull_policy: always
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+    restart: "no"
 
   postgres:
     image: postgres:16-alpine

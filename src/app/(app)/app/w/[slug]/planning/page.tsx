@@ -1,16 +1,14 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
-import { isWorkspaceMember } from "@/lib/auth/policy";
-import { db } from "@/lib/db";
-import { workspaces } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { listWorkspaceContent } from "@/lib/content/service";
-import { statusBadgeVariant, humanStatus, humanFormat } from "@/lib/content/status";
+import { ALL_STATUSES, humanFormat } from "@/lib/content/status";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/feedback/empty-state";
-import { Plus, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight, Files, Plus, FileText } from "lucide-react";
+import { StatusBadge } from "@/components/content/status-badge";
+import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 
 /**
  * Planning list (Goal 6 master prompt §3 Monthly Planning List).
@@ -23,35 +21,50 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return { title: `Planning · ${(await params).slug}` };
 }
 
-export default async function PlanningPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function PlanningPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ month?: string; status?: string; risk?: string; density?: string }>;
+}) {
   const { slug } = await params;
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
 
-  const [ws] = await db.select().from(workspaces).where(eq(workspaces.slug, slug)).limit(1);
+  const ws = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!ws) notFound();
+  const canCreate = await hasWorkspaceRole({ id: session.user.id }, ws.id, [
+    "workspace_manager",
+    "content_planner",
+  ]);
 
-  const isMember = await isWorkspaceMember({ id: session.user.id }, ws.id);
-  if (!isMember) {
-    return (
-      <div className="space-y-4">
-        <h1 className="text-title-page text-fg-primary font-semibold">No access</h1>
-        <p className="text-body text-fg-secondary">You&apos;re not a member of this workspace.</p>
-        <Link href="/app/workspaces" className="text-primary underline-offset-4 hover:underline">
-          ← Back to Workspaces
-        </Link>
-      </div>
-    );
-  }
-
-  // Default view: current month
-  const now = new Date();
+  const filters = await searchParams;
+  const match = filters.month?.match(/^(\d{4})-(\d{2})$/);
+  const now = match ? new Date(Number(match[1]), Number(match[2]) - 1, 1) : new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const items = await listWorkspaceContent({ id: session.user.id }, ws.id, {
+  const selectedStatus =
+    filters.status && (ALL_STATUSES as readonly string[]).includes(filters.status)
+      ? filters.status
+      : undefined;
+  let items = await listWorkspaceContent({ id: session.user.id }, ws.id, {
     monthStart,
     monthEnd,
+    ...(selectedStatus ? { status: selectedStatus } : {}),
   });
+  if (filters.risk === "at_risk")
+    items = items.filter(
+      (item) =>
+        item.plannedPublishAt < new Date() &&
+        !["ready_to_publish", "partially_published", "published", "cancelled"].includes(
+          item.status,
+        ),
+    );
+  const monthParam = (offset: number) => {
+    const date = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -65,13 +78,86 @@ export default async function PlanningPage({ params }: { params: Promise<{ slug:
             {items.length === 1 ? "" : "s"}
           </p>
         </div>
-        <Button asChild>
-          <Link href={`/app/w/${slug}/planning/new`}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Quick Create
-          </Link>
-        </Button>
+        {canCreate ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" asChild>
+              <Link href={`/app/w/${slug}/planning/batch`}>
+                <Files className="h-4 w-4" />
+                Batch add
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href={`/app/w/${slug}/planning/new`}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Quick Create
+              </Link>
+            </Button>
+          </div>
+        ) : null}
       </header>
+
+      <div className="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border p-3">
+        <div className="flex items-center gap-2">
+          <Link
+            aria-label="Previous month"
+            href={`?month=${monthParam(-1)}`}
+            className="border-border rounded-[var(--radius-control)] border p-2"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Link>
+          <span className="text-body min-w-36 text-center font-semibold">
+            {now.toLocaleString("default", { month: "long", year: "numeric" })}
+          </span>
+          <Link
+            aria-label="Next month"
+            href={`?month=${monthParam(1)}`}
+            className="border-border rounded-[var(--radius-control)] border p-2"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <form className="flex flex-wrap items-center gap-2">
+          <input
+            type="hidden"
+            name="month"
+            value={`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`}
+          />
+          <select
+            name="status"
+            aria-label="Filter by status"
+            defaultValue={selectedStatus ?? ""}
+            className="border-border bg-surface text-body h-10 rounded-[var(--radius-control)] border px-3"
+          >
+            <option value="">All statuses</option>
+            {ALL_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {status.replace(/_/g, " ")}
+              </option>
+            ))}
+          </select>
+          <select
+            name="density"
+            aria-label="List density"
+            defaultValue={filters.density ?? "comfortable"}
+            className="border-border bg-surface text-body h-10 rounded-[var(--radius-control)] border px-3"
+          >
+            <option value="comfortable">Comfortable</option>
+            <option value="compact">Compact</option>
+          </select>
+          <Button variant="outline" type="submit">
+            Apply
+          </Button>
+          {selectedStatus || filters.risk ? (
+            <Button variant="ghost" asChild>
+              <Link
+                href={`/app/w/${slug}/planning?month=${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`}
+              >
+                Clear
+              </Link>
+            </Button>
+          ) : null}
+        </form>
+      </div>
 
       {items.length === 0 ? (
         <EmptyState
@@ -79,12 +165,14 @@ export default async function PlanningPage({ params }: { params: Promise<{ slug:
           title="Nothing planned for this month"
           description="Use Quick Create to add a draft — it'll show up here ready to schedule."
           action={
-            <Button asChild>
-              <Link href={`/app/w/${slug}/planning/new`}>
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Quick Create
-              </Link>
-            </Button>
+            canCreate ? (
+              <Button asChild>
+                <Link href={`/app/w/${slug}/planning/new`}>
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Quick Create
+                </Link>
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -96,7 +184,7 @@ export default async function PlanningPage({ params }: { params: Promise<{ slug:
             >
               <Link
                 href={`/app/w/${slug}/planning/${it.id}`}
-                className="flex items-center gap-3 px-4 py-3 sm:gap-4"
+                className={`flex items-center gap-3 px-4 ${filters.density === "compact" ? "py-2" : "py-3"} sm:gap-4`}
               >
                 <FileText
                   className="text-fg-muted hidden h-4 w-4 shrink-0 sm:block"
@@ -110,7 +198,7 @@ export default async function PlanningPage({ params }: { params: Promise<{ slug:
                     {humanFormat(it.format)} · {it.plannedPublishAt.toLocaleDateString()}
                   </p>
                 </div>
-                <Badge variant={statusBadgeVariant(it.status)}>{humanStatus(it.status)}</Badge>
+                <StatusBadge status={it.status} />
               </Link>
             </li>
           ))}

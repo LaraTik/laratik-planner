@@ -24,8 +24,8 @@ test.describe("Error states", () => {
     // No bootstrap — no session cookie
     await page.goto("/app");
     await expect(page).toHaveURL(/\/signin/);
-    // Signin page renders the Google button
-    await expect(page.getByRole("button", { name: /Continue with Google/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Sign in$/i })).toBeVisible();
+    await expect(page.getByText(/Invitation-only access/i)).toBeVisible();
   });
 
   test("/signin?error=AccessDenied shows the access-denied banner", async ({ page }) => {

@@ -1,10 +1,10 @@
 import { signIn } from "@/lib/auth/config";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
 import { Mail, AlertCircle } from "lucide-react";
 import { authError } from "./auth-error-codes";
+import { serverEnv } from "@/lib/validation/env";
 
 /**
  * Sign-in page (Goal 2).
@@ -36,8 +36,16 @@ export default async function SignInPage({
   searchParams: Promise<SearchParams>;
 }) {
   const sp = await searchParams;
-  const callbackUrl = sp.callbackUrl ?? "/app";
+  const callbackUrl =
+    sp.callbackUrl?.startsWith("/") && !sp.callbackUrl.startsWith("//") ? sp.callbackUrl : "/app";
   const errorCode = sp.error;
+  const googleEnabled = !!(serverEnv.GOOGLE_CLIENT_ID && serverEnv.GOOGLE_CLIENT_SECRET);
+  const emailEnabled = !!(
+    serverEnv.SMTP_HOST &&
+    serverEnv.SMTP_USER &&
+    serverEnv.SMTP_PASSWORD &&
+    serverEnv.SMTP_FROM
+  );
 
   return (
     <main className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 py-16">
@@ -62,66 +70,66 @@ export default async function SignInPage({
       ) : null}
 
       <div className="w-full space-y-3">
-        <form
-          action={async () => {
-            "use server";
-            await signIn("google", { redirectTo: callbackUrl });
-          }}
-        >
-          <Button type="submit" variant="default" className="w-full" size="lg">
-            <GoogleIcon className="h-4 w-4" />
-            Continue with Google
-          </Button>
-        </form>
+        {googleEnabled ? (
+          <form
+            action={async () => {
+              "use server";
+              await signIn("google", { redirectTo: callbackUrl });
+            }}
+          >
+            <Button type="submit" variant="default" className="w-full" size="lg">
+              <GoogleIcon className="h-4 w-4" />
+              Continue with Google
+            </Button>
+          </form>
+        ) : null}
 
-        <div className="flex items-center gap-3 py-2" role="separator" aria-label="or">
-          <hr className="border-border flex-1" />
-          <span className="text-label text-fg-muted">or</span>
-          <hr className="border-border flex-1" />
-        </div>
+        {googleEnabled && emailEnabled ? (
+          <div className="flex items-center gap-3 py-2" role="separator" aria-label="or">
+            <hr className="border-border flex-1" />
+            <span className="text-label text-fg-muted">or</span>
+            <hr className="border-border flex-1" />
+          </div>
+        ) : null}
 
-        <form
-          action={async (formData) => {
-            "use server";
-            const email = String(formData.get("email") ?? "").trim();
-            if (!email) return;
-            await signIn("nodemailer", { email, redirectTo: callbackUrl });
-          }}
-          className="space-y-3"
-        >
-          <FormField id="email" label="Work email" required>
-            <Input
-              type="email"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              required
-              placeholder="you@company.com"
-            />
-          </FormField>
-          <Button type="submit" variant="secondary" className="w-full" size="lg">
-            <Mail className="h-4 w-4" aria-hidden="true" />
-            Email me a sign-in link
-          </Button>
-        </form>
+        {emailEnabled ? (
+          <form
+            action={async (formData) => {
+              "use server";
+              const email = String(formData.get("email") ?? "").trim();
+              if (!email) return;
+              await signIn("nodemailer", { email, redirectTo: callbackUrl });
+            }}
+            className="space-y-3"
+          >
+            <FormField id="email" label="Work email" required>
+              <Input
+                type="email"
+                name="email"
+                autoComplete="email"
+                autoFocus
+                required
+                placeholder="you@company.com"
+              />
+            </FormField>
+            <Button type="submit" variant="secondary" className="w-full" size="lg">
+              <Mail className="h-4 w-4" aria-hidden="true" />
+              Email me a sign-in link
+            </Button>
+          </form>
+        ) : null}
+        {!googleEnabled && !emailEnabled ? (
+          <p
+            role="alert"
+            className="border-warning/20 bg-warning-subtle text-body text-warning rounded-[var(--radius-card)] border p-4 text-center"
+          >
+            Sign-in providers are not configured. Contact the platform administrator.
+          </p>
+        ) : null}
       </div>
 
       <p className="text-label text-fg-muted text-center">
-        By continuing you agree to our{" "}
-        <Link
-          href="/legal/terms"
-          className="text-primary focus-visible:ring-focus-ring rounded underline underline-offset-4 hover:no-underline focus-visible:no-underline focus-visible:ring-2 focus-visible:outline-none"
-        >
-          terms
-        </Link>{" "}
-        and{" "}
-        <Link
-          href="/legal/privacy"
-          className="text-primary focus-visible:ring-focus-ring rounded underline underline-offset-4 hover:no-underline focus-visible:no-underline focus-visible:ring-2 focus-visible:outline-none"
-        >
-          privacy policy
-        </Link>
-        .
+        Invitation-only access. Ask your agency administrator if you need an account.
       </p>
     </main>
   );

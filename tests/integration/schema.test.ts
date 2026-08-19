@@ -12,6 +12,7 @@ import {
   contentItemChannels,
   publicationRecords,
 } from "@/lib/db/schema";
+import { expectPgConstraint } from "./_db-error";
 
 /**
  * Goal 1 contract: every CHECK constraint + UNIQUE index from the master
@@ -21,13 +22,13 @@ import {
  *
  * Run with: TEST_DATABASE_URL=postgresql://... pnpm test:integration
  */
-const TEST_DB_URL = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
-const SKIP = !TEST_DB_URL;
+const TEST_DB_URL = process.env.TEST_DATABASE_URL;
+if (!TEST_DB_URL) throw new Error("TEST_DATABASE_URL is required for integration tests");
 
 const pool = new Pool({ connectionString: TEST_DB_URL });
 const db = drizzle(pool);
 
-describe.skipIf(SKIP)("schema invariants (Goal 1)", () => {
+describe("schema invariants", () => {
   beforeAll(async () => {
     await migrate(db, { migrationsFolder: "./src/lib/db/migrations" });
   });
@@ -54,8 +55,9 @@ describe.skipIf(SKIP)("schema invariants (Goal 1)", () => {
   describe("singleton agency", () => {
     it("allows exactly one agency row", async () => {
       await db.insert(agencies).values({ name: "Acme", slug: "acme" });
-      await expect(db.insert(agencies).values({ name: "Other", slug: "other" })).rejects.toThrow(
-        /agency_singleton_unique/,
+      await expectPgConstraint(
+        db.insert(agencies).values({ name: "Other", slug: "other" }),
+        "agency_singleton_unique",
       );
     });
   });
@@ -63,9 +65,10 @@ describe.skipIf(SKIP)("schema invariants (Goal 1)", () => {
   // ─── Email format invariant (added) ─────────────────────────────────────
   describe("email format", () => {
     it("rejects malformed email", async () => {
-      await expect(
+      await expectPgConstraint(
         db.insert(users).values({ email: "not-an-email", displayName: "Bad" }),
-      ).rejects.toThrow(/user_email_format/);
+        "user_email_format",
+      );
     });
   });
 
@@ -94,7 +97,7 @@ describe.skipIf(SKIP)("schema invariants (Goal 1)", () => {
     });
 
     it("blocks requires blocked_reason", async () => {
-      await expect(
+      await expectPgConstraint(
         db.insert(contentItems).values({
           workspaceId,
           title: "T",
@@ -104,11 +107,12 @@ describe.skipIf(SKIP)("schema invariants (Goal 1)", () => {
           createdBy: userId,
           status: "blocked",
         }),
-      ).rejects.toThrow(/content_item_blocked_needs_reason/);
+        "content_item_blocked_needs_reason",
+      );
     });
 
     it("cancelled requires cancellation_reason", async () => {
-      await expect(
+      await expectPgConstraint(
         db.insert(contentItems).values({
           workspaceId,
           title: "T",
@@ -118,11 +122,12 @@ describe.skipIf(SKIP)("schema invariants (Goal 1)", () => {
           createdBy: userId,
           status: "cancelled",
         }),
-      ).rejects.toThrow(/content_item_cancelled_needs_reason/);
+        "content_item_cancelled_needs_reason",
+      );
     });
 
     it("changes_requested requires change_request_gate", async () => {
-      await expect(
+      await expectPgConstraint(
         db.insert(contentItems).values({
           workspaceId,
           title: "T",
@@ -132,7 +137,8 @@ describe.skipIf(SKIP)("schema invariants (Goal 1)", () => {
           createdBy: userId,
           status: "changes_requested",
         }),
-      ).rejects.toThrow(/content_item_changes_requested_needs_gate/);
+        "content_item_changes_requested_needs_gate",
+      );
     });
 
     it("valid status with required reason succeeds", async () => {
@@ -163,14 +169,15 @@ describe.skipIf(SKIP)("schema invariants (Goal 1)", () => {
         .insert(workspaces)
         .values({ agencyId: agency!.id, slug: "w", name: "W", createdBy: user!.id })
         .returning();
-      await expect(
+      await expectPgConstraint(
         db.insert(socialChannels).values({
           workspaceId: ws!.id,
           platform: "instagram",
           accountName: "IG",
           url: "ftp://example.com",
         }),
-      ).rejects.toThrow(/social_channel_url_https/);
+        "social_channel_url_https",
+      );
     });
   });
 
@@ -206,12 +213,13 @@ describe.skipIf(SKIP)("schema invariants (Goal 1)", () => {
         .values({ contentItemId: ci!.id, socialChannelId: ch!.id })
         .returning();
 
-      await expect(
+      await expectPgConstraint(
         db.insert(publicationRecords).values({
           contentItemChannelId: cic!.id,
           status: "published",
         }),
-      ).rejects.toThrow(/publication_published_needs_url_time_publisher/);
+        "publication_published_needs_url_time_publisher",
+      );
     });
   });
 });

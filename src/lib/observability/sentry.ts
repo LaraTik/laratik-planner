@@ -55,9 +55,9 @@ function loadSentry(): SentryLike | null {
       setUser: (user) => Sentry.setUser(user),
     };
     return cached;
-  } catch (err) {
+  } catch {
     // Sentry package not installed or init failed — fall back to no-op
-    console.warn("[sentry] init failed:", err);
+    console.warn("[sentry] initialization failed; details suppressed");
     return (cached = noopSentry);
   }
 }

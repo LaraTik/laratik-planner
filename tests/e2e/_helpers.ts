@@ -50,12 +50,19 @@ export type SeedResult = {
  */
 export async function devSeed(
   request: APIRequestContext,
-  options: { email?: string; workspaceSlug?: string } = {},
+  options: {
+    email?: string;
+    workspaceSlug?: string;
+    agencyAdmin?: boolean;
+    workspaceRoles?: Exclude<FixtureRole, "agency_admin">[];
+  } = {},
 ): Promise<SeedResult> {
   const res = await request.post("/api/dev/seed", {
     data: {
       email: options.email ?? DEFAULT_EMAIL,
       workspaceSlug: options.workspaceSlug ?? "acme",
+      ...(options.agencyAdmin !== undefined ? { agencyAdmin: options.agencyAdmin } : {}),
+      ...(options.workspaceRoles ? { workspaceRoles: options.workspaceRoles } : {}),
     },
   });
   if (!res.ok()) {
@@ -75,5 +82,31 @@ export async function bootstrapTestSession(
 ): Promise<SeedResult> {
   const result = await devSeed(page.request, options);
   await devSignIn(page.request, options.email ? { email: options.email } : {});
+  return result;
+}
+
+export type FixtureRole =
+  | "agency_admin"
+  | "workspace_manager"
+  | "content_planner"
+  | "designer"
+  | "internal_reviewer"
+  | "client_reviewer"
+  | "publisher"
+  | "viewer";
+
+export async function bootstrapRoleSession(
+  page: Page,
+  role: FixtureRole,
+  workspaceSlug = "acme",
+): Promise<SeedResult> {
+  const email = `e2e-${role}@laratik.local`;
+  const result = await devSeed(page.request, {
+    email,
+    workspaceSlug,
+    agencyAdmin: role === "agency_admin",
+    workspaceRoles: role === "agency_admin" ? [] : [role],
+  });
+  await devSignIn(page.request, { email, role: role === "agency_admin" ? "agency_admin" : "user" });
   return result;
 }

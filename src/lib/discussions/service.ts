@@ -9,7 +9,7 @@ import {
   users,
   workspaceMemberships,
 } from "@/lib/db/schema";
-import { hasWorkspaceRole, isWorkspaceMember, requirePolicy, type Actor } from "@/lib/auth/policy";
+import { canAccessWorkspace, hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -89,7 +89,7 @@ export async function createComment(actor: Actor, input: CreateCommentInput) {
   if (!item) throw new Error("Content item not found");
 
   // Anyone in the workspace (any role) can comment
-  await requirePolicy(isWorkspaceMember(actor, item.workspaceId), "comment");
+  await requirePolicy(canAccessWorkspace(actor, item.workspaceId), "comment");
 
   // Reply visibility cannot be less restrictive than parent
   if (data.parentCommentId) {
@@ -254,7 +254,7 @@ export async function listCommentsForItem(
     .limit(1);
   if (!item) return [];
 
-  await requirePolicy(isWorkspaceMember(actor, item.workspaceId), "view_comments");
+  await requirePolicy(canAccessWorkspace(actor, item.workspaceId), "view_comments");
 
   // Determine what visibility the actor can see
   const canSeeInternal = await hasWorkspaceRole(actor, item.workspaceId, [

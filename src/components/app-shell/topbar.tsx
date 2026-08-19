@@ -1,5 +1,3 @@
-import { Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { UserMenu } from "./user-menu";
 import { WorkspaceSwitcherServer } from "./workspace-switcher.server";
 import { NotificationsBell } from "./notifications-bell";
@@ -28,14 +26,15 @@ export function Topbar({
   return (
     <div className="flex h-full items-center justify-between gap-3 px-4 sm:px-6">
       <div className="flex min-w-0 items-center gap-2">
-        <WorkspaceSwitcherServer />
+        <WorkspaceSwitcherServer testId="workspace-switcher-trigger" />
       </div>
 
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-        <Button variant="ghost" size="icon" aria-label="Search (coming soon)">
-          <Search className="h-4 w-4" aria-hidden="true" />
-        </Button>
-        <NotificationsBell initial={notifications} initialUnread={unreadCount} />
+        <NotificationsBell
+          initial={notifications}
+          initialUnread={unreadCount}
+          badgeTestId="unread-badge"
+        />
         <UserMenu user={user} />
       </div>
     </div>

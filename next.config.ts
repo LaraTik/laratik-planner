@@ -1,4 +1,6 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
+import { buildSecurityHeaders } from "./src/lib/security/headers";
 
 const nextConfig: NextConfig = {
   // Standalone output keeps the production image small (~150 MB).
@@ -20,14 +22,33 @@ const nextConfig: NextConfig = {
   // Disable powered-by header (Traefik already adds its own).
   poweredByHeader: false,
 
+  async headers() {
+    const environment =
+      process.env.NODE_ENV === "production"
+        ? "production"
+        : process.env.NODE_ENV === "test"
+          ? "test"
+          : "development";
+    return [
+      {
+        source: "/(.*)",
+        headers: buildSecurityHeaders(environment),
+      },
+    ];
+  },
+
   // Standalone output omits some transitive deps that the server actually
   // needs at runtime. Force-include them in the file trace.
   outputFileTracingIncludes: {
     "**": ["./node_modules/@swc/helpers/**/*", "./node_modules/@next/swc-*/**/*"],
   },
-
-  // Sentry is wired later (Goal 13). Skipped here to keep Goal 0 dependency-light.
-  // Sentry: {} block belongs in the build phase.
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  ...(process.env.SENTRY_ORG ? { org: process.env.SENTRY_ORG } : {}),
+  ...(process.env.SENTRY_PROJECT ? { project: process.env.SENTRY_PROJECT } : {}),
+  ...(process.env.SENTRY_AUTH_TOKEN ? { authToken: process.env.SENTRY_AUTH_TOKEN } : {}),
+  silent: !process.env.CI,
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
+  webpack: { treeshake: { removeDebugLogging: true } },
+});

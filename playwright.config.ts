@@ -41,16 +41,23 @@ export default defineConfig({
 
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+    { name: "webkit", use: { ...devices["Desktop Safari"] } },
     { name: "mobile-chrome", use: { ...devices["Pixel 7"] } },
+    { name: "mobile-safari", use: { ...devices["iPhone 13"] } },
   ],
 
   // Boot the Next.js dev server before tests if not already running.
-  webServer: {
-    command: process.env.PLAYWRIGHT_NO_WEBSERVER ? "echo skip" : "pnpm dev",
-    url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    stdout: "pipe",
-    stderr: "pipe",
-  },
+  ...(process.env.PLAYWRIGHT_NO_WEBSERVER
+    ? {}
+    : {
+        webServer: {
+          command: "pnpm exec next dev --webpack",
+          url: BASE_URL,
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+          stdout: "ignore" as const,
+          stderr: "pipe" as const,
+        },
+      }),
 } as Parameters<typeof defineConfig>[0]);

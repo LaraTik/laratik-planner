@@ -38,7 +38,10 @@ jobs:
       AUTH_TRUST_HOST: "true"
       SMTP_HOST: localhost
       SMTP_PORT: 1025
+      SMTP_USER: ci
+      SMTP_PASSWORD: ci-only
       SMTP_FROM: "ci <ci@planner.test>"
+      TEST_DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
 
     steps:
       - name: Checkout
@@ -67,14 +70,20 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Generate Drizzle types
-        run: pnpm db:generate
-
       - name: Apply migrations
         run: pnpm db:migrate
 
       - name: Unit tests
         run: pnpm test:unit -- --reporter=verbose
+
+      - name: Integration tests
+        run: pnpm test:integration
+
+      - name: Coverage
+        run: pnpm test:coverage
+
+      - name: Dependency audit
+        run: pnpm audit --prod
 
       - name: Build
         run: pnpm build
@@ -90,6 +99,10 @@ jobs:
             -e AUTH_SECRET=$AUTH_SECRET \
             -e DATABASE_URL=$DATABASE_URL \
             -e AUTH_URL=http://localhost:3000 \
+            -e SMTP_HOST=localhost \
+            -e SMTP_USER=ci \
+            -e SMTP_PASSWORD=ci-only \
+            -e SMTP_FROM='ci <ci@planner.test>' \
             --network host \
             --name laratik-planner-smoke \
             laratik-planner:ci-${{ github.sha }}
@@ -135,7 +148,10 @@ jobs:
       AUTH_TRUST_HOST: "true"
       SMTP_HOST: localhost
       SMTP_PORT: 1025
+      SMTP_USER: ci
+      SMTP_PASSWORD: ci-only
       SMTP_FROM: "ci <ci@planner.test>"
+      TEST_DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
 
     steps:
       - uses: actions/checkout@v4
@@ -148,9 +164,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:migrate
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - name: Run Playwright tests
-        run: pnpm test:e2e:run
+        run: pnpm test:e2e:isolated
       - uses: actions/upload-artifact@v4
         if: always()
         with:

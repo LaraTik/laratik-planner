@@ -18,7 +18,7 @@ export function UserMenu({
     <div className="flex items-center gap-2">
       <Link
         href="/app/account"
-        className="border-border bg-surface text-fg-primary hover:bg-surface-subtle text-label flex h-9 items-center gap-2 rounded-full border px-2 font-semibold transition"
+        className="border-border bg-surface text-fg-primary hover:bg-surface-subtle text-label flex min-h-11 min-w-11 items-center gap-2 rounded-full border px-2 py-2 font-semibold transition"
       >
         <span className="bg-surface-subtle text-label flex h-7 w-7 items-center justify-center rounded-full font-semibold">
           {user.name.charAt(0).toUpperCase()}

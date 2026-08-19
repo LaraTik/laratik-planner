@@ -11,7 +11,7 @@ import { WorkspaceSwitcher } from "./workspace-switcher";
  * active workspace, then hands them to the client `<WorkspaceSwitcher>`
  * for the popover UI.
  */
-export async function WorkspaceSwitcherServer() {
+export async function WorkspaceSwitcherServer({ testId }: { testId?: string } = {}) {
   const session = await auth();
   if (!session?.user?.id) return null;
 
@@ -58,5 +58,12 @@ export async function WorkspaceSwitcherServer() {
   // single source of truth for related tables.
   void agencyMemberships;
 
-  return <WorkspaceSwitcher active={active} options={options} canCreate={isAdmin} />;
+  return (
+    <WorkspaceSwitcher
+      active={active}
+      options={options}
+      canCreate={isAdmin}
+      {...(testId ? { testId } : {})}
+    />
+  );
 }

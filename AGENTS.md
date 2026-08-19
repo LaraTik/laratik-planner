@@ -4,6 +4,18 @@
 >
 > **Single source of truth:** `STUDIOFLOW_MASTER_PROMPT.md` in this directory. All product, scope, design, and engineering decisions originate there. `PORT_NOTES.md` records every deviation from that prompt (Supabase → Postgres sidecar, Vercel → VPS, Resend → Mailcow, pgTAP → Drizzle tests).
 
+## Mandatory production-readiness protocol
+
+`PRODUCTION_READINESS_TRACKER.md` is the authoritative implementation status. Before changing code, read the master prompt, tracker, relevant ADRs, and the applicable documentation in `node_modules/next/dist/docs/`.
+
+- Execute tracker items in dependency order. A full implementation pass does not remove evidence requirements.
+- Use atomic milestone commits and never mix unrelated work.
+- Never mark work complete from compilation alone or weaken/skip a test to obtain green output.
+- MiniMax may move work through `Tested`; only an independent reviewer may assign `Verified`.
+- Record every material deviation with reason, impact, security/data implications, and approval requirement.
+- Preserve production identifiers/data. Every migration needs forward, compatibility, backup, and rollback evidence.
+- End an implementation pass with the evidence bundle described in `docs/production-readiness/README.md`.
+
 ## Quick start
 
 ```bash
@@ -161,3 +173,13 @@ See `docs/implementation/progress.md` for the live per-task checklist.
 - `docs/operations/environment.md` — every env var, what it does, where it lives
 - `docs/testing/strategy.md` — test layers, fixtures, coverage targets
 - `docs/implementation/progress.md` — live task list (per master prompt §0)
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

@@ -82,14 +82,6 @@ test.describe("Workspace non-member experience", () => {
 });
 
 test.describe("Workspace switcher keyboard (topbar)", () => {
-  // The workspace switcher lives in the desktop topbar, which is hidden
-  // on <768px. The mobile topbar only shows the user avatar. So these
-  // tests are desktop-only.
-  test.skip(
-    ({ isMobile }) => isMobile === true,
-    "Desktop-only — switcher is not in the mobile topbar",
-  );
-
   test("Enter on the trigger opens the listbox; arrow keys move aria-activedescendant", async ({
     page,
   }) => {
@@ -100,16 +92,14 @@ test.describe("Workspace switcher keyboard (topbar)", () => {
     });
     await page.goto("/app");
 
-    const trigger = page.getByTestId("workspace-switcher-trigger");
+    const trigger = page.locator('[data-testid^="workspace-switcher-trigger"]:visible');
     await trigger.focus();
-    // The button's onClick is what toggles the popover. Pressing Enter
-    // on a focused <button> should fire a click. If it doesn't, click.
     await page.keyboard.press("Enter");
     const listbox = page.getByRole("listbox", { name: "Workspaces" });
-    if (!(await listbox.isVisible().catch(() => false))) {
-      await trigger.click();
-    }
-    await expect(listbox).toBeVisible();
+    // Keyboard Enter on a focused <button> must open the listbox — assert it
+    // without falling back to a click. If this fails, the keyboard
+    // affordance is broken, not a test race.
+    await expect(listbox).toBeVisible({ timeout: 5_000 });
 
     // Active descendant should start on the first option
     const initialActive = await listbox.getAttribute("aria-activedescendant");
@@ -127,7 +117,7 @@ test.describe("Workspace switcher keyboard (topbar)", () => {
     await bootstrapTestSession(page);
     await page.goto("/app");
 
-    const trigger = page.getByTestId("workspace-switcher-trigger");
+    const trigger = page.locator('[data-testid^="workspace-switcher-trigger"]:visible');
     await trigger.click();
     await expect(page.getByRole("listbox", { name: "Workspaces" })).toBeVisible();
 
@@ -140,12 +130,12 @@ test.describe("Workspace switcher keyboard (topbar)", () => {
     await bootstrapTestSession(page);
     await page.goto("/app");
 
-    const trigger = page.getByTestId("workspace-switcher-trigger");
+    const trigger = page.locator('[data-testid^="workspace-switcher-trigger"]:visible');
     await trigger.click();
     await expect(page.getByRole("listbox", { name: "Workspaces" })).toBeVisible();
 
     // Click somewhere outside the popover
-    await page.locator("main").click({ position: { x: 5, y: 5 } });
+    await page.mouse.click(600, 240);
     await expect(page.getByRole("listbox", { name: "Workspaces" })).not.toBeVisible();
   });
 });

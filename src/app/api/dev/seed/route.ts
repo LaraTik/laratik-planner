@@ -51,6 +51,16 @@ type SeedBody = {
   agencySlug?: string;
   workspaceName?: string;
   workspaceSlug?: string;
+  agencyAdmin?: boolean;
+  workspaceRoles?: (
+    | "workspace_manager"
+    | "content_planner"
+    | "designer"
+    | "internal_reviewer"
+    | "client_reviewer"
+    | "publisher"
+    | "viewer"
+  )[];
 };
 
 const FIXTURES = {
@@ -80,6 +90,8 @@ export async function POST(req: NextRequest) {
     agencySlug: body.agencySlug ?? FIXTURES.agencySlug,
     workspaceName: body.workspaceName ?? FIXTURES.workspaceName,
     workspaceSlug: body.workspaceSlug ?? FIXTURES.workspaceSlug,
+    agencyAdmin: body.agencyAdmin ?? true,
+    workspaceRoles: body.workspaceRoles ?? [],
   };
 
   try {
@@ -100,6 +112,16 @@ async function seedInternal(f: {
   agencySlug: string;
   workspaceName: string;
   workspaceSlug: string;
+  agencyAdmin: boolean;
+  workspaceRoles: (
+    | "workspace_manager"
+    | "content_planner"
+    | "designer"
+    | "internal_reviewer"
+    | "client_reviewer"
+    | "publisher"
+    | "viewer"
+  )[];
 }) {
   // ─── User ────────────────────────────────────────────────────────────────
   let userId: string;
@@ -110,7 +132,10 @@ async function seedInternal(f: {
     .limit(1);
   if (existingUser[0]) {
     userId = existingUser[0].id;
-    await db.update(users).set({ role: "agency_admin" }).where(eq(users.id, userId));
+    await db
+      .update(users)
+      .set({ role: f.agencyAdmin ? "agency_admin" : "user" })
+      .where(eq(users.id, userId));
   } else {
     const [created] = await db
       .insert(users)
@@ -118,7 +143,7 @@ async function seedInternal(f: {
         email: f.email,
         name: f.name,
         displayName: f.name,
-        role: "agency_admin",
+        role: f.agencyAdmin ? "agency_admin" : "user",
         emailVerified: new Date(),
       })
       .returning({ id: users.id });
@@ -154,11 +179,11 @@ async function seedInternal(f: {
       agencyId,
       userId,
       status: "active",
-      isAgencyAdmin: true,
+      isAgencyAdmin: f.agencyAdmin,
     })
     .onConflictDoUpdate({
       target: [agencyMemberships.agencyId, agencyMemberships.userId],
-      set: { isAgencyAdmin: true, status: "active" },
+      set: { isAgencyAdmin: f.agencyAdmin, status: "active" },
     });
 
   // ─── Bootstrap lock ─────────────────────────────────────────────────────
@@ -213,16 +238,16 @@ async function seedInternal(f: {
     membershipId = created!.id;
   }
 
-  // Grant all workspace roles so the admin can exercise every flow
-  const allRoles = [
-    "workspace_manager",
-    "content_planner",
-    "designer",
-    "internal_reviewer",
-    "client_reviewer",
-    "publisher",
-  ] as const;
-  for (const role of allRoles) {
+  // Exact role fixture: tests must never rely on one identity holding every role.
+  await db
+    .delete(workspaceMembershipRoles)
+    .where(eq(workspaceMembershipRoles.workspaceMembershipId, membershipId));
+  const exactRoles = f.agencyAdmin
+    ? []
+    : f.workspaceRoles.length
+      ? f.workspaceRoles
+      : ["viewer" as const];
+  for (const role of exactRoles) {
     await db
       .insert(workspaceMembershipRoles)
       .values({ workspaceMembershipId: membershipId, role })
