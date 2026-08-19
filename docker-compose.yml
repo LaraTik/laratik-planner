@@ -32,7 +32,11 @@ services:
       - traefik.http.routers.laratik-planner.entrypoints=https
       - traefik.http.routers.laratik-planner.tls=true
       - traefik.http.routers.laratik-planner.tls.certresolver=le
-      - traefik.http.services.laratik-planner.loadbalancer.server.port=3000
+      # CRITICAL: pin upstream URL to the container name on traefik-public.
+      # Without this, Traefik may pick the wrong network's IP and the
+      # router silently fails to register. See AGENTS.md "Traefik upstream
+      # pinning" and the vps-ops evo/bot compose files for the pattern.
+      - traefik.http.services.laratik-planner.loadbalancer.server.url=http://laratik-planner-app-1:3000
       - traefik.http.middlewares.laratik-planner-secure.headers.stsSeconds=31536000
       - traefik.http.middlewares.laratik-planner-secure.headers.stsIncludeSubdomains=true
       - traefik.http.middlewares.laratik-planner-secure.headers.stsPreload=true
