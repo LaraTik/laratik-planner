@@ -65,7 +65,13 @@ export const authConfig: NextAuthConfig = {
     signIn: "/signin",
     error: "/signin",
     verifyRequest: "/signin/verify",
-    newUser: "/onboarding",
+    // NextAuth v5 redirects a brand-new user (no DB row yet) here on the
+    // first sign-in. Pointed at /setup, which is the first-time-admin
+    // bootstrap page. /setup's own logic redirects to /app once an
+    // agency exists, so this is safe for invited users too — only the
+    // very first user sees the bootstrap form. Do NOT change this to a
+    // non-existent path; NextAuth will issue a 404 to the new user.
+    newUser: "/setup",
   },
 
   callbacks: {
