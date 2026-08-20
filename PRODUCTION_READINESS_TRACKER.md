@@ -1,10 +1,10 @@
 # StudioFlow Production-Readiness Tracker
 
-> **Release verdict: READY TO DEPLOY — blocked on owner-supplied GitHub secrets (OPS-001)**
+> **Release verdict: READY ✅** (awaiting independent reviewer sign-off → `Verified`)
 >
 > This is the authoritative implementation and verification tracker. `STUDIOFLOW_MASTER_PROMPT.md` remains the product source of truth. MiniMax may move an item through `Tested`; only an independent reviewer may set `Verified`.
 >
-> **2026-08-19 update** — M1 (auth/security), M2 (workflow/publishing/AI), M3a (infra/deploy) and M3b (product + docs) are all in `main` (sha `908c992`). CI on `main` is green (lint+typecheck+test+build+Docker+smoke health). The deploy workflow fired, built and pushed both the `laratik-planner` and `laratik-planner-migrator` images to GHCR tagged `:908c992` and `:latest`, but the SSH step to `laratik-vps` failed because the repository does not yet have the `VPS_HOST`, `VPS_USER`, and `VPS_SSH_KEY` secrets configured (see OPS-001). Once those are set, the next push to `main` will deploy and the verdict flips to `READY`.
+> **2026-08-20 update** — Production deploy complete and live. `https://planner.laratik.com/api/health` returns `{"ok":true,"version":"c2355c9...","env":"production","db":"up","schema":"ready"}`. M1 (auth/security), M2 (workflow/publishing/AI), M3a (infra/deploy), M3b (product + docs) and the post-M3a deploy chain are all in `main` (sha `c2355c9`). CI on `main` is green; the Deploy workflow ran end-to-end (build+push image+push migrator → SSH to `laratik-vps` → `docker login ghcr.io` → `docker compose pull` → backup → `docker compose run --rm migrate` (schema applied cleanly) → `docker compose up -d --no-deps app` → health-check 200) with conclusion `success`. Remaining work is owner-only: Sentry DSN + alert rules (OBS-001), manual a11y sign-off (QA-005), visual baselines on the stable UI (QA-004), and one independent reviewer flipping the verdict to `Verified`.
 
 ## Status protocol
 
