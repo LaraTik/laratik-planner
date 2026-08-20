@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { and, eq, isNull } from "drizzle-orm";
+import { CalendarRange, Clock, Layers, Megaphone } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { campaigns, contentPillars, contentTemplates } from "@/lib/db/schema";
@@ -7,7 +8,30 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
+import { SectionHeader } from "@/components/workspace/section-header";
 
+const STATUS_VARIANT: Record<string, "success" | "warning" | "outline"> = {
+  active: "success",
+  draft: "warning",
+  archived: "outline",
+  scheduled: "success",
+  ongoing: "success",
+};
+
+/**
+ * Planning library (M3.8) — workspace-scoped catalogue of reusable
+ * campaigns, content pillars, and templates.
+ *
+ * Stitch design (project 5403097764334458790, screen `7493876f`):
+ *   - Sub-nav: Campaigns / Pillars / Templates (client-side tabs)
+ *   - Campaigns: card grid with status, dates, owner, content progress
+ *   - Pillars: 2-col table (Pillar / Description / Actions)
+ *   - Templates: list with format icon + name + meta
+ *
+ * v1 keeps the three sections in a single page (no client-side tabs) —
+ * each card hosts its own list, the workspace context is shown via the
+ * timezone pill, and data-testids are wired for visual-regression.
+ */
 export default async function PlanningLibraryPage({
   params,
 }: {
@@ -39,60 +63,144 @@ export default async function PlanningLibraryPage({
       <PageHeader
         eyebrow={workspace.name}
         title="Planning library"
-        description="Reusable campaigns, pillars, and content templates."
+        description={
+          <>
+            Reusable campaigns, content pillars, and templates for this workspace.
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {workspace.timezone}
+            </span>
+          </>
+        }
       />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <LibrarySection title="Campaigns" empty="No campaigns yet">
-          {campaignRows.map((row) => (
-            <li
-              key={row.id}
-              className="border-border flex flex-wrap items-start justify-between gap-2 border-b py-3 last:border-0"
-            >
-              <span className="text-body font-semibold">{row.name}</span>
-              <Badge variant={row.status === "active" ? "success" : "default"}>{row.status}</Badge>
-              {row.objective ? (
-                <p className="text-label text-fg-secondary w-full">{row.objective}</p>
-              ) : null}
-            </li>
-          ))}
-        </LibrarySection>
-        <LibrarySection title="Content pillars" empty="No pillars yet">
-          {pillars.map((row) => (
-            <li key={row.id} className="border-border border-b py-3 last:border-0">
-              <span className="text-body font-semibold">{row.name}</span>
-              {row.description ? (
-                <p className="text-label text-fg-secondary mt-1">{row.description}</p>
-              ) : null}
-            </li>
-          ))}
-        </LibrarySection>
-        <LibrarySection title="Templates" empty="No templates yet">
-          {templates.map((row) => (
-            <li key={row.id} className="border-border border-b py-3 last:border-0">
-              <span className="text-body font-semibold">{row.name}</span>
-              <p className="text-label text-fg-secondary mt-1">{row.format.replace(/_/g, " ")}</p>
-            </li>
-          ))}
-        </LibrarySection>
-      </div>
+
+      <Card padding="none" className="overflow-hidden">
+        <div className="border-border border-b px-4 py-3">
+          <SectionHeader
+            title={
+              <span className="inline-flex items-center gap-2">
+                <Megaphone className="text-fg-secondary h-4 w-4" aria-hidden="true" />
+                Campaigns
+                <Badge variant="info">{campaignRows.length}</Badge>
+              </span>
+            }
+          />
+        </div>
+        {campaignRows.length === 0 ? (
+          <p className="text-body text-fg-muted px-4 py-6">
+            No campaigns yet. Create one from the planning list to bundle related ideas.
+          </p>
+        ) : (
+          <ul className="divide-border divide-y" data-testid="library-campaigns">
+            {campaignRows.map((row) => (
+              <li
+                key={row.id}
+                className="hover:bg-surface-subtle flex flex-wrap items-start justify-between gap-2 px-4 py-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-body text-fg-primary font-semibold">{row.name}</p>
+                  {row.objective ? (
+                    <p className="text-label text-fg-secondary mt-0.5">{row.objective}</p>
+                  ) : null}
+                </div>
+                <div className="text-label text-fg-muted flex items-center gap-1.5">
+                  <CalendarRange className="h-3 w-3" aria-hidden="true" />
+                  {formatCampaignWindow(row.startDate, row.endDate)}
+                </div>
+                <Badge variant={STATUS_VARIANT[row.status] ?? "outline"}>{row.status}</Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card padding="none" className="overflow-hidden">
+        <div className="border-border border-b px-4 py-3">
+          <SectionHeader
+            title={
+              <span className="inline-flex items-center gap-2">
+                <Layers className="text-fg-secondary h-4 w-4" aria-hidden="true" />
+                Content pillars
+                <Badge variant="info">{pillars.length}</Badge>
+              </span>
+            }
+          />
+        </div>
+        {pillars.length === 0 ? (
+          <p className="text-body text-fg-muted px-4 py-6">No content pillars yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="bg-surface-subtle border-border border-b">
+                  <th className="text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase">
+                    Pillar
+                  </th>
+                  <th className="text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase">
+                    Description
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-border text-table-dense divide-y">
+                {pillars.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="hover:bg-surface-subtle transition-colors"
+                    data-testid={`library-pillar-${row.id}`}
+                  >
+                    <td className="text-body text-fg-primary px-4 py-3 font-medium">{row.name}</td>
+                    <td className="text-body text-fg-secondary px-4 py-3">
+                      {row.description ?? <span className="text-fg-muted">&mdash;</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card padding="none" className="overflow-hidden">
+        <div className="border-border border-b px-4 py-3">
+          <SectionHeader
+            title={
+              <span className="inline-flex items-center gap-2">
+                <Layers className="text-fg-secondary h-4 w-4" aria-hidden="true" />
+                Templates
+                <Badge variant="info">{templates.length}</Badge>
+              </span>
+            }
+          />
+        </div>
+        {templates.length === 0 ? (
+          <p className="text-body text-fg-muted px-4 py-6">No templates yet.</p>
+        ) : (
+          <ul className="divide-border divide-y" data-testid="library-templates">
+            {templates.map((row) => (
+              <li
+                key={row.id}
+                className="hover:bg-surface-subtle flex items-center justify-between gap-3 px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-body text-fg-primary font-semibold">{row.name}</p>
+                  <p className="text-label text-fg-muted mt-0.5">{row.format.replace(/_/g, " ")}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
     </div>
   );
 }
 
-function LibrarySection({
-  title,
-  empty,
-  children,
-}: {
-  title: string;
-  empty: string;
-  children: React.ReactNode;
-}) {
-  const hasChildren = Array.isArray(children) ? children.length > 0 : Boolean(children);
-  return (
-    <Card>
-      <h2 className="text-title-card text-fg-primary mb-3 font-semibold">{title}</h2>
-      {hasChildren ? <ul>{children}</ul> : <p className="text-body text-fg-muted mt-4">{empty}</p>}
-    </Card>
-  );
+function formatCampaignWindow(start: Date | string | null, end: Date | string | null): string {
+  const fmt = (d: Date | string) => {
+    const date = typeof d === "string" ? new Date(d) : d;
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  };
+  if (start && end) return `${fmt(start)} – ${fmt(end)}`;
+  if (start) return `From ${fmt(start)}`;
+  if (end) return `Until ${fmt(end)}`;
+  return "No window set";
 }
