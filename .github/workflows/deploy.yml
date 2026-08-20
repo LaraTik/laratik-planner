@@ -80,12 +80,17 @@ jobs:
           # The VPS-side deploy.sh needs a GHCR credential to pull the
           # private `ghcr.io/laratik/laratik-planner{-migrator}` images.
           # Pipe GHCR_PAT (a fine-grained PAT with read:packages on the
-          # LaraTik org) into the script as $GHCR_PAT. The script does
-          # `echo "$GHCR_PAT" | docker login ghcr.io -u <user> --password-stdin`
-          # before the first pull, then `docker logout` after.
+          # LaraTik org) and GHCR_USER into the script. The script does
+          # `echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin`
+          # before the first pull, then `docker logout` in an EXIT trap.
+          # appleboy/ssh-action@v1 needs the values in the step's env: AND
+          # the names listed in envs: to forward them to the remote shell.
           envs: GHCR_PAT,GHCR_USER
+          env:
+            GHCR_PAT: ${{ secrets.GHCR_PAT }}
+            GHCR_USER: ${{ secrets.GHCR_USER }}
           script: |
             cd /opt/laratik-planner
             git fetch --all --prune
             git checkout ${{ github.event.workflow_run.head_sha }}
-            GHCR_USER="$GHCR_USER" GHCR_PAT="$GHCR_PAT" ./scripts/deploy.sh "${{ github.event.workflow_run.head_sha }}"
+            ./scripts/deploy.sh "${{ github.event.workflow_run.head_sha }}"
