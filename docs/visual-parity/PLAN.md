@@ -14,11 +14,11 @@
 `laratik-planner` v1 ships all 27 canonical routes, but the **navigation
 shell diverges from Stitch** in three load-bearing ways:
 
-| # | Divergence | Where it lives |
-| - | ---------- | -------------- |
-| 1 | Workspace tabs are a **horizontal** `<nav>` rendered inside `/app/w/[slug]/layout.tsx`. Stitch has them as **vertical** items inside the sidebar. | `src/components/workspace/workspace-navigation.tsx`, `src/app/(app)/app/w/[slug]/layout.tsx` |
-| 2 | The current `Sidebar` is **global-only** (My Work, Workspaces, admin items, account). Stitch's sidebar is **workspace-aware**: when you are inside `/app/w/[slug]/*`, it shows the workspace tabs (Overview / Planning / Calendar / Reviews / Social Channels / Brand Kit / Team) and the bottom section becomes Settings / Admin / Help / **Workspace Switcher** + a primary **Create content** button. | `src/components/app-shell/sidebar.tsx`, `src/components/app-shell/app-shell.tsx` |
-| 3 | "User account" sits at the bottom of the sidebar. Stitch puts the user as an avatar in the **top bar**, with the account menu opening from the topbar avatar. | `src/components/app-shell/sidebar.tsx:80-116`, `src/components/app-shell/topbar.tsx` |
+| #   | Divergence                                                                                                                                                                                                                                                                                                                                                                                               | Where it lives                                                                               |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 1   | Workspace tabs are a **horizontal** `<nav>` rendered inside `/app/w/[slug]/layout.tsx`. Stitch has them as **vertical** items inside the sidebar.                                                                                                                                                                                                                                                        | `src/components/workspace/workspace-navigation.tsx`, `src/app/(app)/app/w/[slug]/layout.tsx` |
+| 2   | The current `Sidebar` is **global-only** (My Work, Workspaces, admin items, account). Stitch's sidebar is **workspace-aware**: when you are inside `/app/w/[slug]/*`, it shows the workspace tabs (Overview / Planning / Calendar / Reviews / Social Channels / Brand Kit / Team) and the bottom section becomes Settings / Admin / Help / **Workspace Switcher** + a primary **Create content** button. | `src/components/app-shell/sidebar.tsx`, `src/components/app-shell/app-shell.tsx`             |
+| 3   | "User account" sits at the bottom of the sidebar. Stitch puts the user as an avatar in the **top bar**, with the account menu opening from the topbar avatar.                                                                                                                                                                                                                                            | `src/components/app-shell/sidebar.tsx:80-116`, `src/components/app-shell/topbar.tsx`         |
 
 Plus the per-screen layouts (Overview KPI cards, Planning list density,
 Calendar grid, Board columns, etc.) are correct in structure but not
@@ -72,7 +72,7 @@ and a feature branch merge leaves every existing page and test green.
 2. **Refactor `AppShell`** to fetch the current workspace from the
    request pathname (server component reads `headers().get('x-pathname')`
    or uses the existing layout context) and pass `currentWorkspaceSlug`
-   + `currentWorkspaceName` to the Sidebar.
+   - `currentWorkspaceName` to the Sidebar.
 3. **Remove `WorkspaceNavigation`** from `src/app/(app)/app/w/[slug]/layout.tsx`.
    Keep the file as the workspace-data boundary; drop the horizontal
    tab bar.
@@ -83,6 +83,7 @@ and a feature branch merge leaves every existing page and test green.
    new vertical nav).
 
 **Touched files (estimate):**
+
 - `src/components/app-shell/sidebar.tsx` (rewrite)
 - `src/components/app-shell/app-shell.tsx` (workspace context + props)
 - `src/components/app-shell/topbar.tsx` (account menu)
@@ -101,6 +102,7 @@ and a feature branch merge leaves every existing page and test green.
   to match the new nav shape.
 
 **Acceptance:**
+
 - `pnpm verify` green (format:check + lint + typecheck + test:unit + build)
 - All existing E2E pass with the updated nav (Playwright role-by-route
   matrix still green; only `getByRole('link', { name: '…' })` selectors
@@ -114,13 +116,13 @@ and a feature branch merge leaves every existing page and test green.
 Pixel-accurate rebuild, in priority order. Each row = one milestone
 commit + a per-screen visual diff harness update.
 
-| # | Screen | Route | Current | Target (Stitch) |
-| - | ------ | ----- | ------- | --------------- |
-| 1 | Workspace Overview | `/app/w/[slug]` | KPI cards + delivery health + status pipeline | `f2bf40ae_northstar-coffee---workspace-overview.png` (already correct in structure, refine composition + Create content CTA position) |
-| 2 | Monthly Planning | `/app/w/[slug]/planning` | Grouped list w/ month nav | `96f0dd19_northstar-coffee---monthly-planning-list.png` (density toggle, week groups, batch add CTA) |
-| 3 | Workflow Board | `/app/w/[slug]/board` | 7-col board | `f9e58e53_northstar-coffee---workflow-board-final.png` (7-col w/ mobile list alt) |
-| 4 | Calendar | `/app/w/[slug]/calendar` | FullCalendar month/week | `8c0ec0b08e_northstar-coffee---editorial-calendar.png` (FullCalendar w/ Stitch month styling) |
-| 5 | Reviews | `/app/w/[slug]/reviews` | V1/V2 + queue | `bb6ac00d_northstar-coffee---reviews.png` (queue + decision panel) |
+| #   | Screen             | Route                    | Current                                       | Target (Stitch)                                                                                                                       |
+| --- | ------------------ | ------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Workspace Overview | `/app/w/[slug]`          | KPI cards + delivery health + status pipeline | `f2bf40ae_northstar-coffee---workspace-overview.png` (already correct in structure, refine composition + Create content CTA position) |
+| 2   | Monthly Planning   | `/app/w/[slug]/planning` | Grouped list w/ month nav                     | `96f0dd19_northstar-coffee---monthly-planning-list.png` (density toggle, week groups, batch add CTA)                                  |
+| 3   | Workflow Board     | `/app/w/[slug]/board`    | 7-col board                                   | `f9e58e53_northstar-coffee---workflow-board-final.png` (7-col w/ mobile list alt)                                                     |
+| 4   | Calendar           | `/app/w/[slug]/calendar` | FullCalendar month/week                       | `8c0ec0b08e_northstar-coffee---editorial-calendar.png` (FullCalendar w/ Stitch month styling)                                         |
+| 5   | Reviews            | `/app/w/[slug]/reviews`  | V1/V2 + queue                                 | `bb6ac00d_northstar-coffee---reviews.png` (queue + decision panel)                                                                    |
 
 Per-screen work: open the Stitch HTML, port the layout to the current
 shadcn/ui + Tailwind tokens (no CDN `tailwindcss.com`, no Material
