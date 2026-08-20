@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { signIn } from "@/lib/auth/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
-import { Mail, AlertCircle } from "lucide-react";
+import { Mail, AlertCircle, Wrench } from "lucide-react";
 import { authError } from "./auth-error-codes";
 import { serverEnv } from "@/lib/validation/env";
 
@@ -66,6 +67,22 @@ export default async function SignInPage({
         >
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{authError(errorCode)}</span>
+        </div>
+      ) : null}
+
+      {serverEnv.NODE_ENV !== "production" ? (
+        <div
+          role="note"
+          className="border-warning/20 bg-warning-subtle text-warning flex items-start gap-2 rounded-[var(--radius-card)] border px-4 py-3 text-sm"
+        >
+          <Wrench className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>
+            Dev mode:{" "}
+            <Link href="/dev/signin" className="font-semibold underline-offset-4 hover:underline">
+              one-click sign-in
+            </Link>{" "}
+            bypasses Google and SMTP (returns 404 in production builds).
+          </span>
         </div>
       ) : null}
 

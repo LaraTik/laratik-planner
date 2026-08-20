@@ -1,117 +1,71 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { encode } from "next-auth/jwt";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
-import { eq, sql } from "drizzle-orm";
+import {
+  DEV_SESSION_COOKIE_NAME,
+  DEV_SESSION_MAX_AGE_SECONDS,
+  signInDevUser,
+} from "@/lib/auth/dev-sign-in";
 import { serverEnv } from "@/lib/validation/env";
 
 /**
  * POST /api/dev/sign-in
  *
  * Dev/test-only helper. Creates (or fetches) a user with the given email,
- * promotes them to "agency_admin", and signs a NextAuth JWT cookie so
- * subsequent requests are authenticated.
+ * promotes them to "agency_admin" by default, and signs a NextAuth JWT
+ * cookie so subsequent requests are authenticated.
  *
- * Gated by NODE_ENV !== "production". Production builds will return
- * 404 for this route (Next.js does not register the handler in prod).
+ * Gated by NODE_ENV !== "production" (enforced inside the helper).
+ * Production builds return 404 because the helper short-circuits.
  *
  * Body: { email: string, name?: string, role?: "agency_admin" | "user" }
  *
  * This is the equivalent of "magic-link sign-in" for E2E tests — it
  * bypasses the Google OAuth and SMTP paths. Real users always use the
  * real providers.
+ *
+ * Companion UI for humans: `src/app/dev/signin/page.tsx` (one-click form).
  */
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function isDevOrTest() {
-  return serverEnv.NODE_ENV !== "production";
-}
-
 export async function POST(req: NextRequest) {
-  if (!isDevOrTest()) {
-    return NextResponse.json({ error: "Not available in production" }, { status: 404 });
-  }
-
   const body = (await req.json().catch(() => ({}))) as {
     email?: string;
     name?: string;
     role?: string;
   };
 
-  const email = (body.email ?? "").trim().toLowerCase();
-  if (!email || !email.includes("@")) {
-    return NextResponse.json({ error: "Invalid email" }, { status: 400 });
-  }
-
-  const role = body.role === "user" ? "user" : "agency_admin";
-  const name = body.name?.trim() || email.split("@")[0]!;
-
-  // Find or create the user. Email-verified at sign-in time.
-  const existing = await db
-    .select({ id: users.id, role: users.role, name: users.name })
-    .from(users)
-    .where(sql`lower(${users.email}) = ${email}`)
-    .limit(1);
-
-  let userId: string;
-  if (existing[0]) {
-    userId = existing[0].id;
-    // Keep role in sync (idempotent for E2E)
-    if (existing[0].role !== role) {
-      await db.update(users).set({ role }).where(eq(users.id, userId));
-    }
-  } else {
-    const [created] = await db
-      .insert(users)
-      .values({
-        email,
-        name,
-        displayName: name,
-        role,
-        emailVerified: new Date(),
-      })
-      .returning({ id: users.id });
-    userId = created!.id;
-  }
-
-  // Sign the NextAuth JWT cookie (v5 uses @auth/core token shape)
-  if (!serverEnv.AUTH_SECRET) {
-    return NextResponse.json({ error: "AUTH_SECRET not set" }, { status: 500 });
-  }
-  const token = await encode({
-    token: {
-      sub: userId,
-      id: userId,
-      role,
-      email,
-      name,
-    },
-    secret: serverEnv.AUTH_SECRET,
-    salt: "authjs.session-token",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+  const result = await signInDevUser({
+    email: body.email ?? "",
+    ...(body.name ? { name: body.name } : {}),
+    ...(body.role === "user" ? { role: "user" as const } : {}),
   });
+
+  if (!result.ok) {
+    const status =
+      result.error === "invalid_email" ? 400 : result.error === "missing_auth_secret" ? 500 : 404;
+    return NextResponse.json({ error: result.error }, { status });
+  }
 
   const res = NextResponse.json({
     ok: true,
-    userId,
-    email,
-    role,
+    userId: result.userId,
+    email: result.email,
+    role: result.role,
   });
   res.cookies.set({
-    name: "authjs.session-token",
-    value: token,
+    name: DEV_SESSION_COOKIE_NAME,
+    value: result.token,
     httpOnly: true,
     sameSite: "lax",
     secure: serverEnv.NODE_ENV === "production",
     path: "/",
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: DEV_SESSION_MAX_AGE_SECONDS,
   });
   return res;
 }
 
 export async function GET() {
-  if (!isDevOrTest()) {
+  if (serverEnv.NODE_ENV === "production") {
     return NextResponse.json({ error: "Not available in production" }, { status: 404 });
   }
   return NextResponse.json({

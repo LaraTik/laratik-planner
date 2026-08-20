@@ -31,3 +31,23 @@ services:
       options:
         max-size: "5m"
         max-file: "3"
+
+  # Mailpit — fake SMTP server that catches every email the app sends and
+  # shows them in a web UI. Use this to test the magic-link sign-in flow
+  # locally without a real mailbox. See docs/operations/local-dev.md.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: laratik-planner-mailpit-dev
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP — what Nodemailer connects to
+      - "8025:8025" # Web UI — http://localhost:8025 to read captured mail
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_SMTP_AUTH_ACCEPT_ANY: 1 # accept any user/pass (no real creds)
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
