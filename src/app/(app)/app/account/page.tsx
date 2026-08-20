@@ -4,6 +4,8 @@ import { agencyMemberships, agencies, workspaces, workspaceMemberships } from "@
 import { and, eq, sql } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/workspace/page-header";
 import { LogOut, Mail, User as UserIcon } from "lucide-react";
 
 /**
@@ -58,25 +60,17 @@ export default async function AccountPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <header>
-        <h1 className="text-title-page text-fg-primary font-semibold">Account</h1>
-        <p className="text-body text-fg-secondary mt-1">
-          Your profile, agency membership, and sign-in options.
-        </p>
-      </header>
+      <PageHeader
+        title="Account"
+        description="Your profile, agency membership, and sign-in options."
+      />
 
-      <section
-        aria-labelledby="profile-heading"
-        className="border-border bg-surface rounded-[var(--radius-card)] border p-5"
-      >
-        <h2
-          id="profile-heading"
-          className="text-title-card text-fg-primary flex items-center gap-2 font-semibold"
-        >
+      <Card aria-labelledby="profile-heading">
+        <CardTitle id="profile-heading" className="mb-3 flex items-center gap-2">
           <UserIcon className="h-4 w-4" aria-hidden="true" />
           Profile
-        </h2>
-        <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[8rem_1fr]">
+        </CardTitle>
+        <dl className="grid grid-cols-1 gap-2 sm:grid-cols-[8rem_1fr]">
           <dt className="text-body text-fg-muted">Name</dt>
           <dd className="text-body text-fg-primary font-semibold">{session.user.name}</dd>
           <dt className="text-body text-fg-muted">Email</dt>
@@ -91,17 +85,14 @@ export default async function AccountPage() {
             </Badge>
           </dd>
         </dl>
-      </section>
+      </Card>
 
-      <section
-        aria-labelledby="agency-heading"
-        className="border-border bg-surface rounded-[var(--radius-card)] border p-5"
-      >
-        <h2 id="agency-heading" className="text-title-card text-fg-primary font-semibold">
+      <Card aria-labelledby="agency-heading">
+        <CardTitle id="agency-heading" className="mb-3">
           Agency
-        </h2>
+        </CardTitle>
         {profile ? (
-          <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[8rem_1fr]">
+          <dl className="grid grid-cols-1 gap-2 sm:grid-cols-[8rem_1fr]">
             <dt className="text-body text-fg-muted">Name</dt>
             <dd className="text-body text-fg-primary font-semibold">{profile.agencyName}</dd>
             <dt className="text-body text-fg-muted">Admin</dt>
@@ -126,7 +117,7 @@ export default async function AccountPage() {
             flow will assign you as the agency admin on the next page load.
           </p>
         )}
-      </section>
+      </Card>
 
       <form
         action={async () => {

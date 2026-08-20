@@ -4,8 +4,10 @@ import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { listWorkspaceContent } from "@/lib/content/service";
 import { StatusBadge } from "@/components/content/status-badge";
-import { ScreenHeading } from "@/components/workspace/screen-heading";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { PageHeader } from "@/components/workspace/page-header";
+import { MonthNav } from "@/components/workspace/month-nav";
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 export default async function EditorialCalendarPage({
   params,
@@ -40,35 +42,17 @@ export default async function EditorialCalendarPage({
   };
   return (
     <div className="space-y-6">
-      <ScreenHeading
+      <PageHeader
         eyebrow={workspace.name}
         title="Editorial calendar"
         description="Planned publish dates in the workspace timezone."
         action={
-          <div className="flex items-center gap-2">
-            <Link
-              aria-label="Previous month"
-              className="border-border bg-surface rounded-[var(--radius-control)] border p-2"
-              href={`?month=${monthParam(-1)}`}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Link>
-            <span className="text-body min-w-32 text-center font-semibold">
-              {reference.toLocaleString("default", { month: "long", year: "numeric" })}
-            </span>
-            <Link
-              aria-label="Next month"
-              className="border-border bg-surface rounded-[var(--radius-control)] border p-2"
-              href={`?month=${monthParam(1)}`}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
+          <MonthNav month={reference} buildHref={(offset) => `?month=${monthParam(offset)}`} />
         }
       />
       <div className="border-border bg-surface overflow-x-auto rounded-[var(--radius-card)] border">
         <div className="grid min-w-[760px] grid-cols-7">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+          {WEEKDAYS.map((day) => (
             <div
               key={day}
               className="border-border text-label text-fg-muted border-b p-3 font-semibold"

@@ -6,8 +6,11 @@ import { listWorkspaceContent } from "@/lib/content/service";
 import { ALL_STATUSES, humanFormat } from "@/lib/content/status";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
-import { ChevronLeft, ChevronRight, Files, Plus, FileText } from "lucide-react";
+import { Files, Plus, FileText } from "lucide-react";
 import { StatusBadge } from "@/components/content/status-badge";
+import { PageHeader } from "@/components/workspace/page-header";
+import { ListCard, ListItem } from "@/components/workspace/list-item";
+import { MonthNav } from "@/components/workspace/month-nav";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 
 /**
@@ -48,6 +51,7 @@ export default async function PlanningPage({
     filters.status && (ALL_STATUSES as readonly string[]).includes(filters.status)
       ? filters.status
       : undefined;
+  const density = filters.density === "compact" ? "compact" : "comfortable";
   let items = await listWorkspaceContent({ id: session.user.id }, ws.id, {
     monthStart,
     monthEnd,
@@ -65,57 +69,42 @@ export default async function PlanningPage({
     const date = new Date(now.getFullYear(), now.getMonth() + offset, 1);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
   };
+  const buildMonthHref = (offset: number) => `?month=${monthParam(offset)}`;
+  const hasFilter = Boolean(selectedStatus || filters.risk);
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-label text-fg-muted">{ws.name}</p>
-          <h1 className="text-title-page text-fg-primary font-semibold">Planning</h1>
-          <p className="text-body text-fg-secondary mt-1">
+      <PageHeader
+        eyebrow={ws.name}
+        title="Planning"
+        description={
+          <>
             {now.toLocaleString("default", { month: "long", year: "numeric" })} · {items.length}{" "}
-            item
-            {items.length === 1 ? "" : "s"}
-          </p>
-        </div>
-        {canCreate ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" asChild>
-              <Link href={`/app/w/${slug}/planning/batch`}>
-                <Files className="h-4 w-4" />
-                Batch add
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link href={`/app/w/${slug}/planning/new`}>
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Quick Create
-              </Link>
-            </Button>
-          </div>
-        ) : null}
-      </header>
+            item{items.length === 1 ? "" : "s"}
+          </>
+        }
+        action={
+          canCreate ? (
+            <>
+              <Button variant="outline" asChild>
+                <Link href={`/app/w/${slug}/planning/batch`}>
+                  <Files className="h-4 w-4" />
+                  Batch add
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link href={`/app/w/${slug}/planning/new`}>
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Quick Create
+                </Link>
+              </Button>
+            </>
+          ) : null
+        }
+      />
 
-      <div className="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border p-3">
-        <div className="flex items-center gap-2">
-          <Link
-            aria-label="Previous month"
-            href={`?month=${monthParam(-1)}`}
-            className="border-border rounded-[var(--radius-control)] border p-2"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
-          <span className="text-body min-w-36 text-center font-semibold">
-            {now.toLocaleString("default", { month: "long", year: "numeric" })}
-          </span>
-          <Link
-            aria-label="Next month"
-            href={`?month=${monthParam(1)}`}
-            className="border-border rounded-[var(--radius-control)] border p-2"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-        </div>
+      <div className="border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-card)] border p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <MonthNav month={now} buildHref={buildMonthHref} />
         <form className="flex flex-wrap items-center gap-2">
           <input
             type="hidden"
@@ -138,7 +127,7 @@ export default async function PlanningPage({
           <select
             name="density"
             aria-label="List density"
-            defaultValue={filters.density ?? "comfortable"}
+            defaultValue={density}
             className="border-border bg-surface text-body h-10 rounded-[var(--radius-control)] border px-3"
           >
             <option value="comfortable">Comfortable</option>
@@ -147,7 +136,7 @@ export default async function PlanningPage({
           <Button variant="outline" type="submit">
             Apply
           </Button>
-          {selectedStatus || filters.risk ? (
+          {hasFilter ? (
             <Button variant="ghost" asChild>
               <Link
                 href={`/app/w/${slug}/planning?month=${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`}
@@ -176,33 +165,19 @@ export default async function PlanningPage({
           }
         />
       ) : (
-        <ul className="border-border bg-surface divide-border divide-y overflow-hidden rounded-[var(--radius-card)] border">
+        <ListCard>
           {items.map((it) => (
-            <li
+            <ListItem
               key={it.id}
-              className="hover:bg-surface-subtle focus-within:bg-surface-subtle transition"
-            >
-              <Link
-                href={`/app/w/${slug}/planning/${it.id}`}
-                className={`flex items-center gap-3 px-4 ${filters.density === "compact" ? "py-2" : "py-3"} sm:gap-4`}
-              >
-                <FileText
-                  className="text-fg-muted hidden h-4 w-4 shrink-0 sm:block"
-                  aria-hidden="true"
-                />
-                <div className="min-w-0 flex-1">
-                  <span className="text-body text-fg-primary block truncate font-semibold">
-                    {it.title}
-                  </span>
-                  <p className="text-label text-fg-muted">
-                    {humanFormat(it.format)} · {it.plannedPublishAt.toLocaleDateString()}
-                  </p>
-                </div>
-                <StatusBadge status={it.status} />
-              </Link>
-            </li>
+              href={`/app/w/${slug}/planning/${it.id}`}
+              leading={<FileText className="text-fg-muted h-4 w-4" aria-hidden="true" />}
+              title={it.title}
+              meta={`${humanFormat(it.format)} · ${it.plannedPublishAt.toLocaleDateString()}`}
+              trailing={<StatusBadge status={it.status} />}
+              density={density}
+            />
           ))}
-        </ul>
+        </ListCard>
       )}
     </div>
   );

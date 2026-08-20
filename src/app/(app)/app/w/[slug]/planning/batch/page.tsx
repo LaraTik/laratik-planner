@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { PageHeader } from "@/components/workspace/page-header";
 import { BatchForm } from "./batch-form";
 
 export default async function BatchAddPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -19,14 +20,11 @@ export default async function BatchAddPage({ params }: { params: Promise<{ slug:
     notFound();
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <header>
-        <p className="text-label text-fg-muted">{workspace.name}</p>
-        <h1 className="text-title-page font-semibold">Batch add</h1>
-        <p className="text-body text-fg-secondary mt-1">
-          Paste up to 50 ideas. All active channels and workspace defaults are applied
-          automatically. The batch is atomic.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow={workspace.name}
+        title="Batch add"
+        description="Paste up to 50 ideas. All active channels and workspace defaults are applied automatically. The batch is atomic."
+      />
       <BatchForm slug={slug} />
     </div>
   );

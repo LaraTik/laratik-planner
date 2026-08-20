@@ -4,8 +4,10 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { users, workspaceMembershipRoles, workspaceMemberships } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
-import { ScreenHeading } from "@/components/workspace/screen-heading";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/workspace/page-header";
+import { IconTile } from "@/components/workspace/icon-button";
 
 export default async function WorkspaceTeamPage({ params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();
@@ -45,32 +47,34 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
   }
   return (
     <div className="space-y-6">
-      <ScreenHeading
+      <PageHeader
         eyebrow={workspace.name}
         title="Team and access"
         description="People with access to this brand workspace and their exact roles."
       />
-      <div className="border-border bg-surface divide-border divide-y rounded-[var(--radius-card)] border">
-        {[...members.entries()].map(([id, member]) => (
-          <article key={id} className="flex flex-wrap items-center gap-3 p-4">
-            <div className="bg-primary-subtle text-primary flex h-10 w-10 items-center justify-center rounded-full font-semibold">
-              {member.name.charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-body text-fg-primary font-semibold">{member.name}</p>
-              <p className="text-label text-fg-secondary truncate">{member.email}</p>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {member.roles.map((role) => (
-                <Badge key={role}>{role.replace(/_/g, " ")}</Badge>
-              ))}
-              <Badge variant={member.status === "active" ? "success" : "danger"}>
-                {member.status}
-              </Badge>
-            </div>
-          </article>
-        ))}
-      </div>
+      <Card padding="none">
+        <ul className="divide-border divide-y">
+          {[...members.entries()].map(([id, member]) => (
+            <li key={id} className="flex flex-wrap items-center gap-3 p-4 sm:gap-4">
+              <IconTile size="lg" tone="primary" aria-hidden="true">
+                {member.name.charAt(0).toUpperCase()}
+              </IconTile>
+              <div className="min-w-0 flex-1">
+                <p className="text-body text-fg-primary font-semibold">{member.name}</p>
+                <p className="text-label text-fg-secondary truncate">{member.email}</p>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {member.roles.map((role) => (
+                  <Badge key={role}>{role.replace(/_/g, " ")}</Badge>
+                ))}
+                <Badge variant={member.status === "active" ? "success" : "danger"}>
+                  {member.status}
+                </Badge>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Card>
     </div>
   );
 }

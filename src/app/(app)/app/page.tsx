@@ -6,6 +6,8 @@ import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ListCard, ListItem } from "@/components/workspace/list-item";
+import { PageHeader } from "@/components/workspace/page-header";
 import { statusBadgeVariant, humanStatus } from "@/lib/content/status";
 import { Calendar, FileText, Plus } from "lucide-react";
 
@@ -51,12 +53,10 @@ export default async function MyWorkPage() {
   if (myItems.length === 0) {
     return (
       <div className="space-y-6">
-        <header>
-          <h1 className="text-title-page text-fg-primary font-semibold">My Work</h1>
-          <p className="text-body text-fg-secondary mt-1">
-            Content you own, design, or review. Empty for now — your day starts here.
-          </p>
-        </header>
+        <PageHeader
+          title="My Work"
+          description="Content you own, design, or review. Empty for now — your day starts here."
+        />
         <EmptyState
           icon={<FileText className="h-8 w-8" aria-hidden="true" />}
           title="Nothing assigned yet"
@@ -76,54 +76,42 @@ export default async function MyWorkPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-title-page text-fg-primary font-semibold">My Work</h1>
-          <p className="text-body text-fg-secondary mt-1">
-            {myItems.length} item{myItems.length === 1 ? "" : "s"} assigned to you, ordered by
-            planned publish time.
-          </p>
-        </div>
-        <Button asChild variant="secondary" size="sm">
-          <Link href="/app/workspaces/new">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            New workspace
-          </Link>
-        </Button>
-      </header>
-
-      <ul className="border-border bg-surface divide-border divide-y overflow-hidden rounded-[var(--radius-card)] border">
-        {myItems.map((item) => (
-          <li
-            key={item.id}
-            className="hover:bg-surface-subtle focus-within:bg-surface-subtle transition"
-          >
-            <Link
-              href={`/app/w/${item.workspaceSlug}/planning/${item.id}`}
-              className="flex items-center gap-3 px-4 py-3 sm:gap-4"
-            >
-              <FileText
-                className="text-fg-muted hidden h-4 w-4 shrink-0 sm:block"
-                aria-hidden="true"
-              />
-              <div className="min-w-0 flex-1">
-                <span className="text-body text-fg-primary block truncate font-semibold">
-                  {item.title}
-                </span>
-                <div className="text-label text-fg-muted mt-0.5 flex items-center gap-2">
-                  <span className="truncate">{item.workspaceName}</span>
-                  <span aria-hidden="true">·</span>
-                  <span className="flex shrink-0 items-center gap-1">
-                    <Calendar className="h-3 w-3" aria-hidden="true" />
-                    {item.plannedPublishAt.toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-              <Badge variant={statusBadgeVariant(item.status)}>{humanStatus(item.status)}</Badge>
+      <PageHeader
+        title="My Work"
+        description={`${myItems.length} item${myItems.length === 1 ? "" : "s"} assigned to you, ordered by planned publish time.`}
+        action={
+          <Button asChild variant="secondary" size="sm">
+            <Link href="/app/workspaces/new">
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              New workspace
             </Link>
-          </li>
+          </Button>
+        }
+      />
+
+      <ListCard>
+        {myItems.map((item) => (
+          <ListItem
+            key={item.id}
+            href={`/app/w/${item.workspaceSlug}/planning/${item.id}`}
+            leading={<FileText className="text-fg-muted h-4 w-4" aria-hidden="true" />}
+            title={item.title}
+            meta={
+              <>
+                <span className="truncate">{item.workspaceName}</span>
+                <span aria-hidden="true"> · </span>
+                <span className="inline-flex shrink-0 items-center gap-1 align-middle">
+                  <Calendar className="h-3 w-3" aria-hidden="true" />
+                  {item.plannedPublishAt.toLocaleDateString()}
+                </span>
+              </>
+            }
+            trailing={
+              <Badge variant={statusBadgeVariant(item.status)}>{humanStatus(item.status)}</Badge>
+            }
+          />
         ))}
-      </ul>
+      </ListCard>
     </div>
   );
 }

@@ -9,8 +9,9 @@ import {
   workspaceSettings,
 } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
-import { ScreenHeading } from "@/components/workspace/screen-heading";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/workspace/page-header";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { SettingsForm } from "./settings-form";
 
@@ -65,13 +66,13 @@ export default async function WorkspaceSettingsPage({
   };
   return (
     <div className="space-y-6">
-      <ScreenHeading
+      <PageHeader
         eyebrow={workspace.name}
         title="Workspace settings"
         description="Defaults reduce setup work while keeping every idea editable."
       />
       {canManage ? (
-        <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
+        <Card>
           <SettingsForm
             slug={slug}
             values={{ ...values, timezone: workspace.timezone }}
@@ -79,12 +80,12 @@ export default async function WorkspaceSettingsPage({
             internalReviewers={peopleForRole(membershipRows, "internal_reviewer")}
             clientReviewers={peopleForRole(membershipRows, "client_reviewer")}
           />
-        </section>
+        </Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-            <h2 className="text-title-card font-semibold">Planning defaults</h2>
-            <dl className="mt-4 space-y-3">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Card>
+            <CardTitle className="mb-4">Planning defaults</CardTitle>
+            <dl className="space-y-3">
               <Setting label="Timezone" value={workspace.timezone} />
               <Setting
                 label="Monthly target"
@@ -92,10 +93,10 @@ export default async function WorkspaceSettingsPage({
               />
               <Setting label="Approval mode" value={values.approvalMode.replace(/_/g, " ")} />
             </dl>
-          </section>
-          <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-            <h2 className="text-title-card font-semibold">Lead times</h2>
-            <dl className="mt-4 space-y-3">
+          </Card>
+          <Card>
+            <CardTitle className="mb-4">Lead times</CardTitle>
+            <dl className="space-y-3">
               <Setting label="Content approval" value={`${values.contentApprovalLeadDays} days`} />
               <Setting label="Design complete" value={`${values.designCompleteLeadDays} days`} />
               <Setting
@@ -107,10 +108,10 @@ export default async function WorkspaceSettingsPage({
                 value={`${values.readyToPublishLeadDays} day${values.readyToPublishLeadDays === 1 ? "" : "s"}`}
               />
             </dl>
-          </section>
-          <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5 lg:col-span-2">
-            <h2 className="text-title-card font-semibold">Default assignments</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          </Card>
+          <Card className="sm:col-span-2">
+            <CardTitle className="mb-4">Default assignments</CardTitle>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Assignment label="Designer" configured={!!values.defaultDesignerId} />
               <Assignment label="Content reviewer" configured={!!values.defaultContentReviewerId} />
               <Assignment
@@ -119,7 +120,7 @@ export default async function WorkspaceSettingsPage({
               />
               <Assignment label="Client reviewer" configured={!!values.defaultClientReviewerId} />
             </div>
-          </section>
+          </Card>
         </div>
       )}
     </div>
@@ -137,7 +138,7 @@ function peopleForRole(
 }
 function Setting({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-3">
       <dt className="text-body text-fg-secondary">{label}</dt>
       <dd className="text-body text-fg-primary font-semibold capitalize">{value}</dd>
     </div>

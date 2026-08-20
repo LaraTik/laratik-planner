@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
 import { submitDeliveryAction } from "../actions";
@@ -42,21 +43,21 @@ export function DeliverySection({
 
   if (!open) {
     return (
-      <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-        <header className="flex items-center justify-between">
-          <h2 className="text-title-card text-fg-primary font-semibold">Deliveries</h2>
+      <Card>
+        <header className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle>Deliveries</CardTitle>
           <Button size="sm" onClick={() => setOpen(true)}>
             <Package className="h-3.5 w-3.5" aria-hidden="true" /> Submit delivery
           </Button>
         </header>
-      </section>
+      </Card>
     );
   }
 
   return (
-    <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-      <header className="mb-3 flex items-center justify-between">
-        <h2 className="text-title-card text-fg-primary font-semibold">Submit a delivery</h2>
+    <Card>
+      <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <CardTitle>Submit a delivery</CardTitle>
         <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
           Cancel
         </Button>
@@ -136,6 +137,6 @@ export function DeliverySection({
           {pending ? "Submitting…" : "Submit for creative review"}
         </Button>
       </form>
-    </section>
+    </Card>
   );
 }

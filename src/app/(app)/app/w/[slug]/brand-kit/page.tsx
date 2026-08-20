@@ -4,9 +4,10 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { brandAssets, brandVoiceRules } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
-import { ScreenHeading } from "@/components/workspace/screen-heading";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
+import { PageHeader } from "@/components/workspace/page-header";
 import { Palette } from "lucide-react";
 
 export default async function BrandKitPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -24,16 +25,16 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
   ]);
   return (
     <div className="space-y-6">
-      <ScreenHeading
+      <PageHeader
         eyebrow={workspace.name}
         title="Brand kit"
         description="The shared source for visual assets and writing guidance."
       />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-          <h2 className="text-title-card font-semibold">Assets</h2>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card>
+          <CardTitle className="mb-3">Assets</CardTitle>
           {assets.length ? (
-            <ul className="divide-border mt-3 divide-y">
+            <ul className="divide-border divide-y">
               {assets.map((asset) => (
                 <li key={asset.id} className="flex items-center justify-between py-3">
                   <span className="text-body font-semibold">{asset.name}</span>
@@ -48,11 +49,11 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
               description="Add logos, colors, fonts, guidelines, and references."
             />
           )}
-        </section>
-        <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-          <h2 className="text-title-card font-semibold">Voice rules</h2>
+        </Card>
+        <Card>
+          <CardTitle className="mb-3">Voice rules</CardTitle>
           {rules.length ? (
-            <ul className="mt-3 space-y-2">
+            <ul className="space-y-2">
               {rules.map((rule) => (
                 <li key={rule.id} className="bg-surface-subtle rounded-[var(--radius-control)] p-3">
                   <Badge
@@ -73,7 +74,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
           ) : (
             <p className="text-body text-fg-muted mt-4">No voice guidance has been added.</p>
           )}
-        </section>
+        </Card>
       </div>
     </div>
   );

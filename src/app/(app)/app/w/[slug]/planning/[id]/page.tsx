@@ -8,6 +8,8 @@ import { listCommentsForItem } from "@/lib/discussions/service";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { statusBadgeVariant, humanStatus, humanFormat } from "@/lib/content/status";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/workspace/page-header";
 import { WorkflowBar } from "./workflow-bar";
 import { DeliverySection } from "./delivery-section";
 import { PublishingSection } from "./publishing-section";
@@ -57,39 +59,40 @@ export default async function ContentDetailPage({
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-label text-fg-muted">{ws.name}</p>
-          <h1 className="text-title-page text-fg-primary font-semibold">{item.title}</h1>
-          <p className="text-body text-fg-secondary mt-1">
-            {humanFormat(item.format)} · {item.plannedPublishAt.toLocaleString()}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Badge variant={statusBadgeVariant(item.status)}>{humanStatus(item.status)}</Badge>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={`/app/w/${slug}/planning`}>← Planning</Link>
-          </Button>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow={ws.name}
+        title={item.title}
+        description={`${humanFormat(item.format)} · ${item.plannedPublishAt.toLocaleString()}`}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={statusBadgeVariant(item.status)}>{humanStatus(item.status)}</Badge>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/app/w/${slug}/planning`}>← Planning</Link>
+            </Button>
+          </div>
+        }
+      />
 
-      <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-        <h2 className="text-title-card text-fg-primary mb-3 font-semibold">Brief</h2>
+      <Card>
+        <CardTitle className="mb-3">Brief</CardTitle>
         {item.brief ? (
           <p className="text-body text-fg-primary whitespace-pre-wrap">{item.brief}</p>
         ) : (
           <p className="text-body text-fg-muted">No brief yet.</p>
         )}
-      </section>
+      </Card>
 
-      <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-        <h2 className="text-title-card text-fg-primary mb-3 font-semibold">Channels</h2>
+      <Card>
+        <CardTitle className="mb-3">Channels</CardTitle>
         {item.channels.length === 0 ? (
           <p className="text-body text-fg-muted">No channels selected.</p>
         ) : (
           <ul className="space-y-2">
             {item.channels.map((ch) => (
-              <li key={ch.id} className="text-body text-fg-primary flex items-center gap-2">
+              <li
+                key={ch.id}
+                className="text-body text-fg-primary flex flex-wrap items-center gap-2"
+              >
                 <Badge variant="outline">{ch.platform}</Badge>
                 <span>{ch.accountName}</span>
                 {ch.plannedPublishAtOverride ? (
@@ -101,7 +104,7 @@ export default async function ContentDetailPage({
             ))}
           </ul>
         )}
-      </section>
+      </Card>
 
       <WorkflowBar
         workspaceSlug={slug}

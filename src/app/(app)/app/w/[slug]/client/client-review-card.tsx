@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardTitle } from "@/components/ui/card";
 import { decideApprovalAction } from "../planning/actions";
 
 type ClientReviewCardProps = {
@@ -50,9 +51,9 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
   };
 
   return (
-    <article className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
+    <Card>
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-title-card font-semibold">{props.title}</h2>
+        <CardTitle>{props.title}</CardTitle>
         <Badge variant={props.overdue ? "danger" : "info"}>Review</Badge>
       </div>
       <p className="text-body text-fg-secondary mt-2">{props.deliveryDescription}</p>
@@ -117,6 +118,6 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
           Request changes
         </Button>
       </div>
-    </article>
+    </Card>
   );
 }

@@ -13,8 +13,10 @@ import {
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
+import { PageHeader } from "@/components/workspace/page-header";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -112,11 +114,14 @@ export default async function NewWorkspacePage() {
   if (!isAdmin) {
     return (
       <div className="space-y-6">
-        <h1 className="text-title-page text-fg-primary font-semibold">New workspace</h1>
-        <p className="text-body text-fg-secondary">
-          Only agency admins can create workspaces. Ask your admin to create one and add you to it.
-        </p>
-        <Link href="/app/workspaces" className="text-primary underline-offset-4 hover:underline">
+        <PageHeader
+          title="New workspace"
+          description="Only agency admins can create workspaces. Ask your admin to create one and add you to it."
+        />
+        <Link
+          href="/app/workspaces"
+          className="text-primary inline-block underline-offset-4 hover:underline"
+        >
           ← Back to Workspaces
         </Link>
       </div>
@@ -125,55 +130,55 @@ export default async function NewWorkspacePage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
-      <header>
-        <h1 className="text-title-page text-fg-primary font-semibold">New workspace</h1>
-        <p className="text-body text-fg-secondary mt-1">
-          A workspace is one client brand. Each has its own planning, content, and team.
-        </p>
-      </header>
+      <PageHeader
+        title="New workspace"
+        description="A workspace is one client brand. Each has its own planning, content, and team."
+      />
 
-      <form action={createWorkspaceAction} className="space-y-4">
-        <FormField id="name" label="Workspace name" hint="e.g. Acme Coffee" required>
-          <Input
-            type="text"
-            name="name"
+      <Card>
+        <form action={createWorkspaceAction} className="space-y-4">
+          <FormField id="name" label="Workspace name" hint="e.g. Acme Coffee" required>
+            <Input
+              type="text"
+              name="name"
+              required
+              minLength={2}
+              maxLength={100}
+              placeholder="Acme Coffee"
+            />
+          </FormField>
+          <FormField
+            id="slug"
+            label="URL slug"
+            hint="Lowercase letters, digits, and hyphens. Used in URLs."
             required
-            minLength={2}
-            maxLength={100}
-            placeholder="Acme Coffee"
-          />
-        </FormField>
-        <FormField
-          id="slug"
-          label="URL slug"
-          hint="Lowercase letters, digits, and hyphens. Used in URLs."
-          required
-        >
-          <Input
-            type="text"
-            name="slug"
-            required
-            minLength={2}
-            maxLength={60}
-            pattern="^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$"
-            placeholder="acme-coffee"
-          />
-        </FormField>
-        <FormField id="timezone" label="Timezone" hint="Used to display dates. UTC by default.">
-          <Input type="text" name="timezone" defaultValue="UTC" placeholder="UTC" />
-        </FormField>
-        <div className="flex items-center gap-3 pt-2">
-          <Button type="submit" size="lg">
-            Create workspace
-          </Button>
-          <Link
-            href="/app/workspaces"
-            className="text-body text-fg-secondary hover:text-fg-primary"
           >
-            Cancel
-          </Link>
-        </div>
-      </form>
+            <Input
+              type="text"
+              name="slug"
+              required
+              minLength={2}
+              maxLength={60}
+              pattern="^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$"
+              placeholder="acme-coffee"
+            />
+          </FormField>
+          <FormField id="timezone" label="Timezone" hint="Used to display dates. UTC by default.">
+            <Input type="text" name="timezone" defaultValue="UTC" placeholder="UTC" />
+          </FormField>
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <Button type="submit" size="lg">
+              Create workspace
+            </Button>
+            <Link
+              href="/app/workspaces"
+              className="text-body text-fg-secondary hover:text-fg-primary"
+            >
+              Cancel
+            </Link>
+          </div>
+        </form>
+      </Card>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { recordPublicationAction } from "../actions";
@@ -43,10 +44,8 @@ export function PublishingSection({
   if (channels.length === 0) return null;
 
   return (
-    <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-      <h2 className="text-title-card text-fg-primary mb-3 font-semibold">
-        Publishing (per channel)
-      </h2>
+    <Card>
+      <CardTitle className="mb-3">Publishing (per channel)</CardTitle>
       <ul className="divide-border divide-y">
         {channels.map((ch) => {
           const pub = publications.find((p) => p.contentItemChannelId === ch.id);
@@ -157,6 +156,6 @@ export function PublishingSection({
           );
         })}
       </ul>
-    </section>
+    </Card>
   );
 }

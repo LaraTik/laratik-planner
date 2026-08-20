@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CalendarDays, CheckCircle2, MessagesSquare, Workflow } from "lucide-react";
+import { Card } from "@/components/ui/card";
 
 export const metadata = {
   title: "laratik-planner",
@@ -69,10 +70,10 @@ export default function HomePage() {
 
 function Feature({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
   return (
-    <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
+    <Card>
       <div className="text-primary">{icon}</div>
-      <h2 className="text-title-card mt-3 font-semibold">{title}</h2>
+      <h2 className="text-title-card text-fg-primary mt-3 font-semibold">{title}</h2>
       <p className="text-body text-fg-secondary mt-1">{text}</p>
-    </section>
+    </Card>
   );
 }

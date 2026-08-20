@@ -6,6 +6,9 @@ import { workspaces, workspaceMemberships, workspaceMembershipRoles } from "@/li
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
+import { ListCard, ListItem } from "@/components/workspace/list-item";
+import { PageHeader } from "@/components/workspace/page-header";
+import { IconTile } from "@/components/workspace/icon-button";
 import { Plus, Folder } from "lucide-react";
 
 /**
@@ -66,24 +69,24 @@ export default async function WorkspacesPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-title-page text-fg-primary font-semibold">Workspaces</h1>
-          <p className="text-body text-fg-secondary mt-1">
-            {isAdmin
-              ? "All workspaces in this agency. Create a new one to onboard a client brand."
-              : "Workspaces you're a member of."}
-          </p>
-        </div>
-        {isAdmin ? (
-          <Button asChild>
-            <Link href="/app/workspaces/new">
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              New workspace
-            </Link>
-          </Button>
-        ) : null}
-      </header>
+      <PageHeader
+        title="Workspaces"
+        description={
+          isAdmin
+            ? "All workspaces in this agency. Create a new one to onboard a client brand."
+            : "Workspaces you're a member of."
+        }
+        action={
+          isAdmin ? (
+            <Button asChild>
+              <Link href="/app/workspaces/new">
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                New workspace
+              </Link>
+            </Button>
+          ) : null
+        }
+      />
 
       {rows.length === 0 ? (
         <EmptyState
@@ -106,27 +109,26 @@ export default async function WorkspacesPage() {
           }
         />
       ) : (
-        <ul className="border-border bg-surface divide-border divide-y overflow-hidden rounded-[var(--radius-card)] border">
+        <ListCard>
           {rows.map((ws) => (
-            <li key={ws.id}>
-              <Link
-                href={`/app/w/${ws.slug}`}
-                className="hover:bg-surface-subtle flex items-center gap-4 px-4 py-3 transition"
-              >
-                <div className="bg-primary-subtle text-primary text-body flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] font-bold">
+            <ListItem
+              key={ws.id}
+              href={`/app/w/${ws.slug}`}
+              leading={
+                <IconTile tone="primary" aria-hidden="true">
                   {ws.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-body text-fg-primary truncate font-semibold">{ws.name}</p>
-                  <p className="text-label text-fg-muted truncate">{ws.slug}.planner.laratik.com</p>
-                </div>
-                <div className="text-label text-fg-muted">
+                </IconTile>
+              }
+              title={ws.name}
+              meta={`${ws.slug}.planner.laratik.com`}
+              trailing={
+                <span className="text-label text-fg-muted">
                   {ws.memberCount} member{ws.memberCount === 1 ? "" : "s"}
-                </div>
-              </Link>
-            </li>
+                </span>
+              }
+            />
           ))}
-        </ul>
+        </ListCard>
       )}
     </div>
   );

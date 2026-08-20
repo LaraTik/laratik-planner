@@ -6,7 +6,8 @@ import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import { approvalRequests, contentItems, deliveryLinks, deliveryVersions } from "@/lib/db/schema";
 import { getClientWorkspace } from "@/lib/workspaces/context";
-import { ScreenHeading } from "@/components/workspace/screen-heading";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/workspace/page-header";
 import { ClientReviewCard } from "./client-review-card";
 
 export default async function ClientReviewPortalPage({
@@ -62,20 +63,20 @@ export default async function ClientReviewPortalPage({
     : [];
   return (
     <div className="space-y-6">
-      <ScreenHeading
+      <PageHeader
         eyebrow={workspace.name}
         title="Client review"
         description="Creative deliveries waiting for your decision."
         action={
           <Link
             href={`/app/w/${slug}/client/calendar`}
-            className="border-border bg-surface text-body rounded-[var(--radius-control)] border px-3 py-2 font-semibold"
+            className="border-border bg-surface text-body hover:bg-surface-subtle inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 py-2 font-semibold transition"
           >
             View calendar
           </Link>
         }
       />
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {rows.map((row) => (
           <ClientReviewCard
             key={row.requestId}
@@ -91,9 +92,9 @@ export default async function ClientReviewPortalPage({
         ))}
       </div>
       {rows.length === 0 ? (
-        <p className="border-border bg-surface text-body text-fg-secondary rounded-[var(--radius-card)] border p-8 text-center">
+        <Card padding="lg" className="text-body text-fg-secondary text-center">
           No client reviews are waiting.
-        </p>
+        </Card>
       ) : null}
     </div>
   );

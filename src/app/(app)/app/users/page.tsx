@@ -10,6 +10,8 @@ import { SendInviteForm } from "./send-invite-form";
 import { InvitationList } from "./invitation-list";
 import { MemberList } from "./member-list";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/workspace/page-header";
 
 /**
  * User Management (admin only).
@@ -27,9 +29,8 @@ export default async function UsersPage() {
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
     return (
       <div className="space-y-4">
-        <h1 className="text-title-page text-fg-primary font-semibold">Forbidden</h1>
-        <p className="text-body text-fg-secondary">Only agency admins can manage users.</p>
-        <Link href="/app" className="text-primary underline-offset-4 hover:underline">
+        <PageHeader title="Forbidden" description="Only agency admins can manage users." />
+        <Link href="/app" className="text-primary inline-block underline-offset-4 hover:underline">
           ← Back to My Work
         </Link>
       </div>
@@ -47,23 +48,21 @@ export default async function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-title-page text-fg-primary font-semibold">User Management</h1>
-        <p className="text-body text-fg-secondary mt-1">
-          Invite team members, assign workspace roles, deactivate departures.
-        </p>
-      </header>
+      <PageHeader
+        title="User Management"
+        description="Invite team members, assign workspace roles, deactivate departures."
+      />
 
-      <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
+      <Card>
         <h2 className="text-title-card text-fg-primary mb-3 font-semibold">Send an invitation</h2>
         <SendInviteForm workspaces={allWorkspaces.map((w) => ({ id: w.id, name: w.name }))} />
-      </section>
+      </Card>
 
-      <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-        <header className="mb-3 flex items-center justify-between">
-          <h2 className="text-title-card text-fg-primary font-semibold">Pending invitations</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>Pending invitations</CardTitle>
           <Badge variant="info">{pending.length}</Badge>
-        </header>
+        </CardHeader>
         <InvitationList
           invitations={pending.map((i) => ({
             id: i.id,
@@ -72,13 +71,13 @@ export default async function UsersPage() {
             grantsAgencyAdmin: i.grantsAgencyAdmin,
           }))}
         />
-      </section>
+      </Card>
 
-      <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-        <header className="mb-3 flex items-center justify-between">
-          <h2 className="text-title-card text-fg-primary font-semibold">Members</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>Members</CardTitle>
           <Badge variant="info">{members.length}</Badge>
-        </header>
+        </CardHeader>
         <MemberList
           members={members.map((m) => ({
             id: m.userId,
@@ -90,7 +89,7 @@ export default async function UsersPage() {
             joinedAt: m.joinedAt.toISOString().slice(0, 10),
           }))}
         />
-      </section>
+      </Card>
     </div>
   );
 }

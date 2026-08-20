@@ -5,10 +5,15 @@ import { db } from "@/lib/db";
 import { contentItems, workspaceSettings } from "@/lib/db/schema";
 import { and, desc, eq, gte, isNull, lt } from "drizzle-orm";
 import { EmptyState } from "@/components/feedback/empty-state";
+import { Card } from "@/components/ui/card";
 import { Calendar, CheckCircle2, FileText, Gauge, Rocket, ShieldAlert } from "lucide-react";
 import { calculateWorkspaceKpis } from "@/lib/dashboard/kpis";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { StatusBadge } from "@/components/content/status-badge";
+import { KpiCard } from "@/components/workspace/kpi-card";
+import { ProgressMetric } from "@/components/workspace/progress-metric";
+import { PageHeader } from "@/components/workspace/page-header";
+import { SectionHeader } from "@/components/workspace/section-header";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 
 /**
@@ -70,27 +75,27 @@ export default async function WorkspaceOverviewPage({
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-label text-fg-muted">Workspace</p>
-          <h1 className="text-title-page text-fg-primary font-semibold">{ws.name}</h1>
-          <p className="text-body text-fg-secondary mt-1">{ws.timezone}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/app/w/${slug}/planning`}
-            className="border-border bg-surface text-fg-primary hover:bg-surface-subtle text-body inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold transition"
-          >
-            Planning
-          </Link>
-          <Link
-            href={`/app/w/${slug}/calendar`}
-            className="border-border bg-surface text-fg-primary hover:bg-surface-subtle text-body inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold transition"
-          >
-            Calendar
-          </Link>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Workspace"
+        title={ws.name}
+        description={ws.timezone}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/app/w/${slug}/planning`}
+              className="border-border bg-surface text-fg-primary hover:bg-surface-subtle text-body inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold transition"
+            >
+              Planning
+            </Link>
+            <Link
+              href={`/app/w/${slug}/calendar`}
+              className="border-border bg-surface text-fg-primary hover:bg-surface-subtle text-body inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold transition"
+            >
+              Calendar
+            </Link>
+          </div>
+        }
+      />
 
       <section aria-label="Monthly performance" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
@@ -121,16 +126,12 @@ export default async function WorkspaceOverviewPage({
       </section>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-          <header className="mb-3 flex items-center justify-between">
-            <h2 className="text-title-card text-fg-primary font-semibold">Recent items</h2>
-            <Link
-              href={`/app/w/${slug}/planning`}
-              className="text-label text-primary underline-offset-4 hover:underline"
-            >
-              View all →
-            </Link>
-          </header>
+        <Card>
+          <SectionHeader
+            title="Recent items"
+            actionHref={`/app/w/${slug}/planning`}
+            actionLabel="View all"
+          />
           {recentItems.length === 0 ? (
             <EmptyState
               icon={<FileText className="h-8 w-8" aria-hidden="true" />}
@@ -148,7 +149,7 @@ export default async function WorkspaceOverviewPage({
                   >
                     {it.title}
                   </Link>
-                  <span className="text-label text-fg-muted flex items-center gap-1">
+                  <span className="text-label text-fg-muted inline-flex items-center gap-1">
                     <Calendar className="h-3 w-3" aria-hidden="true" />
                     {it.plannedPublishAt.toLocaleDateString()}
                   </span>
@@ -157,11 +158,11 @@ export default async function WorkspaceOverviewPage({
               ))}
             </ul>
           )}
-        </section>
+        </Card>
 
-        <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5 xl:col-span-2">
-          <h2 className="text-title-card text-fg-primary font-semibold">Monthly health</h2>
-          <div className="mt-5 grid gap-5 sm:grid-cols-3">
+        <Card className="xl:col-span-2">
+          <SectionHeader title="Monthly health" />
+          <div className="mt-2 grid gap-4 sm:grid-cols-3">
             <ProgressMetric
               label="Plan coverage"
               value={kpis.coveragePercent}
@@ -185,64 +186,8 @@ export default async function WorkspaceOverviewPage({
               </p>
             </div>
           </div>
-        </section>
+        </Card>
       </div>
-    </div>
-  );
-}
-
-function KpiCard({
-  label,
-  value,
-  icon,
-  href,
-  danger = false,
-}: {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-  href: string;
-  danger?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className="border-border bg-surface hover:border-primary rounded-[var(--radius-card)] border p-4 transition"
-    >
-      <div className={danger ? "text-danger" : "text-primary"}>{icon}</div>
-      <p className="text-title-page text-fg-primary mt-3 font-semibold">{value}</p>
-      <p className="text-label text-fg-secondary">{label}</p>
-    </Link>
-  );
-}
-
-function ProgressMetric({
-  label,
-  value,
-  suffix,
-  empty,
-}: {
-  label: string;
-  value: number | null;
-  suffix: string;
-  empty?: string;
-}) {
-  return (
-    <div className="border-border rounded-[var(--radius-control)] border p-4">
-      <p className="text-label text-fg-muted">{label}</p>
-      <p className="text-title-page text-fg-primary mt-2 font-semibold">
-        {value === null ? "—" : `${value}${suffix}`}
-      </p>
-      {value === null ? (
-        <p className="text-label text-fg-secondary mt-1">{empty}</p>
-      ) : (
-        <div className="bg-surface-subtle mt-3 h-2 overflow-hidden rounded-full">
-          <div
-            className="bg-primary h-full rounded-full"
-            style={{ width: `${Math.min(100, value)}%` }}
-          />
-        </div>
-      )}
     </div>
   );
 }

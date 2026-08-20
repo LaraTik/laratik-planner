@@ -8,6 +8,8 @@ import { agencies, agencyMemberships, workspaces } from "@/lib/db/schema";
 import { count, eq } from "drizzle-orm";
 import { serverEnv } from "@/lib/validation/env";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/workspace/page-header";
 
 /**
  * Agency-level identity and operational configuration summary.
@@ -22,11 +24,11 @@ export default async function AgencySettingsPage() {
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
     return (
       <div className="space-y-4">
-        <h1 className="text-title-page text-fg-primary font-semibold">Forbidden</h1>
-        <p className="text-body text-fg-secondary">
-          Only agency admins can change agency settings.
-        </p>
-        <Link href="/app" className="text-primary underline-offset-4 hover:underline">
+        <PageHeader
+          title="Forbidden"
+          description="Only agency admins can change agency settings."
+        />
+        <Link href="/app" className="text-primary inline-block underline-offset-4 hover:underline">
           ← Back to My Work
         </Link>
       </div>
@@ -44,28 +46,26 @@ export default async function AgencySettingsPage() {
   if (!agency) redirect("/setup");
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-title-page text-fg-primary font-semibold">Agency Settings</h1>
-        <p className="text-body text-fg-secondary mt-1">
-          Agency identity, access footprint, and environment-managed services.
-        </p>
-      </header>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-          <div className="text-primary flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            <h2 className="text-title-card text-fg-primary font-semibold">Agency</h2>
+      <PageHeader
+        title="Agency Settings"
+        description="Agency identity, access footprint, and environment-managed services."
+      />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card>
+          <div className="text-primary mb-4 flex items-center gap-2">
+            <Settings className="h-5 w-5" aria-hidden="true" />
+            <CardTitle>Agency</CardTitle>
           </div>
-          <dl className="mt-4 space-y-3">
+          <dl className="space-y-3">
             <Row label="Name" value={agency.name} />
             <Row label="Slug" value={agency.slug} />
             <Row label="Workspaces" value={String(workspaceCount?.value ?? 0)} />
             <Row label="Members" value={String(memberCount?.value ?? 0)} />
           </dl>
-        </section>
-        <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-          <h2 className="text-title-card font-semibold">Managed services</h2>
-          <div className="mt-4 space-y-3">
+        </Card>
+        <Card>
+          <CardTitle className="mb-4">Managed services</CardTitle>
+          <div className="space-y-3">
             <Service
               label="Google OAuth"
               enabled={!!(serverEnv.GOOGLE_CLIENT_ID && serverEnv.GOOGLE_CLIENT_SECRET)}
@@ -83,14 +83,14 @@ export default async function AgencySettingsPage() {
           <p className="text-label text-fg-muted mt-4">
             Credentials are managed by the deployment environment and are never shown here.
           </p>
-        </section>
+        </Card>
       </div>
     </div>
   );
 }
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4">
+    <div className="flex flex-wrap items-center justify-between gap-2">
       <dt className="text-body text-fg-secondary">{label}</dt>
       <dd className="text-body font-semibold">{value}</dd>
     </div>
@@ -98,7 +98,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 function Service({ label, enabled }: { label: string; enabled: boolean }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex flex-wrap items-center justify-between gap-2">
       <span className="text-body">{label}</span>
       <Badge variant={enabled ? "success" : "outline"}>{enabled ? "Configured" : "Disabled"}</Badge>
     </div>

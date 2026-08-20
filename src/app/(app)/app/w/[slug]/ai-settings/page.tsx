@@ -6,8 +6,9 @@ import { db } from "@/lib/db";
 import { aiUsageEvents } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/validation/env";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
-import { ScreenHeading } from "@/components/workspace/screen-heading";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/workspace/page-header";
 import { Bot, ShieldCheck } from "lucide-react";
 
 export default async function AiSettingsPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -27,17 +28,17 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
   const enabled = serverEnv.AI_FEATURE_ENABLED && !!serverEnv.MINIMAX_API_KEY;
   return (
     <div className="space-y-6">
-      <ScreenHeading
+      <PageHeader
         eyebrow={workspace.name}
         title="AI settings"
         description="Environment-managed assistance with human-controlled insert and replace."
       />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bot className="text-primary h-5 w-5" />
-              <h2 className="text-title-card font-semibold">MiniMax</h2>
+              <CardTitle>MiniMax</CardTitle>
             </div>
             <Badge variant={enabled ? "success" : "outline"}>
               {enabled ? "Enabled" : "Disabled"}
@@ -51,11 +52,11 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
             />
             <Row label="Requests, last 30 days" value={String(usage?.value ?? 0)} />
           </dl>
-        </section>
-        <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
+        </Card>
+        <Card>
           <div className="flex items-center gap-2">
             <ShieldCheck className="text-success h-5 w-5" />
-            <h2 className="text-title-card font-semibold">Safety boundary</h2>
+            <CardTitle>Safety boundary</CardTitle>
           </div>
           <ul className="text-body text-fg-secondary mt-4 list-disc space-y-2 pl-5">
             <li>AI can draft text but cannot change status, approve, or publish.</li>
@@ -65,7 +66,7 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
             </li>
             <li>Rate limits protect both users and provider spend.</li>
           </ul>
-        </section>
+        </Card>
       </div>
     </div>
   );
@@ -73,7 +74,7 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4">
+    <div className="flex flex-wrap items-center justify-between gap-2">
       <dt className="text-body text-fg-secondary">{label}</dt>
       <dd className="text-body text-right font-semibold">{value}</dd>
     </div>

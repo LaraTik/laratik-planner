@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardTitle } from "@/components/ui/card";
 import { transitionAction, decideApprovalAction, claimAction } from "../actions";
 import { CheckCircle, XCircle, ArrowRight, Ban, Play } from "lucide-react";
 
@@ -68,8 +69,8 @@ export function WorkflowBar({
   const can = (allowed: Role[]) => allowed.some((r) => roles[r]);
 
   return (
-    <section className="border-border bg-surface rounded-[var(--radius-card)] border p-5">
-      <h2 className="text-title-card text-fg-primary mb-3 font-semibold">Workflow</h2>
+    <Card>
+      <CardTitle className="mb-3">Workflow</CardTitle>
 
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
         {STATUSES.map((s) => {
@@ -198,7 +199,7 @@ export function WorkflowBar({
           {approvals.map((a) => (
             <div
               key={a.id}
-              className="border-border bg-surface-subtle text-body flex items-center gap-3 rounded-[var(--radius-control)] border p-2"
+              className="border-border bg-surface-subtle text-body flex flex-wrap items-center gap-3 rounded-[var(--radius-control)] border p-2"
             >
               <span className="font-semibold">{a.gate.replace(/_/g, " ")}</span>
               <Badge
@@ -268,6 +269,6 @@ export function WorkflowBar({
           ))}
         </div>
       ) : null}
-    </section>
+    </Card>
   );
 }

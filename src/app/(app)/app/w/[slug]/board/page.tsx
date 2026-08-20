@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { listWorkspaceContent } from "@/lib/content/service";
 import { StatusBadge } from "@/components/content/status-badge";
-import { ScreenHeading } from "@/components/workspace/screen-heading";
+import { PageHeader } from "@/components/workspace/page-header";
 
 const COLUMNS = [
   { label: "Ideas", statuses: ["draft", "changes_requested", "blocked"] },
@@ -25,12 +25,12 @@ export default async function WorkflowBoardPage({ params }: { params: Promise<{ 
   const items = await listWorkspaceContent({ id: session.user.id }, workspace.id, { limit: 300 });
   return (
     <div className="space-y-6">
-      <ScreenHeading
+      <PageHeader
         eyebrow={workspace.name}
         title="Workflow board"
         description="Every idea, grouped by its current production stage."
       />
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
         {COLUMNS.map((column) => {
           const rows = items.filter((item) =>
             (column.statuses as readonly string[]).includes(item.status),
@@ -50,7 +50,7 @@ export default async function WorkflowBoardPage({ params }: { params: Promise<{ 
                     <Link
                       key={item.id}
                       href={`/app/w/${slug}/planning/${item.id}`}
-                      className="border-border bg-surface hover:border-primary block rounded-[var(--radius-control)] border p-3 transition"
+                      className="border-border bg-surface hover:border-primary focus-visible:ring-focus-ring block rounded-[var(--radius-control)] border p-3 transition focus:outline-none focus-visible:ring-2"
                     >
                       <p className="text-body text-fg-primary line-clamp-2 font-semibold">
                         {item.title}

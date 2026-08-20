@@ -4,10 +4,11 @@ import { db } from "@/lib/db";
 import { socialChannels } from "@/lib/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
-import { QuickCreateForm } from "./quick-create-form";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/workspace/page-header";
 import Link from "next/link";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import { QuickCreateForm } from "./quick-create-form";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   return { title: `Quick Create · ${(await params).slug}` };
@@ -28,10 +29,10 @@ export default async function QuickCreatePage({ params }: { params: Promise<{ sl
   ) {
     return (
       <div className="space-y-4">
-        <h1 className="text-title-page font-semibold">Creation access required</h1>
-        <p className="text-body text-fg-secondary">
-          Only workspace managers and content planners can create ideas.
-        </p>
+        <PageHeader
+          title="Creation access required"
+          description="Only workspace managers and content planners can create ideas."
+        />
         <Button asChild variant="ghost">
           <Link href={`/app/w/${slug}/planning`}>← Back to Planning</Link>
         </Button>
@@ -56,12 +57,10 @@ export default async function QuickCreatePage({ params }: { params: Promise<{ sl
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <header>
-        <h1 className="text-title-page text-fg-primary font-semibold">Quick Create</h1>
-        <p className="text-body text-fg-secondary mt-1">
-          Four fields, a draft is born. Edit anything later.
-        </p>
-      </header>
+      <PageHeader
+        title="Quick Create"
+        description="Four fields, a draft is born. Edit anything later."
+      />
       <QuickCreateForm workspaceSlug={slug} channels={channels} />
     </div>
   );
