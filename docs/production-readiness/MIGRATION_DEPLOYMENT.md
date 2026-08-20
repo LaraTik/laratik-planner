@@ -5,17 +5,17 @@
 
 ## Status
 
-| Item                                | Status as of 2026-08-19                       |
+| Item                                | Status as of 2026-08-19                      |
 | ----------------------------------- | -------------------------------------------- |
-| From-zero migration                 | **PASS** (drill 1/4, 2026-08-19)              |
-| In-place upgrade                    | **PASS** (drill 2/4, 2026-08-19)              |
-| Backup verification                 | **PASS** (drill 3/4, 2026-08-19)              |
-| Disposable restore                  | **PASS** (drill 3/4, 2026-08-19)              |
-| Failed-migration abort              | **PASS** (drill 4/4, 2026-08-19)              |
+| From-zero migration                 | **PASS** (drill 1/4, 2026-08-19)             |
+| In-place upgrade                    | **PASS** (drill 2/4, 2026-08-19)             |
+| Backup verification                 | **PASS** (drill 3/4, 2026-08-19)             |
+| Disposable restore                  | **PASS** (drill 3/4, 2026-08-19)             |
+| Failed-migration abort              | **PASS** (drill 4/4, 2026-08-19)             |
 | Release health / version            | **PASS** (real release SHA in `/api/health`) |
-| Rollback drill                      | **Deferred** (forward-only migrations)        |
-| Encrypted offsite backup + rotation | **Blocked on OPS-001** (owner-supplied)       |
-| VPS deploy to `laratik-vps`         | **Blocked on OPS-001** (VPS_SSH_* secrets)    |
+| Rollback drill                      | **Deferred** (forward-only migrations)       |
+| Encrypted offsite backup + rotation | **Blocked on OPS-001** (owner-supplied)      |
+| VPS deploy to `laratik-vps`         | **Blocked on OPS-001** (VPS_SSH_* secrets)   |
 
 ## Baseline findings (pre-M3a) — all resolved
 
@@ -39,17 +39,17 @@ The pre-M3a baseline listed four release blockers. Each is now closed:
 
 ## Evidence table
 
-| Gate                   | Commit / image                                | Command or run                                                       | Result                                                | Operator / date       |
-| ---------------------- | --------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------- | --------------------- |
-| From-zero migration    | M3a `908c992` (was M2 pre-`a5ad6e0` lineage)  | `pnpm migration-drill` (drill 1)                                     | **PASS** — 3 migrations applied, 39 tables present    | local dev, 2026-08-19 |
-| In-place upgrade       | M3a `908c992` (was M2 pre-`a5ad6e0` lineage)  | `pnpm migration-drill` (drill 2)                                     | **PASS** — add+drop marker migration cycle            | local dev, 2026-08-19 |
-| Backup verification    | M3a `908c992` (was M2 pre-`a5ad6e0` lineage)  | `pnpm migration-drill` (drill 3) — `pg_dump` + drop+recreate + restore | **PASS** — schema identical, `rate_limit_event` present | local dev, 2026-08-19 |
-| Disposable restore     | M3a `908c992` (was M2 pre-`a5ad6e0` lineage)  | `pnpm migration-drill` (drill 3)                                     | **PASS** — same drill covers backup→restore cycle     | local dev, 2026-08-19 |
-| Failed-migration abort | M3a `908c992` (was M2 pre-`a5ad6e0` lineage)  | `pnpm migration-drill` (drill 4)                                     | **PASS** — broken migration throws, schema unchanged  | local dev, 2026-08-19 |
-| Release health/version | M3a `908c992`                                 | `curl https://planner.laratik.com/api/health`                        | **PASS** — `{ ok, version: "908c992", env: "prod" }`  | local dev, 2026-08-19 |
-| Rollback drill         | —                                             | `scripts/migration-drill.ts` (drill 5)                               | **Deferred** — forward-only migrations               | —                     |
-| Encrypted offsite backup | —                                           | `scripts/vps/backup.sh` + restic offsite                             | **Pending OPS-001** — restic repo + OAuth app         | owner                 |
-| VPS deploy             | M3a `908c992`                                 | `workflow_run: CI success` → `appleboy/ssh-action` → `scripts/deploy.sh` | **Pending OPS-001** — VPS_SSH_* secrets              | owner                 |
+| Gate                     | Commit / image                               | Command or run                                                           | Result                                                  | Operator / date       |
+| ------------------------ | -------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------- | --------------------- |
+| From-zero migration      | M3a `908c992` (was M2 pre-`a5ad6e0` lineage) | `pnpm migration-drill` (drill 1)                                         | **PASS** — 3 migrations applied, 39 tables present      | local dev, 2026-08-19 |
+| In-place upgrade         | M3a `908c992` (was M2 pre-`a5ad6e0` lineage) | `pnpm migration-drill` (drill 2)                                         | **PASS** — add+drop marker migration cycle              | local dev, 2026-08-19 |
+| Backup verification      | M3a `908c992` (was M2 pre-`a5ad6e0` lineage) | `pnpm migration-drill` (drill 3) — `pg_dump` + drop+recreate + restore   | **PASS** — schema identical, `rate_limit_event` present | local dev, 2026-08-19 |
+| Disposable restore       | M3a `908c992` (was M2 pre-`a5ad6e0` lineage) | `pnpm migration-drill` (drill 3)                                         | **PASS** — same drill covers backup→restore cycle       | local dev, 2026-08-19 |
+| Failed-migration abort   | M3a `908c992` (was M2 pre-`a5ad6e0` lineage) | `pnpm migration-drill` (drill 4)                                         | **PASS** — broken migration throws, schema unchanged    | local dev, 2026-08-19 |
+| Release health/version   | M3a `908c992`                                | `curl https://planner.laratik.com/api/health`                            | **PASS** — `{ ok, version: "908c992", env: "prod" }`    | local dev, 2026-08-19 |
+| Rollback drill           | —                                            | `scripts/migration-drill.ts` (drill 5)                                   | **Deferred** — forward-only migrations                  | —                     |
+| Encrypted offsite backup | —                                            | `scripts/vps/backup.sh` + restic offsite                                 | **Pending OPS-001** — restic repo + OAuth app           | owner                 |
+| VPS deploy               | M3a `908c992`                                | `workflow_run: CI success` → `appleboy/ssh-action` → `scripts/deploy.sh` | **Pending OPS-001** — VPS_SSH_* secrets                 | owner                 |
 
 Drill mechanics (refusing to run against non-test DBs, drill 5/5 forward-only rationale, idempotency): see [`MIGRATION_DRILL_RESULTS.md`](./MIGRATION_DRILL_RESULTS.md).
 
