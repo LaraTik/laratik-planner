@@ -38,6 +38,8 @@ The VPS deploy workflow reads the runtime env from the host's `.env` (mounted in
 
 > **Common pitfall:** if you skip the redirect URIs, clicking "Continue with Google" returns `?error=Configuration` because NextAuth v5 redirects to Google with a `redirect_uri` parameter that doesn't match what's registered. The fix is the URIs above — the JSON download from this step does NOT list them; the Google Cloud Console UI is the source of truth.
 
+> **Another common pitfall:** a `?error=Configuration` page can also mean the _server_ doesn't have a Google provider wired in at all. The `Configuration` code is generic — it fires when `signIn("google")` is called but the Google provider isn't in `authConfig.providers` at request time. The most common cause is a missing `GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_SECRET` in the VPS `.env` (the `auth/config.ts` provider array is filtered at request time by a ternary on those two vars). See §6 — the preflight script catches this before a deploy can ship a container with no sign-in method.
+
 ### 1.2 — Configure the OAuth consent screen (first time only)
 
 If you haven't already:
@@ -255,3 +257,29 @@ Both buttons working = Goal 2 is done.
 | `SMTP_PASSWORD`         | If leaked, or every 12 months       | Reset in Mailcow admin, update `.env` on VPS, restart.                                      |
 | `AUTH_SECRET`           | If leaked, or every 12 months       | New value, update `.env` on VPS, restart. **Note: this invalidates all existing sessions.** |
 | `BOOTSTRAP_SETUP_TOKEN` | Not needed after first admin exists | Leave alone.                                                                                |
+
+## 6. Preflight check (deploy-time guard)
+
+`scripts/vps/preflight.sh` is run at the top of `scripts/deploy.sh` before the new image is pulled. It reads `/opt/laratik-planner/.env` and refuses to deploy if no authentication provider is complete — i.e. `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` is empty, AND `SMTP_HOST` + `SMTP_USER` + `SMTP_PASSWORD` + `SMTP_FROM` is empty. This catches the failure mode where the .env was edited to remove a provider but the running container was never restarted to pick up the change, and the next deploy would otherwise silently ship a sign-in page that returns `?error=Configuration` for every click.
+
+Run it manually to verify a config before kicking off a deploy:
+
+```
+$ ./scripts/vps/preflight.sh
+✅ Preflight OK: Google SMTP provider(s) configured in ./.env.
+
+# or, on failure:
+$ ./scripts/vps/preflight.sh
+✗ Preflight failed. Refusing to deploy.
+
+  No complete authentication provider in ./.env.
+  Need EITHER
+    (GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET) for Google OAuth, OR
+    (SMTP_HOST + SMTP_USER + SMTP_PASSWORD + SMTP_FROM) for the magic-link fallback.
+
+  After updating ./.env, restart the running container so the new
+  env_file is read:
+    docker compose up -d --no-deps app
+```
+
+The script targets bash 3.2 (macOS) and bash 4+ (Linux). The check is structural — it does not contact the running container, so it works on the very first deploy (before any image is pulled) and on subsequent deploys.

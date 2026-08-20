@@ -54,6 +54,9 @@ else
   echo "→ GHCR_PAT / GHCR_USER not set; assuming GHCR images are public or already logged in"
 fi
 
+echo "→ Preflight: verifying authentication providers are configured…"
+./scripts/vps/preflight.sh
+
 echo "→ Pulling immutable app and migrator images…"
 docker compose pull app migrate
 
