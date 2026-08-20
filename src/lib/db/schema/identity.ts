@@ -31,6 +31,13 @@ export const users = pgTable(
     name: text("name"),
     image: text("image"),
     // Profile extensions (master prompt §8)
+    // `display_name` is NOT NULL but the NextAuth Drizzle adapter does
+    // not supply it on INSERT (it only knows the OAuth/email fields).
+    // A before-insert trigger (see migration 0003) fills the column
+    // from `name` (or the email local-part when `name` is null), so
+    // sign-in never fails on this constraint. The trigger is the
+    // canonical Postgres pattern for "default derived from other
+    // columns" — SET DEFAULT can't reference columns.
     displayName: text("display_name").notNull(),
     avatarPath: text("avatar_path"),
     locale: text("locale").notNull().default("en"),
