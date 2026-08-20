@@ -1,0 +1,140 @@
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { Sidebar } from "@/components/app-shell/sidebar";
+
+// next/navigation's usePathname + useRouter are client hooks. We stub
+// usePathname per-test via vi.mock so the same suite can exercise
+// both the global-mode and workspace-mode branches of the
+// workspace-aware sidebar. useRouter is also stubbed because the
+// embedded WorkspaceSwitcher uses it for the popover's selection.
+const usePathnameMock = vi.fn<() => string>(() => "/app");
+const pushMock = vi.fn<(href: string) => void>(() => {});
+vi.mock("next/navigation", () => ({
+  usePathname: () => usePathnameMock(),
+  useRouter: () => ({ push: pushMock }),
+}));
+// next/link is fine in jsdom; nothing extra to stub.
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    ...rest
+  }: {
+    href: string;
+    children: React.ReactNode;
+  } & React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}));
+
+const baseProps = {
+  user: { name: "Lara", isAdmin: false },
+  workspaces: [
+    { id: "ws-1", name: "Northstar Coffee", slug: "northstar" },
+    { id: "ws-2", name: "Autumn Blend", slug: "autumn" },
+  ],
+  workspaceSwitcherOptions: [
+    { id: "ws-1", name: "Northstar Coffee", slug: "northstar" },
+    { id: "ws-2", name: "Autumn Blend", slug: "autumn" },
+  ],
+  canCreateWorkspace: false,
+};
+
+describe("Sidebar (workspace-aware)", () => {
+  beforeEach(() => {
+    usePathnameMock.mockReset();
+  });
+
+  it("renders the global nav when the user is on a global page", () => {
+    usePathnameMock.mockReturnValue("/app");
+    render(<Sidebar {...baseProps} />);
+    expect(screen.getByRole("link", { name: "My Work" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Workspaces" })).toBeInTheDocument();
+    // Workspace tabs are NOT rendered in global mode
+    expect(screen.queryByRole("link", { name: "Overview" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Planning" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Calendar" })).toBeNull();
+    // "Create content" CTA is NOT shown in global mode
+    expect(screen.queryByTestId("sidebar-create-content")).toBeNull();
+  });
+
+  it("hides admin items in the sidebar when the user is not an admin (global mode)", () => {
+    usePathnameMock.mockReturnValue("/app");
+    render(<Sidebar {...baseProps} user={{ name: "Lara", isAdmin: false }} />);
+    expect(screen.queryByRole("link", { name: /User Management/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Agency Settings/i })).toBeNull();
+  });
+
+  it("shows admin items in the sidebar when the user is an admin (global mode)", () => {
+    usePathnameMock.mockReturnValue("/app");
+    render(<Sidebar {...baseProps} user={{ name: "Lara", isAdmin: true }} />);
+    expect(screen.getByRole("link", { name: /User Management/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Agency Settings/i })).toBeInTheDocument();
+  });
+
+  it("renders the workspace nav when the user is inside /app/w/[slug]/*", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(<Sidebar {...baseProps} />);
+    // Workspace tabs are rendered, pointing to the current workspace
+    const overview = screen.getByRole("link", { name: "Overview" });
+    expect(overview).toHaveAttribute("href", "/app/w/northstar");
+    const planning = screen.getByRole("link", { name: "Planning" });
+    expect(planning).toHaveAttribute("href", "/app/w/northstar/planning");
+    expect(screen.getByRole("link", { name: "Calendar" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Reviews" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Social Channels" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Brand Kit" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Team" })).toBeInTheDocument();
+    // "Workspaces" list link is NOT rendered in workspace mode
+    expect(screen.queryByRole("link", { name: "Workspaces" })).toBeNull();
+    // "Create content" CTA IS rendered in workspace mode
+    const cta = screen.getByTestId("sidebar-create-content");
+    expect(cta).toHaveAttribute("href", "/app/w/northstar/planning/new");
+  });
+
+  it("renders the workspace name in the brand block when in workspace mode", () => {
+    usePathnameMock.mockReturnValue("/app/w/autumn");
+    render(<Sidebar {...baseProps} />);
+    // Brand block: the parent <div class="min-w-0"> holds both the
+    // product name and the workspace name.
+    const productName = screen.getByText("StudioFlow");
+    const brandRow = productName.parentElement as HTMLElement | null;
+    expect(brandRow).not.toBeNull();
+    expect(brandRow!.textContent).toContain("Autumn Blend");
+  });
+
+  it("does not show the workspace name in the brand block in global mode", () => {
+    usePathnameMock.mockReturnValue("/app");
+    render(<Sidebar {...baseProps} />);
+    // Brand block: the parent <div class="min-w-0"> only holds the
+    // product name. The workspace switcher in the sidebar bottom DOES
+    // still render the active workspace name even in global mode (per
+    // the Stitch design), so the assertion targets the brand row only.
+    const productName = screen.getByText("StudioFlow");
+    const brandRow = productName.parentElement as HTMLElement | null;
+    expect(brandRow).not.toBeNull();
+    expect(brandRow!.textContent).not.toContain("Northstar Coffee");
+  });
+
+  it("highlights the active workspace tab based on the pathname", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/calendar");
+    render(<Sidebar {...baseProps} />);
+    const calendar = screen.getByRole("link", { name: "Calendar" });
+    expect(calendar).toHaveAttribute("aria-current", "page");
+    // An inactive sibling is not marked current
+    const planning = screen.getByRole("link", { name: "Planning" });
+    expect(planning).not.toHaveAttribute("aria-current", "page");
+  });
+
+  it("ignores an unknown workspace slug in the URL (no crash, falls back to global)", () => {
+    usePathnameMock.mockReturnValue("/app/w/not-a-real-slug");
+    render(<Sidebar {...baseProps} />);
+    // Falls back to global mode (no workspace name shown, no workspace
+    // tabs). The user is still authenticated; the route's own gate
+    // is responsible for the 404.
+    expect(screen.getByRole("link", { name: "My Work" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Overview" })).toBeNull();
+  });
+});

@@ -81,7 +81,7 @@ test.describe("Workspace non-member experience", () => {
   });
 });
 
-test.describe("Workspace switcher keyboard (topbar)", () => {
+test.describe("Workspace switcher keyboard (sidebar)", () => {
   test("Enter on the trigger opens the listbox; arrow keys move aria-activedescendant", async ({
     page,
   }) => {
@@ -92,7 +92,10 @@ test.describe("Workspace switcher keyboard (topbar)", () => {
     });
     await page.goto("/app");
 
-    const trigger = page.locator('[data-testid^="workspace-switcher-trigger"]:visible');
+    // The switcher now lives in the sidebar bottom (per Stitch design),
+    // not the topbar. The desktop sidebar is hidden < 768px so we
+    // assert the trigger is visible at the default Playwright viewport.
+    const trigger = page.locator('[data-testid="sidebar-workspace-switcher-trigger"]');
     await trigger.focus();
     await page.keyboard.press("Enter");
     const listbox = page.getByRole("listbox", { name: "Workspaces" });
@@ -117,7 +120,7 @@ test.describe("Workspace switcher keyboard (topbar)", () => {
     await bootstrapTestSession(page);
     await page.goto("/app");
 
-    const trigger = page.locator('[data-testid^="workspace-switcher-trigger"]:visible');
+    const trigger = page.locator('[data-testid="sidebar-workspace-switcher-trigger"]');
     await trigger.click();
     await expect(page.getByRole("listbox", { name: "Workspaces" })).toBeVisible();
 
@@ -130,7 +133,7 @@ test.describe("Workspace switcher keyboard (topbar)", () => {
     await bootstrapTestSession(page);
     await page.goto("/app");
 
-    const trigger = page.locator('[data-testid^="workspace-switcher-trigger"]:visible');
+    const trigger = page.locator('[data-testid="sidebar-workspace-switcher-trigger"]');
     await trigger.click();
     await expect(page.getByRole("listbox", { name: "Workspaces" })).toBeVisible();
 

@@ -1,10 +1,10 @@
-import { UserMenu } from "./user-menu";
-import { WorkspaceSwitcherServer } from "./workspace-switcher.server";
 import { NotificationsBell } from "./notifications-bell";
+import { UserMenu } from "./user-menu";
 
 /**
- * Topbar — search, notifications, workspace switcher, user menu.
- * Per master prompt §3: 64px tall, 24-32px horizontal padding on desktop.
+ * Topbar — search + notifications + user menu. The workspace switcher
+ * has moved into the sidebar bottom (per Stitch). Per master prompt
+ * §3: 64px tall, 24-32px horizontal padding on desktop.
  */
 export function Topbar({
   user,
@@ -25,8 +25,17 @@ export function Topbar({
 }) {
   return (
     <div className="flex h-full items-center justify-between gap-3 px-4 sm:px-6">
-      <div className="flex min-w-0 items-center gap-2">
-        <WorkspaceSwitcherServer testId="workspace-switcher-trigger" />
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <label htmlFor="app-search" className="sr-only">
+          Search
+        </label>
+        <input
+          id="app-search"
+          type="search"
+          placeholder="Search…"
+          aria-label="Search"
+          className="border-border bg-surface-subtle text-body text-fg-primary placeholder:text-fg-muted focus-visible:ring-focus-ring h-9 w-full max-w-md rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
+        />
       </div>
 
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">

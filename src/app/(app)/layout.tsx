@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/config";
 import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { countUnreadNotifications, listNotificationsForUser } from "@/lib/notifications/service";
+import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
 
 /**
  * Authenticated app shell — wraps every page under (app)/*.
@@ -12,6 +13,10 @@ import { countUnreadNotifications, listNotificationsForUser } from "@/lib/notifi
  *  2. Signed in but no agency configured → /setup
  *  3. Signed in + agency, but no workspace membership → /app/workspaces/new
  *     (or /app for admins who can create the first workspace)
+ *
+ * The full workspace list is fetched here once per request and passed
+ * down to the sidebar so it can detect the current workspace from
+ * `usePathname()` and render the workspace-scoped nav.
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -24,10 +29,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/setup");
   }
 
-  const isAdmin = await isAgencyAdmin({ id: session.user.id }, agencyId);
-  const [notifications, unreadCount] = await Promise.all([
-    listNotificationsForUser({ id: session.user.id }, { limit: 10 }),
-    countUnreadNotifications({ id: session.user.id }),
+  const actor = { id: session.user.id };
+  const isAdmin = await isAgencyAdmin(actor, agencyId);
+  const [notifications, unreadCount, switcher] = await Promise.all([
+    listNotificationsForUser(actor, { limit: 10 }),
+    countUnreadNotifications(actor),
+    listSwitcherWorkspaces(actor),
   ]);
 
   return (
@@ -39,6 +46,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         image: session.user.image ?? null,
         isAdmin,
       }}
+      workspaces={switcher.options}
+      canCreateWorkspace={switcher.isAdmin}
       notifications={notifications.map((n) => ({
         id: n.id,
         kind: n.kind,

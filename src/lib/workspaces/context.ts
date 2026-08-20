@@ -1,11 +1,12 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { workspaces } from "@/lib/db/schema";
+import { workspaceMemberships, workspaces } from "@/lib/db/schema";
 import {
   activeAgencyId,
   canAccessClientWorkspace,
   canAccessInternalWorkspace,
+  isAgencyAdmin,
   type Actor,
 } from "@/lib/auth/policy";
 
@@ -30,4 +31,53 @@ export async function getClientWorkspace(actor: Actor, slug: string) {
   const workspace = await findWorkspaceBySlug(slug);
   if (!workspace || !(await canAccessClientWorkspace(actor, workspace.id))) return null;
   return workspace;
+}
+
+/**
+ * Every workspace in the current agency the actor can switch to.
+ *
+ * Members see their own active memberships. Agency admins additionally
+ * see every other active workspace in the agency, with member rows
+ * first so the order matches what the user expects. Used by the
+ * workspace switcher in the sidebar.
+ */
+export type SwitcherWorkspace = { id: string; name: string; slug: string };
+
+export async function listSwitcherWorkspaces(
+  actor: Actor,
+): Promise<{ options: SwitcherWorkspace[]; isAdmin: boolean }> {
+  const agencyId = await activeAgencyId();
+  if (!agencyId) return { options: [], isAdmin: false };
+  const isAdmin = await isAgencyAdmin(actor, agencyId);
+
+  const memberRows = await db
+    .select({ id: workspaces.id, name: workspaces.name, slug: workspaces.slug })
+    .from(workspaceMemberships)
+    .innerJoin(workspaces, eq(workspaces.id, workspaceMemberships.workspaceId))
+    .where(
+      and(
+        eq(workspaceMemberships.userId, actor.id),
+        eq(workspaceMemberships.status, "active"),
+        eq(workspaces.status, "active"),
+      ),
+    )
+    .orderBy(asc(workspaces.name))
+    .limit(50);
+
+  if (!isAdmin) {
+    return { options: memberRows, isAdmin: false };
+  }
+
+  const all = await db
+    .select({ id: workspaces.id, name: workspaces.name, slug: workspaces.slug })
+    .from(workspaces)
+    .where(and(eq(workspaces.agencyId, agencyId), eq(workspaces.status, "active")))
+    .orderBy(asc(workspaces.name))
+    .limit(50);
+
+  const seen = new Set(memberRows.map((w) => w.id));
+  return {
+    options: [...memberRows, ...all.filter((w) => !seen.has(w.id))],
+    isAdmin: true,
+  };
 }

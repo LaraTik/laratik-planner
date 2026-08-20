@@ -62,12 +62,12 @@ test.describe("Mobile layout (master prompt §3 — <768px)", () => {
     const mobileAvatar = page.getByLabel(/Signed in as/i);
     await expect(mobileAvatar).toBeVisible();
 
-    // Desktop — the user menu (a <Link> inside the topbar) shows the
-    // name. Use the first matching link to disambiguate from the
-    // sidebar footer link (also a Link to /app/account).
+    // Desktop — the user menu is a button in the topbar (data-testid
+    // "user-menu-trigger") with an aria-label that includes the user
+    // name. The avatar inside the button also has the user's initial.
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/app");
-    const userMenu = page.getByRole("link", { name: /Test User/i }).first();
+    const userMenu = page.getByTestId("user-menu-trigger");
     await expect(userMenu).toBeVisible();
   });
 });

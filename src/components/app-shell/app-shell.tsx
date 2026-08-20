@@ -1,7 +1,7 @@
+import Link from "next/link";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { MobileNav } from "./mobile-nav";
-import { WorkspaceSwitcherServer } from "./workspace-switcher.server";
 import { NotificationsBell } from "./notifications-bell";
 import { RouteScrollReset } from "./route-scroll-reset";
 
@@ -9,10 +9,16 @@ import { RouteScrollReset } from "./route-scroll-reset";
  * App shell — sidebar (left, persistent on desktop) + topbar (right
  * of sidebar) + mobile bottom nav. The content area is the {children}.
  *
- * Per master prompt §3:
- *  - Desktop ≥1280px: expanded sidebar (240px), 64px topbar
+ * Per Stitch design (project 5403097764334458790):
+ *  - Desktop ≥1280px: expanded sidebar (248px), 64px topbar
  *  - Tablet 768-1279px: collapsed icon rail (64px), 64px topbar, touch ≥44px
  *  - Mobile <768px: bottom navigation, full-screen sheets
+ *
+ * The sidebar is workspace-aware: it inspects the current pathname
+ * and renders either the global nav (My Work, Workspaces, admin) or
+ * the workspace nav (Overview, Planning, Calendar, Reviews, Social
+ * Channels, Brand Kit, Team) depending on whether the URL lives
+ * under /app/w/[slug]/*.
  *
  * A11y: the first focusable element is a "Skip to main content" link,
  * which is invisible until focused. The main element has a stable id
@@ -20,6 +26,8 @@ import { RouteScrollReset } from "./route-scroll-reset";
  */
 export function AppShell({
   user,
+  workspaces,
+  canCreateWorkspace,
   notifications,
   unreadCount,
   children,
@@ -31,6 +39,8 @@ export function AppShell({
     image: string | null;
     isAdmin: boolean;
   };
+  workspaces: { id: string; slug: string; name: string }[];
+  canCreateWorkspace: boolean;
   notifications: {
     id: string;
     kind: string;
@@ -55,19 +65,35 @@ export function AppShell({
         Skip to main content
       </a>
 
-      {/* Desktop sidebar (hidden below 768px) */}
-      <aside className="bg-surface border-border fixed inset-y-0 left-0 z-30 hidden w-60 border-r md:flex md:flex-col">
-        <Sidebar user={user} />
+      {/* Desktop sidebar (hidden below 768px) — 248px per Stitch */}
+      <aside
+        className="bg-surface border-border fixed inset-y-0 left-0 z-30 hidden w-[248px] border-r md:flex md:flex-col"
+        data-testid="app-sidebar"
+      >
+        <Sidebar
+          user={user}
+          workspaces={workspaces}
+          workspaceSwitcherOptions={workspaces}
+          canCreateWorkspace={canCreateWorkspace}
+        />
       </aside>
 
-      {/* Topbar (desktop + tablet) */}
-      <header className="bg-surface border-border sticky top-0 z-20 ml-0 hidden h-16 border-b md:ml-60 md:block">
+      {/* Topbar (desktop + tablet) — search + notifications + user menu */}
+      <header className="bg-surface border-border sticky top-0 z-20 ml-0 hidden h-16 border-b md:ml-[248px] md:block">
         <Topbar user={user} notifications={notifications} unreadCount={unreadCount} />
       </header>
 
-      {/* Mobile topbar (md:hidden) */}
+      {/* Mobile topbar (md:hidden) — workspace identity + notifications + avatar */}
       <header className="bg-surface border-border sticky top-0 z-20 flex h-14 items-center justify-between border-b px-4 md:hidden">
-        <WorkspaceSwitcherServer testId="workspace-switcher-trigger-mobile" />
+        <Link
+          href="/app"
+          className="focus-visible:ring-focus-ring flex items-center gap-2 rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2"
+        >
+          <div className="bg-primary-container text-on-primary-container flex h-7 w-7 items-center justify-center rounded-[var(--radius-control)] font-bold">
+            S
+          </div>
+          <span className="text-body text-fg-primary font-semibold">StudioFlow</span>
+        </Link>
         <div className="flex items-center gap-1">
           <NotificationsBell
             initial={notifications}
@@ -87,7 +113,7 @@ export function AppShell({
       <main
         id="main-content"
         tabIndex={-1}
-        className="pb-16 focus:outline-none md:ml-60 md:pt-16 md:pb-0"
+        className="pb-16 focus:outline-none md:ml-[248px] md:pt-16 md:pb-0"
       >
         <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8 md:py-8">{children}</div>
       </main>
