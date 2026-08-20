@@ -102,7 +102,8 @@ laratik-planner/
         ├── shell.sh
         ├── migrate.sh
         ├── backup.sh               # pg_dump + (optional) restic offsite
-        └── health-check.sh
+        ├── health-check.sh         # /api/health retry loop (curl-after-up race fix)
+        └── preflight.sh            # refuses to deploy if no auth provider is complete
 ```
 
 ## Production deployment (VPS)
