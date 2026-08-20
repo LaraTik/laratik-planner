@@ -65,7 +65,19 @@
 10. Install the backup cron (see below).
 11. Set up Google OAuth: in Google Cloud Console, add `https://planner.laratik.com/api/auth/callback/google` as an authorized redirect URI, then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env` and `docker compose up -d app`.
 12. Set up Mailcow mailbox `no-reply@planner.laratik.com` (Mailcow admin → Mailboxes → Add), then set `SMTP_PASSWORD` in `.env` and `docker compose up -d app`.
-13. First sign-in: visit `https://planner.laratik.com/signin`, sign in with Google, then go to `/setup` and enter the agency name + slug + `BOOTSTRAP_SETUP_TOKEN`.
+13. **GHCR credential for the deploy workflow**: the `ghcr.io/laratik/laratik-planner{-migrator}` images are private. The VPS-side `scripts/deploy.sh` does `echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin` before pulling, but the credential comes from the GitHub repo secrets, not from the VPS filesystem. Set them once:
+    ```bash
+    # 1. https://github.com/settings/tokens?type=beta → Generate new token
+    #    • Resource owner: LaraTik
+    #    • Repository access: Public repositories (read) + LaraTik org (read:packages)
+    #    • No other scopes needed
+    #    • No expiration (or 1 year + a calendar reminder)
+    # 2. Save the PAT to a local file, then:
+    gh secret set GHCR_PAT  --repo LaraTik/laratik-planner < ~/.ssh/<pat-file>
+    gh secret set GHCR_USER --repo LaraTik/laratik-planner --body "MHDNEZAM"
+    ```
+    The PAT must be kept secret — it grants read:packages on the LaraTik org. Rotate on the same cadence as the deploy SSH key (see Rotation).
+14. First sign-in: visit `https://planner.laratik.com/signin`, sign in with Google, then go to `/setup` and enter the agency name + slug + `BOOTSTRAP_SETUP_TOKEN`.
 
 ## Deploying a new version
 
