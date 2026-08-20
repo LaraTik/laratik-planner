@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
+import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { ChannelForm } from "./channel-form";
 import { archiveChannelAction } from "./actions";
 
@@ -197,27 +198,4 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
       )}
     </div>
   );
-}
-
-/**
- * Format a `Date` as a short, human-readable relative time stamp.
- * Captured-relative-to-now is good enough for "Last updated" cells —
- * we don't need to ship a full date library for v1.
- */
-function formatRelativeDate(date: Date | string): string {
-  const ms = typeof date === "string" ? Date.parse(date) : date.getTime();
-  if (!Number.isFinite(ms)) return "—";
-  const diffMs = Date.now() - ms;
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-  if (diffMs < minute) return "just now";
-  if (diffMs < hour) return `${Math.round(diffMs / minute)}m ago`;
-  if (diffMs < day) return `${Math.round(diffMs / hour)}h ago`;
-  if (diffMs < 7 * day) return `${Math.round(diffMs / day)}d ago`;
-  return new Date(ms).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
