@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
+import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import {
@@ -64,65 +65,130 @@ export default async function WorkspaceSettingsPage({
     defaultInternalCreativeReviewerId: null,
     defaultClientReviewerId: null,
   };
+
+  // Section anchors — the Stitch design has a sticky left nav with
+  // 8+ settings sections. v1 ships one combined form; the section
+  // list here documents the eventual split (Lifecycle / Defaults /
+  // Targets / AI assistance / Archive) and provides anchor IDs so
+  // the per-section nav can land on the right card group.
+  const sections: { id: string; label: string }[] = [
+    { id: "lifecycle", label: "Lifecycle" },
+    { id: "lead-times", label: "Lead times" },
+    { id: "defaults", label: "Assignment defaults" },
+    { id: "approvals", label: "Approval mode" },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow={workspace.name}
         title="Workspace settings"
-        description="Defaults reduce setup work while keeping every idea editable."
+        description={
+          <>
+            Defaults reduce setup work while keeping every idea editable.
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {workspace.timezone}
+            </span>
+          </>
+        }
       />
-      {canManage ? (
-        <Card>
-          <SettingsForm
-            slug={slug}
-            values={{ ...values, timezone: workspace.timezone }}
-            designers={peopleForRole(membershipRows, "designer")}
-            internalReviewers={peopleForRole(membershipRows, "internal_reviewer")}
-            clientReviewers={peopleForRole(membershipRows, "client_reviewer")}
-          />
-        </Card>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Card>
-            <CardTitle className="mb-4">Planning defaults</CardTitle>
-            <dl className="space-y-3">
-              <Setting label="Timezone" value={workspace.timezone} />
-              <Setting
-                label="Monthly target"
-                value={values.monthlyTarget ? String(values.monthlyTarget) : "Not set"}
+
+      <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
+        {/* Section nav (Stitch has 8+ entries; v1 lists the 4 we ship). */}
+        <nav aria-label="Settings sections" className="lg:sticky lg:top-20 lg:self-start">
+          <ul className="space-y-1">
+            {sections.map((section) => (
+              <li key={section.id}>
+                <a
+                  href={`#${section.id}`}
+                  className="text-body text-fg-secondary hover:bg-surface-subtle hover:text-fg-primary block rounded-[var(--radius-control)] px-3 py-2 font-semibold transition-colors"
+                >
+                  {section.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div className="space-y-4">
+          {canManage ? (
+            <Card>
+              <CardTitle className="mb-4" id="lifecycle">
+                Lifecycle
+              </CardTitle>
+              <p className="text-body text-fg-muted mb-6 max-w-3xl">
+                Standard workflow stages. Status flags like Changes Requested, Blocked, Cancelled,
+                and Overdue are functional states applied to items within these stages, not distinct
+                columns.
+              </p>
+              <SettingsForm
+                slug={slug}
+                values={{ ...values, timezone: workspace.timezone }}
+                designers={peopleForRole(membershipRows, "designer")}
+                internalReviewers={peopleForRole(membershipRows, "internal_reviewer")}
+                clientReviewers={peopleForRole(membershipRows, "client_reviewer")}
               />
-              <Setting label="Approval mode" value={values.approvalMode.replace(/_/g, " ")} />
-            </dl>
-          </Card>
-          <Card>
-            <CardTitle className="mb-4">Lead times</CardTitle>
-            <dl className="space-y-3">
-              <Setting label="Content approval" value={`${values.contentApprovalLeadDays} days`} />
-              <Setting label="Design complete" value={`${values.designCompleteLeadDays} days`} />
-              <Setting
-                label="Creative approval"
-                value={`${values.creativeApprovalLeadDays} days`}
-              />
-              <Setting
-                label="Ready to publish"
-                value={`${values.readyToPublishLeadDays} day${values.readyToPublishLeadDays === 1 ? "" : "s"}`}
-              />
-            </dl>
-          </Card>
-          <Card className="sm:col-span-2">
-            <CardTitle className="mb-4">Default assignments</CardTitle>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <Assignment label="Designer" configured={!!values.defaultDesignerId} />
-              <Assignment label="Content reviewer" configured={!!values.defaultContentReviewerId} />
-              <Assignment
-                label="Internal creative reviewer"
-                configured={!!values.defaultInternalCreativeReviewerId}
-              />
-              <Assignment label="Client reviewer" configured={!!values.defaultClientReviewerId} />
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              <Card id="lifecycle">
+                <CardTitle className="mb-4">Lifecycle</CardTitle>
+                <dl className="space-y-3">
+                  <Setting label="Timezone" value={workspace.timezone} />
+                  <Setting
+                    label="Monthly target"
+                    value={values.monthlyTarget ? String(values.monthlyTarget) : "Not set"}
+                  />
+                </dl>
+              </Card>
+              <Card id="lead-times">
+                <CardTitle className="mb-4">Lead times</CardTitle>
+                <dl className="space-y-3">
+                  <Setting
+                    label="Content approval"
+                    value={`${values.contentApprovalLeadDays} days`}
+                  />
+                  <Setting
+                    label="Design complete"
+                    value={`${values.designCompleteLeadDays} days`}
+                  />
+                  <Setting
+                    label="Creative approval"
+                    value={`${values.creativeApprovalLeadDays} days`}
+                  />
+                  <Setting
+                    label="Ready to publish"
+                    value={`${values.readyToPublishLeadDays} day${values.readyToPublishLeadDays === 1 ? "" : "s"}`}
+                  />
+                </dl>
+              </Card>
+              <Card id="defaults">
+                <CardTitle className="mb-4">Assignment defaults</CardTitle>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <Assignment label="Designer" configured={!!values.defaultDesignerId} />
+                  <Assignment
+                    label="Content reviewer"
+                    configured={!!values.defaultContentReviewerId}
+                  />
+                  <Assignment
+                    label="Internal creative reviewer"
+                    configured={!!values.defaultInternalCreativeReviewerId}
+                  />
+                  <Assignment
+                    label="Client reviewer"
+                    configured={!!values.defaultClientReviewerId}
+                  />
+                </div>
+              </Card>
+              <Card id="approvals">
+                <CardTitle className="mb-4">Approval mode</CardTitle>
+                <Setting label="Mode" value={values.approvalMode.replace(/_/g, " ")} />
+              </Card>
             </div>
-          </Card>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
