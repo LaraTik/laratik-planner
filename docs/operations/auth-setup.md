@@ -36,6 +36,8 @@ The VPS deploy workflow reads the runtime env from the host's `.env` (mounted in
    ```
 8. Click **Create**. Copy the **Client ID** and **Client Secret** that appear.
 
+> **Common pitfall:** if you skip the redirect URIs, clicking "Continue with Google" returns `?error=Configuration` because NextAuth v5 redirects to Google with a `redirect_uri` parameter that doesn't match what's registered. The fix is the URIs above — the JSON download from this step does NOT list them; the Google Cloud Console UI is the source of truth.
+
 ### 1.2 — Configure the OAuth consent screen (first time only)
 
 If you haven't already:
@@ -73,7 +75,60 @@ Both must match the redirect URIs you registered. Restart the app after each edi
 
 ## 2. Mailcow SMTP
 
-`mail.laratik.com` is already running on the VPS per `PORT_NOTES.md`. The mailbox `no-reply@planner.laratik.com` should already be provisioned (check Mailcow admin). If not, create it.
+`mail.laratik.com` is already running on the VPS per `PORT_NOTES.md`. The mailbox `no-reply@planner.laratik.com` should already be provisioned (check Mailcow admin). If not, create it — either via the UI or programmatically via the Mailcow API (see §2.0 below).
+
+### 2.0 — Provision the mailbox via the Mailcow API (faster than the UI)
+
+The `no-reply@planner.laratik.com` mailbox from `PORT_NOTES.md` may not actually exist in Mailcow yet. Rather than clicking through the Mailcow UI, you can provision it in one shell command using the Mailcow admin API. Useful for repeatable deploys.
+
+**Get the API key first:** Mailcow admin → **Configuration → Access → API** → copy the key (format `XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX`).
+
+**Provision the mailbox:**
+
+```bash
+MAILCOW_KEY="your-key-here"
+SMTP_PASSWORD=$(node -e "console.log(require('crypto').randomBytes(20).toString('base64url'))")
+
+# Build the JSON body in a file to avoid shell escaping
+python3 <<PYEOF > /tmp/mailbox-payload.json
+import json
+print(json.dumps({
+  "active": "1",
+  "local_part": "no-reply",
+  "domain": "laratik.com",  # or planner.laratik.com if that domain is registered in Mailcow
+  "password": "$SMTP_PASSWORD",
+  "password2": "$SMTP_PASSWORD",
+  "name": "laratik-planner no-reply",
+  "quota": "0",
+  "attributes": {
+    "force_pw_update": "0",
+    "tls_enforce_in": "0",
+    "tls_enforce_out": "0",
+    "sogo_access": "0",   # relay-only, no IMAP/POP3
+    "imap_access": "0",
+    "pop3_access": "0",
+    "smtp_access": "1",
+    "sieve_access": "0"
+  }
+}))
+PYEOF
+
+curl -sS -X POST -H "X-API-Key: $MAILCOW_KEY" -H "Content-Type: application/json" \
+  "https://mail.laratik.com/api/v1/add/mailbox" \
+  --data-binary @/tmp/mailbox-payload.json
+```
+
+Capture `$SMTP_PASSWORD` immediately — Mailcow only stores a hash; you can't retrieve the plaintext later. Paste it into `.env` as `SMTP_PASSWORD=...` right after.
+
+**Verify the credentials work BEFORE restarting the app** (avoids the verbose NextAuth error masking the real cause):
+
+```python
+import smtplib
+with smtplib.SMTP("mail.laratik.com", 587, timeout=10) as s:
+    s.ehlo(); s.starttls(); s.ehlo()
+    s.login("no-reply@laratik.com", "<the-password>")
+    print("AUTH OK")
+```
 
 ### 2.1 — Get the SMTP password
 
@@ -96,14 +151,16 @@ If the second command returns `Verify return code: 0 (ok)`, the certificate is v
 
 ### 2.3 — Fill the secrets
 
+> **Note on the sender address:** `PORT_NOTES.md` references `no-reply@planner.laratik.com` as the canonical sender. The `planner.laratik.com` domain is not registered in Mailcow as of 2026-08-20, so the practical setup is to provision `no-reply@laratik.com` (a domain Mailcow already serves) and use that as both `SMTP_USER` and `SMTP_FROM`. If you ever add `planner.laratik.com` as a Mailcow domain (with matching DNS MX + SPF + DKIM records), you can switch back to the canonical address — same Mailcow API call, just change `local_part`/`domain`.
+
 Local `.env` (for testing the prod SMTP from your dev box — optional but useful):
 
 ```
 SMTP_HOST=mail.laratik.com
 SMTP_PORT=587
-SMTP_USER=no-reply@planner.laratik.com
-SMTP_PASSWORD=<value from step 2.1>
-SMTP_FROM="laratik-planner <no-reply@planner.laratik.com>"
+SMTP_USER=no-reply@laratik.com
+SMTP_PASSWORD=<value from step 2.0 or 2.1>
+SMTP_FROM="laratik-planner <no-reply@laratik.com>"
 ```
 
 VPS `/opt/laratik-planner/.env`:
@@ -111,9 +168,9 @@ VPS `/opt/laratik-planner/.env`:
 ```
 SMTP_HOST=mail.laratik.com
 SMTP_PORT=587
-SMTP_USER=no-reply@planner.laratik.com
-SMTP_PASSWORD=<value from step 2.1>
-SMTP_FROM="laratik-planner <no-reply@planner.laratik.com>"
+SMTP_USER=no-reply@laratik.com
+SMTP_PASSWORD=<value from step 2.0 or 2.1>
+SMTP_FROM="laratik-planner <no-reply@laratik.com>"
 ```
 
 Restart after each edit.
