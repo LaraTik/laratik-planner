@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { socialChannels } from "@/lib/db/schema";
@@ -59,7 +60,15 @@ export default async function QuickCreatePage({ params }: { params: Promise<{ sl
     <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader
         title="Quick Create"
-        description="Four fields, a draft is born. Edit anything later."
+        description={
+          <>
+            Four fields, a draft is born. Edit anything later.
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {ws.timezone}
+            </span>
+          </>
+        }
       />
       <QuickCreateForm workspaceSlug={slug} channels={channels} />
     </div>

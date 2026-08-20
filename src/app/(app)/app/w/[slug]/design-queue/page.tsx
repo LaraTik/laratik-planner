@@ -9,7 +9,7 @@ import { StatusBadge } from "@/components/content/status-badge";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
-import { Paintbrush } from "lucide-react";
+import { Clock, Paintbrush } from "lucide-react";
 
 export default async function DesignQueuePage({ params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();
@@ -33,7 +33,15 @@ export default async function DesignQueuePage({ params }: { params: Promise<{ sl
       <PageHeader
         eyebrow={workspace.name}
         title="Unassigned design queue"
-        description="Approved ideas waiting for a designer to claim or be assigned."
+        description={
+          <>
+            Approved ideas waiting for a designer to claim or be assigned.
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {workspace.timezone}
+            </span>
+          </>
+        }
       />
       {rows.length ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

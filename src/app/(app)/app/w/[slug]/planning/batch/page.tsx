@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
@@ -23,7 +24,16 @@ export default async function BatchAddPage({ params }: { params: Promise<{ slug:
       <PageHeader
         eyebrow={workspace.name}
         title="Batch add"
-        description="Paste up to 50 ideas. All active channels and workspace defaults are applied automatically. The batch is atomic."
+        description={
+          <>
+            Paste up to 50 ideas. All active channels and workspace defaults are applied
+            automatically. The batch is atomic.
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {workspace.timezone}
+            </span>
+          </>
+        }
       />
       <BatchForm slug={slug} />
     </div>

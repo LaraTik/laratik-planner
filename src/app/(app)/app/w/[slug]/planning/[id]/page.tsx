@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getContentItem } from "@/lib/content/service";
 import { listApprovalsForItem } from "@/lib/deliveries/service";
@@ -62,7 +63,15 @@ export default async function ContentDetailPage({
       <PageHeader
         eyebrow={ws.name}
         title={item.title}
-        description={`${humanFormat(item.format)} · ${item.plannedPublishAt.toLocaleString()}`}
+        description={
+          <>
+            {humanFormat(item.format)} · {item.plannedPublishAt.toLocaleString()}
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {ws.timezone}
+            </span>
+          </>
+        }
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={statusBadgeVariant(item.status)}>{humanStatus(item.status)}</Badge>
