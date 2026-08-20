@@ -5,6 +5,12 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref (branch/tag/sha) to deploy. Defaults to the latest main."
+        required: false
+        default: "main"
 
 concurrency:
   group: deploy
