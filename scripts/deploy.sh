@@ -21,6 +21,22 @@ PREVIOUS_IMAGE="$(docker inspect --format '{{.Config.Image}}' laratik-planner-ap
 
 echo "→ Deploying ${APP_IMAGE}"
 
+# The `ghcr.io/laratik/laratik-planner{-migrator}` images are private, so
+# the VPS-side docker daemon needs to be logged in to GHCR before pulling.
+# The deploy workflow passes GHCR_PAT (a fine-grained PAT with
+# read:packages on the LaraTik org) + GHCR_USER (any user in the org,
+# the PAT carries the actual auth) via env. Skip silently if neither is
+# set (e.g. local testing) — `docker pull` will then fail with a clear
+# "unauthorized" error which surfaces in the deploy log.
+if [[ -n "${GHCR_PAT:-}" && -n "${GHCR_USER:-}" ]]; then
+  echo "→ Logging in to GHCR as ${GHCR_USER}…"
+  echo "${GHCR_PAT}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin >/dev/null
+  GHCR_LOGGED_IN=1
+  trap '[[ "${GHCR_LOGGED_IN:-0}" == "1" ]] && docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+else
+  echo "→ GHCR_PAT / GHCR_USER not set; assuming GHCR images are public or already logged in"
+fi
+
 echo "→ Pulling immutable app and migrator images…"
 docker compose pull app migrate
 
