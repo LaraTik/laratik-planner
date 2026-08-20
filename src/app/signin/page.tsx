@@ -7,7 +7,7 @@ import { FormField } from "@/components/forms/form-field";
 import { Mail, AlertCircle, Wrench } from "lucide-react";
 import { authError } from "./auth-error-codes";
 import { serverEnv } from "@/lib/validation/env";
-import { enforceRateLimit, rateLimitRuleFor } from "@/lib/security/rate-limit";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { headers } from "next/headers";
 
 /**
@@ -123,7 +123,6 @@ export default async function SignInPage({
               // with sign-in links (phishing / social-engineering vector).
               // The signin page itself stays public; the rate limit just
               // throttles per (scope, subject) at the DB level.
-              const rule = rateLimitRuleFor("magic_link_request");
               const h = await headers();
               const requestId = h.get("x-request-id");
               const subject = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? email;
