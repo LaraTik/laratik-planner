@@ -4,6 +4,10 @@ Project `5403097764334458790`; design system `assets/e2bbd2e84f524a5eb7e1aa20a22
 
 Status values: `Missing`, `Partial`, `Implemented`, `Tested`, `Verified`. Only independent review assigns `Verified`.
 
+## 2026-08-20 update
+
+After the M0–M4 visual refactor (`docs/visual-parity/PLAN.md`), every workspace-scoped page now ships a **Stitch-aligned PageHeader** with eyebrow / title / description / `workspace.timezone` pill, a **`PlanningViewToggle`** (List/Board/Calendar) where it makes sense, a per-card or per-row **status colour-code**, and `data-testid` hooks for visual regression. The visual-regression harness now covers 25 routes × 6 viewports (150 baselines, all `test.skip`-by-default until the first `--update-snapshots` run).
+
 ## 2026-08-19 update
 
 M3b (PR #1) closed the Goal 3–10 product gaps and shipped all 27 canonical routes. The matrix below has been refreshed:
@@ -51,7 +55,7 @@ The `Missing` and `Partial` statuses from the prior revision were pre-M3b and ar
 `Tested` is reserved for rows whose "Required proof" is **captured in the repository** (visual baseline, behavioral log, signed manual checklist). The current state:
 
 - **Behavioral evidence** (axe-core per route, role-by-route matrix, E2E happy paths) — captured in `tests/e2e/`. Re-runs on `main` are green per `docs/production-readiness/TEST_EVIDENCE.md`.
-- **Visual baselines (QA-004)** — spec exists at `tests/e2e/visual-regression.spec.ts` and is `test.skip` by default. The first capture requires a stable UI render + `playwright test --update-snapshots` on the target viewports (360, 390, 768, 1024, 1280, 1440), then a reviewer approves the diff.
+- **Visual baselines (QA-004)** — spec exists at `tests/e2e/visual-regression.spec.ts` and is `test.skip` by default. After the M0–M3 + M4 visual refactor (`docs/visual-parity/PLAN.md`), the harness covers **25 canonical routes × 6 viewports = 150 baselines** (mobile-s 360, mobile-m 390, tablet 768, laptop 1024, desktop 1280, wide 1440). First capture requires `playwright test --update-snapshots visual-regression.spec.ts` on a stable render, then a reviewer signs the diff.
 - **Manual a11y checklist (QA-005)** — automated a11y passes; screen-reader / zoom / reduced-motion manual sign-off is pending an owner action (recorded separately, not in this matrix).
 
 The matrix ladder is therefore: every row `Implemented` (today) → `Tested` after QA-004 capture + QA-005 sign-off → `Verified` after independent review of the captured baselines.
