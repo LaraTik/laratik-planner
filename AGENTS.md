@@ -130,6 +130,7 @@ laratik-planner/
 - ❌ Never expose `MINIMAX_API_KEY`, `AUTH_SECRET`, `SMTP_PASSWORD`, or `SENTRY_AUTH_TOKEN` in client code (the split env schema enforces this structurally)
 - ✅ Always backup before upgrading — `./scripts/project.sh backup` (or `scripts/vps/backup.sh` on VPS)
 - ✅ Always run `pnpm verify` before pushing
+- ✅ Always merge finished work to `main` — review, commit, push as soon as `pnpm verify` is green. No half-finished work sitting in the local working tree or on a stale local branch. The deploy workflow fires on `workflow_run: CI success`, so the change is live on production the moment the deploy job finishes.
 - ✅ CI is authoritative — local git hooks are optional and never replace CI
 - ✅ Staging before production: not yet (single-environment for v1, see Goal 14)
 - ✅ Disk hygiene before deploy: ensure VPS `/` is < 70% (use the vps-ops `disk-cleanup.sh apply` if needed)
@@ -163,6 +164,7 @@ See `docs/implementation/progress.md` for the live per-task checklist.
 - **Branches:** `main` is production. `feat/*` for features, `fix/*` for hotfixes, `chore/*` for chores. Squash-merge.
 - **PRs:** must pass CI (`pnpm verify` + build + smoke e2e). Reference the goal number in the PR title.
 - **ADRs:** material deviations from the master prompt go in `docs/decisions/`. The first one (`docs/decisions/0001-vps-port.md`) records the choice to self-host on the LaraTik VPS instead of Supabase + Vercel.
+- **Merge on completion:** when a change is finished and `pnpm verify` is green, commit it with a `<type>(<scope>): <description>` message and push to `main`. The deploy workflow fires on `workflow_run: CI success`, so the change is live on production the moment the deploy job finishes. No finished work sits in the local working tree or on a stale local branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space.
 
 ## Cross-references
 
