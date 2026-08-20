@@ -1,19 +1,40 @@
 import Link from "next/link";
+import { and, eq, isNull, or } from "drizzle-orm";
+import {
+  AlertTriangle,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Eye,
+  FileText,
+  Plus,
+  Sparkles,
+} from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { contentItems, workspaces } from "@/lib/db/schema";
-import { and, desc, eq, isNull, or } from "drizzle-orm";
-import { EmptyState } from "@/components/feedback/empty-state";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/feedback/empty-state";
+import { KpiCard } from "@/components/workspace/kpi-card";
 import { ListCard, ListItem } from "@/components/workspace/list-item";
 import { PageHeader } from "@/components/workspace/page-header";
-import { statusBadgeVariant, humanStatus } from "@/lib/content/status";
-import { Calendar, FileText, Plus } from "lucide-react";
+import { StatusBadge } from "@/components/content/status-badge";
+import { KpiContentStatus, calculateOverviewMetrics } from "@/lib/dashboard/kpis";
 
 /**
- * My Work — items assigned to or owned by the current user across all
- * workspaces. The "first day" experience per master prompt §3.
+ * My Work — Stitch-aligned personal dashboard.
+ *
+ * Stitch design (project 5403097764334458790, screen `f4dc67d1`):
+ *   header: "My Work" + today's date
+ *   5 KPI tiles: Assigned to me / Awaiting my review / Mentions / At risk / Ready
+ *   left column (8 cols): "Needs your attention" list
+ *   right column (4 cols): upcoming panels
+ *
+ * v1 ships 4 KPIs (no "Mentions" — we don't have that data model),
+ * the "Needs attention" list, and an "Upcoming this week" panel. v0
+ * kept a single list; the rewrite makes the KPI tiles actionable
+ * (each links to a filtered view) and surfaces overdue items first.
  */
 export const metadata = { title: "My Work" };
 
@@ -21,8 +42,14 @@ export default async function MyWorkPage() {
   const session = await auth();
   if (!session?.user?.id) return null;
   const userId = session.user.id;
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekEnd = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const nowMs = now.getTime();
 
-  // Items where I'm owner / designer / reviewer
+  // Pull every item I have any stake in (owner / designer / reviewer),
+  // archive-free. Capped at 200 to keep the page snappy; the KPI tiles
+  // and "Needs attention" list don't need more than that.
   const myItems = await db
     .select({
       id: contentItems.id,
@@ -32,6 +59,11 @@ export default async function MyWorkPage() {
       plannedPublishAt: contentItems.plannedPublishAt,
       workspaceName: workspaces.name,
       workspaceSlug: workspaces.slug,
+      ownerId: contentItems.contentOwnerId,
+      designerId: contentItems.designerId,
+      contentReviewerId: contentItems.contentReviewerId,
+      internalCreativeReviewerId: contentItems.internalCreativeReviewerId,
+      clientReviewerId: contentItems.clientReviewerId,
     })
     .from(contentItems)
     .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
@@ -47,38 +79,72 @@ export default async function MyWorkPage() {
         ),
       ),
     )
-    .orderBy(desc(contentItems.plannedPublishAt))
-    .limit(50);
+    .limit(200);
 
-  if (myItems.length === 0) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="My Work"
-          description="Content you own, design, or review. Empty for now — your day starts here."
-        />
-        <EmptyState
-          icon={<FileText className="h-8 w-8" aria-hidden="true" />}
-          title="Nothing assigned yet"
-          description="Once a planner creates content and assigns it to you, it'll show up here. You can also start by creating a workspace."
-          action={
-            <Button asChild>
-              <Link href="/app/workspaces/new">
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Create a workspace
-              </Link>
-            </Button>
-          }
-        />
-      </div>
-    );
-  }
+  // KPIs — reuse the workspace calculator so the math stays consistent
+  // with the Overview screen.
+  const overview = calculateOverviewMetrics({
+    now,
+    monthlyTarget: null,
+    items: myItems.map((i) => ({
+      status: i.status as KpiContentStatus,
+      plannedPublishAt: i.plannedPublishAt,
+      format: i.format as Parameters<typeof calculateOverviewMetrics>[0]["items"][number]["format"],
+    })),
+  });
+
+  const assignedToMe = myItems.length;
+  const awaitingMyReview = myItems.filter(
+    (i) =>
+      (i.contentReviewerId === userId || i.internalCreativeReviewerId === userId) &&
+      (i.status === "content_review" || i.status === "creative_review"),
+  ).length;
+  const atRisk = overview.atRiskCount;
+  const readyToPublish = overview.readyToPublish;
+
+  // "Needs your attention" — items that are mine AND at risk, plus any
+  // review I'm assigned to that's overdue (planned date in the past).
+  const needsAttention = myItems
+    .filter((i) => {
+      if (
+        i.status === "ready_to_publish" ||
+        i.status === "partially_published" ||
+        i.status === "published"
+      )
+        return false;
+      const planned = i.plannedPublishAt.getTime();
+      const isOverdue = planned < nowMs;
+      const isMyReview =
+        (i.contentReviewerId === userId || i.internalCreativeReviewerId === userId) &&
+        (i.status === "content_review" || i.status === "creative_review");
+      return isOverdue || isMyReview;
+    })
+    .sort((a, b) => a.plannedPublishAt.getTime() - b.plannedPublishAt.getTime())
+    .slice(0, 8);
+
+  // "Upcoming this week" — items planned in the next 7 days, sorted
+  // by planned date ascending. Capped at 6.
+  const upcoming = myItems
+    .filter(
+      (i) =>
+        i.plannedPublishAt.getTime() >= nowMs &&
+        i.plannedPublishAt.getTime() <= weekEnd.getTime() &&
+        i.status !== "published" &&
+        i.status !== "cancelled",
+    )
+    .sort((a, b) => a.plannedPublishAt.getTime() - b.plannedPublishAt.getTime())
+    .slice(0, 6);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="My Work"
-        description={`${myItems.length} item${myItems.length === 1 ? "" : "s"} assigned to you, ordered by planned publish time.`}
+        description={now.toLocaleDateString(undefined, {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })}
         action={
           <Button asChild variant="secondary" size="sm">
             <Link href="/app/workspaces/new">
@@ -89,29 +155,120 @@ export default async function MyWorkPage() {
         }
       />
 
-      <ListCard>
-        {myItems.map((item) => (
-          <ListItem
-            key={item.id}
-            href={`/app/w/${item.workspaceSlug}/planning/${item.id}`}
-            leading={<FileText className="text-fg-muted h-4 w-4" aria-hidden="true" />}
-            title={item.title}
-            meta={
-              <>
-                <span className="truncate">{item.workspaceName}</span>
-                <span aria-hidden="true"> · </span>
-                <span className="inline-flex shrink-0 items-center gap-1 align-middle">
-                  <Calendar className="h-3 w-3" aria-hidden="true" />
-                  {item.plannedPublishAt.toLocaleDateString()}
-                </span>
-              </>
-            }
-            trailing={
-              <Badge variant={statusBadgeVariant(item.status)}>{humanStatus(item.status)}</Badge>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4" data-testid="my-work-kpi-row">
+        <KpiCard
+          label="Assigned to me"
+          value={assignedToMe}
+          icon={<FileText className="h-4 w-4" aria-hidden="true" />}
+          href="/app/planning"
+        />
+        <KpiCard
+          label="Awaiting my review"
+          value={awaitingMyReview}
+          icon={<Eye className="h-4 w-4" aria-hidden="true" />}
+          href="/app/reviews"
+        />
+        <KpiCard
+          label="At risk"
+          value={atRisk}
+          icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
+          href="/app/planning?filter=at_risk"
+          danger
+        />
+        <KpiCard
+          label="Ready to publish"
+          value={readyToPublish}
+          icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+          href="/app/planning?filter=ready"
+        />
+      </div>
+
+      {myItems.length === 0 ? (
+        <Card variant="dashed" padding="lg">
+          <EmptyState
+            icon={<Sparkles className="h-8 w-8" aria-hidden="true" />}
+            title="Nothing assigned yet"
+            description="Once a planner creates content and assigns it to you, it'll show up here. You can also start by creating a workspace."
+            action={
+              <Button asChild>
+                <Link href="/app/workspaces/new">
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Create a workspace
+                </Link>
+              </Button>
             }
           />
-        ))}
-      </ListCard>
+        </Card>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-12">
+          <div className="space-y-3 lg:col-span-8">
+            <h2 className="text-title-section text-fg-primary inline-flex items-center gap-2 font-semibold">
+              <AlertTriangle className="text-warning h-5 w-5" aria-hidden="true" />
+              Needs your attention
+            </h2>
+            {needsAttention.length === 0 ? (
+              <Card variant="dashed" padding="md">
+                <p className="text-body text-fg-muted">
+                  Nothing overdue. You&rsquo;re on top of it.
+                </p>
+              </Card>
+            ) : (
+              <ListCard data-testid="my-work-needs-attention">
+                {needsAttention.map((item) => (
+                  <ListItem
+                    key={item.id}
+                    href={`/app/w/${item.workspaceSlug}/planning/${item.id}`}
+                    leading={<FileText className="text-fg-muted h-4 w-4" aria-hidden="true" />}
+                    title={item.title}
+                    meta={
+                      <>
+                        <span className="truncate">{item.workspaceName}</span>
+                        <span aria-hidden="true"> · </span>
+                        <span className="inline-flex shrink-0 items-center gap-1 align-middle">
+                          <Clock className="h-3 w-3" aria-hidden="true" />
+                          {item.plannedPublishAt.toLocaleDateString()}
+                        </span>
+                      </>
+                    }
+                    trailing={<StatusBadge status={item.status} />}
+                  />
+                ))}
+              </ListCard>
+            )}
+          </div>
+
+          <div className="space-y-3 lg:col-span-4">
+            <h2 className="text-title-section text-fg-primary inline-flex items-center gap-2 font-semibold">
+              <Calendar className="text-fg-secondary h-5 w-5" aria-hidden="true" />
+              Upcoming this week
+            </h2>
+            {upcoming.length === 0 ? (
+              <Card variant="dashed" padding="md">
+                <p className="text-body text-fg-muted">No items planned in the next 7 days.</p>
+              </Card>
+            ) : (
+              <ListCard>
+                {upcoming.map((item) => (
+                  <ListItem
+                    key={item.id}
+                    href={`/app/w/${item.workspaceSlug}/planning/${item.id}`}
+                    density="compact"
+                    title={item.title}
+                    meta={
+                      <>
+                        <span className="truncate">{item.workspaceName}</span>
+                        <span aria-hidden="true"> · </span>
+                        <span>{item.plannedPublishAt.toLocaleDateString()}</span>
+                      </>
+                    }
+                    trailing={<StatusBadge status={item.status} />}
+                  />
+                ))}
+              </ListCard>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
