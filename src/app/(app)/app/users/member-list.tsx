@@ -36,7 +36,7 @@ export function MemberList({
           {error}
         </p>
       ) : null}
-      <ul className="divide-border divide-y">
+      <ul className="divide-border divide-y" data-testid="users-member-list">
         {members.map((m) => {
           const active = m.status === "active";
           return (

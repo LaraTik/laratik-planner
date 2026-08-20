@@ -18,7 +18,7 @@ export function InvitationList({
   }
 
   return (
-    <ul className="divide-border divide-y">
+    <ul className="divide-border divide-y" data-testid="users-invitation-list">
       {invitations.map((inv) => (
         <li key={inv.id} className="text-body flex items-center gap-3 py-3">
           <Mail className="text-fg-muted h-4 w-4" aria-hidden="true" />

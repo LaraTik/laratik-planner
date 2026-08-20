@@ -12,12 +12,20 @@ import { MemberList } from "./member-list";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
+import { Building2, Mail, UserCheck, UserX } from "lucide-react";
 
 /**
- * User Management (admin only).
- *  - Active members list
- *  - Pending invitations with resend / revoke
- *  - Send new invitation form
+ * User Management (admin only) — Stitch-aligned dashboard.
+ *
+ * Stitch design (project 5403097764334458790, screen `89113980`):
+ *   - 3 KPI tiles: Active / Pending / Deactivated
+ *   - Tabbed table (All users / Pending / Deactivated)
+ *   - Side drawer for "Edit access"
+ *
+ * v1 ships the KPI tiles plus the existing three sections (send
+ * invitation / pending invitations / members). The tabbed table is a
+ * follow-up that re-uses the same MemberList + InvitationList with a
+ * client-side filter.
  */
 export const metadata = { title: "User Management" };
 
@@ -49,6 +57,9 @@ export default async function UsersPage() {
       .where(and(eq(workspaces.agencyId, agencyId))),
   ]);
 
+  const activeCount = members.filter((m) => m.status === "active").length;
+  const deactivatedCount = members.length - activeCount;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -56,8 +67,34 @@ export default async function UsersPage() {
         description="Invite team members, assign workspace roles, deactivate departures."
       />
 
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="users-kpi-row">
+        <KpiTile
+          icon={<UserCheck className="h-4 w-4" aria-hidden="true" />}
+          label="Active users"
+          value={activeCount}
+          tone="success"
+        />
+        <KpiTile
+          icon={<Mail className="text-warning h-4 w-4" aria-hidden="true" />}
+          label="Pending invitations"
+          value={pending.length}
+          tone="warning"
+        />
+        <KpiTile
+          icon={<UserX className="text-fg-muted h-4 w-4" aria-hidden="true" />}
+          label="Deactivated"
+          value={deactivatedCount}
+        />
+      </div>
+
       <Card>
-        <h2 className="text-title-card text-fg-primary mb-3 font-semibold">Send an invitation</h2>
+        <CardHeader>
+          <CardTitle className="inline-flex items-center gap-2">
+            <Mail className="text-fg-secondary h-4 w-4" aria-hidden="true" />
+            Send an invitation
+          </CardTitle>
+          <Badge variant="outline">Agency admin only</Badge>
+        </CardHeader>
         <SendInviteForm workspaces={allWorkspaces.map((w) => ({ id: w.id, name: w.name }))} />
       </Card>
 
@@ -78,7 +115,10 @@ export default async function UsersPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Members</CardTitle>
+          <CardTitle className="inline-flex items-center gap-2">
+            <Building2 className="text-fg-secondary h-4 w-4" aria-hidden="true" />
+            Members
+          </CardTitle>
           <Badge variant="info">{members.length}</Badge>
         </CardHeader>
         <MemberList
@@ -93,6 +133,36 @@ export default async function UsersPage() {
           }))}
         />
       </Card>
+    </div>
+  );
+}
+
+function KpiTile({
+  icon,
+  label,
+  value,
+  tone = "default",
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  tone?: "default" | "success" | "warning";
+}) {
+  const toneClass =
+    tone === "success"
+      ? "border-l-4 border-l-success"
+      : tone === "warning"
+        ? "border-l-4 border-l-warning"
+        : "";
+  return (
+    <div
+      className={`border-border bg-surface rounded-[var(--radius-card)] border p-4 ${toneClass}`}
+    >
+      <div className="text-fg-muted mb-2 flex items-center gap-2">
+        {icon}
+        <span className="text-label font-medium tracking-wider uppercase">{label}</span>
+      </div>
+      <p className="text-title-page text-fg-primary font-semibold">{value}</p>
     </div>
   );
 }
