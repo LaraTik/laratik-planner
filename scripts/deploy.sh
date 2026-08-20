@@ -17,7 +17,16 @@ export IMAGE_TAG
 APP_IMAGE="ghcr.io/laratik/laratik-planner:${IMAGE_TAG}"
 MIGRATOR_IMAGE="ghcr.io/laratik/laratik-planner-migrator:${IMAGE_TAG}"
 export APP_IMAGE MIGRATOR_IMAGE
-PREVIOUS_IMAGE="$(docker inspect --format '{{.Config.Image}}' laratik-planner-app-1 2>/dev/null || true)"
+# Capture the previous app image for rollback. Normalize to a fully-qualified
+# ghcr.io/... name; if the prior container was built under a different naming
+# scheme (e.g. a stale `laratik-planner:latest` from before M3a), skip the
+# rollback rather than try to pull a tag that no longer exists.
+PREVIOUS_IMAGE_RAW="$(docker inspect --format '{{.Config.Image}}' laratik-planner-app-1 2>/dev/null || true)"
+if [[ "$PREVIOUS_IMAGE_RAW" == ghcr.io/* ]]; then
+  PREVIOUS_IMAGE="$PREVIOUS_IMAGE_RAW"
+else
+  PREVIOUS_IMAGE=""
+fi
 # Normalize: docker inspect returns the short form `laratik-planner:latest` if
 # the previous container was started with the short name (e.g. an early
 # pre-M3a deploy, or a manual `docker run`). Without the registry prefix,
@@ -65,6 +74,8 @@ if ! HEALTH_URL=http://127.0.0.1:3100/api/health ./scripts/vps/health-check.sh; 
     export APP_IMAGE="$PREVIOUS_IMAGE"
     docker compose up -d --no-deps app
     HEALTH_URL=http://127.0.0.1:3100/api/health ./scripts/vps/health-check.sh || true
+  else
+    echo "→ No prior image to roll back to (first deploy or previous image is unresolvable). Leaving new release in place; investigate manually."
   fi
   exit 1
 fi
