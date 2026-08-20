@@ -1,19 +1,21 @@
 name: E2E
 
-# The full Playwright suite runs separately from CI so it can be slow
-# (5 browser projects × ~28 specs, 10-20 min) without blocking the
-# main CI workflow's "success" conclusion — which gates the deploy
-# workflow via workflow_run.
+# The full Playwright suite is run **manually** while we keep iterating
+# on the deploy pipeline (2026-08-20). It used to fire on every push
+# and PR — that's 10-20 min of CI on every commit, which is wasteful
+# when E2E is mostly re-asserting behavior the unit + integration +
+# smoke-health jobs already cover.
 #
-# This workflow is informative-only. Failures here DO NOT block
-# deploy; they are surfaced as a status check on the PR and as a
-# workflow run for human review.
+# Run locally with:
+#   pnpm install --frozen-lockfile
+#   pnpm db:migrate   # against a planner_test database
+#   pnpm test:e2e:isolated
+#
+# Or trigger this workflow on demand from the Actions tab → "Run workflow".
+# When we re-enable auto E2E, add `push: branches: [main]` back to `on:`.
+# This workflow is informative-only and never gates deploy.
 
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
