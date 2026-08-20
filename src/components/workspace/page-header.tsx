@@ -13,8 +13,10 @@ import { cn } from "@/lib/utils";
 export interface PageHeaderProps {
   /** Small uppercase / muted label above the title (e.g. workspace name). */
   eyebrow?: string;
-  /** Main title — 28/36 semibold per design tokens. */
-  title: string;
+  /** Main title — 28/36 semibold per design tokens. Accepts a React
+   *  node so the title row can host inline accents (e.g. a month
+   *  selector pill, as in the Stitch Workspace Overview). */
+  title: React.ReactNode;
   /** Supporting description — 14/21 secondary. */
   description?: React.ReactNode;
   /** Action area (Button group) — wraps below the title on mobile. */
