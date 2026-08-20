@@ -63,6 +63,7 @@ export const authConfig: NextAuthConfig = {
 
   pages: {
     signIn: "/signin",
+    signOut: "/signin", // explicit so a future config change can't drift it
     error: "/signin",
     verifyRequest: "/signin/verify",
     // NextAuth v5 redirects a brand-new user (no DB row yet) here on the

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { signIn } from "@/lib/auth/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +7,8 @@ import { FormField } from "@/components/forms/form-field";
 import { Mail, AlertCircle, Wrench } from "lucide-react";
 import { authError } from "./auth-error-codes";
 import { serverEnv } from "@/lib/validation/env";
+import { enforceRateLimit, rateLimitRuleFor } from "@/lib/security/rate-limit";
+import { headers } from "next/headers";
 
 /**
  * Sign-in page (Goal 2).
@@ -115,6 +118,25 @@ export default async function SignInPage({
               "use server";
               const email = String(formData.get("email") ?? "").trim();
               if (!email) return;
+              // Rate-limit magic-link requests per email so an attacker
+              // can't spam arbitrary laratik.com or gmail.com addresses
+              // with sign-in links (phishing / social-engineering vector).
+              // The signin page itself stays public; the rate limit just
+              // throttles per (scope, subject) at the DB level.
+              const rule = rateLimitRuleFor("magic_link_request");
+              const h = await headers();
+              const requestId = h.get("x-request-id");
+              const subject = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? email;
+              const limit = await enforceRateLimit({
+                scope: "magic_link_request",
+                subject: `${email}::${subject}`,
+                ...(requestId ? { requestId } : {}),
+              });
+              if (!limit.allowed) {
+                redirect(
+                  `/signin?error=EmailSignin&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+                );
+              }
               await signIn("nodemailer", { email, redirectTo: callbackUrl });
             }}
             className="space-y-3"

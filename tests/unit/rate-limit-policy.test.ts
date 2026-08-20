@@ -7,6 +7,7 @@ describe("rate-limit policy", () => {
     expect(rateLimitRuleFor("bootstrap")).toEqual({ limit: 5, windowSeconds: 900 });
     expect(rateLimitRuleFor("invitation_accept")).toEqual({ limit: 10, windowSeconds: 900 });
     expect(rateLimitRuleFor("ai_generation")).toEqual({ limit: 30, windowSeconds: 60 });
+    expect(rateLimitRuleFor("magic_link_request")).toEqual({ limit: 5, windowSeconds: 3600 });
   });
 
   it("hashes normalized subjects with the application secret", () => {

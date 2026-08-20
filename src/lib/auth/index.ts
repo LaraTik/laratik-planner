@@ -1,14 +1,8 @@
 /**
- * NextAuth v5 configuration — fully wired in Goal 2.
+ * Auth module re-exports. The real NextAuth config lives in `./config.ts`.
  *
- * Goal 0 leaves this as a typed stub so `pnpm typecheck` passes and the
- * `next-auth` import is validated. Goal 2 fills in:
- *  - Google OAuth provider
- *  - Resend / Nodemailer magic-link email provider
- *  - Drizzle adapter
- *  - JWT session strategy + role callback
- *  - Bootstrap token gate for the first administrator
+ * Goal 0 left this file as a typed stub so `pnpm typecheck` passed before
+ * the auth surface was wired. Goal 2 filled in `./config.ts` and this file
+ * is now a thin re-export of the symbols other modules actually import.
  */
-import "server-only";
-
-export const authConfigPlaceholder = true;
+export { authConfig, handlers, signIn, signOut, auth } from "@/lib/auth/config";

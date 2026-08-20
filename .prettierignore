@@ -1,0 +1,5 @@
+# Don't format raw SQL migrations — Prettier doesn't have a SQL parser
+# plugin installed, and the Drizzle migrations are usually hand-tweaked
+# for idempotency. We do format .ts / .tsx / .json / .md via the
+# project prettier config.
+src/lib/db/migrations/*.sql

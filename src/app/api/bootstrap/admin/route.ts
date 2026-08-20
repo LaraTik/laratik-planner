@@ -4,6 +4,8 @@ import { auth } from "@/lib/auth/config";
 import { bootstrapFirstAdmin } from "@/lib/auth/bootstrap";
 import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { db } from "@/lib/db";
+import { securityAuditEvents } from "@/lib/db/schema";
 
 const Body = z.object({
   agencyName: z.string().min(2).max(100),
@@ -51,6 +53,14 @@ export async function POST(req: NextRequest) {
     ...(requestId ? { requestId } : {}),
   });
   if (!limit.allowed) {
+    await db.insert(securityAuditEvents).values({
+      actorId: session.user.id,
+      action: "bootstrap",
+      targetType: "agency",
+      outcome: "denied",
+      ...(requestId ? { requestId } : {}),
+      metadata: { reason: "rate_limit_exceeded", windowSeconds: limit.retryAfterSeconds },
+    });
     return NextResponse.json(
       { error: "Too many setup attempts. Please try again later." },
       { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
@@ -71,6 +81,14 @@ export async function POST(req: NextRequest) {
   });
 
   if (result.status === "invalid_token") {
+    await db.insert(securityAuditEvents).values({
+      actorId: session.user.id,
+      action: "bootstrap",
+      targetType: "agency",
+      outcome: "denied",
+      ...(requestId ? { requestId } : {}),
+      metadata: { reason: "invalid_token" },
+    });
     return NextResponse.json({ error: "Invalid token" }, { status: 403 });
   }
   if (result.status === "already_configured") {
@@ -79,6 +97,16 @@ export async function POST(req: NextRequest) {
       { status: 409 },
     );
   }
+
+  await db.insert(securityAuditEvents).values({
+    actorId: session.user.id,
+    action: "bootstrap",
+    targetType: "agency",
+    targetId: result.agencyId,
+    outcome: "success",
+    ...(requestId ? { requestId } : {}),
+    metadata: { agencySlug: parsed.data.agencySlug },
+  });
 
   return NextResponse.json({
     status: "ok",

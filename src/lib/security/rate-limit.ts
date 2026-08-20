@@ -5,7 +5,12 @@ import { rateLimitEvents, securityAuditEvents } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/validation/env";
 
 export type RateLimitScope =
-  "bootstrap" | "invitation_create" | "invitation_accept" | "invitation_resend" | "ai_generation";
+  | "bootstrap"
+  | "invitation_create"
+  | "invitation_accept"
+  | "invitation_resend"
+  | "ai_generation"
+  | "magic_link_request";
 
 const RULES: Record<RateLimitScope, { limit: number; windowSeconds: number }> = {
   bootstrap: { limit: 5, windowSeconds: 15 * 60 },
@@ -13,6 +18,11 @@ const RULES: Record<RateLimitScope, { limit: number; windowSeconds: number }> = 
   invitation_accept: { limit: 10, windowSeconds: 15 * 60 },
   invitation_resend: { limit: 10, windowSeconds: 60 * 60 },
   ai_generation: { limit: 30, windowSeconds: 60 },
+  // Magic-link request: throttles per (email, source IP) at 5/hour. The
+  // (email, IP) composite prevents both targeted email-spam (limit per
+  // email) and IP-rotation spam (limit per IP). Defense against the
+  // "request a sign-in link for arbitrary laratik.com addresses" vector.
+  magic_link_request: { limit: 5, windowSeconds: 60 * 60 },
 };
 
 export function rateLimitRuleFor(scope: RateLimitScope) {

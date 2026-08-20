@@ -42,6 +42,13 @@ export type DevSignInResult =
   | { ok: false; error: "invalid_email" }
   | { ok: false; error: "missing_auth_secret" };
 
+// Dev-only cookie name. Intentionally the NON-secure name — this helper
+// is gated by NODE_ENV !== "production" so the JWT it issues is never
+// used against the prod NextAuth() writer, which uses the secure
+// `__Secure-authjs.session-token` (HTTPS) name + matching salt. Mixing
+// the two would cause the dev cookie to silently fail to authenticate
+// in prod and the prod cookie to silently fail in dev. Do NOT "unify"
+// the names without first updating both writers and all readers.
 const SESSION_COOKIE_NAME = "authjs.session-token";
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
 

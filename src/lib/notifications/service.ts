@@ -51,8 +51,12 @@ export async function createInAppNotification(input: {
   title: string;
   body: string;
   actionUrl?: string;
+  // Optional transaction — used by the outbox dispatcher so the
+  // notification fan-out and the outbox row update commit together.
+  tx?: Parameters<Parameters<typeof db.transaction>[0]>[0];
 }) {
-  const [created] = await db
+  const runner = input.tx ?? db;
+  const [created] = await runner
     .insert(notifications)
     .values({
       userId: input.userId,
@@ -66,15 +70,18 @@ export async function createInAppNotification(input: {
     .returning({ id: notifications.id });
   return created?.id;
 }
+void db; // `db` referenced via the `tx` parameter type only
 
 /**
  * Process the outbox: for each unprocessed outbox_event, fan out
  * in-app notifications to the affected users. Email is a Goal 13+ job
  * (a separate worker that calls the Mailcow SMTP transport).
  *
- * This is a single-process, no-locking function — safe to call from
- * a cron or `pnpm notifications:dispatch` CLI. The transaction wraps
- * each event so partial failures don't poison the queue.
+ * Each event is processed in its own transaction so partial failures
+ * don't poison the queue. The claim (SELECT) does not use SKIP LOCKED
+ * today because this is a single-process worker; if/when we run >1
+ * concurrent dispatchers, add `.for("update", { skipLocked: true })` to
+ * the SELECT and move the `processed_at` write into the same tx.
  */
 export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date } = {}) {
   const now = opts.now ?? new Date();
@@ -91,17 +98,22 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
   const processed: string[] = [];
   for (const evt of events) {
     try {
-      const payload = evt.payload as Record<string, unknown> | null;
-      if (evt.eventType === "comment_created" && payload) {
-        await fanOutCommentCreated(payload);
-      }
-      // other event types (assignment, approval, etc.) follow the same pattern
-      await db
-        .update(outboxEvents)
-        .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
-        .where(eq(outboxEvents.id, evt.id));
+      await db.transaction(async (tx) => {
+        const payload = evt.payload as Record<string, unknown> | null;
+        if (evt.eventType === "comment_created" && payload) {
+          await fanOutCommentCreated(payload, tx);
+        }
+        // other event types (assignment, approval, etc.) follow the same pattern
+        await tx
+          .update(outboxEvents)
+          .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
+          .where(eq(outboxEvents.id, evt.id));
+      });
       processed.push(evt.id);
     } catch (err) {
+      // Failure path runs OUTSIDE the rolled-back tx so the error
+      // bookkeeping (attempt_count++, last_error) is persisted even
+      // when the inner fan-out throws.
       await db
         .update(outboxEvents)
         .set({
@@ -114,7 +126,10 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
   return { processed: processed.length };
 }
 
-async function fanOutCommentCreated(payload: Record<string, unknown>) {
+async function fanOutCommentCreated(
+  payload: Record<string, unknown>,
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+) {
   const commentId = payload["commentId"] as string | undefined;
   const contentItemId = payload["contentItemId"] as string | undefined;
   const authorId = payload["authorId"] as string | undefined;
@@ -124,13 +139,16 @@ async function fanOutCommentCreated(payload: Record<string, unknown>) {
 
   // Mentions: notify each mentioned user
   for (const userId of mentionedUserIds) {
-    await maybeNotify({
-      userId,
-      contentItemId,
-      kind: "mention",
-      title: "You were mentioned in a comment",
-      body: "Someone @mentioned you in a comment on a content item.",
-    });
+    await maybeNotify(
+      {
+        userId,
+        contentItemId,
+        kind: "mention",
+        title: "You were mentioned in a comment",
+        body: "Someone @mentioned you in a comment on a content item.",
+      },
+      tx,
+    );
   }
 
   // (Reply notifications: would notify the parent comment's author.
@@ -138,15 +156,18 @@ async function fanOutCommentCreated(payload: Record<string, unknown>) {
   void visibility;
 }
 
-async function maybeNotify(input: {
-  userId: string;
-  contentItemId: string;
-  kind: NotificationKind;
-  title: string;
-  body: string;
-}) {
+async function maybeNotify(
+  input: {
+    userId: string;
+    contentItemId: string;
+    kind: NotificationKind;
+    title: string;
+    body: string;
+  },
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+) {
   // Check user preferences (default: in-app enabled, email disabled)
-  const [pref] = await db
+  const [pref] = await tx
     .select({ inAppEnabled: notificationPreferences.inAppEnabled })
     .from(notificationPreferences)
     .where(
@@ -165,6 +186,7 @@ async function maybeNotify(input: {
     title: input.title,
     body: input.body,
     actionUrl: `/app/planning/${input.contentItemId}`,
+    tx,
   });
 }
 
