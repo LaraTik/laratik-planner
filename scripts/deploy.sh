@@ -18,6 +18,14 @@ APP_IMAGE="ghcr.io/laratik/laratik-planner:${IMAGE_TAG}"
 MIGRATOR_IMAGE="ghcr.io/laratik/laratik-planner-migrator:${IMAGE_TAG}"
 export APP_IMAGE MIGRATOR_IMAGE
 PREVIOUS_IMAGE="$(docker inspect --format '{{.Config.Image}}' laratik-planner-app-1 2>/dev/null || true)"
+# Normalize: docker inspect returns the short form `laratik-planner:latest` if
+# the previous container was started with the short name (e.g. an early
+# pre-M3a deploy, or a manual `docker run`). Without the registry prefix,
+# `docker compose pull` will 403 on a private image. Prefix it so the
+# rollback path is always able to pull the previous image.
+if [[ -n "$PREVIOUS_IMAGE" && "$PREVIOUS_IMAGE" != *"/"* ]]; then
+  PREVIOUS_IMAGE="ghcr.io/laratik/${PREVIOUS_IMAGE}"
+fi
 
 echo "→ Deploying ${APP_IMAGE}"
 
