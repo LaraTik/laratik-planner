@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>StudioFlow — Workspaces</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Custom scrollbar for tables and side panels to keep it clean */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #DDE1E6;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-container": "#bfdfff",
+                    "surface": "#FFFFFF",
+                    "on-primary-fixed": "#0f0069",
+                    "surface-tint": "#4d44e3",
+                    "error-container": "#ffdad6",
+                    "warning-subtle": "#FFF7E6",
+                    "on-tertiary-fixed-variant": "#004b74",
+                    "on-error-container": "#93000a",
+                    "focus-ring": "#6366F1",
+                    "surface-container-highest": "#dae3f8",
+                    "border": "#DDE1E6",
+                    "tertiary-fixed": "#cde5ff",
+                    "on-secondary": "#ffffff",
+                    "on-surface-variant": "#464555",
+                    "outline-variant": "#c7c4d8",
+                    "secondary-fixed-dim": "#bdc6e0",
+                    "inverse-primary": "#c3c0ff",
+                    "outline": "#777587",
+                    "primary-hover": "#4338CA",
+                    "surface-subtle": "#F1F3F5",
+                    "success": "#15803D",
+                    "on-secondary-fixed": "#121b2e",
+                    "secondary-container": "#d7dff9",
+                    "primary-container": "#4f46e5",
+                    "warning": "#B45309",
+                    "primary": "#3525cd",
+                    "on-surface": "#131c2b",
+                    "on-secondary-container": "#5a6278",
+                    "on-primary": "#ffffff",
+                    "tertiary": "#004c77",
+                    "surface-container-low": "#f0f3ff",
+                    "secondary-fixed": "#d9e2fc",
+                    "primary-subtle": "#EEF2FF",
+                    "on-error": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "info-subtle": "#F0F9FF",
+                    "inverse-on-surface": "#ecf0ff",
+                    "surface-variant": "#dae3f8",
+                    "surface-container": "#e7eeff",
+                    "background": "#f9f9ff",
+                    "on-background": "#131c2b",
+                    "surface-dim": "#d1daef",
+                    "surface-bright": "#f9f9ff",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "text-muted": "#7B8495",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-high": "#dfe8fe",
+                    "on-primary-container": "#dad7ff",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "secondary": "#555e74",
+                    "on-tertiary-fixed": "#001d32",
+                    "success-subtle": "#ECFDF3",
+                    "danger-subtle": "#FEF2F2",
+                    "tertiary-fixed-dim": "#94ccff",
+                    "canvas": "#F7F7F5",
+                    "on-secondary-fixed-variant": "#3e475b",
+                    "inverse-surface": "#283141",
+                    "danger": "#B91C1C",
+                    "error": "#ba1a1a",
+                    "primary-fixed": "#e2dfff",
+                    "tertiary-container": "#00659c"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "topbar-height": "64px",
+                    "gutter": "16px",
+                    "sidebar-collapsed": "72px",
+                    "base": "4px",
+                    "sidebar-expanded": "248px",
+                    "screen-padding": "24px",
+                    "card-padding": "16px"
+            },
+            "fontFamily": {
+                    "section-title": ["Inter", "sans-serif"],
+                    "body": ["Inter", "sans-serif"],
+                    "label": ["Inter", "sans-serif"],
+                    "card-title": ["Inter", "sans-serif"],
+                    "page-title": ["Inter", "sans-serif"],
+                    "table-dense": ["Inter", "sans-serif"],
+                    "button": ["Inter", "sans-serif"]
+            },
+            "fontSize": {
+                    "section-title": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body": ["14px", {"lineHeight": "21px", "fontWeight": "400"}],
+                    "label": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "card-title": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "page-title": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                    "table-dense": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                    "button": ["14px", {"lineHeight": "20px", "fontWeight": "600"}]
+            }
+          }
+        }
+      }
+    </script>
+</head>
+<body class="bg-canvas text-on-surface h-screen w-screen overflow-hidden flex font-body text-body">
+<!-- SIDE NAV BAR (From JSON Blueprint) -->
+<nav class="bg-surface border-r border-border fixed left-0 top-0 h-full flex flex-col p-gutter z-40 w-sidebar-expanded transition-all duration-200 ease-in-out">
+<div class="flex items-center gap-3 mb-8 px-2">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[20px]">layers</span>
+</div>
+<div>
+<h1 class="font-section-title text-section-title text-primary tracking-tight leading-none">StudioFlow</h1>
+<p class="font-label text-label text-text-muted mt-0.5">Admin Console</p>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary font-button text-button py-2 px-4 rounded-lg flex items-center justify-center gap-2 mb-6 hover:bg-primary-hover transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">add</span>
+            New Project
+        </button>
+<div class="flex-1 flex flex-col gap-1 overflow-y-auto">
+<!-- Inactive -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-label text-label hover:text-primary hover:bg-surface-subtle transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">assignment_turned_in</span>
+                My Work
+            </a>
+<!-- Inactive -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-label text-label hover:text-primary hover:bg-surface-subtle transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+                Overview
+            </a>
+<!-- Active (CRITICAL MAPPING: Workspaces) -->
+<a class="flex items-center gap-3 px-3 py-2 text-primary font-button text-button bg-primary-subtle rounded-lg transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px] icon-fill">business_center</span>
+                Workspaces
+            </a>
+<!-- Inactive -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-label text-label hover:text-primary hover:bg-surface-subtle transition-all duration-200 ease-in-out mt-4" href="#">
+<span class="material-symbols-outlined text-[20px]">group</span>
+                User Management
+            </a>
+<!-- Inactive -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-label text-label hover:text-primary hover:bg-surface-subtle transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+                Agency Settings
+            </a>
+</div>
+<div class="mt-auto pt-4 border-t border-border flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-label text-label hover:text-primary hover:bg-surface-subtle transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">swap_horiz</span>
+                Switch Workspace
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-label text-label hover:text-primary hover:bg-surface-subtle transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+                Help &amp; Support
+            </a>
+</div>
+</nav>
+<!-- MAIN CONTENT AREA -->
+<div class="flex-1 flex flex-col ml-[theme(spacing.sidebar-expanded)] w-[calc(100%-theme(spacing.sidebar-expanded))] h-screen">
+<!-- TOP NAV BAR (From JSON Blueprint) -->
+<header class="bg-surface font-body text-body docked full-width top-0 h-topbar-height border-b border-border flat no shadows flex justify-between items-center px-screen-padding w-full sticky top-0 z-30 shrink-0">
+<!-- Search on Left -->
+<div class="flex items-center w-96">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px]">search</span>
+<input class="w-full pl-10 pr-4 py-1.5 bg-surface-subtle border-none rounded-md text-on-surface focus:ring-2 focus:ring-focus-ring focus:bg-surface transition-all outline-none font-body text-body" placeholder="Search across workspaces..." type="text"/>
+</div>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-4">
+<button class="bg-primary-container text-on-primary font-button text-button px-4 py-1.5 rounded-md hover:bg-primary-hover transition-colors shadow-sm text-sm">
+                    Add workspace
+                </button>
+<div class="h-6 w-px bg-border"></div>
+<button class="text-on-surface-variant hover:bg-surface-subtle p-2 rounded-full transition-colors relative cursor-pointer">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full border border-surface"></span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-subtle p-2 rounded-full transition-colors cursor-pointer">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<img alt="Aisha Rahman" class="w-8 h-8 rounded-full border border-border object-cover cursor-pointer ml-2" data-alt="Professional headshot of a confident South Asian woman, Aisha Rahman, agency administrator, wearing a dark blazer over a crisp white shirt, clean studio lighting, warm neutral background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSvTdWHMeOjqIze3SDxcm9b1uGwZVZ9cma_2XVr_h9_y3VvpC9WiErvamLJkU_bqtCj6E-bqcQyIe4uo3eUzMHbow_xT-DVJsIxhP6Wi7hLeUcKZY2EccEkAgzHeMYx4MLdJuG-C5eMYCt4nkQ2AbaajclNSjUlxU2fQEG1wsNnvAJwN0zzFtqomFLBYTlJqZnOzxlvHm-IeVHyucRaYwJtj4iaIB3mRWzeByk3hUzB2BcLWk0DaVaTWVR19vVQgo83U0RjFKLPEc"/>
+</div>
+</header>
+<!-- SCROLLABLE PAGE CONTENT -->
+<main class="flex-1 overflow-y-auto p-screen-padding bg-canvas relative z-10">
+<!-- Page Header -->
+<div class="flex justify-between items-end mb-8">
+<div class="max-w-2xl">
+<h2 class="font-page-title text-page-title text-on-surface tracking-tight">Workspaces</h2>
+<p class="font-body text-body text-text-muted mt-2">One workspace per brand keeps channels, team access, defaults, and planning separate. Manage overall agency health across isolated brand environments.</p>
+</div>
+</div>
+<!-- KPI Strip (Bento-style Grid) -->
+<div class="grid grid-cols-4 gap-4 mb-8">
+<div class="bg-surface border border-border rounded-lg p-card-padding flex flex-col justify-between hover:border-primary-fixed-dim transition-colors cursor-default">
+<div class="flex items-center gap-2 text-text-muted mb-3">
+<span class="material-symbols-outlined text-[18px]">business_center</span>
+<span class="font-label text-label">Active brands</span>
+</div>
+<div class="font-page-title text-page-title text-on-surface">6</div>
+</div>
+<div class="bg-surface border border-border rounded-lg p-card-padding flex flex-col justify-between hover:border-primary-fixed-dim transition-colors cursor-default">
+<div class="flex items-center gap-2 text-text-muted mb-3">
+<span class="material-symbols-outlined text-[18px]">lightbulb</span>
+<span class="font-label text-label">Ideas this month</span>
+</div>
+<div class="font-page-title text-page-title text-on-surface">74</div>
+</div>
+<div class="bg-surface border border-border rounded-lg p-card-padding flex flex-col justify-between hover:border-primary-fixed-dim transition-colors cursor-default relative overflow-hidden">
+<div class="absolute right-0 top-0 w-1 h-full bg-warning"></div>
+<div class="flex items-center gap-2 text-text-muted mb-3">
+<span class="material-symbols-outlined text-[18px] text-warning">rate_review</span>
+<span class="font-label text-label text-warning">Need review</span>
+</div>
+<div class="font-page-title text-page-title text-on-surface">11</div>
+</div>
+<div class="bg-surface border border-border rounded-lg p-card-padding flex flex-col justify-between hover:border-primary-fixed-dim transition-colors cursor-default relative overflow-hidden">
+<div class="absolute right-0 top-0 w-1 h-full bg-success"></div>
+<div class="flex items-center gap-2 text-text-muted mb-3">
+<span class="material-symbols-outlined text-[18px] text-success">send</span>
+<span class="font-label text-label text-success">Ready to publish</span>
+</div>
+<div class="font-page-title text-page-title text-on-surface">8</div>
+</div>
+</div>
+<!-- Filters Bar -->
+<div class="flex justify-between items-center mb-4 bg-surface p-2 rounded-lg border border-border">
+<div class="flex items-center gap-2 w-1/3">
+<span class="material-symbols-outlined text-text-muted pl-2 text-[18px]">filter_list</span>
+<input class="w-full bg-transparent border-none outline-none font-body text-body text-on-surface placeholder:text-text-muted focus:ring-0 py-1" placeholder="Filter workspaces..." type="text"/>
+</div>
+<div class="flex items-center gap-3 pr-2">
+<div class="flex items-center gap-2 border-r border-border pr-3">
+<span class="font-label text-label text-text-muted">Status</span>
+<select class="bg-transparent border-none text-on-surface font-label text-label font-medium focus:ring-0 cursor-pointer outline-none">
+<option>Active</option>
+<option>Archived</option>
+<option>All</option>
+</select>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label text-label text-text-muted">Sort by</span>
+<select class="bg-transparent border-none text-on-surface font-label text-label font-medium focus:ring-0 cursor-pointer outline-none">
+<option>Last activity</option>
+<option>Alphabetical</option>
+<option>Health</option>
+</select>
+</div>
+</div>
+</div>
+<!-- Workspace Dense List (Data Table) -->
+<div class="bg-surface border border-border rounded-lg overflow-hidden shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-subtle border-b border-border">
+<th class="font-label text-label text-text-muted py-3 px-4 font-medium w-1/4">Brand</th>
+<th class="font-label text-label text-text-muted py-3 px-4 font-medium">Channels</th>
+<th class="font-label text-label text-text-muted py-3 px-4 font-medium">Members</th>
+<th class="font-label text-label text-text-muted py-3 px-4 font-medium">Plan Coverage</th>
+<th class="font-label text-label text-text-muted py-3 px-4 font-medium">Health</th>
+<th class="font-label text-label text-text-muted py-3 px-4 font-medium">Next Publish</th>
+<th class="font-label text-label text-text-muted py-3 px-4 font-medium text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="font-table-dense text-table-dense">
+<!-- Highlighted Row -->
+<tr class="border-b border-border bg-primary-subtle hover:bg-surface-variant transition-colors group">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface border border-border flex items-center justify-center overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="A minimalist logo design for 'Northstar Coffee', featuring a stylized geometric compass star integrated with a simple coffee bean shape. Monochromatic deep blue on a clean white background. Flat vector style, modern corporate branding." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC7flL7ddnCIysmlYej2rtXQwWh_w9QNSL31CyaPmelplAn123MSCz5XJUacikFj2xJ1sPkZ-wsW8GC_mpVZWQFzlvwN1ctX-lvgoj3bvoO6S2xFBGahe7CrCMpoH1s02_Dwoi01mo9VZo7zN3W1dDdgN3ciMDKrLT8jNLkmEGcTnN8PFINvIjo9shMsYwL6RC93jp-p3JZ8SuMTwvXSwDXz3l3yMhNF3l-2v_I3MoKsozOc_zMp26ZCM01yuoGjSPcPvtOOr1nKCU"/>
+</div>
+<div>
+<div class="font-card-title text-card-title text-on-surface leading-tight">Northstar Coffee</div>
+<div class="text-[11px] text-primary mt-0.5 font-medium">Last active 2 hrs ago</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">flutter_dash</span> <!-- Twitter-ish -->
+<span class="material-symbols-outlined text-[16px]">photo_camera</span> <!-- IG-ish -->
+<span class="material-symbols-outlined text-[16px]">play_circle</span> <!-- YT-ish -->
+<span class="material-symbols-outlined text-[16px]">work</span> <!-- LI-ish -->
+<span class="material-symbols-outlined text-[16px]">public</span> <!-- Web-ish -->
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex -space-x-2">
+<img class="w-6 h-6 rounded-full border border-surface object-cover" data-alt="Headshot of a young creative professional with glasses, bright studio lighting, white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAoDhIPy1O6kDIzAFklLP1YyXl4ePNufQmdqitHPYE9tmMcSFM9Oy0jQQAsPJKsYBvSS0kXqzwtYU3-tve-uJQE6sAVIsi7kSUezzAo5WLvCGoAcrbSN6rrA6hqdKQST8Y9z65OluXuBE6Jpmy7k3mb56tE1qAnMMJWckgTtFkdeposyMLqZQmj5SEDmgqdWT3SgvFYxxA7_GoGMgjZ9WMGjQKcdUOpjpklTl7JnFjSD7DhMmM35lRK4FLAiARIUOIXWQIiZK_Uufs"/>
+<img class="w-6 h-6 rounded-full border border-surface object-cover" data-alt="Headshot of a middle-aged marketing manager smiling, warm lighting, white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8jh-OegzEg-Kwcf9AO42wgxq-I4Bx_xtfYBxbdRwKPZkrYdfsRrm3r4z8fyV0N7w65zkbr4u1IrQRmqmc_KQvM2HLKWTpKDjH6WumqpKCfSuQjoh4kKQDuV0BEKbFffhvt6SHG122cIHugarq0ocI-il5HU-k4i25_mcjOBowCwAYEfhkfho8p_GxYWufZ8CI0QL-3N80qwWuoH5lCu34-93gc4hBUsOoCc-FgvQ65tc4unpIOZfSabuAZjtn8odz5moxgv5x8bY"/>
+<img class="w-6 h-6 rounded-full border border-surface object-cover" data-alt="Headshot of a female copywriter, serious expression, white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwVtMqY-x1HnCor3UoaMGQeMNNUUId9ak0VB79jdeD-dVi23SyQCmruWiR-j-2_slk9drIOfQ3O1DB8PKlhjmfxdO1qImXVxYRrJnQP1Z5nGwsdiS3HVbpNo5WZgaqBGARi8JRmIoLNghwFbFQzlWDMeY_dYgJOlDsvF4DQVg2NeEIydAyKMJ5d__hT4OCIZrk_VtxXq9Zi-wcxx2Lx71UuyaeRiF26sHLWcgXymQCLSxqGV7pqmDCFbidRl6WYCh5aTV5P0QoPUg"/>
+<div class="w-6 h-6 rounded-full border border-surface bg-surface-dim flex items-center justify-center text-[10px] font-medium text-on-surface">+1</div>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<div class="flex-1 h-1.5 bg-surface-dim rounded-full overflow-hidden w-20">
+<div class="h-full bg-primary" style="width: 90%"></div>
+</div>
+<span class="text-on-surface-variant">18/20</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 bg-success-subtle text-success font-label text-label px-2 py-0.5 rounded-full">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                                    On track
+                                </span>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">Today, 14:00 (3 ready)</td>
+<td class="py-3 px-4 text-right">
+<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-text-muted hover:text-primary hover:bg-surface-container rounded"><span class="material-symbols-outlined text-[18px]">open_in_new</span></button>
+<button class="p-1 text-text-muted hover:text-primary hover:bg-surface-container rounded"><span class="material-symbols-outlined text-[18px]">settings</span></button>
+<button class="p-1 text-text-muted hover:text-danger hover:bg-danger-subtle rounded"><span class="material-symbols-outlined text-[18px]">archive</span></button>
+</div>
+</td>
+</tr>
+<!-- Standard Row 1 -->
+<tr class="border-b border-border bg-surface hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center text-on-surface-variant font-bold text-sm shrink-0">SO</div>
+<div>
+<div class="font-medium text-on-surface leading-tight">Summit Outdoors</div>
+<div class="text-[11px] text-text-muted mt-0.5">Last active 1 day ago</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4"><div class="flex gap-1 text-text-muted"><span class="material-symbols-outlined text-[16px]">photo_camera</span><span class="material-symbols-outlined text-[16px]">play_circle</span></div></td>
+<td class="py-3 px-4"><div class="flex -space-x-2"><img class="w-6 h-6 rounded-full border border-surface object-cover" data-alt="Headshot of outdoor marketing specialist." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCw__yPmmqwszlfJkmGyL8naw5l8GAjqXDN_zjfanC_TV3_Y-FysmE77JgWUkapVbSQKhz9aS_IV16GKwiU9U7VIepPd618zPPmDxxbc2UZ6yE8Q9UTkqwMCqHsbjJXE1SBigtWtj6EqjS5wVNEP3Saj4uVM5uorVowfxR3MqL9E16J6Xq8gykNaCDUfnm_6Ng2Nzydi-NywQQleTfFq7Zlu5Axnqapf1Vj-WU-N2c4f1csV8NdCY5bflayGviacqrecV2LB7H0Zuw"/><div class="w-6 h-6 rounded-full border border-surface bg-surface-dim flex items-center justify-center text-[10px] font-medium text-on-surface">+2</div></div></td>
+<td class="py-3 px-4"><div class="flex items-center gap-2"><div class="flex-1 h-1.5 bg-surface-dim rounded-full overflow-hidden w-20"><div class="h-full bg-warning" style="width: 40%"></div></div><span class="text-on-surface-variant">4/10</span></div></td>
+<td class="py-3 px-4"><span class="inline-flex items-center gap-1 bg-warning-subtle text-warning font-label text-label px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-[14px]">warning</span>At risk</span></td>
+<td class="py-3 px-4 text-on-surface-variant">Tomorrow (0 ready)</td>
+<td class="py-3 px-4 text-right">
+<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-text-muted hover:text-primary hover:bg-surface-container rounded"><span class="material-symbols-outlined text-[18px]">open_in_new</span></button>
+<button class="p-1 text-text-muted hover:text-primary hover:bg-surface-container rounded"><span class="material-symbols-outlined text-[18px]">settings</span></button>
+</div>
+</td>
+</tr>
+<!-- Standard Row 2 -->
+<tr class="border-b border-border bg-surface hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center text-on-surface-variant font-bold text-sm shrink-0">VB</div>
+<div>
+<div class="font-medium text-on-surface leading-tight">Velvet Brew</div>
+<div class="text-[11px] text-text-muted mt-0.5">Last active 3 days ago</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4"><div class="flex gap-1 text-text-muted"><span class="material-symbols-outlined text-[16px]">photo_camera</span></div></td>
+<td class="py-3 px-4"><div class="flex -space-x-2"><div class="w-6 h-6 rounded-full border border-surface bg-surface-dim flex items-center justify-center text-[10px] font-medium text-on-surface">2</div></div></td>
+<td class="py-3 px-4"><div class="flex items-center gap-2"><div class="flex-1 h-1.5 bg-surface-dim rounded-full overflow-hidden w-20"><div class="h-full bg-success" style="width: 100%"></div></div><span class="text-on-surface-variant">5/5</span></div></td>
+<td class="py-3 px-4"><span class="inline-flex items-center gap-1 bg-success-subtle text-success font-label text-label px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-[14px]">check_circle</span>On track</span></td>
+<td class="py-3 px-4 text-on-surface-variant">Oct 24 (5 ready)</td>
+<td class="py-3 px-4 text-right">
+<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-text-muted hover:text-primary hover:bg-surface-container rounded"><span class="material-symbols-outlined text-[18px]">open_in_new</span></button>
+<button class="p-1 text-text-muted hover:text-primary hover:bg-surface-container rounded"><span class="material-symbols-outlined text-[18px]">settings</span></button>
+</div>
+</td>
+</tr>
+<!-- Standard Row 3, 4, 5 (Simplified for brevity, assuming similar structure) -->
+<tr class="border-b border-border bg-surface hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center text-on-surface-variant font-bold text-sm shrink-0">PP</div><div><div class="font-medium text-on-surface leading-tight">Peak Performance</div></div></div></td>
+<td class="py-3 px-4 text-text-muted">3 channels</td>
+<td class="py-3 px-4 text-text-muted">6 members</td>
+<td class="py-3 px-4 text-text-muted">12/15</td>
+<td class="py-3 px-4"><span class="inline-flex items-center gap-1 bg-success-subtle text-success font-label text-label px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-[14px]">check_circle</span>On track</span></td>
+<td class="py-3 px-4 text-on-surface-variant">Nov 1</td>
+<td class="py-3 px-4 text-right"><div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity"><button class="p-1 text-text-muted hover:text-primary rounded"><span class="material-symbols-outlined text-[18px]">settings</span></button></div></td>
+</tr>
+<tr class="border-b border-border bg-surface hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center text-on-surface-variant font-bold text-sm shrink-0">UG</div><div><div class="font-medium text-on-surface leading-tight">Urban Green</div></div></div></td>
+<td class="py-3 px-4 text-text-muted">2 channels</td>
+<td class="py-3 px-4 text-text-muted">3 members</td>
+<td class="py-3 px-4 text-text-muted">2/8</td>
+<td class="py-3 px-4"><span class="inline-flex items-center gap-1 bg-error-container text-on-error-container font-label text-label px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-[14px]">error</span>Delayed</span></td>
+<td class="py-3 px-4 text-on-surface-variant">Past due</td>
+<td class="py-3 px-4 text-right"><div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity"><button class="p-1 text-text-muted hover:text-primary rounded"><span class="material-symbols-outlined text-[18px]">settings</span></button></div></td>
+</tr>
+<tr class="bg-surface hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center text-on-surface-variant font-bold text-sm shrink-0">NT</div><div><div class="font-medium text-on-surface leading-tight">Nova Tech</div></div></div></td>
+<td class="py-3 px-4 text-text-muted">4 channels</td>
+<td class="py-3 px-4 text-text-muted">8 members</td>
+<td class="py-3 px-4 text-text-muted">20/20</td>
+<td class="py-3 px-4"><span class="inline-flex items-center gap-1 bg-success-subtle text-success font-label text-label px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-[14px]">check_circle</span>On track</span></td>
+<td class="py-3 px-4 text-on-surface-variant">Dec 15</td>
+<td class="py-3 px-4 text-right"><div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity"><button class="p-1 text-text-muted hover:text-primary rounded"><span class="material-symbols-outlined text-[18px]">settings</span></button></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Archived Section -->
+<div class="mt-8 border-t border-border pt-4">
+<button class="flex items-center gap-2 text-text-muted hover:text-on-surface transition-colors font-label text-label">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                    Archived Workspaces (1)
+                </button>
+</div>
+</main>
+</div>
+<!-- SIDE PANEL (Add Workspace Form overlay) -->
+<!-- Utilizing a semi-transparent backdrop and a slide-over panel -->
+<div aria-labelledby="slide-over-title" aria-modal="true" class="fixed inset-0 z-50 flex justify-end" role="dialog">
+<!-- Backdrop -->
+<div class="fixed inset-0 bg-on-surface/20 backdrop-blur-[2px] transition-opacity"></div>
+<!-- Panel -->
+<div class="relative w-[900px] max-w-[90vw] bg-surface h-full shadow-2xl flex flex-col transform transition-transform ease-in-out duration-300">
+<!-- Panel Header -->
+<div class="px-screen-padding py-4 border-b border-border flex items-center justify-between bg-surface shrink-0">
+<h2 class="font-section-title text-section-title text-on-surface" id="slide-over-title">Add workspace</h2>
+<button class="text-text-muted hover:text-on-surface hover:bg-surface-subtle p-1 rounded transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Panel Body (3 Columns: Nav, Form, Summary) -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Step Navigation (Left) -->
+<div class="w-56 border-r border-border bg-canvas p-6 flex flex-col gap-2 overflow-y-auto shrink-0">
+<div class="text-[10px] uppercase tracking-wider text-text-muted font-bold mb-2">Setup Steps</div>
+<button class="flex items-center gap-3 px-3 py-2 text-primary font-button text-button bg-primary-subtle rounded-md text-left w-full transition-colors relative before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-4 before:w-1 before:bg-primary before:rounded-r-full">
+<span class="w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center text-[10px]">1</span>
+                        Brand
+                    </button>
+<button class="flex items-center gap-3 px-3 py-2 text-text-muted font-label text-label hover:bg-surface hover:text-on-surface rounded-md text-left w-full transition-colors">
+<span class="w-5 h-5 rounded-full border border-outline-variant flex items-center justify-center text-[10px]">2</span>
+                        Social Channels
+                    </button>
+<button class="flex items-center gap-3 px-3 py-2 text-text-muted font-label text-label hover:bg-surface hover:text-on-surface rounded-md text-left w-full transition-colors">
+<span class="w-5 h-5 rounded-full border border-outline-variant flex items-center justify-center text-[10px]">3</span>
+                        Workflow
+                    </button>
+<button class="flex items-center gap-3 px-3 py-2 text-text-muted font-label text-label hover:bg-surface hover:text-on-surface rounded-md text-left w-full transition-colors">
+<span class="w-5 h-5 rounded-full border border-outline-variant flex items-center justify-center text-[10px]">4</span>
+                        Team
+                    </button>
+<button class="flex items-center gap-3 px-3 py-2 text-text-muted font-label text-label hover:bg-surface hover:text-on-surface rounded-md text-left w-full transition-colors">
+<span class="w-5 h-5 rounded-full border border-outline-variant flex items-center justify-center text-[10px]">5</span>
+                        Defaults
+                    </button>
+<button class="flex items-center gap-3 px-3 py-2 text-text-muted font-label text-label hover:bg-surface hover:text-on-surface rounded-md text-left w-full transition-colors">
+<span class="w-5 h-5 rounded-full border border-outline-variant flex items-center justify-center text-[10px]">6</span>
+                        Targets
+                    </button>
+</div>
+<!-- Form Area (Center) -->
+<div class="flex-1 p-8 overflow-y-auto bg-surface relative">
+<div class="max-w-md mx-auto">
+<div class="mb-6 bg-info-subtle border border-tertiary-fixed rounded-lg p-4 flex gap-3 text-tertiary">
+<span class="material-symbols-outlined text-[20px] shrink-0 mt-0.5">info</span>
+<p class="font-body text-body text-sm">Only brand name and timezone are required; recommended defaults are prefilled based on typical agency workflows.</p>
+</div>
+<form class="space-y-6">
+<!-- Brand Name -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5 flex justify-between">
+                                    Brand name <span class="text-danger">*</span>
+</label>
+<input autofocus="" class="w-full h-10 px-3 border border-border rounded-md font-body text-body text-on-surface focus:ring-2 focus:ring-focus-ring focus:border-focus-ring outline-none transition-shadow shadow-sm" type="text" value="Acme Corp"/>
+</div>
+<!-- Workspace Name (Auto) -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5 flex items-center gap-1">
+                                    Workspace ID
+                                    <span class="material-symbols-outlined text-[14px] text-text-muted cursor-help" title="Used in URLs and API">help</span>
+</label>
+<input class="w-full h-10 px-3 border border-border rounded-md font-body text-body text-text-muted bg-surface-subtle outline-none" readonly="" type="text" value="acme-corp"/>
+</div>
+<!-- Timezone -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5">
+                                    Primary Timezone <span class="text-danger">*</span>
+</label>
+<div class="relative">
+<select class="w-full h-10 pl-3 pr-10 border border-border rounded-md font-body text-body text-on-surface focus:ring-2 focus:ring-focus-ring focus:border-focus-ring outline-none appearance-none bg-surface">
+<option>Europe/Vienna (CET)</option>
+<option>Europe/London (GMT)</option>
+<option>America/New_York (EST)</option>
+<option>America/Los_Angeles (PST)</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none">expand_more</span>
+</div>
+</div>
+<hr class="border-border my-6"/>
+<!-- Optional: Logo -->
+<div>
+<label class="block font-label text-label text-on-surface mb-2">Brand logo (Optional)</label>
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 rounded-lg border border-dashed border-outline-variant flex items-center justify-center bg-canvas hover:bg-surface-subtle transition-colors cursor-pointer text-text-muted">
+<span class="material-symbols-outlined text-[24px]">add_photo_alternate</span>
+</div>
+<div class="text-sm text-text-muted">
+<p>Upload a square PNG or JPG.</p>
+<p>Max 2MB.</p>
+</div>
+</div>
+</div>
+<!-- Optional: Description -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5">Short description (Optional)</label>
+<textarea class="w-full p-3 border border-border rounded-md font-body text-body text-on-surface focus:ring-2 focus:ring-focus-ring focus:border-focus-ring outline-none resize-none h-24 placeholder:text-text-muted" placeholder="e.g. Enterprise B2B software solutions..."></textarea>
+</div>
+</form>
+</div>
+</div>
+<!-- Right Summary Panel -->
+<div class="w-64 border-l border-border bg-surface-subtle p-6 flex flex-col shrink-0 overflow-y-auto">
+<h3 class="font-card-title text-card-title text-on-surface mb-4">Recommended Defaults</h3>
+<p class="font-label text-label text-text-muted mb-6">These settings will be applied automatically unless customized in later steps.</p>
+<div class="space-y-4 font-body text-body text-sm">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">share</span>
+<div>
+<div class="font-medium text-on-surface">Channels</div>
+<div class="text-text-muted text-xs mt-0.5">All 5 active channels enabled</div>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">account_tree</span>
+<div>
+<div class="font-medium text-on-surface">Workflow</div>
+<div class="text-text-muted text-xs mt-0.5">7-stage standard pipeline</div>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">fact_check</span>
+<div>
+<div class="font-medium text-on-surface">Team</div>
+<div class="text-text-muted text-xs mt-0.5">Simple approvals (1 reviewer)</div>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">track_changes</span>
+<div>
+<div class="font-medium text-on-surface">Targets</div>
+<div class="text-text-muted text-xs mt-0.5">10/5/2/1 milestones</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Panel Footer -->
+<div class="px-6 py-4 border-t border-border bg-surface flex justify-between items-center shrink-0">
+<button class="text-text-muted hover:text-on-surface font-button text-button px-4 py-2 rounded transition-colors">
+                    Cancel
+                </button>
+<div class="flex gap-3">
+<button class="bg-surface border border-border text-on-surface hover:bg-surface-subtle font-button text-button px-4 py-2 rounded-md transition-colors shadow-sm">
+                        Save draft
+                    </button>
+<button class="bg-primary text-on-primary hover:bg-primary-hover font-button text-button px-5 py-2 rounded-md transition-colors shadow-sm flex items-center gap-2">
+                        Continue to Channels
+                        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

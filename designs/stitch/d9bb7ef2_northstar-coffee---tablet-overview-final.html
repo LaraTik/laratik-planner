@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee — Tablet Overview Final</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Design System Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "canvas": "#F7F7F5",
+                        "surface-tint": "#4d44e3",
+                        "outline": "#777587",
+                        "warning-subtle": "#FFF7E6",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-background": "#131c2b",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "focus-ring": "#6366F1",
+                        "on-surface-variant": "#464555",
+                        "on-primary-container": "#dad7ff",
+                        "surface-variant": "#dae3f8",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "tertiary-fixed": "#cde5ff",
+                        "error-container": "#ffdad6",
+                        "tertiary-container": "#00659c",
+                        "primary": "#3525cd",
+                        "primary-container": "#4f46e5",
+                        "text-muted": "#7B8495",
+                        "surface-container-highest": "#dae3f8",
+                        "on-primary": "#ffffff",
+                        "secondary": "#555e74",
+                        "info-subtle": "#F0F9FF",
+                        "danger-subtle": "#FEF2F2",
+                        "error": "#ba1a1a",
+                        "surface-bright": "#f9f9ff",
+                        "inverse-surface": "#283141",
+                        "on-secondary-fixed": "#121b2e",
+                        "on-primary-fixed": "#0f0069",
+                        "surface-subtle": "#F1F3F5",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "surface": "#FFFFFF",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "primary-hover": "#4338CA",
+                        "success-subtle": "#ECFDF3",
+                        "secondary-fixed": "#d9e2fc",
+                        "secondary-container": "#d7dff9",
+                        "on-tertiary-container": "#bfdfff",
+                        "border": "#DDE1E6",
+                        "surface-container": "#e7eeff",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "on-tertiary-fixed": "#001d32",
+                        "danger": "#B91C1C",
+                        "on-secondary": "#ffffff",
+                        "surface-container-low": "#f0f3ff",
+                        "primary-subtle": "#EEF2FF",
+                        "on-secondary-container": "#5a6278",
+                        "surface-container-high": "#dfe8fe",
+                        "primary-fixed": "#e2dfff",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "on-error-container": "#93000a",
+                        "background": "#f9f9ff",
+                        "warning": "#B45309",
+                        "surface-dim": "#d1daef",
+                        "inverse-primary": "#c3c0ff",
+                        "inverse-on-surface": "#ecf0ff",
+                        "success": "#15803D",
+                        "outline-variant": "#c7c4d8",
+                        "on-surface": "#131c2b",
+                        "tertiary": "#004c77"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "card-padding": "16px",
+                        "base": "4px",
+                        "gutter": "16px",
+                        "sidebar-expanded": "248px",
+                        "topbar-height": "64px",
+                        "sidebar-collapsed": "72px",
+                        "screen-padding": "24px"
+                    },
+                    "fontFamily": {
+                        "label": ["Inter"],
+                        "section-title": ["Inter"],
+                        "body": ["Inter"],
+                        "card-title": ["Inter"],
+                        "button": ["Inter"],
+                        "table-dense": ["Inter"],
+                        "page-title": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-canvas text-on-surface font-body text-body antialiased min-h-screen flex">
+<!-- SideNavBar (Collapsed Shell) -->
+<nav class="bg-surface border-r border-border fixed left-0 top-0 h-full w-[72px] flex flex-col items-center py-base gap-4 z-50">
+<!-- Brand Avatar -->
+<div class="mt-4 mb-2 flex items-center justify-center">
+<div aria-label="StudioFlow S Mark" class="w-10 h-10 bg-primary-container text-on-primary rounded-lg flex items-center justify-center font-section-title font-bold">S</div>
+</div>
+<!-- Primary Navigation Tabs -->
+<div class="flex flex-col gap-2 w-full px-2">
+<!-- Active Tab: Dashboard (Overview Intent) -->
+<a aria-label="Dashboard" class="flex justify-center items-center w-full min-h-[44px] text-primary-container bg-primary-subtle rounded-lg scale-95 transition-transform duration-150" href="#" title="Dashboard">
+<span class="material-symbols-outlined" data-icon="dashboard" data-weight="fill" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+</a>
+<a aria-label="Projects" class="flex justify-center items-center w-full min-h-[44px] text-secondary hover:bg-surface-subtle transition-colors rounded-lg" href="#" title="Projects">
+<span class="material-symbols-outlined" data-icon="folder_copy">folder_copy</span>
+</a>
+<a aria-label="Campaigns" class="flex justify-center items-center w-full min-h-[44px] text-secondary hover:bg-surface-subtle transition-colors rounded-lg" href="#" title="Campaigns">
+<span class="material-symbols-outlined" data-icon="campaign">campaign</span>
+</a>
+<a aria-label="Reports" class="flex justify-center items-center w-full min-h-[44px] text-secondary hover:bg-surface-subtle transition-colors rounded-lg" href="#" title="Reports">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+</a>
+<a aria-label="Settings" class="flex justify-center items-center w-full min-h-[44px] text-secondary hover:bg-surface-subtle transition-colors rounded-lg" href="#" title="Settings">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</a>
+</div>
+<!-- Footer Navigation Tabs -->
+<div class="mt-auto flex flex-col gap-2 w-full px-2 pb-4">
+<a aria-label="Help" class="flex justify-center items-center w-full min-h-[44px] text-secondary hover:bg-surface-subtle transition-colors rounded-lg" href="#" title="Help">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</a>
+<a aria-label="Profile" class="flex justify-center items-center w-full min-h-[44px] text-secondary hover:bg-surface-subtle transition-colors rounded-lg" href="#" title="Profile">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</a>
+</div>
+</nav>
+<!-- TopNavBar Shell -->
+<header class="docked full-width top-0 h-[64px] border-b border-border bg-surface flex justify-between items-center w-full px-screen-padding ml-[72px] w-[calc(100%-72px)] fixed z-40">
+<div class="flex items-center gap-6 h-full">
+<h1 class="font-section-title text-section-title font-semibold text-on-surface">StudioFlow / Northstar Coffee</h1>
+<!-- Navigation Links acting as contextual filter/subtitle -->
+<nav class="flex h-full items-end pb-[14px]">
+<a class="text-primary font-bold border-b-2 border-primary-container pb-1 -mb-[15px] opacity-80 transition-opacity min-h-[44px] flex items-center" href="#">
+                    September 2026
+                </a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<!-- Trailing Icon Actions -->
+<div class="flex items-center gap-2">
+<button aria-label="search" class="w-[44px] min-h-[44px] flex items-center justify-center text-on-surface-variant hover:bg-surface-subtle transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</button>
+<button aria-label="notifications" class="w-[44px] min-h-[44px] flex items-center justify-center text-on-surface-variant hover:bg-surface-subtle transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</div>
+<!-- Trailing Primary Action -->
+<button class="min-h-[44px] px-5 bg-primary-container hover:bg-primary-hover transition-colors text-on-primary font-button text-button rounded-lg flex items-center justify-center">
+                + New content
+            </button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="ml-[72px] mt-[64px] w-full p-screen-padding max-w-[1024px] mx-auto overflow-x-hidden">
+<!-- Top Row: Health Cards -->
+<section class="grid grid-cols-2 gap-6 mb-6">
+<!-- Plan Coverage Card -->
+<div class="bg-surface border border-border rounded-lg p-card-padding flex flex-col justify-center gap-2 relative overflow-hidden">
+<h2 class="font-label text-label text-secondary uppercase tracking-wider">Plan Coverage</h2>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="font-page-title text-page-title text-on-surface leading-none">18</span>
+<span class="font-section-title text-section-title text-secondary leading-none">/20</span>
+</div>
+<div class="w-full bg-surface-variant h-1.5 rounded-full mt-2 overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 90%;"></div>
+</div>
+</div>
+<!-- Delivery Health Card -->
+<div class="bg-surface border border-border rounded-lg p-card-padding flex flex-col justify-center gap-2">
+<h2 class="font-label text-label text-secondary uppercase tracking-wider">Delivery Health</h2>
+<div class="flex items-center gap-2 mt-2 bg-success-subtle w-fit px-3 py-1.5 rounded-full border border-success/20">
+<span class="material-symbols-outlined text-success text-[18px]" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-button text-button text-success">On track</span>
+</div>
+</div>
+</section>
+<!-- KPI Grid (4x2 Layout) -->
+<section class="mb-8">
+<h2 class="font-section-title text-section-title text-on-surface mb-4">Pipeline Status</h2>
+<div class="grid grid-cols-4 gap-4">
+<!-- Status Cards -->
+<div class="bg-surface border border-border rounded-lg p-3 flex flex-col gap-1 hover:bg-surface-subtle transition-colors cursor-pointer min-h-[80px] justify-center">
+<span class="font-label text-label text-secondary">Draft</span>
+<div class="flex items-center gap-2 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[20px]" data-icon="edit_document">edit_document</span>
+<span class="font-card-title text-card-title">3</span>
+</div>
+</div>
+<div class="bg-surface border border-border rounded-lg p-3 flex flex-col gap-1 hover:bg-surface-subtle transition-colors cursor-pointer min-h-[80px] justify-center">
+<span class="font-label text-label text-secondary">Awaiting Review</span>
+<div class="flex items-center gap-2 text-primary-container">
+<span class="material-symbols-outlined text-[20px]" data-icon="pending_actions">pending_actions</span>
+<span class="font-card-title text-card-title">4</span>
+</div>
+</div>
+<div class="bg-surface border border-border rounded-lg p-3 flex flex-col gap-1 hover:bg-surface-subtle transition-colors cursor-pointer min-h-[80px] justify-center">
+<span class="font-label text-label text-secondary">In Design</span>
+<div class="flex items-center gap-2 text-tertiary">
+<span class="material-symbols-outlined text-[20px]" data-icon="brush">brush</span>
+<span class="font-card-title text-card-title">5</span>
+</div>
+</div>
+<div class="bg-surface border border-border rounded-lg p-3 flex flex-col gap-1 hover:bg-surface-subtle transition-colors cursor-pointer min-h-[80px] justify-center">
+<span class="font-label text-label text-secondary">Ready</span>
+<div class="flex items-center gap-2 text-success">
+<span class="material-symbols-outlined text-[20px]" data-icon="task_alt">task_alt</span>
+<span class="font-card-title text-card-title">3</span>
+</div>
+</div>
+<div class="bg-surface border border-border rounded-lg p-3 flex flex-col gap-1 hover:bg-surface-subtle transition-colors cursor-pointer min-h-[80px] justify-center">
+<span class="font-label text-label text-secondary">Published</span>
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined text-[20px]" data-icon="public">public</span>
+<span class="font-card-title text-card-title">3</span>
+</div>
+</div>
+<div class="bg-danger-subtle border border-danger/20 rounded-lg p-3 flex flex-col gap-1 hover:bg-danger/10 transition-colors cursor-pointer min-h-[80px] justify-center">
+<span class="font-label text-label text-danger">Overdue</span>
+<div class="flex items-center gap-2 text-danger">
+<span class="material-symbols-outlined text-[20px]" data-icon="error" data-weight="fill" style="font-variation-settings: 'FILL' 1;">error</span>
+<span class="font-card-title text-card-title">1</span>
+</div>
+</div>
+<div class="bg-warning-subtle border border-warning/20 rounded-lg p-3 flex flex-col gap-1 hover:bg-warning/10 transition-colors cursor-pointer min-h-[80px] justify-center">
+<span class="font-label text-label text-warning">Blocked</span>
+<div class="flex items-center gap-2 text-warning">
+<span class="material-symbols-outlined text-[20px]" data-icon="warning" data-weight="fill" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-card-title text-card-title">1</span>
+</div>
+</div>
+<!-- Empty slot to balance 4x2 grid gracefully -->
+<div class="bg-transparent border border-dashed border-outline-variant rounded-lg p-3 flex items-center justify-center text-secondary hover:bg-surface-subtle transition-colors cursor-pointer min-h-[80px]">
+<span class="font-label text-label">+ Add Metric</span>
+</div>
+</div>
+</section>
+<!-- Bottom Layout: Two Columns -->
+<div class="grid grid-cols-1 md:grid-cols-[55%_1fr] gap-8">
+<!-- Left Column: Action List -->
+<section>
+<h2 class="font-section-title text-section-title text-on-surface mb-4">Needs your action</h2>
+<div class="flex flex-col gap-3">
+<!-- Action Item 1 -->
+<div class="bg-surface border border-border rounded-lg p-card-padding flex items-center justify-between group">
+<div class="flex flex-col gap-1">
+<h3 class="font-card-title text-card-title text-on-surface">First Sip of Autumn</h3>
+<div class="flex items-center gap-1.5 text-secondary">
+<span class="material-symbols-outlined text-[16px]" data-icon="play_circle">play_circle</span>
+<span class="font-label text-label">Short-form Video</span>
+</div>
+</div>
+<button class="min-h-[44px] px-4 py-2 border border-border rounded-lg font-button text-button text-on-surface hover:bg-surface-subtle hover:border-outline transition-all flex items-center gap-2">
+                            Review
+                        </button>
+</div>
+<!-- Action Item 2 -->
+<div class="bg-surface border border-border rounded-lg p-card-padding flex items-center justify-between group">
+<div class="flex flex-col gap-1">
+<h3 class="font-card-title text-card-title text-on-surface">Origin story: Guatemala</h3>
+<div class="flex items-center gap-1.5 text-secondary">
+<span class="material-symbols-outlined text-[16px]" data-icon="article">article</span>
+<span class="font-label text-label">Article</span>
+</div>
+</div>
+<button class="min-h-[44px] px-4 py-2 border border-border rounded-lg font-button text-button text-on-surface hover:bg-surface-subtle hover:border-outline transition-all flex items-center gap-2">
+                            Review
+                        </button>
+</div>
+<!-- Action Item 3 -->
+<div class="bg-surface border border-border rounded-lg p-card-padding flex items-center justify-between group">
+<div class="flex flex-col gap-1">
+<h3 class="font-card-title text-card-title text-on-surface">Fall Menu</h3>
+<div class="flex items-center gap-1.5 text-secondary">
+<span class="material-symbols-outlined text-[16px]" data-icon="view_carousel">view_carousel</span>
+<span class="font-label text-label">Carousel</span>
+</div>
+</div>
+<button class="min-h-[44px] px-4 py-2 border border-border rounded-lg font-button text-button text-on-surface hover:bg-surface-subtle hover:border-outline transition-all flex items-center gap-2">
+                            Review
+                        </button>
+</div>
+</div>
+</section>
+<!-- Right Column: Timeline -->
+<section>
+<h2 class="font-section-title text-section-title text-on-surface mb-4">This week</h2>
+<div class="relative pl-6 border-l-2 border-surface-variant flex flex-col gap-6 ml-2 mt-2">
+<!-- Timeline Item 1 -->
+<div class="relative">
+<!-- Node indicator -->
+<div class="absolute -left-[31px] top-1 w-3 h-3 bg-primary-container rounded-full ring-4 ring-canvas"></div>
+<div class="flex flex-col gap-0.5">
+<span class="font-label text-label text-primary-container">Today, 2:00 PM</span>
+<h4 class="font-body text-body font-semibold text-on-surface">Final Cut Approval</h4>
+<div class="flex items-center gap-1 text-secondary mt-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="movie">movie</span>
+<span class="font-table-dense text-table-dense">Autumn Campaign Promo</span>
+</div>
+</div>
+</div>
+<!-- Timeline Item 2 -->
+<div class="relative">
+<div class="absolute -left-[31px] top-1 w-3 h-3 bg-surface border-2 border-outline-variant rounded-full ring-4 ring-canvas"></div>
+<div class="flex flex-col gap-0.5">
+<span class="font-label text-label text-secondary">Tomorrow, 10:00 AM</span>
+<h4 class="font-body text-body font-semibold text-on-surface">Copy Deck Sign-off</h4>
+<div class="flex items-center gap-1 text-secondary mt-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="description">description</span>
+<span class="font-table-dense text-table-dense">Email Sequences Q3</span>
+</div>
+</div>
+</div>
+<!-- Timeline Item 3 -->
+<div class="relative">
+<div class="absolute -left-[31px] top-1 w-3 h-3 bg-surface border-2 border-outline-variant rounded-full ring-4 ring-canvas"></div>
+<div class="flex flex-col gap-0.5">
+<span class="font-label text-label text-secondary">Thursday, 4:00 PM</span>
+<h4 class="font-body text-body font-semibold text-on-surface">Asset Handoff to Media</h4>
+<div class="flex items-center gap-1 text-secondary mt-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="send">send</span>
+<span class="font-table-dense text-table-dense">Social Batch 4</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

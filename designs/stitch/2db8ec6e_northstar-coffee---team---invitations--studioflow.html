@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee — Team &amp; Invitations</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "info-subtle": "#F0F9FF",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "secondary-container": "#d7dff9",
+                        "on-error-container": "#93000a",
+                        "surface-dim": "#d1daef",
+                        "surface-subtle": "#F1F3F5",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "danger-subtle": "#FEF2F2",
+                        "surface-variant": "#dae3f8",
+                        "success": "#15803D",
+                        "secondary": "#555e74",
+                        "primary": "#3525cd",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#dfe8fe",
+                        "canvas": "#F7F7F5",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "on-tertiary-container": "#bfdfff",
+                        "primary-fixed": "#e2dfff",
+                        "focus-ring": "#6366F1",
+                        "warning": "#B45309",
+                        "inverse-primary": "#c3c0ff",
+                        "outline": "#777587",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "surface-container-highest": "#dae3f8",
+                        "surface": "#FFFFFF",
+                        "error-container": "#ffdad6",
+                        "on-primary": "#ffffff",
+                        "inverse-on-surface": "#ecf0ff",
+                        "primary-container": "#4f46e5",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#5a6278",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "on-surface-variant": "#464555",
+                        "surface-tint": "#4d44e3",
+                        "background": "#f9f9ff",
+                        "danger": "#B91C1C",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-container": "#00659c",
+                        "primary-hover": "#4338CA",
+                        "text-muted": "#7B8495",
+                        "surface-container-low": "#f0f3ff",
+                        "on-primary-container": "#dad7ff",
+                        "surface-container": "#e7eeff",
+                        "tertiary-fixed": "#cde5ff",
+                        "on-surface": "#131c2b",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-tertiary-fixed": "#001d32",
+                        "outline-variant": "#c7c4d8",
+                        "warning-subtle": "#FFF7E6",
+                        "on-secondary-fixed": "#121b2e",
+                        "secondary-fixed": "#d9e2fc",
+                        "tertiary": "#004c77",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#283141",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed": "#0f0069",
+                        "on-background": "#131c2b",
+                        "primary-subtle": "#EEF2FF",
+                        "surface-bright": "#f9f9ff",
+                        "border": "#DDE1E6",
+                        "success-subtle": "#ECFDF3"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    },
+                    spacing: {
+                        gutter: "16px",
+                        "topbar-height": "64px",
+                        "card-padding": "16px",
+                        "sidebar-expanded": "248px",
+                        "sidebar-collapsed": "72px",
+                        "screen-padding": "24px",
+                        base: "4px"
+                    },
+                    fontFamily: {
+                        "card-title": ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                        label: ["Inter", "sans-serif"],
+                        "section-title": ["Inter", "sans-serif"],
+                        button: ["Inter", "sans-serif"],
+                        "page-title": ["Inter", "sans-serif"],
+                        "table-dense": ["Inter", "sans-serif"]
+                    },
+                    fontSize: {
+                        "card-title": ["16px", { lineHeight: "24px", fontWeight: "600" }],
+                        body: ["14px", { lineHeight: "21px", fontWeight: "400" }],
+                        label: ["12px", { lineHeight: "16px", fontWeight: "500" }],
+                        "section-title": ["20px", { lineHeight: "28px", fontWeight: "600" }],
+                        button: ["14px", { lineHeight: "20px", fontWeight: "600" }],
+                        "page-title": ["28px", { lineHeight: "36px", fontWeight: "600" }],
+                        "table-dense": ["13px", { lineHeight: "18px", fontWeight: "400" }]
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body antialiased min-h-screen flex overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<aside class="w-sidebar-expanded h-screen sticky left-0 top-0 overflow-y-auto bg-canvas border-r border-border flex flex-col py-4 hidden md:flex z-50">
+<!-- Brand / Header -->
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 bg-primary rounded flex items-center justify-center text-on-primary font-bold">
+<span class="material-symbols-outlined text-[20px]" data-icon="workspaces" data-weight="fill" style="font-variation-settings: 'FILL' 1;">workspaces</span>
+</div>
+<div>
+<div class="font-section-title text-section-title font-bold text-on-surface">StudioFlow</div>
+<div class="text-[11px] text-text-muted font-medium uppercase tracking-wider">Agency Workspace</div>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary hover:bg-surface-container-low transition-all duration-200 ease-in-out font-label text-label" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="assignment">assignment</span>
+<span>My Work</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary hover:bg-surface-container-low transition-all duration-200 ease-in-out font-label text-label" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+<span>Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary hover:bg-surface-container-low transition-all duration-200 ease-in-out font-label text-label" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="event_note">event_note</span>
+<span>Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary hover:bg-surface-container-low transition-all duration-200 ease-in-out font-label text-label" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="calendar_today">calendar_today</span>
+<span>Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary hover:bg-surface-container-low transition-all duration-200 ease-in-out font-label text-label" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="rate_review">rate_review</span>
+<span>Reviews</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary hover:bg-surface-container-low transition-all duration-200 ease-in-out font-label text-label" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="share">share</span>
+<span>Social Channels</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary hover:bg-surface-container-low transition-all duration-200 ease-in-out font-label text-label" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="inventory_2">inventory_2</span>
+<span>Brand Kit</span>
+</a>
+<!-- Active State -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface text-primary font-semibold border-r-4 border-primary transition-all duration-200 ease-in-out font-label text-label shadow-sm" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="group">group</span>
+<span>Team</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary hover:bg-surface-container-low transition-all duration-200 ease-in-out font-label text-label" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<!-- Bottom Actions -->
+<div class="px-3 mt-auto pt-4 border-t border-border space-y-1">
+<button class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-secondary hover:bg-surface-container-low transition-colors font-label text-label">
+<span class="material-symbols-outlined text-[20px]" data-icon="help">help</span>
+<span>Help</span>
+</button>
+<div class="mt-2 pt-2 border-t border-border">
+<button class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A small, circular avatar portrait of Maya Chen, a professional designer with dark hair smiling warmly. The photo is high quality, well-lit, and suitable for a corporate dashboard profile icon. The background is a soft, neutral studio setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOMSnE7C_twwbgrCKBa3m1aUDCX6jARTPB77Y0zS_n0iB8YhvX1I4gMx_Cs5er2r5-DU4Kw1wt6ruOiRo_AwPrRW-Zx5yOsRmiT2qEhUBcL8xzLJupUkk8Y7Xky10UG0MyB6FeJ0BAqaKf0xg01XA_s7e7wXJxjrgtz3pI7HtnbShGBHctyka0E_IpgsVlqseoRV5ZNKg_q1nOikSXXFnAVYr-zOz5QfiVQMpjlxf1W107SI6rPfCnpslf997Yo7vX-iQesEKpmxM"/>
+<div class="text-left">
+<div class="font-label text-label text-on-surface">Maya Chen</div>
+<div class="text-[11px] text-text-muted">Northstar Coffee</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-[16px] text-secondary group-hover:text-primary transition-colors" data-icon="unfold_more">unfold_more</span>
+</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col min-w-0 relative h-screen">
+<!-- TopNavBar (Shared Component) -->
+<header class="h-topbar-height w-full sticky top-0 z-40 bg-surface border-b border-border flex justify-between items-center px-gutter shrink-0">
+<!-- Breadcrumbs -->
+<div class="flex items-center gap-2 text-sm">
+<span class="text-text-muted font-medium hover:text-on-surface cursor-pointer transition-colors">Northstar Coffee</span>
+<span class="text-outline-variant">/</span>
+<span class="text-on-surface font-semibold">Team</span>
+</div>
+<!-- Right Actions -->
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]" data-icon="search">search</span>
+<input class="w-full pl-9 pr-3 py-2 bg-surface-subtle border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-focus-ring transition-all placeholder-text-muted" placeholder="Search workspace..." type="text"/>
+</div>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-danger rounded-full border-2 border-surface"></span>
+</button>
+<button class="w-8 h-8 rounded-full overflow-hidden border border-border cursor-pointer hover:opacity-80 transition-opacity">
+<img class="w-full h-full object-cover" data-alt="A small, circular avatar portrait of Maya Chen, a professional designer with dark hair smiling warmly. The photo is high quality, well-lit, and suitable for a corporate dashboard profile icon. The background is a soft, neutral studio setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEnMTxUHMkSvuHd88W5f7IwuBN1_DzCncsBZDqq5MRiK6aVSFWkwbuFnI_7Fu4Rf9ce9CUjIWRCg_W7NP6vhVeqgaGPZR5UnMh305SldBnB9P98fcYe5ydyWVorexGHtgrRPqWS9mnLeki9c3BhiaKx0D2kEQRy8ezx0LrTwqOKqB6880TtHlwWSeQXBNjDWqUkHpYrHo6W-nO07F1epCJzRlsJ8mtB0BQoXJMTwkJzT3hY85ans-4zWssIAtg-2BoA-ta-8TkWoQ"/>
+</button>
+</div>
+</header>
+<!-- Scrollable Content -->
+<main class="flex-1 overflow-y-auto bg-background p-screen-padding">
+<div class="max-w-6xl mx-auto space-y-6">
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div>
+<h1 class="font-page-title text-page-title text-on-surface tracking-tight">Team &amp; access</h1>
+<p class="font-body text-body text-text-muted mt-1">Invite people and control what they can do in this workspace.</p>
+</div>
+<button class="bg-primary-container text-on-primary font-button text-button px-4 py-2 rounded-lg hover:bg-primary-hover transition-colors shadow-sm flex items-center gap-2 whitespace-nowrap" onclick="document.getElementById('drawer-overlay').classList.remove('hidden'); document.getElementById('invite-drawer').classList.remove('translate-x-full');">
+<span class="material-symbols-outlined text-[18px]" data-icon="person_add">person_add</span>
+                        Invite people
+                    </button>
+</div>
+<!-- Tabs -->
+<div class="border-b border-border">
+<nav class="flex gap-6">
+<button class="pb-3 border-b-2 border-primary text-primary font-label text-label whitespace-nowrap">Members</button>
+<button class="pb-3 border-b-2 border-transparent text-text-muted hover:text-on-surface hover:border-outline-variant transition-colors font-label text-label whitespace-nowrap">Pending invitations <span class="bg-surface-container-high text-secondary px-1.5 py-0.5 rounded-full ml-1 text-[10px]">2</span></button>
+<button class="pb-3 border-b-2 border-transparent text-text-muted hover:text-on-surface hover:border-outline-variant transition-colors font-label text-label whitespace-nowrap">Access matrix</button>
+</nav>
+</div>
+<!-- Filters/Search Bar -->
+<div class="flex items-center justify-between bg-surface p-2 rounded-xl border border-border shadow-sm">
+<div class="relative w-72">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]" data-icon="search">search</span>
+<input class="w-full pl-9 pr-3 py-1.5 bg-transparent border-none text-sm focus:ring-0 placeholder-text-muted" placeholder="Filter members..." type="text"/>
+</div>
+<button class="px-3 py-1.5 text-secondary hover:bg-surface-container-low rounded-lg font-label text-label flex items-center gap-2 transition-colors border border-transparent hover:border-border">
+<span class="material-symbols-outlined text-[16px]" data-icon="filter_list">filter_list</span>
+                        Filters
+                    </button>
+</div>
+<!-- Team Table -->
+<div class="bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
+<table class="w-full text-left font-table-dense text-table-dense border-collapse">
+<thead class="bg-canvas border-b border-border text-secondary font-medium">
+<tr>
+<th class="py-3 px-4 w-[35%]">Name &amp; Email</th>
+<th class="py-3 px-4 w-[30%]">Role</th>
+<th class="py-3 px-4 w-[15%]">Status</th>
+<th class="py-3 px-4 w-[15%]">Last active</th>
+<th class="py-3 px-4 w-[5%]"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border">
+<!-- Aisha Rahman -->
+<tr class="hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-subtle text-primary flex items-center justify-center font-bold text-xs shrink-0">AR</div>
+<div>
+<div class="font-medium text-on-surface">Aisha Rahman</div>
+<div class="text-text-muted text-[12px]">aisha@northstar.co</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex flex-wrap gap-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-subtle text-primary text-[11px] font-medium border border-primary-fixed">
+<span class="material-symbols-outlined text-[12px]" data-icon="admin_panel_settings">admin_panel_settings</span>
+                                            Agency Admin
+                                        </span>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[11px] font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span> Active
+                                    </span>
+</td>
+<td class="py-3 px-4 text-text-muted">Today</td>
+<td class="py-3 px-4 text-right">
+<button class="p-1 rounded text-outline hover:text-on-surface hover:bg-surface-container-high transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-[18px]" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Daniel Kim -->
+<tr class="hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed text-on-secondary-fixed-variant flex items-center justify-center font-bold text-xs shrink-0">DK</div>
+<div>
+<div class="font-medium text-on-surface">Daniel Kim</div>
+<div class="text-text-muted text-[12px]">daniel@northstar.co</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex flex-wrap gap-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-variant text-on-surface text-[11px] font-medium border border-outline-variant">
+                                            Workspace Manager
+                                        </span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-variant text-on-surface text-[11px] font-medium border border-outline-variant">
+                                            Content Planner
+                                        </span>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[11px] font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span> Active
+                                    </span>
+</td>
+<td class="py-3 px-4 text-text-muted">Yesterday</td>
+<td class="py-3 px-4 text-right">
+<button class="p-1 rounded text-outline hover:text-on-surface hover:bg-surface-container-high transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-[18px]" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Maya Chen -->
+<tr class="hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full object-cover shrink-0 border border-border" data-alt="A small, circular avatar portrait of Maya Chen, a professional designer with dark hair smiling warmly. The photo is high quality, well-lit, and suitable for a corporate dashboard profile icon. The background is a soft, neutral studio setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAASVwobhLLgSXLBHhD52efJfaX_8rUhLuvkUfOBjw4GbGu2GyV6qRnJTxiuUywFQtp4_sqEs3K0eVC4oxd9qHKO3-45XI87uII6rfBHUDC9ZH_rPJ3lh-ToEgamDZzcmvCmsUoKWRfWh95n0sOd-yYyEhFwpG1XNhc0ML3j_kPX8iEBAwW9_ofJ7XlTw1eHpOdGH9bIY8Vh6qMUc6IaZ4VrFE6Kjpecpz56wJADoroNk6h_P7T8ikEJC0ajIxgbfkBkg_tOv6LOU8"/>
+<div>
+<div class="font-medium text-on-surface flex items-center gap-2">Maya Chen <span class="bg-surface-container-high text-secondary text-[10px] px-1.5 py-0.5 rounded font-medium">You</span></div>
+<div class="text-text-muted text-[12px]">maya@northstar.co</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex flex-wrap gap-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-variant text-on-surface text-[11px] font-medium border border-outline-variant">
+                                            Designer
+                                        </span>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[11px] font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span> Active
+                                    </span>
+</td>
+<td class="py-3 px-4 text-text-muted">Now</td>
+<td class="py-3 px-4 text-right">
+</td>
+</tr>
+<!-- Claire Martin -->
+<tr class="hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant flex items-center justify-center font-bold text-xs shrink-0">CM</div>
+<div>
+<div class="font-medium text-on-surface">Claire Martin</div>
+<div class="text-text-muted text-[12px]">claire.m@client.com</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex flex-wrap gap-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning-subtle text-warning border border-warning-subtle text-[11px] font-medium">
+<span class="material-symbols-outlined text-[12px]" data-icon="visibility_off">visibility_off</span>
+                                            Client Reviewer
+                                        </span>
+<span class="text-[11px] text-text-muted italic self-center">Restricted client view</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[11px] font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span> Active
+                                    </span>
+</td>
+<td class="py-3 px-4 text-text-muted">3 days ago</td>
+<td class="py-3 px-4 text-right">
+<button class="p-1 rounded text-outline hover:text-on-surface hover:bg-surface-container-high transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-[18px]" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</main>
+</div>
+<!-- Side Drawer: Invite People -->
+<div class="fixed inset-0 bg-on-surface/20 backdrop-blur-sm z-50 transition-opacity hidden" id="drawer-overlay"></div>
+<div class="fixed inset-y-0 right-0 w-[560px] bg-surface shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col border-l border-border" id="invite-drawer">
+<!-- Drawer Header -->
+<div class="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+<h2 class="font-section-title text-section-title text-on-surface">Invite people</h2>
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-secondary hover:bg-surface-container-low transition-colors" onclick="document.getElementById('drawer-overlay').classList.add('hidden'); document.getElementById('invite-drawer').classList.add('translate-x-full');">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<!-- Drawer Body -->
+<div class="flex-1 overflow-y-auto p-6 space-y-6 bg-canvas">
+<!-- Email Input -->
+<div class="space-y-1">
+<label class="font-label text-label text-on-surface block">Email addresses</label>
+<div class="min-h-[40px] border border-border rounded-lg bg-surface p-1.5 flex flex-wrap gap-1.5 items-center focus-within:ring-2 focus-within:ring-focus-ring focus-within:border-focus-ring transition-all">
+<span class="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded bg-surface-container text-sm text-on-surface">
+                        alex@northstar.co
+                        <button class="text-secondary hover:text-on-surface"><span class="material-symbols-outlined text-[14px]" data-icon="close">close</span></button>
+</span>
+<span class="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded bg-danger-subtle text-danger border border-danger-subtle text-sm">
+                        sarah@example.com
+                        <button class="hover:text-danger/80"><span class="material-symbols-outlined text-[14px]" data-icon="close">close</span></button>
+</span>
+<input class="flex-1 min-w-[120px] bg-transparent border-none text-sm focus:ring-0 p-1" placeholder="Add more emails..." type="text"/>
+</div>
+<p class="text-[12px] text-danger flex items-center gap-1 mt-1 font-medium">
+<span class="material-symbols-outlined text-[14px]" data-icon="error">error</span>
+                    This person is already a member of this workspace (sarah@example.com).
+                </p>
+</div>
+<!-- Workspace Selector -->
+<div class="space-y-1">
+<label class="font-label text-label text-on-surface block">Workspace</label>
+<button class="w-full h-[40px] px-3 bg-surface border border-border rounded-lg flex items-center justify-between text-sm text-on-surface hover:bg-surface-subtle transition-colors">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="workspaces" data-weight="fill">workspaces</span>
+                        Northstar Coffee
+                    </span>
+<span class="material-symbols-outlined text-[18px] text-secondary" data-icon="expand_more">expand_more</span>
+</button>
+</div>
+<!-- Role Selector Cards -->
+<div class="space-y-3">
+<label class="font-label text-label text-on-surface block">Select role for new members</label>
+<div class="grid grid-cols-1 gap-3">
+<!-- Role: Workspace Manager -->
+<label class="relative flex items-start p-4 cursor-pointer bg-surface border border-border rounded-xl hover:border-outline transition-colors shadow-sm">
+<div class="flex items-center h-5">
+<input class="w-4 h-4 text-primary border-outline-variant focus:ring-focus-ring bg-surface" name="role" type="radio"/>
+</div>
+<div class="ml-3 flex-1">
+<span class="block font-medium text-on-surface text-sm">Workspace Manager</span>
+<span class="block text-text-muted text-[13px] mt-0.5 leading-snug">Can manage workspace settings, team access, defaults, and workflow.</span>
+</div>
+</label>
+<!-- Role: Client Reviewer (Selected) -->
+<label class="relative flex items-start p-4 cursor-pointer bg-primary-subtle border-2 border-primary rounded-xl shadow-sm">
+<div class="flex items-center h-5">
+<input checked="" class="w-4 h-4 text-primary border-primary focus:ring-focus-ring bg-surface" name="role" type="radio"/>
+</div>
+<div class="ml-3 flex-1">
+<div class="flex items-center justify-between">
+<span class="block font-semibold text-primary-fixed-dim text-sm text-primary">Client Reviewer</span>
+<span class="text-[10px] font-bold uppercase tracking-wider bg-surface px-1.5 py-0.5 rounded text-secondary border border-border">External</span>
+</div>
+<span class="block text-secondary text-[13px] mt-0.5 leading-snug">Simplified access to assigned review items only. Cannot see internal discussions.</span>
+</div>
+</label>
+<!-- Other Roles (Collapsed for brevity visually, implied via scroll) -->
+<div class="border border-border rounded-xl bg-surface overflow-hidden divide-y divide-border shadow-sm">
+<label class="flex items-center p-3 cursor-pointer hover:bg-surface-subtle transition-colors">
+<input class="w-4 h-4 text-primary border-outline-variant focus:ring-focus-ring bg-surface" name="role" type="radio"/>
+<span class="ml-3 text-sm text-on-surface">Content Planner</span>
+</label>
+<label class="flex items-center p-3 cursor-pointer hover:bg-surface-subtle transition-colors">
+<input class="w-4 h-4 text-primary border-outline-variant focus:ring-focus-ring bg-surface" name="role" type="radio"/>
+<span class="ml-3 text-sm text-on-surface">Designer</span>
+</label>
+<label class="flex items-center p-3 cursor-pointer hover:bg-surface-subtle transition-colors">
+<input class="w-4 h-4 text-primary border-outline-variant focus:ring-focus-ring bg-surface" name="role" type="radio"/>
+<span class="ml-3 text-sm text-on-surface">Internal Reviewer</span>
+</label>
+<label class="flex items-center p-3 cursor-pointer hover:bg-surface-subtle transition-colors">
+<input class="w-4 h-4 text-primary border-outline-variant focus:ring-focus-ring bg-surface" name="role" type="radio"/>
+<span class="ml-3 text-sm text-on-surface">Publisher</span>
+</label>
+</div>
+</div>
+</div>
+<!-- Personal Message -->
+<div class="space-y-1 pt-2">
+<label class="font-label text-label text-on-surface block flex items-center justify-between">
+                    Personal message
+                    <span class="text-text-muted font-normal text-[11px]">Optional</span>
+</label>
+<textarea class="w-full bg-surface border border-border rounded-lg text-sm focus:ring-2 focus:ring-focus-ring focus:border-focus-ring transition-all p-3 resize-none placeholder-text-muted" placeholder="Add a note to your invitation..." rows="3"></textarea>
+</div>
+<!-- Info Callout -->
+<div class="bg-info-subtle border border-info-subtle rounded-lg p-3 flex gap-3 text-sm">
+<span class="material-symbols-outlined text-tertiary-container text-[20px]" data-icon="info">info</span>
+<p class="text-on-tertiary-container text-secondary">Invitation expires in 7 days. An email invitation will be sent.</p>
+</div>
+</div>
+<!-- Drawer Footer (Sticky) -->
+<div class="px-6 py-4 border-t border-border bg-surface flex justify-end gap-3 shrink-0">
+<button class="px-4 py-2 font-button text-button text-on-surface border border-border rounded-lg hover:bg-surface-subtle transition-colors" onclick="document.getElementById('drawer-overlay').classList.add('hidden'); document.getElementById('invite-drawer').classList.add('translate-x-full');">Cancel</button>
+<button class="px-4 py-2 font-button text-button bg-primary-container text-on-primary rounded-lg hover:bg-primary-hover transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Send invitations</button>
+</div>
+</div>
+</body></html>

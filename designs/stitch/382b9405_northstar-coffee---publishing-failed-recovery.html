@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee — Publishing Failed Recovery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-container": "#00659c",
+                        "border": "#DDE1E6",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#464555",
+                        "surface": "#FFFFFF",
+                        "on-tertiary-container": "#bfdfff",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "inverse-primary": "#c3c0ff",
+                        "danger-subtle": "#FEF2F2",
+                        "tertiary": "#004c77",
+                        "surface-bright": "#f9f9ff",
+                        "on-primary-container": "#dad7ff",
+                        "surface-container-low": "#f0f3ff",
+                        "primary-subtle": "#EEF2FF",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "on-secondary-fixed": "#121b2e",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "error": "#ba1a1a",
+                        "canvas": "#F7F7F5",
+                        "on-secondary-container": "#5a6278",
+                        "surface-subtle": "#F1F3F5",
+                        "surface-container-lowest": "#ffffff",
+                        "success": "#15803D",
+                        "primary": "#3525cd",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-error": "#ffffff",
+                        "outline-variant": "#c7c4d8",
+                        "success-subtle": "#ECFDF3",
+                        "surface-variant": "#dae3f8",
+                        "on-background": "#131c2b",
+                        "warning": "#B45309",
+                        "primary-fixed": "#e2dfff",
+                        "primary-hover": "#4338CA",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "background": "#f9f9ff",
+                        "on-primary": "#ffffff",
+                        "surface-tint": "#4d44e3",
+                        "surface-container-high": "#dfe8fe",
+                        "secondary-container": "#d7dff9",
+                        "secondary-fixed": "#d9e2fc",
+                        "primary-container": "#4f46e5",
+                        "on-primary-fixed": "#0f0069",
+                        "inverse-on-surface": "#ecf0ff",
+                        "outline": "#777587",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "info-subtle": "#F0F9FF",
+                        "warning-subtle": "#FFF7E6",
+                        "danger": "#B91C1C",
+                        "surface-container": "#e7eeff",
+                        "on-surface": "#131c2b",
+                        "surface-dim": "#d1daef",
+                        "surface-container-highest": "#dae3f8",
+                        "on-secondary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "text-muted": "#7B8495",
+                        "focus-ring": "#6366F1",
+                        "on-tertiary-fixed": "#001d32",
+                        "secondary": "#555e74",
+                        "inverse-surface": "#283141",
+                        "tertiary-fixed": "#cde5ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sidebar-collapsed": "72px",
+                        "card-padding": "16px",
+                        "sidebar-expanded": "248px",
+                        "topbar-height": "64px",
+                        "screen-padding": "24px",
+                        "gutter": "16px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "section-title": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "table-dense": ["Inter", "sans-serif"],
+                        "card-title": ["Inter", "sans-serif"],
+                        "button": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"],
+                        "page-title": ["Inter", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+</head>
+<body class="bg-canvas text-on-surface font-body h-screen overflow-hidden flex">
+<!-- Sidebar -->
+<nav class="bg-surface dark:bg-surface-container-lowest border-r border-border dark:border-outline-variant fixed left-0 top-0 h-screen flex flex-col pt-topbar-height z-40 w-sidebar-expanded">
+<div class="px-screen-padding pb-6 pt-4 border-b border-border">
+<h1 class="font-section-title text-section-title text-on-surface dark:text-on-surface-variant truncate">Northstar Coffee</h1>
+<p class="font-label text-label text-text-muted mt-1">Agency Workspace</p>
+</div>
+<ul class="flex flex-col gap-1 p-screen-padding overflow-y-auto">
+<li>
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-container dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container transition-all rounded-lg font-label text-label transition-transform duration-200 ease-in-out cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="assignment">assignment</span>
+                    My Work
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-container dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container transition-all rounded-lg font-label text-label transition-transform duration-200 ease-in-out cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+                    Overview
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-container dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container transition-all rounded-lg font-label text-label transition-transform duration-200 ease-in-out cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="event_note">event_note</span>
+                    Planning
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-container dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container transition-all rounded-lg font-label text-label transition-transform duration-200 ease-in-out cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="calendar_month">calendar_month</span>
+                    Calendar
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-container dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container transition-all rounded-lg font-label text-label transition-transform duration-200 ease-in-out cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="rate_review">rate_review</span>
+                    Reviews
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 text-primary dark:text-primary-fixed-dim font-bold bg-primary-subtle dark:bg-primary-container rounded-lg font-label text-label transition-transform duration-200 ease-in-out cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="share">share</span>
+                    Social Channels
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-container dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container transition-all rounded-lg font-label text-label transition-transform duration-200 ease-in-out cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="inventory_2">inventory_2</span>
+                    Brand Kit
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-container dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container transition-all rounded-lg font-label text-label transition-transform duration-200 ease-in-out cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="group">group</span>
+                    Team
+                </a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 ml-sidebar-expanded flex flex-col h-screen overflow-hidden">
+<!-- Top Navigation -->
+<header class="bg-surface dark:bg-surface-container-low border-b border-border dark:border-outline-variant flex justify-between items-center px-screen-padding w-full sticky top-0 z-50 h-topbar-height">
+<div class="flex items-center gap-4">
+<span class="font-page-title text-page-title text-primary dark:text-primary-fixed-dim">StudioFlow</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-subtle border border-border rounded-lg text-body font-body focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-transparent w-64 h-[40px]" placeholder="Search..." type="text"/>
+</div>
+<button class="p-2 text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-high transition-colors rounded-full cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-high transition-colors rounded-full cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary-subtle border border-border overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a person looking forward, neutral lighting, minimalist background, corporate modern style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuClpZxNutJrr24ASrcDRULo070cQtsiL2slpgN4gJmbTpwnTNQsisr2X8t0bBIYzAO_cvt-izXa3nm5qsW4nmyr1405iYAxtAHGNU3nsRssbq-GHwmdjGfAIBspIqOe_nYicSlkiVydA-EcGcpYXBbpcEaetBj5Hcrr8bI6szFNoYIeACme6x3TL0wsRJYYGPHyrE6jeYfKe7Px3TRzOgrrHOfIAL6S2me7-cN4tYrgahVkoWPiv7xUCJTwGX10EK89rCo_K5qvm_0"/>
+</div>
+</div>
+</header>
+<!-- Main Scrollable Area -->
+<main class="flex-1 overflow-y-auto p-screen-padding bg-canvas">
+<div class="max-w-6xl mx-auto space-y-6">
+<!-- Page Header -->
+<div class="flex justify-between items-start">
+<div>
+<h2 class="font-page-title text-page-title text-on-surface">Weekend Brewing Guide</h2>
+<div class="flex items-center gap-3 mt-2 text-body font-body text-text-muted">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="calendar_today">calendar_today</span>
+                                Scheduled: Sep 18, 2026, 10:00 AM
+                            </span>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning-subtle text-warning font-label text-label border border-warning/20">
+<span class="w-1.5 h-1.5 rounded-full bg-warning"></span>
+                                Partially Published
+                            </span>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 bg-surface border border-border text-on-surface rounded-lg font-button text-button hover:bg-surface-subtle transition-colors h-[40px]">
+                            Edit Details
+                        </button>
+</div>
+</div>
+<!-- Info Banner -->
+<div class="bg-info-subtle border border-tertiary-fixed-dim rounded-lg p-4 flex items-start gap-3">
+<span class="material-symbols-outlined text-tertiary-container mt-0.5" data-icon="info">info</span>
+<p class="font-body text-body text-on-tertiary-fixed-variant">
+<strong>StudioFlow records publication;</strong> it does not publish directly to social networks. Please verify manually.
+                    </p>
+</div>
+<!-- Bento Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Left Column: Status & Error Resolution -->
+<div class="lg:col-span-2 space-y-6">
+<!-- Channels Status -->
+<div class="bg-surface border border-border rounded-xl p-card-padding">
+<h3 class="font-card-title text-card-title text-on-surface mb-4">Channel Status</h3>
+<div class="space-y-4">
+<!-- Instagram -->
+<div class="flex items-center justify-between p-3 bg-surface-subtle border border-border rounded-lg">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-[18px]" data-icon="photo_camera">photo_camera</span>
+</div>
+<div>
+<p class="font-label text-label text-on-surface font-semibold">Instagram</p>
+</div>
+</div>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success-subtle text-success font-label text-label border border-success/20">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span>
+                                        Published
+                                    </span>
+</div>
+<!-- Facebook -->
+<div class="flex items-center justify-between p-3 bg-surface-subtle border border-border rounded-lg">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-[18px]" data-icon="thumb_up">thumb_up</span>
+</div>
+<div>
+<p class="font-label text-label text-on-surface font-semibold">Facebook</p>
+</div>
+</div>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success-subtle text-success font-label text-label border border-success/20">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span>
+                                        Published
+                                    </span>
+</div>
+<!-- TikTok Error Card -->
+<div class="bg-danger-subtle border border-danger/30 rounded-lg p-4 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-danger"></div>
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface border border-danger/30 flex items-center justify-center text-danger">
+<span class="material-symbols-outlined text-[18px]" data-icon="videocam">videocam</span>
+</div>
+<div>
+<p class="font-label text-label text-on-surface font-semibold">TikTok</p>
+</div>
+</div>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-danger/10 text-danger font-label text-label border border-danger/20">
+<span class="material-symbols-outlined text-[14px]" data-icon="error">error</span>
+                                            Failed
+                                        </span>
+</div>
+<div class="space-y-2 mb-4 font-body text-body text-on-surface-variant ml-11">
+<p><span class="font-semibold text-on-surface">Attempted:</span> Sep 18, 10:05 AM</p>
+<p><span class="font-semibold text-on-surface">Publisher:</span> Daniel Kim</p>
+<div class="bg-surface border border-danger/20 p-2 rounded text-danger text-sm font-mono mt-2">
+                                            Error: Live post URL could not be verified.
+                                        </div>
+</div>
+<div class="flex flex-wrap gap-2 ml-11">
+<button class="px-4 py-2 bg-primary-container text-on-primary rounded-lg font-button text-button hover:bg-primary-hover transition-colors h-[40px]">
+                                            Retry verification
+                                        </button>
+<button class="px-4 py-2 bg-surface border border-border text-on-surface rounded-lg font-button text-button hover:bg-surface-subtle transition-colors h-[40px]">
+                                            Edit publishing record
+                                        </button>
+<button class="px-4 py-2 text-text-muted hover:text-on-surface rounded-lg font-button text-button transition-colors h-[40px] ml-auto flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]" data-icon="more_vert">more_vert</span>
+                                            Mark as skipped
+                                        </button>
+</div>
+</div>
+<!-- YouTube -->
+<div class="flex items-center justify-between p-3 bg-surface border border-border rounded-lg opacity-70">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-subtle border border-border flex items-center justify-center text-text-muted">
+<span class="material-symbols-outlined text-[18px]" data-icon="play_circle">play_circle</span>
+</div>
+<div>
+<p class="font-label text-label text-text-muted font-semibold">YouTube</p>
+</div>
+</div>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-subtle text-text-muted font-label text-label border border-border">
+<span class="material-symbols-outlined text-[14px]" data-icon="remove">remove</span>
+                                        Skipped
+                                    </span>
+</div>
+</div>
+</div>
+<!-- Delivery History -->
+<div class="bg-surface border border-border rounded-xl p-card-padding">
+<h3 class="font-card-title text-card-title text-on-surface mb-4">Delivery History</h3>
+<div class="space-y-0 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
+<!-- History Item 1 -->
+<div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+<div class="flex items-center justify-center w-8 h-8 rounded-full border border-border bg-surface text-text-muted shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10 mx-auto">
+<span class="material-symbols-outlined text-[14px]" data-icon="history">history</span>
+</div>
+<div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-3 rounded-lg bg-surface border border-border shadow-sm">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label text-label text-text-muted">10:05 AM</span>
+</div>
+<p class="font-body text-table-dense text-danger font-medium">TikTok Verification Failed</p>
+</div>
+</div>
+<!-- History Item 2 -->
+<div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active mt-4">
+<div class="flex items-center justify-center w-8 h-8 rounded-full border border-border bg-surface text-text-muted shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10 mx-auto">
+<span class="material-symbols-outlined text-[14px]" data-icon="history">history</span>
+</div>
+<div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-3 rounded-lg bg-surface border border-border shadow-sm">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label text-label text-text-muted">10:03 AM</span>
+</div>
+<p class="font-body text-table-dense text-on-surface">Facebook Published by Daniel Kim</p>
+</div>
+</div>
+<!-- History Item 3 -->
+<div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active mt-4">
+<div class="flex items-center justify-center w-8 h-8 rounded-full border border-border bg-surface text-text-muted shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10 mx-auto">
+<span class="material-symbols-outlined text-[14px]" data-icon="history">history</span>
+</div>
+<div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-3 rounded-lg bg-surface border border-border shadow-sm">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label text-label text-text-muted">10:02 AM</span>
+</div>
+<p class="font-body text-table-dense text-on-surface">Instagram Published by Daniel Kim</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Content Preview -->
+<div class="space-y-6">
+<!-- Preview Card -->
+<div class="bg-surface border border-border rounded-xl p-card-padding flex flex-col h-full">
+<h3 class="font-card-title text-card-title text-on-surface mb-4">Content Preview</h3>
+<div class="aspect-square w-full rounded-lg bg-surface-subtle border border-border overflow-hidden mb-4 relative">
+<img class="w-full h-full object-cover" data-alt="A high-quality, top-down shot of a beautifully poured latte on a rustic wooden table, with fresh coffee beans scattered around, soft warm morning lighting, professional modern cafe aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBqZw-xZpy_ojQTuK__dnmAf1gk1MDq2SWG2RmcAito-H4_Y3EZEwKQXlDtRX7MGdu2PzBdvs74hEMsdhG0f_dKbtiV9hn4LR5RegPxkIUuVsc-kLY76jvdno8dwiNSJEuZtg18xT8kHODj_LfuRA2VZXbtNCLa2V-E_envdjZ_NNzxYoKjR-j0LvxS4KnlMqGVo_-RqocFb491CIXTR03mhUllWSq_TBSUixRfFG3GykK38voE9i5NUQ3X9U89fNKb25lxdvTVsOs"/>
+<div class="absolute bottom-2 right-2 bg-surface/80 backdrop-blur-sm px-2 py-1 rounded text-xs font-mono border border-border">IMG_2026_PRO.jpg</div>
+</div>
+<div class="space-y-4 flex-1">
+<div>
+<h4 class="font-label text-label text-text-muted uppercase tracking-wider mb-1">Strategic Brief</h4>
+<p class="font-body text-table-dense text-on-surface-variant bg-surface-subtle p-3 rounded-lg border border-border">
+                                        Drive weekend engagement by sharing a relatable slow-morning brewing routine. Target casual coffee enthusiasts.
+                                    </p>
+</div>
+<div>
+<h4 class="font-label text-label text-text-muted uppercase tracking-wider mb-1">Social Copy</h4>
+<div class="font-body text-body text-on-surface bg-surface-subtle p-3 rounded-lg border border-border whitespace-pre-line">
+Slow mornings start here. ☕️
+
+Weekends are for taking your time. What's your go-to weekend brew method? Let us know below 👇
+
+#NorthstarCoffee #WeekendBrew #SlowMorning
+                                    </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee — Tablet Content Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "border": "#DDE1E6",
+                      "info-subtle": "#F0F9FF",
+                      "inverse-primary": "#c3c0ff",
+                      "secondary-fixed": "#d9e2fc",
+                      "outline": "#777587",
+                      "tertiary-fixed-dim": "#94ccff",
+                      "inverse-on-surface": "#ecf0ff",
+                      "canvas": "#F7F7F5",
+                      "on-surface-variant": "#464555",
+                      "danger": "#B91C1C",
+                      "secondary-container": "#d7dff9",
+                      "tertiary-fixed": "#cde5ff",
+                      "on-error": "#ffffff",
+                      "outline-variant": "#c7c4d8",
+                      "primary-subtle": "#EEF2FF",
+                      "on-secondary-fixed-variant": "#3e475b",
+                      "surface-bright": "#f9f9ff",
+                      "surface-subtle": "#F1F3F5",
+                      "surface-container-lowest": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "on-secondary-container": "#5a6278",
+                      "primary-fixed": "#e2dfff",
+                      "on-primary-container": "#dad7ff",
+                      "warning-subtle": "#FFF7E6",
+                      "surface-variant": "#dae3f8",
+                      "inverse-surface": "#283141",
+                      "on-primary-fixed": "#0f0069",
+                      "error-container": "#ffdad6",
+                      "tertiary": "#004c77",
+                      "on-primary": "#ffffff",
+                      "surface-container-low": "#f0f3ff",
+                      "surface-container": "#e7eeff",
+                      "surface-container-high": "#dfe8fe",
+                      "on-secondary": "#ffffff",
+                      "primary": "#3525cd",
+                      "background": "#f9f9ff",
+                      "surface": "#FFFFFF",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "danger-subtle": "#FEF2F2",
+                      "surface-tint": "#4d44e3",
+                      "primary-hover": "#4338CA",
+                      "primary-container": "#4f46e5",
+                      "tertiary-container": "#00659c",
+                      "on-background": "#131c2b",
+                      "focus-ring": "#6366F1",
+                      "success-subtle": "#ECFDF3",
+                      "success": "#15803D",
+                      "surface-dim": "#d1daef",
+                      "on-tertiary": "#ffffff",
+                      "secondary-fixed-dim": "#bdc6e0",
+                      "surface-container-highest": "#dae3f8",
+                      "on-tertiary-container": "#bfdfff",
+                      "text-muted": "#7B8495",
+                      "secondary": "#555e74",
+                      "warning": "#B45309",
+                      "on-tertiary-fixed-variant": "#004b74",
+                      "on-secondary-fixed": "#121b2e",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "on-tertiary-fixed": "#001d32",
+                      "error": "#ba1a1a",
+                      "on-surface": "#131c2b"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "sidebar-collapsed": "72px",
+                      "sidebar-expanded": "248px",
+                      "base": "4px",
+                      "card-padding": "16px",
+                      "screen-padding": "24px",
+                      "gutter": "16px",
+                      "topbar-height": "64px"
+              },
+              "fontFamily": {
+                      "button": [
+                              "Inter"
+                      ],
+                      "section-title": [
+                              "Inter"
+                      ],
+                      "table-dense": [
+                              "Inter"
+                      ],
+                      "label": [
+                              "Inter"
+                      ],
+                      "page-title": [
+                              "Inter"
+                      ],
+                      "body": [
+                              "Inter"
+                      ],
+                      "card-title": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "button": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "section-title": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "table-dense": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "page-title": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body": [
+                              "14px",
+                              {
+                                      "lineHeight": "21px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "card-title": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+</head>
+<body class="bg-canvas text-on-surface font-body overflow-hidden">
+<!-- App Shell Structure -->
+<div class="flex h-screen w-[1024px] mx-auto bg-background relative">
+<!-- SideNav Container -->
+<nav class="fixed left-0 top-0 h-full w-sidebar-collapsed z-40 py-4 flex flex-col items-center bg-canvas dark:bg-inverse-surface border-r border-border dark:border-outline-variant">
+<div class="font-section-title text-section-title font-bold text-on-surface dark:text-inverse-on-surface mb-8">NC</div>
+<div class="flex flex-col space-y-4 flex-1">
+<div class="text-on-surface-variant dark:text-outline hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-all cursor-pointer flex items-center justify-center h-12 w-12 mx-auto rounded-lg" title="Workspaces">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+</div>
+<div class="bg-primary-subtle dark:bg-primary-container text-primary dark:text-on-primary-container rounded-lg cursor-pointer flex items-center justify-center h-12 w-12 mx-auto" title="Projects">
+<span class="material-symbols-outlined" data-icon="assignment" style="font-variation-settings: 'FILL' 1;">assignment</span>
+</div>
+<div class="text-on-surface-variant dark:text-outline hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-all cursor-pointer flex items-center justify-center h-12 w-12 mx-auto rounded-lg" title="Calendar">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+</div>
+<div class="text-on-surface-variant dark:text-outline hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-all cursor-pointer flex items-center justify-center h-12 w-12 mx-auto rounded-lg" title="Assets">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+</div>
+<div class="text-on-surface-variant dark:text-outline hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-all cursor-pointer flex items-center justify-center h-12 w-12 mx-auto rounded-lg" title="Analytics">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+</div>
+</div>
+<div class="flex flex-col space-y-4 mt-auto">
+<div class="text-on-surface-variant dark:text-outline hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-all cursor-pointer flex items-center justify-center h-12 w-12 mx-auto rounded-lg" title="Help">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</div>
+<div class="text-on-surface-variant dark:text-outline hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-all cursor-pointer flex items-center justify-center h-12 w-12 mx-auto rounded-lg" title="Logout">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+</div>
+</div>
+</nav>
+<!-- Main Content Area Container -->
+<div class="ml-sidebar-collapsed flex-1 flex flex-col h-full w-[calc(1024px-72px)] relative">
+<!-- TopNavBar -->
+<header class="fixed top-0 left-sidebar-collapsed w-[calc(1024px-72px)] z-30 h-topbar-height flex items-center justify-between px-screen-padding bg-surface dark:bg-surface-container-low border-b border-border dark:border-outline-variant">
+<div class="flex items-center space-x-4">
+<div class="font-page-title text-page-title text-primary dark:text-primary-fixed">StudioFlow</div>
+<div class="h-6 w-px bg-border mx-4"></div>
+<div class="text-on-surface-variant dark:text-outline font-label text-label flex items-center">
+                        Northstar Coffee <span class="mx-2 material-symbols-outlined text-sm">chevron_right</span> Planning <span class="mx-2 material-symbols-outlined text-sm">chevron_right</span> <span class="font-bold text-on-surface dark:text-white">Autumn roast launch</span>
+</div>
+</div>
+<div class="flex items-center space-x-6">
+<button class="bg-primary-container text-white font-button text-button h-10 px-4 rounded-lg flex items-center justify-center hover:opacity-90 transition-opacity">Submit for creative review</button>
+<div class="flex space-x-4 text-on-surface-variant dark:text-outline">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary-hover transition-colors" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary-hover transition-colors" data-icon="settings">settings</span>
+<img alt="User profile" class="w-8 h-8 rounded-full border border-border" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCd5pfWYop3zNpDW56IUrwfM06nnkvXrS0C1VgoJFdffdf3cl5YdekwfpW4HdJfaOehqFtLFNW3BzrKdwvcFr_rnsi088urLd8LNuAL00r_iEKeEN7DggsestvL3Yaiqs-pp6ePQJLrjTbeOHDA5OGEaUI6EJZx-q--EXyxdz_COMjxvjqgtwF5bKlN47XJJ-GpUV9BNzCzVddQ4ufu_P2zuakLK-0ZC0i0Jw1njTkbXsiXcex5GnsLAhLs4ALV-eW31Mu3e9NhAI4"/>
+</div>
+</div>
+</header>
+<!-- Scrollable Content -->
+<main class="mt-topbar-height flex-1 overflow-y-auto bg-background p-screen-padding flex space-x-gutter">
+<!-- Left Column (Main) -->
+<div class="flex-1 flex flex-col space-y-6">
+<!-- Top Navigation Tabs -->
+<div class="flex space-x-6 border-b border-border dark:border-outline-variant">
+<div class="text-on-surface-variant dark:text-outline pb-3 cursor-pointer hover:text-primary-hover dark:hover:text-primary-fixed-dim transition-colors">Overview</div>
+<div class="text-primary dark:text-primary-fixed border-b-2 border-primary dark:border-primary-fixed pb-3 font-bold cursor-pointer">Content</div>
+<div class="text-on-surface-variant dark:text-outline pb-3 cursor-pointer hover:text-primary-hover dark:hover:text-primary-fixed-dim transition-colors">Production</div>
+<div class="text-on-surface-variant dark:text-outline pb-3 cursor-pointer hover:text-primary-hover dark:hover:text-primary-fixed-dim transition-colors">Delivery</div>
+<div class="text-on-surface-variant dark:text-outline pb-3 cursor-pointer hover:text-primary-hover dark:hover:text-primary-fixed-dim transition-colors">Discussion</div>
+<div class="text-on-surface-variant dark:text-outline pb-3 cursor-pointer hover:text-primary-hover dark:hover:text-primary-fixed-dim transition-colors">Activity</div>
+</div>
+<!-- Metadata Header -->
+<div class="bg-surface rounded-xl border border-border p-card-padding shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h1 class="font-page-title text-page-title text-on-surface mb-2">Autumn Roast Reveal Carousel</h1>
+<div class="flex items-center space-x-3 text-sm text-on-surface-variant">
+<span class="flex items-center bg-primary-subtle text-primary px-2 py-1 rounded font-medium text-xs"><span class="material-symbols-outlined text-[14px] mr-1">design_services</span>In Design</span>
+<span class="flex items-center"><span class="material-symbols-outlined text-[16px] mr-1">event</span>Scheduled: Sep 18, 2026</span>
+</div>
+</div>
+<div class="flex space-x-2 text-on-surface-variant">
+<span class="material-symbols-outlined p-2 bg-surface-subtle rounded-md" title="Instagram">photo_camera</span>
+<span class="material-symbols-outlined p-2 bg-surface-subtle rounded-md" title="Facebook">thumb_up</span>
+<span class="material-symbols-outlined p-2 bg-surface-subtle rounded-md" title="LinkedIn">work</span>
+</div>
+</div>
+</div>
+<!-- Strategic Brief -->
+<div class="bg-surface rounded-xl border border-border p-card-padding shadow-sm grid grid-cols-2 gap-4">
+<h2 class="col-span-2 font-card-title text-card-title text-on-surface border-b border-border pb-2 mb-2">Strategic Brief</h2>
+<div>
+<span class="font-label text-label text-text-muted uppercase tracking-wider block mb-1">Campaign</span>
+<span class="font-body text-body text-on-surface">Autumn Roast Launch</span>
+</div>
+<div>
+<span class="font-label text-label text-text-muted uppercase tracking-wider block mb-1">Pillar</span>
+<span class="font-body text-body text-on-surface">Product Reveal</span>
+</div>
+<div>
+<span class="font-label text-label text-text-muted uppercase tracking-wider block mb-1">Objective</span>
+<span class="font-body text-body text-on-surface">Drive seasonal awareness</span>
+</div>
+<div>
+<span class="font-label text-label text-text-muted uppercase tracking-wider block mb-1">Audience</span>
+<span class="font-body text-body text-on-surface">Coffee enthusiasts</span>
+</div>
+</div>
+<!-- Social Copy -->
+<div class="bg-surface rounded-xl border border-border p-card-padding shadow-sm">
+<h2 class="font-card-title text-card-title text-on-surface border-b border-border pb-2 mb-4">Social Copy</h2>
+<div class="bg-canvas p-4 rounded-lg border border-border border-dashed">
+<p class="font-body text-body text-on-surface mb-4">The crisp air is back, and so is our signature Autumn Blend. 🍂☕️ Rich notes of maple, toasted pecan, and a hint of smoke to warm your mornings. Available now in-store and online.</p>
+<a class="text-primary font-medium flex items-center hover:underline" href="#"><span class="material-symbols-outlined text-[18px] mr-1">link</span> Shop Autumn Blend</a>
+</div>
+</div>
+<!-- Carousel Structure -->
+<div class="bg-surface rounded-xl border border-border p-card-padding shadow-sm">
+<div class="flex justify-between items-center border-b border-border pb-2 mb-4">
+<h2 class="font-card-title text-card-title text-on-surface">Sequence (5 Slides)</h2>
+<button class="text-primary text-sm font-medium hover:underline flex items-center"><span class="material-symbols-outlined text-[18px] mr-1">add</span>Add Slide</button>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+<!-- Slide 01 -->
+<div class="border border-border rounded-lg overflow-hidden group">
+<div class="bg-canvas aspect-square flex flex-col items-center justify-center p-4 border-b border-border relative">
+<span class="absolute top-2 left-2 bg-surface text-xs font-bold px-2 py-1 rounded shadow-sm border border-border">01</span>
+<span class="material-symbols-outlined text-4xl text-outline mb-2">image</span>
+<span class="text-sm font-medium text-text-muted">Waiting for Creative</span>
+</div>
+<div class="p-3 bg-surface">
+<p class="text-xs font-bold text-on-surface mb-1">Headline Copy</p>
+<p class="text-xs text-on-surface-variant line-clamp-2">"Welcome Back, Autumn"</p>
+<div class="mt-2 text-[10px] text-text-muted border-t border-border pt-1 uppercase tracking-wide">Visual Dir: Close up on beans</div>
+</div>
+</div>
+<!-- Slide 02 -->
+<div class="border border-border rounded-lg overflow-hidden group">
+<div class="bg-canvas aspect-square flex flex-col items-center justify-center p-4 border-b border-border relative">
+<span class="absolute top-2 left-2 bg-surface text-xs font-bold px-2 py-1 rounded shadow-sm border border-border">02</span>
+<span class="material-symbols-outlined text-4xl text-outline mb-2">image</span>
+</div>
+<div class="p-3 bg-surface">
+<p class="text-xs font-bold text-on-surface mb-1">Body Copy</p>
+<p class="text-xs text-on-surface-variant line-clamp-2">Flavor notes overview</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column (Sticky Summary) -->
+<div class="w-[320px] flex flex-col space-y-6">
+<div class="sticky top-6 flex flex-col space-y-6">
+<!-- Team & Status -->
+<div class="bg-surface rounded-xl border border-border p-card-padding shadow-sm">
+<h3 class="font-card-title text-card-title text-on-surface mb-4">Team</h3>
+<div class="flex items-center space-x-3 mb-3">
+<img alt="Daniel Kim" class="w-8 h-8 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0FlCoPV1JHHwWJEgSgNshawsM3wz-ucEZNzOs2KAt5uV7kgeL4aqPvacNoZDKnU5H_TDSrnJX9eOZWLbfEVpnthCWNav6RfBs6-Tmqfpt_mJyq7qR5iNhXUQ-twoHjY3jliuethK0-qaa5nfMqkhO1e-CdeSm0GDjLY0jcnFwNqMrDM1FRAdjaLBHZbkZ0prD5B6N9fkQWfLAofLDpiUNqOqI_9sRCHgaRkQ0l1n2nOR9qedukGSHdemrc3QLTEPZeaEeSRDJ7Ek"/>
+<div>
+<p class="text-sm font-medium text-on-surface">Daniel Kim</p>
+<p class="text-xs text-text-muted">Owner</p>
+</div>
+</div>
+<div class="flex items-center space-x-3">
+<img alt="Maya Chen" class="w-8 h-8 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKCf6r376a1NxFjiPRO7McE1zJjQ9ytmfUgqSQ07ohzcsLAues3mO2Hq7kdRyM_Bkv7388PkCOC1xXDwFGSvZq1uxmua5WpJ9tHeHDANC28bbuPbQbDW8XQfBrLTJAg4hPLxffBIfOqmdgPDIJdfK4vvYlkZCDIhlSJ_9rTmDiDzG-A082pPW3gRGHE-dAoCWWXlhgmFV9r-tdFU-Lovrdl4vhB1Mam_zd1cZbo37D7DG_lTZwIxG1h7VgKJi_fcMrIy_bxKa6DJY"/>
+<div>
+<p class="text-sm font-medium text-on-surface">Maya Chen</p>
+<p class="text-xs text-text-muted">Designer</p>
+</div>
+</div>
+</div>
+<!-- Milestones -->
+<div class="bg-surface rounded-xl border border-border p-card-padding shadow-sm">
+<h3 class="font-card-title text-card-title text-on-surface mb-4">Milestones</h3>
+<div class="relative pl-4 border-l-2 border-border ml-2 space-y-4">
+<div class="relative">
+<span class="absolute -left-[23px] top-0.5 bg-success text-white rounded-full p-0.5"><span class="material-symbols-outlined text-[12px]">check</span></span>
+<p class="text-sm font-medium text-on-surface">Brief Approved</p>
+</div>
+<div class="relative">
+<span class="absolute -left-[23px] top-0.5 bg-primary text-white rounded-full w-4 h-4 flex items-center justify-center border-2 border-surface"><span class="w-1.5 h-1.5 bg-white rounded-full"></span></span>
+<p class="text-sm font-medium text-primary">Design &amp; Scripting</p>
+<p class="text-xs text-text-muted">In Progress</p>
+</div>
+<div class="relative">
+<span class="absolute -left-[23px] top-0.5 bg-canvas rounded-full w-4 h-4 border-2 border-border"></span>
+<p class="text-sm font-medium text-on-surface-variant">Internal Review</p>
+</div>
+<div class="relative">
+<span class="absolute -left-[23px] top-0.5 bg-canvas rounded-full w-4 h-4 border-2 border-border"></span>
+<p class="text-sm font-medium text-on-surface-variant">Final Delivery</p>
+</div>
+</div>
+</div>
+<!-- Open Question -->
+<div class="bg-warning-subtle rounded-xl border border-warning/20 p-card-padding shadow-sm relative overflow-hidden">
+<div class="absolute top-0 right-0 w-1 bg-warning h-full"></div>
+<div class="flex items-start justify-between mb-2">
+<span class="bg-warning text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">Unresolved</span>
+<span class="material-symbols-outlined text-warning text-sm">help</span>
+</div>
+<p class="text-sm text-on-surface font-medium mb-3">"Should the product bag appear in the final frame or slide 4?"</p>
+<button class="w-full bg-white border border-border text-on-surface text-sm font-medium h-9 rounded-md hover:bg-surface-subtle transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px] mr-1">reply</span> Reply
+                            </button>
+</div>
+<a class="flex items-center justify-center w-full bg-surface border border-border text-on-surface text-sm font-medium h-10 rounded-lg hover:bg-surface-subtle transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px] mr-2">palette</span> View Northstar Brand Kit
+                        </a>
+</div>
+</div>
+</main>
+</div>
+<!-- Right Side Sheet Overlay (Discussion) -->
+<div class="fixed top-topbar-height right-0 h-[calc(100vh-64px)] w-[360px] bg-surface border-l border-border shadow-lg z-50 transform transition-transform translate-x-0 flex flex-col">
+<div class="flex items-center justify-between p-4 border-b border-border">
+<h2 class="font-section-title text-section-title text-on-surface flex items-center"><span class="material-symbols-outlined mr-2">forum</span>Discussion</h2>
+<button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined">close</span></button>
+</div>
+<div class="flex-1 overflow-y-auto p-4">
+<!-- Thread -->
+<div class="bg-canvas rounded-lg p-3 border border-border">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center space-x-2">
+<img alt="Daniel Kim" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKsVvbYArB0jnKSBn0q4Tk9c5A0R2q8G_Pkp7JVeHvwMQRu1uNKIrgfu0Qe5Zty3QDfBWyG2BXjGB6hvprnis81Q9m9IwV8S22cY-Z0Z6PSTktGn4Ltst316CoXjEjtiyS6RSBeN81TEUREn8nvBHNQWzKdPBeRrxvDNv_yHf_uxDEVq4mn7DGJIM3_oWd2TKIAyFvUpD6YDThKuKS1XQ6Od8_82Ep_-Nemk7LvJErDDTMKPHRC9I2lnFBi2SWStoIArLOgpjnBeE"/>
+<span class="text-sm font-semibold text-on-surface">Daniel Kim</span>
+</div>
+<div class="flex items-center bg-surface border border-border rounded px-2 py-0.5 cursor-pointer hover:bg-surface-subtle">
+<span class="text-xs text-text-muted font-medium mr-1">Resolve</span>
+<span class="material-symbols-outlined text-[14px] text-text-muted">check_circle</span>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant mb-3">Hey Maya, thinking we might need to swap the order of slide 2 and 3 to build the narrative better. Thoughts?</p>
+<div class="flex items-center space-x-2">
+<img alt="User profile" class="w-6 h-6 rounded-full border border-border" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAU3kCA2e1W8R-hzGbxLmCrLI5LiYIH6Ld-3VFxduy5nSqsx8wpLIe-dA7xunOh6L1tneJgNcLy8GiOEHmEQeDO0tA_5AY_C20ku2763Eghp7KwVB7rIlurcKp1z-KEkoSVq3yxETuVaWiR7D_tD4Nc3E8yQs0tB72wQNT-aJDDFJl_ZmDwyPkZGImvbI-1tOCs3FKn6Zdy7BQRvG-WbWIfmnGe8uZXMzGszLwQK2ahQ44ET7tQb9Uuxe1brTsjOY-JIEXztOUK-Cw"/>
+<input class="flex-1 h-8 bg-surface border border-border rounded text-sm px-2 focus:ring-2 focus:ring-primary focus:border-primary outline-none" placeholder="Reply..." type="text"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

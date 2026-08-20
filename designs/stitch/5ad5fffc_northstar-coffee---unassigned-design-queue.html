@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee — Unassigned Design Queue</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "error-container": "#ffdad6",
+                      "tertiary-fixed-dim": "#94ccff",
+                      "surface-subtle": "#F1F3F5",
+                      "surface-variant": "#dae3f8",
+                      "focus-ring": "#6366F1",
+                      "on-tertiary-container": "#bfdfff",
+                      "surface-bright": "#f9f9ff",
+                      "error": "#ba1a1a",
+                      "surface-tint": "#4d44e3",
+                      "on-primary-fixed": "#0f0069",
+                      "danger": "#B91C1C",
+                      "border": "#DDE1E6",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "outline": "#777587",
+                      "on-tertiary-fixed-variant": "#004b74",
+                      "on-secondary-fixed-variant": "#3e475b",
+                      "inverse-surface": "#283141",
+                      "tertiary-fixed": "#cde5ff",
+                      "surface-container-low": "#f0f3ff",
+                      "primary-container": "#4f46e5",
+                      "on-primary-container": "#dad7ff",
+                      "surface": "#FFFFFF",
+                      "on-secondary-fixed": "#121b2e",
+                      "surface-dim": "#d1daef",
+                      "primary-fixed": "#e2dfff",
+                      "warning-subtle": "#FFF7E6",
+                      "primary": "#3525cd",
+                      "on-surface-variant": "#464555",
+                      "tertiary": "#004c77",
+                      "secondary-container": "#d7dff9",
+                      "primary-hover": "#4338CA",
+                      "tertiary-container": "#00659c",
+                      "on-primary": "#ffffff",
+                      "text-muted": "#7B8495",
+                      "danger-subtle": "#FEF2F2",
+                      "on-secondary-container": "#5a6278",
+                      "on-error-container": "#93000a",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-container-high": "#dfe8fe",
+                      "background": "#f9f9ff",
+                      "on-secondary": "#ffffff",
+                      "inverse-primary": "#c3c0ff",
+                      "canvas": "#F7F7F5",
+                      "outline-variant": "#c7c4d8",
+                      "secondary-fixed": "#d9e2fc",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "on-background": "#131c2b",
+                      "inverse-on-surface": "#ecf0ff",
+                      "on-surface": "#131c2b",
+                      "surface-container-highest": "#dae3f8",
+                      "primary-subtle": "#EEF2FF",
+                      "success": "#15803D",
+                      "secondary-fixed-dim": "#bdc6e0",
+                      "surface-container": "#e7eeff",
+                      "secondary": "#555e74",
+                      "on-tertiary-fixed": "#001d32",
+                      "warning": "#B45309",
+                      "on-tertiary": "#ffffff",
+                      "on-error": "#ffffff",
+                      "info-subtle": "#F0F9FF",
+                      "success-subtle": "#ECFDF3"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "sidebar-collapsed": "72px",
+                      "card-padding": "16px",
+                      "base": "4px",
+                      "gutter": "16px",
+                      "topbar-height": "64px",
+                      "sidebar-expanded": "248px",
+                      "screen-padding": "24px"
+              },
+              "fontFamily": {
+                      "table-dense": [
+                              "Inter"
+                      ],
+                      "section-title": [
+                              "Inter"
+                      ],
+                      "page-title": [
+                              "Inter"
+                      ],
+                      "label": [
+                              "Inter"
+                      ],
+                      "button": [
+                              "Inter"
+                      ],
+                      "card-title": [
+                              "Inter"
+                      ],
+                      "body": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "table-dense": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "section-title": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "page-title": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "button": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "card-title": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body": [
+                              "14px",
+                              {
+                                      "lineHeight": "21px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+          font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Hide scrollbar for clean UI */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-canvas text-on-background font-body text-body antialiased flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<nav class="bg-surface dark:bg-on-background text-primary dark:text-primary-fixed font-body text-body w-sidebar-expanded h-screen sticky left-0 top-0 border-r border-border dark:border-outline-variant flex flex-col h-full py-screen-padding hidden md:flex z-50">
+<!-- Header -->
+<div class="px-gutter mb-8 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-subtle flex items-center justify-center border border-border">
+<img alt="Workspace Logo" class="w-8 h-8 object-contain rounded" data-alt="A minimalist logo design for Northstar Coffee, featuring a stylized geometric star in deep indigo and charcoal tones on a stark white background. The aesthetic is clean, corporate, and highly professional, utilizing precise vector lines and flat colors." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPkQE4KmBDY9ZAa7e0WXV_kqrBNHQjZ2_1We4a7-nusTAuQAIAA28wu97HKnn4dRjataTvWh3syuASUltJLvC3XSFV4L5t52VS80MbkrEhl7MrZZjhLYPIOzoc1Q-7iIsMA4LvEJJ1BOOKnKSBxLO_LBa3dd1DIwXjBDGNppDm-ntpe7kBA9uf-is3T1OX8FVgMP3xGAzO4z2_ANlbSjuXuKmMOiYh2PPocGV17LKNKBZQdi6mamCo1jA6xx_8WkNXM5A6z4aA4zw"/>
+</div>
+<div>
+<div class="font-section-title text-section-title font-semibold text-on-surface dark:text-inverse-on-surface">StudioFlow</div>
+<div class="text-xs text-text-muted">Northstar Coffee</div>
+</div>
+</div>
+<!-- Main Nav -->
+<div class="flex-1 overflow-y-auto px-4 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-primary dark:text-primary-fixed-dim font-semibold border-r-2 border-primary bg-primary-subtle opacity-80 scale-95 transition-all" href="#">
+<span class="material-symbols-outlined filled">assignment_ind</span>
+                My Work
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-surface-bright hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Overview
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-surface-bright hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">event_note</span>
+                Planning
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-surface-bright hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+                Calendar
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-surface-bright hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">rate_review</span>
+                Reviews
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-surface-bright hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">share</span>
+                Social Channels
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-surface-bright hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">auto_awesome</span>
+                Brand Kit
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-surface-bright hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">group</span>
+                Team
+            </a>
+</div>
+<!-- CTA -->
+<div class="px-4 mt-6 mb-6">
+<button class="w-full bg-primary-container text-on-primary h-[40px] rounded flex items-center justify-center gap-2 font-button text-button hover:bg-primary-hover transition-colors">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Project
+            </button>
+</div>
+<!-- Footer Nav -->
+<div class="px-4 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-surface-bright hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-surface-bright hover:bg-surface-subtle dark:hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">help</span>
+                Support
+            </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-on-background text-primary dark:text-primary-fixed font-body text-body h-topbar-height w-full sticky top-0 z-40 border-b border-border dark:border-outline-variant flex justify-between items-center px-gutter w-full">
+<div class="flex items-center gap-4 flex-1">
+<button class="md:hidden text-on-surface">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="hidden md:flex font-page-title text-page-title font-semibold text-on-surface dark:text-inverse-on-surface items-center gap-2">
+                    StudioFlow / Northstar Coffee
+                </div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+<input class="h-[36px] pl-9 pr-4 rounded-lg border border-border bg-surface-subtle focus:ring-2 focus:ring-focus-ring focus:border-focus-ring text-sm w-64 transition-all" placeholder="Search tasks..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container-low dark:hover:bg-secondary-fixed-dim transition-all text-on-surface-variant dark:text-surface-variant">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="sm:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container-low dark:hover:bg-secondary-fixed-dim transition-all text-on-surface-variant dark:text-surface-variant">
+<span class="material-symbols-outlined">search</span>
+</button>
+</div>
+<div class="flex items-center gap-3 pl-4 border-l border-border">
+<button class="text-secondary hover:text-on-surface font-button text-button transition-colors">
+                        New content
+                    </button>
+<button class="bg-primary-container text-on-primary h-[36px] px-4 rounded-lg font-button text-button hover:bg-primary-hover transition-colors">
+                        Quick Create
+                    </button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-border ml-2 cursor-pointer">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional headshot of a creative agency user. The person has a friendly, engaged expression, wearing a smart-casual dark indigo shirt. The background is a soft, blurred bright white office environment, conveying a clean, modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDr1kwWfFuEgKEUZ5r6n1PvDFy_A5c-oSngIUf3OrEnMDHtr43QL7YXx2IS_2-nOSD92WWtCNldZ8M42FyvGWSnOBq3ElvOM-7TQk-D2AJKULlemP0mfIbBhfjKjinIrZYDHzkJwUSchKY4_jy6mJKDb8QqidMhssOEF6ScJqEv96jLGMDYLtU1BJSBO-gtwKrXBOJCJU29Xzl5mChxG5q9PVgtSKSi9tnfeGINk1Mw7QkdVCWq2fjYXz6v5Bu4ySPzPhvJjnll3A"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Page Canvas -->
+<main class="flex-1 overflow-auto flex">
+<!-- Queue List Area -->
+<div class="flex-1 flex flex-col min-w-0 p-screen-padding">
+<!-- Page Header & Filters -->
+<div class="mb-6 flex flex-col gap-4">
+<div>
+<h1 class="font-page-title text-page-title text-on-surface">Design queue</h1>
+<p class="text-text-muted mt-1">Work appears here only when no default designer is configured.</p>
+</div>
+<!-- Filter Bar -->
+<div class="flex flex-wrap items-center gap-2 mt-2">
+<button class="h-[32px] px-3 rounded border border-border bg-surface text-secondary hover:bg-surface-subtle flex items-center gap-1 text-xs font-medium transition-colors">
+<span class="material-symbols-outlined text-[16px]">filter_alt</span>
+                            Format
+                        </button>
+<button class="h-[32px] px-3 rounded border border-border bg-surface text-secondary hover:bg-surface-subtle flex items-center gap-1 text-xs font-medium transition-colors">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+                            Due date
+                        </button>
+<button class="h-[32px] px-3 rounded border border-border bg-surface text-secondary hover:bg-surface-subtle flex items-center gap-1 text-xs font-medium transition-colors">
+<span class="material-symbols-outlined text-[16px]">campaign</span>
+                            Campaign
+                        </button>
+<button class="h-[32px] px-3 rounded border border-border bg-surface text-secondary hover:bg-surface-subtle flex items-center gap-1 text-xs font-medium transition-colors">
+<span class="material-symbols-outlined text-[16px]">share</span>
+                            Channel
+                        </button>
+<button class="h-[32px] px-3 rounded border border-border bg-surface text-secondary hover:bg-surface-subtle flex items-center gap-1 text-xs font-medium transition-colors">
+<span class="material-symbols-outlined text-[16px]">flag</span>
+                            Priority
+                        </button>
+</div>
+</div>
+<!-- Dense Table Container -->
+<div class="bg-surface border border-border rounded-lg overflow-hidden flex-1 flex flex-col">
+<div class="overflow-x-auto flex-1">
+<table class="w-full text-left border-collapse whitespace-nowrap">
+<thead class="bg-surface-subtle sticky top-0 z-10 border-b border-border">
+<tr>
+<th class="px-4 py-3 font-label text-label text-secondary font-semibold">Title</th>
+<th class="px-4 py-3 font-label text-label text-secondary font-semibold">Format</th>
+<th class="px-4 py-3 font-label text-label text-secondary font-semibold">Publish Date</th>
+<th class="px-4 py-3 font-label text-label text-secondary font-semibold">Design Due</th>
+<th class="px-4 py-3 font-label text-label text-secondary font-semibold">Owner</th>
+<th class="px-4 py-3 font-label text-label text-secondary font-semibold">Channels</th>
+<th class="px-4 py-3 font-label text-label text-secondary font-semibold">Risk</th>
+<th class="px-4 py-3 font-label text-label text-secondary font-semibold">Unresolved</th>
+</tr>
+</thead>
+<tbody class="font-table-dense text-table-dense text-on-surface divide-y divide-border">
+<!-- Selected Row -->
+<tr class="bg-primary-subtle border-l-2 border-primary-container cursor-pointer transition-colors group">
+<td class="px-4 py-3 font-medium text-primary-container">Three Ways to Brew</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-1.5 text-secondary">
+<span class="material-symbols-outlined text-[16px]">web_stories</span> Story
+                                        </div>
+</td>
+<td class="px-4 py-3 text-secondary">Oct 12</td>
+<td class="px-4 py-3 text-on-surface font-medium">Oct 5</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-variant flex items-center justify-center text-xs font-semibold text-primary">OH</div>
+<span>Omar Haddad</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="flex gap-1">
+<span class="px-1.5 py-0.5 rounded bg-surface-subtle text-xs text-secondary border border-border">IG</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-subtle text-xs text-secondary border border-border">TK</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> On track
+                                        </div>
+</td>
+<td class="px-4 py-3">
+<div class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-warning-subtle text-warning text-xs font-semibold">1</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-subtle cursor-pointer transition-colors border-l-2 border-transparent">
+<td class="px-4 py-3 font-medium">Cold Brew Method</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-1.5 text-secondary">
+<span class="material-symbols-outlined text-[16px]">movie</span> Video
+                                        </div>
+</td>
+<td class="px-4 py-3 text-secondary">Oct 10</td>
+<td class="px-4 py-3 text-danger font-medium">Oct 3</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2 text-secondary italic text-xs">
+                                            Unassigned
+                                        </div>
+</td>
+<td class="px-4 py-3">
+<div class="flex gap-1">
+<span class="px-1.5 py-0.5 rounded bg-surface-subtle text-xs text-secondary border border-border">YT</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container text-error text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]">warning</span> Overdue
+                                        </div>
+</td>
+<td class="px-4 py-3 text-secondary">-</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-subtle cursor-pointer transition-colors border-l-2 border-transparent">
+<td class="px-4 py-3 font-medium">New Roaster BTS</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-1.5 text-secondary">
+<span class="material-symbols-outlined text-[16px]">image</span> Image
+                                        </div>
+</td>
+<td class="px-4 py-3 text-secondary">Oct 15</td>
+<td class="px-4 py-3 text-on-surface font-medium">Oct 8</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-variant flex items-center justify-center text-xs font-semibold text-primary">SJ</div>
+<span>Sarah Jenkins</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="flex gap-1">
+<span class="px-1.5 py-0.5 rounded bg-surface-subtle text-xs text-secondary border border-border">IG</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger-subtle text-danger text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]">block</span> Blocked
+                                        </div>
+</td>
+<td class="px-4 py-3 text-secondary">-</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-subtle cursor-pointer transition-colors border-l-2 border-transparent">
+<td class="px-4 py-3 font-medium">Holiday Blend Packaging</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-1.5 text-secondary">
+<span class="material-symbols-outlined text-[16px]">design_services</span> Print
+                                        </div>
+</td>
+<td class="px-4 py-3 text-secondary">Nov 01</td>
+<td class="px-4 py-3 text-on-surface font-medium">Oct 20</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2 text-secondary italic text-xs">
+                                            Unassigned
+                                        </div>
+</td>
+<td class="px-4 py-3">
+<div class="flex gap-1">
+<span class="px-1.5 py-0.5 rounded bg-surface-subtle text-xs text-secondary border border-border">Retail</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> On track
+                                        </div>
+</td>
+<td class="px-4 py-3">
+<div class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-warning-subtle text-warning text-xs font-semibold">3</div>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-subtle cursor-pointer transition-colors border-l-2 border-transparent">
+<td class="px-4 py-3 font-medium">Wholesale Deck V2</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-1.5 text-secondary">
+<span class="material-symbols-outlined text-[16px]">picture_as_pdf</span> PDF
+                                        </div>
+</td>
+<td class="px-4 py-3 text-secondary">Oct 18</td>
+<td class="px-4 py-3 text-on-surface font-medium">Oct 11</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-variant flex items-center justify-center text-xs font-semibold text-primary">MR</div>
+<span>Marcus Reed</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="flex gap-1">
+<span class="px-1.5 py-0.5 rounded bg-surface-subtle text-xs text-secondary border border-border">B2B</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> On track
+                                        </div>
+</td>
+<td class="px-4 py-3 text-secondary">-</td>
+</tr>
+<!-- Row 6 -->
+<tr class="hover:bg-surface-subtle cursor-pointer transition-colors border-l-2 border-transparent">
+<td class="px-4 py-3 font-medium">Latte Art Tutorial</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-1.5 text-secondary">
+<span class="material-symbols-outlined text-[16px]">movie</span> Video
+                                        </div>
+</td>
+<td class="px-4 py-3 text-secondary">Oct 25</td>
+<td class="px-4 py-3 text-on-surface font-medium">Oct 18</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2 text-secondary italic text-xs">
+                                            Unassigned
+                                        </div>
+</td>
+<td class="px-4 py-3">
+<div class="flex gap-1">
+<span class="px-1.5 py-0.5 rounded bg-surface-subtle text-xs text-secondary border border-border">TK</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-subtle text-xs text-secondary border border-border">IG</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-variant text-secondary text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]">schedule</span> Not started
+                                        </div>
+</td>
+<td class="px-4 py-3 text-secondary">-</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Side Panel (Selected Item) -->
+<aside class="w-[480px] bg-surface border-l border-border flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.02)] hidden xl:flex z-20">
+<!-- Panel Header -->
+<div class="px-6 py-5 border-b border-border flex items-start justify-between bg-surface-bright sticky top-0 z-10">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 rounded bg-surface-variant text-primary text-xs font-semibold">Story</span>
+<span class="text-xs text-secondary">Unassigned Design</span>
+</div>
+<h2 class="font-section-title text-section-title text-on-surface">Three Ways to Brew</h2>
+<div class="text-sm text-text-muted mt-1 flex items-center gap-2">
+<span>Req by: Omar Haddad</span>
+<span>•</span>
+<span class="text-danger font-medium">Due Oct 5</span>
+</div>
+</div>
+<button class="text-secondary hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Panel Content Scrollable -->
+<div class="flex-1 overflow-y-auto p-6 space-y-8">
+<!-- Alert / Audit Note -->
+<div class="bg-warning-subtle border border-warning/20 rounded-lg p-3 flex gap-3">
+<span class="material-symbols-outlined text-warning mt-0.5">info</span>
+<div>
+<p class="text-sm font-medium text-warning">1 Unresolved Question</p>
+<p class="text-xs text-warning/80 mt-1">Omar requested clarification on the dimensions for the TikTok variation. Awaiting response.</p>
+</div>
+</div>
+<!-- Brief Section -->
+<section>
+<h3 class="font-label text-label text-secondary mb-3 uppercase tracking-wider">Creative Brief</h3>
+<div class="text-sm text-on-surface space-y-3 leading-relaxed">
+<p>We need a 3-part vertical video story showing different brew methods (Pour over, French Press, Espresso) for the new single-origin beans.</p>
+<p>Goal is highly visual, ASMR-style cuts. Needs text overlays for key steps.</p>
+</div>
+</section>
+<!-- Requirements Grid -->
+<section>
+<h3 class="font-label text-label text-secondary mb-3 uppercase tracking-wider">Requirements</h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-subtle p-3 rounded border border-border">
+<div class="text-xs text-secondary mb-1">Dimensions</div>
+<div class="text-sm font-medium">1080 x 1920 (9:16)</div>
+</div>
+<div class="bg-surface-subtle p-3 rounded border border-border">
+<div class="text-xs text-secondary mb-1">Max Length</div>
+<div class="text-sm font-medium">45 Seconds</div>
+</div>
+<div class="bg-surface-subtle p-3 rounded border border-border col-span-2 flex justify-between items-center cursor-pointer hover:bg-surface-variant transition-colors">
+<div>
+<div class="text-xs text-secondary mb-1">Assets</div>
+<div class="text-sm font-medium text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">folder</span> Northstar Brand Kit
+                                    </div>
+</div>
+<span class="material-symbols-outlined text-secondary">open_in_new</span>
+</div>
+</div>
+</section>
+<!-- Milestones -->
+<section>
+<h3 class="font-label text-label text-secondary mb-3 uppercase tracking-wider">Milestones</h3>
+<div class="space-y-4">
+<div class="flex gap-3">
+<div class="flex flex-col items-center mt-1">
+<div class="w-2.5 h-2.5 rounded-full bg-success"></div>
+<div class="w-px h-full bg-border mt-1"></div>
+</div>
+<div class="pb-1">
+<div class="text-sm font-medium">Brief Approved</div>
+<div class="text-xs text-secondary">Sep 28 by Sarah Jenkins</div>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="flex flex-col items-center mt-1">
+<div class="w-2.5 h-2.5 rounded-full border-2 border-primary bg-surface"></div>
+<div class="w-px h-full bg-border mt-1"></div>
+</div>
+<div class="pb-1">
+<div class="text-sm font-medium text-primary">Design Assignment</div>
+<div class="text-xs text-secondary">Pending action</div>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="flex flex-col items-center mt-1">
+<div class="w-2.5 h-2.5 rounded-full bg-surface-variant border border-border"></div>
+</div>
+<div>
+<div class="text-sm font-medium text-secondary">Draft Review</div>
+<div class="text-xs text-secondary">Target: Oct 5</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Workload Suggestion -->
+<section class="bg-surface-container-low p-4 rounded-lg border border-surface-variant">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-[18px]">psychology</span>
+<h3 class="text-sm font-semibold text-on-surface">Workload Suggestion</h3>
+</div>
+<p class="text-xs text-secondary mb-3">Elena Rossi (You) has 3 hours available this week and has worked on similar "Story" formats.</p>
+<div class="flex items-center gap-2 text-xs">
+<div class="w-6 h-6 rounded-full bg-surface-variant flex items-center justify-center font-semibold text-primary">ER</div>
+<span class="font-medium">Elena Rossi</span>
+<span class="text-success ml-auto">Optimal match</span>
+</div>
+</section>
+</div>
+<!-- Sticky Action Footer -->
+<div class="p-6 border-t border-border bg-surface sticky bottom-0">
+<div class="flex gap-3">
+<button class="flex-1 h-[40px] px-4 rounded-lg border border-border bg-surface text-on-surface font-button text-button hover:bg-surface-subtle transition-colors flex items-center justify-center gap-2">
+                            Ask clarification
+                        </button>
+<button class="flex-1 h-[40px] px-4 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary-hover transition-colors shadow-sm flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">back_hand</span>
+                            Claim task
+                        </button>
+</div>
+<!-- Manager Variant Note (Design Only) -->
+<div class="mt-4 pt-4 border-t border-dashed border-border text-center">
+<p class="text-[11px] text-text-muted uppercase tracking-wider">Manager View Alternative</p>
+<button class="mt-2 text-xs text-primary font-medium hover:underline">Assign to specific designer instead...</button>
+</div>
+</div>
+</aside>
+</main>
+</div>
+</body></html>

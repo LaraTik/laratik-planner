@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>StudioFlow - Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed": "#001d32",
+                      "border": "#DDE1E6",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-container-highest": "#dae3f8",
+                      "surface-container-high": "#dfe8fe",
+                      "on-primary-container": "#dad7ff",
+                      "success": "#15803D",
+                      "error": "#ba1a1a",
+                      "tertiary": "#004c77",
+                      "success-subtle": "#ECFDF3",
+                      "primary-subtle": "#EEF2FF",
+                      "tertiary-fixed": "#cde5ff",
+                      "inverse-surface": "#283141",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "on-surface": "#131c2b",
+                      "on-secondary": "#ffffff",
+                      "secondary": "#555e74",
+                      "primary": "#3525cd",
+                      "surface": "#FFFFFF",
+                      "outline-variant": "#c7c4d8",
+                      "focus-ring": "#6366F1",
+                      "tertiary-container": "#00659c",
+                      "secondary-fixed": "#d9e2fc",
+                      "on-tertiary-container": "#bfdfff",
+                      "secondary-container": "#d7dff9",
+                      "error-container": "#ffdad6",
+                      "surface-container": "#e7eeff",
+                      "info-subtle": "#F0F9FF",
+                      "on-secondary-container": "#5a6278",
+                      "outline": "#777587",
+                      "text-muted": "#7B8495",
+                      "on-error-container": "#93000a",
+                      "danger-subtle": "#FEF2F2",
+                      "on-surface-variant": "#464555",
+                      "warning": "#B45309",
+                      "inverse-on-surface": "#ecf0ff",
+                      "surface-container-low": "#f0f3ff",
+                      "primary-hover": "#4338CA",
+                      "surface-subtle": "#F1F3F5",
+                      "on-tertiary-fixed-variant": "#004b74",
+                      "on-secondary-fixed-variant": "#3e475b",
+                      "on-error": "#ffffff",
+                      "canvas": "#F7F7F5",
+                      "on-secondary-fixed": "#121b2e",
+                      "tertiary-fixed-dim": "#94ccff",
+                      "on-primary": "#ffffff",
+                      "on-primary-fixed": "#0f0069",
+                      "warning-subtle": "#FFF7E6",
+                      "surface-variant": "#dae3f8",
+                      "on-tertiary": "#ffffff",
+                      "on-background": "#131c2b",
+                      "primary-fixed": "#e2dfff",
+                      "surface-dim": "#d1daef",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "surface-tint": "#4d44e3",
+                      "danger": "#B91C1C",
+                      "background": "#f9f9ff",
+                      "secondary-fixed-dim": "#bdc6e0",
+                      "inverse-primary": "#c3c0ff",
+                      "surface-bright": "#f9f9ff",
+                      "primary-container": "#4f46e5"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "sidebar-expanded": "248px",
+                      "sidebar-collapsed": "72px",
+                      "screen-padding": "24px",
+                      "base": "4px",
+                      "topbar-height": "64px",
+                      "gutter": "16px",
+                      "card-padding": "16px"
+              },
+              "fontFamily": {
+                      "table-dense": [
+                              "Inter"
+                      ],
+                      "card-title": [
+                              "Inter"
+                      ],
+                      "button": [
+                              "Inter"
+                      ],
+                      "body": [
+                              "Inter"
+                      ],
+                      "section-title": [
+                              "Inter"
+                      ],
+                      "page-title": [
+                              "Inter"
+                      ],
+                      "label": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "table-dense": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "card-title": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "button": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body": [
+                              "14px",
+                              {
+                                      "lineHeight": "21px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "section-title": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "page-title": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+</head>
+<body class="bg-canvas text-on-surface font-body text-body font-body antialiased">
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 h-topbar-height z-30 flex items-center justify-between px-screen-padding ml-sidebar-expanded w-[calc(100%-var(--spacing-sidebar-expanded))] bg-surface border-b border-border text-primary font-body text-body cursor-pointer">
+<!-- Search bar (on left) -->
+<div class="flex items-center flex-1 max-w-md">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-canvas border border-border rounded-DEFAULT focus:ring-2 focus:ring-focus-ring focus:border-focus-ring outline-none text-body transition-shadow" placeholder="Search StudioFlow..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-subtle text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-subtle text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden border border-border ml-2">
+<img class="w-full h-full object-cover" data-alt="A clean, professional headshot of Maya Chen in a bright, modern office setting. She is wearing a dark blazer over a simple white top. The lighting is soft and even, highlighting her approachable expression. The background is a slightly blurred, light gray minimalist wall, keeping the focus entirely on her face. Shot with a high-end corporate portrait aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSeEeQubrkl2OMrlAnxNT4FewAa5DMHbmQxzR9ipMlBHOrlYxpFjOkCXEbReg8uU92qx8iGeJ3cRWoiOfrfZAdKpmTBSWa0ZqY-DWU61Uf1YIe56fLGx0M58HMDAVeDV_lq-DEElJegLahyBYgOQjhkdXcL0IY5t6TGTXt2iwHDhIKLQ6MaOdFV7PdA0P5MvvUCirXXasXknXv2FyINExxWJI-E5v3VszpNH_u1NXpGgc-uW5s2bJadA4BGJo8MJbEbMHAYYvawVk"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-screen w-sidebar-expanded bg-surface flex flex-col py-4 border-r border-border z-40 text-primary font-body text-body cursor-pointer">
+<!-- Brand Logo -->
+<div class="px-6 mb-8 flex flex-col">
+<span class="font-page-title text-page-title text-on-surface tracking-tight">StudioFlow</span>
+<span class="font-label text-label text-on-surface-variant mt-1">Northstar Coffee</span>
+</div>
+<!-- Main Tabs -->
+<div class="flex-1 overflow-y-auto flex flex-col gap-1 px-3">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">assignment</span>
+<span>My Work</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">event_note</span>
+<span>Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span>Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">rate_review</span>
+<span>Reviews</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">share</span>
+<span>Social Channels</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span>Brand Kit</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">group</span>
+<span>Team</span>
+</a>
+</div>
+<!-- Footer Tabs -->
+<div class="mt-auto flex flex-col gap-1 px-3 pt-4 border-t border-border">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-primary font-bold border-r-4 border-primary bg-primary-subtle hover:bg-surface-container-low transition-colors duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span>Admin</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">help</span>
+<span>Help</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">swap_horiz</span>
+<span>Workspace Switcher</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-sidebar-expanded pt-topbar-height min-h-screen pb-24">
+<!-- Breadcrumb -->
+<div class="px-screen-padding py-4 border-b border-border bg-canvas">
+<div class="flex items-center gap-2 text-table-dense text-on-surface-variant">
+<span>Northstar Coffee</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-on-surface font-medium">Settings</span>
+</div>
+</div>
+<div class="px-screen-padding py-8 max-w-7xl mx-auto">
+<div class="grid grid-cols-12 gap-8">
+<!-- Left Nav: Settings Sections -->
+<aside class="col-span-12 md:col-span-3 lg:col-span-2">
+<nav class="flex flex-col gap-1 sticky top-[calc(var(--spacing-topbar-height)+32px)]">
+<a class="px-3 py-2 rounded-lg text-body text-on-surface-variant hover:bg-surface-subtle transition-colors" href="#">General</a>
+<a class="px-3 py-2 rounded-lg text-body font-semibold text-primary bg-primary-subtle" href="#">Workflow &amp; approvals</a>
+<a class="px-3 py-2 rounded-lg text-body text-on-surface-variant hover:bg-surface-subtle transition-colors" href="#">Defaults</a>
+<a class="px-3 py-2 rounded-lg text-body text-on-surface-variant hover:bg-surface-subtle transition-colors" href="#">Milestones</a>
+<a class="px-3 py-2 rounded-lg text-body text-on-surface-variant hover:bg-surface-subtle transition-colors" href="#">Targets</a>
+<div class="px-3 py-2 rounded-lg text-body text-on-surface-variant hover:bg-surface-subtle transition-colors flex items-center justify-between group cursor-pointer">
+<span>AI assistance</span>
+<span class="font-label text-[10px] bg-surface-variant text-on-surface-variant px-1.5 py-0.5 rounded uppercase tracking-wide">Optional</span>
+</div>
+<!-- AI Info Box (Contextual) -->
+<div class="mt-2 mb-4 p-3 bg-surface border border-border rounded-lg shadow-sm text-table-dense text-text-muted">
+<span class="material-symbols-outlined text-[16px] mb-1 text-primary">auto_awesome</span>
+<p>MiniMax key is server-side. Dynamic model selection. Human-triggered actions only. Context preview available. No API key input fields.</p>
+</div>
+<a class="px-3 py-2 rounded-lg text-body text-on-surface-variant hover:bg-surface-subtle transition-colors" href="#">Archive</a>
+<a class="px-3 py-2 rounded-lg text-body text-on-surface-variant hover:bg-surface-subtle transition-colors" href="#">Audit log</a>
+</nav>
+</aside>
+<!-- Right Content Area -->
+<div class="col-span-12 md:col-span-9 lg:col-span-10 flex flex-col gap-8 pb-10">
+<!-- Header -->
+<div class="flex items-center justify-between">
+<h1 class="font-page-title text-page-title text-on-surface">Workflow &amp; approvals</h1>
+<div class="flex items-center gap-2 text-table-dense text-warning font-medium">
+<span class="w-2 h-2 rounded-full bg-warning"></span>
+<span>Unsaved changes</span>
+</div>
+</div>
+<!-- Section 1: Lifecycle -->
+<section class="bg-surface border border-border rounded-xl p-card-padding shadow-sm">
+<h2 class="font-section-title text-section-title text-on-surface mb-2">Lifecycle</h2>
+<p class="text-body text-text-muted mb-6 max-w-3xl">Standard workflow stages. Status flags like Changes Requested, Blocked, Cancelled, and Overdue are functional states applied to items within these stages, not distinct columns.</p>
+<div class="flex items-center w-full overflow-x-auto pb-4 gap-2 no-scrollbar">
+<!-- Stages -->
+<div class="flex-shrink-0 w-32 h-20 bg-canvas border border-border rounded-lg flex flex-col items-center justify-center p-2 relative group cursor-default">
+<span class="font-label text-label text-on-surface-variant text-center">Draft</span>
+<div class="absolute -right-3 top-1/2 -translate-y-1/2 w-4 h-[2px] bg-border z-0"></div>
+</div>
+<div class="flex-shrink-0 w-32 h-20 bg-surface border-2 border-primary-subtle rounded-lg flex flex-col items-center justify-center p-2 relative group cursor-default shadow-sm">
+<span class="font-label text-label text-on-surface text-center font-semibold">Content Review</span>
+<div class="absolute -right-3 top-1/2 -translate-y-1/2 w-4 h-[2px] bg-border z-0"></div>
+</div>
+<div class="flex-shrink-0 w-32 h-20 bg-canvas border border-border rounded-lg flex flex-col items-center justify-center p-2 relative group cursor-default">
+<span class="font-label text-label text-on-surface-variant text-center">Approved for<br/>Design</span>
+<div class="absolute -right-3 top-1/2 -translate-y-1/2 w-4 h-[2px] bg-border z-0"></div>
+</div>
+<div class="flex-shrink-0 w-32 h-20 bg-canvas border border-border rounded-lg flex flex-col items-center justify-center p-2 relative group cursor-default">
+<span class="font-label text-label text-on-surface-variant text-center">In Design</span>
+<div class="absolute -right-3 top-1/2 -translate-y-1/2 w-4 h-[2px] bg-border z-0"></div>
+</div>
+<div class="flex-shrink-0 w-32 h-20 bg-surface border-2 border-primary-subtle rounded-lg flex flex-col items-center justify-center p-2 relative group cursor-default shadow-sm">
+<span class="font-label text-label text-on-surface text-center font-semibold">Creative Review</span>
+<div class="absolute -right-3 top-1/2 -translate-y-1/2 w-4 h-[2px] bg-border z-0"></div>
+</div>
+<div class="flex-shrink-0 w-32 h-20 bg-canvas border border-border rounded-lg flex flex-col items-center justify-center p-2 relative group cursor-default">
+<span class="font-label text-label text-on-surface-variant text-center">Ready to Publish</span>
+<div class="absolute -right-3 top-1/2 -translate-y-1/2 w-4 h-[2px] bg-border z-0"></div>
+</div>
+<div class="flex-shrink-0 w-32 h-20 bg-canvas border border-border rounded-lg flex flex-col items-center justify-center p-2 relative group cursor-default">
+<span class="font-label text-label text-on-surface-variant text-center">Published</span>
+</div>
+</div>
+</section>
+<!-- Section 2: Approval gates -->
+<section class="bg-surface border border-border rounded-xl p-card-padding shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<h2 class="font-section-title text-section-title text-on-surface">Approval gates</h2>
+<label class="flex items-center gap-2 cursor-pointer">
+<div class="relative">
+<input checked="" class="sr-only" type="checkbox"/>
+<div class="w-10 h-6 bg-primary rounded-full"></div>
+<div class="dot absolute right-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+</div>
+<span class="text-body font-medium text-on-surface">Reset approval after material edits</span>
+</label>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Content Approval -->
+<div class="border border-border rounded-lg p-4 bg-canvas">
+<h3 class="font-card-title text-card-title text-on-surface mb-4">Content approval</h3>
+<div class="mb-4">
+<label class="block font-label text-label text-on-surface-variant mb-2">Mode</label>
+<div class="flex p-1 bg-surface-subtle border border-border rounded-lg">
+<button class="flex-1 py-1.5 px-3 bg-surface shadow-sm rounded-md text-table-dense font-medium text-on-surface">Simple one-step</button>
+<button class="flex-1 py-1.5 px-3 text-table-dense font-medium text-on-surface-variant hover:text-on-surface">Internal then client</button>
+</div>
+</div>
+<div>
+<label class="block font-label text-label text-on-surface-variant mb-2">Default reviewer</label>
+<div class="relative">
+<select class="w-full h-10 pl-3 pr-10 bg-surface border border-border rounded-lg appearance-none text-body focus:ring-2 focus:ring-focus-ring outline-none">
+<option selected="">Daniel Kim</option>
+<option>Maya Chen</option>
+<option>Sofia Reyes</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Creative Approval -->
+<div class="border border-border rounded-lg p-4 bg-canvas">
+<h3 class="font-card-title text-card-title text-on-surface mb-4">Creative approval</h3>
+<div class="mb-4">
+<label class="block font-label text-label text-on-surface-variant mb-2">Mode</label>
+<div class="flex p-1 bg-surface-subtle border border-border rounded-lg">
+<button class="flex-1 py-1.5 px-3 bg-surface shadow-sm rounded-md text-table-dense font-medium text-on-surface">Simple one-step</button>
+<button class="flex-1 py-1.5 px-3 text-table-dense font-medium text-on-surface-variant hover:text-on-surface">Internal then client</button>
+</div>
+</div>
+<div>
+<label class="block font-label text-label text-on-surface-variant mb-2">Default reviewer</label>
+<div class="relative">
+<select class="w-full h-10 pl-3 pr-10 bg-surface border border-border rounded-lg appearance-none text-body focus:ring-2 focus:ring-focus-ring outline-none">
+<option>Daniel Kim</option>
+<option>Maya Chen</option>
+<option selected="">Sofia Reyes</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Assignment defaults -->
+<section class="bg-surface border border-border rounded-xl p-card-padding shadow-sm">
+<h2 class="font-section-title text-section-title text-on-surface mb-6">Assignment defaults</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div>
+<label class="block font-label text-label text-on-surface-variant mb-2">Default designer</label>
+<div class="relative mb-3">
+<select class="w-full h-10 pl-3 pr-10 bg-surface border border-border rounded-lg appearance-none text-body focus:ring-2 focus:ring-focus-ring outline-none">
+<option selected="">Maya Chen</option>
+<option>Daniel Kim</option>
+<option>Sofia Reyes</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+<label class="flex items-center gap-2 cursor-pointer">
+<div class="relative">
+<input checked="" class="sr-only" type="checkbox"/>
+<div class="w-8 h-5 bg-primary rounded-full"></div>
+<div class="dot absolute right-1 top-1 bg-white w-3 h-3 rounded-full transition"></div>
+</div>
+<span class="text-table-dense text-on-surface-variant">Claim queue fallback</span>
+</label>
+</div>
+<div>
+<label class="block font-label text-label text-on-surface-variant mb-2">Default content owner</label>
+<div class="relative">
+<select class="w-full h-10 pl-3 pr-10 bg-surface border border-border rounded-lg appearance-none text-body focus:ring-2 focus:ring-focus-ring outline-none">
+<option selected="">Daniel Kim</option>
+<option>Maya Chen</option>
+<option>Sofia Reyes</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 4: Quick Create defaults -->
+<section class="bg-surface border border-border rounded-xl p-card-padding shadow-sm mb-8">
+<div class="flex justify-between items-start mb-6">
+<h2 class="font-section-title text-section-title text-on-surface">Quick Create defaults</h2>
+<button class="text-primary hover:text-primary-hover font-button text-table-dense transition-colors">Restore recommended defaults</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+<!-- Channels -->
+<div class="col-span-1 md:col-span-2">
+<label class="block font-label text-label text-on-surface-variant mb-3">Active channels</label>
+<div class="flex flex-wrap gap-3">
+<label class="flex items-center gap-2 px-3 py-1.5 border border-primary-subtle bg-primary-subtle rounded-full cursor-pointer">
+<input checked="" class="rounded text-primary focus:ring-primary w-4 h-4 border-border" type="checkbox"/>
+<span class="text-table-dense text-primary font-medium">Instagram</span>
+</label>
+<label class="flex items-center gap-2 px-3 py-1.5 border border-primary-subtle bg-primary-subtle rounded-full cursor-pointer">
+<input checked="" class="rounded text-primary focus:ring-primary w-4 h-4 border-border" type="checkbox"/>
+<span class="text-table-dense text-primary font-medium">LinkedIn</span>
+</label>
+<label class="flex items-center gap-2 px-3 py-1.5 border border-primary-subtle bg-primary-subtle rounded-full cursor-pointer">
+<input checked="" class="rounded text-primary focus:ring-primary w-4 h-4 border-border" type="checkbox"/>
+<span class="text-table-dense text-primary font-medium">Twitter / X</span>
+</label>
+<label class="flex items-center gap-2 px-3 py-1.5 border border-primary-subtle bg-primary-subtle rounded-full cursor-pointer">
+<input checked="" class="rounded text-primary focus:ring-primary w-4 h-4 border-border" type="checkbox"/>
+<span class="text-table-dense text-primary font-medium">Blog</span>
+</label>
+</div>
+</div>
+<div>
+<label class="block font-label text-label text-on-surface-variant mb-2">Timezone</label>
+<div class="relative">
+<select class="w-full h-10 pl-3 pr-10 bg-surface border border-border rounded-lg appearance-none text-body focus:ring-2 focus:ring-focus-ring outline-none">
+<option selected="">Europe/Vienna</option>
+<option>America/New_York</option>
+<option>Asia/Tokyo</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<div>
+<label class="block font-label text-label text-on-surface-variant mb-2">New content state</label>
+<div class="relative">
+<select class="w-full h-10 pl-3 pr-10 bg-surface border border-border rounded-lg appearance-none text-body focus:ring-2 focus:ring-focus-ring outline-none">
+<option selected="">Draft</option>
+<option>Ready for Review</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="col-span-1 md:col-span-2">
+<label class="block font-label text-label text-on-surface-variant mb-3">Milestone schedule offsets (days before due date)</label>
+<div class="flex flex-wrap gap-3">
+<div class="flex items-center gap-2 px-3 py-1.5 bg-canvas border border-border rounded-md">
+<span class="text-table-dense text-on-surface">Brief due</span>
+<div class="flex items-center bg-surface border border-border rounded px-1 w-12 ml-2">
+<input class="w-full bg-transparent border-none p-0 text-center text-table-dense outline-none focus:ring-0" type="text" value="10"/>
+<span class="text-[10px] text-text-muted">d</span>
+</div>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 bg-canvas border border-border rounded-md">
+<span class="text-table-dense text-on-surface">Design due</span>
+<div class="flex items-center bg-surface border border-border rounded px-1 w-12 ml-2">
+<input class="w-full bg-transparent border-none p-0 text-center text-table-dense outline-none focus:ring-0" type="text" value="5"/>
+<span class="text-[10px] text-text-muted">d</span>
+</div>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 bg-canvas border border-border rounded-md">
+<span class="text-table-dense text-on-surface">Creative review</span>
+<div class="flex items-center bg-surface border border-border rounded px-1 w-12 ml-2">
+<input class="w-full bg-transparent border-none p-0 text-center text-table-dense outline-none focus:ring-0" type="text" value="2"/>
+<span class="text-[10px] text-text-muted">d</span>
+</div>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 bg-canvas border border-border rounded-md">
+<span class="text-table-dense text-on-surface">Final approval</span>
+<div class="flex items-center bg-surface border border-border rounded px-1 w-12 ml-2">
+<input class="w-full bg-transparent border-none p-0 text-center text-table-dense outline-none focus:ring-0" type="text" value="1"/>
+<span class="text-[10px] text-text-muted">d</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+<!-- Sticky Footer Actions -->
+<div class="fixed bottom-0 left-sidebar-expanded right-0 bg-surface border-t border-border p-4 z-20 flex justify-end gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+<button class="h-10 px-4 rounded-lg font-button text-button text-on-surface border border-border hover:bg-surface-subtle transition-colors">Discard</button>
+<button class="h-10 px-4 rounded-lg font-button text-button text-white bg-primary-container hover:bg-primary-hover transition-colors shadow-sm">Save changes</button>
+</div>
+</body></html>

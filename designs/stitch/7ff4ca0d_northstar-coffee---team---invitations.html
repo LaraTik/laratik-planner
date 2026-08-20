@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Team &amp; Access - AgencyOS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#131c2b",
+                        "on-surface": "#131c2b",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#0f0069",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "surface": "#FFFFFF",
+                        "success": "#15803D",
+                        "outline-variant": "#c7c4d8",
+                        "on-tertiary-fixed": "#001d32",
+                        "primary": "#3525cd",
+                        "border": "#DDE1E6",
+                        "on-surface-variant": "#464555",
+                        "error": "#ba1a1a",
+                        "outline": "#777587",
+                        "on-tertiary-container": "#bfdfff",
+                        "on-secondary": "#ffffff",
+                        "inverse-on-surface": "#ecf0ff",
+                        "danger": "#B91C1C",
+                        "danger-subtle": "#FEF2F2",
+                        "tertiary-container": "#00659c",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "info-subtle": "#F0F9FF",
+                        "on-tertiary": "#ffffff",
+                        "success-subtle": "#ECFDF3",
+                        "surface-dim": "#d1daef",
+                        "surface-container-high": "#dfe8fe",
+                        "inverse-primary": "#c3c0ff",
+                        "inverse-surface": "#283141",
+                        "tertiary": "#004c77",
+                        "on-primary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#d7dff9",
+                        "tertiary-fixed": "#cde5ff",
+                        "warning": "#B45309",
+                        "background": "#f9f9ff",
+                        "surface-variant": "#dae3f8",
+                        "on-primary-container": "#dad7ff",
+                        "canvas": "#F7F7F5",
+                        "primary-hover": "#4338CA",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "warning-subtle": "#FFF7E6",
+                        "primary-fixed": "#e2dfff",
+                        "on-error": "#ffffff",
+                        "secondary": "#555e74",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "surface-tint": "#4d44e3",
+                        "on-secondary-fixed": "#121b2e",
+                        "surface-container-low": "#f0f3ff",
+                        "primary-container": "#4f46e5",
+                        "on-secondary-container": "#5a6278",
+                        "surface-bright": "#f9f9ff",
+                        "focus-ring": "#6366F1",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "primary-subtle": "#EEF2FF",
+                        "text-muted": "#7B8495",
+                        "surface-subtle": "#F1F3F5",
+                        "surface-container": "#e7eeff",
+                        "secondary-fixed": "#d9e2fc",
+                        "surface-container-highest": "#dae3f8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "topbar-height": "64px",
+                        "sidebar-collapsed": "72px",
+                        "screen-padding": "24px",
+                        "card-padding": "16px",
+                        "sidebar-expanded": "248px",
+                        "gutter": "16px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "section-title": ["Inter"],
+                        "label": ["Inter"],
+                        "page-title": ["Inter"],
+                        "button": ["Inter"],
+                        "card-title": ["Inter"],
+                        "body": ["Inter"],
+                        "table-dense": ["Inter"]
+                    },
+                    "fontSize": {
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+        }
+    </style>
+</head>
+<body class="bg-canvas text-on-surface font-body overflow-hidden">
+<nav class="fixed left-0 top-0 h-screen w-sidebar-expanded bg-surface border-r border-border flex flex-col py-4 px-2 z-20">
+<div class="px-4 mb-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded-DEFAULT bg-primary-subtle text-primary flex items-center justify-center font-bold">W</div>
+<div>
+<h1 class="font-section-title text-section-title text-on-surface leading-tight">Workspace</h1>
+<p class="font-label text-label text-secondary leading-tight mt-0.5">Creative Agency</p>
+</div>
+</div>
+<div class="px-2 mb-4">
+<button class="w-full flex items-center justify-center gap-2 bg-primary-container text-white rounded-DEFAULT py-2 font-button text-button hover:bg-primary-hover transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Project
+            </button>
+</div>
+<div class="flex-1 overflow-y-auto">
+<ul class="space-y-1">
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-secondary hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined text-[20px]">assignment_ind</span><span class="font-body text-body">My Work</span></a></li>
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-secondary hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined text-[20px]">dashboard</span><span class="font-body text-body">Overview</span></a></li>
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-secondary hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined text-[20px]">event_note</span><span class="font-body text-body">Planning</span></a></li>
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-secondary hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined text-[20px]">calendar_today</span><span class="font-body text-body">Calendar</span></a></li>
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-secondary hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined text-[20px]">fact_check</span><span class="font-body text-body">Reviews</span></a></li>
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-secondary hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined text-[20px]">share</span><span class="font-body text-body">Social Channels</span></a></li>
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-secondary hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined text-[20px]">palette</span><span class="font-body text-body">Brand Kit</span></a></li>
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-primary font-bold bg-surface-container-low transition-colors opacity-80 duration-150" href="#"><span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">group</span><span class="font-body text-body font-semibold">Team</span></a></li>
+</ul>
+</div>
+<div class="mt-auto pt-4 border-t border-border">
+<ul class="space-y-1">
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-secondary hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined text-[20px]">settings</span><span class="font-body text-body">Settings</span></a></li>
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-secondary hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined text-[20px]">admin_panel_settings</span><span class="font-body text-body">Admin</span></a></li>
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-secondary hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined text-[20px]">help</span><span class="font-body text-body">Help</span></a></li>
+</ul>
+<div class="mt-4 px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-surface-container-low rounded-DEFAULT">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-variant flex items-center justify-center text-[10px] font-bold text-on-surface">NC</div>
+<span class="font-label text-label text-on-surface">Northstar Coffee</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-secondary">unfold_more</span>
+</div>
+</div>
+</nav>
+<header class="fixed top-0 right-0 h-topbar-height z-10 bg-surface border-b border-border flex justify-between items-center px-6 w-[calc(100%-248px)] ml-sidebar-expanded">
+<div class="flex items-center gap-4 flex-1">
+<h2 class="font-page-title text-page-title text-primary hidden md:block">AgencyOS</h2>
+<div class="relative w-64 ml-4">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-[18px]">search</span>
+<input class="w-full h-[36px] pl-9 pr-3 rounded-DEFAULT border border-border bg-canvas text-body focus:ring-2 focus:ring-focus-ring focus:border-focus-ring outline-none transition-shadow" placeholder="Search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:bg-surface-container-low p-2 rounded-full transition-colors"><span class="material-symbols-outlined text-[20px]">notifications</span></button>
+<button class="text-on-surface-variant hover:bg-surface-container-low p-2 rounded-full transition-colors"><span class="material-symbols-outlined text-[20px]">help</span></button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-border cursor-pointer">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional headshot of an Asian woman in her 30s with short black hair, smiling warmly. She is wearing a clean white blouse, standing in a brightly lit, modern office space with subtle, soft natural lighting and a minimalist, light-mode background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkJlktlv-5X_tD_of4_rWbPpcjm0cJlFgKx7tuCvslSr-6WAGDIvVkrBdwbBCOwE9QNNaRBNjCM3HUYC8k3ueO-5Bx4Q2SO9BoheP2nrgknydxCOz6MFeIUPW7-o0J_R_uetd_jNnhFRyyM_1y_Uvv9DW2AAxD2RmC9DFodqnK212Pe0cjPmOL3irmbxXokjYQDmUgGjohLKWHn12TF7yo8bPdU_OaHLZzQwPTeIINLt1ttOiJX62iY385684dRL9PsyW31KotHc0"/>
+</div>
+</div>
+</header>
+<main class="ml-sidebar-expanded mt-topbar-height h-[calc(100vh-64px)] overflow-y-auto p-screen-padding bg-canvas flex flex-col">
+<div class="max-w-7xl mx-auto w-full">
+<div class="flex items-center gap-2 text-secondary mb-6 font-label text-label">
+<span>Northstar Coffee</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface font-semibold">Team</span>
+</div>
+<div class="flex justify-between items-start mb-8">
+<div>
+<h1 class="font-page-title text-page-title text-on-surface mb-2">Team &amp; access</h1>
+<p class="font-body text-body text-secondary">Invite people and control what they can do in this workspace.</p>
+</div>
+<button class="bg-primary-container text-white px-4 py-2 rounded-DEFAULT font-button text-button hover:bg-primary-hover transition-colors shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">person_add</span>
+                    Invite people
+                </button>
+</div>
+<div class="flex border-b border-border mb-6">
+<button class="px-4 py-3 text-primary font-bold border-b-2 border-primary-container text-sm">Members <span class="ml-1 bg-surface-container-low text-on-surface-variant px-1.5 py-0.5 rounded-full text-[10px]">8</span></button>
+<button class="px-4 py-3 text-secondary hover:text-on-surface transition-colors text-sm">Pending invitations</button>
+<button class="px-4 py-3 text-secondary hover:text-on-surface transition-colors text-sm">Access matrix</button>
+</div>
+<div class="bg-surface rounded-lg border border-border shadow-sm flex flex-col">
+<div class="p-4 border-b border-border flex items-center justify-between gap-4">
+<div class="relative w-72">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-[18px]">search</span>
+<input class="w-full h-[36px] pl-9 pr-3 rounded-DEFAULT border border-border bg-surface text-body focus:ring-2 focus:ring-focus-ring outline-none" placeholder="Search members..." type="text"/>
+</div>
+<button class="flex items-center gap-2 px-3 py-1.5 border border-border rounded-DEFAULT text-on-surface hover:bg-surface-subtle transition-colors text-sm">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                        Filters
+                    </button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse min-w-[800px]">
+<thead>
+<tr class="border-b border-border bg-surface-subtle">
+<th class="font-label text-label text-secondary py-3 px-4 font-semibold w-1/4">Person</th>
+<th class="font-label text-label text-secondary py-3 px-4 font-semibold w-1/4">Workspace roles</th>
+<th class="font-label text-label text-secondary py-3 px-4 font-semibold w-1/5">Last active</th>
+<th class="font-label text-label text-secondary py-3 px-4 font-semibold w-32">Status</th>
+<th class="font-label text-label text-secondary py-3 px-4 font-semibold text-right w-24">Actions</th>
+</tr>
+</thead>
+<tbody class="font-table-dense text-table-dense">
+<tr class="border-b border-border hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4 flex items-center gap-3">
+<img alt="Aisha Rahman" class="w-8 h-8 rounded-full object-cover" data-alt="A professional headshot of a Middle Eastern woman in her late 20s, wearing glasses and a dark blazer. The background is a clean, bright, modern workspace. Lighting is soft and even, suggesting a high-end corporate environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCl-nsjtPBBUv-ds8s49--Xg-beeRg8RbUUsRcTZcg576VQ-AwD3I8k81za3u3sBOTrJtpQHVXo91dKwBVe29cdgu3lV2-rs_UQYsxQDM9dB0mne-MSs1gZGN3oAWe7kqpruvISP-cGEjmSrUJVHMuiCY28uGFgCIDiTVIWe0D_4CruP0GIfP4F4AQD-tArjTU8lFfQiIF-qG_QTdPtiwS3CFrJGUvVsA2spX5fWb1SKMfSNmDZLOq3pZYK0b9F4Fpzb1czNYy2eZM"/>
+<div>
+<div class="font-semibold text-on-surface">Aisha Rahman</div>
+<div class="text-secondary text-[12px]">aisha@agency.com</div>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded-DEFAULT bg-surface-variant text-on-surface border border-border text-[11px] font-medium">Agency Admin</span>
+</td>
+<td class="py-3 px-4 text-secondary">Just now</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 text-success text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>Active</span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-primary font-medium hover:underline mr-3 opacity-0 group-hover:opacity-100 transition-opacity">Edit</button>
+<button class="text-secondary hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</td>
+</tr>
+<tr class="border-b border-border hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4 flex items-center gap-3">
+<img alt="Daniel Kim" class="w-8 h-8 rounded-full object-cover" data-alt="A professional headshot of a Korean man in his 30s, clean-shaven, wearing a light blue button-down shirt. He has a friendly expression. The lighting is bright and modern, set against a pristine white studio background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuoOznJSjr6nyoEqJXk8OrxcGz6rHGdIeTU7LktOWnjJ9kryXNU9JO8HuXH8zETz-H4mtQKaLoXdicHccdbcSVXWKS7vHsiucB2_eWmqgsisEoBNV8rca6pWVEH1SwgJuqAc1LiPeEt3xFzcXAjp5Kb4IG8LnjiGDuhmlHL69tzQi6mRP3bU82WIFzakjTEmgPFd4MhKvzZ4lotsqBvLTFGyVnbVq8cU3rFFSbW2aQSSb_-dX0luz-h6LcvvHqTXKjiQeRT2skVbk"/>
+<div>
+<div class="font-semibold text-on-surface">Daniel Kim</div>
+<div class="text-secondary text-[12px]">daniel@agency.com</div>
+</div>
+</td>
+<td class="py-3 px-4 flex gap-1 flex-wrap">
+<span class="inline-flex items-center px-2 py-0.5 rounded-DEFAULT bg-surface-container text-on-surface border border-border text-[11px] font-medium">Workspace Manager</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-DEFAULT bg-surface-container text-on-surface border border-border text-[11px] font-medium">Content Planner</span>
+</td>
+<td class="py-3 px-4 text-secondary">2 hours ago</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 text-success text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>Active</span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-primary font-medium hover:underline mr-3 opacity-0 group-hover:opacity-100 transition-opacity">Edit</button>
+<button class="text-secondary hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</td>
+</tr>
+<tr class="border-b border-border hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4 flex items-center gap-3">
+<img alt="Maya Chen" class="w-8 h-8 rounded-full object-cover" data-alt="A professional headshot of an Asian woman in her 30s with short black hair, smiling warmly. She is wearing a clean white blouse, standing in a brightly lit, modern office space with subtle, soft natural lighting and a minimalist, light-mode background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQG1KJ_h5dhBCBv6_zpQNVHbQKxRDIonhBQliszg_DNfXatZ-lHuplcdkgXjFxHivg0B4qtgmLrFai4cANUmZ0EeI4KreYgQTZ_v3RaU6lQGx6E_Z2uHpL-sYBA58mw9c_0NMMIorF4-syqHGMpGjtfD0oJS1E_3ch3vgGQqFHzYkGqQ-tcnArwtr1u1zmpNEO87ETc0ucCKu9sfbo66CahqwIXR5jlFKJ8nUK9WIJgIZT_ZD3hIIPRhQWgNW0lQF9c9zXFUAbc84"/>
+<div>
+<div class="font-semibold text-on-surface">Maya Chen (You)</div>
+<div class="text-secondary text-[12px]">maya@agency.com</div>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded-DEFAULT bg-surface-container text-on-surface border border-border text-[11px] font-medium">Designer</span>
+</td>
+<td class="py-3 px-4 text-secondary">Active now</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 text-success text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>Active</span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-secondary hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</td>
+</tr>
+<tr class="border-b border-border hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-tertiary-container text-white flex items-center justify-center font-semibold text-sm">SR</div>
+<div>
+<div class="font-semibold text-on-surface">Sofia Reyes</div>
+<div class="text-secondary text-[12px]">sofia@agency.com</div>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded-DEFAULT bg-surface-container text-on-surface border border-border text-[11px] font-medium">Internal Reviewer</span>
+</td>
+<td class="py-3 px-4 text-secondary">Yesterday</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 text-success text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>Active</span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-primary font-medium hover:underline mr-3 opacity-0 group-hover:opacity-100 transition-opacity">Edit</button>
+<button class="text-secondary hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</td>
+</tr>
+<tr class="border-b border-border hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4 flex items-center gap-3">
+<img alt="Claire Martin" class="w-8 h-8 rounded-full object-cover" data-alt="A bright, high-key headshot of a Caucasian woman in her 40s with blonde hair pulled back. She is wearing a smart casual navy top. The setting is minimal, reflecting a corporate but approachable aesthetic with cool daylight illumination." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBot_h3ytOqnhp3lQVirDJvq3GSoFoQUjO5GvV7Awb-7HXBtVaUlpuYjrEM4nX-RLGnM2L_q7cINedis_ViBGQWTiUGTBdHHOtsTac9LaWusYCWFqCEy4vi-nRatXXD7gjxux4dS4Zy-hAHe8vJmTwGNkMWcCP1t30LkaGfHF91HyOppMm8_a17C8XGHtDOCDBJPOSceNWmNm-KmkRfDSwAOJSdFvW1aazpH2I9_uxcslaL53v7vsqiXVc1nQzSJALRNPldW3_JG5E"/>
+<div>
+<div class="font-semibold text-on-surface flex items-center gap-2">
+                                            Claire Martin
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-DEFAULT bg-warning-subtle text-warning border border-warning/20 text-[10px] font-medium uppercase tracking-wider" title="Restricted client view">External</span>
+</div>
+<div class="text-secondary text-[12px]">claire@northstar.com</div>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded-DEFAULT bg-info-subtle text-tertiary-container border border-tertiary-container/20 text-[11px] font-medium">Client Reviewer</span>
+</td>
+<td class="py-3 px-4 text-secondary">3 days ago</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 text-success text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>Active</span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-primary font-medium hover:underline mr-3 opacity-0 group-hover:opacity-100 transition-opacity">Edit</button>
+<button class="text-secondary hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</td>
+</tr>
+<tr class="border-b border-border hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-dim text-on-surface-variant flex items-center justify-center font-semibold text-sm">OH</div>
+<div>
+<div class="font-semibold text-on-surface">Omar Haddad</div>
+<div class="text-secondary text-[12px]">omar@agency.com</div>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded-DEFAULT bg-surface-container text-on-surface border border-border text-[11px] font-medium">Publisher</span>
+</td>
+<td class="py-3 px-4 text-secondary">1 week ago</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 text-success text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>Active</span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-primary font-medium hover:underline mr-3 opacity-0 group-hover:opacity-100 transition-opacity">Edit</button>
+<button class="text-secondary hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</td>
+</tr>
+<tr class="border-b border-border hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-variant text-on-surface flex items-center justify-center font-semibold text-sm">LJ</div>
+<div>
+<div class="font-semibold text-on-surface">Liam Jones</div>
+<div class="text-secondary text-[12px]">liam@agency.com</div>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded-DEFAULT bg-surface-container-low text-secondary border border-border text-[11px] font-medium">Viewer</span>
+</td>
+<td class="py-3 px-4 text-secondary">2 weeks ago</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 text-success text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>Active</span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-primary font-medium hover:underline mr-3 opacity-0 group-hover:opacity-100 transition-opacity">Edit</button>
+<button class="text-secondary hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</td>
+</tr>
+<tr class="border-b border-border hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-variant text-on-surface flex items-center justify-center font-semibold text-sm">ET</div>
+<div>
+<div class="font-semibold text-on-surface">Emma Torres</div>
+<div class="text-secondary text-[12px]">emma@agency.com</div>
+</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded-DEFAULT bg-surface-container-low text-secondary border border-border text-[11px] font-medium">Viewer</span>
+</td>
+<td class="py-3 px-4 text-secondary">1 month ago</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 text-success text-[12px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>Active</span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-primary font-medium hover:underline mr-3 opacity-0 group-hover:opacity-100 transition-opacity">Edit</button>
+<button class="text-secondary hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-border flex justify-between items-center text-sm text-secondary">
+<span>Showing 8 of 8 members</span>
+</div>
+</div>
+</div>
+</main>
+<div class="fixed inset-0 bg-on-background/20 backdrop-blur-sm z-40"></div>
+<aside class="fixed inset-y-0 right-0 w-[560px] bg-surface shadow-xl z-50 flex flex-col border-l border-border transform transition-transform duration-300 ease-in-out">
+<div class="flex items-center justify-between px-6 py-5 border-b border-border">
+<h2 class="font-section-title text-section-title text-on-surface">Invite people</h2>
+<button class="text-secondary hover:text-on-surface rounded-full p-1 hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-6 space-y-6">
+<div>
+<label class="block font-label text-label text-on-surface mb-2">Email addresses</label>
+<div class="min-h-[80px] p-2 border border-border rounded-DEFAULT bg-canvas focus-within:ring-2 focus-within:ring-focus-ring focus-within:border-focus-ring transition-shadow cursor-text flex flex-wrap gap-2 items-start">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-DEFAULT bg-surface border border-border text-sm text-on-surface">
+                        alex@example.com
+                        <button class="text-secondary hover:text-on-surface"><span class="material-symbols-outlined text-[14px]">close</span></button>
+</span>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-DEFAULT bg-error-container text-on-error-container border border-error/30 text-sm">
+                        sarah@example.com
+                        <button class="text-on-error-container/70 hover:text-on-error-container"><span class="material-symbols-outlined text-[14px]">close</span></button>
+</span>
+<input class="flex-1 min-w-[120px] bg-transparent border-none focus:ring-0 text-sm p-1 placeholder:text-secondary" placeholder="Add more emails..." type="text"/>
+</div>
+<p class="mt-1.5 text-[12px] text-error flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">error</span>
+                    This person is already a member of this workspace (sarah@example.com).
+                </p>
+</div>
+<div>
+<label class="block font-label text-label text-on-surface mb-2">Add to workspace</label>
+<div class="relative">
+<select class="w-full h-[40px] pl-3 pr-8 rounded-DEFAULT border border-border bg-surface text-body focus:ring-2 focus:ring-focus-ring outline-none appearance-none cursor-pointer">
+<option>Northstar Coffee</option>
+<option>Internal Agency</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-secondary pointer-events-none text-[20px]">expand_more</span>
+</div>
+</div>
+<div class="border-t border-border pt-6">
+<label class="block font-label text-label text-on-surface mb-3">Assign workspace roles</label>
+<div class="space-y-3">
+<label class="flex items-start gap-3 p-3 rounded-DEFAULT border border-border cursor-pointer hover:bg-surface-subtle transition-colors">
+<input class="mt-0.5 w-4 h-4 text-primary-container border-border rounded focus:ring-primary-container" type="checkbox"/>
+<div>
+<div class="font-medium text-sm text-on-surface">Workspace Manager</div>
+<div class="text-xs text-secondary mt-0.5">Can manage settings, teams, and billing for this workspace.</div>
+</div>
+</label>
+<label class="flex items-start gap-3 p-3 rounded-DEFAULT border border-primary-container bg-primary-subtle cursor-pointer">
+<input checked="" class="mt-0.5 w-4 h-4 text-primary-container border-primary-container rounded focus:ring-primary-container" type="checkbox"/>
+<div>
+<div class="font-medium text-sm text-primary-container flex items-center gap-2">
+                                Client Reviewer
+                                <span class="bg-surface text-secondary px-1.5 py-0.5 rounded text-[10px] uppercase border border-border tracking-wider font-semibold">External</span>
+</div>
+<div class="text-xs text-on-surface-variant mt-0.5">Simplified access to assigned review items only. Cannot see internal discussions.</div>
+</div>
+</label>
+<label class="flex items-start gap-3 p-3 rounded-DEFAULT border border-border cursor-pointer hover:bg-surface-subtle transition-colors">
+<input class="mt-0.5 w-4 h-4 text-primary-container border-border rounded focus:ring-primary-container" type="checkbox"/>
+<div>
+<div class="font-medium text-sm text-on-surface">Designer</div>
+<div class="text-xs text-secondary mt-0.5">Can upload assets, create drafts, and participate in reviews.</div>
+</div>
+</label>
+<label class="flex items-start gap-3 p-3 rounded-DEFAULT border border-border cursor-pointer hover:bg-surface-subtle transition-colors">
+<input class="mt-0.5 w-4 h-4 text-primary-container border-border rounded focus:ring-primary-container" type="checkbox"/>
+<div>
+<div class="font-medium text-sm text-on-surface">Viewer</div>
+<div class="text-xs text-secondary mt-0.5">Read-only access to most workspace areas.</div>
+</div>
+</label>
+</div>
+</div>
+<div>
+<label class="block font-label text-label text-on-surface mb-2">Personal message (optional)</label>
+<textarea class="w-full p-3 rounded-DEFAULT border border-border bg-canvas text-body focus:ring-2 focus:ring-focus-ring outline-none resize-none" placeholder="Add a note to your invitation..." rows="3"></textarea>
+</div>
+<div class="bg-info-subtle p-3 rounded-DEFAULT flex items-start gap-2 border border-tertiary-fixed-dim">
+<span class="material-symbols-outlined text-tertiary-container text-[18px] mt-0.5">info</span>
+<div class="text-sm text-tertiary-container">
+                    Invitation expires in 7 days. Email invitation will be sent from <strong>notifications@agencyos.com</strong>.
+                </div>
+</div>
+</div>
+<div class="p-6 border-t border-border bg-surface flex justify-end gap-3 items-center sticky bottom-0">
+<button class="px-4 py-2 rounded-DEFAULT font-button text-button text-secondary hover:bg-surface-subtle transition-colors">Cancel</button>
+<button class="bg-primary-container text-white px-4 py-2 rounded-DEFAULT font-button text-button hover:bg-primary-hover transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                Send invitations
+            </button>
+</div>
+</aside>
+</body></html>

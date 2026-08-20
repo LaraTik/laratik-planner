@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Notifications - StudioFlow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-container": "#00659c",
+                      "error": "#ba1a1a",
+                      "on-surface-variant": "#464555",
+                      "text-muted": "#7B8495",
+                      "success-subtle": "#ECFDF3",
+                      "on-primary": "#ffffff",
+                      "outline-variant": "#c7c4d8",
+                      "tertiary": "#004c77",
+                      "on-background": "#131c2b",
+                      "surface-container-high": "#dfe8fe",
+                      "info-subtle": "#F0F9FF",
+                      "danger": "#B91C1C",
+                      "primary-container": "#4f46e5",
+                      "primary-subtle": "#EEF2FF",
+                      "inverse-primary": "#c3c0ff",
+                      "secondary": "#555e74",
+                      "on-secondary-container": "#5a6278",
+                      "on-tertiary": "#ffffff",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "on-secondary-fixed": "#121b2e",
+                      "border": "#DDE1E6",
+                      "on-tertiary-fixed-variant": "#004b74",
+                      "on-secondary": "#ffffff",
+                      "secondary-fixed": "#d9e2fc",
+                      "success": "#15803D",
+                      "secondary-container": "#d7dff9",
+                      "tertiary-fixed-dim": "#94ccff",
+                      "warning": "#B45309",
+                      "on-secondary-fixed-variant": "#3e475b",
+                      "danger-subtle": "#FEF2F2",
+                      "on-primary-fixed": "#0f0069",
+                      "focus-ring": "#6366F1",
+                      "primary-hover": "#4338CA",
+                      "surface-dim": "#d1daef",
+                      "surface-variant": "#dae3f8",
+                      "error-container": "#ffdad6",
+                      "surface-container-low": "#f0f3ff",
+                      "inverse-surface": "#283141",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "inverse-on-surface": "#ecf0ff",
+                      "surface-container-highest": "#dae3f8",
+                      "on-error": "#ffffff",
+                      "warning-subtle": "#FFF7E6",
+                      "outline": "#777587",
+                      "primary-fixed": "#e2dfff",
+                      "on-tertiary-container": "#bfdfff",
+                      "canvas": "#F7F7F5",
+                      "on-surface": "#131c2b",
+                      "surface-tint": "#4d44e3",
+                      "tertiary-fixed": "#cde5ff",
+                      "surface": "#FFFFFF",
+                      "on-primary-container": "#dad7ff",
+                      "surface-subtle": "#F1F3F5",
+                      "primary": "#3525cd",
+                      "on-tertiary-fixed": "#001d32",
+                      "surface-container": "#e7eeff",
+                      "secondary-fixed-dim": "#bdc6e0",
+                      "background": "#f9f9ff",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-bright": "#f9f9ff",
+                      "on-error-container": "#93000a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "sidebar-collapsed": "72px",
+                      "screen-padding": "24px",
+                      "topbar-height": "64px",
+                      "gutter": "16px",
+                      "base": "4px",
+                      "sidebar-expanded": "248px",
+                      "card-padding": "16px"
+              },
+              "fontFamily": {
+                      "body": ["Inter"],
+                      "table-dense": ["Inter"],
+                      "card-title": ["Inter"],
+                      "section-title": ["Inter"],
+                      "label": ["Inter"],
+                      "button": ["Inter"],
+                      "page-title": ["Inter"]
+              },
+              "fontSize": {
+                      "body": ["14px", {"lineHeight": "21px", "fontWeight": "400"}],
+                      "table-dense": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                      "card-title": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                      "section-title": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "label": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "button": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                      "page-title": ["28px", {"lineHeight": "36px", "fontWeight": "600"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        /* Base configuration */
+        :root {
+            --bottom-nav-height: 64px;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F7F7F5; /* canvas */
+            color: #131c2b; /* on-surface */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Mobile container constraint */
+        .mobile-container {
+            max-width: 390px;
+            margin: 0 auto;
+            min-height: 100dvh;
+            background-color: #F7F7F5;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Hide scrollbar for tabs */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Bottom sheet animation */
+        #filter-sheet {
+            transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+            transform: translateY(100%);
+        }
+        #filter-sheet.open {
+            transform: translateY(0);
+        }
+        #sheet-backdrop {
+            transition: opacity 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        #sheet-backdrop.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<div class="mobile-container">
+<!-- Top App Bar -->
+<header class="bg-surface sticky top-0 z-40 border-b border-border flex flex-col">
+<div class="flex items-center justify-between px-screen-padding h-topbar-height w-full">
+<div class="flex flex-col justify-center">
+<span class="font-label text-label text-on-surface-variant uppercase tracking-wider">StudioFlow</span>
+<h1 class="font-page-title text-page-title text-primary">Notifications</h1>
+</div>
+</div>
+<!-- Tabs -->
+<div class="px-screen-padding flex gap-6 border-t border-border overflow-x-auto hide-scrollbar">
+<button class="relative py-3 px-1 font-label text-label text-primary font-bold whitespace-nowrap">
+                    All
+                    <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+</button>
+<button class="relative py-3 px-1 font-label text-label text-on-surface-variant whitespace-nowrap">
+                    Mentions
+                </button>
+<button class="relative py-3 px-1 font-label text-label text-on-surface-variant whitespace-nowrap">
+                    Reviews
+                </button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 pb-24 overflow-y-auto">
+<!-- Section: Today -->
+<div class="px-4 py-4">
+<h2 class="font-section-title text-section-title text-on-surface mb-3">Today</h2>
+<div class="flex flex-col gap-3">
+<!-- Notification Card: Creative Review (Unread) -->
+<div class="bg-surface rounded-lg border border-border p-4 relative overflow-hidden flex flex-col gap-3">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary-container"></div>
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-primary-subtle flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[18px]">rate_review</span>
+</div>
+<div>
+<p class="font-card-title text-card-title text-on-surface leading-tight">Northstar Coffee</p>
+<p class="font-label text-label text-on-surface-variant">Creative Review</p>
+</div>
+</div>
+<span class="font-label text-label text-text-muted">10m</span>
+</div>
+<div class="pl-10">
+<p class="font-body text-body text-on-surface">'Autumn roast launch' needs your review.</p>
+<button class="mt-2 h-[36px] px-4 bg-primary-container text-on-primary font-button text-button rounded-lg">Review</button>
+</div>
+</div>
+<!-- Notification Card: Mention (Unread) -->
+<div class="bg-surface rounded-lg border border-border p-4 relative overflow-hidden flex flex-col gap-3">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary-container"></div>
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A professional headshot of Daniel Kim, a modern creative director, wearing glasses and a minimalist black t-shirt against a clean white background. High-key lighting, corporate minimal aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDD85YQ0EmcHI1QfGhxwYtZNtZmKJPad50wZmy4EnbRX47WXC2akZBYt80nRw0vHl-hyMhgOTPjuieA2A0RM_UHcvgwkfDvJJEjHGUXDzMD1wU-OPnHEcgaPV9vGGIhW8entZ82K0zVFFiQsWlAdcy-JrugPNd4poQOAZtQQ8omPXJygjxfLpWB-Ela2praieDIKmp9n69Slr5Pm-JJtk5vp4ljWgo7cdWiLhyxVY6EP6-08sbrRmV5Mw_i_njqgpl6GZp5witkYuM"/>
+<div>
+<p class="font-card-title text-card-title text-on-surface leading-tight">Daniel Kim</p>
+<p class="font-label text-label text-on-surface-variant">Mention</p>
+</div>
+</div>
+<span class="font-label text-label text-text-muted">1h</span>
+</div>
+<div class="pl-10">
+<p class="font-body text-body text-on-surface"><span class="text-primary-container">@you</span> Need clarification on the deliverables.</p>
+<button class="mt-2 h-[36px] px-4 border border-border text-on-surface font-button text-button rounded-lg">Reply</button>
+</div>
+</div>
+<!-- Notification Card: Version Submitted -->
+<div class="bg-surface rounded-lg border border-border p-4 flex flex-col gap-3 opacity-75">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A professional headshot of Maya Chen, an energetic graphic designer with curly hair, wearing a neutral toned blouse. Soft natural lighting, minimal corporate background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPHZOKZvglt9PNp2ZCz8FL4gtRDYFDh44rBy-EOl48MLGMDlBalS9bm7fCmVs0Nv-NvETYeCacGAHA4RMUqruTjVOkPRPbzoxene2PIUl-MsGcbQmewKtCiguGJYLb61wFXVOzWUjmViEcEvCXTAd_PU2_wCW1dkPFA_oVK6TmGHvy1yPemzlP-JLVZY6URzJ1ZgiK0vOcYGdXRGDN1qQrVFjQ5l6E5_NuEyuO1FPBMoO_gNJ7gwTND4eBenEOVgz8-c1ZxImbNkc"/>
+<div>
+<p class="font-card-title text-card-title text-on-surface leading-tight">Maya Chen</p>
+<p class="font-label text-label text-on-surface-variant">Version Submitted</p>
+</div>
+</div>
+<span class="font-label text-label text-text-muted">2h</span>
+</div>
+<div class="pl-10">
+<p class="font-body text-body text-on-surface">'V3 Submitted' for Luna Botanics.</p>
+<button class="mt-2 h-[36px] px-4 border border-border text-on-surface font-button text-button rounded-lg">View delivery</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Section: Earlier -->
+<div class="px-4 py-4">
+<h2 class="font-section-title text-section-title text-on-surface mb-3">Earlier</h2>
+<div class="flex flex-col gap-3">
+<!-- Notification Card: Deadline -->
+<div class="bg-surface rounded-lg border border-border p-4 flex flex-col gap-3">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-danger-subtle flex items-center justify-center text-danger">
+<span class="material-symbols-outlined text-[18px]">error</span>
+</div>
+<div>
+<p class="font-card-title text-card-title text-on-surface leading-tight">Campaign Launch</p>
+<p class="font-label text-label text-on-surface-variant">Deadline</p>
+</div>
+</div>
+<span class="font-label text-label text-text-muted">Yesterday</span>
+</div>
+<div class="pl-10">
+<p class="font-body text-body text-on-surface">Due tomorrow</p>
+</div>
+</div>
+<!-- Notification Card: Ready to Publish -->
+<div class="bg-surface rounded-lg border border-border p-4 flex flex-col gap-3">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-success-subtle flex items-center justify-center text-success">
+<span class="material-symbols-outlined text-[18px]">send</span>
+</div>
+<div>
+<p class="font-card-title text-card-title text-on-surface leading-tight">Social post</p>
+<p class="font-label text-label text-on-surface-variant">Ready to Publish</p>
+</div>
+</div>
+<span class="font-label text-label text-text-muted">Yesterday</span>
+</div>
+<div class="pl-10">
+<p class="font-body text-body text-on-surface">Scheduled for 10am</p>
+</div>
+</div>
+<!-- Notification Card: Assignment -->
+<div class="bg-surface rounded-lg border border-border p-4 flex flex-col gap-3">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[18px]">assignment</span>
+</div>
+<div>
+<p class="font-card-title text-card-title text-on-surface leading-tight">New project brief</p>
+<p class="font-label text-label text-on-surface-variant">Assignment</p>
+</div>
+</div>
+<span class="font-label text-label text-text-muted">Mon</span>
+</div>
+<div class="pl-10">
+<p class="font-body text-body text-on-surface">Assigned by Alex</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Action Button for Filters (Mobile Pattern) -->
+<button class="fixed bottom-24 right-4 w-12 h-12 bg-surface border border-border shadow-lg rounded-full flex items-center justify-center text-on-surface z-30" onclick="toggleFilterSheet()">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</main>
+<!-- BottomNavBar Navigation Shell -->
+<nav class="fixed bottom-0 w-full max-w-[390px] z-50 bg-surface border-t border-border flex justify-around items-center px-2 py-2 pb-safe" style="height: var(--bottom-nav-height);">
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-2 py-1 min-w-[64px] min-h-[44px]">
+<span class="material-symbols-outlined text-[24px]">task_alt</span>
+<span class="font-label text-[10px] mt-1">My Work</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-2 py-1 min-w-[64px] min-h-[44px]">
+<span class="material-symbols-outlined text-[24px]">calendar_today</span>
+<span class="font-label text-[10px] mt-1">Planning</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-2 py-1 min-w-[64px] min-h-[44px]">
+<span class="material-symbols-outlined text-[24px]">rate_review</span>
+<span class="font-label text-[10px] mt-1">Reviews</span>
+</div>
+<div class="flex flex-col items-center justify-center text-primary bg-primary-subtle rounded-xl px-2 py-1 min-w-[64px] min-h-[44px]">
+<span class="material-symbols-outlined fill text-[24px]">notifications</span>
+<span class="font-label text-[10px] mt-1">Notifications</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-2 py-1 min-w-[64px] min-h-[44px]">
+<span class="material-symbols-outlined text-[24px]">more_horiz</span>
+<span class="font-label text-[10px] mt-1">More</span>
+</div>
+</nav>
+<!-- Persistent Bottom Sheet (Filters) -->
+<div class="fixed inset-0 bg-on-surface/50 z-50 max-w-[390px] mx-auto" id="sheet-backdrop" onclick="toggleFilterSheet()"></div>
+<div class="fixed bottom-0 left-0 right-0 max-w-[390px] mx-auto bg-surface rounded-t-xl z-50 flex flex-col max-h-[751px]" id="filter-sheet">
+<!-- Handle -->
+<div class="w-full flex justify-center py-3" onclick="toggleFilterSheet()">
+<div class="w-12 h-1.5 bg-border rounded-full"></div>
+</div>
+<div class="px-6 pb-4 border-b border-border flex justify-between items-center">
+<h3 class="font-page-title text-card-title text-on-surface">Filter notifications</h3>
+<button class="text-on-surface-variant w-[44px] h-[44px] flex items-center justify-center" onclick="toggleFilterSheet()">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="overflow-y-auto flex-1 px-6 py-4">
+<!-- Unread Toggle -->
+<div class="flex justify-between items-center mb-6 h-[44px]">
+<span class="font-body text-body text-on-surface">Unread only</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Workspace Chips -->
+<div class="mb-6">
+<h4 class="font-label text-label text-on-surface-variant mb-3 uppercase tracking-wide">Workspace</h4>
+<div class="flex flex-wrap gap-2">
+<button class="px-4 h-[36px] rounded-full border border-primary-container bg-primary-subtle text-primary-container font-label text-label">All</button>
+<button class="px-4 h-[36px] rounded-full border border-border bg-surface text-on-surface font-label text-label">Northstar Coffee</button>
+<button class="px-4 h-[36px] rounded-full border border-border bg-surface text-on-surface font-label text-label">Luna Botanics</button>
+</div>
+</div>
+<!-- Notification Types -->
+<div class="mb-2">
+<h4 class="font-label text-label text-on-surface-variant mb-3 uppercase tracking-wide">Type</h4>
+<div class="flex flex-col gap-2">
+<label class="flex items-center gap-3 h-[44px]">
+<input checked="" class="w-5 h-5 rounded border-border text-primary-container focus:ring-focus-ring" type="checkbox"/>
+<span class="font-body text-body text-on-surface">Assignments</span>
+</label>
+<label class="flex items-center gap-3 h-[44px]">
+<input checked="" class="w-5 h-5 rounded border-border text-primary-container focus:ring-focus-ring" type="checkbox"/>
+<span class="font-body text-body text-on-surface">Reviews</span>
+</label>
+<label class="flex items-center gap-3 h-[44px]">
+<input checked="" class="w-5 h-5 rounded border-border text-primary-container focus:ring-focus-ring" type="checkbox"/>
+<span class="font-body text-body text-on-surface">Mentions</span>
+</label>
+<label class="flex items-center gap-3 h-[44px]">
+<input checked="" class="w-5 h-5 rounded border-border text-primary-container focus:ring-focus-ring" type="checkbox"/>
+<span class="font-body text-body text-on-surface">Deadlines</span>
+</label>
+<label class="flex items-center gap-3 h-[44px]">
+<input checked="" class="w-5 h-5 rounded border-border text-primary-container focus:ring-focus-ring" type="checkbox"/>
+<span class="font-body text-body text-on-surface">Deliveries</span>
+</label>
+<label class="flex items-center gap-3 h-[44px]">
+<input checked="" class="w-5 h-5 rounded border-border text-primary-container focus:ring-focus-ring" type="checkbox"/>
+<span class="font-body text-body text-on-surface">Publishing</span>
+</label>
+</div>
+</div>
+</div>
+<!-- Sticky Footer Actions -->
+<div class="p-4 border-t border-border flex gap-3 bg-surface pb-safe">
+<button class="flex-1 h-[44px] border border-border text-on-surface font-button text-button rounded-lg" onclick="toggleFilterSheet()">Clear all</button>
+<button class="flex-1 h-[44px] bg-primary-container text-on-primary font-button text-button rounded-lg" onclick="toggleFilterSheet()">Apply filters</button>
+</div>
+</div>
+</div>
+<script>
+        function toggleFilterSheet() {
+            const sheet = document.getElementById('filter-sheet');
+            const backdrop = document.getElementById('sheet-backdrop');
+            sheet.classList.toggle('open');
+            backdrop.classList.toggle('open');
+        }
+    </script>
+</body></html>

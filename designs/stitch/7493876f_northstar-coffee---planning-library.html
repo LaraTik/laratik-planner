@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>StudioFlow - Planning Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary-hover": "#4338CA",
+                        "secondary-container": "#d7dff9",
+                        "primary": "#3525cd",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "on-primary": "#ffffff",
+                        "background": "#f9f9ff",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#f9f9ff",
+                        "border": "#DDE1E6",
+                        "outline": "#777587",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed": "#001d32",
+                        "surface-dim": "#d1daef",
+                        "on-primary-fixed": "#0f0069",
+                        "tertiary-container": "#00659c",
+                        "success-subtle": "#ECFDF3",
+                        "on-background": "#131c2b",
+                        "success": "#15803D",
+                        "on-tertiary-container": "#bfdfff",
+                        "secondary-fixed": "#d9e2fc",
+                        "secondary": "#555e74",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "error-container": "#ffdad6",
+                        "surface-subtle": "#F1F3F5",
+                        "on-secondary-fixed": "#121b2e",
+                        "surface-tint": "#4d44e3",
+                        "canvas": "#F7F7F5",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "error": "#ba1a1a",
+                        "on-surface": "#131c2b",
+                        "surface": "#FFFFFF",
+                        "inverse-on-surface": "#ecf0ff",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "surface-variant": "#dae3f8",
+                        "on-primary-container": "#dad7ff",
+                        "surface-container": "#e7eeff",
+                        "on-tertiary": "#ffffff",
+                        "warning": "#B45309",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#283141",
+                        "danger": "#B91C1C",
+                        "tertiary": "#004c77",
+                        "warning-subtle": "#FFF7E6",
+                        "primary-container": "#4f46e5",
+                        "surface-container-high": "#dfe8fe",
+                        "outline-variant": "#c7c4d8",
+                        "on-secondary-container": "#5a6278",
+                        "text-muted": "#7B8495",
+                        "tertiary-fixed": "#cde5ff",
+                        "inverse-primary": "#c3c0ff",
+                        "on-surface-variant": "#464555",
+                        "surface-container-low": "#f0f3ff",
+                        "info-subtle": "#F0F9FF",
+                        "danger-subtle": "#FEF2F2",
+                        "surface-container-highest": "#dae3f8",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "primary-subtle": "#EEF2FF",
+                        "primary-fixed": "#e2dfff",
+                        "focus-ring": "#6366F1"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "screen-padding": "24px",
+                        "base": "4px",
+                        "topbar-height": "64px",
+                        "sidebar-expanded": "248px",
+                        "gutter": "16px",
+                        "sidebar-collapsed": "72px",
+                        "card-padding": "16px"
+                    },
+                    fontFamily: {
+                        "label": ["Inter"],
+                        "body": ["Inter"],
+                        "card-title": ["Inter"],
+                        "button": ["Inter"],
+                        "page-title": ["Inter"],
+                        "table-dense": ["Inter"],
+                        "section-title": ["Inter"]
+                    },
+                    fontSize: {
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .icon-fill { font-variation-settings: 'FILL' 1; }
+        
+        /* Hide scrollbar for clean UI in drawer */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Tab animation */
+        .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-canvas text-on-surface font-body h-screen flex overflow-hidden">
+<!-- Shared Component: SideNavBar -->
+<nav class="fixed left-0 top-0 h-screen w-sidebar-expanded flex flex-col z-40 bg-surface dark:bg-surface border-r border-border dark:border-outline-variant shrink-0">
+<!-- Header -->
+<div class="h-topbar-height flex items-center px-4 border-b border-border">
+<img alt="Workspace Logo" class="w-8 h-8 rounded bg-surface-subtle object-cover mr-3" data-alt="A small, minimalist workspace logo for Northstar Coffee featuring a stylized star icon in high contrast black and white, suitable for a professional SaaS application sidebar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpHGgIHCymoe12Be6qonuQPj5bbBujOdTZm52h8wOS7GinTXTBig5ATpK7g0Efix53vDBRkRyGPrzC1zQjBYgsuYsMS8LGDGwEvmfu0_NQLajS-coWfvsiCsrR-7-0kPhytGbJRPeFi8gVVXfu2aCb1hwiAzv8sfQbyZONcwQp6DrG-6T1fO7ZJNQbdQwiPzybnI7gY4VcQHdg5gz3XTCuVf2PfJ1JVRz80eflcRHrzfh17PER-zJAr8k1h02j7r6Fa8t3ptXTZ4M"/>
+<div class="flex flex-col">
+<span class="text-section-title font-section-title font-bold text-primary dark:text-inverse-primary leading-tight">StudioFlow</span>
+<span class="text-label font-label text-on-surface-variant leading-tight">Creative Agency</span>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<div class="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-low transition-all duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px]">assignment_ind</span>
+<span class="text-label font-label">My Work</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-low transition-all duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="text-label font-label">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded bg-primary-subtle dark:bg-primary-container text-primary dark:text-on-primary-container font-semibold translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px] icon-fill">event_note</span>
+<span class="text-label font-label">Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-low transition-all duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+<span class="text-label font-label">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-low transition-all duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px]">rate_review</span>
+<span class="text-label font-label">Reviews</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-low transition-all duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px]">share</span>
+<span class="text-label font-label">Social Channels</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-low transition-all duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px]">palette</span>
+<span class="text-label font-label">Brand Kit</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-low transition-all duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px]">group</span>
+<span class="text-label font-label">Team</span>
+</a>
+</div>
+<!-- Footer -->
+<div class="p-4 border-t border-border">
+<button class="w-full h-10 bg-primary text-on-primary rounded font-button text-button mb-4">Invite Member</button>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant hover:bg-surface-subtle transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">contact_support</span>
+<span class="text-label font-label">Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-surface-variant hover:bg-surface-subtle transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="text-label font-label">Settings</span>
+</a>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-sidebar-expanded flex-1 flex flex-col h-screen overflow-hidden relative">
+<!-- Header TopBar (Contextual) -->
+<header class="h-topbar-height px-screen-padding border-b border-border bg-surface flex items-center justify-between shrink-0 z-10 relative">
+<div class="flex flex-col justify-center h-full">
+<div class="flex items-center gap-2 text-label font-label text-on-surface-variant mb-1">
+<span>Northstar Coffee</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span>Planning</span>
+</div>
+<h1 class="text-section-title font-section-title text-on-surface">Planning library</h1>
+</div>
+<div class="flex items-center gap-3">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+<input class="pl-9 pr-4 h-10 border border-border rounded-lg text-body font-body bg-surface-subtle focus:bg-surface focus:ring-2 focus:ring-focus-ring focus:border-focus-ring focus:outline-none w-64 transition-all" placeholder="Search planning library..." type="text"/>
+</div>
+</div>
+</header>
+<!-- Sub-navigation Tabs -->
+<div class="px-screen-padding border-b border-border bg-surface shrink-0 z-10 relative">
+<div class="flex gap-6">
+<button class="py-3 text-body font-button text-primary border-b-2 border-primary -mb-[1px] relative transition-colors" id="tab-campaigns" onclick="switchTab('campaigns')">Campaigns</button>
+<button class="py-3 text-body font-button text-on-surface-variant hover:text-on-surface border-b-2 border-transparent hover:border-border -mb-[1px] transition-colors" id="tab-pillars" onclick="switchTab('pillars')">Content pillars</button>
+<button class="py-3 text-body font-button text-on-surface-variant hover:text-on-surface border-b-2 border-transparent hover:border-border -mb-[1px] transition-colors" id="tab-templates" onclick="switchTab('templates')">Templates</button>
+</div>
+</div>
+<!-- Scrollable Canvas -->
+<div class="flex-1 overflow-y-auto p-screen-padding bg-canvas relative z-0">
+<!-- Tab: Campaigns (Active) -->
+<div class="tab-content active h-full" id="content-campaigns">
+<!-- Bento/Grid Layout for Campaigns -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-gutter items-start">
+<!-- Campaign Card 1 (Active) -->
+<div class="bg-surface rounded-lg border border-border p-card-padding flex flex-col gap-4 group hover:border-primary-fixed-dim transition-colors cursor-pointer">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-card-title font-card-title text-on-surface mb-1 group-hover:text-primary transition-colors">Autumn Blend Launch</h3>
+<p class="text-body font-body text-on-surface-variant">Drive seasonal awareness</p>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-1 bg-success-subtle rounded text-success text-label font-label">
+<span class="material-symbols-outlined text-[14px]">play_circle</span>
+                                Active
+                            </div>
+</div>
+<div class="flex gap-4 text-label font-label text-on-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">calendar_month</span>
+                                Sep 1–30, 2026
+                            </div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">person</span>
+                                Omar Haddad
+                            </div>
+</div>
+<div class="pt-4 border-t border-border mt-2">
+<div class="flex justify-between items-center mb-2">
+<span class="text-label font-label text-on-surface">Content Progress</span>
+<span class="text-label font-label text-on-surface-variant">8 items</span>
+</div>
+<!-- Progress visual -->
+<div class="flex gap-1 h-2 rounded-full overflow-hidden mb-3">
+<div class="bg-success w-1/4" title="2 published"></div>
+<div class="bg-primary w-2/4" title="4 in design"></div>
+<div class="bg-warning w-1/4" title="2 review"></div>
+</div>
+<!-- Legend -->
+<div class="flex gap-4 text-label font-label text-on-surface-variant">
+<div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-success"></div>2 Published</div>
+<div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-primary"></div>4 Design</div>
+<div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-warning"></div>2 Review</div>
+</div>
+</div>
+</div>
+<!-- Campaign Card 2 (Draft) -->
+<div class="bg-surface rounded-lg border border-border p-card-padding flex flex-col gap-4 group hover:border-primary-fixed-dim transition-colors cursor-pointer opacity-80">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-card-title font-card-title text-on-surface mb-1 group-hover:text-primary transition-colors">Holiday Gifting</h3>
+<p class="text-body font-body text-on-surface-variant">Promote corporate &amp; individual gift sets</p>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-1 bg-surface-subtle border border-border rounded text-on-surface-variant text-label font-label">
+<span class="material-symbols-outlined text-[14px]">edit_document</span>
+                                Draft
+                            </div>
+</div>
+<div class="flex gap-4 text-label font-label text-on-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">calendar_month</span>
+                                Nov 15–Dec 24, 2026
+                            </div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">person</span>
+                                Unassigned
+                            </div>
+</div>
+<div class="pt-4 border-t border-border mt-2 flex justify-center">
+<button class="text-button font-button text-primary hover:text-primary-hover flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                                Add content items
+                            </button>
+</div>
+</div>
+<!-- Campaign Card 3 (Active) -->
+<div class="bg-surface rounded-lg border border-border p-card-padding flex flex-col gap-4 group hover:border-primary-fixed-dim transition-colors cursor-pointer">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-card-title font-card-title text-on-surface mb-1 group-hover:text-primary transition-colors">Evergreen Education</h3>
+<p class="text-body font-body text-on-surface-variant">Ongoing brew guides and origin info</p>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-1 bg-success-subtle rounded text-success text-label font-label">
+<span class="material-symbols-outlined text-[14px]">autorenew</span>
+                                Ongoing
+                            </div>
+</div>
+<div class="flex gap-4 text-label font-label text-on-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">calendar_month</span>
+                                All year
+                            </div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">person</span>
+                                Sarah Jenkins
+                            </div>
+</div>
+<div class="pt-4 border-t border-border mt-2 flex justify-between items-center">
+<span class="text-label font-label text-on-surface-variant">24 items total</span>
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border border-surface bg-surface-subtle flex items-center justify-center text-[10px] font-bold">IG</div>
+<div class="w-6 h-6 rounded-full border border-surface bg-surface-subtle flex items-center justify-center text-[10px] font-bold">FB</div>
+<div class="w-6 h-6 rounded-full border border-surface bg-surface-subtle flex items-center justify-center text-[10px] font-bold">TT</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Tab: Content Pillars -->
+<div class="tab-content h-full" id="content-pillars">
+<div class="bg-surface border border-border rounded-lg overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border bg-surface-subtle text-label font-label text-on-surface-variant">
+<th class="p-3 font-medium">Pillar Name</th>
+<th class="p-3 font-medium">Description</th>
+<th class="p-3 font-medium w-24 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="text-table-dense font-table-dense text-on-surface">
+<tr class="border-b border-border hover:bg-surface-subtle transition-colors group">
+<td class="p-3 flex items-center gap-3">
+<div class="w-3 h-3 rounded-full bg-[#B45309]"></div>
+<span class="font-medium">Coffee education</span>
+</td>
+<td class="p-3 text-on-surface-variant">Brewing guides, equipment care, tasting notes.</td>
+<td class="p-3 text-right">
+<button class="text-on-surface-variant hover:text-primary p-1"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+</td>
+</tr>
+<tr class="border-b border-border hover:bg-surface-subtle transition-colors group">
+<td class="p-3 flex items-center gap-3">
+<div class="w-3 h-3 rounded-full bg-[#15803D]"></div>
+<span class="font-medium">Origin stories</span>
+</td>
+<td class="p-3 text-on-surface-variant">Farmer highlights, sourcing trips, sustainability.</td>
+<td class="p-3 text-right">
+<button class="text-on-surface-variant hover:text-primary p-1"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+</td>
+</tr>
+<tr class="border-b border-border hover:bg-surface-subtle transition-colors group">
+<td class="p-3 flex items-center gap-3">
+<div class="w-3 h-3 rounded-full bg-[#4f46e5]"></div>
+<span class="font-medium">Café culture</span>
+</td>
+<td class="p-3 text-on-surface-variant">In-store atmosphere, barista spotlights, local community.</td>
+<td class="p-3 text-right">
+<button class="text-on-surface-variant hover:text-primary p-1"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+</td>
+</tr>
+<tr class="hover:bg-surface-subtle transition-colors group">
+<td class="p-3 flex items-center gap-3">
+<div class="w-3 h-3 rounded-full bg-[#00659c]"></div>
+<span class="font-medium">Product launches</span>
+</td>
+<td class="p-3 text-on-surface-variant">New beans, merch drops, seasonal drinks.</td>
+<td class="p-3 text-right">
+<button class="text-on-surface-variant hover:text-primary p-1"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Tab: Templates -->
+<div class="tab-content h-full" id="content-templates">
+<div class="flex justify-end mb-4">
+<button class="h-10 px-4 flex items-center gap-2 bg-surface border border-border text-on-surface rounded font-button text-button hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                        New Template
+                    </button>
+</div>
+<div class="flex flex-col gap-4">
+<!-- Template Item 1 -->
+<div class="bg-surface border border-border rounded-lg p-4 flex justify-between items-center hover:border-primary-fixed-dim transition-colors">
+<div class="flex gap-4 items-center">
+<div class="w-12 h-12 rounded bg-surface-subtle flex items-center justify-center text-on-surface-variant border border-border">
+<span class="material-symbols-outlined text-[24px]">view_carousel</span>
+</div>
+<div>
+<h4 class="text-body font-button text-on-surface">Product launch carousel</h4>
+<div class="flex items-center gap-3 text-label font-label text-on-surface-variant mt-1">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">tag</span>Product launches</span>
+<span>•</span>
+<span>IG, FB</span>
+<span>•</span>
+<span>3-5 slides, hook -&gt; details -&gt; CTA</span>
+</div>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="px-3 h-8 flex items-center gap-2 border border-border rounded text-label font-button text-on-surface hover:bg-surface-subtle transition-colors">Duplicate</button>
+<button class="px-3 h-8 flex items-center gap-2 bg-primary-subtle text-primary rounded text-label font-button hover:bg-primary-container hover:text-on-primary-container transition-colors">Use Template</button>
+</div>
+</div>
+<!-- Template Item 2 -->
+<div class="bg-surface border border-border rounded-lg p-4 flex justify-between items-center hover:border-primary-fixed-dim transition-colors">
+<div class="flex gap-4 items-center">
+<div class="w-12 h-12 rounded bg-surface-subtle flex items-center justify-center text-on-surface-variant border border-border">
+<span class="material-symbols-outlined text-[24px]">movie</span>
+</div>
+<div>
+<h4 class="text-body font-button text-on-surface">Behind-the-scenes reel</h4>
+<div class="flex items-center gap-3 text-label font-label text-on-surface-variant mt-1">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">tag</span>Café culture</span>
+<span>•</span>
+<span>IG, TT</span>
+<span>•</span>
+<span>Fast cuts, trending audio, raw feel</span>
+</div>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="px-3 h-8 flex items-center gap-2 border border-border rounded text-label font-button text-on-surface hover:bg-surface-subtle transition-colors">Duplicate</button>
+<button class="px-3 h-8 flex items-center gap-2 bg-primary-subtle text-primary rounded text-label font-button hover:bg-primary-container hover:text-on-primary-container transition-colors">Use Template</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Overlay for Drawer -->
+<div class="fixed inset-0 bg-on-background/10 z-40 backdrop-blur-[1px]"></div>
+<!-- Side Drawer: Create Campaign -->
+<aside class="fixed inset-y-0 right-0 w-[480px] bg-surface shadow-2xl z-50 border-l border-border flex flex-col transform transition-transform duration-300 translate-x-0">
+<!-- Drawer Header -->
+<div class="h-[72px] px-6 border-b border-border flex items-center justify-between shrink-0">
+<h2 class="text-section-title font-section-title text-on-surface">Create campaign</h2>
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-subtle text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Drawer Body (Form) -->
+<div class="flex-1 overflow-y-auto p-6 no-scrollbar">
+<form class="flex flex-col gap-5">
+<!-- Name -->
+<div class="flex flex-col gap-1.5">
+<label class="text-label font-label text-on-surface">Campaign name</label>
+<input class="h-10 border border-border rounded px-3 text-body font-body focus:ring-2 focus:ring-focus-ring focus:border-focus-ring focus:outline-none placeholder:text-on-surface-variant/50" placeholder="e.g., Summer Cold Brew Push" type="text"/>
+</div>
+<!-- Objective -->
+<div class="flex flex-col gap-1.5">
+<label class="text-label font-label text-on-surface">Objective</label>
+<textarea class="border border-border rounded px-3 py-2 text-body font-body focus:ring-2 focus:ring-focus-ring focus:border-focus-ring focus:outline-none resize-none placeholder:text-on-surface-variant/50" placeholder="What is the primary goal?" rows="2"></textarea>
+</div>
+<!-- Dates -->
+<div class="flex gap-4">
+<div class="flex flex-col gap-1.5 flex-1">
+<label class="text-label font-label text-on-surface">Start date</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">calendar_today</span>
+<input class="h-10 w-full border border-border rounded pl-9 pr-3 text-body font-body focus:ring-2 focus:ring-focus-ring focus:border-focus-ring focus:outline-none cursor-pointer" placeholder="Select date" type="text"/>
+</div>
+</div>
+<div class="flex flex-col gap-1.5 flex-1">
+<label class="text-label font-label text-on-surface">End date</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">calendar_today</span>
+<input class="h-10 w-full border border-border rounded pl-9 pr-3 text-body font-body focus:ring-2 focus:ring-focus-ring focus:border-focus-ring focus:outline-none cursor-pointer" placeholder="Select date" type="text"/>
+</div>
+</div>
+</div>
+<!-- Owner -->
+<div class="flex flex-col gap-1.5">
+<label class="text-label font-label text-on-surface">Owner</label>
+<div class="relative">
+<select class="h-10 w-full border border-border rounded pl-3 pr-10 text-body font-body focus:ring-2 focus:ring-focus-ring focus:border-focus-ring focus:outline-none appearance-none bg-surface cursor-pointer">
+<option>Omar Haddad</option>
+<option>Sarah Jenkins</option>
+<option>Alex Chen</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] pointer-events-none">arrow_drop_down</span>
+</div>
+</div>
+<!-- Description -->
+<div class="flex flex-col gap-1.5">
+<label class="text-label font-label text-on-surface">Description (Internal notes)</label>
+<textarea class="border border-border rounded px-3 py-2 text-body font-body focus:ring-2 focus:ring-focus-ring focus:border-focus-ring focus:outline-none resize-none placeholder:text-on-surface-variant/50" placeholder="Add context, budget notes, or references..." rows="4"></textarea>
+</div>
+<!-- Cover Color -->
+<div class="flex flex-col gap-2 mt-2">
+<label class="text-label font-label text-on-surface">Cover Color Indicator</label>
+<div class="flex gap-3">
+<button class="w-8 h-8 rounded-full bg-[#B45309] border-2 border-surface ring-2 ring-[#B45309] shadow-sm" type="button"></button>
+<button class="w-8 h-8 rounded-full bg-[#15803D] hover:scale-110 transition-transform shadow-sm" type="button"></button>
+<button class="w-8 h-8 rounded-full bg-[#00659c] hover:scale-110 transition-transform shadow-sm" type="button"></button>
+<button class="w-8 h-8 rounded-full bg-[#4f46e5] hover:scale-110 transition-transform shadow-sm" type="button"></button>
+<button class="w-8 h-8 rounded-full bg-secondary hover:scale-110 transition-transform shadow-sm" type="button"></button>
+</div>
+</div>
+</form>
+</div>
+<!-- Drawer Footer -->
+<div class="p-6 border-t border-border bg-surface shrink-0 flex justify-end gap-3">
+<button class="h-10 px-4 bg-surface border border-border text-on-surface rounded font-button text-button hover:bg-surface-subtle transition-colors">Cancel</button>
+<button class="h-10 px-6 bg-primary text-on-primary rounded font-button text-button hover:bg-primary-hover transition-colors shadow-sm">Save campaign</button>
+</div>
+</aside>
+<script>
+        // Simple tab switching logic
+        function switchTab(tabId) {
+            // Update buttons
+            document.querySelectorAll('[id^="tab-"]').forEach(btn => {
+                btn.classList.remove('text-primary', 'border-primary');
+                btn.classList.add('text-on-surface-variant', 'border-transparent');
+            });
+            const activeBtn = document.getElementById('tab-' + tabId);
+            activeBtn.classList.remove('text-on-surface-variant', 'border-transparent');
+            activeBtn.classList.add('text-primary', 'border-primary');
+
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById('content-' + tabId).classList.add('active');
+        }
+    </script>
+</body></html>

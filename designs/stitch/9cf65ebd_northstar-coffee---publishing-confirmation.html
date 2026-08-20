@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee — Publishing Confirmation</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS & Config -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#e7eeff",
+                        "primary-container": "#4f46e5",
+                        "background": "#f9f9ff",
+                        "secondary-fixed": "#d9e2fc",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "on-tertiary-fixed": "#001d32",
+                        "info-subtle": "#F0F9FF",
+                        "text-muted": "#7B8495",
+                        "secondary": "#555e74",
+                        "surface-container-highest": "#dae3f8",
+                        "on-secondary-container": "#5a6278",
+                        "secondary-container": "#d7dff9",
+                        "outline-variant": "#c7c4d8",
+                        "on-primary-container": "#dad7ff",
+                        "primary-subtle": "#EEF2FF",
+                        "tertiary-fixed": "#cde5ff",
+                        "surface": "#FFFFFF",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "surface-container-low": "#f0f3ff",
+                        "primary-fixed": "#e2dfff",
+                        "on-error": "#ffffff",
+                        "inverse-on-surface": "#ecf0ff",
+                        "surface-bright": "#f9f9ff",
+                        "on-tertiary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "canvas": "#F7F7F5",
+                        "success": "#15803D",
+                        "surface-dim": "#d1daef",
+                        "success-subtle": "#ECFDF3",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "tertiary-container": "#00659c",
+                        "surface-container-high": "#dfe8fe",
+                        "primary-hover": "#4338CA",
+                        "on-secondary-fixed": "#121b2e",
+                        "focus-ring": "#6366F1",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#283141",
+                        "primary": "#3525cd",
+                        "on-error-container": "#93000a",
+                        "tertiary": "#004c77",
+                        "on-background": "#131c2b",
+                        "surface-variant": "#dae3f8",
+                        "danger": "#B91C1C",
+                        "on-surface-variant": "#464555",
+                        "on-primary-fixed": "#0f0069",
+                        "inverse-primary": "#c3c0ff",
+                        "on-tertiary-container": "#bfdfff",
+                        "on-primary": "#ffffff",
+                        "warning": "#B45309",
+                        "border": "#DDE1E6",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "surface-container-lowest": "#ffffff",
+                        "danger-subtle": "#FEF2F2",
+                        "surface-subtle": "#F1F3F5",
+                        "outline": "#777587",
+                        "warning-subtle": "#FFF7E6",
+                        "surface-tint": "#4d44e3",
+                        "on-surface": "#131c2b",
+                        "tertiary-fixed-dim": "#94ccff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "sidebar-expanded": "248px",
+                        "card-padding": "16px",
+                        "screen-padding": "24px",
+                        "topbar-height": "64px",
+                        "sidebar-collapsed": "72px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "page-title": ["Inter", "sans-serif"],
+                        "card-title": ["Inter", "sans-serif"],
+                        "button": ["Inter", "sans-serif"],
+                        "section-title": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "table-dense": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+    </style>
+</head>
+<body class="bg-canvas text-on-surface font-body antialiased min-h-screen">
+<!-- Main Content Canvas (No Nav Shell per Destination Rule) -->
+<main class="max-w-7xl mx-auto p-screen-padding pb-32">
+<!-- Contextual Header -->
+<div class="mb-8">
+<!-- Breadcrumb & Back -->
+<div class="flex items-center gap-4 mb-4 text-secondary">
+<a class="flex items-center gap-1 hover:text-primary transition-colors text-label font-label" href="#">
+<span class="material-symbols-outlined text-[16px]">arrow_back</span>
+                    Back to Content Detail
+                </a>
+<div class="h-4 w-px bg-border"></div>
+<nav class="font-label text-label flex items-center gap-2 text-text-muted">
+<span>Northstar Coffee</span>
+<span>/</span>
+<span>Planning</span>
+<span>/</span>
+<span class="text-on-surface">Autumn roast launch</span>
+</nav>
+</div>
+<!-- Page Title Area -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h1 class="font-page-title text-page-title text-on-surface mb-3 flex items-center gap-3">
+                        Autumn roast launch
+                        <span class="bg-surface-dim text-secondary px-2 py-1 rounded-full text-label font-label flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">view_carousel</span> Carousel
+                        </span>
+</h1>
+<div class="flex items-center gap-4 font-body text-body text-secondary">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-warning"></span>
+                            Ready to Publish
+                        </div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                            Scheduled: Sep 18, 2026, 10:00 AM
+                        </div>
+</div>
+</div>
+<!-- Avatars -->
+<div class="flex items-center gap-3">
+<div class="flex -space-x-2">
+<img class="w-8 h-8 rounded-full border-2 border-canvas object-cover z-30" data-alt="A small, professional headshot portrait of a man with dark hair and a neat beard, representing a business owner. Studio lighting, clean white background, high resolution, modern corporate style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyBezKx8zy9aD048W72CK93zmBqbvgyl15tp47oYDLsAFEAHipDBv6VgftgDBrLmKIUaFoIFJnxp21PDG1rgsgCS_SSD9TOEiiOelDwTXvkndP9earfOLGsYl-qw1ND57A37GczJhTwMSd5pDYCkpBCUDRtnE5aw4OHz3ayb0o0D9MuAW9DHJD7S__Egn6wph3xSzuu2MFeHVq3Xu2ZQ8wA4dZvVfi0adgTHo9T1RpGKnE8wgkXahjOPcrBqgZzaMDK1yupNwT_18" title="Omar Haddad (Owner)"/>
+<img class="w-8 h-8 rounded-full border-2 border-canvas object-cover z-20" data-alt="A small, professional headshot portrait of a woman with short stylish hair, representing a creative designer. Warm lighting, subtle grey background, high resolution, modern agency style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuU0aq9dPQQNO5wh-GWpVzuApOiEfql96dxQlhzLJboUM4qd8upSJ0ZOaCNK7T7JRUb4zu-RlbNCliCt9eE-2qQTEt2WG5ZcFuAWqxU5H4owQwO-ABkTf0raZAAPuwJvx_izmXpXaJBzTSWHjSWttAdOlb_AJkQ4_cK0-LCuMGXxa4q-FD1WBZRGiLnTDF5F95j4BCo2O4qNHzYI02nWBoxpr1Ov0vGhFbaAP5tNVyC3U2Fsc3smlWlTct2q6ezUHpX7jreOMcG1w" title="Elena Rossi (Designer)"/>
+<img class="w-8 h-8 rounded-full border-2 border-canvas object-cover z-10" data-alt="A small, professional headshot portrait of a woman with glasses looking focused, representing a reviewer or editor. Soft daylight, blurred office background, high resolution, modern professional style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdrYxF3hdPwA7Yxwgbga6weWjFquQSuuSwZuMLfZZRycj6B22paTx-wlfFD-v7We8V27XH-0qncnHgp5IW1w_FxnyJZ8AONFJ3VKR3AaH6chp6BLPb-_xt08Ge3n1a-q1lnn081tDbnlfJRTjUpvS5vbI2dpK2Me7xJDuI0EDMY7fEYbs0KNozeYQzSQ2Ca0ddOZ3d6jkohikh4lHRs9ZxJvoJ17xVlZNW8H1LmXHKgKP_j44LO1cMutENpEyIG3r7nlJbi2aVvKY" title="Sofia Reyes (Reviewer)"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Notice -->
+<div class="bg-info-subtle border border-tertiary/20 rounded-lg p-4 flex items-start gap-3 mb-8">
+<span class="material-symbols-outlined text-tertiary mt-0.5">info</span>
+<div>
+<p class="font-body text-body text-on-surface">StudioFlow records publication; it does not publish directly to social networks.</p>
+<p class="font-table-dense text-table-dense text-secondary mt-1">Please ensure you have manually published to the respective platforms before marking them as complete here.</p>
+</div>
+</div>
+<!-- Grid Layout -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+<!-- Main Content: Checklist Table (Left) -->
+<div class="xl:col-span-8">
+<div class="bg-surface border border-border rounded-lg overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left whitespace-nowrap">
+<thead class="bg-surface-subtle border-b border-border font-label text-label text-secondary">
+<tr>
+<th class="py-3 px-4 font-medium">Channel</th>
+<th class="py-3 px-4 font-medium">Scheduled Time</th>
+<th class="py-3 px-4 font-medium">Publishing State</th>
+<th class="py-3 px-4 font-medium">Published At</th>
+<th class="py-3 px-4 font-medium">Publisher</th>
+<th class="py-3 px-4 font-medium text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="font-table-dense text-table-dense text-on-surface divide-y divide-border">
+<!-- Row 1: Instagram -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<img class="w-5 h-5 rounded" data-alt="A minimalist, flat-design icon representing Instagram, using simple line art and subtle gradients, modern ui style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJqMAR8vJ1_hssouncJhqDIh7JjhoWuOj8crncc8Db5bqSDNuVfsBhmx96mp-FbuwjRZmbhkjuOdm82aNkX_JSHVbaMEvHh4y33Xtu5csHYyaA-72BFcelT0xLclD9PfnSoNN8f1H_QzdXPOj5gn370ysK9LnjSII64lbucgQ3ZsLjdQtOjBnvQkkQkpmmVYCk2SR9r3H8pFhH5dehgNg-r8RjCZqQzqT8ZKYaRwRGwD-YripCojoINP8inI88g9kgK9f7EUmnhYs"/>
+<div>
+<div class="font-medium">Instagram</div>
+<div class="text-secondary text-[11px]">@northstarcoffee</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4 text-secondary">10:00 AM</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-success-subtle text-success font-medium">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Published
+                                        </span>
+</td>
+<td class="py-3 px-4 text-secondary">Sep 18, 10:03 AM</td>
+<td class="py-3 px-4 text-secondary">Omar Haddad</td>
+<td class="py-3 px-4 text-right">
+<a class="text-primary hover:text-primary-hover font-medium" href="#">View URL</a>
+</td>
+</tr>
+<!-- Row 2: Facebook -->
+<tr class="hover:bg-surface-container-lowest transition-colors bg-surface-subtle/30">
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<img class="w-5 h-5 rounded" data-alt="A minimalist, flat-design icon representing Facebook, using simple blue and white shapes, modern ui style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWF850pM1q9ZTz_b53TSib-dkkDtJAyKF63Lw9sraYZ5JMfqab4olhCqQYWt5b4OWcleqFLe8xAmc1fY57zysJDH1gmDTaK14BngYFSsuRPtQ2m-d3-5UQ7_k2xlWNWjOQXDpkFsqwfPGy0GH099Dp_e6lSAtZsCeLP7bsz75_OXczUUSfsOme1WZQSgjGTq6wEHQjv9R7n0UiDOdhdtzUwfeakChN5rbhYG9WbTrj-T78gQcynHoBO8fGmnhQoZOuDFOKBOomsYE"/>
+<div>
+<div class="font-medium">Facebook</div>
+<div class="text-secondary text-[11px]">Northstar Coffee Page</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4 text-secondary">10:00 AM</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-variant text-on-surface-variant font-medium">
+<span class="material-symbols-outlined text-[14px]">schedule</span> Ready
+                                        </span>
+</td>
+<td class="py-3 px-4 text-text-muted italic">—</td>
+<td class="py-3 px-4 text-text-muted italic">—</td>
+<td class="py-3 px-4 text-right">
+<button class="bg-primary text-on-primary px-3 py-1.5 rounded font-button text-button hover:bg-primary-hover transition-colors shadow-sm">
+                                            Mark published
+                                        </button>
+</td>
+</tr>
+<!-- Row 3: LinkedIn -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="py-3 px-4">
+<div class="flex items-center gap-2 opacity-60">
+<img class="w-5 h-5 rounded" data-alt="A minimalist, flat-design icon representing LinkedIn, using simple blue and white shapes, modern ui style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuClomW_TdTi27kcCDdYccu-4sxucn7Fy3bpIAMzbc89blaA-_YFIIlyJ6Ykz4Np4bVWIvtXky5LEhik1jotaALjRFvV-WTM6AuVckpRrLxL9sH3i-A-DLKLiMSv53Pd0M8nBN3sd70o4BT8oOn-9puHWfpYEbes7aNG8O5Hp9hRmPj0b8lkzxy3XS0kKGnbKBJmuWprDBqm7la6GzA5oEEZ8r8gwXg83PR6qdPqK3AA6Q09N80OS1m_e-URdfUj90JoL6J7uQxyalY"/>
+<div>
+<div class="font-medium text-secondary">LinkedIn</div>
+<div class="text-text-muted text-[11px]">Northstar Corp</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4 text-text-muted opacity-60">10:00 AM</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-dim text-secondary font-medium">
+<span class="material-symbols-outlined text-[14px]">block</span> Skipped
+                                        </span>
+</td>
+<td class="py-3 px-4 text-text-muted italic" colspan="2">
+                                        Not suitable for this campaign
+                                    </td>
+<td class="py-3 px-4 text-right">
+<button class="text-secondary hover:text-on-surface font-medium opacity-0 group-hover:opacity-100 transition-opacity">Edit</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right Sidebar: Summary -->
+<div class="xl:col-span-4">
+<div class="bg-surface border border-border rounded-lg p-card-padding flex flex-col h-full sticky top-[24px]">
+<h2 class="font-card-title text-card-title mb-6">Publication Summary</h2>
+<!-- Progress & State -->
+<div class="mb-6">
+<div class="flex justify-between items-end mb-2">
+<span class="font-label text-label text-secondary uppercase tracking-wider">Progress</span>
+<span class="font-body text-body font-medium">2/3 Resolved</span>
+</div>
+<div class="w-full bg-surface-dim h-2 rounded-full overflow-hidden mb-4">
+<div class="bg-primary h-full rounded-full" style="width: 66%;"></div>
+</div>
+<div class="flex items-center justify-between py-3 border-y border-border">
+<span class="font-label text-label text-secondary">Overall State</span>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-warning-subtle text-warning font-label text-label">
+<span class="w-1.5 h-1.5 rounded-full bg-warning"></span>
+                                Partially Published
+                            </span>
+</div>
+</div>
+<!-- Policy Text -->
+<p class="font-table-dense text-table-dense text-text-muted mb-8 bg-canvas p-3 rounded border border-border/50">
+<span class="font-medium text-secondary">Policy:</span> Item becomes Published when every selected channel is Published or Skipped.
+                    </p>
+<!-- Primary Action -->
+<button class="w-full bg-surface-variant text-text-muted py-2.5 rounded-lg font-button text-button cursor-not-allowed opacity-70 mb-8 border border-border" disabled="">
+                        Complete Publication
+                    </button>
+<!-- Timeline -->
+<div class="mt-auto">
+<h3 class="font-label text-label text-secondary uppercase tracking-wider mb-4">Timeline</h3>
+<div class="relative pl-4 space-y-6">
+<div class="absolute left-[7px] top-2 bottom-2 w-px bg-border"></div>
+<!-- Timeline Item 1 -->
+<div class="relative">
+<div class="absolute -left-[20px] top-1 w-3 h-3 rounded-full bg-success ring-4 ring-surface"></div>
+<div class="font-body text-body text-on-surface">Instagram Published</div>
+<div class="font-table-dense text-table-dense text-text-muted mt-0.5">By Omar Haddad • Sep 18, 10:03 AM</div>
+</div>
+<!-- Timeline Item 2 -->
+<div class="relative">
+<div class="absolute -left-[20px] top-1 w-3 h-3 rounded-full bg-border ring-4 ring-surface"></div>
+<div class="font-body text-body text-on-surface">Content Approved</div>
+<div class="font-table-dense text-table-dense text-text-muted mt-0.5">By Sofia Reyes • Sep 17, 4:30 PM</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Modal Overlay (Simulating Open State for Facebook Action) -->
+<div class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
+<!-- Modal Dialog -->
+<div class="bg-surface rounded-xl shadow-lg border border-border w-full max-w-[480px] overflow-hidden flex flex-col">
+<!-- Header -->
+<div class="px-6 py-4 border-b border-border flex justify-between items-center bg-surface-subtle">
+<h2 class="font-section-title text-section-title text-on-surface">Mark Facebook as published</h2>
+<button class="text-secondary hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Form Body -->
+<div class="p-6 flex flex-col gap-5 bg-surface">
+<!-- URL Input -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label text-label text-on-surface flex items-center justify-between">
+                        Published URL
+                        <span class="text-error text-[10px] uppercase tracking-wider">Required</span>
+</label>
+<input class="w-full h-10 px-3 border border-border rounded font-body text-body focus:ring-2 focus:ring-focus-ring focus:ring-offset-1 focus:border-focus-ring outline-none transition-shadow placeholder:text-text-muted text-on-surface bg-surface" placeholder="https://facebook.com/..." type="url"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<!-- Date Input -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label text-label text-secondary">Published Date/Time</label>
+<input class="w-full h-10 px-3 border border-border rounded font-body text-body focus:ring-2 focus:ring-focus-ring outline-none text-on-surface bg-surface-subtle cursor-default" type="text" value="Sep 18, 2026 10:00 AM"/>
+</div>
+<!-- Publisher Input -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label text-label text-secondary">Publisher</label>
+<input class="w-full h-10 px-3 border border-border rounded font-body text-body focus:ring-2 focus:ring-focus-ring outline-none text-on-surface bg-surface-subtle cursor-default" type="text" value="Omar Haddad"/>
+</div>
+</div>
+<!-- Note Input -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label text-label text-secondary">Note (Optional)</label>
+<textarea class="w-full px-3 py-2 border border-border rounded font-body text-body focus:ring-2 focus:ring-focus-ring focus:ring-offset-1 focus:border-focus-ring outline-none transition-shadow placeholder:text-text-muted resize-none text-on-surface bg-surface" placeholder="Add any final details..." rows="2"></textarea>
+</div>
+<!-- Checkbox -->
+<label class="flex items-start gap-3 mt-2 cursor-pointer group">
+<div class="relative flex items-center justify-center">
+<input class="peer appearance-none w-5 h-5 border border-border rounded bg-surface checked:bg-primary checked:border-primary focus:ring-2 focus:ring-focus-ring focus:ring-offset-1 transition-all" type="checkbox"/>
+<span class="material-symbols-outlined text-on-primary text-[16px] absolute opacity-0 peer-checked:opacity-100 pointer-events-none">check</span>
+</div>
+<span class="font-body text-body text-on-surface pt-0.5 group-hover:text-primary transition-colors">I verified the live post</span>
+</label>
+</div>
+<!-- Footer Actions -->
+<div class="px-6 py-4 border-t border-border bg-surface-subtle flex justify-end gap-3">
+<button class="px-4 py-2 rounded font-button text-button text-secondary hover:bg-surface-variant hover:text-on-surface transition-colors">
+                    Cancel
+                </button>
+<button class="px-4 py-2 rounded font-button text-button bg-primary text-on-primary hover:bg-primary-hover shadow-sm transition-colors">
+                    Confirm published
+                </button>
+</div>
+</div>
+</div>
+</body></html>

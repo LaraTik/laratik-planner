@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>StudioFlow — AI Assistance Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 20px; /* Default size, override with utility classes if needed */
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#93000a",
+                        "surface-container-low": "#f0f3ff",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "tertiary-fixed": "#cde5ff",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "surface-dim": "#d1daef",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "secondary": "#555e74",
+                        "on-primary-fixed": "#0f0069",
+                        "on-background": "#131c2b",
+                        "primary-subtle": "#EEF2FF",
+                        "focus-ring": "#6366F1",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "tertiary-container": "#00659c",
+                        "warning": "#B45309",
+                        "secondary-fixed": "#d9e2fc",
+                        "danger": "#B91C1C",
+                        "on-primary-container": "#dad7ff",
+                        "surface-tint": "#4d44e3",
+                        "text-muted": "#7B8495",
+                        "error-container": "#ffdad6",
+                        "primary-container": "#4f46e5",
+                        "surface": "#FFFFFF",
+                        "on-secondary-fixed": "#121b2e",
+                        "surface-container": "#e7eeff",
+                        "primary-hover": "#4338CA",
+                        "warning-subtle": "#FFF7E6",
+                        "primary-fixed": "#e2dfff",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "on-tertiary": "#ffffff",
+                        "success-subtle": "#ECFDF3",
+                        "surface-variant": "#dae3f8",
+                        "surface-container-highest": "#dae3f8",
+                        "danger-subtle": "#FEF2F2",
+                        "inverse-on-surface": "#ecf0ff",
+                        "canvas": "#F7F7F5",
+                        "inverse-surface": "#283141",
+                        "surface-subtle": "#F1F3F5",
+                        "on-error": "#ffffff",
+                        "on-tertiary-container": "#bfdfff",
+                        "on-primary": "#ffffff",
+                        "background": "#f9f9ff",
+                        "tertiary": "#004c77",
+                        "success": "#15803D",
+                        "info-subtle": "#F0F9FF",
+                        "on-surface": "#131c2b",
+                        "surface-container-high": "#dfe8fe",
+                        "outline-variant": "#c7c4d8",
+                        "on-secondary-container": "#5a6278",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "border": "#DDE1E6",
+                        "surface-bright": "#f9f9ff",
+                        "outline": "#777587",
+                        "inverse-primary": "#c3c0ff",
+                        "on-tertiary-fixed": "#001d32",
+                        "primary": "#3525cd",
+                        "on-surface-variant": "#464555",
+                        "secondary-container": "#d7dff9"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sidebar-collapsed": "72px",
+                        "topbar-height": "64px",
+                        "screen-padding": "24px",
+                        "card-padding": "16px",
+                        "sidebar-expanded": "248px",
+                        "gutter": "16px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "label": ["Inter", "sans-serif"],
+                        "card-title": ["Inter", "sans-serif"],
+                        "table-dense": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "section-title": ["Inter", "sans-serif"],
+                        "page-title": ["Inter", "sans-serif"],
+                        "button": ["Inter", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-canvas text-on-surface font-body antialiased min-h-screen flex">
+<!-- SideNavBar (Shared Component) -->
+<nav class="bg-surface border-r border-border fixed left-0 top-0 h-screen w-sidebar-expanded flex flex-col p-gutter z-40 transition-all duration-200 ease-in-out">
+<!-- Header -->
+<div class="flex items-center gap-3 mb-8 px-2">
+<div class="w-10 h-10 rounded-lg overflow-hidden border border-border flex-shrink-0 bg-surface-subtle flex items-center justify-center">
+<img alt="Agency Logo" class="w-full h-full object-cover" data-alt="A minimalist, modern corporate logo featuring a sleek geometric monogram design in deep indigo and subtle silver tones, placed against a clean white background, conveying trust and professionalism." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUljHm1l5aOqt3bCpL2j2R6H88WHVrA23tfem3EAkT2HgQrCmbM2GgM6f-_x4ycrhYpvWPih10KarGvHGe79Upr5e6IwRCKqJIbsCWtYhL2UkCsap4yIOKJPtW8yw9AGfAbWamQFuVWmXxcMwzGSGyhXffCBK_sPN3gRzx-TH9UiPXWhVSzLPluE1ufA_nfmhK4OlvcHHBwmjr_37zT28r3KYqostThQGIhWV9Mc8cbgaT9TvAXAAedlfLbMDma5vhEeH36dfcvks"/>
+</div>
+<div>
+<h1 class="font-section-title text-section-title text-primary leading-tight">Agency Workspace</h1>
+<p class="font-label text-label text-text-muted">Admin Console</p>
+</div>
+</div>
+<!-- Main Tabs -->
+<div class="flex flex-col gap-1 flex-1">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-label hover:text-primary hover:bg-surface-subtle transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="assignment_turned_in">assignment_turned_in</span>
+<span>My Work</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-label hover:text-primary hover:bg-surface-subtle transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+<span>Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-label hover:text-primary hover:bg-surface-subtle transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="business_center">business_center</span>
+<span>Workspaces</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-label hover:text-primary hover:bg-surface-subtle transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="group">group</span>
+<span>User Management</span>
+</a>
+<!-- Active Tab -->
+<a class="flex items-center gap-3 px-3 py-2 text-primary font-button bg-primary-subtle rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings" data-weight="fill" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span>Agency Settings</span>
+</a>
+</div>
+<!-- CTA -->
+<div class="mt-4 mb-6">
+<button class="w-full h-[40px] bg-primary-container text-on-primary font-button rounded-lg flex items-center justify-center gap-2 hover:bg-primary-hover transition-colors">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Project
+            </button>
+</div>
+<!-- Footer Tabs -->
+<div class="flex flex-col gap-1 border-t border-border pt-4">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-label hover:text-primary hover:bg-surface-subtle transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="help">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-label hover:text-primary hover:bg-surface-subtle transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="description">description</span>
+<span>Documentation</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="ml-sidebar-expanded flex-1 flex flex-col min-h-screen">
+<!-- TopNavBar (Shared Component) -->
+<header class="bg-surface border-b border-border docked full-width top-0 h-topbar-height flex justify-between items-center px-screen-padding w-full sticky z-50 transition-all duration-200">
+<!-- Left: Search -->
+<div class="flex items-center flex-1">
+<div class="relative w-full max-w-md group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px] group-focus-within:text-focus-ring transition-colors">search</span>
+<input class="w-full h-[36px] bg-canvas border border-border rounded-lg pl-10 pr-4 font-body text-body text-on-surface focus:border-focus-ring focus:ring-1 focus:ring-focus-ring focus:outline-none transition-shadow placeholder:text-text-muted" placeholder="Search workspaces, projects..." type="text"/>
+</div>
+</div>
+<!-- Brand (Center-ish, but usually handled by sidebar. JSON mandates Brand Logo style here if needed, but we rely on SideNav for primary identity in this layout pattern. Will include discrete wordmark as per JSON 'AgencyOS'.) -->
+<div class="hidden lg:flex items-center justify-center mx-4">
+<span class="font-page-title text-page-title text-primary opacity-50 text-sm tracking-wider uppercase">AgencyOS</span>
+</div>
+<!-- Right: Actions & Profile -->
+<div class="flex items-center gap-4 flex-1 justify-end">
+<button class="h-[36px] px-4 bg-surface border border-border text-on-surface font-button rounded-lg hover:bg-surface-subtle transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Add workspace
+                </button>
+<div class="flex items-center gap-1 border-l border-border pl-4">
+<button aria-label="Notifications" class="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined text-[22px]" data-icon="notifications">notifications</span>
+</button>
+<button aria-label="Settings" class="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined text-[22px]" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-border ml-2 cursor-pointer hover:ring-2 ring-primary-container ring-offset-2 transition-all">
+<img alt="Aisha Rahman" class="w-full h-full object-cover" data-alt="A professional headshot of a young woman of South Asian descent, smiling subtly, wearing modern business casual attire in a well-lit office environment. The lighting is soft and natural, suggesting a modern, approachable corporate identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPpsXYib_bpa29Yl6f1yS09ENFi_eB8SXvKkHDovPx_66uZVTfQYzFqs230c67VDYW2JZN1mEhK7l-7grcT-ycB9UOjFOoJSP8Ss8wYpqu9giGvYMZENqZFyPcSlImCUwdPU_CuN1_SNS9DKVVWB5PoYBvwtLiRwr94aqSqiFZMsFuaRqJCkt1Iw0C1qhuQ7Wau5utobdwt_JGWJa08MnNlEPm93_RPItA6-_QWUHOk_n9aCpyp1dCui3k_cnLE7dylnADbXAZHjg"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Page Canvas -->
+<main class="flex-1 p-screen-padding max-w-7xl mx-auto w-full">
+<div class="flex flex-col md:flex-row gap-8 items-start">
+<!-- Secondary Vertical Navigation -->
+<aside class="w-full md:w-56 flex-shrink-0 sticky top-[calc(64px+24px)]">
+<nav class="flex flex-col gap-1">
+<a class="px-3 py-2 rounded-lg font-body text-body text-on-surface-variant hover:bg-surface-subtle hover:text-on-surface transition-colors" href="#">General</a>
+<a class="px-3 py-2 rounded-lg font-body text-body text-on-surface-variant hover:bg-surface-subtle hover:text-on-surface transition-colors" href="#">Notifications</a>
+<!-- Active Secondary Item -->
+<a class="px-3 py-2 rounded-lg font-body text-body bg-surface text-primary border border-border shadow-sm flex items-center justify-between" href="#">
+<span class="font-semibold">AI assistance</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</a>
+<a class="px-3 py-2 rounded-lg font-body text-body text-on-surface-variant hover:bg-surface-subtle hover:text-on-surface transition-colors" href="#">Security</a>
+<a class="px-3 py-2 rounded-lg font-body text-body text-on-surface-variant hover:bg-surface-subtle hover:text-on-surface transition-colors" href="#">Audit log</a>
+</nav>
+</aside>
+<!-- Main Settings Content -->
+<div class="flex-1 w-full flex flex-col gap-6">
+<!-- 1. Header -->
+<div class="mb-2 border-b border-border pb-6">
+<h2 class="font-page-title text-page-title text-on-surface mb-1">AI Assistance</h2>
+<p class="font-body text-body text-text-muted">Manage agency-wide AI integration and security protocols.</p>
+</div>
+<!-- 2. Connection Status Card & 3. Model Configuration (Bento Grid Layout) -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+<!-- Connection Status -->
+<div class="bg-surface border border-border rounded-xl p-card-padding flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-inverse-on-surface flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[24px]">memory</span>
+</div>
+<div>
+<h3 class="font-card-title text-card-title text-on-surface">MiniMax</h3>
+<p class="font-label text-label text-text-muted">Primary Inference Provider</p>
+</div>
+</div>
+<div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-success-subtle border border-success/20">
+<span class="material-symbols-outlined text-[14px] text-success" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-label text-label text-success">Connected</span>
+</div>
+</div>
+<div class="bg-canvas border border-border rounded-lg p-3 flex items-center justify-between mt-4">
+<div class="flex flex-col">
+<span class="font-label text-label text-text-muted mb-0.5">API Key Authentication</span>
+<div class="flex items-center gap-2">
+<span class="font-table-dense text-table-dense text-on-surface tracking-widest">••••••••••••••••</span>
+</div>
+</div>
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant">
+<span class="material-symbols-outlined text-[12px]">lock</span>
+<span class="text-[11px] font-medium uppercase tracking-wide">Server-side only</span>
+</div>
+</div>
+</div>
+<div class="mt-5 flex justify-end">
+<button class="h-[36px] px-4 bg-surface border border-border text-on-surface font-button rounded-lg hover:bg-surface-subtle transition-colors flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">sync</span>
+                                    Test connection
+                                </button>
+</div>
+</div>
+<!-- Model Configuration -->
+<div class="bg-surface border border-border rounded-xl p-card-padding flex flex-col justify-between">
+<div>
+<h3 class="font-card-title text-card-title text-on-surface mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-outline">tune</span>
+                                    Model Configuration
+                                </h3>
+<div class="flex flex-col gap-1.5 mb-5">
+<label class="font-label text-label text-on-surface">Active Model</label>
+<div class="relative">
+<select class="w-full h-[40px] appearance-none bg-surface border border-border rounded-lg pl-3 pr-10 font-body text-body text-on-surface focus:border-focus-ring focus:ring-1 focus:ring-focus-ring focus:outline-none cursor-pointer">
+<option selected="" value="minimax-m2.7">MiniMax-M2.7 (High Intelligence)</option>
+<option value="minimax-m2.0">MiniMax-M2.0 (Fast)</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+<div class="bg-canvas border border-border rounded-lg p-4">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label text-label text-on-surface">Usage Summary</span>
+<span class="font-label text-label text-text-muted">Billing Cycle</span>
+</div>
+<div class="flex items-end gap-2 mb-2">
+<span class="font-section-title text-section-title text-on-surface leading-none">12.4k</span>
+<span class="font-body text-body text-text-muted leading-none pb-0.5">/ 50k tokens</span>
+</div>
+<div class="w-full h-2 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full" style="width: 24.8%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- 4. Feature Toggles -->
+<div class="bg-surface border border-border rounded-xl flex flex-col overflow-hidden">
+<div class="p-4 border-b border-border bg-surface-bright">
+<h3 class="font-card-title text-card-title text-on-surface">Capabilities</h3>
+</div>
+<!-- Toggle Row 1 -->
+<div class="p-4 flex items-start justify-between gap-6 border-b border-border hover:bg-canvas transition-colors">
+<div class="flex flex-col gap-1">
+<span class="font-body text-body font-medium text-on-surface">Context-aware suggestions</span>
+<span class="font-label text-label text-text-muted">Allow AI to preview visible canvas content to provide relevant design assistance.</span>
+</div>
+<!-- Custom Toggle Switch (ON) -->
+<button aria-checked="true" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-primary-container transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2" role="switch">
+<span aria-hidden="true" class="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+</button>
+</div>
+<!-- Toggle Row 2 -->
+<div class="p-4 flex items-start justify-between gap-6 hover:bg-canvas transition-colors">
+<div class="flex flex-col gap-1">
+<span class="font-body text-body font-medium text-on-surface">AI activity log</span>
+<span class="font-label text-label text-text-muted">Maintain a transparent history of all AI-generated suggestions and edits for audit compliance.</span>
+</div>
+<!-- Custom Toggle Switch (ON) -->
+<button aria-checked="true" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-primary-container transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2" role="switch">
+<span aria-hidden="true" class="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+</button>
+</div>
+</div>
+<!-- 5. Workspace Availability & 6. Data Privacy (Grid Layout) -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+<!-- Workspace Availability -->
+<div class="bg-surface border border-border rounded-xl p-card-padding">
+<h3 class="font-card-title text-card-title text-on-surface mb-1">Availability</h3>
+<p class="font-label text-label text-text-muted mb-4">Select which workspaces can access AI tools.</p>
+<div class="flex flex-col gap-2 border border-border rounded-lg bg-canvas p-1 max-h-[220px] overflow-y-auto">
+<label class="flex items-center gap-3 p-2 rounded-md hover:bg-surface cursor-pointer transition-colors">
+<input checked="" class="w-4 h-4 text-primary-container bg-surface border-border rounded focus:ring-focus-ring" type="checkbox"/>
+<span class="font-table-dense text-table-dense text-on-surface">Northstar Coffee Branding</span>
+</label>
+<label class="flex items-center gap-3 p-2 rounded-md hover:bg-surface cursor-pointer transition-colors">
+<input checked="" class="w-4 h-4 text-primary-container bg-surface border-border rounded focus:ring-focus-ring" type="checkbox"/>
+<span class="font-table-dense text-table-dense text-on-surface">Luna Botanics E-commerce</span>
+</label>
+<label class="flex items-center gap-3 p-2 rounded-md hover:bg-surface cursor-pointer transition-colors">
+<input class="w-4 h-4 text-primary-container bg-surface border-border rounded focus:ring-focus-ring" type="checkbox"/>
+<span class="font-table-dense text-table-dense text-on-surface">FinTech Dashboard 2.0</span>
+</label>
+<label class="flex items-center gap-3 p-2 rounded-md hover:bg-surface cursor-pointer transition-colors">
+<input checked="" class="w-4 h-4 text-primary-container bg-surface border-border rounded focus:ring-focus-ring" type="checkbox"/>
+<span class="font-table-dense text-table-dense text-on-surface">Agency Internal Assets</span>
+</label>
+</div>
+</div>
+<!-- Data Privacy & Governance -->
+<div class="bg-surface border border-border rounded-xl p-card-padding flex flex-col">
+<h3 class="font-card-title text-card-title text-on-surface mb-4">Data Governance</h3>
+<!-- Human Trigger Note -->
+<div class="bg-info-subtle border border-tertiary-fixed rounded-lg p-3 flex items-start gap-3 mb-4">
+<span class="material-symbols-outlined text-[20px] text-tertiary-container mt-0.5">policy</span>
+<div>
+<span class="font-body text-body font-medium text-tertiary block mb-0.5">Human-triggered only</span>
+<span class="font-label text-label text-tertiary/80">All AI actions require explicit user invocation and confirmation. Autonomous operations are disabled at the agency level.</span>
+</div>
+</div>
+<div class="flex flex-col sm:flex-row gap-4 mt-auto">
+<div class="flex-1">
+<span class="font-label text-label text-text-muted uppercase tracking-wider mb-2 block">Allowed Data</span>
+<ul class="flex flex-col gap-1.5">
+<li class="flex items-center gap-2 font-table-dense text-table-dense text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-success">check</span> Layer names &amp; hierarchy
+                                        </li>
+<li class="flex items-center gap-2 font-table-dense text-table-dense text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-success">check</span> Color palettes &amp; typography
+                                        </li>
+<li class="flex items-center gap-2 font-table-dense text-table-dense text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-success">check</span> Public text content
+                                        </li>
+</ul>
+</div>
+<div class="w-px bg-border hidden sm:block"></div>
+<div class="flex-1">
+<span class="font-label text-label text-text-muted uppercase tracking-wider mb-2 block">Excluded by Default</span>
+<ul class="flex flex-col gap-1.5">
+<li class="flex items-center gap-2 font-table-dense text-table-dense text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-outline">close</span> User PII data
+                                        </li>
+<li class="flex items-center gap-2 font-table-dense text-table-dense text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-outline">close</span> Billing information
+                                        </li>
+<li class="flex items-center gap-2 font-table-dense text-table-dense text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-outline">close</span> Private team notes
+                                        </li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<!-- 7. States / Variants (Dev Reference Area) -->
+<div class="mt-8 pt-6 border-t border-dashed border-outline-variant">
+<h4 class="font-label text-label text-text-muted uppercase tracking-wider mb-4">Component States (Reference)</h4>
+<div class="flex flex-col md:flex-row gap-4">
+<!-- Disabled State Block -->
+<div class="flex-1 bg-surface border border-border rounded-lg p-4 opacity-60 pointer-events-none">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-outline">block</span>
+<span class="font-body text-body font-medium text-on-surface">AI Features Disabled</span>
+</div>
+<!-- Toggle Switch (OFF/Disabled) -->
+<div class="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent bg-surface-variant">
+<span class="translate-x-0 inline-block h-5 w-5 transform rounded-full bg-white shadow"></span>
+</div>
+</div>
+<p class="font-label text-label text-text-muted">Global switch is currently off. Contact your enterprise admin to enable AI features.</p>
+</div>
+<!-- Error State Block -->
+<div class="flex-1 bg-danger-subtle border border-error-container rounded-lg p-4 flex gap-3">
+<span class="material-symbols-outlined text-[20px] text-danger mt-0.5">warning</span>
+<div>
+<span class="font-body text-body font-medium text-danger block mb-0.5">Connection Error</span>
+<span class="font-label text-label text-danger/80">Could not reach MiniMax servers. Verify your network or provider status.</span>
+<button class="mt-2 text-danger font-button text-[13px] underline hover:no-underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">refresh</span> Retry connection
+                                    </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

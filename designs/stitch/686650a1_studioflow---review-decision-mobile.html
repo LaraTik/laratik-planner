@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>StudioFlow — Review Decision Mobile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "success": "#15803D",
+                        "secondary-fixed": "#d9e2fc",
+                        "on-primary-container": "#dad7ff",
+                        "surface-subtle": "#F1F3F5",
+                        "outline": "#777587",
+                        "surface-container-highest": "#dae3f8",
+                        "surface-container": "#e7eeff",
+                        "inverse-on-surface": "#ecf0ff",
+                        "on-surface": "#131c2b",
+                        "on-background": "#131c2b",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "secondary-container": "#d7dff9",
+                        "warning": "#B45309",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#c3c0ff",
+                        "primary-subtle": "#EEF2FF",
+                        "primary": "#3525cd",
+                        "primary-fixed": "#e2dfff",
+                        "outline-variant": "#c7c4d8",
+                        "tertiary-container": "#00659c",
+                        "on-error": "#ffffff",
+                        "secondary": "#555e74",
+                        "focus-ring": "#6366F1",
+                        "warning-subtle": "#FFF7E6",
+                        "surface": "#FFFFFF",
+                        "tertiary": "#004c77",
+                        "on-primary-fixed": "#0f0069",
+                        "on-secondary": "#ffffff",
+                        "border": "#DDE1E6",
+                        "surface-tint": "#4d44e3",
+                        "surface-container-high": "#dfe8fe",
+                        "danger-subtle": "#FEF2F2",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "tertiary-fixed": "#cde5ff",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "on-tertiary-fixed": "#001d32",
+                        "on-tertiary-container": "#bfdfff",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "inverse-surface": "#283141",
+                        "success-subtle": "#ECFDF3",
+                        "on-surface-variant": "#464555",
+                        "surface-dim": "#d1daef",
+                        "canvas": "#F7F7F5",
+                        "danger": "#B91C1C",
+                        "on-secondary-container": "#5a6278",
+                        "on-error-container": "#93000a",
+                        "info-subtle": "#F0F9FF",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "primary-container": "#4f46e5",
+                        "surface-bright": "#f9f9ff",
+                        "background": "#f9f9ff",
+                        "surface-variant": "#dae3f8",
+                        "surface-container-low": "#f0f3ff",
+                        "primary-hover": "#4338CA",
+                        "text-muted": "#7B8495",
+                        "on-secondary-fixed": "#121b2e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "topbar-height": "64px",
+                        "gutter": "16px",
+                        "screen-padding": "24px",
+                        "sidebar-expanded": "248px",
+                        "card-padding": "16px",
+                        "base": "4px",
+                        "sidebar-collapsed": "72px"
+                    },
+                    "fontFamily": {
+                        "page-title": ["Inter"],
+                        "label": ["Inter"],
+                        "table-dense": ["Inter"],
+                        "button": ["Inter"],
+                        "section-title": ["Inter"],
+                        "card-title": ["Inter"],
+                        "body": ["Inter"]
+                    },
+                    "fontSize": {
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .touch-target { min-height: 44px; min-width: 44px; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-canvas text-on-surface h-screen w-full flex justify-center items-start overflow-hidden">
+<!-- Mobile Device Container for Preview (390px width limit) -->
+<div class="relative w-full max-w-[390px] h-full bg-canvas shadow-xl flex flex-col overflow-hidden border-x border-border">
+<!-- TopAppBar (from JSON) -->
+<header class="fixed top-0 left-0 w-full h-topbar-height flex items-center px-gutter z-50 bg-surface dark:bg-on-surface border-b border-border dark:border-outline-variant max-w-[390px] absolute">
+<button aria-label="Go Back" class="touch-target flex items-center justify-center text-primary dark:text-primary-fixed hover:bg-surface-subtle dark:hover:bg-secondary-container transition-colors active:scale-95 duration-150 rounded-full">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<div class="flex-1 flex justify-center">
+<span class="font-page-title text-page-title font-semibold text-on-surface dark:text-surface text-lg">Northstar Coffee</span>
+</div>
+<button aria-label="More Options" class="touch-target flex items-center justify-center text-primary dark:text-primary-fixed hover:bg-surface-subtle dark:hover:bg-secondary-container transition-colors active:scale-95 duration-150 rounded-full">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</header>
+<!-- Main Scrollable Content -->
+<main class="flex-1 overflow-y-auto pt-[64px] pb-[80px] bg-canvas">
+<!-- Media Preview -->
+<section class="bg-surface border-b border-border mb-2">
+<div class="relative w-full aspect-square bg-surface-subtle overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional, high-resolution product photography shot of a sleek, modern coffee bag featuring 'Autumn Roast' branding. The bag is placed on a clean, light-colored wooden table with scattered autumn leaves and soft, warm morning sunlight casting gentle shadows. The aesthetic is clean, modern, and inviting, suitable for a premium coffee brand's social media carousel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGhqCCUC8d4JH6vXFFdtSvEJe_0E7K1yoo50dLWWl7K69Tmt78WwjtO58yxvkYGG6so-T1AHDE1NsXIYcFvEarz2rPPCREL7Fe0QNNi5K9oUj_Ah88v5dPSPABcWz_Z6BLXgMnkvnhUwknEUvatQxESuuyI0p9UzEhbSFEvoeFZsF7zewEGWYWqabaSoMAM3qXmHm9aedqgK8GrdxY1s_0d6PjqPHea6NJOpKWMcivzpytQe0lI_oiQGmW1fkh6f8eLwvLE703N54"/>
+<div class="absolute top-2 right-2 bg-on-surface/70 text-on-primary px-2 py-1 rounded font-label text-label backdrop-blur-sm">
+                        1 of 5
+                    </div>
+</div>
+<!-- Thumbnail Strip -->
+<div class="flex gap-2 p-3 overflow-x-auto snap-x">
+<div class="w-16 h-16 shrink-0 snap-center rounded border-2 border-primary overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Thumbnail showing a close-up of coffee beans spilling out of the Autumn Roast bag. Warm lighting, sharp focus on the beans, soft blurred background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyTB89Dd2XDuRF9EOY_WFQXdaGv8u8VSyi8t_Gs7QqpVseTdYCZPnwH4vJXz-PBR6wxLsSSL9liIIxPhYcr0kExxHBeKK0viRQM1m4aNGNtYVVlJ3X6TAfAF4zuQKIhnQNXoEy5uzaqH4dK_-jw93R3FFUP2xfRoC1yu7wkX53viYlVmfixhmEB-CVTZ46T8Lw8Rw7KVJxhNcYSoeELn_5wDIs6VKHYhlyKAWdNleTlAh0TI3ciKrc-T_wI6FN9kryfcRMOGPbWGU"/>
+</div>
+<div class="w-16 h-16 shrink-0 snap-center rounded border border-border opacity-60 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Thumbnail showing a steaming cup of coffee next to the Autumn Roast bag. Minimalist setup, morning light, cozy atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-7dS9UeCmP3bm9-56UdVa_Yvi2XqWZKGLj42ORqxRcuFkwBGydNtbfQde0b_GTU49TyNk4Vd6IMF4wqd-WdZoDxVZlETfTCUL-1KHGgu4hd1oq7p00lRQ4TXzdRnTQ5R-MOJ5tZRfrNjoHteVZQ1_HOj9qz3mYE4jQMIzCQxXco-mYYZZdLxl2q-VakuABcPDcJnQsul0ZhUBmWuoD3g_NI3Ln1NfzL4t6VeKqaxXUW1DYoByEl6QQ4uej_-J2ijw8CGMiqPFe1g"/>
+</div>
+<div class="w-16 h-16 shrink-0 snap-center rounded border border-border opacity-60 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Thumbnail showing hands pouring coffee from a sleek kettle into a ceramic mug. Clean, modern kitchen setting, warm tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhVsbDuO_qgFx8JjKHQXE5RYtByO5_wNV6uWcVJqGKGRh1PTTtjfiC5QlmSaWTC_8UOQt4wTW4gHUkH2XNIkGPCDwQnYlSYmuSIZ1LPW4_HQhSkJBzcyPR-JfwxFy2NfpRnFdlw4rGFVZm9UAKJMkSJvURZ2UjNufsP7uEbJNRtlLWlCwAdUgRfRxhDEymiod_FI6hMg-qgc8aRjJoFOLnWFibvijyPkX_qwFmnsNFCH1eNTnHrv2vY-rsARemugPaDhd3MEp6U2M"/>
+</div>
+</div>
+</section>
+<!-- Content Info -->
+<section class="bg-surface p-card-padding mb-2 border-y border-border">
+<div class="flex items-center gap-2 mb-1">
+<span class="bg-primary-subtle text-primary px-2 py-0.5 rounded font-label text-label">Version 3</span>
+<span class="text-text-muted font-label text-label uppercase tracking-wider">Creative Review</span>
+</div>
+<h1 class="font-section-title text-section-title text-on-surface mb-2">Autumn roast launch</h1>
+<div class="grid grid-cols-2 gap-4 mt-4 font-body text-body text-on-surface-variant">
+<div>
+<span class="block text-text-muted font-label text-label mb-1">Format</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-base">view_carousel</span> Carousel
+                        </div>
+</div>
+<div>
+<span class="block text-text-muted font-label text-label mb-1">Channels</span>
+<div class="flex gap-2">
+<span class="material-symbols-outlined text-base">photo_camera</span> <!-- IG -->
+<span class="material-symbols-outlined text-base">thumb_up</span> <!-- FB -->
+<span class="material-symbols-outlined text-base">work</span> <!-- LI -->
+</div>
+</div>
+<div>
+<span class="block text-text-muted font-label text-label mb-1">Scheduled</span>
+<span>Sep 18, 2026 10:00 AM</span>
+</div>
+<div>
+<span class="block text-text-muted font-label text-label mb-1">Due Date</span>
+<span class="text-danger">Sep 14</span>
+</div>
+<div class="col-span-2">
+<span class="block text-text-muted font-label text-label mb-1">Submitted by</span>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center font-label text-[10px]">MC</div>
+<span>Maya Chen</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Overlay: Request Changes Bottom Sheet -->
+<div class="absolute inset-0 bg-on-surface/50 z-[100] flex flex-col justify-end">
+<!-- Sheet Content -->
+<div class="bg-surface w-full rounded-t-xl shadow-lg flex flex-col max-h-[90%] transform transition-transform translate-y-0">
+<!-- Drag Handle -->
+<div class="w-full flex justify-center py-3">
+<div class="w-12 h-1.5 bg-border rounded-full"></div>
+</div>
+<div class="px-screen-padding pb-6 overflow-y-auto">
+<h2 class="font-section-title text-section-title text-on-surface mb-6">Request creative changes</h2>
+<form class="space-y-4">
+<div>
+<label class="block font-label text-label text-on-surface-variant mb-1">Category</label>
+<div class="relative">
+<select class="w-full h-10 border border-border rounded px-3 appearance-none bg-surface text-on-surface font-body text-body focus:ring-2 focus:ring-focus-ring focus:border-transparent">
+<option>Creative feedback</option>
+<option>Copy / Messaging</option>
+<option>Compliance / Legal</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<div>
+<label class="block font-label text-label text-on-surface-variant mb-1">Required Comment</label>
+<textarea class="w-full border border-border rounded p-3 bg-surface text-on-surface font-body text-body focus:ring-2 focus:ring-focus-ring focus:border-transparent min-h-[100px] resize-none" placeholder="Add your feedback here..."></textarea>
+</div>
+<button class="flex items-center gap-2 text-primary font-button text-button hover:text-primary-hover py-2" type="button">
+<span class="material-symbols-outlined text-sm">attach_file</span>
+                            + Add file
+                        </button>
+<div class="flex items-start gap-3 py-2">
+<input checked="" class="mt-1 w-4 h-4 text-primary border-border rounded focus:ring-focus-ring" id="block-progress" type="checkbox"/>
+<label class="font-body text-body text-on-surface" for="block-progress">Block progress until resolved</label>
+</div>
+<div class="bg-warning-subtle p-3 rounded flex items-start gap-3 mt-4">
+<span class="material-symbols-outlined text-warning text-lg shrink-0 mt-0.5">info</span>
+<p class="font-body text-[13px] leading-tight text-on-surface-variant">Material edits after approval will reset this gate and require re-approval.</p>
+</div>
+<div class="flex gap-3 pt-4 mt-2 border-t border-border">
+<button class="flex-1 h-10 border border-border rounded font-button text-button text-on-surface hover:bg-surface-subtle transition-colors" type="button">Cancel</button>
+<button class="flex-1 h-10 bg-primary text-on-primary rounded font-button text-button hover:bg-primary-hover transition-colors" type="button">Submit changes</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+</body></html>

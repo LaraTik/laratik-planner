@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>StudioFlow — Notifications Mobile Final</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                            "on-primary-fixed-variant": "#3323cc",
+                            "danger-subtle": "#FEF2F2",
+                            "error-container": "#ffdad6",
+                            "inverse-primary": "#c3c0ff",
+                            "on-primary-container": "#dad7ff",
+                            "background": "#f9f9ff",
+                            "inverse-on-surface": "#ecf0ff",
+                            "secondary-fixed": "#d9e2fc",
+                            "warning": "#B45309",
+                            "surface-container-high": "#dfe8fe",
+                            "surface-container-lowest": "#ffffff",
+                            "surface": "#FFFFFF",
+                            "success": "#15803D",
+                            "surface-variant": "#dae3f8",
+                            "primary-fixed": "#e2dfff",
+                            "focus-ring": "#6366F1",
+                            "on-secondary-container": "#5a6278",
+                            "primary-hover": "#4338CA",
+                            "surface-container-highest": "#dae3f8",
+                            "on-tertiary": "#ffffff",
+                            "warning-subtle": "#FFF7E6",
+                            "secondary-fixed-dim": "#bdc6e0",
+                            "on-secondary": "#ffffff",
+                            "tertiary": "#004c77",
+                            "primary-subtle": "#EEF2FF",
+                            "on-background": "#131c2b",
+                            "surface-dim": "#d1daef",
+                            "on-tertiary-container": "#bfdfff",
+                            "on-primary": "#ffffff",
+                            "primary-fixed-dim": "#c3c0ff",
+                            "outline": "#777587",
+                            "info-subtle": "#F0F9FF",
+                            "tertiary-fixed": "#cde5ff",
+                            "on-surface": "#131c2b",
+                            "tertiary-fixed-dim": "#94ccff",
+                            "surface-subtle": "#F1F3F5",
+                            "secondary": "#555e74",
+                            "primary": "#3525cd",
+                            "tertiary-container": "#00659c",
+                            "border": "#DDE1E6",
+                            "on-tertiary-fixed-variant": "#004b74",
+                            "error": "#ba1a1a",
+                            "outline-variant": "#c7c4d8",
+                            "success-subtle": "#ECFDF3",
+                            "inverse-surface": "#283141",
+                            "on-error": "#ffffff",
+                            "surface-container": "#e7eeff",
+                            "on-surface-variant": "#464555",
+                            "danger": "#B91C1C",
+                            "on-secondary-fixed": "#121b2e",
+                            "secondary-container": "#d7dff9",
+                            "text-muted": "#7B8495",
+                            "surface-tint": "#4d44e3",
+                            "on-error-container": "#93000a",
+                            "surface-container-low": "#f0f3ff",
+                            "on-primary-fixed": "#0f0069",
+                            "on-tertiary-fixed": "#001d32",
+                            "surface-bright": "#f9f9ff",
+                            "primary-container": "#4f46e5",
+                            "canvas": "#F7F7F5",
+                            "on-secondary-fixed-variant": "#3e475b"
+                    },
+                    "borderRadius": {
+                            "DEFAULT": "0.25rem",
+                            "lg": "0.5rem",
+                            "xl": "0.75rem",
+                            "full": "9999px"
+                    },
+                    "spacing": {
+                            "base": "4px",
+                            "sidebar-expanded": "248px",
+                            "topbar-height": "64px",
+                            "sidebar-collapsed": "72px",
+                            "screen-padding": "24px",
+                            "gutter": "16px",
+                            "card-padding": "16px"
+                    },
+                    "fontFamily": {
+                            "card-title": ["Inter", "sans-serif"],
+                            "table-dense": ["Inter", "sans-serif"],
+                            "page-title": ["Inter", "sans-serif"],
+                            "button": ["Inter", "sans-serif"],
+                            "body": ["Inter", "sans-serif"],
+                            "section-title": ["Inter", "sans-serif"],
+                            "label": ["Inter", "sans-serif"]
+                    },
+                    "fontSize": {
+                            "card-title": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                            "table-dense": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                            "page-title": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                            "button": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                            "body": ["14px", {"lineHeight": "21px", "fontWeight": "400"}],
+                            "section-title": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                            "label": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.canvas');
+            color: theme('colors.on-background');
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Mobile Specific Utility */
+        .min-touch-target { min-height: 44px; min-width: 44px; }
+        
+        /* Hide scrollbar for horizontal scroll areas */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Animation for Bottom Sheet */
+        .sheet-enter {
+            transform: translateY(100%);
+        }
+        .sheet-enter-active {
+            transform: translateY(0);
+            transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .backdrop-enter {
+            opacity: 0;
+        }
+        .backdrop-enter-active {
+            opacity: 1;
+            transition: opacity 300ms ease-out;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body antialiased selection:bg-primary-subtle selection:text-primary pb-[80px]">
+<!-- TopAppBar -->
+<header class="bg-surface fixed top-0 w-full h-topbar-height flex items-center justify-between px-screen-padding z-40">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary font-page-title text-page-title tracking-tight" style="font-variation-settings: 'FILL' 1;">bubble_chart</span>
+<h1 class="font-page-title text-page-title text-primary tracking-tight">StudioFlow</h1>
+</div>
+<button aria-label="Settings" class="min-touch-target flex items-center justify-center text-on-surface-variant hover:bg-primary-subtle transition-colors duration-200 ease-in-out rounded-full">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</header>
+<!-- Main Content Area (padding-top accounts for header + sub-nav) -->
+<main class="pt-[64px] px-4 space-y-6">
+<!-- Sticky Navigation Area -->
+<div class="bg-surface/95 backdrop-blur-md sticky top-[64px] -mx-4 px-4 pt-2 pb-3 z-30 space-y-4">
+<!-- Page Title (Secondary Header) -->
+<h2 class="font-section-title text-section-title text-on-background">Notifications</h2>
+<!-- Sub Navigation Tabs -->
+<nav class="flex space-x-1 border-b border-border">
+<button class="flex-1 pb-3 text-center border-b-2 border-primary text-primary font-button text-button transition-colors">
+                    All
+                </button>
+<button class="flex-1 pb-3 text-center border-b-2 border-transparent text-secondary hover:text-primary transition-colors font-button text-button">
+                    Mentions
+                </button>
+<button class="flex-1 pb-3 text-center border-b-2 border-transparent text-secondary hover:text-primary transition-colors font-button text-button">
+                    Reviews
+                </button>
+</nav>
+<!-- Filter Chips (Scrollable) -->
+<div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+<button class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-full text-secondary font-label text-label hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined text-[16px]">workspaces</span>
+                    All workspaces
+                    <span class="material-symbols-outlined text-[16px]">arrow_drop_down</span>
+</button>
+<button class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-subtle border border-primary text-primary rounded-full font-label text-label transition-colors">
+                    Unread
+                    <span class="material-symbols-outlined text-[16px] cursor-pointer" style="font-variation-settings: 'FILL' 1;">cancel</span>
+</button>
+<button class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-full text-secondary font-label text-label hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined text-[16px]">tune</span>
+                    More filters
+                </button>
+</div>
+</div>
+<!-- Notification List -->
+<div class="space-y-6 pb-20">
+<!-- Group: Today -->
+<section class="space-y-3">
+<h3 class="font-label text-label text-secondary uppercase tracking-wider pl-1">Today</h3>
+<!-- Item 1: Unread Creative Review -->
+<article class="bg-surface rounded-xl p-4 border border-border shadow-sm flex gap-3 relative overflow-hidden">
+<!-- Unread Indicator (Left edge line) -->
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="flex-shrink-0 mt-1">
+<div class="w-10 h-10 rounded-full bg-warning-subtle flex items-center justify-center text-warning">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">rate_review</span>
+</div>
+</div>
+<div class="flex-1 min-w-0 space-y-1">
+<div class="flex justify-between items-start gap-2">
+<div class="flex items-center gap-2">
+<span class="font-label text-label text-secondary">Creative Review</span>
+<!-- Unread dot inline -->
+<span class="w-2 h-2 rounded-full bg-primary inline-block"></span>
+</div>
+<span class="font-label text-label text-secondary whitespace-nowrap">10m ago</span>
+</div>
+<h4 class="font-card-title text-card-title text-on-background truncate">Northstar Coffee</h4>
+<p class="font-body text-body text-secondary line-clamp-2">Autumn roast launch</p>
+<div class="pt-2">
+<button class="inline-flex items-center justify-center h-9 px-4 bg-primary-container text-on-primary rounded-lg font-button text-button hover:bg-primary-hover transition-colors">
+                                Review
+                            </button>
+</div>
+</div>
+</article>
+<!-- Item 2: Mention -->
+<article class="bg-surface rounded-xl p-4 border border-border flex gap-3 opacity-90 hover:opacity-100 transition-opacity">
+<div class="flex-shrink-0 mt-1">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-primary border border-border overflow-hidden">
+<!-- Profile Initial / Placeholder Avatar -->
+<span class="font-button text-button">DK</span>
+</div>
+</div>
+<div class="flex-1 min-w-0 space-y-1">
+<div class="flex justify-between items-start gap-2">
+<span class="font-label text-label text-secondary">@Mention</span>
+<span class="font-label text-label text-secondary whitespace-nowrap">1h ago</span>
+</div>
+<h4 class="font-card-title text-card-title text-on-background truncate">From Daniel Kim</h4>
+<p class="font-body text-body text-secondary line-clamp-2">"Need clarification on the main hero banner asset dimensions before we proceed..."</p>
+<div class="pt-2">
+<button class="inline-flex items-center justify-center h-9 px-4 bg-surface border border-border text-on-background rounded-lg font-button text-button hover:bg-surface-subtle transition-colors">
+                                Reply
+                            </button>
+</div>
+</div>
+</article>
+<!-- Item 3: Version Submitted -->
+<article class="bg-surface rounded-xl p-4 border border-border flex gap-3 opacity-90 hover:opacity-100 transition-opacity">
+<div class="flex-shrink-0 mt-1">
+<div class="w-10 h-10 rounded-full bg-success-subtle flex items-center justify-center text-success">
+<span class="material-symbols-outlined">upload_file</span>
+</div>
+</div>
+<div class="flex-1 min-w-0 space-y-1">
+<div class="flex justify-between items-start gap-2">
+<span class="font-label text-label text-secondary">Version Submitted</span>
+<span class="font-label text-label text-secondary whitespace-nowrap">2h ago</span>
+</div>
+<h4 class="font-card-title text-card-title text-on-background truncate">Maya Chen submitted V3</h4>
+<p class="font-body text-body text-secondary line-clamp-1">Packaging Design Final.pdf</p>
+<div class="pt-2">
+<button class="inline-flex items-center justify-center h-9 px-4 bg-surface border border-border text-on-background rounded-lg font-button text-button hover:bg-surface-subtle transition-colors">
+                                View delivery
+                            </button>
+</div>
+</div>
+</article>
+</section>
+<!-- Group: Earlier -->
+<section class="space-y-3">
+<h3 class="font-label text-label text-secondary uppercase tracking-wider pl-1 pt-2">Earlier</h3>
+<!-- Item 4: Deadline at risk -->
+<article class="bg-surface rounded-xl p-4 border border-border flex gap-3">
+<div class="flex-shrink-0 mt-1">
+<div class="w-10 h-10 rounded-full bg-danger-subtle flex items-center justify-center text-danger">
+<span class="material-symbols-outlined">warning</span>
+</div>
+</div>
+<div class="flex-1 min-w-0 space-y-1">
+<div class="flex justify-between items-start gap-2">
+<span class="font-label text-label text-danger font-medium">Deadline at risk</span>
+<span class="font-label text-label text-secondary whitespace-nowrap">Yesterday</span>
+</div>
+<h4 class="font-card-title text-card-title text-on-background truncate">Autumn campaign</h4>
+<p class="font-body text-body text-secondary line-clamp-1">Due in 24 hours. 3 tasks pending.</p>
+<div class="pt-2">
+<button class="inline-flex items-center justify-center h-9 px-4 bg-surface border border-border text-on-background rounded-lg font-button text-button hover:bg-surface-subtle transition-colors">
+                                Open
+                            </button>
+</div>
+</div>
+</article>
+<!-- Item 5: Ready to publish -->
+<article class="bg-surface rounded-xl p-4 border border-border flex gap-3">
+<div class="flex-shrink-0 mt-1">
+<div class="w-10 h-10 rounded-full bg-primary-subtle flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">rocket_launch</span>
+</div>
+</div>
+<div class="flex-1 min-w-0 space-y-1">
+<div class="flex justify-between items-start gap-2">
+<span class="font-label text-label text-secondary">Ready to publish</span>
+<span class="font-label text-label text-secondary whitespace-nowrap">2d ago</span>
+</div>
+<h4 class="font-card-title text-card-title text-on-background truncate">Northstar Coffee</h4>
+<p class="font-body text-body text-secondary line-clamp-1">Social Media Assets Q4</p>
+<div class="pt-2">
+<button class="inline-flex items-center justify-center h-9 px-4 bg-surface border border-border text-on-background rounded-lg font-button text-button hover:bg-surface-subtle transition-colors">
+                                Open
+                            </button>
+</div>
+</div>
+</article>
+<!-- Item 6: New Assignment -->
+<article class="bg-surface rounded-xl p-4 border border-border flex gap-3">
+<div class="flex-shrink-0 mt-1">
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">assignment</span>
+</div>
+</div>
+<div class="flex-1 min-w-0 space-y-1">
+<div class="flex justify-between items-start gap-2">
+<span class="font-label text-label text-secondary">New Assignment</span>
+<span class="font-label text-label text-secondary whitespace-nowrap">3d ago</span>
+</div>
+<h4 class="font-card-title text-card-title text-on-background truncate">Luna Botanics</h4>
+<p class="font-body text-body text-secondary line-clamp-1">Brand Identity Refresh</p>
+<div class="pt-2">
+<button class="inline-flex items-center justify-center h-9 px-4 bg-surface border border-border text-on-background rounded-lg font-button text-button hover:bg-surface-subtle transition-colors">
+                                Open
+                            </button>
+</div>
+</div>
+</article>
+</section>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-surface fixed bottom-0 w-full z-40 border-t border-border flex justify-around items-center h-[72px] px-2 pb-safe md:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+<!-- My Work -->
+<a class="flex flex-col items-center justify-center text-secondary px-3 py-1 min-touch-target hover:text-primary transition-transform duration-150 active:scale-95 w-16" href="#">
+<span class="material-symbols-outlined mb-1">task_alt</span>
+<span class="font-label text-[10px] leading-tight text-center">My Work</span>
+</a>
+<!-- Planning -->
+<a class="flex flex-col items-center justify-center text-secondary px-3 py-1 min-touch-target hover:text-primary transition-transform duration-150 active:scale-95 w-16" href="#">
+<span class="material-symbols-outlined mb-1">calendar_today</span>
+<span class="font-label text-[10px] leading-tight text-center">Planning</span>
+</a>
+<!-- Reviews -->
+<a class="flex flex-col items-center justify-center text-secondary px-3 py-1 min-touch-target hover:text-primary transition-transform duration-150 active:scale-95 w-16" href="#">
+<span class="material-symbols-outlined mb-1">rate_review</span>
+<span class="font-label text-[10px] leading-tight text-center">Reviews</span>
+</a>
+<!-- Notifications (Active) -->
+<a class="flex flex-col items-center justify-center text-primary bg-primary-subtle rounded-xl px-3 py-1 min-touch-target transition-transform duration-150 active:scale-95 w-16 relative" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">notifications</span>
+<!-- Notification Badge -->
+<span class="absolute top-1 right-3 w-2 h-2 rounded-full bg-primary ring-2 ring-surface"></span>
+<span class="font-label text-[10px] leading-tight text-center">Updates</span>
+</a>
+<!-- More -->
+<a class="flex flex-col items-center justify-center text-secondary px-3 py-1 min-touch-target hover:text-primary transition-transform duration-150 active:scale-95 w-16" href="#">
+<span class="material-symbols-outlined mb-1">more_horiz</span>
+<span class="font-label text-[10px] leading-tight text-center">More</span>
+</a>
+</nav>
+<!-- Filter Bottom Sheet Overlay (Simulated Open State) -->
+<!-- In a real app, this would be toggled via JS classes. Currently visible to match prompt requirements. -->
+<div aria-labelledby="modal-title" aria-modal="true" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog">
+<!-- Backdrop -->
+<div aria-hidden="true" class="fixed inset-0 bg-on-background/40 backdrop-enter-active transition-opacity"></div>
+<!-- Sheet Panel -->
+<div class="bg-surface w-full max-w-md rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-xl transform transition-all sheet-enter-active max-h-[795px] flex flex-col relative">
+<!-- Handle for mobile -->
+<div class="w-full flex justify-center pt-3 pb-1">
+<div class="w-12 h-1.5 bg-border rounded-full"></div>
+</div>
+<!-- Header -->
+<div class="px-6 pb-4 pt-2 border-b border-border flex items-center justify-between sticky top-0 bg-surface z-10">
+<h2 class="font-section-title text-section-title text-on-background" id="modal-title">Filter notifications</h2>
+<button class="min-touch-target rounded-full text-secondary hover:bg-surface-subtle inline-flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Scrollable Content -->
+<div class="px-6 py-6 overflow-y-auto flex-1 space-y-8">
+<!-- Unread Toggle -->
+<div class="flex items-center justify-between">
+<div>
+<label class="font-card-title text-card-title text-on-background block" for="unread-toggle">Unread only</label>
+<span class="font-body text-body text-secondary">Show only notifications you haven't seen</span>
+</div>
+<!-- Custom Toggle Switch (ON state) -->
+<button aria-checked="true" class="bg-primary relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2" id="unread-toggle" role="switch" type="button">
+<span aria-hidden="true" class="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-surface shadow ring-0 transition duration-200 ease-in-out"></span>
+</button>
+</div>
+<!-- Workspace Filter -->
+<div class="space-y-3">
+<h3 class="font-label text-label text-secondary uppercase tracking-wider">Workspace</h3>
+<div class="flex flex-wrap gap-2">
+<button class="px-4 py-2 bg-surface-subtle border border-border rounded-lg font-button text-button text-secondary hover:bg-surface-variant transition-colors">All</button>
+<button class="px-4 py-2 bg-primary-subtle border border-primary text-primary rounded-lg font-button text-button transition-colors">Northstar Coffee</button>
+<button class="px-4 py-2 bg-surface border border-border rounded-lg font-button text-button text-secondary hover:bg-surface-subtle transition-colors">Luna Botanics</button>
+<button class="px-4 py-2 bg-surface border border-border rounded-lg font-button text-button text-secondary hover:bg-surface-subtle transition-colors">Cedar Studio</button>
+</div>
+</div>
+<!-- Type Filter -->
+<div class="space-y-3">
+<h3 class="font-label text-label text-secondary uppercase tracking-wider">Notification Type</h3>
+<div class="space-y-1">
+<label class="flex items-center gap-3 p-2 -mx-2 hover:bg-surface-subtle rounded-lg cursor-pointer transition-colors">
+<input checked="" class="h-5 w-5 rounded border-border text-primary focus:ring-focus-ring bg-surface" type="checkbox"/>
+<span class="font-body text-body text-on-background">Assignments</span>
+</label>
+<label class="flex items-center gap-3 p-2 -mx-2 hover:bg-surface-subtle rounded-lg cursor-pointer transition-colors">
+<input checked="" class="h-5 w-5 rounded border-border text-primary focus:ring-focus-ring bg-surface" type="checkbox"/>
+<span class="font-body text-body text-on-background">Reviews</span>
+</label>
+<label class="flex items-center gap-3 p-2 -mx-2 hover:bg-surface-subtle rounded-lg cursor-pointer transition-colors">
+<input checked="" class="h-5 w-5 rounded border-border text-primary focus:ring-focus-ring bg-surface" type="checkbox"/>
+<span class="font-body text-body text-on-background">Mentions</span>
+</label>
+<label class="flex items-center gap-3 p-2 -mx-2 hover:bg-surface-subtle rounded-lg cursor-pointer transition-colors">
+<input checked="" class="h-5 w-5 rounded border-border text-primary focus:ring-focus-ring bg-surface" type="checkbox"/>
+<span class="font-body text-body text-on-background">Deadlines</span>
+</label>
+<label class="flex items-center gap-3 p-2 -mx-2 hover:bg-surface-subtle rounded-lg cursor-pointer transition-colors">
+<input checked="" class="h-5 w-5 rounded border-border text-primary focus:ring-focus-ring bg-surface" type="checkbox"/>
+<span class="font-body text-body text-on-background">Deliveries</span>
+</label>
+<label class="flex items-center gap-3 p-2 -mx-2 hover:bg-surface-subtle rounded-lg cursor-pointer transition-colors">
+<input class="h-5 w-5 rounded border-border text-primary focus:ring-focus-ring bg-surface" type="checkbox"/>
+<span class="font-body text-body text-on-background">Publishing</span>
+</label>
+</div>
+</div>
+</div>
+<!-- Sticky Bottom Actions -->
+<div class="px-6 py-4 border-t border-border bg-surface sticky bottom-0 z-10 flex gap-3 pb-safe">
+<button class="flex-1 h-12 inline-flex items-center justify-center bg-surface border border-border text-secondary rounded-xl font-button text-button hover:bg-surface-subtle transition-colors">
+                    Clear all
+                </button>
+<button class="flex-[2] h-12 inline-flex items-center justify-center bg-primary-container text-on-primary rounded-xl font-button text-button hover:bg-primary-hover shadow-sm transition-colors">
+                    Apply filters
+                </button>
+</div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>StudioFlow — Agency AI Settings Final</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "danger-subtle": "#FEF2F2",
+                        "tertiary-fixed": "#cde5ff",
+                        "success": "#15803D",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "success-subtle": "#ECFDF3",
+                        "on-secondary-container": "#5a6278",
+                        "outline": "#777587",
+                        "on-primary-container": "#dad7ff",
+                        "warning-subtle": "#FFF7E6",
+                        "on-secondary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "secondary-container": "#d7dff9",
+                        "outline-variant": "#c7c4d8",
+                        "on-secondary-fixed": "#121b2e",
+                        "on-error-container": "#93000a",
+                        "danger": "#B91C1C",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "primary-container": "#4f46e5",
+                        "on-background": "#131c2b",
+                        "inverse-on-surface": "#ecf0ff",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "on-primary-fixed": "#0f0069",
+                        "primary-fixed": "#e2dfff",
+                        "surface-subtle": "#F1F3F5",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "primary": "#3525cd",
+                        "tertiary-container": "#00659c",
+                        "canvas": "#F7F7F5",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#dfe8fe",
+                        "text-muted": "#7B8495",
+                        "inverse-primary": "#c3c0ff",
+                        "primary-subtle": "#EEF2FF",
+                        "on-primary": "#ffffff",
+                        "background": "#f9f9ff",
+                        "surface-bright": "#f9f9ff",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "surface-dim": "#d1daef",
+                        "surface": "#FFFFFF",
+                        "secondary-fixed": "#d9e2fc",
+                        "tertiary": "#004c77",
+                        "on-surface-variant": "#464555",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#4d44e3",
+                        "inverse-surface": "#283141",
+                        "on-tertiary-container": "#bfdfff",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#dae3f8",
+                        "on-tertiary-fixed": "#001d32",
+                        "info-subtle": "#F0F9FF",
+                        "on-error": "#ffffff",
+                        "secondary": "#555e74",
+                        "surface-container": "#e7eeff",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "surface-container-highest": "#dae3f8",
+                        "focus-ring": "#6366F1",
+                        "on-surface": "#131c2b",
+                        "border": "#DDE1E6",
+                        "surface-container-low": "#f0f3ff",
+                        "warning": "#B45309",
+                        "primary-hover": "#4338CA"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sidebar-expanded": "248px",
+                        "screen-padding": "24px",
+                        "card-padding": "16px",
+                        "base": "4px",
+                        "gutter": "16px",
+                        "topbar-height": "64px",
+                        "sidebar-collapsed": "72px"
+                    },
+                    "fontFamily": {
+                        "label": ["Inter"],
+                        "card-title": ["Inter"],
+                        "table-dense": ["Inter"],
+                        "section-title": ["Inter"],
+                        "button": ["Inter"],
+                        "page-title": ["Inter"],
+                        "body": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #68D391;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4F46E5;
+        }
+    </style>
+</head>
+<body class="bg-canvas text-on-surface font-body antialiased min-h-screen flex flex-col md:flex-row">
+<!-- Global Navigation (SideNavBar) -->
+<nav class="hidden md:flex flex-col fixed left-0 top-0 h-screen w-sidebar-expanded bg-surface dark:bg-inverse-surface border-r border-border dark:border-outline-variant z-40">
+<div class="px-6 py-6 border-b border-border dark:border-outline-variant">
+<h1 class="font-page-title text-page-title text-primary dark:text-inverse-primary">StudioFlow</h1>
+<p class="font-label text-label text-on-surface-variant dark:text-surface-variant mt-1">Production Workspace</p>
+</div>
+<div class="px-4 py-4">
+<button class="w-full flex items-center justify-center gap-2 bg-primary text-on-primary font-button text-button h-10 rounded-lg hover:bg-primary-hover transition-colors duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">add</span>
+                New Project
+            </button>
+</div>
+<ul class="flex flex-col gap-1 px-4 flex-grow overflow-y-auto mt-2">
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-subtle dark:hover:bg-secondary-fixed-dim transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="assignment_turned_in">assignment_turned_in</span>
+<span class="font-body text-body">My Work</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-subtle dark:hover:bg-secondary-fixed-dim transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body text-body">Overview</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-subtle dark:hover:bg-secondary-fixed-dim transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="workspaces">workspaces</span>
+<span class="font-body text-body">Workspaces</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-subtle dark:hover:bg-secondary-fixed-dim transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-body text-body">User Management</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-primary dark:text-inverse-primary font-bold bg-primary-subtle dark:bg-primary-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-body text-body font-semibold">Agency Settings</span>
+</a>
+</li>
+</ul>
+<div class="px-6 py-4 border-t border-border dark:border-outline-variant flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-dim overflow-hidden">
+<img alt="StudioFlow Agency Logo" class="object-cover w-full h-full" data-alt="A small, professional headshot of an agency worker in a brightly lit, modern office environment. Soft natural light, high quality, corporate portrait." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1110C_wBEPTTRYGl8B8TtJLC_Pt5bHeNSKnuB6gYBnquiMQMS12shr99k7DabLkZm_Gk_Rd6W3_Eib_fqxPlm8nH1YmsD8BIwXqO_oBWjdR3W06CGMZl1Ix16anhy23KfMNdTKy-9YTsL4vxfaqtPy6PDZRXzOhIQnOHZuCYv_fuFRcGarAWE1VAUdLcCzazvf6uXx7YntspHudD51LYaD4OfEXCi2UhdJ-ucNhWo5I_DvWjax_Fw7f0tZ3hqB7AiRjNvk-qAk9o"/>
+</div>
+<div class="flex flex-col">
+<span class="font-label text-label text-on-surface">Alex Mercer</span>
+<span class="font-table-dense text-table-dense text-on-surface-variant">Admin</span>
+</div>
+</div>
+</nav>
+<!-- Main Workspace -->
+<div class="md:ml-[248px] flex-1 flex flex-col md:flex-row min-h-screen bg-canvas">
+<!-- Secondary Settings Column -->
+<aside class="w-full md:w-[240px] bg-surface border-r border-border md:flex-shrink-0">
+<div class="p-6">
+<h2 class="font-section-title text-section-title text-on-surface mb-4">Settings</h2>
+<nav class="flex flex-col gap-1">
+<a class="px-3 py-2 rounded-md font-body text-body text-on-surface-variant hover:bg-surface-subtle transition-colors" href="#">General</a>
+<a class="px-3 py-2 rounded-md font-body text-body text-on-surface-variant hover:bg-surface-subtle transition-colors" href="#">Notifications</a>
+<a class="px-3 py-2 rounded-md font-body text-body text-primary bg-primary-subtle font-semibold flex items-center justify-between transition-colors" href="#">
+                        AI Assistance
+                        <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</a>
+<a class="px-3 py-2 rounded-md font-body text-body text-on-surface-variant hover:bg-surface-subtle transition-colors" href="#">Security</a>
+<a class="px-3 py-2 rounded-md font-body text-body text-on-surface-variant hover:bg-surface-subtle transition-colors" href="#">Audit Log</a>
+</nav>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 p-screen-padding max-w-[960px]">
+<!-- Header -->
+<header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 border-b border-border pb-6">
+<div class="flex items-center gap-3">
+<h1 class="font-page-title text-page-title text-on-surface">AI Assistance</h1>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold tracking-wide uppercase bg-surface-subtle text-on-surface-variant border border-border">
+                        Optional
+                    </span>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 font-button text-button text-on-surface-variant hover:bg-surface-subtle rounded-lg border border-transparent transition-colors">Cancel</button>
+<button class="px-4 py-2 font-button text-button bg-primary-container text-on-primary rounded-lg hover:bg-primary-hover transition-colors shadow-sm">Save changes</button>
+</div>
+</header>
+<div class="space-y-6">
+<!-- Model Selector & Global Toggle (Bento Top Row) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="md:col-span-2 bg-surface rounded-xl border border-border p-card-padding">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-card-title text-card-title text-on-surface">Model Selection</h3>
+<p class="font-table-dense text-table-dense text-on-surface-variant mt-1">Choose the active AI engine for this agency.</p>
+</div>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer" id="enable-ai" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-border cursor-pointer" for="enable-ai"></label>
+</div>
+</div>
+<div class="mt-4">
+<label class="block font-label text-label text-on-surface-variant mb-2">Active Model</label>
+<div class="relative">
+<select class="appearance-none w-full bg-canvas border border-border text-on-surface font-body text-body rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-transparent">
+<option>MiniMax-M2.7</option>
+<option>GPT-4 Turbo</option>
+<option>Claude 3.5 Sonnet</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Provider Panel -->
+<div class="bg-surface rounded-xl border border-border p-card-padding flex flex-col justify-between">
+<div>
+<h3 class="font-card-title text-card-title text-on-surface">Provider Connection</h3>
+<div class="flex items-center gap-2 mt-3 p-3 bg-canvas rounded-lg border border-border">
+<div class="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[16px] text-on-surface">api</span>
+</div>
+<div class="min-w-0">
+<p class="font-label text-label text-on-surface truncate">MiniMax Connected</p>
+<p class="text-[11px] text-on-surface-variant truncate">••••••••••••7K2M</p>
+</div>
+</div>
+<p class="mt-2 text-[11px] text-text-muted flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">lock</span> Encrypted / Server-side
+                            </p>
+</div>
+<div class="mt-4">
+<button class="w-full flex items-center justify-center gap-2 bg-canvas border border-border text-on-surface font-button text-button h-[36px] rounded-lg hover:bg-surface-subtle transition-colors">
+                                Test connection
+                                <span class="w-2 h-2 rounded-full bg-success"></span>
+</button>
+</div>
+</div>
+</div>
+<!-- Feature Toggles -->
+<div class="bg-surface rounded-xl border border-border p-card-padding">
+<h3 class="font-card-title text-card-title text-on-surface mb-1">Feature Availability</h3>
+<p class="font-table-dense text-table-dense text-on-surface-variant mb-6">Select which AI capabilities are active across allowed workspaces.</p>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-8">
+<div class="flex items-center justify-between">
+<span class="font-body text-body text-on-surface">Campaign ideas</span>
+<div class="relative inline-block w-8 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer" id="t1" name="toggle_1" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-border cursor-pointer" for="t1"></label>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="font-body text-body text-on-surface">Improve brief</span>
+<div class="relative inline-block w-8 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer" id="t2" name="toggle_2" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-border cursor-pointer" for="t2"></label>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="font-body text-body text-on-surface">Captions/hooks/CTA</span>
+<div class="relative inline-block w-8 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer" id="t3" name="toggle_3" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-border cursor-pointer" for="t3"></label>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="font-body text-body text-on-surface">Platform adaptation</span>
+<div class="relative inline-block w-8 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer" id="t4" name="toggle_4" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-border cursor-pointer" for="t4"></label>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="font-body text-body text-on-surface">Related formats</span>
+<div class="relative inline-block w-8 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer" id="t5" name="toggle_5" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-border cursor-pointer" for="t5"></label>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="font-body text-body text-on-surface">Completeness check</span>
+<div class="relative inline-block w-8 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer" id="t6" name="toggle_6" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-border cursor-pointer" for="t6"></label>
+</div>
+</div>
+</div>
+</div>
+<!-- 50/50 Split Layout for Workspaces and Privacy -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Workspace Availability -->
+<div class="bg-surface rounded-xl border border-border flex flex-col">
+<div class="p-card-padding border-b border-border">
+<h3 class="font-card-title text-card-title text-on-surface">Workspace Access</h3>
+<p class="font-table-dense text-table-dense text-on-surface-variant mt-1">Enable AI features per client workspace.</p>
+</div>
+<div class="flex-1 overflow-y-auto">
+<ul class="divide-y divide-border">
+<li class="p-4 flex items-center justify-between hover:bg-canvas transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center font-bold text-on-surface">N</div>
+<span class="font-body text-body text-on-surface">Northstar Coffee</span>
+</div>
+<div class="relative inline-block w-8 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer" id="ws1" name="ws1" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-border cursor-pointer" for="ws1"></label>
+</div>
+</li>
+<li class="p-4 flex items-center justify-between hover:bg-canvas transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center font-bold text-on-surface">L</div>
+<span class="font-body text-body text-on-surface">Luna Botanics</span>
+</div>
+<div class="relative inline-block w-8 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer" id="ws2" name="ws2" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-border cursor-pointer" for="ws2"></label>
+</div>
+</li>
+<li class="p-4 flex items-center justify-between hover:bg-canvas transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center font-bold text-on-surface">C</div>
+<span class="font-body text-body text-on-surface">Cedar Studio</span>
+</div>
+<div class="relative inline-block w-8 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer" id="ws3" name="ws3" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-border cursor-pointer" for="ws3"></label>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<!-- Privacy & Governance Card -->
+<div class="bg-surface rounded-xl border border-border p-card-padding">
+<h3 class="font-card-title text-card-title text-on-surface mb-1">Privacy &amp; Governance</h3>
+<p class="font-table-dense text-table-dense text-on-surface-variant mb-5">Data handling and contextual boundaries.</p>
+<div class="space-y-4 mb-6">
+<div class="flex items-center justify-between">
+<span class="font-body text-body text-on-surface">Preview context before request</span>
+<div class="relative inline-block w-8 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer" id="pg1" name="pg1" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-border cursor-pointer" for="pg1"></label>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="font-body text-body text-on-surface">Record AI activity</span>
+<div class="relative inline-block w-8 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer" id="pg2" name="pg2" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-border cursor-pointer" for="pg2"></label>
+</div>
+</div>
+</div>
+<div class="bg-canvas border border-border rounded-lg p-3 text-[12px] mb-4">
+<div class="grid grid-cols-2 gap-4">
+<div>
+<h4 class="font-semibold text-success flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Allowed Context
+                                     </h4>
+<ul class="text-on-surface-variant space-y-0.5 list-disc pl-4">
+<li>Brand Kit</li>
+<li>Campaign pillars</li>
+<li>Channels</li>
+<li>Current brief</li>
+<li>Approved content</li>
+</ul>
+</div>
+<div>
+<h4 class="font-semibold text-danger flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[14px]">block</span> Excluded
+                                    </h4>
+<ul class="text-on-surface-variant space-y-0.5 list-disc pl-4">
+<li>Internal discussion</li>
+<li>User data</li>
+<li>Client comments</li>
+<li>Unpublished links</li>
+<li>Unrelated workspaces</li>
+</ul>
+</div>
+</div>
+</div>
+<p class="text-[12px] text-text-muted italic">
+                             "AI is human-triggered and never changes status or bypasses approval."
+                         </p>
+</div>
+</div>
+<!-- Usage Summary -->
+<div class="bg-surface rounded-xl border border-border p-card-padding">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+<div>
+<h3 class="font-card-title text-card-title text-on-surface">Usage Summary</h3>
+<p class="font-table-dense text-table-dense text-on-surface-variant mt-1">August 2026: 186 requests, 14 users</p>
+</div>
+<button class="text-primary font-label text-label hover:underline">View detailed log</button>
+</div>
+<!-- Simple visualization -->
+<div class="h-24 flex items-end gap-2 mt-4 px-2">
+<div class="w-full bg-primary-subtle rounded-t-sm h-[30%] hover:bg-primary-container transition-colors cursor-pointer relative group">
+<div class="absolute bottom-full mb-2 hidden group-hover:block bg-inverse-surface text-on-secondary text-[10px] py-1 px-2 rounded whitespace-nowrap z-10 left-1/2 transform -translate-x-1/2">Aug 1: 12 req</div>
+</div>
+<div class="w-full bg-primary-subtle rounded-t-sm h-[50%] hover:bg-primary-container transition-colors cursor-pointer relative group"></div>
+<div class="w-full bg-primary-subtle rounded-t-sm h-[20%] hover:bg-primary-container transition-colors cursor-pointer relative group"></div>
+<div class="w-full bg-primary-subtle rounded-t-sm h-[80%] hover:bg-primary-container transition-colors cursor-pointer relative group"></div>
+<div class="w-full bg-primary-subtle rounded-t-sm h-[60%] hover:bg-primary-container transition-colors cursor-pointer relative group"></div>
+<div class="w-full bg-primary rounded-t-sm h-[100%] hover:bg-primary-hover transition-colors cursor-pointer relative group"></div>
+<div class="w-full bg-primary-subtle rounded-t-sm h-[40%] hover:bg-primary-container transition-colors cursor-pointer relative group"></div>
+<div class="w-full bg-primary-subtle rounded-t-sm h-[70%] hover:bg-primary-container transition-colors cursor-pointer relative group"></div>
+</div>
+<div class="flex justify-between mt-2 text-[10px] text-text-muted px-2">
+<span>Aug 1</span>
+<span>Aug 8</span>
+</div>
+</div>
+<!-- Footer Reference States -->
+<div class="mt-12 pt-8 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4 opacity-75 grayscale hover:grayscale-0 transition-all duration-300">
+<h4 class="col-span-full font-label text-label text-text-muted mb-2 uppercase tracking-wider">Preview States</h4>
+<!-- AI Disabled State -->
+<div class="bg-canvas border border-dashed border-border rounded-lg p-4 flex flex-col items-center justify-center text-center h-32">
+<span class="material-symbols-outlined text-outline mb-2">auto_awesome_mosaic</span>
+<p class="font-label text-label text-on-surface">AI Disabled for Workspace</p>
+<p class="text-[11px] text-text-muted mt-1">Enable in Agency Settings</p>
+</div>
+<!-- Connection Error State -->
+<div class="bg-danger-subtle border border-danger/20 rounded-lg p-4 flex flex-col items-center justify-center text-center h-32">
+<span class="material-symbols-outlined text-danger mb-2">cloud_off</span>
+<p class="font-label text-label text-danger font-semibold">Connection Failed</p>
+<p class="text-[11px] text-danger/80 mt-1">Check API provider status</p>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

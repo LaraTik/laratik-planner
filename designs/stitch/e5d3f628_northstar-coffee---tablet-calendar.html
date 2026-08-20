@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee — Tablet Calendar</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-fixed-dim": "#94ccff",
+                      "on-secondary-container": "#5a6278",
+                      "warning-subtle": "#FFF7E6",
+                      "primary-container": "#4f46e5",
+                      "secondary-fixed-dim": "#bdc6e0",
+                      "primary-subtle": "#EEF2FF",
+                      "on-primary-container": "#dad7ff",
+                      "tertiary-container": "#00659c",
+                      "on-tertiary-container": "#bfdfff",
+                      "surface-container-high": "#dfe8fe",
+                      "error": "#ba1a1a",
+                      "success": "#15803D",
+                      "tertiary-fixed": "#cde5ff",
+                      "on-tertiary-fixed": "#001d32",
+                      "surface": "#FFFFFF",
+                      "warning": "#B45309",
+                      "text-muted": "#7B8495",
+                      "on-secondary-fixed": "#121b2e",
+                      "on-tertiary": "#ffffff",
+                      "on-surface-variant": "#464555",
+                      "surface-tint": "#4d44e3",
+                      "on-error-container": "#93000a",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "tertiary": "#004c77",
+                      "surface-container": "#e7eeff",
+                      "outline": "#777587",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-dim": "#d1daef",
+                      "outline-variant": "#c7c4d8",
+                      "on-tertiary-fixed-variant": "#004b74",
+                      "inverse-surface": "#283141",
+                      "info-subtle": "#F0F9FF",
+                      "secondary": "#555e74",
+                      "primary": "#3525cd",
+                      "on-surface": "#131c2b",
+                      "secondary-container": "#d7dff9",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "danger-subtle": "#FEF2F2",
+                      "surface-container-highest": "#dae3f8",
+                      "inverse-on-surface": "#ecf0ff",
+                      "on-primary": "#ffffff",
+                      "surface-container-low": "#f0f3ff",
+                      "on-secondary-fixed-variant": "#3e475b",
+                      "border": "#DDE1E6",
+                      "primary-fixed": "#e2dfff",
+                      "surface-bright": "#f9f9ff",
+                      "on-error": "#ffffff",
+                      "focus-ring": "#6366F1",
+                      "on-background": "#131c2b",
+                      "inverse-primary": "#c3c0ff",
+                      "canvas": "#F7F7F5",
+                      "surface-subtle": "#F1F3F5",
+                      "primary-hover": "#4338CA",
+                      "on-secondary": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "background": "#f9f9ff",
+                      "on-primary-fixed": "#0f0069",
+                      "surface-variant": "#dae3f8",
+                      "danger": "#B91C1C",
+                      "secondary-fixed": "#d9e2fc",
+                      "success-subtle": "#ECFDF3"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "topbar-height": "64px",
+                      "gutter": "16px",
+                      "sidebar-collapsed": "72px",
+                      "base": "4px",
+                      "card-padding": "16px",
+                      "sidebar-expanded": "248px",
+                      "screen-padding": "24px"
+              },
+              "fontFamily": {
+                      "section-title": [
+                              "Inter"
+                      ],
+                      "label": [
+                              "Inter"
+                      ],
+                      "card-title": [
+                              "Inter"
+                      ],
+                      "button": [
+                              "Inter"
+                      ],
+                      "table-dense": [
+                              "Inter"
+                      ],
+                      "page-title": [
+                              "Inter"
+                      ],
+                      "body": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "section-title": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "card-title": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "button": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "table-dense": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "page-title": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body": [
+                              "14px",
+                              {
+                                      "lineHeight": "21px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for better tablet experience */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F7F7F5; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #DDE1E6; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #c7c4d8; 
+        }
+        body {
+            /* Force tablet landscape width for preview purposes */
+            width: 1024px;
+            margin: 0 auto;
+            overflow-x: hidden;
+        }
+    </style>
+</head>
+<body class="bg-canvas text-on-surface h-screen flex overflow-hidden">
+<!-- Collapsed Side Nav -->
+<nav class="bg-surface border-r border-border h-full w-sidebar-collapsed flex flex-col items-center py-4 shrink-0 shadow-sm z-20 transition-all duration-200 ease-in-out">
+<!-- Brand -->
+<div class="mb-8 w-10 h-10 rounded bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xl">
+            S
+        </div>
+<!-- Primary Nav -->
+<div class="flex flex-col gap-2 w-full px-2">
+<a aria-label="Dashboard" class="w-12 h-12 rounded-lg flex items-center justify-center text-on-secondary-container hover:text-primary hover:bg-surface-container-high transition-colors mx-auto" href="#">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+</a>
+<a aria-label="Projects" class="w-12 h-12 rounded-lg flex items-center justify-center text-on-secondary-container hover:text-primary hover:bg-surface-container-high transition-colors mx-auto" href="#">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 0;">folder_open</span>
+</a>
+<a aria-label="Tasks" class="w-12 h-12 rounded-lg flex items-center justify-center text-on-secondary-container hover:text-primary hover:bg-surface-container-high transition-colors mx-auto" href="#">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 0;">assignment</span>
+</a>
+<!-- Active Tab -->
+<a aria-label="Calendar" class="w-12 h-12 rounded-lg flex items-center justify-center text-primary bg-primary-subtle mx-auto" href="#">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 1;">calendar_today</span>
+</a>
+<a aria-label="Files" class="w-12 h-12 rounded-lg flex items-center justify-center text-on-secondary-container hover:text-primary hover:bg-surface-container-high transition-colors mx-auto" href="#">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 0;">description</span>
+</a>
+<a aria-label="Analytics" class="w-12 h-12 rounded-lg flex items-center justify-center text-on-secondary-container hover:text-primary hover:bg-surface-container-high transition-colors mx-auto" href="#">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 0;">analytics</span>
+</a>
+</div>
+<!-- Footer Nav -->
+<div class="mt-auto flex flex-col gap-2 w-full px-2">
+<a aria-label="Support" class="w-12 h-12 rounded-lg flex items-center justify-center text-on-secondary-container hover:text-primary hover:bg-surface-container-high transition-colors mx-auto" href="#">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 0;">support_agent</span>
+</a>
+<a aria-label="Sign Out" class="w-12 h-12 rounded-lg flex items-center justify-center text-on-secondary-container hover:text-primary hover:bg-surface-container-high transition-colors mx-auto" href="#">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 0;">logout</span>
+</a>
+<!-- User Avatar -->
+<button class="w-10 h-10 rounded-full border border-border mx-auto mt-2 overflow-hidden hover:opacity-80 transition-opacity">
+<img class="w-full h-full object-cover" data-alt="A close up portrait photo of a professional young woman with dark hair tied back, wearing a neat navy blue blazer over a crisp white shirt, softly lit in a modern office environment with bright, neutral tones. Shot with a shallow depth of field to keep the background softly blurred, projecting competence and calm." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMktsrCh91BmX1dLDqF39vnA8ZyUVwR-aFPbnm4D7YR4kYq7bSop5fPn5f7GytJJOQ55kFNgNuHf4rpzEwQGIv0X3Txk--zoA0PnNrOBpAaCZO7zIzMwRGQd-4vdNA4JB9UYEmV2mZuIM9XsqL4G8txzlypOk_aRBqZ12IJE3tr3hgZ7LKnD0tgshPP-7iQWf3ypEkbdcTE2kyQX9rrhXt_GDQvwRckddoV39gr_u9ix3dAaOWs4xQPQDi90FttcXBbNkutt0ewDs"/>
+</button>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+<!-- Top Nav Bar -->
+<header class="bg-surface border-b border-border h-topbar-height flex items-center px-6 shrink-0 z-10 sticky top-0 justify-between">
+<div class="flex items-center gap-6">
+<h1 class="font-section-title text-section-title text-on-surface flex items-center gap-2">
+                    September 2026
+                    <span class="material-symbols-outlined text-on-secondary-container cursor-pointer hover:text-on-surface">expand_more</span>
+</h1>
+<!-- View Toggle -->
+<div class="flex bg-surface-subtle p-1 rounded-lg border border-border h-10">
+<button class="px-4 font-label text-label rounded bg-surface shadow-sm border border-border/50 text-on-surface font-semibold">Month</button>
+<button class="px-4 font-label text-label rounded text-text-muted hover:text-on-surface transition-colors">Week</button>
+</div>
+<button class="h-10 px-4 rounded-lg border border-border bg-surface text-on-surface font-button text-button hover:bg-surface-subtle transition-colors">
+                    Today
+                </button>
+</div>
+<div class="flex items-center gap-4">
+<div class="text-text-muted font-table-dense text-table-dense flex items-center gap-1">
+<span class="material-symbols-outlined text-base">public</span>
+                    Timezone: Europe/Vienna
+                </div>
+<div class="w-px h-6 bg-border mx-2"></div>
+<button class="h-10 px-4 rounded-lg border border-border bg-surface text-on-surface font-button text-button flex items-center gap-2 hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined text-lg">filter_list</span>
+                    Filters
+                </button>
+<button class="w-10 h-10 rounded-lg bg-surface border border-border text-on-surface flex items-center justify-center hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="w-10 h-10 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center hover:bg-primary-hover transition-colors shadow-sm">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</header>
+<!-- Calendar Container -->
+<main class="flex-1 overflow-auto flex bg-canvas">
+<!-- Calendar Grid Area -->
+<div class="flex-1 p-6 flex flex-col min-w-0">
+<!-- Days of Week Header -->
+<div class="grid grid-cols-7 gap-px mb-2">
+<div class="text-right text-text-muted font-label text-label pr-2 py-1">Mon</div>
+<div class="text-right text-text-muted font-label text-label pr-2 py-1">Tue</div>
+<div class="text-right text-text-muted font-label text-label pr-2 py-1">Wed</div>
+<div class="text-right text-text-muted font-label text-label pr-2 py-1">Thu</div>
+<div class="text-right text-text-muted font-label text-label pr-2 py-1">Fri</div>
+<div class="text-right text-text-muted font-label text-label pr-2 py-1">Sat</div>
+<div class="text-right text-text-muted font-label text-label pr-2 py-1">Sun</div>
+</div>
+<!-- Calendar Grid (Month) -->
+<div class="grid grid-cols-7 grid-rows-5 gap-px bg-border flex-1 border border-border rounded-lg overflow-hidden">
+<!-- Row 1 -->
+<div class="bg-surface-subtle min-h-[120px] p-1 flex flex-col">
+<div class="text-right text-text-muted font-label text-label p-1">31</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">1</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">2</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">3</div>
+<!-- Overdue Item -->
+<div class="mt-1 bg-surface border border-danger/20 rounded p-1.5 shadow-sm cursor-grab active:cursor-grabbing hover:border-danger/40 transition-colors group relative flex flex-col gap-1 min-h-[44px]">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-danger rounded-l"></div>
+<div class="pl-1.5 flex items-start justify-between">
+<span class="font-label text-label text-on-surface truncate leading-tight">Fall Campaign Kickoff</span>
+<span class="material-symbols-outlined text-[14px] text-danger opacity-0 group-hover:opacity-100 transition-opacity">drag_indicator</span>
+</div>
+<div class="pl-1.5 flex items-center justify-between mt-auto">
+<div class="flex gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[14px]">videocam</span>
+<span class="material-symbols-outlined text-[14px]">share</span>
+</div>
+<span class="text-[10px] font-semibold text-danger bg-danger-subtle px-1 rounded">Overdue</span>
+</div>
+</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">4</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1 text-text-muted">5</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1 text-text-muted">6</div>
+</div>
+<!-- Row 2 -->
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">7</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">8</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<!-- Current Day -->
+<div class="flex justify-end p-1">
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label text-label">9</div>
+</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">10</div>
+<!-- Published Item -->
+<div class="mt-1 bg-surface border border-border rounded p-1.5 shadow-sm cursor-grab active:cursor-grabbing hover:border-outline transition-colors group relative flex flex-col gap-1 min-h-[44px]">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-success rounded-l"></div>
+<div class="pl-1.5 flex items-start justify-between">
+<span class="font-label text-label text-on-surface truncate leading-tight">Roast Profile Video</span>
+<span class="material-symbols-outlined text-[14px] text-text-muted opacity-0 group-hover:opacity-100 transition-opacity">drag_indicator</span>
+</div>
+<div class="pl-1.5 flex items-center justify-between mt-auto">
+<div class="flex gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[14px]">videocam</span>
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+</div>
+<span class="text-[10px] font-semibold text-success bg-success-subtle px-1 rounded">Published</span>
+</div>
+</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">11</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1 text-text-muted">12</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1 text-text-muted">13</div>
+</div>
+<!-- Row 3 -->
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">14</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">15</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">16</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">17</div>
+<!-- Overflow day -->
+<div class="mt-1 bg-surface border border-border rounded p-1 shadow-sm cursor-pointer hover:border-outline transition-colors flex flex-col gap-0.5 mb-1">
+<div class="flex items-center gap-1">
+<div class="w-1.5 h-1.5 rounded-full bg-success"></div>
+<span class="text-[11px] truncate text-on-surface leading-tight">Barista Tips</span>
+</div>
+</div>
+<div class="bg-surface border border-border rounded p-1 shadow-sm cursor-pointer hover:border-outline transition-colors flex flex-col gap-0.5 mb-1">
+<div class="flex items-center gap-1">
+<div class="w-1.5 h-1.5 rounded-full bg-warning"></div>
+<span class="text-[11px] truncate text-on-surface leading-tight">Origin Story...</span>
+</div>
+</div>
+<div class="text-center text-[10px] font-semibold text-text-muted hover:text-on-surface cursor-pointer mt-auto bg-surface-subtle rounded py-0.5">
+                            +2 more
+                        </div>
+</div>
+<!-- Sep 18 - Selected State -->
+<div class="bg-primary-subtle min-h-[120px] p-1 flex flex-col border border-primary-container relative z-0">
+<div class="text-right font-label text-label text-on-surface p-1 font-semibold">18</div>
+<!-- Partially Published Item -->
+<div class="mt-1 bg-surface border-2 border-primary-container rounded p-1.5 shadow-sm cursor-grab active:cursor-grabbing relative flex flex-col gap-1 min-h-[44px]">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-warning rounded-l"></div>
+<div class="pl-1.5 flex items-start justify-between">
+<span class="font-label text-label text-on-surface truncate leading-tight">Coffee Pairing Guide</span>
+<span class="material-symbols-outlined text-[14px] text-text-muted hover:text-on-surface">drag_indicator</span>
+</div>
+<div class="pl-1.5 flex items-center justify-between mt-auto">
+<div class="flex gap-1 text-text-muted">
+<span class="material-symbols-outlined text-[14px]">article</span>
+</div>
+<span class="text-[10px] font-semibold text-warning bg-warning-subtle px-1 rounded border border-warning/20">Draft</span>
+</div>
+</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1 text-text-muted">19</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1 text-text-muted">20</div>
+</div>
+<!-- Row 4 -->
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">21</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">22</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">23</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">24</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">25</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1 text-text-muted">26</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1 text-text-muted">27</div>
+</div>
+<!-- Row 5 -->
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">28</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">29</div>
+</div>
+<div class="bg-surface min-h-[120px] p-1 flex flex-col">
+<div class="text-right font-label text-label text-on-surface p-1">30</div>
+</div>
+<div class="bg-surface-subtle min-h-[120px] p-1 flex flex-col">
+<div class="text-right text-text-muted font-label text-label p-1">1</div>
+</div>
+<div class="bg-surface-subtle min-h-[120px] p-1 flex flex-col">
+<div class="text-right text-text-muted font-label text-label p-1">2</div>
+</div>
+<div class="bg-surface-subtle min-h-[120px] p-1 flex flex-col">
+<div class="text-right text-text-muted font-label text-label p-1">3</div>
+</div>
+<div class="bg-surface-subtle min-h-[120px] p-1 flex flex-col">
+<div class="text-right text-text-muted font-label text-label p-1">4</div>
+</div>
+</div>
+</div>
+<!-- Side Sheet for Selected Item (340px) -->
+<aside class="w-[340px] bg-surface border-l border-border h-full flex flex-col shrink-0 shadow-[-4px_0_12px_rgba(0,0,0,0.03)] relative z-10 transition-transform">
+<!-- Sheet Header -->
+<div class="flex items-start justify-between p-4 border-b border-border">
+<div class="flex items-center gap-2">
+<div class="w-2 h-8 bg-warning rounded-full"></div>
+<div>
+<h2 class="font-card-title text-card-title text-on-surface leading-tight">Coffee Pairing Guide</h2>
+<p class="font-table-dense text-table-dense text-text-muted mt-0.5">Sep 18, 2026</p>
+</div>
+</div>
+<button aria-label="Close details" class="w-8 h-8 flex items-center justify-center text-text-muted hover:text-on-surface hover:bg-surface-subtle rounded transition-colors">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+</div>
+<!-- Sheet Content Scrollable -->
+<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
+<!-- Metadata Grid -->
+<div class="grid grid-cols-2 gap-y-4 gap-x-2">
+<div>
+<span class="block font-label text-label text-text-muted mb-1">Status</span>
+<div class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-warning-subtle border border-warning/20">
+<span class="material-symbols-outlined text-[14px] text-warning">edit_document</span>
+<span class="font-label text-label text-warning font-semibold">Draft</span>
+</div>
+</div>
+<div>
+<span class="block font-label text-label text-text-muted mb-1">Format</span>
+<div class="flex items-center gap-1.5 text-on-surface font-body text-body">
+<span class="material-symbols-outlined text-lg text-text-muted">article</span>
+                                Article
+                            </div>
+</div>
+<div class="col-span-2">
+<span class="block font-label text-label text-text-muted mb-1">Channels</span>
+<div class="flex items-center gap-2">
+<div class="flex items-center justify-center w-8 h-8 rounded border border-border bg-surface shadow-sm">
+<span class="material-symbols-outlined text-text-muted">photo_camera</span>
+</div>
+<div class="flex items-center justify-center w-8 h-8 rounded border border-border bg-surface shadow-sm">
+<span class="material-symbols-outlined text-text-muted">feed</span>
+</div>
+<span class="font-table-dense text-table-dense text-text-muted ml-1">Instagram, Blog</span>
+</div>
+</div>
+</div>
+<hr class="border-border"/>
+<!-- Assignees -->
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="font-label text-label text-text-muted">Assignees</span>
+<button class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-surface-subtle text-primary">
+<span class="material-symbols-outlined text-sm">add</span>
+</button>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex -space-x-2">
+<img class="w-8 h-8 rounded-full border-2 border-surface object-cover" data-alt="A small circular avatar showing a smiling middle-aged man with glasses, wearing a grey sweater, in a brightly lit modern office setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6I4G4jnFifGXBwl84VQADeGbzXwLowzp--ggdKawdJk5cOmSJo6APXwy7D_bJ2vRB-Lk5TEvVd0wmy1HX05OkGaI_U8yReZDus92Mdng2ZiNFVnzB-jpUWuBgskak8c4jU-aOKHxzPhOuY46g-HxsiyX4t2Fn78UDG8PC-wldfaDIOwQ9LsizFjpQBFkkGiRkBHDgWHvwvYAaJKSZfNFn3lhzG9JG6uCrFWocGzXnHOZHJcQFzmypdtjZ3qaWxNB78fpEBKnFx-0"/>
+<img class="w-8 h-8 rounded-full border-2 border-surface object-cover" data-alt="A small circular avatar showing a focused young person with short hair, wearing a dark green t-shirt, set against a plain light grey background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEUNANQjOicC50sVqWAvWypXQfPwM6gq4r2U4Z294SbHk9QR4G0AhiCujOGcyo7jmUj-uQhEWngWRZvytVtlFcYCYj72ogtkZb1NblSyvD5Nia1hlPP34r1uN44BrCmj-NI_42XIWBjpELH5XeddRKLD3ygB-8shwkvkQ8wb4iSI9_2GAbwKBGRnJfmEOBcRli_03QgF5WU-k-8rfoD0AWy_hQf917FGnT9EsO2pfqirUlxAwYjHEBOLFItwUeJfV8kaUx6OipNNs"/>
+</div>
+</div>
+</div>
+<!-- Notes / Description (Mock) -->
+<div>
+<span class="block font-label text-label text-text-muted mb-2">Description</span>
+<div class="font-body text-body text-on-surface-variant bg-surface-subtle p-3 rounded-lg border border-border/50 text-sm">
+                            Focus on the seasonal single origins for Q3. Need to highlight the contrast between the Ethiopian wash and the Colombian natural process. Make sure to link to the new store items.
+                        </div>
+</div>
+</div>
+<!-- Sheet Footer Actions Sticky -->
+<div class="p-4 border-t border-border bg-surface mt-auto">
+<div class="flex flex-col gap-2">
+<button class="w-full h-10 bg-primary-container text-on-primary-container rounded-lg font-button text-button hover:bg-primary-hover transition-colors shadow-sm">
+                            Edit Details
+                        </button>
+<button class="w-full h-10 bg-surface border border-border text-on-surface rounded-lg font-button text-button hover:bg-surface-subtle transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-lg">calendar_month</span>
+                            Move to...
+                        </button>
+</div>
+<div class="mt-3 text-center">
+<span class="font-table-dense text-[11px] text-text-muted flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[14px]">keyboard</span>
+                            Press <kbd class="px-1 py-0.5 bg-surface-subtle border border-border rounded text-[10px] font-mono mx-0.5">M</kbd> to move item
+                        </span>
+</div>
+</div>
+</aside>
+</main>
+</div>
+</body></html>

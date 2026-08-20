@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee - Kanban Board</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "focus-ring": "#6366F1",
+                      "success": "#15803D",
+                      "on-primary-container": "#dad7ff",
+                      "secondary-container": "#d7dff9",
+                      "on-secondary-fixed-variant": "#3e475b",
+                      "inverse-surface": "#283141",
+                      "surface-container-lowest": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "warning": "#B45309",
+                      "surface-dim": "#d1daef",
+                      "surface-variant": "#dae3f8",
+                      "secondary": "#555e74",
+                      "tertiary-fixed-dim": "#94ccff",
+                      "on-primary-fixed": "#0f0069",
+                      "danger-subtle": "#FEF2F2",
+                      "on-secondary-container": "#5a6278",
+                      "border": "#DDE1E6",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "tertiary-container": "#00659c",
+                      "success-subtle": "#ECFDF3",
+                      "danger": "#B91C1C",
+                      "on-tertiary-container": "#bfdfff",
+                      "on-surface-variant": "#464555",
+                      "surface-container-high": "#dfe8fe",
+                      "on-primary": "#ffffff",
+                      "on-secondary-fixed": "#121b2e",
+                      "text-muted": "#7B8495",
+                      "surface-tint": "#4d44e3",
+                      "primary-container": "#4f46e5",
+                      "primary-subtle": "#EEF2FF",
+                      "on-tertiary-fixed-variant": "#004b74",
+                      "on-error": "#ffffff",
+                      "on-background": "#131c2b",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "surface-container-low": "#f0f3ff",
+                      "info-subtle": "#F0F9FF",
+                      "inverse-primary": "#c3c0ff",
+                      "background": "#f9f9ff",
+                      "tertiary-fixed": "#cde5ff",
+                      "on-tertiary": "#ffffff",
+                      "surface": "#FFFFFF",
+                      "surface-container-highest": "#dae3f8",
+                      "outline-variant": "#c7c4d8",
+                      "surface-subtle": "#F1F3F5",
+                      "on-tertiary-fixed": "#001d32",
+                      "secondary-fixed-dim": "#bdc6e0",
+                      "surface-container": "#e7eeff",
+                      "primary": "#3525cd",
+                      "on-error-container": "#93000a",
+                      "surface-bright": "#f9f9ff",
+                      "on-surface": "#131c2b",
+                      "canvas": "#F7F7F5",
+                      "primary-hover": "#4338CA",
+                      "secondary-fixed": "#d9e2fc",
+                      "primary-fixed": "#e2dfff",
+                      "on-secondary": "#ffffff",
+                      "warning-subtle": "#FFF7E6",
+                      "inverse-on-surface": "#ecf0ff",
+                      "error": "#ba1a1a",
+                      "outline": "#777587",
+                      "tertiary": "#004c77"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "screen-padding": "24px",
+                      "topbar-height": "64px",
+                      "base": "4px",
+                      "sidebar-collapsed": "72px",
+                      "sidebar-expanded": "248px",
+                      "card-padding": "16px",
+                      "gutter": "16px"
+              },
+              "fontFamily": {
+                      "page-title": [
+                              "Inter"
+                      ],
+                      "body": [
+                              "Inter"
+                      ],
+                      "table-dense": [
+                              "Inter"
+                      ],
+                      "section-title": [
+                              "Inter"
+                      ],
+                      "label": [
+                              "Inter"
+                      ],
+                      "card-title": [
+                              "Inter"
+                      ],
+                      "button": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "page-title": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body": [
+                              "14px",
+                              {
+                                      "lineHeight": "21px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "table-dense": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "section-title": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "card-title": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "button": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+          .kanban-scroll::-webkit-scrollbar {
+              height: 8px;
+          }
+          .kanban-scroll::-webkit-scrollbar-track {
+              background: #F7F7F5; 
+              border-radius: 4px;
+          }
+          .kanban-scroll::-webkit-scrollbar-thumb {
+              background: #DDE1E6; 
+              border-radius: 4px;
+          }
+          .kanban-scroll::-webkit-scrollbar-thumb:hover {
+              background: #c7c4d8; 
+          }
+      </style>
+</head>
+<body class="bg-canvas text-on-surface font-body min-h-screen flex">
+<!-- SideNavBar (Shared Component) -->
+<aside class="hidden md:flex w-sidebar-expanded h-screen flex-col bg-surface border-r border-border fixed left-0 top-0 z-40 transition-colors duration-200">
+<div class="h-topbar-height flex items-center px-6 border-b border-border">
+<div class="flex items-center gap-3 w-full">
+<img alt="StudioFlow Workspace Logo" class="w-8 h-8 rounded-lg object-cover" data-alt="A minimal, geometric logo for StudioFlow in a corporate workspace setting. Crisp lines, monochrome with a subtle indigo accent. Clean white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5j16Y9hJF5iS7cvG6a6PRiH6ZUMShRH_WPzLvG0zBkq2E7QC_jzB8AawKmr6hTZCoS_UChzPB5sTva1IozCnxL93HEG55vvByRfHrPxGYbON3ZD8IXvTdzgS-JTD1e_PNhdtJbEWW2RzO10WyPCfLNP_qd6uVVkUCto0oL5E8b24FINAWkWDLr8xKn3z2zTGGwwI4te4oQyNZvlcQRxPwnK7ELGt8j1NoCULp6OkXqaYbuuCAgFd78K0klIRrgVrSXv6UOG0KQEw"/>
+<div class="flex flex-col flex-grow">
+<span class="font-page-title text-page-title text-primary truncate text-sm leading-tight">StudioFlow</span>
+<span class="text-xs text-on-surface-variant truncate">Workspace Switcher</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-sm cursor-pointer" data-icon="unfold_more">unfold_more</span>
+</div>
+</div>
+<div class="p-4">
+<button class="w-full bg-primary-container text-on-primary h-10 rounded font-button text-button flex items-center justify-center gap-2 hover:bg-primary-hover transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                + New content
+            </button>
+</div>
+<nav class="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors duration-200 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="assignment_turned_in">assignment_turned_in</span>
+<span class="font-label text-label">My Work</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors duration-200 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+<span class="font-label text-label">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md transition-colors duration-200 text-primary font-bold border-r-2 border-primary bg-primary-subtle" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="event_note">event_note</span>
+<span class="font-label text-label">Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors duration-200 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="calendar_today">calendar_today</span>
+<span class="font-label text-label">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors duration-200 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="rate_review">rate_review</span>
+<span class="font-label text-label">Reviews</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors duration-200 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="share">share</span>
+<span class="font-label text-label">Social Channels</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors duration-200 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="auto_awesome">auto_awesome</span>
+<span class="font-label text-label">Brand Kit</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors duration-200 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="group">group</span>
+<span class="font-label text-label">Team</span>
+</a>
+<div class="pt-4 mt-4 border-t border-border">
+<a class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors duration-200 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings">settings</span>
+<span class="font-label text-label">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors duration-200 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="admin_panel_settings">admin_panel_settings</span>
+<span class="font-label text-label">Admin</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors duration-200 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="help">help</span>
+<span class="font-label text-label">Help</span>
+</a>
+</div>
+</nav>
+</aside>
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 right-0 w-full md:w-[calc(100%-248px)] h-topbar-height bg-surface border-b border-border flex justify-between items-center px-gutter z-30 transition-all duration-200">
+<div class="flex items-center gap-6 h-full">
+<div class="md:hidden flex items-center mr-2">
+<span class="material-symbols-outlined text-on-surface cursor-pointer">menu</span>
+</div>
+<!-- Breadcrumb / Header Title -->
+<div class="flex flex-col justify-center">
+<div class="flex items-center gap-2 text-text-muted font-label text-label">
+<span>Northstar Coffee</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface">Planning</span>
+</div>
+<h1 class="font-section-title text-section-title text-on-surface leading-none mt-1">September 2026</h1>
+</div>
+<!-- View Toggle -->
+<div class="hidden lg:flex items-center bg-surface-subtle p-1 rounded-lg border border-border h-9 ml-4">
+<button class="px-4 h-full rounded-md font-label text-label text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">format_list_bulleted</span>
+                    List
+                </button>
+<button class="px-4 h-full rounded-md font-label text-label bg-surface shadow-sm text-primary border border-border/50 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">view_kanban</span>
+                    Board
+                </button>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<!-- Filters -->
+<div class="hidden xl:flex items-center gap-2 mr-4">
+<button class="h-9 px-3 border border-border rounded flex items-center gap-2 font-label text-label text-on-surface hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined text-[16px] text-text-muted">person</span>
+                    Owner
+                </button>
+<button class="h-9 px-3 border border-border rounded flex items-center gap-2 font-label text-label text-on-surface hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined text-[16px] text-text-muted">category</span>
+                    Format
+                </button>
+<button class="h-9 px-3 border border-border rounded flex items-center gap-2 font-label text-label text-on-surface hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined text-[16px] text-text-muted">hub</span>
+                    Channel
+                </button>
+<button class="h-9 px-3 border border-border rounded flex items-center gap-2 font-label text-label text-on-surface hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined text-[16px] text-text-muted">flag</span>
+                    Status
+                </button>
+<button class="h-9 w-9 border border-border rounded flex items-center justify-center text-text-muted hover:bg-surface-subtle transition-colors ml-1">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+</button>
+</div>
+<!-- Global Search -->
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]" data-icon="search">search</span>
+<input class="h-9 pl-9 pr-4 rounded bg-surface-subtle border-border focus:border-focus-ring focus:ring-1 focus:ring-focus-ring text-sm w-48 transition-all" placeholder="Search..." type="text"/>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<img alt="User Profile" class="w-8 h-8 rounded-full border border-border object-cover cursor-pointer hover:ring-2 hover:ring-primary-subtle transition-all" data-alt="A small, circular avatar portrait of a professional woman in her 30s with short dark hair, smiling warmly in a bright, modern office setting. Shallow depth of field." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAgnHkBtaWCoeIzYYIobEdyo1ngJjpqB8I7byjm4c6hwGeGAhBjkUL694rfYfTbUJS7-dsAnocEhVB7hGb2LkzGuYYPkEaLq7Qbgjp47-HIjmBxQrqv-jbqr1r5Dl_e8ctF3crgQONpTuFuToHGmZuqVkiboToXSQxXgbcIzvuozjGu37f5DPZJ_wkcEh5nLA-5aRDexT3K7K5VjrPLiteztCoi33tFhB5eC-R41UXdGpXkSGo3yG776U_r4ZQ4WiATfggkN5OtMMU"/>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-[248px] pt-[64px] h-screen overflow-hidden flex flex-col bg-canvas">
+<!-- Mobile Filters Bar (Visible only on small screens) -->
+<div class="xl:hidden w-full bg-surface border-b border-border px-gutter py-2 flex items-center gap-2 overflow-x-auto hide-scrollbar">
+<button class="h-8 px-3 border border-border rounded whitespace-nowrap flex items-center gap-2 font-label text-label text-on-surface bg-surface-subtle shrink-0">
+<span class="material-symbols-outlined text-[16px]">view_kanban</span>
+                    Board View
+                </button>
+<button class="h-8 px-3 border border-border rounded whitespace-nowrap flex items-center gap-2 font-label text-label text-on-surface shrink-0">
+<span class="material-symbols-outlined text-[16px] text-text-muted">filter_list</span>
+                    Filters
+                </button>
+</div>
+<!-- Kanban Board Area -->
+<div class="flex-1 overflow-x-auto overflow-y-hidden kanban-scroll p-6">
+<div class="flex gap-6 h-full min-w-max pb-4">
+<!-- Column 1: Draft -->
+<div class="w-[320px] flex flex-col flex-shrink-0 bg-surface-subtle/50 rounded-lg border border-border/60">
+<div class="p-3 border-b border-border/60 flex items-center justify-between bg-surface/50 rounded-t-lg">
+<div class="flex items-center gap-2">
+<h3 class="font-label text-label text-on-surface uppercase tracking-wider font-semibold">Draft</h3>
+<span class="bg-surface border border-border text-text-muted text-[11px] px-1.5 py-0.5 rounded-full font-medium">3</span>
+</div>
+<button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_horiz</span></button>
+</div>
+<div class="flex-1 overflow-y-auto p-3 space-y-3">
+<button class="w-full py-2 border border-dashed border-primary/40 text-primary hover:bg-primary-subtle/50 rounded flex items-center justify-center gap-2 font-label text-label transition-colors">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                            Add content
+                        </button>
+<!-- Card 1 -->
+<div class="bg-surface border border-border rounded-lg p-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-grab flex flex-col gap-3 group">
+<div class="flex items-start justify-between gap-2">
+<h4 class="font-card-title text-card-title text-on-surface leading-snug">Weekend brew ritual</h4>
+<button class="opacity-0 group-hover:opacity-100 text-text-muted hover:text-on-surface transition-opacity -mt-1 -mr-1"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+</div>
+<div class="flex items-center gap-2 text-text-muted font-label text-label">
+<span class="material-symbols-outlined text-[16px]" data-icon="article">article</span>
+<span>Static Image</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex items-center gap-2">
+<span class="bg-surface-container text-on-surface-variant px-2 py-1 rounded text-[11px] font-medium flex items-center gap-1 border border-border/50">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                        Sep 26
+                                    </span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-[#E1306C]" title="Instagram">photo_camera</span>
+<img alt="Assignee" class="w-6 h-6 rounded-full border border-border object-cover" data-alt="Tiny circular headshot avatar of a young man with glasses and a beard in a brightly lit studio. Professional corporate headshot." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWXyVs5SPkydxmW0O80rjMZayKV7jfoN1J5TP5CyMvHxyq2fI9nYs9rJfpHkTqgr0G4R4s8fpGd6Sp9ND3h7VDzcvEObr1J1cVKZclEcp_zcGablhtv5nS9Ney6jvA8PBj0NRnQ8co32FrIvXmuCrxK0kj_fW3GCigBSTAH7ub4aP9bayowKieBn43jUVheXxY_S662OdYWRL8ebb8gEXwCkwKMJRgBxeeJIQbYi1uuKjfyH0xygCrnA6LcZpuqliwuud3b6SnXpM"/>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface border border-border rounded-lg p-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-grab flex flex-col gap-3 group">
+<div class="flex items-start justify-between gap-2">
+<h4 class="font-card-title text-card-title text-on-surface leading-snug">Q4 Promo Announcement</h4>
+<button class="opacity-0 group-hover:opacity-100 text-text-muted hover:text-on-surface transition-opacity -mt-1 -mr-1"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+</div>
+<div class="flex items-center gap-2 text-text-muted font-label text-label">
+<span class="material-symbols-outlined text-[16px]" data-icon="mail">mail</span>
+<span>Newsletter</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex items-center gap-2">
+<span class="bg-surface-container text-on-surface-variant px-2 py-1 rounded text-[11px] font-medium flex items-center gap-1 border border-border/50">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                        Sep 28
+                                    </span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-text-muted" title="Email">mark_email_read</span>
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-[10px] font-bold border border-border">JD</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 2: Content Review -->
+<div class="w-[320px] flex flex-col flex-shrink-0 bg-surface-subtle/50 rounded-lg border border-border/60">
+<div class="p-3 border-b border-border/60 flex items-center justify-between bg-surface/50 rounded-t-lg">
+<div class="flex items-center gap-2">
+<h3 class="font-label text-label text-on-surface uppercase tracking-wider font-semibold">Content Review</h3>
+<span class="bg-surface border border-border text-text-muted text-[11px] px-1.5 py-0.5 rounded-full font-medium">2</span>
+</div>
+<button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_horiz</span></button>
+</div>
+<div class="flex-1 overflow-y-auto p-3 space-y-3">
+<!-- Card 3 -->
+<div class="bg-surface border border-border rounded-lg p-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-grab flex flex-col gap-3 group">
+<div class="flex items-start justify-between gap-2">
+<h4 class="font-card-title text-card-title text-on-surface leading-snug">Barista tips: milk texture</h4>
+<button class="opacity-0 group-hover:opacity-100 text-text-muted hover:text-on-surface transition-opacity -mt-1 -mr-1"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+</div>
+<div class="flex items-center gap-2 text-text-muted font-label text-label">
+<span class="material-symbols-outlined text-[16px]" data-icon="description">description</span>
+<span>Article</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex items-center gap-2">
+<span class="bg-warning-subtle text-warning px-2 py-1 rounded text-[11px] font-medium flex items-center gap-1 border border-warning/20">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                        Sep 18
+                                    </span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-text-muted" title="Blog">web</span>
+<img alt="Assignee" class="w-6 h-6 rounded-full border border-border object-cover" data-alt="Tiny circular headshot avatar of a young woman with curly hair looking directly at camera. Bright natural lighting. Corporate casual." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjCUQVOeB3ccw8rpxLenBEdm0Uww1BlRmAaHJNPW-qveOagjdvzz7i_OajiMkRAOqSSDaOaq627QfC-kyihRNGfwY39pYSYww_f2N85DuYYO7aXhXABw93nNGXqmC7MZ6GIwPVo902_eTmbDJbDxfMh1nQDwyITvsoD_1lk-GM-_3prXxbvkaGsJ9grR0_Hz4zKPylMeU8lxO6uHBePQYM69KI18sUtJEQ9jF1Oh7zR_QVcBF0wb3BhdUD7voTmttmIKCEBvhThoY"/>
+</div>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="bg-surface border border-border rounded-lg p-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-grab flex flex-col gap-3 group">
+<div class="flex items-start justify-between gap-2">
+<h4 class="font-card-title text-card-title text-on-surface leading-snug">Origin story: Guatemala</h4>
+<button class="opacity-0 group-hover:opacity-100 text-text-muted hover:text-on-surface transition-opacity -mt-1 -mr-1"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+</div>
+<div class="flex items-center gap-2 text-text-muted font-label text-label">
+<span class="material-symbols-outlined text-[16px]" data-icon="videocam">videocam</span>
+<span>Video</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex items-center gap-2">
+<span class="bg-surface-container text-on-surface-variant px-2 py-1 rounded text-[11px] font-medium flex items-center gap-1 border border-border/50">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                        Sep 22
+                                    </span>
+<div class="flex items-center gap-1 text-text-muted text-[11px]">
+<span class="material-symbols-outlined text-[14px]">chat_bubble_outline</span>
+<span>3</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-[#FF0000]" title="YouTube">smart_display</span>
+<img alt="Assignee" class="w-6 h-6 rounded-full border border-border object-cover" data-alt="Tiny circular headshot avatar of an older man with white hair and a blue shirt against a neutral gray background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDV-vnnprbrBEXaGdVqC7R6XzjFOSxc_W8e_kDkvGbQYWGF95R4h3XuqDhLWrdNL43KY_-ZilmjMo1wLBbBspCAUivlbEubbauPiJC3FbNUf52R_OvduVRLOMerI-n_kW6wBtfFrDFZQTimZ9-Whng9JqiIwl86dbbvuOqAzHOgL6kyeZKxOVfvmwt-4tnuhpUIiZcIS0bFwJfwJMN0NF234Nq6UHF_9VsR3zGb-3FZzlAQ-T0op0HAd71k2Tea2E_JabtrPNO_3pg"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 3: Approved for Design (Empty State) -->
+<div class="w-[320px] flex flex-col flex-shrink-0 bg-surface-subtle/50 rounded-lg border border-border/60">
+<div class="p-3 border-b border-border/60 flex items-center justify-between bg-surface/50 rounded-t-lg">
+<div class="flex items-center gap-2">
+<h3 class="font-label text-label text-on-surface uppercase tracking-wider font-semibold">Approved for Design</h3>
+<span class="bg-surface border border-border text-text-muted text-[11px] px-1.5 py-0.5 rounded-full font-medium">0</span>
+</div>
+<button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_horiz</span></button>
+</div>
+<div class="flex-1 p-3 flex flex-col">
+<div class="flex-1 border-2 border-dashed border-border/80 rounded-lg flex flex-col items-center justify-center text-text-muted bg-surface/30">
+<span class="material-symbols-outlined text-[32px] mb-2 opacity-50">note_add</span>
+<p class="font-label text-label">Drop cards here</p>
+</div>
+</div>
+</div>
+<!-- Column 4: In Design -->
+<div class="w-[320px] flex flex-col flex-shrink-0 bg-surface-subtle/50 rounded-lg border border-border/60">
+<div class="p-3 border-b border-border/60 flex items-center justify-between bg-surface/50 rounded-t-lg">
+<div class="flex items-center gap-2">
+<h3 class="font-label text-label text-on-surface uppercase tracking-wider font-semibold">In Design</h3>
+<span class="bg-surface border border-border text-text-muted text-[11px] px-1.5 py-0.5 rounded-full font-medium">4</span>
+</div>
+<button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_horiz</span></button>
+</div>
+<div class="flex-1 overflow-y-auto p-3 space-y-3">
+<!-- Card 5 (Changes Requested) -->
+<div class="bg-surface border border-border rounded-lg p-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-grab flex flex-col gap-3 group relative overflow-hidden">
+<!-- Status Indicator Ribbon -->
+<div class="absolute top-0 left-0 w-1 h-full bg-warning"></div>
+<div class="flex items-start justify-between gap-2 pl-2">
+<div class="flex flex-col gap-1">
+<span class="text-[10px] font-bold text-warning uppercase tracking-wider flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">assignment_return</span> Changes Requested</span>
+<h4 class="font-card-title text-card-title text-on-surface leading-snug">Autumn roast launch</h4>
+</div>
+<button class="opacity-0 group-hover:opacity-100 text-text-muted hover:text-on-surface transition-opacity -mt-1 -mr-1"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+</div>
+<div class="flex items-center gap-2 text-text-muted font-label text-label pl-2">
+<span class="material-symbols-outlined text-[16px]" data-icon="view_carousel">view_carousel</span>
+<span>Carousel</span>
+</div>
+<div class="flex items-center justify-between mt-1 pl-2">
+<div class="flex items-center gap-2">
+<span class="bg-surface-container text-on-surface-variant px-2 py-1 rounded text-[11px] font-medium flex items-center gap-1 border border-border/50">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                        Sep 16
+                                    </span>
+<div class="flex items-center gap-1 text-text-muted text-[11px]">
+<span class="material-symbols-outlined text-[14px]">chat_bubble_outline</span>
+<span>5</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-[#E1306C]" title="Instagram">photo_camera</span>
+<img alt="Assignee" class="w-6 h-6 rounded-full border border-border object-cover" data-alt="Tiny circular headshot avatar of a young Asian woman smiling, wearing a yellow sweater. Simple white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmQv-q5fr8tAcWX7265RNZ3fxuuniNbNmZRUY5CHpufAJajRgWIgVH_E8Taj6B-1r6TxD6qHd8L17MALSfv8UWvWrrpFIFj9ntks7EKfn6PZrSakUb0auSHkqFzzmayUQBY2lB_ft8kUUSqXXjmJxDYhGctq6Ffx7O0v5r9TZcuvLEkrqqfpX3GvZrAwMwv0a76CrG-XRuQpDHx0jU3LdpU6Ei14iwcwxEN-XrVVlzeD6vNgVLqrHZ-gG8xHWTByLcI70iKpTQR8E"/>
+</div>
+</div>
+</div>
+<!-- Card 6 (Overdue) -->
+<div class="bg-danger-subtle border border-danger/30 rounded-lg p-3.5 shadow-sm hover:shadow-md hover:border-danger/60 transition-all cursor-grab flex flex-col gap-3 group relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-danger"></div>
+<div class="flex items-start justify-between gap-2 pl-2">
+<div class="flex flex-col gap-1">
+<span class="text-[10px] font-bold text-danger uppercase tracking-wider flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">warning</span> Overdue</span>
+<h4 class="font-card-title text-card-title text-on-surface leading-snug">Sustainability Reel</h4>
+</div>
+<button class="opacity-0 group-hover:opacity-100 text-danger/70 hover:text-danger transition-opacity -mt-1 -mr-1"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+</div>
+<div class="flex items-center gap-2 text-danger/70 font-label text-label pl-2">
+<span class="material-symbols-outlined text-[16px]" data-icon="movie">movie</span>
+<span>Reel</span>
+</div>
+<div class="flex items-center justify-between mt-1 pl-2">
+<div class="flex items-center gap-2">
+<span class="bg-danger text-on-error px-2 py-1 rounded text-[11px] font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">event_busy</span>
+                                        Sep 09
+                                    </span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-danger/70" title="Instagram">photo_camera</span>
+<img alt="Assignee" class="w-6 h-6 rounded-full border border-border object-cover" data-alt="Tiny circular headshot avatar of a person with dark skin and short hair wearing a green collared shirt. Corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKTny4ryQA4FbmsLkii0bNLAIbSRGddnuNraHX6xOmptegzrRhwooKTscWN9_0kbf64gMpUGZxnQyiVKMirEev_P8BcmmMN66i8ZY88hcah9jN3SgZMCPQYdcPxy9tnhvTTqNGsEq0eCk69CBGDZrWQNN2-Tz7ola3ScFo4DB03bq3e-JxXGnBcq17OT2NhX5lDvvkdYOO8zFFieeYaJU8SY-Rn1-BHE76dBkxgOxtJTXPUxoSFenlU_L-E37O_56QesySmcwM3Us"/>
+</div>
+</div>
+</div>
+<!-- Card dummy -->
+<div class="bg-surface border border-border rounded-lg p-3.5 shadow-sm opacity-60">
+<div class="h-4 w-3/4 bg-surface-variant rounded mb-3"></div>
+<div class="h-3 w-1/2 bg-surface-variant rounded mb-4"></div>
+<div class="flex justify-between">
+<div class="h-5 w-16 bg-surface-variant rounded"></div>
+<div class="h-6 w-6 rounded-full bg-surface-variant"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 5: Creative Review -->
+<div class="w-[320px] flex flex-col flex-shrink-0 bg-surface-subtle/50 rounded-lg border border-border/60">
+<div class="p-3 border-b border-border/60 flex items-center justify-between bg-surface/50 rounded-t-lg">
+<div class="flex items-center gap-2">
+<h3 class="font-label text-label text-on-surface uppercase tracking-wider font-semibold">Creative Review</h3>
+<span class="bg-surface border border-border text-text-muted text-[11px] px-1.5 py-0.5 rounded-full font-medium">2</span>
+</div>
+<button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_horiz</span></button>
+</div>
+<div class="flex-1 overflow-y-auto p-3 space-y-3">
+<!-- Card 7 -->
+<div class="bg-surface border border-border rounded-lg p-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-grab flex flex-col gap-3 group">
+<div class="flex items-start justify-between gap-2">
+<h4 class="font-card-title text-card-title text-on-surface leading-snug">Behind the beans</h4>
+<button class="opacity-0 group-hover:opacity-100 text-text-muted hover:text-on-surface transition-opacity -mt-1 -mr-1"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+</div>
+<div class="flex items-center gap-2 text-text-muted font-label text-label">
+<span class="material-symbols-outlined text-[16px]" data-icon="ondemand_video">ondemand_video</span>
+<span>Long Video</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex items-center gap-2">
+<span class="bg-surface-container text-on-surface-variant px-2 py-1 rounded text-[11px] font-medium flex items-center gap-1 border border-border/50">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                        Sep 20
+                                    </span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-[#FF0000]" title="YouTube">smart_display</span>
+<span class="material-symbols-outlined text-[16px] text-[#0866FF]" title="Facebook">qr_code_2</span>
+<img alt="Assignee" class="w-6 h-6 rounded-full border border-border object-cover" data-alt="Tiny circular headshot avatar of a man with blonde hair and a neat beard in a grey t-shirt." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBMsJEMdFilTJt-jqRkLS4fW2cEw4S6L53Rc2Is3-XECwobowENF1PRkmowIMsegRXUBDCjV-X3Hi-WF8PB-VkXcBuX1b1_0Fk8ymwUQrjln7bnOtsOt3Ac5BVIoA-Y4VJyzPW2qMyJnouIKHEgZI65WvYgxLAjKaVwo96JjlMn3U9PAlmkx2650ITxvNR9iv2GFBvfDR9-sUumBgO9888DsUvlmVP7iDWOCj356-lSne7rSyhGyxog6SBl4DLfDHTzertBjXNU6MI"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 6: Ready to Publish -->
+<div class="w-[320px] flex flex-col flex-shrink-0 bg-surface-subtle/50 rounded-lg border border-border/60">
+<div class="p-3 border-b border-border/60 flex items-center justify-between bg-success-subtle/50 rounded-t-lg">
+<div class="flex items-center gap-2">
+<h3 class="font-label text-label text-success uppercase tracking-wider font-semibold">Ready to Publish</h3>
+<span class="bg-surface border border-success/30 text-success text-[11px] px-1.5 py-0.5 rounded-full font-medium">1</span>
+</div>
+<button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_horiz</span></button>
+</div>
+<div class="flex-1 overflow-y-auto p-3 space-y-3">
+<!-- Card 8 -->
+<div class="bg-surface border border-border rounded-lg p-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-grab flex flex-col gap-3 group">
+<div class="flex items-start justify-between gap-2">
+<h4 class="font-card-title text-card-title text-on-surface leading-snug">New Mug Collection</h4>
+<button class="opacity-0 group-hover:opacity-100 text-text-muted hover:text-on-surface transition-opacity -mt-1 -mr-1"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+</div>
+<div class="flex items-center gap-2 text-text-muted font-label text-label">
+<span class="material-symbols-outlined text-[16px]" data-icon="image">image</span>
+<span>Image Gallery</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex items-center gap-2">
+<span class="bg-success text-on-primary px-2 py-1 rounded text-[11px] font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                                        Sep 11
+                                    </span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-[#E1306C]" title="Instagram">photo_camera</span>
+<img alt="Assignee" class="w-6 h-6 rounded-full border border-border object-cover" data-alt="Tiny circular headshot avatar of a young Asian woman smiling, wearing a yellow sweater. Simple white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-FafvJVWlnoZSWpnKWbMrCcTd1OtOPcC_ZTd4-zXshmAAS6ZJjlOn7rMZQ3nYrCf6mA4Ilgv0ZOm-gHRyfULIMYU0-PZYWICfUhhTrgb9MhX9TqvcUqSMhbYq6SG17KZvm0OlfUfa8cnOHRYnc7Hksx_OhgdzAIL9JmztowAUJMZRMkB5mPm2FkjJp8vwqIRI061SW-xn9hJYNOmIKE_yI3X4yJmsisETZABiftq_eOVp22q-DlPP19hEHgfp6QifpoIPePad2eA"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 7: Published -->
+<div class="w-[320px] flex flex-col flex-shrink-0 bg-surface-subtle/50 rounded-lg border border-border/60 opacity-75 hover:opacity-100 transition-opacity">
+<div class="p-3 border-b border-border/60 flex items-center justify-between bg-surface-variant/30 rounded-t-lg">
+<div class="flex items-center gap-2">
+<h3 class="font-label text-label text-on-surface-variant uppercase tracking-wider font-semibold">Published</h3>
+<span class="bg-surface border border-border text-text-muted text-[11px] px-1.5 py-0.5 rounded-full font-medium">5</span>
+</div>
+<button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">more_horiz</span></button>
+</div>
+<div class="flex-1 overflow-y-auto p-3 space-y-3">
+<!-- Dummy Published Cards -->
+<div class="bg-surface border border-border rounded-lg p-3 shadow-sm flex items-center justify-between gap-3 group">
+<div class="flex flex-col gap-1 overflow-hidden">
+<h4 class="font-label text-label text-on-surface truncate">Labor Day Special Promo</h4>
+<span class="text-[10px] text-text-muted">Published Sep 02</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-success">done_all</span>
+</div>
+<div class="bg-surface border border-border rounded-lg p-3 shadow-sm flex items-center justify-between gap-3 group">
+<div class="flex flex-col gap-1 overflow-hidden">
+<h4 class="font-label text-label text-on-surface truncate">Fall Menu Teaser Video</h4>
+<span class="text-[10px] text-text-muted">Published Sep 04</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-success">done_all</span>
+</div>
+<div class="bg-surface border border-border rounded-lg p-3 shadow-sm flex items-center justify-between gap-3 group">
+<div class="flex flex-col gap-1 overflow-hidden">
+<h4 class="font-label text-label text-on-surface truncate">Staff Spotlight: Maria</h4>
+<span class="text-[10px] text-text-muted">Published Sep 06</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-success">done_all</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

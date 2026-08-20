@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee Reviews</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                            "on-secondary-fixed": "#121b2e",
+                            "on-error-container": "#93000a",
+                            "inverse-surface": "#283141",
+                            "on-primary": "#ffffff",
+                            "surface-container-highest": "#dae3f8",
+                            "on-secondary-container": "#5a6278",
+                            "primary-container": "#4f46e5",
+                            "tertiary": "#004c77",
+                            "surface-container-lowest": "#ffffff",
+                            "surface-container-low": "#f0f3ff",
+                            "error-container": "#ffdad6",
+                            "on-tertiary": "#ffffff",
+                            "on-primary-fixed-variant": "#3323cc",
+                            "background": "#f9f9ff",
+                            "tertiary-fixed": "#cde5ff",
+                            "surface-tint": "#4d44e3",
+                            "primary-fixed": "#e2dfff",
+                            "focus-ring": "#6366F1",
+                            "tertiary-container": "#00659c",
+                            "primary-hover": "#4338CA",
+                            "on-secondary": "#ffffff",
+                            "danger": "#B91C1C",
+                            "surface-container": "#e7eeff",
+                            "outline": "#777587",
+                            "on-primary-fixed": "#0f0069",
+                            "text-muted": "#7B8495",
+                            "on-surface-variant": "#464555",
+                            "error": "#ba1a1a",
+                            "secondary-fixed": "#d9e2fc",
+                            "on-error": "#ffffff",
+                            "warning-subtle": "#FFF7E6",
+                            "on-tertiary-container": "#bfdfff",
+                            "on-surface": "#131c2b",
+                            "warning": "#B45309",
+                            "secondary": "#555e74",
+                            "on-tertiary-fixed": "#001d32",
+                            "on-tertiary-fixed-variant": "#004b74",
+                            "outline-variant": "#c7c4d8",
+                            "surface-subtle": "#F1F3F5",
+                            "surface-variant": "#dae3f8",
+                            "primary-fixed-dim": "#c3c0ff",
+                            "primary": "#3525cd",
+                            "on-primary-container": "#dad7ff",
+                            "success": "#15803D",
+                            "info-subtle": "#F0F9FF",
+                            "surface-bright": "#f9f9ff",
+                            "primary-subtle": "#EEF2FF",
+                            "canvas": "#F7F7F5",
+                            "success-subtle": "#ECFDF3",
+                            "on-background": "#131c2b",
+                            "secondary-fixed-dim": "#bdc6e0",
+                            "on-secondary-fixed-variant": "#3e475b",
+                            "danger-subtle": "#FEF2F2",
+                            "surface-dim": "#d1daef",
+                            "surface-container-high": "#dfe8fe",
+                            "inverse-primary": "#c3c0ff",
+                            "surface": "#FFFFFF",
+                            "inverse-on-surface": "#ecf0ff",
+                            "secondary-container": "#d7dff9",
+                            "border": "#DDE1E6",
+                            "tertiary-fixed-dim": "#94ccff"
+                    },
+                    "borderRadius": {
+                            "DEFAULT": "0.25rem",
+                            "lg": "0.5rem",
+                            "xl": "0.75rem",
+                            "full": "9999px",
+                            "card": "10px"
+                    },
+                    "spacing": {
+                            "topbar-height": "64px",
+                            "card-padding": "16px",
+                            "sidebar-collapsed": "72px",
+                            "sidebar-expanded": "248px",
+                            "gutter": "16px",
+                            "base": "4px",
+                            "screen-padding": "24px"
+                    },
+                    "fontFamily": {
+                            "table-dense": ["Inter"],
+                            "section-title": ["Inter"],
+                            "card-title": ["Inter"],
+                            "label": ["Inter"],
+                            "page-title": ["Inter"],
+                            "body": ["Inter"],
+                            "button": ["Inter"]
+                    },
+                    "fontSize": {
+                            "table-dense": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                            "section-title": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                            "card-title": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                            "label": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                            "page-title": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                            "body": ["14px", {"lineHeight": "21px", "fontWeight": "400"}],
+                            "button": ["14px", {"lineHeight": "20px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: theme('colors.canvas'); color: theme('colors.on-surface'); margin: 0; overflow-x: hidden; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .filled-icon { font-variation-settings: 'FILL' 1; }
+        /* Scrollbar styling for master/detail areas */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: theme('colors.outline-variant'); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: theme('colors.outline'); }
+    </style>
+</head>
+<body class="flex h-screen w-full bg-canvas overflow-hidden">
+<!-- Side NavBar (Collapsed for Tablet Landscape) -->
+<nav aria-label="Main Navigation" class="fixed left-0 top-0 h-full w-sidebar-collapsed z-40 py-4 flex flex-col items-center bg-canvas border-r border-border">
+<!-- Brand Avatar -->
+<div class="mb-8">
+<div aria-label="Northstar Coffee Logo" class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-primary font-bold overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A stylized logo for Northstar Coffee, featuring a minimalist star and coffee bean design. The logo is clean and modern, suited for a corporate dashboard context. Soft lighting and high-contrast colors ensure clear visibility against a light background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDXaBsJRZqaAcuCCy_PIHeIX46FfHgIsqaz2FNDNIxHaCkP1bATyM5QIqhwim1IlIY9nK8j4cwyKlxU5PM7Djxy_HzYa7C3cNlLwJk_05TXf49YqOI_FpE0Sauv7HFEGChf2cMQCJ_GGfc1yKkacLET6nfpp4-vRuKHdgUfqsKBvgAh-E3Aejz-NFWtf7w-G4JG14vWgAdptBnE3ol7SuDsmBmok2RedfyMcdITpwIPxmGTOzHRJhIoTUMfTOLJ6YuVYrWtHnTFK4"/>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<div class="flex-1 w-full flex flex-col gap-2 px-2">
+<a class="cursor-pointer flex items-center justify-center h-12 w-12 mx-auto mb-2 text-on-surface-variant hover:bg-surface-subtle transition-all rounded-lg group" href="#" title="Workspaces">
+<span class="material-symbols-outlined group-hover:text-primary">grid_view</span>
+</a>
+<a class="cursor-pointer flex items-center justify-center h-12 w-12 mx-auto mb-2 bg-primary-subtle text-primary rounded-lg" href="#" title="Projects (Active)">
+<span class="material-symbols-outlined filled-icon">assignment</span>
+</a>
+<a class="cursor-pointer flex items-center justify-center h-12 w-12 mx-auto mb-2 text-on-surface-variant hover:bg-surface-subtle transition-all rounded-lg group" href="#" title="Calendar">
+<span class="material-symbols-outlined group-hover:text-primary">calendar_today</span>
+</a>
+<a class="cursor-pointer flex items-center justify-center h-12 w-12 mx-auto mb-2 text-on-surface-variant hover:bg-surface-subtle transition-all rounded-lg group" href="#" title="Assets">
+<span class="material-symbols-outlined group-hover:text-primary">folder_open</span>
+</a>
+<a class="cursor-pointer flex items-center justify-center h-12 w-12 mx-auto mb-2 text-on-surface-variant hover:bg-surface-subtle transition-all rounded-lg group" href="#" title="Analytics">
+<span class="material-symbols-outlined group-hover:text-primary">trending_up</span>
+</a>
+</div>
+<!-- Footer Tabs -->
+<div class="w-full flex flex-col gap-2 px-2 mt-auto">
+<a class="cursor-pointer flex items-center justify-center h-12 w-12 mx-auto mb-2 text-on-surface-variant hover:bg-surface-subtle transition-all rounded-lg group" href="#" title="Help">
+<span class="material-symbols-outlined group-hover:text-primary">help</span>
+</a>
+<a class="cursor-pointer flex items-center justify-center h-12 w-12 mx-auto mb-2 text-on-surface-variant hover:bg-surface-subtle transition-all rounded-lg group" href="#" title="Logout">
+<span class="material-symbols-outlined group-hover:text-primary">logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-sidebar-collapsed flex-1 flex flex-col h-full overflow-hidden bg-canvas">
+<!-- Top App Bar / Header -->
+<header class="flex-none h-topbar-height border-b border-border bg-surface px-screen-padding flex flex-col justify-center shrink-0">
+<!-- Breadcrumb & Actions -->
+<div class="flex items-center justify-between w-full">
+<div class="flex items-center gap-2 text-on-surface">
+<a class="font-body text-body text-on-surface-variant hover:text-primary transition-colors" href="#">Northstar Coffee</a>
+<span class="material-symbols-outlined text-outline-variant text-[16px]">chevron_right</span>
+<span class="font-section-title text-section-title text-on-surface">Reviews</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:bg-surface-subtle rounded-full transition-colors">
+<span class="material-symbols-outlined">search</span>
+</button>
+<div class="h-6 w-px bg-border"></div>
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:bg-surface-subtle rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full border border-surface"></span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-sm ml-2">
+                        JD
+                    </div>
+</div>
+</div>
+<!-- Tabs (Below Breadcrumb, part of header visually but integrated cleanly) -->
+<div class="flex gap-6 mt-3 px-1 -mb-px">
+<button class="font-label text-label font-bold text-primary border-b-2 border-primary pb-2 px-1">Content Review</button>
+<button class="font-label text-label text-on-surface-variant hover:text-primary transition-colors pb-2 px-1">Creative Review</button>
+</div>
+</header>
+<!-- Master-Detail Split Layout -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Left Queue (Master) - 38% -->
+<section class="w-[38%] min-w-[320px] max-w-[400px] bg-canvas border-r border-border flex flex-col h-full">
+<!-- Queue Filters -->
+<div class="p-gutter border-b border-border bg-surface sticky top-0 z-10 shadow-sm flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-card-title text-card-title text-on-surface">Pending</span>
+<span class="bg-surface-container-high text-on-surface px-2 py-0.5 rounded-full font-label text-label">12</span>
+</div>
+<button class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors font-label text-label">
+<span class="material-symbols-outlined text-[16px]">filter_list</span>
+                        Filter
+                    </button>
+</div>
+<!-- Queue List -->
+<div class="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
+<!-- Active Item -->
+<a class="bg-surface border border-primary ring-1 ring-primary-subtle rounded-card p-3 flex flex-col gap-2 cursor-pointer shadow-sm relative transition-all" href="#">
+<div class="absolute left-0 top-3 bottom-3 w-1 bg-primary rounded-r-full"></div>
+<div class="flex justify-between items-start ml-2">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-warning-subtle text-warning">
+<span class="material-symbols-outlined text-[14px]">pending_actions</span>
+                                Needs Review
+                            </span>
+<span class="font-label text-label text-text-muted">High Urgency</span>
+</div>
+<h3 class="font-body text-body font-semibold text-on-surface ml-2 leading-tight">Autumn roast launch</h3>
+<div class="flex items-center gap-3 font-table-dense text-table-dense text-on-surface-variant ml-2 mt-1">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">image</span> Image</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span>v3</span>
+</div>
+</a>
+<!-- Inactive Item 1 -->
+<a class="bg-surface border border-transparent hover:border-border hover:bg-surface-bright rounded-card p-3 flex flex-col gap-2 cursor-pointer transition-all" href="#">
+<div class="flex justify-between items-start">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-surface-container-high text-on-surface">
+<span class="material-symbols-outlined text-[14px]">visibility</span>
+                                In Review
+                            </span>
+<span class="font-label text-label text-text-muted">Normal</span>
+</div>
+<h3 class="font-body text-body font-semibold text-on-surface leading-tight">Q4 Social Templates</h3>
+<div class="flex items-center gap-3 font-table-dense text-table-dense text-on-surface-variant mt-1">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">video_file</span> Video</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span>v1</span>
+</div>
+</a>
+<!-- Inactive Item 2 -->
+<a class="bg-surface border border-transparent hover:border-border hover:bg-surface-bright rounded-card p-3 flex flex-col gap-2 cursor-pointer transition-all" href="#">
+<div class="flex justify-between items-start">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-warning-subtle text-warning">
+<span class="material-symbols-outlined text-[14px]">pending_actions</span>
+                                Needs Review
+                            </span>
+<span class="font-label text-label text-danger font-medium">Critical</span>
+</div>
+<h3 class="font-body text-body font-semibold text-on-surface leading-tight">Holiday Packaging Copy</h3>
+<div class="flex items-center gap-3 font-table-dense text-table-dense text-on-surface-variant mt-1">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">article</span> Document</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span>v4</span>
+</div>
+</a>
+<!-- Inactive Item 3 -->
+<a class="bg-surface border border-transparent hover:border-border hover:bg-surface-bright rounded-card p-3 flex flex-col gap-2 cursor-pointer transition-all" href="#">
+<div class="flex justify-between items-start">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-warning-subtle text-warning">
+<span class="material-symbols-outlined text-[14px]">pending_actions</span>
+                                Needs Review
+                            </span>
+<span class="font-label text-label text-text-muted">Normal</span>
+</div>
+<h3 class="font-body text-body font-semibold text-on-surface leading-tight">Brand Guidelines Update</h3>
+<div class="flex items-center gap-3 font-table-dense text-table-dense text-on-surface-variant mt-1">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">picture_as_pdf</span> PDF</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span>v2</span>
+</div>
+</a>
+</div>
+</section>
+<!-- Right Detail View - 62% -->
+<section class="flex-1 flex flex-col bg-canvas relative h-full">
+<!-- Detail Scrollable Content -->
+<div class="flex-1 overflow-y-auto pb-[100px] relative"> <!-- Padding bottom for sticky footer -->
+<div class="p-screen-padding max-w-4xl mx-auto space-y-6">
+<!-- Header Section -->
+<div class="flex items-start justify-between">
+<div>
+<h1 class="font-page-title text-page-title text-on-surface mb-2">Autumn roast launch</h1>
+<div class="flex items-center gap-3">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-warning-subtle text-warning">
+<span class="material-symbols-outlined text-[16px]">pending_actions</span>
+                                        Needs Review
+                                    </span>
+<div class="h-4 w-px bg-border"></div>
+<button class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors font-label text-label bg-surface-subtle px-2 py-1 rounded border border-border">
+                                        Version 3
+                                        <span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+</div>
+</div>
+<button class="p-2 text-on-surface-variant hover:bg-surface-subtle rounded-full transition-colors" title="More options">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Main Preview Image -->
+<div class="bg-surface rounded-card border border-border overflow-hidden shadow-sm aspect-video relative group">
+<img class="w-full h-full object-cover" data-alt="A high-fidelity, photorealistic mockup of coffee packaging for an autumn roast. The design features warm, earthy tones with subtle botanical leaf patterns. The packaging sits on a clean, modern surface with professional studio lighting highlighting the texture of the bag and the rich colors of the design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9bhIecl5KB5VDKiALlMoRL-1jkrXOUmQSiwrNS-tLumLV8_HlmlZ5L9aDdfdDo0NGgzbvz_Pt6y8HBJnPR1hqT16RMMhDXlKZjcC5lN87a1K8-M_Zhown1xr2zJndSm_Hd5KFjwcLjMiKUNYTKFXuPWmmDjSf3HDpRFFdZBjANkJeIX9LIo_W4bod7h7rrgr8mIEDGAPJ-K66mdNJeN0IIPQTzSw2zZw2ISWVfWPjwp61HAKvyVdRjl_5zlD1PlSZCeD87SMkshs"/>
+<div class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="bg-surface text-on-surface p-2 rounded-full shadow-md hover:bg-surface-subtle" title="Download">
+<span class="material-symbols-outlined text-[18px]">download</span>
+</button>
+<button class="bg-surface text-on-surface p-2 rounded-full shadow-md hover:bg-surface-subtle" title="Fullscreen">
+<span class="material-symbols-outlined text-[18px]">fullscreen</span>
+</button>
+</div>
+</div>
+<!-- Grid Layout for Metadata, Tags, and History -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Left Column: Metadata & Tags -->
+<div class="md:col-span-2 space-y-6">
+<!-- Metadata Card -->
+<div class="bg-surface rounded-card border border-border p-card-padding shadow-sm">
+<h3 class="font-card-title text-card-title text-on-surface mb-4 border-b border-border pb-2">Details</h3>
+<dl class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
+<div>
+<dt class="font-label text-label text-on-surface-variant mb-1">Schedule</dt>
+<dd class="font-body text-body text-on-surface flex items-center gap-1.5">
+<span class="material-symbols-outlined text-outline-variant text-[16px]">calendar_month</span>
+                                                Sep 18, 2026
+                                            </dd>
+</div>
+<div>
+<dt class="font-label text-label text-on-surface-variant mb-1">Channels</dt>
+<dd class="font-body text-body text-on-surface flex flex-wrap gap-1">
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface-container-high text-on-surface text-xs" title="Instagram">IG</span>
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface-container-high text-on-surface text-xs" title="Facebook">FB</span>
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface-container-high text-on-surface text-xs" title="LinkedIn">IN</span>
+</dd>
+</div>
+<div class="sm:col-span-2">
+<dt class="font-label text-label text-on-surface-variant mb-1">Source Assets</dt>
+<dd>
+<a class="inline-flex items-center gap-1.5 font-body text-body text-primary hover:text-primary-hover transition-colors group" href="#">
+<span class="material-symbols-outlined text-[18px]">link</span>
+<span class="group-hover:underline">Open delivery link (Google Drive)</span>
+</a>
+</dd>
+</div>
+</dl>
+</div>
+<!-- Tags Card -->
+<div class="bg-surface rounded-card border border-border p-card-padding shadow-sm">
+<div class="flex justify-between items-center mb-4 border-b border-border pb-2">
+<h3 class="font-card-title text-card-title text-on-surface">Tags</h3>
+<button class="text-primary hover:text-primary-hover font-label text-label flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">add</span> Add
+                                        </button>
+</div>
+<div class="space-y-4">
+<div>
+<h4 class="font-label text-label text-on-surface-variant mb-2">Client Visible</h4>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 rounded bg-surface-container-high text-on-surface text-xs font-medium">Seasonal</span>
+<span class="px-2 py-1 rounded bg-surface-container-high text-on-surface text-xs font-medium">Product Launch</span>
+</div>
+</div>
+<div>
+<h4 class="font-label text-label text-on-surface-variant mb-2">Internal (Hidden)</h4>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 rounded bg-secondary-fixed text-on-secondary-fixed-variant text-xs font-medium">Q3 Campaign</span>
+<span class="px-2 py-1 rounded bg-secondary-fixed text-on-secondary-fixed-variant text-xs font-medium">Agency Review</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: History Timeline -->
+<div class="md:col-span-1">
+<div class="bg-surface rounded-card border border-border p-card-padding shadow-sm h-full">
+<h3 class="font-card-title text-card-title text-on-surface mb-4 border-b border-border pb-2">Activity</h3>
+<div class="relative pl-4 border-l border-border space-y-6 mt-4">
+<!-- Timeline Item 1 (Newest) -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-primary border-2 border-surface"></div>
+<p class="font-body text-body font-medium text-on-surface leading-tight">Version 3 Submitted</p>
+<p class="font-label text-label text-on-surface-variant mt-1">by Sarah L. (Creator) • 2h ago</p>
+<div class="mt-2 text-sm text-on-surface-variant bg-surface-subtle p-2 rounded border border-border italic">
+                                                "Updated the leaf pattern colors as requested in V2."
+                                            </div>
+</div>
+<!-- Timeline Item 2 -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-danger border-2 border-surface"></div>
+<p class="font-body text-body font-medium text-on-surface leading-tight">Changes Requested</p>
+<p class="font-label text-label text-on-surface-variant mt-1">by John D. (Reviewer) • Yesterday</p>
+</div>
+<!-- Timeline Item 3 -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-surface-variant border-2 border-surface"></div>
+<p class="font-body text-body font-medium text-on-surface leading-tight">Version 2 Submitted</p>
+<p class="font-label text-label text-on-surface-variant mt-1">by Sarah L. • Sep 10</p>
+</div>
+<!-- Timeline Item 4 -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-success border-2 border-surface"></div>
+<p class="font-body text-body font-medium text-on-surface leading-tight">Project Created</p>
+<p class="font-label text-label text-on-surface-variant mt-1">System • Sep 01</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Footer Actions -->
+<div class="absolute bottom-0 left-0 w-full bg-surface border-t border-border p-screen-padding shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex items-center justify-between z-20">
+<div class="flex-1 max-w-xl mx-auto flex items-center gap-4">
+<!-- Action State: Default (Assuming we show the request changes state based on prompt, but keeping layout structured for it) -->
+<div class="w-full flex gap-4 hidden" id="default-actions">
+<button class="flex-1 h-[44px] bg-canvas border border-border text-on-surface font-button text-button rounded-lg hover:bg-surface-subtle transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">edit_note</span>
+                                Request changes
+                            </button>
+<button class="flex-1 h-[44px] bg-primary-container text-on-primary-container font-button text-button rounded-lg hover:bg-primary-hover hover:text-on-primary transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+                                Approve for publishing
+                            </button>
+</div>
+<!-- Action State: Request Changes (Active per prompt) -->
+<div class="w-full flex flex-col gap-3" id="request-changes-state">
+<div class="relative w-full">
+<label class="sr-only" for="change-comment">Required comment for changes</label>
+<textarea class="w-full bg-surface border border-border rounded-lg p-3 text-body font-body text-on-surface focus:ring-2 focus:ring-focus-ring focus:border-focus-ring resize-none placeholder-text-muted" id="change-comment" placeholder="Describe required changes here (Required)..." rows="2"></textarea>
+<span class="absolute top-2 right-2 text-danger font-bold text-xs" title="Required">*</span>
+</div>
+<div class="flex gap-3 justify-end">
+<button class="px-4 h-10 bg-canvas border border-border text-on-surface font-button text-button rounded-lg hover:bg-surface-subtle transition-colors" onclick="document.getElementById('request-changes-state').classList.add('hidden'); document.getElementById('default-actions').classList.remove('hidden');">
+                                    Cancel
+                                </button>
+<button class="px-6 h-10 bg-danger text-on-error font-button text-button rounded-lg hover:bg-danger-subtle hover:text-danger transition-colors flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">send</span>
+                                    Submit changes
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

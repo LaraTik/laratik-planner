@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee — Delivery &amp; Creative Review Final</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "surface-tint": "#4d44e3",
+                        "canvas": "#F7F7F5",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#bfdfff",
+                        "surface": "#FFFFFF",
+                        "surface-dim": "#d1daef",
+                        "background": "#f9f9ff",
+                        "inverse-surface": "#283141",
+                        "surface-bright": "#f9f9ff",
+                        "text-muted": "#7B8495",
+                        "on-primary": "#ffffff",
+                        "primary-container": "#4f46e5",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "secondary-fixed": "#d9e2fc",
+                        "tertiary-container": "#00659c",
+                        "on-secondary-container": "#5a6278",
+                        "tertiary-fixed": "#cde5ff",
+                        "info-subtle": "#F0F9FF",
+                        "on-surface": "#131c2b",
+                        "success": "#15803D",
+                        "error-container": "#ffdad6",
+                        "danger": "#B91C1C",
+                        "outline": "#777587",
+                        "on-error-container": "#93000a",
+                        "focus-ring": "#6366F1",
+                        "primary-fixed": "#e2dfff",
+                        "surface-container-highest": "#dae3f8",
+                        "on-error": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "inverse-on-surface": "#ecf0ff",
+                        "primary": "#3525cd",
+                        "on-tertiary-fixed": "#001d32",
+                        "inverse-primary": "#c3c0ff",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "outline-variant": "#c7c4d8",
+                        "secondary": "#555e74",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-background": "#131c2b",
+                        "border": "#DDE1E6",
+                        "surface-container-low": "#f0f3ff",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "on-surface-variant": "#464555",
+                        "secondary-container": "#d7dff9",
+                        "surface-variant": "#dae3f8",
+                        "primary-subtle": "#EEF2FF",
+                        "surface-subtle": "#F1F3F5",
+                        "warning": "#B45309",
+                        "primary-hover": "#4338CA",
+                        "tertiary": "#004c77",
+                        "on-secondary-fixed": "#121b2e",
+                        "on-primary-fixed": "#0f0069",
+                        "surface-container-high": "#dfe8fe",
+                        "warning-subtle": "#FFF7E6",
+                        "success-subtle": "#ECFDF3",
+                        "danger-subtle": "#FEF2F2",
+                        "surface-container": "#e7eeff",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "on-primary-container": "#dad7ff",
+                        "error": "#ba1a1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "screen-padding": "24px",
+                        "sidebar-expanded": "248px",
+                        "card-padding": "16px",
+                        "sidebar-collapsed": "72px",
+                        "gutter": "16px",
+                        "base": "4px",
+                        "topbar-height": "64px"
+                    },
+                    "fontFamily": {
+                        "section-title": ["Inter"],
+                        "label": ["Inter"],
+                        "card-title": ["Inter"],
+                        "body": ["Inter"],
+                        "table-dense": ["Inter"],
+                        "button": ["Inter"],
+                        "page-title": ["Inter"]
+                    },
+                    "fontSize": {
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="bg-canvas text-on-surface font-body antialiased selection:bg-primary-subtle selection:text-primary">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 right-0 left-[248px] h-topbar-height flex justify-between items-center px-screen-padding z-40 bg-surface border-b border-border">
+<div class="flex items-center gap-4">
+<!-- Left side empty as search is on left in JSON but no specific UI given, assuming breadcrumbs take precedence in user prompt -->
+<nav class="flex items-center gap-2 text-label font-label text-on-surface-variant">
+<a class="hover:text-primary transition-colors" href="#">Northstar Coffee</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">Planning</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-on-surface font-semibold">Autumn roast launch</span>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-primary text-on-primary font-button text-button h-10 px-4 rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-2">
+                Quick Create
+            </button>
+<button class="text-on-surface-variant hover:text-primary transition-colors h-10 w-10 flex items-center justify-center rounded-full hover:bg-surface-subtle">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors h-10 w-10 flex items-center justify-center rounded-full hover:bg-surface-subtle">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-surface-dim overflow-hidden border border-border">
+<img alt="Omar Haddad" class="w-full h-full object-cover" data-alt="A professional headshot of Omar Haddad, a creative director, taken in a bright, modern studio setting with warm natural lighting. He is wearing a dark indigo shirt, looking confident and approachable. The background is slightly blurred to keep focus on the subject. Minimalist corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAchYyXSgHaSD5WQ5U_u4vNOUAI4fscV_AcpH9_FzyagLn8yJybKnZY_bRJmrQcMDKrUiMfAwoXsO9YK52vpmIuQed1vY7pQdHcxEm3NvqwNq0ARDUaRogyjYhVbURJvcNSkd-3NyllwrJgCIDU6u8dK6TuCXnXZdvSO9WUKnRc2bgeOplNyrKH0k5H3z9Elui5JpQq-dVn4tPPKhxlAjltyySB0ziyc8Y-NxOQrrXQ0U4zK6YKpoSSD0JGFzLHWUgwWeP7pL-WVQ8"/>
+</div>
+</div>
+</header>
+<!-- Side Navigation Bar -->
+<aside class="fixed flex flex-col h-full w-[248px] py-4 left-0 top-0 bg-surface border-r border-border z-50">
+<!-- Brand Area -->
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="h-10 w-10 rounded-lg bg-surface-dim overflow-hidden flex-shrink-0 border border-border">
+<img alt="Agency Logo" class="w-full h-full object-cover" data-alt="A minimalist logo for a creative agency named 'Northstar Coffee'. The design features a stylized, geometric coffee bean merging with a subtle compass star icon, rendered in deep indigo and warm white. The aesthetic is clean, corporate, and operational." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWdCzwJlpwpeMOm_u3-ZfbojkeZht-cJeIPWbFZ0tVzCJlz-jYBf28s_Fd3CHOMYoQg0PsxltW_Qyuyig_zxgCn80cgaMwnmvNOBQICkjrhkl1xU8U8K_7iQvZgoB8XNK8xyDP8Ae7HNA9oy6w4_L5Typ52hpR7P80FdJLzTGGjM-fzjW6MKwFHdpA2SBPOlhdxjPA_OviJ8CBUlWXjgHSFaE9nx54jo2z8VRPS-cnHhDcY6rKI-XZ3HoqFJ5Sh-XLIj-Zh0s2CA8"/>
+</div>
+<div class="flex flex-col">
+<span class="text-card-title font-card-title text-on-surface leading-tight">Creative Agency</span>
+<span class="text-label font-label text-on-surface-variant">Production Hub</span>
+</div>
+</div>
+<!-- Main Nav -->
+<nav class="flex-1 flex flex-col gap-1 overflow-y-auto">
+<a class="flex items-center gap-3 text-on-surface-variant px-3 py-2 mx-2 hover:bg-surface-container rounded-lg text-label font-label transition-colors duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">assignment_turned_in</span>
+                My Work
+            </a>
+<a class="flex items-center gap-3 text-on-surface-variant px-3 py-2 mx-2 hover:bg-surface-container rounded-lg text-label font-label transition-colors duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">dashboard</span>
+                Overview
+            </a>
+<a class="flex items-center gap-3 text-on-surface-variant px-3 py-2 mx-2 hover:bg-surface-container rounded-lg text-label font-label transition-colors duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">event_note</span>
+                Planning
+            </a>
+<a class="flex items-center gap-3 text-on-surface-variant px-3 py-2 mx-2 hover:bg-surface-container rounded-lg text-label font-label transition-colors duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">calendar_today</span>
+                Calendar
+            </a>
+<!-- Active State -->
+<a class="flex items-center gap-3 bg-primary-container text-on-primary-container rounded-lg px-3 py-2 mx-2 font-semibold text-label transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px] fill">fact_check</span>
+                Reviews
+            </a>
+<a class="flex items-center gap-3 text-on-surface-variant px-3 py-2 mx-2 hover:bg-surface-container rounded-lg text-label font-label transition-colors duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">share</span>
+                Social Channels
+            </a>
+<a class="flex items-center gap-3 text-on-surface-variant px-3 py-2 mx-2 hover:bg-surface-container rounded-lg text-label font-label transition-colors duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">palette</span>
+                Brand Kit
+            </a>
+<a class="flex items-center gap-3 text-on-surface-variant px-3 py-2 mx-2 hover:bg-surface-container rounded-lg text-label font-label transition-colors duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">group</span>
+                Team
+            </a>
+</nav>
+<!-- Footer Nav -->
+<div class="mt-auto pt-4 border-t border-border flex flex-col gap-1">
+<a class="flex items-center gap-3 text-on-surface-variant px-3 py-2 mx-2 hover:bg-surface-container rounded-lg text-label font-label transition-colors duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">swap_horiz</span>
+                Workspace Switcher
+            </a>
+<a class="flex items-center gap-3 text-on-surface-variant px-3 py-2 mx-2 hover:bg-surface-container rounded-lg text-label font-label transition-colors duration-150 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">settings</span>
+                Settings
+            </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-sidebar-expanded pt-topbar-height min-h-screen p-screen-padding">
+<!-- Page Header -->
+<div class="mb-6 flex flex-col md:flex-row md:items-start justify-between gap-4">
+<div>
+<h1 class="text-page-title font-page-title text-on-surface mb-2 tracking-tight">Autumn roast launch</h1>
+<div class="flex flex-wrap items-center gap-y-2 gap-x-4 text-body font-body text-on-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px]">view_carousel</span>
+                        Carousel
+                    </div>
+<div class="w-1 h-1 rounded-full bg-border"></div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+                        Scheduled Sep 18, 2026, 10:00 AM (Europe/Vienna)
+                    </div>
+<div class="w-1 h-1 rounded-full bg-border"></div>
+<div class="flex items-center gap-2">
+<span class="text-label font-label">Channels:</span>
+<div class="flex gap-1">
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface border border-border text-on-surface-variant" title="Instagram"><span class="material-symbols-outlined text-[14px]">photo_camera</span></span>
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface border border-border text-on-surface-variant" title="Facebook"><span class="material-symbols-outlined text-[14px]">thumb_up</span></span>
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface border border-border text-on-surface-variant" title="LinkedIn"><span class="material-symbols-outlined text-[14px]">work</span></span>
+</div>
+</div>
+</div>
+</div>
+<!-- Status Badge -->
+<div class="flex items-center gap-2 bg-warning-subtle text-warning border border-warning/20 px-3 py-1.5 rounded-full text-label font-label self-start">
+<span class="material-symbols-outlined text-[16px]">pending_actions</span>
+                Creative Review
+            </div>
+</div>
+<!-- 3-Column Operational Layout (Grid 8 / 4 span equivalent) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
+<!-- Main Left (approx 65% width) - 8 cols -->
+<div class="lg:col-span-8 flex flex-col gap-6">
+<!-- Asset Preview Section -->
+<section class="bg-surface border border-border rounded-xl p-card-padding flex flex-col">
+<div class="flex items-center justify-between mb-4 pb-4 border-b border-border">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-primary-subtle text-primary flex items-center justify-center font-bold text-label">
+                                V3
+                            </div>
+<div>
+<h2 class="text-card-title font-card-title text-on-surface">Version 3 — submitted Sep 12 by Maya Chen</h2>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="text-on-surface-variant hover:text-primary transition-colors h-8 w-8 flex items-center justify-center rounded hover:bg-surface-subtle" title="Download">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors h-8 w-8 flex items-center justify-center rounded hover:bg-surface-subtle" title="Open Delivery Link">
+<span class="material-symbols-outlined text-[20px]">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- Carousel Preview Area (Bento-ish presentation) -->
+<div class="relative bg-canvas rounded-lg border border-border overflow-hidden aspect-video group">
+<!-- Main Image -->
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 hover:scale-[1.02]" data-alt="A high-quality, professional photograph of a steaming cup of autumn roast coffee, placed on a rustic wooden table surrounded by fallen maple leaves in warm orange and red hues. Soft, natural morning light filters through a window, creating a cozy and inviting mood. Shot top-down with shallow depth of field. High contrast between the dark coffee and bright leaves. Used as a hero slide for a social media carousel." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAfqzfO1DFQQR6e3-Z-zAw-ggrlO_QqoxuudrZriTnQi8eTrghFRqc3GJhOIvTqfwZRzLOhRbyTDSk9N7SHgwGOjf-BmahqB-vizi9b7wvl7N54qjTAcFAM4jqJohOe60QcLDWK77aoAtsP-OzZzEyjq-_LTNaGJKVezD18NAJL6LdVKHKKIOyVg8-1TSlWhjl6lzmiqqdn23BYD4jrj4H0FW31IN9Q-G-nnZDItloQ397H5m4KE5OkSRNZT5RFvTeLeWl2wkfJzU0')"></div>
+<!-- Overlay Controls -->
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-4">
+<div class="flex justify-end">
+<button class="bg-surface/90 backdrop-blur text-on-surface h-8 w-8 rounded flex items-center justify-center hover:text-primary shadow-sm">
+<span class="material-symbols-outlined text-[18px]">zoom_in</span>
+</button>
+</div>
+<div class="flex justify-between items-center w-full">
+<button class="bg-surface/90 backdrop-blur text-on-surface h-10 w-10 rounded-full flex items-center justify-center hover:text-primary shadow-sm">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="bg-surface/90 backdrop-blur text-on-surface h-10 w-10 rounded-full flex items-center justify-center hover:text-primary shadow-sm">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Thumbnails / Dots -->
+<div class="flex justify-center items-center gap-3 mt-4">
+<button class="w-16 h-16 rounded border-2 border-primary overflow-hidden opacity-100 relative">
+<div class="w-full h-full bg-cover bg-center" data-alt="Thumbnail showing a close-up of coffee beans being roasted, warm amber tones, crisp detail." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAtgb2ZwOHJ5hbCi3Loe5NRi-l4Vj1DkaFiQiPX_6CMIyACFmzeIqsChb2OXH-m_rV4flaAyfRQXcvhqWbR-sYVKPy9aIX0j9Y7czKeAY5-sSiePj0eEI2wqlZVSHQq47H27JTfTEPsRDr2wx5Kjf5HkBoIkvm5OJkscEEoqU-jk7-eyzL_NNIp8TyY2RbXD73Pgiz_fk5vDaqbt8AZpbUd8o7iZ0_22ReRy-doDJmz5QFUWcb6iE2reN9VMnVSLq_4O9DfRx9Th0c')"></div>
+<div class="absolute bottom-0 right-0 bg-surface/80 text-[10px] px-1 font-mono">1/5</div>
+</button>
+<button class="w-16 h-16 rounded border border-border overflow-hidden opacity-60 hover:opacity-100 transition-opacity">
+<div class="w-full h-full bg-cover bg-center" data-alt="Thumbnail showing a barista pouring latte art, cozy cafe setting, soft background." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBVJeEbar42dsTp8tTsr1hTDaNKFR9HjzAZ-QU-wyH1vLvVt89jM7X5zhxNkda4ZZAORrh-KbVZ3ppPjkfFx0-dROVD8AfOYcAuDviD5S3_2i1t0JG50U3rnSU3vrYtIQU4A8LHnGdqOqnBvLcpZ1Amtrr3ZY0cbVU4-BKKUQ-3F1SntzoAd5hhMRuOLrEiMfbkeeZ9lIqERw3GqVkkzQK0RiteqfuRwmrZpSOp7zUT3ZB059eBUBRkrgLR9_8vTwd0kfrasdfFJQM')"></div>
+</button>
+<button class="w-16 h-16 rounded border border-border overflow-hidden opacity-60 hover:opacity-100 transition-opacity">
+<div class="w-full h-full bg-cover bg-center" data-alt="Thumbnail showing coffee packaging with autumn theme, clean studio lighting." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC6sq-vOlh4cskBM22gnJa5yIf7HQDIDWeZ0IIsJ3QlyYac-ujxIeErDuk9BGFk1z9DgWeg4hr0H3zKsIoxQJpY8lwpu8mjuujCFsKvOXiNO6PlO3fCXjIBixJk2ACuLnWGPhv48N-TeI6YqMbaeqp2cl5r2m8kMqB5wWbb8PwwAbCiNgizQIEWHey5opVmlPh0Mr2TZ_E0Ru9WZSNd_x1rNCseQYi3Jk6OC7R3r4WErFVX8_31wlWIXd9eW2oQ8z_nhG-7-gVQIyU')"></div>
+</button>
+<button class="w-16 h-16 rounded border border-border overflow-hidden opacity-60 hover:opacity-100 transition-opacity">
+<div class="w-full h-full bg-cover bg-center" data-alt="Thumbnail showing a stylized typography graphic saying 'Autumn Blend', minimal layout." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA3IFUvlgdNhvArmSmbOWALGxzHSf7a3OrPTM9RD9XbYJ74-MXdU7tSvLrJtn1Oe0_MgWfthSYvxNLIThc9GTYpeK_WX8g5wNR4XE0bxBF9D63bGWKbKUspM5sj1N1MI1q4CX6RC7ERX0k4Uf1g0eBQxmvdLLEWS2DkcYNvrwZ6MAXRXlZEqRn0LtT59WREjhMiWgmNOCsp2OAPtV9ryMY6xvRWnBJHzwBOPTRQBMhwr3-9wvfADxzNUYOT3teaSW_ZSsZXXLP_jjk')"></div>
+</button>
+<button class="w-16 h-16 rounded border border-border overflow-hidden opacity-60 hover:opacity-100 transition-opacity">
+<div class="w-full h-full bg-cover bg-center" data-alt="Thumbnail showing a person holding a coffee cup outdoors in a park, autumn trees." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAwR1ndemVF8TWEMuDYIhN4t7WM0i29KigPw9aHeLQv5LVmraH_8Dt6i8303LCf-3TUkXgwN1gGfNyjkYEw1VKeQSGXbnvaRgAIzzoPzMUJOZq9b-5GLv6_xy2fbv38yLNMN6zZp72XTiJZ0jtFKVXgtU0j6tXrhIVyKrAPuZN4HfQ1Z85oDcCJ4zyfFdHotarIxJ-ZK5jWE0lIpIJVk5x-Cwcn-eLMZiPkFs86hToQAoBv7YdbN5KkLvo6waUMGzbJJqTR7aRZDqM')"></div>
+</button>
+</div>
+</section>
+<!-- Deliveries & Versions -->
+<section class="bg-surface border border-border rounded-xl p-card-padding">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-section-title font-section-title text-on-surface">Deliveries</h3>
+<button class="text-primary hover:bg-primary-subtle font-button text-button h-8 px-3 rounded flex items-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[18px]">add_link</span>
+                            Add delivery link
+                        </button>
+</div>
+<div class="border border-border rounded-lg overflow-hidden">
+<table class="w-full text-left text-table-dense font-table-dense">
+<thead class="bg-surface-subtle border-b border-border text-on-surface-variant text-label font-label uppercase tracking-wider">
+<tr>
+<th class="px-4 py-3 font-medium">Version</th>
+<th class="px-4 py-3 font-medium">Source</th>
+<th class="px-4 py-3 font-medium">Description</th>
+<th class="px-4 py-3 font-medium">Submitted By</th>
+<th class="px-4 py-3 font-medium text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border">
+<!-- V3 Current -->
+<tr class="bg-primary-subtle/30 hover:bg-surface-subtle transition-colors group">
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded">V3</span>
+<span class="text-on-surface font-medium">Current</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="flex flex-col gap-1">
+<span class="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer"><span class="material-symbols-outlined text-[14px]">link</span> Google Drive</span>
+<span class="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer"><span class="material-symbols-outlined text-[14px]">design_services</span> Figma</span>
+</div>
+</td>
+<td class="px-4 py-3 text-on-surface-variant">Final High-Res Assets</td>
+<td class="px-4 py-3">
+<div class="flex items-col text-on-surface-variant">
+<span class="text-on-surface font-medium">Maya Chen</span>
+<span class="text-[11px] block">Sep 12, 09:45 AM</span>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-on-surface-variant hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- V2 Changes -->
+<tr class="hover:bg-surface-subtle transition-colors group">
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="bg-surface-dim text-on-surface-variant text-[10px] font-bold px-1.5 py-0.5 rounded">V2</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1 text-on-surface hover:text-primary hover:underline cursor-pointer"><span class="material-symbols-outlined text-[14px]">folder_shared</span> Dropbox</span>
+</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1.5 bg-error-container/50 text-on-error-container text-[11px] px-2 py-0.5 rounded-full border border-error-container">
+<span class="material-symbols-outlined text-[12px]">edit_note</span>
+                                            Changes requested by Sofia Reyes
+                                        </span>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-col text-on-surface-variant">
+<span class="text-on-surface font-medium">Maya Chen</span>
+<span class="text-[11px] block">Sep 10, 14:20 PM</span>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-on-surface-variant hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- V1 Archived -->
+<tr class="hover:bg-surface-subtle transition-colors group opacity-75">
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="bg-surface-dim text-on-surface-variant text-[10px] font-bold px-1.5 py-0.5 rounded">V1</span>
+</div>
+</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1 text-on-surface hover:text-primary hover:underline cursor-pointer"><span class="material-symbols-outlined text-[14px]">video_library</span> Frame.io</span>
+</td>
+<td class="px-4 py-3 text-on-surface-variant text-[12px]">Initial Draft</td>
+<td class="px-4 py-3">
+<div class="flex items-col text-on-surface-variant">
+<span class="text-on-surface font-medium">Maya Chen</span>
+<span class="text-[11px] block">Sep 08, 11:00 AM</span>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-on-surface-variant hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+<!-- Right Review Rail (approx 35% width) - 4 cols -->
+<div class="lg:col-span-4 flex flex-col gap-6">
+<!-- Creative Approval Gate Card -->
+<section class="bg-surface border border-border rounded-xl p-card-padding shadow-sm">
+<div class="flex items-start justify-between mb-4">
+<h3 class="text-card-title font-card-title text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">verified_user</span>
+                            Approval Gate
+                        </h3>
+<div class="flex flex-col items-end">
+<span class="text-label font-label text-warning flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">timer</span>
+                                Due Sep 14
+                            </span>
+</div>
+</div>
+<div class="mb-5 flex items-center gap-3 p-3 bg-surface-subtle border border-border rounded-lg">
+<div class="h-8 w-8 rounded-full bg-surface-dim overflow-hidden border border-border">
+<img alt="Sofia Reyes" class="w-full h-full object-cover" data-alt="A professional headshot of Sofia Reyes, a marketing manager. She is looking at the camera with a subtle smile. Bright, even lighting. Minimalist background in soft grey tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYxTc6MzvdaEAQSp40dF1loZOR75-SKl6VB3oC7YCX2htBa5k2y8lD93cOU0zvwsb2fDbmcogbDy8RooaBiXZTpIlKjBd6S3NTIku-LO2GTIVgDyUtUtmIr_kkuSVte2-H_BV3sRMlUbdWmwv7fEGcfmgBuyHMkMTmE4RcHwmKTufg4JjraoZtXrtpe_D0ifc89AB3s-Um-taxrnvBkWx5_emb2NCyB5ga7fX8owVPtffvB7IHsLCtPW-sW-tykCcpMtAF6Aa7dOs"/>
+</div>
+<div class="flex flex-col">
+<span class="text-label font-label text-on-surface-variant">Designated Reviewer</span>
+<span class="text-body font-body font-medium text-on-surface">Sofia Reyes</span>
+</div>
+</div>
+<div class="flex flex-col gap-3 mb-5">
+<button class="w-full bg-primary text-on-primary font-button text-button h-10 px-4 rounded-lg hover:bg-primary-hover transition-colors flex items-center justify-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+                            Approve for publishing
+                        </button>
+<button class="w-full bg-surface text-danger border border-danger/30 font-button text-button h-10 px-4 rounded-lg hover:bg-danger-subtle transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">rate_review</span>
+                            Request changes
+                        </button>
+</div>
+<!-- Gate History Timeline -->
+<div class="pt-4 border-t border-border">
+<h4 class="text-label font-label text-on-surface-variant uppercase tracking-wider mb-3">Gate History</h4>
+<div class="relative pl-3 space-y-4 before:content-[''] before:absolute before:left-[5px] before:top-1.5 before:bottom-1 before:w-[2px] before:bg-border">
+<!-- Timeline item -->
+<div class="relative">
+<div class="absolute -left-[14px] top-1.5 w-2 h-2 rounded-full bg-primary ring-4 ring-surface"></div>
+<div class="pl-3">
+<p class="text-[13px] font-medium text-on-surface leading-tight">V3 Submitted</p>
+<p class="text-[11px] text-on-surface-variant mt-0.5">Sep 12, 09:45 AM by Maya Chen</p>
+</div>
+</div>
+<!-- Timeline item -->
+<div class="relative">
+<div class="absolute -left-[14px] top-1.5 w-2 h-2 rounded-full bg-warning ring-4 ring-surface"></div>
+<div class="pl-3">
+<p class="text-[13px] font-medium text-on-surface leading-tight">V2 Changes Requested</p>
+<p class="text-[11px] text-on-surface-variant mt-0.5">Sep 10, 14:20 PM by Sofia Reyes</p>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-4 p-3 bg-surface-subtle rounded text-[11px] text-on-surface-variant flex items-start gap-2 leading-relaxed border border-border/50">
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant shrink-0 mt-0.5">info</span>
+                        Material edits after approval will reset this gate and require re-approval.
+                    </div>
+</section>
+<!-- Discussion Panel -->
+<section class="bg-surface border border-border rounded-xl flex flex-col h-[500px]">
+<!-- Discussion Header -->
+<div class="p-4 border-b border-border flex items-center justify-between bg-surface-bright rounded-t-xl">
+<h3 class="text-card-title font-card-title text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">forum</span>
+                            Discussion
+                        </h3>
+<div class="bg-warning/10 text-warning border border-warning/20 px-2 py-0.5 rounded text-[11px] font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">priority_high</span>
+                            1 unresolved
+                        </div>
+</div>
+<!-- Comments Area -->
+<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-5 bg-canvas/30">
+<!-- Resolved Thread (Collapsed/Dimmed) -->
+<div class="opacity-60 hover:opacity-100 transition-opacity">
+<div class="flex gap-3">
+<div class="h-8 w-8 rounded-full bg-surface-dim overflow-hidden shrink-0 border border-border">
+<img alt="Daniel Kim" class="w-full h-full object-cover" data-alt="A professional headshot of Daniel Kim, a content owner. He wears glasses and a casual collared shirt. Clean, bright studio lighting, neutral background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAk_ls5ATt7d2K1vcK3v0kaVF--U4Q_V7noyj-AlRlEHQF32_VPL8E7Kenqq9P5Hh1TCosE1gHJTp6hi_02EEsxoDvpOF5pPiIYKK8mX_ucXq5t0iAMJHU6ke7lsFA22hQG73mETa7xQPqSciLzVy5RThi2HxPUe-y8eKuV-QMhg82Xx2gABSW9BOjAKPxXTGEaOjSs36icDfYPxp82-kWCB51yy-uaVuZ0tvUe6Yjq1AknI154crw-4u_chXgkYwauK9XzKKCg4CM"/>
+</div>
+<div class="flex-1">
+<div class="flex items-center justify-between mb-1">
+<div class="flex items-baseline gap-2">
+<span class="text-[13px] font-semibold text-on-surface">Daniel Kim</span>
+<span class="text-[11px] text-on-surface-variant">Sep 11</span>
+</div>
+<span class="bg-success-subtle text-success text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[10px]">check</span> Resolved
+                                        </span>
+</div>
+<p class="text-[13px] text-on-surface-variant leading-relaxed">
+                                        Can we make sure the hex code for the primary orange matches the new brand guidelines? It looked a bit washed out in V1.
+                                    </p>
+</div>
+</div>
+</div>
+<!-- Active Thread -->
+<div class="bg-surface border border-warning/30 rounded-lg p-3 shadow-sm relative before:absolute before:-left-[1px] before:top-3 before:bottom-3 before:w-[3px] before:bg-warning before:rounded-r">
+<!-- Parent Comment -->
+<div class="flex gap-3 mb-3">
+<div class="h-8 w-8 rounded-full bg-surface-dim overflow-hidden shrink-0 border border-border">
+<img alt="Sofia Reyes" class="w-full h-full object-cover" data-alt="A professional headshot of Sofia Reyes, marketing manager. Soft smile, professional attire, clean lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtCDJihlvD56lvJ2vg8RzQraoCrx0-ue6_dkdJpTiAORJlKzGbqCuNdfXJU9pQsi--sgdxpjcH8C_Bp8XawFrbEVrEBNu1w0h-bXjWyTJT1z2-UIwi9NxBxK943dj1WYoYcLzOkyPlrBQs8G9-wUftr3RinOuIwJW8qOfuGe6AbSeRvxFhQKOrmnQNQ216k9Fd2LLHuslGeZVoeedkgoaHmFrORq6CtcV2n0a36AOkTPh-fYWPFRps0uOQTfMQmIvzCpe6OYf8AJU"/>
+</div>
+<div class="flex-1">
+<div class="flex items-center justify-between mb-1">
+<div class="flex items-baseline gap-2">
+<span class="text-[13px] font-semibold text-on-surface">Sofia Reyes</span>
+<span class="text-[11px] text-on-surface-variant">Sep 12, 10:15 AM</span>
+</div>
+</div>
+<div class="mb-2">
+<span class="inline-flex items-center gap-1 bg-surface-container text-on-surface-variant text-[10px] px-1.5 py-0.5 rounded border border-border mb-1">
+<span class="material-symbols-outlined text-[10px]">brush</span> Creative feedback
+                                        </span>
+</div>
+<p class="text-[13px] text-on-surface leading-relaxed">
+<span class="text-primary font-medium">@Maya Chen</span> the layout on slide 3 feels a bit cramped now with the new copy. Could we increase the line height slightly or reduce the font size by 1pt to give it more breathing room?
+                                    </p>
+<!-- Attachment -->
+<div class="mt-2 flex items-center gap-2 p-1.5 border border-border rounded bg-surface-subtle w-max cursor-pointer hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">image</span>
+<span class="text-[11px] text-on-surface font-medium">slide_3_markup.png</span>
+</div>
+</div>
+</div>
+<!-- Reply -->
+<div class="flex gap-3 pl-8 mt-3 border-t border-border pt-3">
+<div class="h-6 w-6 rounded-full bg-surface-dim overflow-hidden shrink-0 border border-border mt-0.5">
+<img alt="Maya Chen" class="w-full h-full object-cover" data-alt="A professional headshot of Maya Chen, a designer. She has dark hair, wearing a minimalist black top. Creative, artistic yet professional studio lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0Yrir0yNzeXcl2j2iziFlYCuJKvtXccKv2PbyukSok_tK1pop4YodvfnItrLPDfRaF3Ovgq6pB2gv4zLjCLcwIEL1_uO8DCGRzJwgsHFuwDGf2yTLnz65hLS1uvyUKYAxLiV0gJrA-1sW2NlLJx4zllNly72lzxO-TTdeW6M4hAFJgLN5bSdq8C0suX66ysIdY_CpxjjT-u6DvE2mxGT9J0vHh3ANylcrO3k42gKVFsXF84WtdB-IbFy9G_QDHdKfjFCvrGzvwQY"/>
+</div>
+<div class="flex-1">
+<div class="flex items-center justify-between mb-0.5">
+<div class="flex items-baseline gap-2">
+<span class="text-[12px] font-semibold text-on-surface">Maya Chen</span>
+<span class="text-[10px] text-on-surface-variant">Just now</span>
+</div>
+</div>
+<p class="text-[12px] text-on-surface-variant leading-relaxed">
+                                        I can adjust that. Reducing to 14pt and bumping line-height to 140%. Will push V4 shortly.
+                                    </p>
+</div>
+</div>
+<!-- Thread Actions -->
+<div class="pl-8 mt-3 flex items-center justify-between">
+<button class="text-[11px] text-on-surface-variant font-medium hover:text-primary transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">reply</span> Reply
+                                </button>
+<button class="text-[11px] text-primary font-medium hover:text-primary-hover transition-colors flex items-center gap-1 border border-primary/20 px-2 py-1 rounded bg-primary-subtle">
+<span class="material-symbols-outlined text-[14px]">check</span> Resolve thread
+                                </button>
+</div>
+</div>
+</div>
+<!-- Comment Input -->
+<div class="p-3 border-t border-border bg-surface rounded-b-xl">
+<div class="flex flex-col border border-border rounded-lg focus-within:border-focus-ring focus-within:ring-1 focus-within:ring-focus-ring transition-shadow bg-surface">
+<textarea class="w-full border-none bg-transparent resize-none text-[13px] p-3 text-on-surface placeholder:text-text-muted focus:ring-0 min-h-[60px]" placeholder="Add a comment... Use @ to mention"></textarea>
+<div class="flex items-center justify-between p-2 bg-surface-subtle border-t border-border rounded-b-lg">
+<div class="flex gap-1">
+<button class="h-7 w-7 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container rounded transition-colors" title="Attach file">
+<span class="material-symbols-outlined text-[18px]">attach_file</span>
+</button>
+<button class="h-7 w-7 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container rounded transition-colors" title="Mention">
+<span class="material-symbols-outlined text-[18px]">alternate_email</span>
+</button>
+</div>
+<button class="bg-primary text-on-primary text-[12px] font-medium h-7 px-3 rounded hover:bg-primary-hover transition-colors">
+                                    Post
+                                </button>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</body></html>

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-background dark:bg-background" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee — Social Channels Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-subtle": "#EEF2FF",
+                        "border": "#DDE1E6",
+                        "warning-subtle": "#FFF7E6",
+                        "tertiary": "#004c77",
+                        "secondary-fixed": "#d9e2fc",
+                        "on-primary-fixed": "#0f0069",
+                        "on-secondary-fixed": "#121b2e",
+                        "on-surface-variant": "#464555",
+                        "surface-variant": "#dae3f8",
+                        "on-error-container": "#93000a",
+                        "primary-container": "#4f46e5",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "secondary-container": "#d7dff9",
+                        "inverse-primary": "#c3c0ff",
+                        "on-surface": "#131c2b",
+                        "tertiary-fixed": "#cde5ff",
+                        "on-tertiary-fixed": "#001d32",
+                        "error-container": "#ffdad6",
+                        "on-primary": "#ffffff",
+                        "outline": "#777587",
+                        "tertiary-container": "#00659c",
+                        "surface-container": "#e7eeff",
+                        "on-tertiary-container": "#bfdfff",
+                        "background": "#f9f9ff",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "danger": "#B91C1C",
+                        "surface": "#FFFFFF",
+                        "surface-tint": "#4d44e3",
+                        "focus-ring": "#6366F1",
+                        "warning": "#B45309",
+                        "canvas": "#F7F7F5",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "success": "#15803D",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "outline-variant": "#c7c4d8",
+                        "inverse-surface": "#283141",
+                        "primary-fixed": "#e2dfff",
+                        "on-primary-container": "#dad7ff",
+                        "text-muted": "#7B8495",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "error": "#ba1a1a",
+                        "surface-container-high": "#dfe8fe",
+                        "surface-bright": "#f9f9ff",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "on-secondary-container": "#5a6278",
+                        "surface-container-lowest": "#ffffff",
+                        "danger-subtle": "#FEF2F2",
+                        "surface-dim": "#d1daef",
+                        "inverse-on-surface": "#ecf0ff",
+                        "info-subtle": "#F0F9FF",
+                        "secondary": "#555e74",
+                        "surface-subtle": "#F1F3F5",
+                        "primary": "#3525cd",
+                        "on-background": "#131c2b",
+                        "on-error": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-highest": "#dae3f8",
+                        "success-subtle": "#ECFDF3",
+                        "surface-container-low": "#f0f3ff",
+                        "primary-hover": "#4338CA",
+                        "on-secondary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sidebar-collapsed": "72px",
+                        "base": "4px",
+                        "topbar-height": "64px",
+                        "card-padding": "16px",
+                        "sidebar-expanded": "248px",
+                        "screen-padding": "24px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "page-title": ["Inter"],
+                        "label": ["Inter"],
+                        "card-title": ["Inter"],
+                        "table-dense": ["Inter"],
+                        "section-title": ["Inter"],
+                        "button": ["Inter"],
+                        "body": ["Inter"]
+                    },
+                    "fontSize": {
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .drawer-overlay {
+            background-color: rgba(19, 28, 43, 0.4);
+            backdrop-filter: blur(2px);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #DDE1E6;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="font-body text-body text-on-surface bg-canvas antialiased h-full overflow-hidden flex relative">
+<!-- SideNavBar -->
+<nav class="bg-surface dark:bg-surface-container-low w-sidebar-expanded h-full left-0 top-0 fixed border-r border-border dark:border-outline-variant flex flex-col py-screen-padding z-30 hidden md:flex">
+<!-- Brand/Header -->
+<div class="px-screen-padding mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-sm shrink-0">
+                NC
+            </div>
+<div>
+<div class="font-card-title text-card-title text-on-surface">Northstar Coffee</div>
+<div class="font-label text-label text-text-muted">StudioFlow Workspace</div>
+</div>
+</div>
+<!-- Main Navigation -->
+<div class="flex-1 overflow-y-auto custom-scrollbar px-3 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-on-surface-variant hover:bg-surface-container transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="assignment_ind">assignment_ind</span>
+<span class="font-button text-button">My Work</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-on-surface-variant hover:bg-surface-container transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="dashboard">dashboard</span>
+<span class="font-button text-button">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-on-surface-variant hover:bg-surface-container transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="event_note">event_note</span>
+<span class="font-button text-button">Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-on-surface-variant hover:bg-surface-container transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="calendar_today">calendar_today</span>
+<span class="font-button text-button">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-on-surface-variant hover:bg-surface-container transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="rate_review">rate_review</span>
+<span class="font-button text-button">Reviews</span>
+</a>
+<!-- ACTIVE NAV ITEM -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-primary dark:text-primary-fixed bg-primary-subtle dark:bg-primary-container font-semibold scale-[0.98] transition-transform duration-150" href="#">
+<span class="material-symbols-outlined text-[20px] text-primary" data-icon="share">share</span>
+<span class="font-button text-button">Social Channels</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-on-surface-variant hover:bg-surface-container transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="brush">brush</span>
+<span class="font-button text-button">Brand Kit</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-on-surface-variant hover:bg-surface-container transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="group">group</span>
+<span class="font-button text-button">Team</span>
+</a>
+</div>
+<!-- Footer Navigation -->
+<div class="mt-auto px-3 pt-4 border-t border-border space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-on-surface-variant hover:bg-surface-container transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="settings">settings</span>
+<span class="font-button text-button">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-on-surface-variant hover:bg-surface-container transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="swap_horiz">swap_horiz</span>
+<span class="font-button text-button">Switch Workspace</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 h-full md:ml-sidebar-expanded flex flex-col relative">
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-surface-container-lowest h-topbar-height w-full flex justify-between items-center px-screen-padding border-b border-border dark:border-outline-variant z-20 shrink-0 hidden md:flex">
+<!-- Breadcrumb / Search area -->
+<div class="flex items-center gap-4 flex-1">
+<div class="flex items-center gap-2 text-text-muted font-button text-button">
+<span class="hover:text-primary cursor-pointer transition-colors">Northstar Coffee</span>
+<span class="material-symbols-outlined text-[16px]" data-icon="chevron_right">chevron_right</span>
+<span class="text-on-surface font-semibold">Social Channels</span>
+</div>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-4">
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-secondary hover:bg-surface-container hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="notifications">notifications</span>
+</button>
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-secondary hover:bg-surface-container hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="help">help</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-border cursor-pointer">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a diverse woman with a calm, neutral expression. She is wearing a modern, minimalist dark blazer over a simple white t-shirt. The background is a soft, solid light gray to ensure high contrast without distractions. The lighting is bright, even, and flattering, typical of a high-end corporate or agency profile photo. The overall mood is approachable yet highly professional, matching a modern digital workspace aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-7QA1DJ-88bXJeq7ZyfvexCXZtPlSPCtjEKwHRaYYiVBAxOP2PvdX1kZBQGqUKMJQQcWY0pk1Wmhc-riunEYP8NqPJAIHMVxcx3pjFXDdufmt_l5A0ohzF00hz60cBsrDT8qCfHLpNtT1-9sm8rEcy6uY0HXZgUmsqPhtmNNH4aD-AMvsidy34BiHZt--Kjc-z_UDyCwjTmV_377c3YKQ6M3ZuCPBlOlp-6-3NEg7lywHOCuCYc5BoVTI1wifkfy2ibohXL121c0"/>
+</div>
+</div>
+</header>
+<!-- Canvas / Content Scroll -->
+<div class="flex-1 overflow-y-auto p-screen-padding bg-canvas">
+<!-- Page Header -->
+<div class="max-w-[1200px] mx-auto mb-8 flex flex-col md:flex-row md:items-start justify-between gap-4">
+<div class="max-w-2xl">
+<h1 class="font-page-title text-page-title text-on-surface mb-2">Social Channels</h1>
+<p class="font-body text-body text-text-muted">Keep the brand's account information in one place. Connections and analytics are planned for a future version.</p>
+</div>
+<button class="h-10 px-4 bg-primary-container text-on-primary rounded-lg font-button text-button hover:bg-primary-hover transition-colors shrink-0 flex items-center gap-2 shadow-sm focus:ring-2 focus:ring-focus-ring focus:ring-offset-2 focus:outline-none">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+                    Add channel
+                </button>
+</div>
+<!-- Main Data Table/Card Hybrid -->
+<div class="max-w-[1200px] mx-auto">
+<div class="bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
+<div class="overflow-x-auto custom-scrollbar">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-subtle border-b border-border">
+<th class="py-3 px-4 font-label text-label text-secondary uppercase tracking-wide font-semibold">Platform</th>
+<th class="py-3 px-4 font-label text-label text-secondary uppercase tracking-wide font-semibold">Account Name</th>
+<th class="py-3 px-4 font-label text-label text-secondary uppercase tracking-wide font-semibold hidden lg:table-cell">Profile URL</th>
+<th class="py-3 px-4 font-label text-label text-secondary uppercase tracking-wide font-semibold text-center">Default</th>
+<th class="py-3 px-4 font-label text-label text-secondary uppercase tracking-wide font-semibold">State</th>
+<th class="py-3 px-4 font-label text-label text-secondary uppercase tracking-wide font-semibold hidden md:table-cell">Owner / Contact</th>
+<th class="py-3 px-4 font-label text-label text-secondary uppercase tracking-wide font-semibold hidden xl:table-cell">Last Updated</th>
+<th class="py-3 px-4 font-label text-label text-secondary uppercase tracking-wide font-semibold w-12"></th>
+</tr>
+</thead>
+<tbody class="font-table-dense text-table-dense divide-y divide-border">
+<!-- Row 1: Instagram -->
+<tr class="hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-[18px]" data-icon="photo_camera">photo_camera</span>
+</div>
+<span class="font-medium text-on-surface">Instagram</span>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface">@northstarcoffee</td>
+<td class="py-3 px-4 text-text-muted hidden lg:table-cell truncate max-w-[200px]">instagram.com/northstarcoffee</td>
+<td class="py-3 px-4 text-center">
+<span class="material-symbols-outlined text-success text-[20px]" data-icon="check_circle">check_circle</span>
+</td>
+<td class="py-3 px-4">
+<div class="inline-flex items-center px-2 py-1 rounded-md bg-success-subtle text-success font-label text-label gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                            Active
+                                        </div>
+</td>
+<td class="py-3 px-4 text-secondary hidden md:table-cell">Marketing Team</td>
+<td class="py-3 px-4 text-text-muted hidden xl:table-cell">Oct 12, 2023</td>
+<td class="py-3 px-4 text-right">
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-text-muted hover:bg-border hover:text-on-surface transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring">
+<span class="material-symbols-outlined text-[20px]" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2: Facebook -->
+<tr class="hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-[18px]" data-icon="facebook">qr_code_2</span>
+</div>
+<span class="font-medium text-on-surface">Facebook</span>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface">Northstar Coffee Page</td>
+<td class="py-3 px-4 text-text-muted hidden lg:table-cell truncate max-w-[200px]">facebook.com/northstarcoffee</td>
+<td class="py-3 px-4 text-center">
+<span class="material-symbols-outlined text-success text-[20px]" data-icon="check_circle">check_circle</span>
+</td>
+<td class="py-3 px-4">
+<div class="inline-flex items-center px-2 py-1 rounded-md bg-success-subtle text-success font-label text-label gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                            Active
+                                        </div>
+</td>
+<td class="py-3 px-4 text-secondary hidden md:table-cell">Marketing Team</td>
+<td class="py-3 px-4 text-text-muted hidden xl:table-cell">Sep 28, 2023</td>
+<td class="py-3 px-4 text-right">
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-text-muted hover:bg-border hover:text-on-surface transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring">
+<span class="material-symbols-outlined text-[20px]" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3: TikTok -->
+<tr class="hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-[18px]" data-icon="music_note">music_note</span>
+</div>
+<span class="font-medium text-on-surface">TikTok</span>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface">@northstar.coffee</td>
+<td class="py-3 px-4 text-text-muted hidden lg:table-cell truncate max-w-[200px]">tiktok.com/@northstar.coffee</td>
+<td class="py-3 px-4 text-center">
+<span class="material-symbols-outlined text-success text-[20px]" data-icon="check_circle">check_circle</span>
+</td>
+<td class="py-3 px-4">
+<div class="inline-flex items-center px-2 py-1 rounded-md bg-success-subtle text-success font-label text-label gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                            Active
+                                        </div>
+</td>
+<td class="py-3 px-4 text-secondary hidden md:table-cell">Video Prod Team</td>
+<td class="py-3 px-4 text-text-muted hidden xl:table-cell">Nov 02, 2023</td>
+<td class="py-3 px-4 text-right">
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-text-muted hover:bg-border hover:text-on-surface transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring">
+<span class="material-symbols-outlined text-[20px]" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4: LinkedIn -->
+<tr class="hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-[18px]" data-icon="work">work</span>
+</div>
+<span class="font-medium text-on-surface">LinkedIn</span>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface">Northstar Coffee</td>
+<td class="py-3 px-4 text-text-muted hidden lg:table-cell truncate max-w-[200px]">linkedin.com/company/northstar</td>
+<td class="py-3 px-4 text-center">
+<span class="material-symbols-outlined text-border text-[20px]" data-icon="radio_button_unchecked">radio_button_unchecked</span>
+</td>
+<td class="py-3 px-4">
+<div class="inline-flex items-center px-2 py-1 rounded-md bg-surface-dim text-secondary font-label text-label gap-1.5 border border-border">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                                            Inactive
+                                        </div>
+</td>
+<td class="py-3 px-4 text-secondary hidden md:table-cell">HR / Comms</td>
+<td class="py-3 px-4 text-text-muted hidden xl:table-cell">Aug 14, 2023</td>
+<td class="py-3 px-4 text-right">
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-text-muted hover:bg-border hover:text-on-surface transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring">
+<span class="material-symbols-outlined text-[20px]" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 5: YouTube -->
+<tr class="hover:bg-surface-subtle transition-colors group">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-[18px]" data-icon="play_circle">play_circle</span>
+</div>
+<span class="font-medium text-on-surface">YouTube</span>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface">Northstar Coffee Roasters</td>
+<td class="py-3 px-4 text-text-muted hidden lg:table-cell truncate max-w-[200px]">youtube.com/c/northstarcoffeeroasters</td>
+<td class="py-3 px-4 text-center">
+<span class="material-symbols-outlined text-border text-[20px]" data-icon="radio_button_unchecked">radio_button_unchecked</span>
+</td>
+<td class="py-3 px-4">
+<div class="inline-flex items-center px-2 py-1 rounded-md bg-success-subtle text-success font-label text-label gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                            Active
+                                        </div>
+</td>
+<td class="py-3 px-4 text-secondary hidden md:table-cell">Video Prod Team</td>
+<td class="py-3 px-4 text-text-muted hidden xl:table-cell">Oct 30, 2023</td>
+<td class="py-3 px-4 text-right">
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-text-muted hover:bg-border hover:text-on-surface transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring">
+<span class="material-symbols-outlined text-[20px]" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="h-20"></div> <!-- Bottom padding -->
+</div>
+</main>
+<!-- Side Drawer Overlay & Panel (Active State Simulation) -->
+<div class="fixed inset-0 z-50 flex justify-end">
+<!-- Overlay -->
+<div aria-hidden="true" class="absolute inset-0 drawer-overlay cursor-pointer"></div>
+<!-- Drawer Panel -->
+<div class="relative w-full max-w-[520px] bg-surface h-full shadow-2xl flex flex-col transform transition-transform duration-300 translate-x-0 border-l border-border z-10">
+<!-- Drawer Header -->
+<div class="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+<h2 class="font-section-title text-section-title text-on-surface">Add social channel</h2>
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-secondary hover:bg-surface-subtle hover:text-on-surface transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring">
+<span class="material-symbols-outlined text-[20px]" data-icon="close">close</span>
+</button>
+</div>
+<!-- Drawer Scrollable Content -->
+<div class="flex-1 overflow-y-auto custom-scrollbar px-6 py-6 space-y-6">
+<!-- Info Callout -->
+<div class="bg-info-subtle border border-tertiary-fixed-dim rounded-lg p-4 flex gap-3">
+<span class="material-symbols-outlined text-tertiary-container shrink-0 mt-0.5 text-[20px]" data-icon="info">info</span>
+<p class="font-body text-body text-on-surface">New ideas target all active channels by default. You can change channels per idea.</p>
+</div>
+<!-- Form Fields -->
+<div class="space-y-5">
+<!-- Platform Dropdown -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5">Platform</label>
+<div class="relative">
+<select class="w-full h-10 pl-10 pr-10 border border-border rounded-lg bg-surface text-on-surface font-body text-body appearance-none focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-focus-ring">
+<option selected="" value="instagram">Instagram</option>
+<option value="facebook">Facebook</option>
+<option value="tiktok">TikTok</option>
+<option value="linkedin">LinkedIn</option>
+<option value="youtube">YouTube</option>
+<option value="x">X (Twitter)</option>
+<option value="other">Other</option>
+</select>
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-secondary text-[20px]" data-icon="photo_camera">photo_camera</span>
+</div>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-secondary text-[20px]" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Account Display Name -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5">Account display name <span class="text-danger">*</span></label>
+<input class="w-full h-10 px-3 border border-border rounded-lg bg-surface text-on-surface font-body text-body focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-focus-ring placeholder:text-text-muted" placeholder="e.g. Northstar Coffee Main" type="text"/>
+</div>
+<!-- Handle -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5">Handle <span class="text-danger">*</span></label>
+<div class="relative flex items-center">
+<span class="absolute left-3 text-secondary font-body">@</span>
+<input class="w-full h-10 pl-7 pr-3 border border-border rounded-lg bg-surface text-on-surface font-body text-body focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-focus-ring placeholder:text-text-muted" placeholder="northstarcoffee" type="text"/>
+</div>
+</div>
+<!-- Profile URL -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5">Profile URL <span class="text-danger">*</span></label>
+<input class="w-full h-10 px-3 border border-border rounded-lg bg-surface text-on-surface font-body text-body focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-focus-ring placeholder:text-text-muted" placeholder="https://instagram.com/..." type="url"/>
+</div>
+<!-- Internal Label -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5">Internal label (optional)</label>
+<input class="w-full h-10 px-3 border border-border rounded-lg bg-surface text-on-surface font-body text-body focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-focus-ring placeholder:text-text-muted" placeholder="e.g. Brand Mktg Team" type="text"/>
+<p class="mt-1 font-label text-[11px] text-text-muted">Used to help team members identify the correct channel internally.</p>
+</div>
+<!-- Notes -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5">Notes</label>
+<textarea class="w-full p-3 border border-border rounded-lg bg-surface text-on-surface font-body text-body focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-focus-ring placeholder:text-text-muted resize-none" placeholder="Any specific formatting rules or audience details..." rows="3"></textarea>
+</div>
+<hr class="border-border my-6"/>
+<!-- Toggles -->
+<div class="space-y-4">
+<!-- Default Toggle -->
+<div class="flex items-start justify-between">
+<div>
+<h4 class="font-card-title text-card-title text-on-surface">Default channel</h4>
+<p class="font-body text-body text-text-muted mt-0.5">Automatically include this channel when creating new ideas or campaigns.</p>
+</div>
+<button aria-checked="true" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-success transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2 mt-1" role="switch" type="button">
+<span class="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+</button>
+</div>
+<!-- Active Toggle -->
+<div class="flex items-start justify-between">
+<div>
+<h4 class="font-card-title text-card-title text-on-surface">Active state</h4>
+<p class="font-body text-body text-text-muted mt-0.5">Allow team members to select and plan content for this channel.</p>
+</div>
+<button aria-checked="true" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-success transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2 mt-1" role="switch" type="button">
+<span class="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Drawer Footer (Sticky) -->
+<div class="px-6 py-4 border-t border-border bg-surface shrink-0 flex items-center justify-end gap-3">
+<button class="h-10 px-4 rounded-lg font-button text-button text-on-surface border border-border bg-surface hover:bg-surface-subtle transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2">
+                    Cancel
+                </button>
+<button class="h-10 px-4 rounded-lg font-button text-button text-on-primary bg-primary-container hover:bg-primary-hover transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2 shadow-sm">
+                    Add channel
+                </button>
+</div>
+</div>
+</div>
+</body></html>

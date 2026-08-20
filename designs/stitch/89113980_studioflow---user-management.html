@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+
+<html class="h-full antialiased bg-canvas text-on-surface" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>User Management - StudioFlow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#e7eeff",
+                        "on-tertiary-container": "#bfdfff",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "on-tertiary-fixed": "#001d32",
+                        "inverse-on-surface": "#ecf0ff",
+                        "surface-tint": "#4d44e3",
+                        "on-secondary-container": "#5a6278",
+                        "warning-subtle": "#FFF7E6",
+                        "inverse-primary": "#c3c0ff",
+                        "danger-subtle": "#FEF2F2",
+                        "danger": "#B91C1C",
+                        "surface-container-low": "#f0f3ff",
+                        "outline": "#777587",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#dae3f8",
+                        "on-secondary": "#ffffff",
+                        "on-background": "#131c2b",
+                        "outline-variant": "#c7c4d8",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "tertiary-fixed": "#cde5ff",
+                        "primary-container": "#4f46e5",
+                        "warning": "#B45309",
+                        "secondary-fixed": "#d9e2fc",
+                        "text-muted": "#7B8495",
+                        "surface-dim": "#d1daef",
+                        "on-surface-variant": "#464555",
+                        "secondary-container": "#d7dff9",
+                        "primary": "#3525cd",
+                        "success": "#15803D",
+                        "focus-ring": "#6366F1",
+                        "tertiary-container": "#00659c",
+                        "tertiary": "#004c77",
+                        "primary-fixed": "#e2dfff",
+                        "on-surface": "#131c2b",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "primary-hover": "#4338CA",
+                        "on-primary-container": "#dad7ff",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "surface-container-lowest": "#ffffff",
+                        "error": "#ba1a1a",
+                        "canvas": "#F7F7F5",
+                        "primary-subtle": "#EEF2FF",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "surface-container-highest": "#dae3f8",
+                        "surface-bright": "#f9f9ff",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "on-primary": "#ffffff",
+                        "secondary": "#555e74",
+                        "surface-subtle": "#F1F3F5",
+                        "on-secondary-fixed": "#121b2e",
+                        "on-primary-fixed": "#0f0069",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#283141",
+                        "surface-container-high": "#dfe8fe",
+                        "on-error": "#ffffff",
+                        "surface": "#FFFFFF",
+                        "success-subtle": "#ECFDF3",
+                        "border": "#DDE1E6",
+                        "background": "#f9f9ff",
+                        "error-container": "#ffdad6",
+                        "info-subtle": "#F0F9FF"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sidebar-collapsed": "72px",
+                        "screen-padding": "24px",
+                        "sidebar-expanded": "248px",
+                        "gutter": "16px",
+                        "card-padding": "16px",
+                        "base": "4px",
+                        "topbar-height": "64px"
+                    },
+                    "fontFamily": {
+                        "body": ["Inter"],
+                        "table-dense": ["Inter"],
+                        "label": ["Inter"],
+                        "card-title": ["Inter"],
+                        "section-title": ["Inter"],
+                        "page-title": ["Inter"],
+                        "button": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[style*="'FILL' 1"] {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="flex h-full overflow-hidden">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-sidebar-expanded bg-surface dark:bg-surface-dim border-r border-border dark:border-outline-variant flex flex-col h-screen py-6 px-4 z-20">
+<div class="flex items-center gap-3 mb-8 px-2">
+<img alt="StudioFlow Logo" class="w-8 h-8 rounded" data-alt="A minimalist logo for StudioFlow featuring abstract geometric shapes in indigo and warm white, suggesting seamless creative production and workflow management." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAngkI02UoUo7f12iN8p1HXP8ZTOFJlxiOgPSmSsz0wBst2FCx7gWQBJAe7Trbs2vx3LJwspLayEzsC6O0Y5SBiSBo2yCMsKYvQ5ycboq3jztvkmE2skGKO5sSwkci3euCCbIgPPTC8wZqq5ZGmONHB7jn8UmDIPSjCT4f1Tba1MMnOnODTKAdFr9RET4jQPdWKj_BhW0UdYWNd36agN5kJuj5efuRvd-XD09ANXP5_UPiLm4RG96btUnjwCwZOMTgkI0_8cBGNLYo"/>
+<div>
+<h1 class="font-page-title text-page-title text-primary dark:text-primary-fixed-dim tracking-tight text-lg">StudioFlow</h1>
+<p class="font-label text-label text-on-surface-variant">Agency Workspace</p>
+</div>
+</div>
+<div class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors duration-200 font-body text-body" href="#">
+<span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+<span>My Work</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors duration-200 font-body text-body" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors duration-200 font-body text-body" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span>Workspaces</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-primary dark:text-primary-fixed-dim font-bold bg-primary-subtle dark:bg-primary-container transition-colors duration-200 font-body text-body" href="#">
+<span class="material-symbols-outlined" data-icon="person_search" data-weight="fill" style="font-variation-settings: 'FILL' 1;">person_search</span>
+<span>User Management</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors duration-200 font-body text-body" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Agency Settings</span>
+</a>
+</div>
+<div class="mt-auto space-y-1 pt-4 border-t border-border">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors duration-200 font-body text-body" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors duration-200 font-body text-body" href="#">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+<span>Account</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col ml-sidebar-expanded min-w-0">
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 h-topbar-height w-[calc(100%-theme(spacing.sidebar-expanded))] bg-surface dark:bg-surface-dim border-b border-border dark:border-outline-variant flex items-center justify-between px-screen-padding z-10">
+<div class="flex-1 flex items-center">
+<!-- Search bar on left -->
+<div class="relative w-96">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="search">search</span>
+<input class="w-full h-10 pl-10 pr-4 bg-surface-subtle border border-border rounded-lg text-body font-body focus:ring-2 focus:ring-focus-ring focus:border-focus-ring outline-none transition-shadow" placeholder="Search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-primary-container text-on-primary font-button text-button h-10 px-4 rounded-lg hover:bg-primary-hover transition-colors">
+                    Invite People
+                </button>
+<button class="text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<img alt="User Profile" class="w-8 h-8 rounded-full border border-border" data-alt="A professional headshot of a user, soft lighting, neutral background, suitable for a corporate profile image." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvzM6Y3G8K3eV5-hboY0QZY3Lw5TBaHi5nj82TZzMWXfoZjI4l0pvwpa4ASYPIlABvLJsDKEIfhxhYDJpBFh420MzNH3aUO5E63UprFuyeR0srgCxX2gkOTszz6L4lvVoYjMVs3pxMvKsLhRCAjnqh92Bon04gTS5Zvv2JrnwApDLYRePnC6GUHzw3p55Ni5CRz8wvYXQmy1JqAHllHax-q1Fg98sO8CJs3HQ6eiSKNRzPf5eo6OXKqMYUyK9akz6kil-3rGvCXhI"/>
+</div>
+</header>
+<!-- Page Content -->
+<main class="flex-1 overflow-y-auto mt-topbar-height p-screen-padding relative">
+<!-- Page Header -->
+<div class="mb-8">
+<h2 class="font-page-title text-page-title text-on-surface mb-2">User Management</h2>
+<p class="font-body text-body text-on-surface-variant">Manage agency access across every brand workspace.</p>
+</div>
+<!-- KPIs -->
+<div class="grid grid-cols-3 gap-gutter mb-8">
+<div class="bg-surface rounded-xl border border-border p-card-padding">
+<div class="font-label text-label text-on-surface-variant mb-1 uppercase tracking-wider">Active Users</div>
+<div class="font-page-title text-page-title text-on-surface">18</div>
+</div>
+<div class="bg-surface rounded-xl border border-border p-card-padding">
+<div class="font-label text-label text-on-surface-variant mb-1 uppercase tracking-wider">Pending Invitations</div>
+<div class="font-page-title text-page-title text-on-surface">3</div>
+</div>
+<div class="bg-surface rounded-xl border border-border p-card-padding">
+<div class="font-label text-label text-on-surface-variant mb-1 uppercase tracking-wider">Deactivated</div>
+<div class="font-page-title text-page-title text-on-surface">2</div>
+</div>
+</div>
+<!-- Content Area -->
+<div class="bg-surface rounded-xl border border-border overflow-hidden">
+<!-- Tabs -->
+<div class="flex border-b border-border px-4">
+<button class="px-4 py-3 font-button text-button text-primary border-b-2 border-primary -mb-px">All users</button>
+<button class="px-4 py-3 font-button text-button text-on-surface-variant hover:text-on-surface transition-colors">Pending invitations</button>
+<button class="px-4 py-3 font-button text-button text-on-surface-variant hover:text-on-surface transition-colors">Deactivated</button>
+</div>
+<!-- Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border bg-surface-subtle">
+<th class="font-label text-label text-on-surface-variant py-3 px-4 font-medium">Person</th>
+<th class="font-label text-label text-on-surface-variant py-3 px-4 font-medium">Agency role</th>
+<th class="font-label text-label text-on-surface-variant py-3 px-4 font-medium">Workspace access</th>
+<th class="font-label text-label text-on-surface-variant py-3 px-4 font-medium">Workspace roles</th>
+<th class="font-label text-label text-on-surface-variant py-3 px-4 font-medium">Status</th>
+<th class="font-label text-label text-on-surface-variant py-3 px-4 font-medium">Last active</th>
+<th class="font-label text-label text-on-surface-variant py-3 px-4 font-medium w-12"></th>
+</tr>
+</thead>
+<tbody class="font-table-dense text-table-dense text-on-surface divide-y divide-border">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-subtle transition-colors">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-subtle text-primary flex items-center justify-center font-bold text-xs">MC</div>
+<div>
+<div class="font-medium">Maya Chen</div>
+<div class="text-on-surface-variant text-xs">maya@studioflow.com</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4">Agency Admin</td>
+<td class="py-3 px-4">All workspaces</td>
+<td class="py-3 px-4"><span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container text-on-surface text-xs border border-outline-variant">Admin</span></td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-success-subtle text-success text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span> Active
+                                    </span>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">Today</td>
+<td class="py-3 px-4 text-right">
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-subtle transition-colors">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs">OH</div>
+<div>
+<div class="font-medium">Omar Haddad</div>
+<div class="text-on-surface-variant text-xs">omar@northstar.com</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">Normal User</td>
+<td class="py-3 px-4">Northstar Coffee</td>
+<td class="py-3 px-4"><span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container text-on-surface text-xs border border-outline-variant">Content Planner</span></td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-success-subtle text-success text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span> Active
+                                    </span>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">Yesterday</td>
+<td class="py-3 px-4 text-right">
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 3 - Selected State simulation -->
+<tr class="bg-primary-subtle transition-colors border-l-2 border-l-primary">
+<td class="py-3 px-4 pl-3">
+<div class="flex items-center gap-3">
+<img alt="Elena Rossi" class="w-8 h-8 rounded-full object-cover" data-alt="Professional headshot of a female designer, natural light, clean background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuByJVhI4WwkOZW0tVY1uB9lccXVl6oZBJbCl1Ebbn_kq3YwwSqUKIrUP6NCnsaS3TVilKaICZOoI8MKjdMyfOJnHm7lTSuAH9LA0DWPJvoL0eFT8J5znb0B5Zn6RhL7xORGIiMRJwQJ4EnVcEODLv1-R05znq9ovo3MKuCTnWz19gzyOwOopnaxGBkMS2wvGd6mrssGhMRM4QFfPEX979arYdIU7B0FUbtzb1TTmRd0EyDBWqtbTIF0sx383cTPj0m6hKMiF-INJxE"/>
+<div>
+<div class="font-medium">Elena Rossi</div>
+<div class="text-on-surface-variant text-xs">elena@studioflow.com</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">Normal User</td>
+<td class="py-3 px-4">3 Workspaces</td>
+<td class="py-3 px-4"><span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container text-on-surface text-xs border border-outline-variant">Designer</span></td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-success-subtle text-success text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span> Active
+                                    </span>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">2h ago</td>
+<td class="py-3 px-4 text-right">
+<button class="text-primary hover:text-primary-hover"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-subtle transition-colors">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center font-bold text-xs">JB</div>
+<div>
+<div class="font-medium">Jon Bell</div>
+<div class="text-on-surface-variant text-xs">jon@northstar.com</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">Normal User</td>
+<td class="py-3 px-4">Northstar Coffee</td>
+<td class="py-3 px-4"><span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container text-on-surface text-xs border border-outline-variant">Internal Reviewer</span></td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-success-subtle text-success text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span> Active
+                                    </span>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">3 days ago</td>
+<td class="py-3 px-4 text-right">
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 5 Pending -->
+<tr class="hover:bg-surface-subtle transition-colors">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-on-surface-variant border border-dashed border-outline-variant flex items-center justify-center font-bold text-xs">SJ</div>
+<div>
+<div class="font-medium">Sarah Jenkins</div>
+<div class="text-on-surface-variant text-xs">sarah@studioflow.com</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">Normal User</td>
+<td class="py-3 px-4 text-on-surface-variant italic">-</td>
+<td class="py-3 px-4 text-on-surface-variant italic">-</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-warning-subtle text-warning text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule">schedule</span> Pending
+                                    </span>
+</td>
+<td class="py-3 px-4 text-on-surface-variant text-xs">Invite sent 2 days ago</td>
+<td class="py-3 px-4 text-right">
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 6 Deactivated -->
+<tr class="hover:bg-surface-subtle transition-colors opacity-75">
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container text-outline flex items-center justify-center font-bold text-xs">MR</div>
+<div>
+<div class="font-medium line-through text-on-surface-variant">Mike Ross</div>
+<div class="text-on-surface-variant text-xs">mike@studioflow.com</div>
+</div>
+</div>
+</td>
+<td class="py-3 px-4 text-on-surface-variant">-</td>
+<td class="py-3 px-4 text-on-surface-variant">-</td>
+<td class="py-3 px-4 text-on-surface-variant">-</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-container-high text-on-surface-variant text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]" data-icon="block">block</span> Deactivated
+                                    </span>
+</td>
+<td class="py-3 px-4 text-on-surface-variant text-xs">1 month ago</td>
+<td class="py-3 px-4 text-right">
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Side Drawer Overlay (Simulated) -->
+<div aria-hidden="true" class="absolute inset-0 bg-on-background/20 z-30"></div>
+<!-- Side Drawer -->
+<div class="absolute top-0 right-0 h-full w-[480px] bg-surface shadow-2xl z-40 flex flex-col border-l border-border transform transition-transform">
+<!-- Drawer Header -->
+<div class="px-6 py-5 border-b border-border flex items-center justify-between">
+<h3 class="font-section-title text-section-title text-on-surface">Edit access — Elena Rossi</h3>
+<button class="text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<!-- Drawer Content -->
+<div class="flex-1 overflow-y-auto p-6">
+<div class="mb-8">
+<label class="block font-label text-label text-on-surface-variant mb-2">Agency Role</label>
+<select class="w-full h-10 px-3 bg-surface border border-border rounded-lg text-body font-body focus:ring-2 focus:ring-focus-ring focus:border-focus-ring outline-none">
+<option>Normal User</option>
+<option>Agency Admin</option>
+</select>
+<p class="mt-2 text-xs text-on-surface-variant">Normal users only see workspaces they are explicitly added to.</p>
+</div>
+<div>
+<div class="flex items-center justify-between mb-4">
+<h4 class="font-card-title text-card-title text-on-surface">Workspace Access</h4>
+<button class="text-primary font-button text-button hover:text-primary-hover flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span> Add workspace
+                            </button>
+</div>
+<div class="border border-border rounded-lg overflow-hidden">
+<table class="w-full text-left">
+<thead class="bg-surface-subtle border-b border-border">
+<tr>
+<th class="py-2 px-3 font-label text-label text-on-surface-variant font-medium">Workspace</th>
+<th class="py-2 px-3 font-label text-label text-on-surface-variant font-medium">Roles</th>
+<th class="py-2 px-3 w-10"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border font-table-dense text-table-dense">
+<tr>
+<td class="py-3 px-3 font-medium">Northstar Coffee</td>
+<td class="py-3 px-3">
+<div class="flex flex-wrap gap-1">
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container text-xs">Designer <button class="ml-1 text-on-secondary-container opacity-70 hover:opacity-100"><span class="material-symbols-outlined text-[12px]" data-icon="close">close</span></button></span>
+</div>
+</td>
+<td class="py-3 px-3 text-right">
+<button class="text-on-surface-variant hover:text-primary"><span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span></button>
+</td>
+</tr>
+<tr>
+<td class="py-3 px-3 font-medium">Luna Botanics</td>
+<td class="py-3 px-3">
+<div class="flex flex-wrap gap-1">
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container text-xs">Designer <button class="ml-1 text-on-secondary-container opacity-70 hover:opacity-100"><span class="material-symbols-outlined text-[12px]" data-icon="close">close</span></button></span>
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container text-xs">Viewer <button class="ml-1 text-on-secondary-container opacity-70 hover:opacity-100"><span class="material-symbols-outlined text-[12px]" data-icon="close">close</span></button></span>
+</div>
+</td>
+<td class="py-3 px-3 text-right">
+<button class="text-on-surface-variant hover:text-primary"><span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span></button>
+</td>
+</tr>
+<tr>
+<td class="py-3 px-3 font-medium text-on-surface-variant">Summit Peak</td>
+<td class="py-3 px-3 text-on-surface-variant italic text-xs">None selected</td>
+<td class="py-3 px-3 text-right">
+<button class="text-on-surface-variant hover:text-primary"><span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Drawer Footer -->
+<div class="mt-auto">
+<div class="p-6 border-t border-border flex justify-end gap-3 bg-surface">
+<button class="px-4 py-2 font-button text-button text-on-surface border border-border rounded-lg hover:bg-surface-subtle transition-colors">Cancel</button>
+<button class="px-4 py-2 font-button text-button bg-primary-container text-on-primary rounded-lg hover:bg-primary-hover transition-colors">Save access</button>
+</div>
+<div class="p-4 bg-danger-subtle border-t border-danger/20 text-sm">
+<div class="flex items-start justify-between">
+<div class="pr-4">
+<span class="font-medium text-danger block mb-1">Deactivate user</span>
+<span class="text-danger/80 text-xs leading-relaxed">Deactivating will immediately revoke all workspace access. Audit history and content ownership are preserved.</span>
+</div>
+<button class="px-3 py-1.5 font-button text-[13px] text-danger border border-danger/30 rounded-lg hover:bg-danger/10 transition-colors whitespace-nowrap">Deactivate</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create New Workspace - StudioFlow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-subtle": "#EEF2FF",
+                      "background": "#f9f9ff",
+                      "border": "#DDE1E6",
+                      "tertiary-container": "#00659c",
+                      "on-primary-fixed": "#0f0069",
+                      "surface-container-low": "#f0f3ff",
+                      "surface": "#FFFFFF",
+                      "danger-subtle": "#FEF2F2",
+                      "on-tertiary-fixed-variant": "#004b74",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "surface-container-highest": "#dae3f8",
+                      "surface-subtle": "#F1F3F5",
+                      "text-muted": "#7B8495",
+                      "tertiary-fixed-dim": "#94ccff",
+                      "on-tertiary-fixed": "#001d32",
+                      "secondary-fixed-dim": "#bdc6e0",
+                      "inverse-surface": "#283141",
+                      "primary-fixed": "#e2dfff",
+                      "success": "#15803D",
+                      "surface-variant": "#dae3f8",
+                      "error": "#ba1a1a",
+                      "tertiary-fixed": "#cde5ff",
+                      "outline": "#777587",
+                      "on-background": "#131c2b",
+                      "on-tertiary-container": "#bfdfff",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "warning-subtle": "#FFF7E6",
+                      "secondary-container": "#d7dff9",
+                      "on-secondary-fixed-variant": "#3e475b",
+                      "surface-container": "#e7eeff",
+                      "on-secondary-container": "#5a6278",
+                      "primary": "#3525cd",
+                      "warning": "#B45309",
+                      "inverse-on-surface": "#ecf0ff",
+                      "primary-container": "#4f46e5",
+                      "focus-ring": "#6366F1",
+                      "primary-hover": "#4338CA",
+                      "inverse-primary": "#c3c0ff",
+                      "on-secondary": "#ffffff",
+                      "secondary-fixed": "#d9e2fc",
+                      "on-secondary-fixed": "#121b2e",
+                      "surface-container-high": "#dfe8fe",
+                      "surface-tint": "#4d44e3",
+                      "success-subtle": "#ECFDF3",
+                      "surface-container-lowest": "#ffffff",
+                      "canvas": "#F7F7F5",
+                      "on-surface-variant": "#464555",
+                      "danger": "#B91C1C",
+                      "on-primary-container": "#dad7ff",
+                      "info-subtle": "#F0F9FF",
+                      "surface-dim": "#d1daef",
+                      "error-container": "#ffdad6",
+                      "surface-bright": "#f9f9ff",
+                      "on-primary": "#ffffff",
+                      "outline-variant": "#c7c4d8",
+                      "on-error-container": "#93000a",
+                      "on-tertiary": "#ffffff",
+                      "secondary": "#555e74",
+                      "on-error": "#ffffff",
+                      "on-surface": "#131c2b",
+                      "tertiary": "#004c77"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "16px",
+                      "screen-padding": "24px",
+                      "card-padding": "16px",
+                      "base": "4px",
+                      "topbar-height": "64px",
+                      "sidebar-expanded": "248px",
+                      "sidebar-collapsed": "72px"
+              },
+              "fontFamily": {
+                      "card-title": [
+                              "Inter", "sans-serif"
+                      ],
+                      "table-dense": [
+                              "Inter", "sans-serif"
+                      ],
+                      "button": [
+                              "Inter", "sans-serif"
+                      ],
+                      "page-title": [
+                              "Inter", "sans-serif"
+                      ],
+                      "label": [
+                              "Inter", "sans-serif"
+                      ],
+                      "section-title": [
+                              "Inter", "sans-serif"
+                      ],
+                      "body": [
+                              "Inter", "sans-serif"
+                      ]
+              },
+              "fontSize": {
+                      "card-title": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "table-dense": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "button": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "page-title": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "section-title": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body": [
+                              "14px",
+                              {
+                                      "lineHeight": "21px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+            },
+          }
+        }
+    </script>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body text-body antialiased flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<nav class="bg-surface border-r border-border w-sidebar-expanded h-screen sticky left-0 top-0 flex flex-col p-4 gap-2 flex-shrink-0 z-40 hidden md:flex">
+<div class="mb-6 px-3">
+<h1 class="font-page-title text-page-title text-primary tracking-tight">StudioFlow</h1>
+<p class="font-label text-label text-secondary mt-1">Agency Workspace</p>
+</div>
+<button class="bg-primary-container text-on-primary w-full py-2.5 rounded-lg font-button text-button mb-4 transition-all active:scale-95 hover:bg-primary-hover">
+            Create New Project
+        </button>
+<div class="flex-1 overflow-y-auto overflow-x-hidden space-y-1 pr-2 custom-scrollbar">
+<a class="flex items-center gap-3 px-3 py-2 text-secondary hover:bg-surface-container-low rounded-lg transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">assignment_ind</span>
+<span class="font-button text-button">My Work</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-secondary hover:bg-surface-container-low rounded-lg transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+<span class="font-button text-button">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-secondary hover:bg-surface-container-low rounded-lg transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">event_note</span>
+<span class="font-button text-button">Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-secondary hover:bg-surface-container-low rounded-lg transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">calendar_month</span>
+<span class="font-button text-button">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-secondary hover:bg-surface-container-low rounded-lg transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">rate_review</span>
+<span class="font-button text-button">Reviews</span>
+</a>
+<div class="h-px bg-border my-2"></div>
+<div class="px-3 py-1 font-label text-label text-text-muted mb-1">System</div>
+<a class="flex items-center gap-3 px-3 py-2 bg-primary-subtle text-primary font-button text-button rounded-lg transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span>Settings</span>
+</a>
+</div>
+<div class="mt-auto pt-4 border-t border-border">
+<a class="flex items-center gap-3 px-3 py-2 text-secondary hover:bg-surface-container-low rounded-lg transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">help_outline</span>
+<span class="font-button text-button">Help Center</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col min-w-0 bg-canvas">
+<!-- TopNavBar -->
+<header class="h-topbar-height sticky top-0 z-50 w-full border-b border-border bg-surface flex items-center justify-between px-gutter flex-shrink-0">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-64 hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">search</span>
+<input class="w-full h-10 pl-9 pr-3 rounded bg-surface border border-border focus:border-focus-ring focus:ring-1 focus:ring-focus-ring outline-none font-body text-body text-on-surface placeholder-text-muted transition-colors" placeholder="Search workspace..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<button class="w-10 h-10 flex items-center justify-center text-secondary hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-secondary hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined">apps</span>
+</button>
+</div>
+<div class="h-6 w-px bg-border"></div>
+<button class="flex items-center gap-2 hover:bg-surface-container-low p-1.5 rounded-lg transition-colors">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-button text-button">MC</div>
+<div class="hidden md:block text-left">
+<div class="font-button text-button text-on-surface leading-tight">Maya Chen</div>
+<div class="font-label text-label text-text-muted leading-tight">Agency Admin</div>
+</div>
+</button>
+</div>
+</header>
+<!-- Wizard Canvas -->
+<main class="flex-1 overflow-y-auto p-screen-padding">
+<div class="max-w-5xl mx-auto">
+<div class="mb-8">
+<h2 class="font-page-title text-page-title text-on-surface">Create New Workspace</h2>
+<p class="font-body text-body text-secondary mt-1">Set up your new agency environment in a few simple steps.</p>
+</div>
+<div class="flex flex-col lg:flex-row gap-8 items-start">
+<!-- Progress Sidebar -->
+<div class="w-full lg:w-64 flex-shrink-0 bg-surface rounded-xl border border-border p-card-padding">
+<nav aria-label="Progress">
+<ol class="space-y-4" role="list">
+<li class="relative">
+<div aria-hidden="true" class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-border"></div>
+<a aria-current="step" class="relative flex items-start group" href="#">
+<span class="h-9 flex items-center">
+<span class="relative z-10 w-8 h-8 flex items-center justify-center bg-primary-container rounded-full ring-4 ring-surface">
+<span class="font-button text-button text-on-primary">1</span>
+</span>
+</span>
+<span class="ml-4 min-w-0 flex flex-col pt-1.5">
+<span class="font-button text-button text-primary">Brand Identity</span>
+<span class="font-label text-label text-secondary">In progress</span>
+</span>
+</a>
+</li>
+<li class="relative">
+<div aria-hidden="true" class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-border"></div>
+<a class="relative flex items-start group" href="#">
+<span class="h-9 flex items-center">
+<span class="relative z-10 w-8 h-8 flex items-center justify-center bg-surface border-2 border-border rounded-full ring-4 ring-surface">
+<span class="font-button text-button text-text-muted">2</span>
+</span>
+</span>
+<span class="ml-4 min-w-0 flex flex-col pt-1.5">
+<span class="font-button text-button text-secondary">Social Channels</span>
+</span>
+</a>
+</li>
+<li class="relative">
+<div aria-hidden="true" class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-border"></div>
+<a class="relative flex items-start group" href="#">
+<span class="h-9 flex items-center">
+<span class="relative z-10 w-8 h-8 flex items-center justify-center bg-surface border-2 border-border rounded-full ring-4 ring-surface">
+<span class="font-button text-button text-text-muted">3</span>
+</span>
+</span>
+<span class="ml-4 min-w-0 flex flex-col pt-1.5">
+<span class="font-button text-button text-secondary">Workflow</span>
+</span>
+</a>
+</li>
+<li class="relative">
+<div aria-hidden="true" class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-border"></div>
+<a class="relative flex items-start group" href="#">
+<span class="h-9 flex items-center">
+<span class="relative z-10 w-8 h-8 flex items-center justify-center bg-surface border-2 border-border rounded-full ring-4 ring-surface">
+<span class="font-button text-button text-text-muted">4</span>
+</span>
+</span>
+<span class="ml-4 min-w-0 flex flex-col pt-1.5">
+<span class="font-button text-button text-secondary">Team</span>
+</span>
+</a>
+</li>
+<li class="relative">
+<div aria-hidden="true" class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-border"></div>
+<a class="relative flex items-start group" href="#">
+<span class="h-9 flex items-center">
+<span class="relative z-10 w-8 h-8 flex items-center justify-center bg-surface border-2 border-border rounded-full ring-4 ring-surface">
+<span class="font-button text-button text-text-muted">5</span>
+</span>
+</span>
+<span class="ml-4 min-w-0 flex flex-col pt-1.5">
+<span class="font-button text-button text-secondary">Defaults</span>
+</span>
+</a>
+</li>
+<li class="relative">
+<a class="relative flex items-start group" href="#">
+<span class="h-9 flex items-center">
+<span class="relative z-10 w-8 h-8 flex items-center justify-center bg-surface border-2 border-border rounded-full ring-4 ring-surface">
+<span class="font-button text-button text-text-muted">6</span>
+</span>
+</span>
+<span class="ml-4 min-w-0 flex flex-col pt-1.5">
+<span class="font-button text-button text-secondary">Targets</span>
+</span>
+</a>
+</li>
+</ol>
+</nav>
+<div class="mt-8 pt-6 border-t border-border">
+<div class="bg-surface-container-low p-3 rounded-lg border border-border">
+<span class="flex items-center gap-2 font-button text-button text-on-surface mb-1">
+<span class="material-symbols-outlined text-sm text-primary">visibility</span>
+                                    Up Next
+                                </span>
+<p class="font-label text-label text-secondary">Connect your Social Channels (Instagram, Facebook, TikTok) to enable automated publishing.</p>
+</div>
+</div>
+</div>
+<!-- Step Content Container -->
+<div class="flex-1 min-w-0 flex flex-col bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+<div class="p-6 md:p-8 flex-1">
+<h3 class="font-section-title text-section-title text-on-surface mb-6">Step 1: Brand Identity</h3>
+<form class="space-y-6 max-w-2xl">
+<!-- Brand Name -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5" for="workspace-name">Workspace Name <span class="text-error">*</span></label>
+<input class="w-full h-10 px-3 rounded-lg bg-surface border border-border focus:border-focus-ring focus:ring-1 focus:ring-focus-ring outline-none font-body text-body text-on-surface transition-colors" id="workspace-name" required="" type="text" value="Northstar Coffee"/>
+</div>
+<!-- Logo Upload -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5">Brand Logo (Optional)</label>
+<div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-border border-dashed rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="space-y-1 text-center">
+<span class="material-symbols-outlined text-4xl text-text-muted group-hover:text-primary transition-colors">cloud_upload</span>
+<div class="flex text-sm text-on-surface justify-center font-body">
+<label class="relative cursor-pointer rounded-md font-button text-primary hover:text-primary-hover focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-focus-ring" for="file-upload">
+<span>Upload a file</span>
+<input class="sr-only" id="file-upload" name="file-upload" type="file"/>
+</label>
+<p class="pl-1">or drag and drop</p>
+</div>
+<p class="font-label text-label text-text-muted">PNG, JPG, SVG up to 5MB</p>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Timezone -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5" for="timezone">Timezone <span class="text-error">*</span></label>
+<div class="relative">
+<select class="w-full h-10 pl-3 pr-10 rounded-lg bg-surface border border-border focus:border-focus-ring focus:ring-1 focus:ring-focus-ring outline-none font-body text-body text-on-surface appearance-none transition-colors" id="timezone" required="">
+<option selected="" value="Europe/Vienna">Europe/Vienna (CET)</option>
+<option value="Europe/London">Europe/London (GMT)</option>
+<option value="America/New_York">America/New_York (EST)</option>
+<option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">expand_more</span>
+</div>
+</div>
+<!-- Date Format -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5" for="date-format">Date Format</label>
+<div class="relative">
+<select class="w-full h-10 pl-3 pr-10 rounded-lg bg-surface border border-border focus:border-focus-ring focus:ring-1 focus:ring-focus-ring outline-none font-body text-body text-on-surface appearance-none transition-colors" id="date-format">
+<option selected="" value="DD/MM/YYYY">DD/MM/YYYY</option>
+<option value="MM/DD/YYYY">MM/DD/YYYY</option>
+<option value="YYYY-MM-DD">YYYY-MM-DD</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">expand_more</span>
+</div>
+</div>
+<!-- Primary Language -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5" for="primary-language">Interface Language</label>
+<div class="relative">
+<select class="w-full h-10 pl-3 pr-10 rounded-lg bg-surface border border-border focus:border-focus-ring focus:ring-1 focus:ring-focus-ring outline-none font-body text-body text-on-surface appearance-none transition-colors" id="primary-language">
+<option selected="" value="en">English</option>
+<option value="de">German</option>
+<option value="fr">French</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">expand_more</span>
+</div>
+</div>
+<!-- Content Language -->
+<div>
+<label class="block font-label text-label text-on-surface mb-1.5" for="content-language">Default Content Language</label>
+<div class="relative">
+<select class="w-full h-10 pl-3 pr-10 rounded-lg bg-surface border border-border focus:border-focus-ring focus:ring-1 focus:ring-focus-ring outline-none font-body text-body text-on-surface appearance-none transition-colors" id="content-language">
+<option selected="" value="en">English</option>
+<option value="de">German</option>
+<option value="es">Spanish</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">expand_more</span>
+</div>
+</div>
+</div>
+</form>
+</div>
+<!-- Footer Actions -->
+<div class="px-6 py-4 border-t border-border bg-surface-bright flex items-center justify-between">
+<button class="h-10 px-4 flex items-center justify-center font-button text-button text-secondary hover:bg-surface-container-low rounded-lg transition-colors" type="button">
+                                Back
+                            </button>
+<div class="flex items-center gap-3">
+<button class="h-10 px-4 flex items-center justify-center font-button text-button text-secondary hover:text-on-surface transition-colors hidden sm:flex" type="button">
+                                    Save and continue later
+                                </button>
+<button class="h-10 px-6 flex items-center justify-center bg-primary-container text-on-primary font-button text-button rounded-lg hover:bg-primary-hover transition-colors shadow-sm" type="button">
+                                    Continue to Social Channels
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

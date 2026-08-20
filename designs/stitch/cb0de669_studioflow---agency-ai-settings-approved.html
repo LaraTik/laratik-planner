@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>StudioFlow — Agency AI Settings Approved</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary-fixed-dim": "#c3c0ff",
+                        "primary-subtle": "#EEF2FF",
+                        "inverse-on-surface": "#ecf0ff",
+                        "success-subtle": "#ECFDF3",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "surface-bright": "#f9f9ff",
+                        "border": "#DDE1E6",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "secondary-container": "#d7dff9",
+                        "danger-subtle": "#FEF2F2",
+                        "tertiary": "#004c77",
+                        "surface-container-highest": "#dae3f8",
+                        "outline-variant": "#c7c4d8",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed": "#d9e2fc",
+                        "on-primary-container": "#dad7ff",
+                        "inverse-surface": "#283141",
+                        "primary-fixed": "#e2dfff",
+                        "on-tertiary-container": "#bfdfff",
+                        "danger": "#B91C1C",
+                        "warning-subtle": "#FFF7E6",
+                        "tertiary-fixed": "#cde5ff",
+                        "on-secondary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "info-subtle": "#F0F9FF",
+                        "surface-dim": "#d1daef",
+                        "primary-container": "#4f46e5",
+                        "focus-ring": "#6366F1",
+                        "surface": "#FFFFFF",
+                        "error": "#ba1a1a",
+                        "on-surface": "#131c2b",
+                        "surface-container-low": "#f0f3ff",
+                        "on-secondary-container": "#5a6278",
+                        "primary-hover": "#4338CA",
+                        "warning": "#B45309",
+                        "secondary": "#555e74",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "text-muted": "#7B8495",
+                        "surface-container": "#e7eeff",
+                        "surface-variant": "#dae3f8",
+                        "on-tertiary-fixed": "#001d32",
+                        "outline": "#777587",
+                        "background": "#f9f9ff",
+                        "success": "#15803D",
+                        "primary": "#3525cd",
+                        "inverse-primary": "#c3c0ff",
+                        "surface-container-high": "#dfe8fe",
+                        "on-secondary-fixed": "#121b2e",
+                        "on-primary-fixed": "#0f0069",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-container": "#00659c",
+                        "surface-tint": "#4d44e3",
+                        "canvas": "#F7F7F5",
+                        "on-background": "#131c2b",
+                        "error-container": "#ffdad6",
+                        "on-surface-variant": "#464555",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "surface-subtle": "#F1F3F5"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "topbar-height": "64px",
+                        "gutter": "16px",
+                        "screen-padding": "24px",
+                        "card-padding": "16px",
+                        "sidebar-collapsed": "72px",
+                        "sidebar-expanded": "248px",
+                        "base": "4px"
+                    },
+                    fontFamily: {
+                        "body": ["Inter"],
+                        "section-title": ["Inter"],
+                        "label": ["Inter"],
+                        "card-title": ["Inter"],
+                        "table-dense": ["Inter"],
+                        "button": ["Inter"],
+                        "page-title": ["Inter"]
+                    },
+                    fontSize: {
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-canvas text-on-background font-body h-screen flex overflow-hidden">
+<!-- Global Agency Sidebar -->
+<aside class="fixed left-0 top-0 h-full w-sidebar-expanded bg-surface border-r border-border flex flex-col py-6 px-4 z-50 flex-shrink-0">
+<!-- Header -->
+<div class="flex items-center gap-3 mb-8 px-2">
+<div class="w-8 h-8 rounded-lg bg-primary-container text-on-primary flex items-center justify-center flex-shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">camera</span>
+</div>
+<div class="flex flex-col">
+<h1 class="font-page-title text-[16px] leading-[20px] font-bold text-primary tracking-tight">StudioFlow</h1>
+<span class="font-label text-label text-text-muted">Agency Workspace</span>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="assignment">assignment</span>
+<span class="font-button text-button">My Work</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+<span class="font-button text-button">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="groups">groups</span>
+<span class="font-button text-button">Workspaces</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="person_search">person_search</span>
+<span class="font-button text-button">User Management</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-primary font-bold bg-primary-subtle transition-colors duration-200" href="#" style="transform: scale(0.98);">
+<span class="material-symbols-outlined icon-fill text-[20px]" data-icon="settings">settings</span>
+<span class="font-button text-button">Agency Settings</span>
+</a>
+</nav>
+<!-- CTA -->
+<div class="mt-6 mb-6">
+<button class="w-full flex items-center justify-center gap-2 bg-surface border border-border rounded-lg py-2 px-4 hover:bg-surface-container transition-colors text-on-surface font-button text-button shadow-sm">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Invite People
+            </button>
+</div>
+<!-- Footer Tabs -->
+<div class="pt-4 border-t border-border space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="help">help</span>
+<span class="font-button text-button">Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="account_circle">account_circle</span>
+<span class="font-button text-button">Account</span>
+</a>
+</div>
+</aside>
+<!-- Secondary Settings Sidebar -->
+<div class="fixed left-[248px] top-0 h-full w-64 bg-surface-bright border-r border-border flex flex-col pt-8 pb-6 px-4 z-40">
+<h2 class="font-section-title text-section-title text-on-surface mb-6 px-2">Settings</h2>
+<nav class="flex-1 space-y-1">
+<a class="block px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-container transition-colors font-body text-body" href="#">General</a>
+<a class="block px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-container transition-colors font-body text-body" href="#">Notifications</a>
+<a class="block px-3 py-2 rounded-md bg-surface border border-border text-primary font-button text-button shadow-sm relative" href="#">
+                AI assistance
+                <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-r-full"></div>
+</a>
+<a class="block px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-container transition-colors font-body text-body" href="#">Security</a>
+<a class="block px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-container transition-colors font-body text-body" href="#">Audit log</a>
+</nav>
+</div>
+<!-- Main Content Canvas -->
+<main class="ml-[504px] flex-1 min-h-screen overflow-y-auto bg-canvas p-screen-padding relative">
+<div class="max-w-[1024px] mx-auto pb-24">
+<!-- Page Header -->
+<div class="flex items-center justify-between mb-8 pb-4 border-b border-border">
+<div class="flex items-center gap-4">
+<h1 class="font-page-title text-page-title text-on-background">AI assistance</h1>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-variant text-on-surface-variant font-label text-label border border-outline-variant">Optional</span>
+</div>
+<button class="h-10 px-5 bg-primary-container hover:bg-primary-hover text-on-primary font-button text-button rounded-lg shadow-sm transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+                    Save changes
+                </button>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Section 1 & 2: Provider & Connection (Col span 8) -->
+<div class="col-span-12 lg:col-span-8 bg-surface rounded-xl border border-border p-card-padding shadow-sm flex flex-col justify-between">
+<div class="flex items-start justify-between mb-6">
+<div>
+<h2 class="font-card-title text-card-title text-on-surface mb-1">Provider Connection</h2>
+<p class="font-body text-body text-text-muted">Configure your agency's preferred inference engine.</p>
+</div>
+<div class="flex items-center gap-1.5 px-2.5 py-1 bg-success-subtle border border-success-subtle rounded-full">
+<div class="w-2 h-2 rounded-full bg-success"></div>
+<span class="font-label text-[11px] font-semibold text-success tracking-wide uppercase">MiniMax Connected</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<!-- Model Selection -->
+<div class="flex flex-col gap-2">
+<label class="font-label text-label text-on-surface-variant">Active Model</label>
+<div class="relative">
+<select class="w-full h-10 pl-3 pr-10 appearance-none bg-surface border border-border rounded-lg font-body text-body text-on-surface focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-transparent cursor-pointer">
+<option selected="">MiniMax-M2.7</option>
+<option>GPT-4o (Fallback)</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Key & Status -->
+<div class="flex flex-col gap-2">
+<label class="font-label text-label text-on-surface-variant">API Key Mask</label>
+<div class="flex items-center h-10 px-3 bg-surface-subtle border border-border rounded-lg text-on-surface-variant font-table-dense text-table-dense tracking-wider">
+<span class="material-symbols-outlined text-[16px] mr-2 text-text-muted">lock</span>
+                                ••••••••••••7K2M
+                            </div>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-border flex items-center gap-2">
+<span class="material-symbols-outlined text-success text-[16px]">verified</span>
+<span class="font-label text-label text-success">Test connection successful via encrypted server-side channel.</span>
+</div>
+</div>
+<!-- Section 7: Usage Summary (Col span 4) -->
+<div class="col-span-12 lg:col-span-4 bg-surface rounded-xl border border-border p-card-padding shadow-sm flex flex-col">
+<h2 class="font-card-title text-card-title text-on-surface mb-1">Usage Summary</h2>
+<p class="font-label text-label text-text-muted mb-4">August 2026</p>
+<div class="flex items-end gap-3 mb-6">
+<div class="text-[32px] font-bold text-on-surface leading-none">186</div>
+<div class="font-body text-body text-text-muted leading-relaxed">requests</div>
+</div>
+<!-- Micro Chart -->
+<div class="mt-auto h-16 flex items-end justify-between gap-1 border-b border-border pb-1">
+<div class="w-full bg-primary-subtle rounded-t-sm h-[20%]" title="Mon: 12"></div>
+<div class="w-full bg-primary-subtle rounded-t-sm h-[45%]" title="Tue: 28"></div>
+<div class="w-full bg-primary-container rounded-t-sm h-[85%]" title="Wed: 54"></div>
+<div class="w-full bg-primary-subtle rounded-t-sm h-[60%]" title="Thu: 38"></div>
+<div class="w-full bg-primary-subtle rounded-t-sm h-[30%]" title="Fri: 18"></div>
+<div class="w-full bg-primary-subtle opacity-50 rounded-t-sm h-[15%]" title="Sat: 9"></div>
+<div class="w-full bg-primary-subtle opacity-50 rounded-t-sm h-[40%]" title="Sun: 27"></div>
+</div>
+<div class="flex justify-between mt-1 px-1">
+<span class="font-label text-[10px] text-text-muted">Mon</span>
+<span class="font-label text-[10px] text-text-muted">Sun</span>
+</div>
+<div class="mt-3 flex items-center gap-2 text-text-muted">
+<span class="material-symbols-outlined text-[14px]">group</span>
+<span class="font-label text-label">14 active users</span>
+</div>
+</div>
+<!-- Section 3: Feature Availability (Col span 6) -->
+<div class="col-span-12 lg:col-span-6 bg-surface rounded-xl border border-border p-card-padding shadow-sm">
+<h2 class="font-card-title text-card-title text-on-surface mb-4">Feature Availability</h2>
+<div class="space-y-3">
+<div class="flex items-center justify-between p-3 rounded-lg border border-border bg-surface-subtle hover:bg-surface transition-colors">
+<span class="font-body text-body text-on-surface">Campaign ideas</span>
+<button class="w-10 h-6 bg-primary-container rounded-full relative flex items-center transition-colors px-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-1"><span class="w-4 h-4 bg-surface rounded-full shadow-sm translate-x-4 transition-transform"></span></button>
+</div>
+<div class="flex items-center justify-between p-3 rounded-lg border border-border bg-surface-subtle hover:bg-surface transition-colors">
+<span class="font-body text-body text-on-surface">Improve brief</span>
+<button class="w-10 h-6 bg-primary-container rounded-full relative flex items-center transition-colors px-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-1"><span class="w-4 h-4 bg-surface rounded-full shadow-sm translate-x-4 transition-transform"></span></button>
+</div>
+<div class="flex items-center justify-between p-3 rounded-lg border border-border bg-surface-subtle hover:bg-surface transition-colors">
+<span class="font-body text-body text-on-surface">Captions / hooks / CTA</span>
+<button class="w-10 h-6 bg-primary-container rounded-full relative flex items-center transition-colors px-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-1"><span class="w-4 h-4 bg-surface rounded-full shadow-sm translate-x-4 transition-transform"></span></button>
+</div>
+<div class="flex items-center justify-between p-3 rounded-lg border border-border bg-surface-subtle hover:bg-surface transition-colors">
+<span class="font-body text-body text-on-surface">Platform adaptation</span>
+<button class="w-10 h-6 bg-surface-variant rounded-full relative flex items-center transition-colors px-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-1"><span class="w-4 h-4 bg-surface rounded-full shadow-sm translate-x-0 transition-transform"></span></button>
+</div>
+<div class="flex items-center justify-between p-3 rounded-lg border border-border bg-surface-subtle hover:bg-surface transition-colors">
+<span class="font-body text-body text-on-surface">Related formats</span>
+<button class="w-10 h-6 bg-surface-variant rounded-full relative flex items-center transition-colors px-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-1"><span class="w-4 h-4 bg-surface rounded-full shadow-sm translate-x-0 transition-transform"></span></button>
+</div>
+<div class="flex items-center justify-between p-3 rounded-lg border border-border bg-surface-subtle hover:bg-surface transition-colors">
+<span class="font-body text-body text-on-surface">Completeness check</span>
+<button class="w-10 h-6 bg-primary-container rounded-full relative flex items-center transition-colors px-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-1"><span class="w-4 h-4 bg-surface rounded-full shadow-sm translate-x-4 transition-transform"></span></button>
+</div>
+</div>
+</div>
+<!-- Section 4 & 5: Workspace Access & Privacy (Col span 6) -->
+<div class="col-span-12 lg:col-span-6 flex flex-col gap-gutter">
+<!-- Privacy & Governance -->
+<div class="bg-surface rounded-xl border border-border p-card-padding shadow-sm">
+<h2 class="font-card-title text-card-title text-on-surface mb-4">Privacy &amp; Governance</h2>
+<div class="space-y-4">
+<div class="flex items-start justify-between">
+<div class="pr-4">
+<h3 class="font-body text-body font-semibold text-on-surface">Preview context before request</h3>
+<p class="font-label text-label text-text-muted mt-1">Users must confirm the data sent to the model.</p>
+</div>
+<button class="w-10 h-6 bg-primary-container rounded-full relative flex items-center transition-colors px-1 shrink-0 cursor-pointer focus:outline-none"><span class="w-4 h-4 bg-surface rounded-full shadow-sm translate-x-4 transition-transform"></span></button>
+</div>
+<div class="flex items-start justify-between">
+<div class="pr-4">
+<h3 class="font-body text-body font-semibold text-on-surface">Record AI activity</h3>
+<p class="font-label text-label text-text-muted mt-1">Log all prompts and outputs in the Audit log.</p>
+</div>
+<button class="w-10 h-6 bg-primary-container rounded-full relative flex items-center transition-colors px-1 shrink-0 cursor-pointer focus:outline-none"><span class="w-4 h-4 bg-surface rounded-full shadow-sm translate-x-4 transition-transform"></span></button>
+</div>
+</div>
+<div class="mt-4 p-3 bg-surface-variant border border-outline-variant rounded-lg flex gap-3">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">info</span>
+<p class="font-table-dense text-table-dense text-on-surface-variant leading-tight mt-0.5">
+                                AI is human-triggered and never changes status or bypasses approval.
+                            </p>
+</div>
+</div>
+<!-- Workspace Access -->
+<div class="bg-surface rounded-xl border border-border p-card-padding shadow-sm flex-1">
+<h2 class="font-card-title text-card-title text-on-surface mb-4">Workspace Access</h2>
+<div class="space-y-2">
+<div class="flex items-center justify-between py-2 border-b border-border last:border-0">
+<div class="flex items-center gap-3">
+<div class="w-6 h-6 rounded bg-tertiary-fixed-dim text-on-tertiary-fixed flex items-center justify-center font-bold text-[10px]">NC</div>
+<span class="font-body text-body text-on-surface">Northstar Coffee</span>
+</div>
+<button class="w-10 h-6 bg-primary-container rounded-full relative flex items-center transition-colors px-1 cursor-pointer focus:outline-none"><span class="w-4 h-4 bg-surface rounded-full shadow-sm translate-x-4 transition-transform"></span></button>
+</div>
+<div class="flex items-center justify-between py-2 border-b border-border last:border-0">
+<div class="flex items-center gap-3">
+<div class="w-6 h-6 rounded bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-[10px]">LB</div>
+<span class="font-body text-body text-on-surface text-opacity-70">Luna Botanics</span>
+</div>
+<button class="w-10 h-6 bg-surface-variant rounded-full relative flex items-center transition-colors px-1 cursor-pointer focus:outline-none"><span class="w-4 h-4 bg-surface rounded-full shadow-sm translate-x-0 transition-transform"></span></button>
+</div>
+<div class="flex items-center justify-between py-2 border-b border-border last:border-0">
+<div class="flex items-center gap-3">
+<div class="w-6 h-6 rounded bg-primary-subtle text-primary flex items-center justify-center font-bold text-[10px]">CS</div>
+<span class="font-body text-body text-on-surface">Cedar Studio</span>
+</div>
+<button class="w-10 h-6 bg-primary-container rounded-full relative flex items-center transition-colors px-1 cursor-pointer focus:outline-none"><span class="w-4 h-4 bg-surface rounded-full shadow-sm translate-x-4 transition-transform"></span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Section 6: Context Control Lists (Col span 12) -->
+<div class="col-span-12 bg-surface rounded-xl border border-border p-card-padding shadow-sm">
+<h2 class="font-card-title text-card-title text-on-surface mb-1">Context Injection Rules</h2>
+<p class="font-label text-label text-text-muted mb-4">Define what metadata is sent to the model when generating content.</p>
+<div class="grid grid-cols-2 gap-6">
+<!-- Allowed Context -->
+<div class="p-4 rounded-lg bg-surface-bright border border-success-subtle border-opacity-50">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-success text-[18px]">check_circle</span>
+<h3 class="font-button text-button text-on-surface">Allowed Context</h3>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-2.5 py-1 bg-surface border border-border rounded text-table-dense font-table-dense text-on-surface shadow-sm">Brand Kit</span>
+<span class="px-2.5 py-1 bg-surface border border-border rounded text-table-dense font-table-dense text-on-surface shadow-sm">Campaign details</span>
+<span class="px-2.5 py-1 bg-surface border border-border rounded text-table-dense font-table-dense text-on-surface shadow-sm">Content pillars</span>
+<span class="px-2.5 py-1 bg-surface border border-border rounded text-table-dense font-table-dense text-on-surface shadow-sm">Target channels</span>
+<span class="px-2.5 py-1 bg-surface border border-border rounded text-table-dense font-table-dense text-on-surface shadow-sm">Creative brief</span>
+<span class="px-2.5 py-1 bg-surface border border-border rounded text-table-dense font-table-dense text-on-surface shadow-sm">Approved content history</span>
+</div>
+</div>
+<!-- Excluded Context -->
+<div class="p-4 rounded-lg bg-surface-bright border border-danger-subtle border-opacity-50">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-danger text-[18px]">cancel</span>
+<h3 class="font-button text-button text-on-surface">Excluded Context</h3>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-2.5 py-1 bg-danger-subtle border border-danger border-opacity-20 rounded text-table-dense font-table-dense text-danger shadow-sm">Internal discussion</span>
+<span class="px-2.5 py-1 bg-danger-subtle border border-danger border-opacity-20 rounded text-table-dense font-table-dense text-danger shadow-sm">User identities</span>
+<span class="px-2.5 py-1 bg-danger-subtle border border-danger border-opacity-20 rounded text-table-dense font-table-dense text-danger shadow-sm">Client comments</span>
+<span class="px-2.5 py-1 bg-danger-subtle border border-danger border-opacity-20 rounded text-table-dense font-table-dense text-danger shadow-sm">Unpublished link structures</span>
+<span class="px-2.5 py-1 bg-danger-subtle border border-danger border-opacity-20 rounded text-table-dense font-table-dense text-danger shadow-sm">Unrelated workspace data</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- UI States Preview (Footer reference) -->
+<div class="mt-12 pt-6 border-t border-border border-dashed flex gap-6 opacity-60">
+<div class="flex items-center gap-2">
+<span class="font-label text-label text-text-muted">UI State: Disabled Component</span>
+<button class="h-8 px-3 bg-surface-variant text-on-surface-variant font-button text-button rounded opacity-50 cursor-not-allowed">Generate</button>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label text-label text-text-muted">UI State: Connection Error</span>
+<div class="flex items-center gap-1.5 px-2.5 py-1 bg-error-container border border-error-container rounded-full">
+<span class="material-symbols-outlined text-on-error-container text-[14px]">error</span>
+<span class="font-label text-[11px] font-semibold text-on-error-container tracking-wide uppercase">Connection Failed</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

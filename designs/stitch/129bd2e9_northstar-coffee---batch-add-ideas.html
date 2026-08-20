@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee — Batch Add Ideas | StudioFlow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "surface-container-low": "#f0f3ff",
+                        "danger-subtle": "#FEF2F2",
+                        "on-surface": "#131c2b",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed": "#e2dfff",
+                        "inverse-primary": "#c3c0ff",
+                        "on-error": "#ffffff",
+                        "on-secondary-container": "#5a6278",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#0f0069",
+                        "surface-container-high": "#dfe8fe",
+                        "surface-bright": "#f9f9ff",
+                        "outline-variant": "#c7c4d8",
+                        "tertiary": "#004c77",
+                        "border": "#DDE1E6",
+                        "surface-subtle": "#F1F3F5",
+                        "info-subtle": "#F0F9FF",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "on-secondary-fixed": "#121b2e",
+                        "inverse-surface": "#283141",
+                        "warning": "#B45309",
+                        "surface-tint": "#4d44e3",
+                        "on-primary-container": "#dad7ff",
+                        "surface-variant": "#dae3f8",
+                        "surface-container-highest": "#dae3f8",
+                        "secondary": "#555e74",
+                        "success-subtle": "#ECFDF3",
+                        "canvas": "#F7F7F5",
+                        "tertiary-container": "#00659c",
+                        "surface": "#FFFFFF",
+                        "on-primary": "#ffffff",
+                        "background": "#f9f9ff",
+                        "on-tertiary-fixed": "#001d32",
+                        "surface-dim": "#d1daef",
+                        "focus-ring": "#6366F1",
+                        "error-container": "#ffdad6",
+                        "warning-subtle": "#FFF7E6",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "error": "#ba1a1a",
+                        "on-tertiary-container": "#bfdfff",
+                        "on-background": "#131c2b",
+                        "secondary-fixed": "#d9e2fc",
+                        "danger": "#B91C1C",
+                        "success": "#15803D",
+                        "text-muted": "#7B8495",
+                        "inverse-on-surface": "#ecf0ff",
+                        "primary-subtle": "#EEF2FF",
+                        "outline": "#777587",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "on-surface-variant": "#464555",
+                        "primary-hover": "#4338CA",
+                        "surface-container": "#e7eeff",
+                        "primary": "#3525cd",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "tertiary-fixed": "#cde5ff",
+                        "secondary-container": "#d7dff9",
+                        "primary-container": "#4f46e5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sidebar-collapsed": "72px",
+                        "gutter": "16px",
+                        "topbar-height": "64px",
+                        "sidebar-expanded": "248px",
+                        "screen-padding": "24px",
+                        "card-padding": "16px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "page-title": ["Inter"],
+                        "button": ["Inter"],
+                        "body": ["Inter"],
+                        "table-dense": ["Inter"],
+                        "section-title": ["Inter"],
+                        "label": ["Inter"],
+                        "card-title": ["Inter"]
+                    },
+                    "fontSize": {
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f9f9ff; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .grid-layout { display: grid; grid-template-columns: 48px minmax(200px, 2fr) minmax(140px, 1fr) minmax(160px, 1fr) minmax(250px, 2fr) 140px minmax(100px, 1fr) 100px; }
+    </style>
+</head>
+<body class="text-on-surface bg-background flex h-screen overflow-hidden">
+<!-- Sidebar -->
+<nav class="w-sidebar-expanded h-screen sticky left-0 top-0 bg-surface dark:bg-surface-container-low border-r border-border dark:border-outline-variant flex flex-col h-full p-4 gap-2 z-50">
+<div class="flex items-center gap-3 px-3 py-4 mb-4">
+<div class="w-8 h-8 rounded bg-primary text-on-primary flex items-center justify-center font-bold text-lg">S</div>
+<div>
+<h1 class="font-page-title text-page-title text-primary dark:text-primary-fixed-dim tracking-tight text-lg leading-tight">StudioFlow</h1>
+<p class="font-label text-label text-secondary text-xs">Northstar Coffee</p>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary font-button text-button rounded-lg py-2.5 px-4 mb-4 flex items-center justify-center gap-2 hover:bg-primary-hover transition-colors">
+<span class="material-symbols-outlined text-sm">add</span>
+            Create New Project
+        </button>
+<div class="flex flex-col gap-1 flex-1">
+<a class="flex items-center gap-3 px-3 py-2 text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container rounded-lg transition-all active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="assignment_ind">assignment_ind</span>
+<span class="font-body text-body">My Work</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container rounded-lg transition-all active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body text-body">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-primary-subtle dark:bg-primary-container text-primary dark:text-on-primary-container font-button rounded-lg transition-all active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="event_note">event_note</span>
+<span>Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container rounded-lg transition-all active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_month">calendar_month</span>
+<span class="font-body text-body">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container rounded-lg transition-all active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="rate_review">rate_review</span>
+<span class="font-body text-body">Reviews</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container rounded-lg transition-all active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body text-body">Settings</span>
+</a>
+</div>
+<div class="mt-auto border-t border-border pt-4">
+<a class="flex items-center gap-3 px-3 py-2 text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-container-low dark:hover:bg-surface-container rounded-lg transition-all active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+<span class="font-body text-body">Help Center</span>
+</a>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col h-screen overflow-hidden bg-background">
+<!-- Header Area -->
+<header class="bg-surface border-b border-border px-screen-padding py-6 flex-shrink-0">
+<div class="flex items-center gap-2 text-secondary font-body text-body text-sm mb-4">
+<span>Northstar Coffee</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span>Planning</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="text-on-surface font-medium">Batch add ideas</span>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h2 class="font-page-title text-page-title text-on-surface mb-1">Batch add ideas</h2>
+<p class="font-body text-body text-secondary">Paste or enter several ideas, then save them all as drafts.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="font-button text-button text-secondary hover:text-on-surface px-4 py-2 transition-colors">Download template</button>
+<button class="font-button text-button bg-surface border border-border text-on-surface px-4 py-2 rounded-lg hover:bg-surface-subtle transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">content_paste</span>
+                        Paste from spreadsheet
+                    </button>
+<button class="font-button text-button bg-surface-dim text-secondary px-4 py-2 rounded-lg cursor-not-allowed opacity-70" disabled="">Save all as drafts</button>
+</div>
+</div>
+</header>
+<!-- Contextual Defaults -->
+<div class="bg-surface border-b border-border px-screen-padding py-3 flex items-center gap-4 flex-shrink-0">
+<span class="font-label text-label text-secondary uppercase tracking-wider mr-2">Apply to all:</span>
+<div class="flex items-center gap-2 bg-surface-subtle border border-border rounded px-3 py-1.5 cursor-pointer hover:border-outline-variant">
+<span class="font-label text-label text-secondary">Campaign:</span>
+<span class="font-body text-body text-sm">Autumn Blend Launch</span>
+<span class="material-symbols-outlined text-sm text-secondary">arrow_drop_down</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-subtle border border-border rounded px-3 py-1.5 cursor-pointer hover:border-outline-variant">
+<span class="font-label text-label text-secondary">Content Pillar:</span>
+<span class="font-body text-body text-sm">Coffee education</span>
+<span class="material-symbols-outlined text-sm text-secondary">arrow_drop_down</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-subtle border border-border rounded px-3 py-1.5 cursor-pointer hover:border-outline-variant">
+<span class="font-label text-label text-secondary">Owner:</span>
+<span class="font-body text-body text-sm">Omar Haddad</span>
+<span class="material-symbols-outlined text-sm text-secondary">arrow_drop_down</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-subtle border border-border rounded px-3 py-1.5 cursor-pointer hover:border-outline-variant border-dashed">
+<span class="font-label text-label text-secondary">Template:</span>
+<span class="font-body text-body text-sm text-secondary italic">None</span>
+<span class="material-symbols-outlined text-sm text-secondary">arrow_drop_down</span>
+</div>
+</div>
+<!-- Spreadsheet Grid Container -->
+<div class="flex-1 overflow-auto bg-canvas p-screen-padding relative">
+<div class="bg-surface rounded-lg border border-border shadow-sm w-full min-w-[1100px] overflow-hidden">
+<!-- Grid Header -->
+<div class="grid-layout bg-surface-subtle border-b border-border font-label text-label text-secondary uppercase py-2 px-2">
+<div class="px-2 flex items-center justify-center border-r border-border/50">#</div>
+<div class="px-3 flex items-center border-r border-border/50">Title</div>
+<div class="px-3 flex items-center border-r border-border/50">Format</div>
+<div class="px-3 flex items-center border-r border-border/50">Planned date/time</div>
+<div class="px-3 flex items-center border-r border-border/50">Short brief</div>
+<div class="px-3 flex items-center border-r border-border/50">Social Channels</div>
+<div class="px-3 flex items-center border-r border-border/50">Validation</div>
+<div class="px-2 flex items-center justify-center">Actions</div>
+</div>
+<!-- Row 1 -->
+<div class="grid-layout border-b border-border/50 hover:bg-surface-subtle transition-colors group">
+<div class="px-2 flex items-center justify-center text-secondary text-xs border-r border-border/50 bg-surface-subtle/30">1</div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none" type="text" value="Barista Tips: Perfect Pour"/></div>
+<div class="p-0 border-r border-border/50 relative">
+<select class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none appearance-none cursor-pointer">
+<option>Article</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-2.5 text-secondary pointer-events-none text-sm">expand_more</span>
+</div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none" type="text" value="Sep 18, 01:00 PM"/></div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-secondary outline-none" type="text" value="Detailed pour-over guide"/></div>
+<div class="p-1 px-3 border-r border-border/50 flex items-center gap-1">
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">IG</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">TK</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">FB</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">YT</span>
+</div>
+<div class="px-3 flex items-center border-r border-border/50">
+<span class="inline-flex items-center gap-1 bg-success-subtle text-success px-2 py-0.5 rounded text-xs font-medium"><span class="material-symbols-outlined text-[14px]">check_circle</span> Valid</span>
+</div>
+<div class="px-2 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-secondary hover:text-on-surface p-1"><span class="material-symbols-outlined text-[16px]">drag_indicator</span></button>
+<button class="text-secondary hover:text-on-surface p-1"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+<button class="text-secondary hover:text-danger p-1"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+<!-- Row 2 (Warning) -->
+<div class="grid-layout border-b border-border/50 hover:bg-surface-subtle transition-colors group bg-warning-subtle/20">
+<div class="px-2 flex items-center justify-center text-secondary text-xs border-r border-border/50 bg-surface-subtle/30">2</div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none" type="text" value="Maple Pecan Latte Recipe"/></div>
+<div class="p-0 border-r border-border/50 relative">
+<select class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none appearance-none cursor-pointer">
+<option>Short-form Video</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-2.5 text-secondary pointer-events-none text-sm">expand_more</span>
+</div>
+<div class="p-0 border-r border-border/50 relative">
+<input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none bg-warning-subtle text-warning" type="text" value="Sep 16, 10:00 AM"/>
+</div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-secondary outline-none" type="text" value="Quick autumn drink"/></div>
+<div class="p-1 px-3 border-r border-border/50 flex items-center gap-1">
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">IG</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">TK</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">FB</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">YT</span>
+</div>
+<div class="px-3 flex items-center border-r border-border/50">
+<div class="flex items-start gap-1 group/tooltip relative">
+<span class="material-symbols-outlined text-warning text-sm mt-0.5">warning</span>
+<span class="text-xs text-warning leading-tight line-clamp-2">Duplicate date - Autumn Roast...</span>
+</div>
+</div>
+<div class="px-2 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-secondary hover:text-on-surface p-1"><span class="material-symbols-outlined text-[16px]">drag_indicator</span></button>
+<button class="text-secondary hover:text-on-surface p-1"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+<button class="text-secondary hover:text-danger p-1"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="grid-layout border-b border-border/50 hover:bg-surface-subtle transition-colors group">
+<div class="px-2 flex items-center justify-center text-secondary text-xs border-r border-border/50 bg-surface-subtle/30">3</div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none" type="text" value="Brewing at Home Series"/></div>
+<div class="p-0 border-r border-border/50 relative">
+<select class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none appearance-none cursor-pointer">
+<option>Story</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-2.5 text-secondary pointer-events-none text-sm">expand_more</span>
+</div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none" type="text" value="Sep 25, 11:00 AM"/></div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-secondary outline-none" type="text" value="Behind the scenes"/></div>
+<div class="p-1 px-3 border-r border-border/50 flex items-center gap-1">
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">IG</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">TK</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">FB</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">YT</span>
+</div>
+<div class="px-3 flex items-center border-r border-border/50">
+<span class="inline-flex items-center gap-1 bg-success-subtle text-success px-2 py-0.5 rounded text-xs font-medium"><span class="material-symbols-outlined text-[14px]">check_circle</span> Valid</span>
+</div>
+<div class="px-2 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-secondary hover:text-on-surface p-1"><span class="material-symbols-outlined text-[16px]">drag_indicator</span></button>
+<button class="text-secondary hover:text-on-surface p-1"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+<button class="text-secondary hover:text-danger p-1"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+<!-- Row 4 (Error & Highlighted Cell) -->
+<div class="grid-layout border-b border-border/50 hover:bg-surface-subtle transition-colors group bg-danger-subtle/10">
+<div class="px-2 flex items-center justify-center text-secondary text-xs border-r border-border/50 bg-surface-subtle/30">4</div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none" type="text" value="Espresso 101"/></div>
+<!-- Highlighted Selected Cell -->
+<div class="p-0 border-r border-border/50 relative ring-2 ring-inset ring-focus-ring bg-surface z-10 shadow-sm">
+<select autofocus="" class="w-full h-10 px-3 border-0 bg-transparent font-table-dense text-table-dense text-secondary outline-none appearance-none cursor-pointer">
+<option disabled="" selected="" value="">Select format...</option>
+<option>Article</option>
+<option>Short-form Video</option>
+<option>Story</option>
+<option>Carousel</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-2.5 text-secondary pointer-events-none text-sm">expand_more</span>
+<div class="absolute inset-0 border border-error pointer-events-none"></div>
+</div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none" type="text" value="Sep 23, 09:00 AM"/></div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-secondary outline-none" type="text" value="Focus on tamping"/></div>
+<div class="p-1 px-3 border-r border-border/50 flex items-center gap-1">
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">IG</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">TK</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">FB</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">YT</span>
+</div>
+<div class="px-3 flex items-center border-r border-border/50">
+<div class="flex items-center gap-1 text-error text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]">error</span>
+<span>Format required</span>
+</div>
+</div>
+<div class="px-2 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-secondary hover:text-on-surface p-1"><span class="material-symbols-outlined text-[16px]">drag_indicator</span></button>
+<button class="text-secondary hover:text-on-surface p-1"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+<button class="text-secondary hover:text-danger p-1"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+<!-- Row 5 -->
+<div class="grid-layout border-b border-border/50 hover:bg-surface-subtle transition-colors group">
+<div class="px-2 flex items-center justify-center text-secondary text-xs border-r border-border/50 bg-surface-subtle/30">5</div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none" type="text" value="Fall Menu Teaser"/></div>
+<div class="p-0 border-r border-border/50 relative">
+<select class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none appearance-none cursor-pointer">
+<option>Carousel</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-2.5 text-secondary pointer-events-none text-sm">expand_more</span>
+</div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none" type="text" value="Sep 20, 04:00 PM"/></div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-secondary outline-none" type="text" value="Product reveal"/></div>
+<div class="p-1 px-3 border-r border-border/50 flex items-center gap-1">
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">IG</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">TK</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">FB</span>
+<span class="w-6 h-6 rounded bg-surface-dim text-secondary flex items-center justify-center text-xs">YT</span>
+</div>
+<div class="px-3 flex items-center border-r border-border/50">
+<span class="inline-flex items-center gap-1 bg-success-subtle text-success px-2 py-0.5 rounded text-xs font-medium"><span class="material-symbols-outlined text-[14px]">check_circle</span> Valid</span>
+</div>
+<div class="px-2 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-secondary hover:text-on-surface p-1"><span class="material-symbols-outlined text-[16px]">drag_indicator</span></button>
+<button class="text-secondary hover:text-on-surface p-1"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+<button class="text-secondary hover:text-danger p-1"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+<!-- Row 6 (Blank) -->
+<div class="grid-layout border-b border-border/50 hover:bg-surface-subtle transition-colors group">
+<div class="px-2 flex items-center justify-center text-secondary text-xs border-r border-border/50 bg-surface-subtle/30">6</div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none" placeholder="" type="text"/></div>
+<div class="p-0 border-r border-border/50 relative">
+<select class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-secondary outline-none appearance-none cursor-pointer">
+<option disabled="" selected="" value=""></option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-2.5 text-border pointer-events-none text-sm">expand_more</span>
+</div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-on-surface outline-none" placeholder="" type="text"/></div>
+<div class="p-0 border-r border-border/50"><input class="w-full h-10 px-3 border-0 bg-transparent focus:ring-2 focus:ring-inset focus:ring-focus-ring font-table-dense text-table-dense text-secondary outline-none" placeholder="" type="text"/></div>
+<div class="p-1 px-3 border-r border-border/50 flex items-center gap-1">
+</div>
+<div class="px-3 flex items-center border-r border-border/50">
+</div>
+<div class="px-2 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-border hover:text-on-surface p-1"><span class="material-symbols-outlined text-[16px]">drag_indicator</span></button>
+</div>
+</div>
+<!-- Add Row Button Area -->
+<div class="p-3 border-t border-border/50 bg-surface">
+<button class="flex items-center gap-2 text-primary font-button text-button text-sm hover:text-primary-hover px-2 py-1 rounded hover:bg-primary-subtle transition-colors">
+<span class="material-symbols-outlined text-sm">add</span> Add row
+                    </button>
+</div>
+</div>
+<!-- Toast Notification -->
+<div class="absolute bottom-8 right-8 bg-inverse-surface text-inverse-on-surface px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 font-body text-body text-sm transform translate-y-0 opacity-100 transition-all duration-300">
+<span class="material-symbols-outlined text-success">check_circle</span>
+                Successfully pasted 5 rows from clipboard.
+                <button class="ml-2 text-inverse-on-surface/70 hover:text-inverse-on-surface"><span class="material-symbols-outlined text-sm">close</span></button>
+</div>
+</div>
+<!-- Sticky Footer Summary -->
+<footer class="bg-surface border-t border-border px-screen-padding py-4 flex items-center justify-between flex-shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-3">
+<span class="bg-surface-container text-on-surface font-button text-button px-3 py-1 rounded-full text-sm">5 valid</span>
+<span class="bg-error-container text-on-error-container font-button text-button px-3 py-1 rounded-full text-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">error</span> 1 needs attention</span>
+</div>
+<div class="h-4 w-px bg-border"></div>
+<p class="font-body text-body text-secondary text-sm">Saved items will be created as Drafts and can be completed later in the Planning view.</p>
+</div>
+<button class="font-button text-button bg-primary text-on-primary px-6 py-2.5 rounded-lg opacity-50 cursor-not-allowed flex items-center gap-2">
+                Save all as drafts
+            </button>
+</footer>
+</main>
+</body></html>

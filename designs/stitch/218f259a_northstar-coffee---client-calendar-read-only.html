@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee — Client Calendar Read Only</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary": "#004c77",
+                      "primary-fixed": "#e2dfff",
+                      "primary-container": "#4f46e5",
+                      "inverse-on-surface": "#ecf0ff",
+                      "surface-bright": "#f9f9ff",
+                      "secondary-container": "#d7dff9",
+                      "outline-variant": "#c7c4d8",
+                      "inverse-surface": "#283141",
+                      "secondary": "#555e74",
+                      "on-tertiary-fixed": "#001d32",
+                      "on-secondary-container": "#5a6278",
+                      "surface-container-high": "#dfe8fe",
+                      "outline": "#777587",
+                      "danger-subtle": "#FEF2F2",
+                      "on-tertiary-container": "#bfdfff",
+                      "surface-container": "#e7eeff",
+                      "on-primary-container": "#dad7ff",
+                      "success-subtle": "#ECFDF3",
+                      "surface": "#FFFFFF",
+                      "on-background": "#131c2b",
+                      "warning": "#B45309",
+                      "text-muted": "#7B8495",
+                      "surface-container-highest": "#dae3f8",
+                      "success": "#15803D",
+                      "surface-subtle": "#F1F3F5",
+                      "primary-hover": "#4338CA",
+                      "on-secondary": "#ffffff",
+                      "inverse-primary": "#c3c0ff",
+                      "on-tertiary-fixed-variant": "#004b74",
+                      "tertiary-fixed-dim": "#94ccff",
+                      "surface-container-lowest": "#ffffff",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "tertiary-fixed": "#cde5ff",
+                      "error-container": "#ffdad6",
+                      "focus-ring": "#6366F1",
+                      "tertiary-container": "#00659c",
+                      "canvas": "#F7F7F5",
+                      "on-secondary-fixed-variant": "#3e475b",
+                      "warning-subtle": "#FFF7E6",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "error": "#ba1a1a",
+                      "secondary-fixed": "#d9e2fc",
+                      "primary-subtle": "#EEF2FF",
+                      "secondary-fixed-dim": "#bdc6e0",
+                      "danger": "#B91C1C",
+                      "background": "#f9f9ff",
+                      "surface-variant": "#dae3f8",
+                      "on-primary-fixed": "#0f0069",
+                      "on-error-container": "#93000a",
+                      "surface-dim": "#d1daef",
+                      "on-primary": "#ffffff",
+                      "on-secondary-fixed": "#121b2e",
+                      "on-surface-variant": "#464555",
+                      "primary": "#3525cd",
+                      "on-surface": "#131c2b",
+                      "info-subtle": "#F0F9FF",
+                      "on-error": "#ffffff",
+                      "surface-tint": "#4d44e3",
+                      "on-tertiary": "#ffffff",
+                      "border": "#DDE1E6",
+                      "surface-container-low": "#f0f3ff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "sidebar-collapsed": "72px",
+                      "card-padding": "16px",
+                      "screen-padding": "24px",
+                      "base": "4px",
+                      "topbar-height": "64px",
+                      "gutter": "16px",
+                      "sidebar-expanded": "248px"
+              },
+              "fontFamily": {
+                      "table-dense": [
+                              "Inter"
+                      ],
+                      "section-title": [
+                              "Inter"
+                      ],
+                      "card-title": [
+                              "Inter"
+                      ],
+                      "body": [
+                              "Inter"
+                      ],
+                      "label": [
+                              "Inter"
+                      ],
+                      "page-title": [
+                              "Inter"
+                      ],
+                      "button": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "table-dense": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "section-title": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "card-title": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body": [
+                              "14px",
+                              {
+                                      "lineHeight": "21px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "page-title": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "button": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F7F7F5; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c7c4d8; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #777587; 
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 1px;
+            background-color: #DDE1E6;
+        }
+        .calendar-cell {
+            background-color: #FFFFFF;
+            min-height: 120px;
+        }
+        .calendar-cell.outside-month {
+            background-color: #F7F7F5;
+        }
+    </style>
+</head>
+<body class="bg-canvas text-on-surface font-body antialiased flex flex-col h-screen overflow-hidden">
+<!-- TopNavBar -->
+<nav class="bg-canvas dark:bg-canvas docked full-width top-0 flat no shadows flex justify-between items-center h-topbar-height px-screen-padding w-full border-b border-border z-10 shrink-0">
+<div class="flex items-center gap-6">
+<div class="font-page-title text-page-title text-primary dark:text-primary-fixed-dim font-bold tracking-tight">
+                StudioFlow <span class="text-text-muted font-normal text-section-title">/ Northstar Coffee</span>
+</div>
+<div class="hidden md:flex items-center gap-8 ml-8">
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary-hover transition-colors font-body text-body font-medium" href="#">My Reviews</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary-hover transition-colors font-body text-body font-medium" href="#">Approved Content</a>
+<a class="text-primary dark:text-primary-fixed-dim font-bold transition-colors font-body text-body relative after:absolute after:-bottom-[21px] after:left-0 after:w-full after:h-[2px] after:bg-primary" href="#">Calendar</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-dim">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="flex items-center justify-center w-8 h-8 rounded-full bg-surface-variant text-on-surface-variant font-button text-button">
+                SL
+            </button>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex overflow-hidden">
+<!-- Canvas Content -->
+<div class="flex-1 flex flex-col overflow-hidden relative">
+<!-- Page Header -->
+<div class="px-screen-padding py-6 shrink-0 flex flex-col gap-4 border-b border-border bg-surface">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<h1 class="font-page-title text-page-title text-on-surface">September 2026 Editorial Plan</h1>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label font-label bg-surface-dim text-on-surface-variant border border-outline-variant">
+<span class="material-symbols-outlined text-[14px] mr-1" data-icon="visibility">visibility</span> Read only
+                        </span>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center w-10 h-10 rounded-lg border border-border text-on-surface-variant hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="px-4 h-10 rounded-lg border border-border text-on-surface font-button text-button hover:bg-surface-subtle transition-colors">
+                            Today
+                        </button>
+<button class="flex items-center justify-center w-10 h-10 rounded-lg border border-border text-on-surface-variant hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Filters -->
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border text-body font-body text-on-surface-variant bg-surface hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="filter_list">filter_list</span>
+                        Campaign
+                        <span class="material-symbols-outlined text-[16px]" data-icon="arrow_drop_down">arrow_drop_down</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border text-body font-body text-on-surface-variant bg-surface hover:bg-surface-subtle transition-colors">
+                        Channel
+                        <span class="material-symbols-outlined text-[16px]" data-icon="arrow_drop_down">arrow_drop_down</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border text-body font-body text-on-surface-variant bg-surface hover:bg-surface-subtle transition-colors">
+                        Status
+                        <span class="material-symbols-outlined text-[16px]" data-icon="arrow_drop_down">arrow_drop_down</span>
+</button>
+</div>
+</div>
+<!-- Calendar Grid Container -->
+<div class="flex-1 overflow-auto bg-canvas p-screen-padding">
+<div class="bg-surface rounded-xl border border-border overflow-hidden flex flex-col h-full shadow-sm">
+<!-- Days Header -->
+<div class="grid grid-cols-7 border-b border-border bg-surface-subtle">
+<div class="py-2 text-center font-label text-label text-text-muted">SUN</div>
+<div class="py-2 text-center font-label text-label text-text-muted">MON</div>
+<div class="py-2 text-center font-label text-label text-text-muted">TUE</div>
+<div class="py-2 text-center font-label text-label text-text-muted">WED</div>
+<div class="py-2 text-center font-label text-label text-text-muted">THU</div>
+<div class="py-2 text-center font-label text-label text-text-muted">FRI</div>
+<div class="py-2 text-center font-label text-label text-text-muted">SAT</div>
+</div>
+<!-- Calendar Body -->
+<div class="calendar-grid flex-1">
+<!-- Row 1 -->
+<div class="calendar-cell outside-month p-2 flex flex-col gap-1">
+<span class="font-body text-label text-text-muted ml-1">30</span>
+</div>
+<div class="calendar-cell outside-month p-2 flex flex-col gap-1">
+<span class="font-body text-label text-text-muted ml-1">31</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">1</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">2</span>
+<div class="bg-success-subtle border border-success/20 rounded-[4px] p-1.5 flex flex-col gap-1 cursor-pointer hover:bg-success-subtle/80 transition-colors">
+<div class="flex items-center justify-between">
+<span class="font-table-dense text-table-dense text-on-surface font-medium truncate">Morning Brew</span>
+</div>
+<div class="flex items-center justify-between mt-0.5">
+<span class="text-[10px] text-success font-medium flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]" data-icon="check_circle">check_circle</span> Published
+                                    </span>
+<div class="flex gap-0.5">
+<span class="material-symbols-outlined text-[12px] text-text-muted" data-icon="photo_camera">photo_camera</span>
+</div>
+</div>
+</div>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">3</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">4</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">5</span>
+</div>
+<!-- Row 2 -->
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">6</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">7</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">8</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">9</span>
+<div class="bg-warning-subtle border border-warning/20 rounded-[4px] p-1.5 flex flex-col gap-1 cursor-pointer hover:bg-warning-subtle/80 transition-colors">
+<div class="flex items-center justify-between">
+<span class="font-table-dense text-table-dense text-on-surface font-medium truncate">Barista Tips</span>
+</div>
+<div class="flex items-center justify-between mt-0.5">
+<span class="text-[10px] text-warning font-medium flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]" data-icon="schedule">schedule</span> Awaiting Review
+                                    </span>
+<div class="flex gap-0.5">
+<span class="material-symbols-outlined text-[12px] text-text-muted" data-icon="play_circle">play_circle</span>
+</div>
+</div>
+</div>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">10</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">11</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">12</span>
+</div>
+<!-- Row 3 -->
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">13</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">14</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">15</span>
+<div class="bg-info-subtle border border-primary/20 rounded-[4px] p-1.5 flex flex-col gap-1 cursor-pointer hover:bg-info-subtle/80 transition-colors">
+<div class="flex items-center justify-between">
+<span class="font-table-dense text-table-dense text-on-surface font-medium truncate">Origin Story</span>
+</div>
+<div class="flex items-center justify-between mt-0.5">
+<span class="text-[10px] text-primary font-medium flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]" data-icon="thumb_up">thumb_up</span> Approved
+                                    </span>
+</div>
+</div>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">16</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">17</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1 ring-2 ring-focus-ring ring-inset bg-surface-subtle relative">
+<span class="font-body text-label text-on-surface ml-1 font-bold">18</span>
+<!-- Selected Card -->
+<div class="bg-warning-subtle border border-focus-ring rounded-[4px] p-1.5 flex flex-col gap-1 cursor-pointer mt-1 shadow-sm">
+<div class="flex items-center justify-between">
+<span class="font-table-dense text-table-dense text-on-surface font-semibold truncate">Autumn roast launch</span>
+</div>
+<div class="flex items-center justify-between mt-0.5">
+<span class="text-[10px] text-warning font-medium flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]" data-icon="schedule">schedule</span> Awaiting Review
+                                    </span>
+<div class="flex gap-0.5">
+<span class="material-symbols-outlined text-[12px] text-text-muted" data-icon="view_carousel">view_carousel</span>
+</div>
+</div>
+</div>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">19</span>
+</div>
+<!-- Row 4 -->
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">20</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">21</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">22</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">23</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">24</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">25</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">26</span>
+</div>
+<!-- Row 5 -->
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">27</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">28</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">29</span>
+</div>
+<div class="calendar-cell p-2 flex flex-col gap-1">
+<span class="font-body text-label text-on-surface ml-1">30</span>
+</div>
+<div class="calendar-cell outside-month p-2 flex flex-col gap-1">
+<span class="font-body text-label text-text-muted ml-1">1</span>
+</div>
+<div class="calendar-cell outside-month p-2 flex flex-col gap-1">
+<span class="font-body text-label text-text-muted ml-1">2</span>
+</div>
+<div class="calendar-cell outside-month p-2 flex flex-col gap-1">
+<span class="font-body text-label text-text-muted ml-1">3</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Side Panel -->
+<aside class="w-[480px] bg-surface border-l border-border flex flex-col shrink-0 shadow-[-4px_0_24px_rgba(0,0,0,0.02)] relative z-20">
+<!-- Panel Header -->
+<div class="p-6 border-b border-border flex flex-col gap-3 shrink-0">
+<div class="flex items-start justify-between">
+<div>
+<span class="inline-flex items-center px-2 py-1 rounded bg-warning-subtle text-warning font-label text-[11px] font-semibold mb-3">
+                            Awaiting your review
+                        </span>
+<h2 class="font-section-title text-section-title text-on-surface mb-1">Autumn roast launch</h2>
+<p class="font-body text-body text-on-surface-variant flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]" data-icon="view_carousel">view_carousel</span>
+                            Carousel • Scheduled for Sep 18, 2026
+                        </p>
+</div>
+<button class="text-text-muted hover:text-on-surface transition-colors p-1 rounded-md hover:bg-surface-subtle">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+</div>
+<!-- Panel Content -->
+<div class="p-6 flex-1 overflow-y-auto flex flex-col gap-8">
+<!-- Notice -->
+<div class="bg-surface-subtle rounded-lg p-4 flex gap-3 border border-border">
+<span class="material-symbols-outlined text-primary shrink-0" data-icon="info">info</span>
+<p class="font-body text-[13px] leading-relaxed text-on-surface-variant">
+                        Schedule and content changes are managed by your agency team. You can provide feedback or request changes within the assigned review task.
+                    </p>
+</div>
+<!-- Section: Brief -->
+<div class="flex flex-col gap-3">
+<h3 class="font-card-title text-card-title text-on-surface">Final Brief</h3>
+<p class="font-body text-body text-on-surface-variant leading-relaxed">
+                        Introduce the new seasonal blend focusing on notes of cinnamon and roasted pecan. Target audience is existing loyal customers looking for cozy autumn vibes. Ensure packaging prominently features the new illustration style.
+                    </p>
+</div>
+<!-- Section: Preview -->
+<div class="flex flex-col gap-3">
+<h3 class="font-card-title text-card-title text-on-surface">Preview</h3>
+<div class="rounded-lg border border-border overflow-hidden bg-canvas relative group aspect-square">
+<div class="bg-cover bg-center w-full h-full absolute inset-0" data-alt="A clean, flat-lay photograph of a coffee bag with autumn-themed illustrations (leaves, warm colors) placed on a minimal wooden surface with subtle soft lighting, modern agency styling." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCCDvD1eyDtd2-ft2voKY7wwH9WbfEGhBE-uaWycWAQmhGIg53HcQ68EOwUBwFqGbsQWpHhBbT8ARirKV9mt52K-FvrGytiYAnt-sU0E7B_d5f_j8TnWL6Pf3kQNiB8jZuZrJ0CMVe7If_Iwp9XC04pcVm-URRrW0e4V2OwS6J4c_GFeNljXKgeQrSC4NqngUx9PvE15tIwMI5EsoyDx7YFydLWw_7hGUZIHIIS1kyh5Lyl7L5hWbAZhIxbn7-kKpBOLg2yG7xHJFw')"></div>
+<div class="absolute bottom-3 right-3 bg-surface/90 backdrop-blur-sm px-2 py-1 rounded text-[11px] font-medium text-on-surface border border-border/50">
+                            Slide 1 of 4
+                        </div>
+</div>
+</div>
+</div>
+<!-- Panel Footer Actions -->
+<div class="p-6 border-t border-border bg-surface shrink-0 flex flex-col gap-3">
+<button class="w-full h-10 bg-primary-container text-on-primary font-button text-button rounded-lg hover:bg-primary-hover transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="rate_review">rate_review</span>
+                    Open review
+                </button>
+<button class="w-full h-10 text-primary font-button text-button rounded-lg hover:bg-primary-subtle transition-colors">
+                    View discussion
+                </button>
+</div>
+</aside>
+</main>
+</body></html>

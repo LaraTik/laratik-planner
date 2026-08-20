@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>StudioFlow — Operational States</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-container": "#00659c",
+                      "primary-subtle": "#EEF2FF",
+                      "surface-subtle": "#F1F3F5",
+                      "on-surface": "#131c2b",
+                      "border": "#DDE1E6",
+                      "surface-container-lowest": "#ffffff",
+                      "focus-ring": "#6366F1",
+                      "on-error-container": "#93000a",
+                      "on-primary-container": "#dad7ff",
+                      "text-muted": "#7B8495",
+                      "outline": "#777587",
+                      "success": "#15803D",
+                      "info-subtle": "#F0F9FF",
+                      "surface-container-high": "#dfe8fe",
+                      "on-primary": "#ffffff",
+                      "warning-subtle": "#FFF7E6",
+                      "success-subtle": "#ECFDF3",
+                      "surface-container-low": "#f0f3ff",
+                      "surface-variant": "#dae3f8",
+                      "on-error": "#ffffff",
+                      "secondary-fixed-dim": "#bdc6e0",
+                      "on-secondary-fixed-variant": "#3e475b",
+                      "background": "#f9f9ff",
+                      "outline-variant": "#c7c4d8",
+                      "on-primary-fixed": "#0f0069",
+                      "on-secondary": "#ffffff",
+                      "inverse-primary": "#c3c0ff",
+                      "surface-dim": "#d1daef",
+                      "surface": "#FFFFFF",
+                      "primary-container": "#4f46e5",
+                      "tertiary": "#004c77",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "secondary": "#555e74",
+                      "error": "#ba1a1a",
+                      "on-tertiary-fixed": "#001d32",
+                      "error-container": "#ffdad6",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "warning": "#B45309",
+                      "tertiary-fixed-dim": "#94ccff",
+                      "primary-hover": "#4338CA",
+                      "secondary-container": "#d7dff9",
+                      "danger-subtle": "#FEF2F2",
+                      "canvas": "#F7F7F5",
+                      "on-secondary-container": "#5a6278",
+                      "tertiary-fixed": "#cde5ff",
+                      "secondary-fixed": "#d9e2fc",
+                      "on-tertiary-container": "#bfdfff",
+                      "surface-tint": "#4d44e3",
+                      "on-secondary-fixed": "#121b2e",
+                      "primary": "#3525cd",
+                      "on-tertiary-fixed-variant": "#004b74",
+                      "danger": "#B91C1C",
+                      "primary-fixed": "#e2dfff",
+                      "inverse-surface": "#283141",
+                      "on-tertiary": "#ffffff",
+                      "on-surface-variant": "#464555",
+                      "surface-container": "#e7eeff",
+                      "surface-bright": "#f9f9ff",
+                      "surface-container-highest": "#dae3f8",
+                      "inverse-on-surface": "#ecf0ff",
+                      "on-background": "#131c2b"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "sidebar-collapsed": "72px",
+                      "topbar-height": "64px",
+                      "sidebar-expanded": "248px",
+                      "gutter": "16px",
+                      "screen-padding": "24px",
+                      "card-padding": "16px",
+                      "base": "4px"
+              },
+              "fontFamily": {
+                      "card-title": [
+                              "Inter"
+                      ],
+                      "label": [
+                              "Inter"
+                      ],
+                      "button": [
+                              "Inter"
+                      ],
+                      "page-title": [
+                              "Inter"
+                      ],
+                      "table-dense": [
+                              "Inter"
+                      ],
+                      "section-title": [
+                              "Inter"
+                      ],
+                      "body": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "card-title": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "button": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "page-title": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "table-dense": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "section-title": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body": [
+                              "14px",
+                              {
+                                      "lineHeight": "21px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+      </style>
+</head>
+<body class="bg-canvas text-on-surface font-body h-screen flex overflow-hidden">
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 left-0 z-50 flex justify-between items-center px-gutter h-topbar-height w-full bg-surface dark:bg-surface border-b border-border dark:border-outline-variant flat no shadows">
+<div class="flex items-center gap-4 ml-sidebar-expanded md:ml-sidebar-expanded">
+<h1 class="text-section-title font-section-title font-bold text-primary dark:text-inverse-primary">StudioFlow</h1>
+<div class="hidden md:flex items-center border border-border rounded-lg bg-canvas focus-within:ring-2 focus-within:ring-focus-ring focus-within:border-transparent transition-all overflow-hidden ml-8 h-10 w-64">
+<span class="material-symbols-outlined text-text-muted px-3 text-lg">search</span>
+<input class="w-full bg-transparent border-none focus:ring-0 text-body font-body h-full placeholder:text-text-muted" placeholder="Global Search" type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="h-10 px-4 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary-hover transition-colors">Create New</button>
+<div class="flex items-center gap-1 ml-2">
+<button class="w-10 h-10 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-subtle transition-colors duration-200" title="notifications">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-subtle transition-colors duration-200" title="help">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-subtle transition-colors duration-200" title="settings">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary-subtle ml-2 flex items-center justify-center border border-border overflow-hidden">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="person">person</span>
+</div>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-screen w-sidebar-expanded flex flex-col z-40 bg-surface dark:bg-surface border-r border-border dark:border-outline-variant flat no shadows pt-topbar-height">
+<div class="p-gutter border-b border-border">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-canvas border border-border flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="domain">domain</span>
+</div>
+<div>
+<h2 class="text-section-title font-section-title font-bold text-primary dark:text-inverse-primary text-sm">StudioFlow</h2>
+<p class="text-label font-label text-text-muted">Creative Agency</p>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto py-4 flex flex-col gap-1 px-3">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-low transition-all duration-150" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="assignment_ind">assignment_ind</span>
+<span class="text-label font-label">My Work</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary-subtle dark:bg-primary-container text-primary dark:text-on-primary-container font-semibold Active: translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="dashboard">dashboard</span>
+<span class="text-label font-label">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-low transition-all duration-150" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="event_note">event_note</span>
+<span class="text-label font-label">Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-low transition-all duration-150" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="calendar_today">calendar_today</span>
+<span class="text-label font-label">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-low transition-all duration-150" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="rate_review">rate_review</span>
+<span class="text-label font-label">Reviews</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-low transition-all duration-150" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="share">share</span>
+<span class="text-label font-label">Social Channels</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-low transition-all duration-150" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="palette">palette</span>
+<span class="text-label font-label">Brand Kit</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-subtle dark:hover:bg-surface-container-low transition-all duration-150" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="group">group</span>
+<span class="text-label font-label">Team</span>
+</a>
+</div>
+<div class="p-4 border-t border-border flex flex-col gap-2">
+<button class="w-full py-2 rounded-lg border border-border text-on-surface font-button text-button hover:bg-surface-subtle transition-colors flex justify-center items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="person_add">person_add</span>
+                Invite Member
+            </button>
+<div class="flex flex-col gap-1 mt-2">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-subtle transition-colors text-label font-label" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="contact_support">contact_support</span>
+                    Support
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-subtle transition-colors text-label font-label" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="settings">settings</span>
+                    Settings
+                </a>
+</div>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="flex-1 ml-sidebar-expanded pt-topbar-height h-full overflow-y-auto bg-canvas p-screen-padding">
+<div class="max-w-[1200px] mx-auto">
+<header class="mb-8">
+<h2 class="text-page-title font-page-title text-on-surface mb-2">StudioFlow — Operational States</h2>
+<p class="text-body font-body text-text-muted">A QA-ready pattern library demonstrating core application states.</p>
+</header>
+<!-- State Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+<!-- 1. Empty Planning Month -->
+<div class="bg-surface rounded-lg border border-border p-card-padding flex flex-col items-center justify-center min-h-[300px] text-center">
+<div class="w-12 h-12 rounded-full bg-surface-subtle flex items-center justify-center mb-4 border border-border">
+<span class="material-symbols-outlined text-text-muted text-2xl" data-icon="calendar_month">calendar_month</span>
+</div>
+<h3 class="text-card-title font-card-title mb-1">No content planned for October yet</h3>
+<p class="text-body font-body text-text-muted mb-6">Start planning your month to see tasks here.</p>
+<div class="flex items-center gap-3">
+<button class="h-10 px-4 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary-hover transition-colors flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span> Quick Create
+                        </button>
+<button class="h-10 px-4 rounded-lg border border-border bg-surface text-on-surface font-button text-button hover:bg-surface-subtle transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2">
+                            Batch Add
+                        </button>
+</div>
+</div>
+<!-- 2. Loading Planning List -->
+<div aria-label="Loading planning data..." class="bg-surface rounded-lg border border-border p-card-padding min-h-[300px]">
+<div class="flex items-center justify-between mb-6">
+<div class="h-6 bg-surface-subtle rounded w-1/3 animate-pulse"></div>
+<div class="h-8 bg-surface-subtle rounded w-24 animate-pulse"></div>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex items-center gap-4 p-3 border border-border rounded-lg animate-pulse">
+<div class="w-10 h-10 rounded bg-surface-subtle"></div>
+<div class="flex-1">
+<div class="h-4 bg-surface-subtle rounded w-3/4 mb-2"></div>
+<div class="h-3 bg-surface-subtle rounded w-1/2"></div>
+</div>
+<div class="w-20 h-6 bg-surface-subtle rounded"></div>
+</div>
+<div class="flex items-center gap-4 p-3 border border-border rounded-lg animate-pulse">
+<div class="w-10 h-10 rounded bg-surface-subtle"></div>
+<div class="flex-1">
+<div class="h-4 bg-surface-subtle rounded w-2/3 mb-2"></div>
+<div class="h-3 bg-surface-subtle rounded w-1/3"></div>
+</div>
+<div class="w-20 h-6 bg-surface-subtle rounded"></div>
+</div>
+<div class="flex items-center gap-4 p-3 border border-border rounded-lg animate-pulse">
+<div class="w-10 h-10 rounded bg-surface-subtle"></div>
+<div class="flex-1">
+<div class="h-4 bg-surface-subtle rounded w-4/5 mb-2"></div>
+<div class="h-3 bg-surface-subtle rounded w-1/2"></div>
+</div>
+<div class="w-20 h-6 bg-surface-subtle rounded"></div>
+</div>
+</div>
+</div>
+<!-- 3. Error Loading Reviews -->
+<div class="bg-surface rounded-lg border border-border p-card-padding flex flex-col items-center justify-center min-h-[300px] text-center">
+<div class="w-12 h-12 rounded-full bg-danger-subtle flex items-center justify-center mb-4 border border-danger/20">
+<span class="material-symbols-outlined text-danger text-2xl" data-icon="error">error</span>
+</div>
+<h3 class="text-card-title font-card-title mb-1">Something went wrong while loading reviews</h3>
+<p class="text-body font-body text-text-muted mb-2">We couldn't fetch the latest data.</p>
+<p class="text-label font-label text-text-muted mb-6 font-mono">Ref: ERR-042</p>
+<div class="flex items-center gap-3">
+<button class="h-10 px-4 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary-hover transition-colors flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2">
+<span class="material-symbols-outlined text-sm" data-icon="refresh">refresh</span> Retry
+                        </button>
+<button class="h-10 px-4 rounded-lg border border-border bg-surface text-on-surface font-button text-button hover:bg-surface-subtle transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2">
+                            Contact Support
+                        </button>
+</div>
+</div>
+<!-- 4. Permission Denied Team -->
+<div class="bg-surface rounded-lg border border-border p-card-padding flex flex-col items-center justify-center min-h-[300px] text-center">
+<div class="w-12 h-12 rounded-full bg-warning-subtle flex items-center justify-center mb-4 border border-warning/20">
+<span class="material-symbols-outlined text-warning text-2xl" data-icon="lock">lock</span>
+</div>
+<h3 class="text-card-title font-card-title mb-1">You don't have access to Team settings</h3>
+<p class="text-body font-body text-text-muted mb-6">This area is restricted to workspace administrators.</p>
+<div class="flex flex-col items-center gap-4">
+<button class="h-10 px-4 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary-hover transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2">
+                            Return to Overview
+                        </button>
+<a class="text-primary font-button text-button hover:underline focus:outline-none focus:ring-2 focus:ring-focus-ring rounded px-1" href="#">
+                            Request Access
+                        </a>
+</div>
+</div>
+<!-- 5. Archived Workspace -->
+<div class="bg-surface rounded-lg border border-border overflow-hidden min-h-[300px] flex flex-col relative">
+<div class="bg-surface-subtle border-b border-border p-4 flex items-start sm:items-center justify-between gap-4 flex-col sm:flex-row">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-muted" data-icon="inventory_2">inventory_2</span>
+<div>
+<p class="text-card-title font-card-title text-on-surface text-sm">This workspace was archived on Sep 30, 2026</p>
+<p class="text-label font-label text-text-muted">History and assets are preserved but read-only.</p>
+</div>
+</div>
+<button class="h-8 px-3 rounded border border-border bg-surface text-on-surface font-button text-button hover:bg-surface-subtle transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring whitespace-nowrap text-xs">
+                            Restore Workspace
+                        </button>
+</div>
+<div class="p-card-padding flex-1 flex flex-col opacity-60 pointer-events-none">
+<!-- Mock content to show it's read only -->
+<div class="h-8 bg-surface-subtle rounded w-1/4 mb-4"></div>
+<div class="flex gap-4">
+<div class="flex-1 h-32 bg-surface-subtle rounded border border-border"></div>
+<div class="flex-1 h-32 bg-surface-subtle rounded border border-border"></div>
+</div>
+</div>
+<div aria-hidden="true" class="absolute inset-0 bg-transparent z-10" title="Read-only view"></div>
+</div>
+<!-- 6. No Search Results -->
+<div class="bg-surface rounded-lg border border-border p-card-padding flex flex-col items-center justify-center min-h-[300px] text-center">
+<div class="w-full max-w-sm mb-8">
+<div class="flex items-center border border-border rounded-lg bg-canvas overflow-hidden h-10 focus-within:ring-2 focus-within:ring-focus-ring focus-within:border-transparent">
+<span class="material-symbols-outlined text-text-muted px-3 text-lg" data-icon="search">search</span>
+<input aria-label="Search" class="w-full bg-transparent border-none focus:ring-0 text-body font-body h-full" type="text" value="winter launch"/>
+<button aria-label="Clear search" class="px-3 text-text-muted hover:text-on-surface">
+<span class="material-symbols-outlined text-lg" data-icon="close">close</span>
+</button>
+</div>
+</div>
+<div class="w-12 h-12 rounded-full bg-surface-subtle flex items-center justify-center mb-4 border border-border">
+<span class="material-symbols-outlined text-text-muted text-2xl" data-icon="search_off">search_off</span>
+</div>
+<h3 class="text-card-title font-card-title mb-1">No results found for 'winter launch'</h3>
+<p class="text-body font-body text-text-muted mb-6">Try adjusting your search or filters.</p>
+<button class="h-10 px-4 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary-hover transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2">
+                        Clear filters
+                    </button>
+</div>
+</div>
+<!-- Inline Patterns -->
+<section>
+<h3 class="text-section-title font-section-title text-on-surface mb-6 border-b border-border pb-2">Inline Patterns</h3>
+<div class="flex flex-wrap gap-8 items-start">
+<!-- Offline/Reconnecting -->
+<div class="flex items-center gap-2 bg-surface border border-border rounded-full px-4 py-2 shadow-sm">
+<span class="material-symbols-outlined text-warning text-sm animate-spin" data-icon="sync">sync</span>
+<span class="text-label font-label text-on-surface">Reconnecting... (Offline)</span>
+</div>
+<!-- Save Success -->
+<div class="flex items-center gap-4 bg-inverse-surface text-on-tertiary rounded-lg px-4 py-3 shadow-md">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-success text-sm" data-icon="check_circle">check_circle</span>
+<span class="text-body font-body">Project settings saved</span>
+</div>
+<button class="text-inverse-primary font-button text-button hover:underline focus:outline-none focus:ring-2 focus:ring-focus-ring rounded px-1">
+                            Undo
+                        </button>
+</div>
+<!-- Form Validation -->
+<div class="flex flex-col gap-1 w-64">
+<label class="text-label font-label text-on-surface">Project Title</label>
+<div class="flex items-center border border-danger rounded-lg bg-surface overflow-hidden h-10 focus-within:ring-2 focus-within:ring-focus-ring focus-within:border-transparent">
+<input class="w-full bg-transparent border-none focus:ring-0 text-body font-body h-full px-3" placeholder="Enter title" type="text"/>
+<span class="material-symbols-outlined text-danger px-3 text-lg" data-icon="error">error</span>
+</div>
+<p class="text-label font-label text-danger">Title is required</p>
+</div>
+<!-- Disabled Action -->
+<div class="relative group inline-block">
+<button class="h-10 px-4 rounded-lg bg-surface-subtle text-text-muted font-button text-button border border-border cursor-not-allowed flex items-center gap-2" disabled="">
+<span class="material-symbols-outlined text-sm" data-icon="download">download</span>
+                            Export Assets
+                        </button>
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-inverse-surface text-on-tertiary text-label font-label rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-sm">
+                            Approval required to export
+                        </div>
+</div>
+</div>
+<!-- Destructive Confirmation (Mocked inline) -->
+<div class="mt-8 p-card-padding border border-border rounded-lg bg-surface max-w-md shadow-sm">
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 rounded-full bg-danger-subtle flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-danger" data-icon="delete">delete</span>
+</div>
+<div>
+<h4 class="text-card-title font-card-title text-on-surface mb-2">Archive workspace?</h4>
+<p class="text-body font-body text-text-muted mb-6">Archived workspaces can be restored later.</p>
+<div class="flex items-center justify-end gap-3">
+<button class="h-10 px-4 rounded-lg border border-border bg-surface text-on-surface font-button text-button hover:bg-surface-subtle transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2">
+                                    Cancel
+                                </button>
+<button class="h-10 px-4 rounded-lg bg-danger text-on-error font-button text-button hover:bg-red-800 transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2">
+                                    Archive
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

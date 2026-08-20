@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee — Brand Kit</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "focus-ring": "#6366F1",
+                        "warning-subtle": "#FFF7E6",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "surface-container": "#e7eeff",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "border": "#DDE1E6",
+                        "inverse-primary": "#c3c0ff",
+                        "text-muted": "#7B8495",
+                        "surface-container-low": "#f0f3ff",
+                        "surface-container-lowest": "#ffffff",
+                        "error": "#ba1a1a",
+                        "surface-variant": "#dae3f8",
+                        "surface-bright": "#f9f9ff",
+                        "tertiary": "#004c77",
+                        "on-primary-fixed": "#0f0069",
+                        "primary-hover": "#4338CA",
+                        "inverse-on-surface": "#ecf0ff",
+                        "surface-subtle": "#F1F3F5",
+                        "on-primary-container": "#dad7ff",
+                        "secondary": "#555e74",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#131c2b",
+                        "on-secondary-fixed": "#121b2e",
+                        "primary-fixed": "#e2dfff",
+                        "surface-container-highest": "#dae3f8",
+                        "surface-dim": "#d1daef",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "on-tertiary-fixed": "#001d32",
+                        "on-surface": "#131c2b",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#00659c",
+                        "primary-container": "#4f46e5",
+                        "warning": "#B45309",
+                        "surface-tint": "#4d44e3",
+                        "outline": "#777587",
+                        "on-secondary-container": "#5a6278",
+                        "on-error-container": "#93000a",
+                        "on-error": "#ffffff",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "outline-variant": "#c7c4d8",
+                        "error-container": "#ffdad6",
+                        "canvas": "#F7F7F5",
+                        "surface": "#FFFFFF",
+                        "secondary-fixed": "#d9e2fc",
+                        "secondary-container": "#d7dff9",
+                        "background": "#f9f9ff",
+                        "on-surface-variant": "#464555",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "inverse-surface": "#283141",
+                        "primary": "#3525cd",
+                        "info-subtle": "#F0F9FF",
+                        "danger-subtle": "#FEF2F2",
+                        "surface-container-high": "#dfe8fe",
+                        "on-tertiary-container": "#bfdfff",
+                        "success": "#15803D",
+                        "danger": "#B91C1C",
+                        "on-primary": "#ffffff",
+                        "success-subtle": "#ECFDF3",
+                        "primary-subtle": "#EEF2FF",
+                        "tertiary-fixed": "#cde5ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "topbar-height": "64px",
+                        "gutter": "16px",
+                        "screen-padding": "24px",
+                        "card-padding": "16px",
+                        "sidebar-collapsed": "72px",
+                        "base": "4px",
+                        "sidebar-expanded": "248px"
+                    },
+                    "fontFamily": {
+                        "page-title": ["Inter"],
+                        "label": ["Inter"],
+                        "section-title": ["Inter"],
+                        "button": ["Inter"],
+                        "body": ["Inter"],
+                        "card-title": ["Inter"],
+                        "table-dense": ["Inter"]
+                    },
+                    "fontSize": {
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-canvas text-on-surface font-body antialiased min-h-screen">
+<!-- SideNavBar -->
+<nav class="w-sidebar-expanded h-screen fixed left-0 top-0 border-r border-border dark:border-outline-variant bg-surface dark:bg-inverse-surface flex flex-col h-full py-4 z-20">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary-container text-on-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">local_cafe</span>
+</div>
+<div>
+<div class="font-section-title text-section-title font-bold text-on-surface dark:text-inverse-on-surface leading-tight">StudioFlow</div>
+<div class="text-label font-label text-text-muted">Northstar Coffee</div>
+</div>
+</div>
+<div class="px-4 mb-6">
+<button class="w-full bg-primary-container text-on-primary-container hover:bg-primary hover:text-on-primary transition-colors duration-200 font-button text-button rounded py-2 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Create content
+            </button>
+</div>
+<div class="flex-1 overflow-y-auto px-3 space-y-1">
+<!-- Nav Items -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-secondary-container dark:text-secondary-fixed-dim hover:bg-surface-container dark:hover:bg-secondary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">assignment</span>
+<span class="font-body text-body">My Work</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-secondary-container dark:text-secondary-fixed-dim hover:bg-surface-container dark:hover:bg-secondary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="font-body text-body">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-secondary-container dark:text-secondary-fixed-dim hover:bg-surface-container dark:hover:bg-secondary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">event_note</span>
+<span class="font-body text-body">Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-secondary-container dark:text-secondary-fixed-dim hover:bg-surface-container dark:hover:bg-secondary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_month</span>
+<span class="font-body text-body">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-secondary-container dark:text-secondary-fixed-dim hover:bg-surface-container dark:hover:bg-secondary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">rate_review</span>
+<span class="font-body text-body">Reviews</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-secondary-container dark:text-secondary-fixed-dim hover:bg-surface-container dark:hover:bg-secondary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">share</span>
+<span class="font-body text-body">Social Channels</span>
+</a>
+<!-- Active Item -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-primary dark:text-primary-fixed font-bold border-r-2 border-primary bg-primary-subtle" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="font-body text-body">Brand Kit</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-secondary-container dark:text-secondary-fixed-dim hover:bg-surface-container dark:hover:bg-secondary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">groups</span>
+<span class="font-body text-body">Team</span>
+</a>
+</div>
+<div class="px-3 pt-4 border-t border-border mt-auto space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-secondary-container dark:text-secondary-fixed-dim hover:bg-surface-container dark:hover:bg-secondary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-body text-body">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-secondary-container dark:text-secondary-fixed-dim hover:bg-surface-container dark:hover:bg-secondary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+<span class="font-body text-body">Admin</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-secondary-container dark:text-secondary-fixed-dim hover:bg-surface-container dark:hover:bg-secondary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+<span class="font-body text-body">Help</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 mt-2 rounded-lg text-on-secondary-container dark:text-secondary-fixed-dim hover:bg-surface-container dark:hover:bg-secondary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">swap_horiz</span>
+<span class="font-body text-body">Workspace Switcher</span>
+</a>
+</div>
+</nav>
+<!-- TopNavBar -->
+<header class="h-topbar-height fixed top-0 right-0 w-[calc(100%-248px)] bg-surface dark:bg-inverse-surface border-b border-border dark:border-outline-variant flex justify-between items-center px-screen-padding z-10">
+<!-- Search (on_left logic from JSON applied visually) -->
+<div class="flex items-center w-96 relative">
+<span class="material-symbols-outlined absolute left-3 text-text-muted text-[20px]">search</span>
+<input class="w-full h-10 pl-10 pr-4 rounded-lg border border-border bg-canvas focus:border-focus-ring focus:ring-1 focus:ring-focus-ring outline-none font-body text-body text-on-surface placeholder-text-muted transition-all" placeholder="Search resources, assets..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 flex items-center justify-center rounded-full text-on-secondary-container hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full text-on-secondary-container hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="h-8 w-px bg-border mx-1"></div>
+<button class="flex items-center gap-2 hover:bg-surface-container-low p-1 pr-2 rounded-full transition-colors">
+<img alt="Maya Chen's profile" class="w-8 h-8 rounded-full object-cover border border-border" data-alt="A professional headshot of Maya Chen, a young Asian woman with short black hair, wearing a dark blazer, smiling warmly against a clean light grey studio background. High quality corporate photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSJVB81aHyU6JHHWR0oluUnQQDqgZlgo2Che6uQL30iW5NhFAkXvty4dyHMv3nXKO3Gc9mXkwDUSc4vCewjjDCWmIf4snrCuwLbkfcyO-wy-LlEVW45jb3njuoYMKZqrYfwdHLbtg-0GsDNT3TbL_2bH_Fwgb2yTSxGsgwA66PkbsVn1Cx7In7y7r_htx19rgBYvx3WZNDNtUJcK-4VbeTq_aZHas2WlvEwPpegkZ9TvJm8cBdyKrP-hWvN44QH7NfykIzbI8l0uA"/>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[248px] pt-[64px] min-h-screen">
+<!-- Page Header Section -->
+<div class="bg-surface border-b border-border px-screen-padding pt-6 pb-0">
+<!-- Breadcrumbs -->
+<nav class="flex items-center text-label font-label text-text-muted mb-4 gap-2">
+<a class="hover:text-primary transition-colors" href="#">Northstar Coffee</a>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface">Brand Kit</span>
+</nav>
+<div class="flex justify-between items-start mb-6">
+<div>
+<h1 class="font-page-title text-page-title text-on-surface mb-1">Brand Kit</h1>
+<p class="font-body text-body text-on-secondary-container">Give planners, designers, and reviewers one trusted source for brand guidance.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="h-10 px-4 rounded-lg border border-border font-button text-button text-on-surface bg-surface hover:bg-surface-subtle transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add_circle</span>
+                        Add asset
+                    </button>
+<button class="h-10 px-4 rounded-lg bg-primary-container text-on-primary-container hover:bg-primary hover:text-on-primary transition-colors font-button text-button flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+                        Edit brand kit
+                    </button>
+</div>
+</div>
+<!-- Tabs -->
+<div class="flex items-center gap-8 border-b border-transparent">
+<button class="pb-3 border-b-2 border-primary text-primary font-button text-button">Overview</button>
+<button class="pb-3 border-b-2 border-transparent text-on-secondary-container hover:text-on-surface font-button text-button transition-colors">Assets</button>
+<button class="pb-3 border-b-2 border-transparent text-on-secondary-container hover:text-on-surface font-button text-button transition-colors">Guidelines</button>
+<button class="pb-3 border-b-2 border-transparent text-on-secondary-container hover:text-on-surface font-button text-button transition-colors">Voice &amp; tone</button>
+<button class="pb-3 border-b-2 border-transparent text-on-secondary-container hover:text-on-surface font-button text-button transition-colors">Publishing rules</button>
+</div>
+</div>
+<!-- Bento Grid Content Area -->
+<div class="p-screen-padding grid grid-cols-12 gap-gutter max-w-7xl mx-auto">
+<!-- 1. Brand Identity (col-span-12) -->
+<div class="col-span-12 bg-surface rounded-xl border border-border p-card-padding flex items-start gap-8">
+<div class="w-32 h-32 rounded-lg bg-surface-subtle border border-border flex items-center justify-center flex-shrink-0">
+<img class="w-24 h-24 object-contain" data-alt="A minimalist flat vector logo design for 'Northstar Coffee' featuring a stylized star motif integrated with a coffee bean shape, rendered in deep espresso brown and sage green against a clean cream background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVfh3e6R72Jdr_wx00KMaJDbL-UimzSDCt4DR1mvVwGE3FwP4K9jCUORMIrD81UDODiQ3vNJh_3is6MsW9puKHa3qW9EsT-1FBSkXjLrR_ykfldb10EyNqghGG7WAGNSQNg38s4-UDNyyqFYsAeAyLD6tgmya5wvIotJbBtHX7-43BKyCzHR-WFs8JQCSL1AbQgJiBEfokapYYLqC8cG4j746L2cmtOEYbgYnCrrEOKn4Nn5x5lPQEOSuIsv3HyXdxKqW5R49B_WI"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-2">
+<h2 class="font-section-title text-section-title text-on-surface">Northstar Coffee</h2>
+<span class="px-2 py-1 rounded bg-info-subtle text-tertiary font-label text-label border border-tertiary-fixed-dim">Primary Brand</span>
+</div>
+<p class="font-body text-body text-on-secondary-container mb-4 max-w-2xl">
+                        Premium, sustainably sourced coffee roaster focused on single-origin storytelling and cafe culture.
+                    </p>
+<div class="flex gap-6">
+<div class="flex flex-col gap-1">
+<span class="font-label text-label text-text-muted uppercase tracking-wider">Website</span>
+<a class="font-body text-body text-primary hover:underline flex items-center gap-1" href="#">
+                                northstarcoffee.eu
+                                <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</a>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-label text-label text-text-muted uppercase tracking-wider">Timezone</span>
+<span class="font-body text-body text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-text-muted">schedule</span>
+                                Europe/Vienna (CET)
+                            </span>
+</div>
+</div>
+</div>
+</div>
+<!-- 2. Logo Assets (col-span-8) -->
+<div class="col-span-8 bg-surface rounded-xl border border-border p-card-padding flex flex-col">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-card-title text-card-title text-on-surface">Logo Assets</h3>
+<a class="text-primary font-button text-button hover:underline text-sm" href="#">View all assets</a>
+</div>
+<div class="grid grid-cols-3 gap-4 mb-4 flex-1">
+<!-- Primary -->
+<div class="border border-border rounded-lg p-4 flex flex-col items-center justify-center group relative bg-canvas">
+<img class="h-16 object-contain mb-4" data-alt="The primary Northstar Coffee logo with full wordmark and icon, dark brown text on a light background, clean corporate layout." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFmgrZBGq1-YAH404GtQBmlHdb3kox_mG4Ut3Js0JQBpphvx1Dn9O1twWOvOiX8H55sUO62HAG-INzKY-x37PigxJ44wm690KkcAQIqCIrWY2TMZasToAR89o-7RQgq6APHjO55atln5Hn74I4cjeVWb8f8ZCKR9n-tCE4s4cZKygV6O7iPkHLKhVKnmohSFR1sWESGDEtr8yH6SdRvLnttuQ8bPI1GyWHHwI9gLAmpxXvktt93rJg6AkuVpO5OkEXzyQG5Dx60cg"/>
+<div class="absolute inset-0 bg-inverse-surface/80 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="bg-surface text-on-surface font-button text-button px-3 py-1.5 rounded flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">download</span> SVG
+                            </button>
+</div>
+<span class="font-label text-label text-on-surface mt-auto">Primary</span>
+</div>
+<!-- Dark -->
+<div class="border border-border rounded-lg p-4 flex flex-col items-center justify-center group relative bg-on-surface">
+<img class="h-16 object-contain mb-4" data-alt="The Northstar Coffee logo in white/cream color designed for dark backgrounds, modern and high contrast." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPcDAPJpn7es93hpW1OorSL7tUa5O-18JJfW1b0rPMqmxXHIyJIFSxDBh3xm9hgyo13j-mRIZmdJZzk3dBnAQ3IbROlEuR_ZINRBn8w5CRklatoIJdsP4Ce1M1iLU3oT8XT6w17qsbXJQIXzWa3Rw4UDI1jmVfDhmFN2jqF3RsoGlQtfe2N2mQt8TMvBsdXQl2BiQMD1hNOv462ALYRDLvF1x6Dc1zW6sQ2i3jS1CDHhnPwiH2UOMmfK13cT_Db_I9wZdhLUF0qDc"/>
+<div class="absolute inset-0 bg-inverse-surface/80 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="bg-surface text-on-surface font-button text-button px-3 py-1.5 rounded flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">download</span> PNG
+                            </button>
+</div>
+<span class="font-label text-label text-on-primary mt-auto">Dark Mode</span>
+</div>
+<!-- Icon -->
+<div class="border border-border rounded-lg p-4 flex flex-col items-center justify-center group relative bg-canvas">
+<img class="h-12 object-contain mb-4" data-alt="The standalone star/bean icon mark for Northstar coffee, without the wordmark, simple geometric design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbwttZ1xcnnmNX5wZMClOGVyVUJuSGlU3OgN2Rk8wMVqt-xobA4BkLmroY1waOdzVT44c-yfsyLmuILeZQ03n8p1QUm26KFbNhfu9REZ5laJbxs0cn9uslok9qSNiVWemnIRq9mIDBy7zwa2eUYOpYxX-Ds5zM9gPqsNfzItS_Xkqgm2pOgtNV8bYGk7KksuY3bbIWE8m9pJ-ZiDWUDzVSTeU9iITky0Knql8SRqJnsRB7U08w1kFX371Wj2g5EE6OKPUXkDwg6cg"/>
+<div class="absolute inset-0 bg-inverse-surface/80 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="bg-surface text-on-surface font-button text-button px-3 py-1.5 rounded flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">download</span> SVG
+                            </button>
+</div>
+<span class="font-label text-label text-on-surface mt-auto">Icon Mark</span>
+</div>
+</div>
+<div class="bg-info-subtle rounded p-3 flex gap-3 border border-tertiary-fixed-dim">
+<span class="material-symbols-outlined text-tertiary">info</span>
+<p class="font-body text-table-dense text-on-surface">For high-res print files (.ai, .eps), please access the <a class="text-primary hover:underline font-medium" href="#">Google Drive archive</a>.</p>
+</div>
+</div>
+<!-- 3. Color Palette (col-span-4) -->
+<div class="col-span-4 bg-surface rounded-xl border border-border p-card-padding">
+<h3 class="font-card-title text-card-title text-on-surface mb-4">Color Palette</h3>
+<div class="space-y-3">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded border border-border shadow-sm flex-shrink-0" style="background-color: #3A241C;"></div>
+<div class="flex-1">
+<div class="font-label text-label text-on-surface font-bold">Espresso</div>
+<div class="font-body text-table-dense text-text-muted">#3A241C</div>
+</div>
+<button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">content_copy</span></button>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded border border-border shadow-sm flex-shrink-0" style="background-color: #F6F0E5;"></div>
+<div class="flex-1">
+<div class="font-label text-label text-on-surface font-bold">Cream</div>
+<div class="font-body text-table-dense text-text-muted">#F6F0E5</div>
+</div>
+<button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">content_copy</span></button>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded border border-border shadow-sm flex-shrink-0" style="background-color: #75866B;"></div>
+<div class="flex-1">
+<div class="font-label text-label text-on-surface font-bold">Sage</div>
+<div class="font-body text-table-dense text-text-muted">#75866B</div>
+</div>
+<button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">content_copy</span></button>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded border border-border shadow-sm flex-shrink-0" style="background-color: #D89B45;"></div>
+<div class="flex-1">
+<div class="font-label text-label text-on-surface font-bold">Amber</div>
+<div class="font-body text-table-dense text-text-muted">#D89B45</div>
+</div>
+<button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">content_copy</span></button>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded border border-border shadow-sm flex-shrink-0" style="background-color: #172033;"></div>
+<div class="flex-1">
+<div class="font-label text-label text-on-surface font-bold">Ink</div>
+<div class="font-body text-table-dense text-text-muted">#172033</div>
+</div>
+<button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">content_copy</span></button>
+</div>
+</div>
+</div>
+<!-- 4. Typography (col-span-6) -->
+<div class="col-span-6 bg-surface rounded-xl border border-border p-card-padding">
+<h3 class="font-card-title text-card-title text-on-surface mb-4">Typography</h3>
+<div class="space-y-6">
+<div>
+<div class="flex justify-between items-end mb-2 border-b border-border pb-2">
+<span class="font-label text-label text-text-muted uppercase">Headlines (Fraunces)</span>
+<span class="font-body text-table-dense text-text-muted">Semibold</span>
+</div>
+<div class="font-page-title text-page-title text-on-surface tracking-tight" style="font-family: serif;">
+                            The perfect roast awaits.
+                        </div>
+</div>
+<div>
+<div class="flex justify-between items-end mb-2 border-b border-border pb-2">
+<span class="font-label text-label text-text-muted uppercase">Body (Inter)</span>
+<span class="font-body text-table-dense text-text-muted">Regular / Medium</span>
+</div>
+<div class="font-body text-body text-on-secondary-container">
+                            We believe that great coffee starts with great relationships. From the farmers who nurture the beans to the baristas who craft your morning cup, every step matters.
+                        </div>
+</div>
+</div>
+</div>
+<!-- 5. Voice & Tone (col-span-6) -->
+<div class="col-span-6 bg-surface rounded-xl border border-border p-card-padding flex flex-col">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-card-title text-card-title text-on-surface">Voice &amp; Tone</h3>
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-surface-container rounded text-xs font-medium text-on-surface">Warm</span>
+<span class="px-2 py-1 bg-surface-container rounded text-xs font-medium text-on-surface">Knowledgeable</span>
+<span class="px-2 py-1 bg-surface-container rounded text-xs font-medium text-on-surface">Grounded</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 flex-1">
+<div class="bg-success-subtle border border-success/20 rounded-lg p-4">
+<div class="flex items-center gap-2 text-success font-button text-button mb-2">
+<span class="material-symbols-outlined text-[18px]">check_circle</span> Do
+                        </div>
+<ul class="space-y-2 font-body text-table-dense text-on-surface">
+<li>• Share the origin story of the beans.</li>
+<li>• Use sensory language (aroma, notes).</li>
+<li>• Speak to the craft and process.</li>
+</ul>
+</div>
+<div class="bg-danger-subtle border border-danger/20 rounded-lg p-4">
+<div class="flex items-center gap-2 text-danger font-button text-button mb-2">
+<span class="material-symbols-outlined text-[18px]">cancel</span> Don't
+                        </div>
+<ul class="space-y-2 font-body text-table-dense text-on-surface">
+<li>• Be pretentious or overly technical.</li>
+<li>• Make unverified health claims.</li>
+<li>• Use aggressive sales language.</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- 6. Content Pillars (col-span-4) -->
+<div class="col-span-4 bg-surface rounded-xl border border-border p-card-padding">
+<h3 class="font-card-title text-card-title text-on-surface mb-4">Content Pillars</h3>
+<div class="flex flex-wrap gap-2">
+<div class="bg-surface-variant text-on-surface px-3 py-2 rounded border border-outline-variant font-body text-table-dense flex items-center gap-2 w-full">
+<span class="material-symbols-outlined text-[16px] text-text-muted">school</span>
+                        Coffee Education
+                    </div>
+<div class="bg-surface-variant text-on-surface px-3 py-2 rounded border border-outline-variant font-body text-table-dense flex items-center gap-2 w-full">
+<span class="material-symbols-outlined text-[16px] text-text-muted">public</span>
+                        Origin Stories
+                    </div>
+<div class="bg-surface-variant text-on-surface px-3 py-2 rounded border border-outline-variant font-body text-table-dense flex items-center gap-2 w-full">
+<span class="material-symbols-outlined text-[16px] text-text-muted">storefront</span>
+                        Café Culture
+                    </div>
+<div class="bg-surface-variant text-on-surface px-3 py-2 rounded border border-outline-variant font-body text-table-dense flex items-center gap-2 w-full">
+<span class="material-symbols-outlined text-[16px] text-text-muted">new_releases</span>
+                        Product Launches
+                    </div>
+</div>
+</div>
+<!-- 7. Publishing Rules (col-span-4) -->
+<div class="col-span-4 bg-surface rounded-xl border border-border p-card-padding">
+<h3 class="font-card-title text-card-title text-on-surface mb-4">Publishing Rules</h3>
+<ul class="space-y-3">
+<li class="flex gap-3 items-start">
+<span class="material-symbols-outlined text-[18px] text-primary mt-0.5">rule</span>
+<p class="font-body text-table-dense text-on-surface">All images must include descriptive alt text for accessibility.</p>
+</li>
+<li class="flex gap-3 items-start">
+<span class="material-symbols-outlined text-[18px] text-primary mt-0.5">gavel</span>
+<p class="font-body text-table-dense text-on-surface">Strictly avoid medical or health claims regarding caffeine.</p>
+</li>
+<li class="flex gap-3 items-start">
+<span class="material-symbols-outlined text-[18px] text-primary mt-0.5">tag</span>
+<p class="font-body text-table-dense text-on-surface">Use #NorthstarRoasters on all primary Instagram posts.</p>
+</li>
+</ul>
+</div>
+<!-- 8. Linked Resources (col-span-4) -->
+<div class="col-span-4 bg-surface rounded-xl border border-border p-card-padding">
+<h3 class="font-card-title text-card-title text-on-surface mb-4">Linked Resources</h3>
+<div class="space-y-2">
+<a class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-subtle transition-colors border border-transparent hover:border-border" href="#">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center flex-shrink-0 text-primary">
+<span class="material-symbols-outlined text-[18px]">folder_shared</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="font-button text-table-dense text-on-surface truncate">Brand Assets Drive</div>
+<div class="font-label text-label text-text-muted">Updated 2d ago by Maya</div>
+</div>
+<span class="material-symbols-outlined text-[16px] text-text-muted">open_in_new</span>
+</a>
+<a class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-subtle transition-colors border border-transparent hover:border-border" href="#">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center flex-shrink-0 text-primary">
+<span class="material-symbols-outlined text-[18px]">design_services</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="font-button text-table-dense text-on-surface truncate">Figma UI Library</div>
+<div class="font-label text-label text-text-muted">Updated 1w ago by Alex</div>
+</div>
+<span class="material-symbols-outlined text-[16px] text-text-muted">open_in_new</span>
+</a>
+<a class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-subtle transition-colors border border-transparent hover:border-border" href="#">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center flex-shrink-0 text-primary">
+<span class="material-symbols-outlined text-[18px]">view_quilt</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="font-button text-table-dense text-on-surface truncate">Canva Social Templates</div>
+<div class="font-label text-label text-text-muted">Updated 1m ago by Sam</div>
+</div>
+<span class="material-symbols-outlined text-[16px] text-text-muted">open_in_new</span>
+</a>
+</div>
+</div>
+<!-- 9. Recent Activity (col-span-12) -->
+<div class="col-span-12 mt-4">
+<h3 class="font-section-title text-section-title text-on-surface mb-4">Recent Updates</h3>
+<div class="bg-surface border border-border rounded-xl overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-subtle border-b border-border">
+<th class="py-3 px-4 font-label text-label text-text-muted uppercase tracking-wider w-1/4">Date</th>
+<th class="py-3 px-4 font-label text-label text-text-muted uppercase tracking-wider w-1/2">Update Description</th>
+<th class="py-3 px-4 font-label text-label text-text-muted uppercase tracking-wider w-1/4">User</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border">
+<tr class="hover:bg-surface-subtle transition-colors">
+<td class="py-3 px-4 font-body text-table-dense text-on-surface">Oct 24, 2023</td>
+<td class="py-3 px-4 font-body text-table-dense text-on-surface">Added new secondary icon set (SVG format).</td>
+<td class="py-3 px-4 font-body text-table-dense text-on-secondary-container flex items-center gap-2">
+<div class="w-5 h-5 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-[10px] font-bold">MC</div>
+                                    Maya Chen
+                                </td>
+</tr>
+<tr class="hover:bg-surface-subtle transition-colors">
+<td class="py-3 px-4 font-body text-table-dense text-on-surface">Oct 12, 2023</td>
+<td class="py-3 px-4 font-body text-table-dense text-on-surface">Updated Tone &amp; Voice guidelines for holiday campaign.</td>
+<td class="py-3 px-4 font-body text-table-dense text-on-secondary-container flex items-center gap-2">
+<div class="w-5 h-5 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center text-[10px] font-bold">SJ</div>
+                                    Sam Jones
+                                </td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+</body></html>

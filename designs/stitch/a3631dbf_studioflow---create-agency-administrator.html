@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>StudioFlow - Create Agency Administrator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error-container": "#93000a",
+                    "background": "#f9f9ff",
+                    "inverse-surface": "#283141",
+                    "on-surface-variant": "#464555",
+                    "warning-subtle": "#FFF7E6",
+                    "secondary": "#555e74",
+                    "on-tertiary-container": "#bfdfff",
+                    "surface-dim": "#d1daef",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-fixed": "#001d32",
+                    "danger": "#B91C1C",
+                    "canvas": "#F7F7F5",
+                    "surface-bright": "#f9f9ff",
+                    "surface-container-lowest": "#ffffff",
+                    "on-error": "#ffffff",
+                    "primary-subtle": "#EEF2FF",
+                    "primary-container": "#4f46e5",
+                    "inverse-primary": "#c3c0ff",
+                    "on-secondary": "#ffffff",
+                    "tertiary-container": "#00659c",
+                    "tertiary": "#004c77",
+                    "success": "#15803D",
+                    "on-secondary-fixed-variant": "#3e475b",
+                    "surface-container-high": "#dfe8fe",
+                    "success-subtle": "#ECFDF3",
+                    "on-background": "#131c2b",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "secondary-container": "#d7dff9",
+                    "surface-container": "#e7eeff",
+                    "on-secondary-fixed": "#121b2e",
+                    "surface-tint": "#4d44e3",
+                    "text-muted": "#7B8495",
+                    "border": "#DDE1E6",
+                    "primary-fixed": "#e2dfff",
+                    "outline-variant": "#c7c4d8",
+                    "warning": "#B45309",
+                    "secondary-fixed-dim": "#bdc6e0",
+                    "danger-subtle": "#FEF2F2",
+                    "outline": "#777587",
+                    "surface-variant": "#dae3f8",
+                    "on-tertiary": "#ffffff",
+                    "on-tertiary-fixed-variant": "#004b74",
+                    "primary": "#3525cd",
+                    "on-secondary-container": "#5a6278",
+                    "surface-subtle": "#F1F3F5",
+                    "error": "#ba1a1a",
+                    "on-surface": "#131c2b",
+                    "on-primary": "#ffffff",
+                    "surface-container-highest": "#dae3f8",
+                    "tertiary-fixed": "#cde5ff",
+                    "surface-container-low": "#f0f3ff",
+                    "primary-hover": "#4338CA",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "surface": "#FFFFFF",
+                    "info-subtle": "#F0F9FF",
+                    "secondary-fixed": "#d9e2fc",
+                    "on-primary-container": "#dad7ff",
+                    "on-primary-fixed": "#0f0069",
+                    "focus-ring": "#6366F1",
+                    "tertiary-fixed-dim": "#94ccff",
+                    "inverse-on-surface": "#ecf0ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "card-padding": "16px",
+                    "base": "4px",
+                    "topbar-height": "64px",
+                    "sidebar-expanded": "248px",
+                    "sidebar-collapsed": "72px",
+                    "screen-padding": "24px"
+            },
+            "fontFamily": {
+                    "body": ["Inter"],
+                    "button": ["Inter"],
+                    "card-title": ["Inter"],
+                    "table-dense": ["Inter"],
+                    "page-title": ["Inter"],
+                    "section-title": ["Inter"],
+                    "label": ["Inter"]
+            },
+            "fontSize": {
+                    "body": ["14px", {"lineHeight": "21px", "fontWeight": "400"}],
+                    "button": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "card-title": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "table-dense": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                    "page-title": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                    "section-title": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+            }
+          },
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-canvas min-h-screen flex items-center justify-center font-body text-on-surface antialiased p-screen-padding">
+<!-- Top Navigation (Hidden on linear/transactional page as per Shell Visibility Rule) -->
+<!-- Content Canvas -->
+<main class="w-full max-w-[560px] mx-auto fade-in" id="setup-container">
+<!-- Brand / Identity -->
+<div class="mb-8 text-center flex flex-col items-center justify-center">
+<div class="h-12 w-12 rounded-lg bg-primary-container text-on-primary flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-3xl">corporate_fare</span>
+</div>
+<h1 class="font-page-title text-page-title text-on-surface tracking-tight mb-2">Create your agency account.</h1>
+<p class="font-body text-body text-on-surface-variant max-w-[480px]">No administrator exists yet. Create the first account to securely set up StudioFlow.</p>
+</div>
+<!-- Main Card -->
+<div class="bg-surface rounded-xl border border-border p-[32px]">
+<form class="space-y-6" id="setup-form" onsubmit="event.preventDefault(); showSuccessState();">
+<!-- Agency Details Section -->
+<div>
+<h2 class="font-section-title text-section-title mb-4">Agency Details</h2>
+<div class="space-y-4">
+<div class="flex flex-col gap-1">
+<label class="font-label text-label text-on-surface-variant" for="agency-name">Agency name</label>
+<input class="h-[40px] px-3 rounded border border-border focus:ring-2 focus:ring-focus-ring focus:border-transparent outline-none font-body text-body text-on-surface bg-surface-container-lowest placeholder-text-muted transition-shadow" id="agency-name" placeholder="Acme Creative Agency" required="" type="text"/>
+</div>
+</div>
+</div>
+<hr class="border-border"/>
+<!-- Admin Details Section -->
+<div>
+<h2 class="font-section-title text-section-title mb-4">Administrator Details</h2>
+<div class="space-y-4">
+<div class="flex flex-col gap-1">
+<label class="font-label text-label text-on-surface-variant" for="admin-name">Administrator full name</label>
+<input class="h-[40px] px-3 rounded border border-border focus:ring-2 focus:ring-focus-ring focus:border-transparent outline-none font-body text-body text-on-surface bg-surface-container-lowest placeholder-text-muted transition-shadow" id="admin-name" placeholder="Jane Doe" required="" type="text"/>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label text-label text-on-surface-variant" for="work-email">Work email</label>
+<input class="h-[40px] px-3 rounded border border-border focus:ring-2 focus:ring-focus-ring focus:border-transparent outline-none font-body text-body text-on-surface bg-surface-container-lowest placeholder-text-muted transition-shadow" id="work-email" placeholder="jane@acme.agency" required="" type="email"/>
+</div>
+<div class="flex flex-col gap-1 relative">
+<label class="font-label text-label text-on-surface-variant" for="password">Password</label>
+<div class="relative w-full">
+<input class="h-[40px] w-full pl-3 pr-10 rounded border border-border focus:ring-2 focus:ring-focus-ring focus:border-transparent outline-none font-body text-body text-on-surface bg-surface-container-lowest transition-shadow" id="password" required="" type="password"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors" onclick="togglePassword('password', 'pwd-icon')" type="button">
+<span class="material-symbols-outlined" id="pwd-icon" style="font-size: 20px;">visibility</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col gap-1 relative">
+<label class="font-label text-label text-on-surface-variant" for="confirm-password">Confirm password</label>
+<div class="relative w-full">
+<input class="h-[40px] w-full pl-3 pr-10 rounded border border-border focus:ring-2 focus:ring-focus-ring focus:border-transparent outline-none font-body text-body text-on-surface bg-surface-container-lowest transition-shadow" id="confirm-password" required="" type="password"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors" onclick="togglePassword('confirm-password', 'confirm-pwd-icon')" type="button">
+<span class="material-symbols-outlined" id="confirm-pwd-icon" style="font-size: 20px;">visibility</span>
+</button>
+</div>
+</div>
+<!-- Password Requirements -->
+<div class="bg-surface-subtle p-3 rounded-lg border border-border mt-2">
+<p class="font-label text-label text-on-surface-variant mb-2">Password must contain:</p>
+<ul class="font-label text-label text-text-muted space-y-1 grid grid-cols-2 gap-x-4">
+<li class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">radio_button_unchecked</span>
+                                    12+ characters
+                                </li>
+<li class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">radio_button_unchecked</span>
+                                    Uppercase &amp; lowercase
+                                </li>
+<li class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">radio_button_unchecked</span>
+                                    At least 1 number
+                                </li>
+<li class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">radio_button_unchecked</span>
+                                    Special character
+                                </li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Security Note -->
+<div class="flex items-start gap-3 p-4 bg-info-subtle border border-tertiary-fixed-dim rounded-lg">
+<span class="material-symbols-outlined text-tertiary flex-shrink-0 mt-0.5">info</span>
+<p class="font-body text-table-dense text-tertiary">
+<strong>Security note:</strong> This setup page closes permanently after the first administrator is created to prevent unauthorized access.
+                    </p>
+</div>
+<!-- Actions -->
+<div class="flex flex-col gap-4 pt-2">
+<button class="w-full h-[40px] bg-primary-container text-on-primary font-button text-button rounded-lg hover:bg-primary-hover transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-primary-container outline-none flex items-center justify-center gap-2" type="submit">
+                        Create agency account
+                        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+<a class="w-full text-center font-button text-button text-primary hover:text-primary-hover transition-colors outline-none focus:underline" href="#">
+                        Return to sign in
+                    </a>
+</div>
+</form>
+</div>
+<!-- Footer / Legal -->
+<div class="mt-8 text-center flex flex-col items-center gap-2">
+<p class="font-label text-label text-text-muted">© 2024 StudioFlow Agency Platform</p>
+<div class="flex items-center gap-4">
+<a class="font-label text-label text-text-muted hover:text-on-surface transition-colors" href="#">Privacy Policy</a>
+<span class="text-border text-[10px]">|</span>
+<a class="font-label text-label text-text-muted hover:text-on-surface transition-colors" href="#">Terms of Service</a>
+</div>
+</div>
+</main>
+<!-- Success State Container (Hidden by default) -->
+<main class="hidden w-full max-w-[480px] mx-auto text-center flex flex-col items-center" id="success-container">
+<div class="h-24 w-24 rounded-full bg-success-subtle border-2 border-success/20 flex items-center justify-center mb-6 scale-0" id="success-icon-wrapper">
+<span class="material-symbols-outlined text-5xl text-success fill">check_circle</span>
+</div>
+<h1 class="font-page-title text-page-title text-on-surface mb-3 opacity-0 translate-y-4" id="success-title">Agency account created</h1>
+<p class="font-body text-body text-on-surface-variant mb-8 max-w-[360px] opacity-0 translate-y-4" id="success-desc">
+            Your administrator profile has been securely generated. You can now begin configuring your agency's workspace.
+        </p>
+<button class="h-[40px] px-6 bg-primary-container text-on-primary font-button text-button rounded-lg hover:bg-primary-hover transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-primary-container outline-none flex items-center justify-center gap-2 opacity-0 translate-y-4" id="success-btn" type="button">
+            Set up first workspace
+            <span class="material-symbols-outlined text-[18px]">domain_add</span>
+</button>
+</main>
+<script>
+        function togglePassword(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.textContent = 'visibility_off';
+            } else {
+                input.type = 'password';
+                icon.textContent = 'visibility';
+            }
+        }
+
+        function showSuccessState() {
+            const setupContainer = document.getElementById('setup-container');
+            const successContainer = document.getElementById('success-container');
+            
+            // Fade out setup
+            setupContainer.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            setupContainer.style.opacity = '0';
+            setupContainer.style.transform = 'translateY(-10px)';
+            
+            setTimeout(() => {
+                setupContainer.classList.add('hidden');
+                successContainer.classList.remove('hidden');
+                
+                // Trigger success animations
+                requestAnimationFrame(() => {
+                    const icon = document.getElementById('success-icon-wrapper');
+                    const title = document.getElementById('success-title');
+                    const desc = document.getElementById('success-desc');
+                    const btn = document.getElementById('success-btn');
+
+                    icon.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                    icon.style.transform = 'scale(1)';
+
+                    const textElems = [title, desc, btn];
+                    textElems.forEach((el, index) => {
+                        el.style.transition = `opacity 0.4s ease ${0.2 + (index * 0.1)}s, transform 0.4s ease ${0.2 + (index * 0.1)}s`;
+                        el.style.opacity = '1';
+                        el.style.transform = 'translateY(0)';
+                    });
+                });
+            }, 300);
+        }
+
+        // Simple password validation UI visual update (mock implementation for demo)
+        const pwdInput = document.getElementById('password');
+        pwdInput.addEventListener('input', function(e) {
+            const val = e.target.value;
+            const checks = document.querySelectorAll('.bg-surface-subtle li span');
+            
+            // Very basic visual toggle for demo purposes
+            if(val.length >= 12) {
+                checks[0].textContent = 'check_circle';
+                checks[0].classList.add('text-success', 'fill');
+            } else {
+                checks[0].textContent = 'radio_button_unchecked';
+                checks[0].classList.remove('text-success', 'fill');
+            }
+        });
+    </script>
+</body></html>

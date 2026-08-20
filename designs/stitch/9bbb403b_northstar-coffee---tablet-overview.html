@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee — Tablet Overview</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface": "#FFFFFF",
+                      "on-primary-fixed": "#0f0069",
+                      "primary-fixed": "#e2dfff",
+                      "on-secondary-container": "#5a6278",
+                      "inverse-primary": "#c3c0ff",
+                      "primary-subtle": "#EEF2FF",
+                      "surface-dim": "#d1daef",
+                      "outline": "#777587",
+                      "text-muted": "#7B8495",
+                      "surface-container-highest": "#dae3f8",
+                      "danger-subtle": "#FEF2F2",
+                      "primary": "#3525cd",
+                      "tertiary": "#004c77",
+                      "on-background": "#131c2b",
+                      "surface-container": "#e7eeff",
+                      "secondary": "#555e74",
+                      "danger": "#B91C1C",
+                      "surface-container-low": "#f0f3ff",
+                      "secondary-container": "#d7dff9",
+                      "surface-variant": "#dae3f8",
+                      "background": "#f9f9ff",
+                      "tertiary-fixed": "#cde5ff",
+                      "tertiary-fixed-dim": "#94ccff",
+                      "focus-ring": "#6366F1",
+                      "on-tertiary": "#ffffff",
+                      "on-tertiary-fixed": "#001d32",
+                      "on-tertiary-fixed-variant": "#004b74",
+                      "secondary-fixed-dim": "#bdc6e0",
+                      "canvas": "#F7F7F5",
+                      "warning-subtle": "#FFF7E6",
+                      "info-subtle": "#F0F9FF",
+                      "on-surface-variant": "#464555",
+                      "error": "#ba1a1a",
+                      "on-error": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "surface-tint": "#4d44e3",
+                      "primary-hover": "#4338CA",
+                      "tertiary-container": "#00659c",
+                      "on-secondary-fixed": "#121b2e",
+                      "on-surface": "#131c2b",
+                      "surface-bright": "#f9f9ff",
+                      "on-tertiary-container": "#bfdfff",
+                      "on-secondary": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "border": "#DDE1E6",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "on-secondary-fixed-variant": "#3e475b",
+                      "inverse-on-surface": "#ecf0ff",
+                      "surface-subtle": "#F1F3F5",
+                      "warning": "#B45309",
+                      "success-subtle": "#ECFDF3",
+                      "surface-container-high": "#dfe8fe",
+                      "outline-variant": "#c7c4d8",
+                      "on-primary": "#ffffff",
+                      "on-primary-container": "#dad7ff",
+                      "inverse-surface": "#283141",
+                      "primary-container": "#4f46e5",
+                      "success": "#15803D",
+                      "secondary-fixed": "#d9e2fc",
+                      "surface-container-lowest": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "sidebar-expanded": "248px",
+                      "topbar-height": "64px",
+                      "base": "4px",
+                      "gutter": "16px",
+                      "sidebar-collapsed": "72px",
+                      "screen-padding": "24px",
+                      "card-padding": "16px"
+              },
+              "fontFamily": {
+                      "card-title": [
+                              "Inter"
+                      ],
+                      "page-title": [
+                              "Inter"
+                      ],
+                      "section-title": [
+                              "Inter"
+                      ],
+                      "button": [
+                              "Inter"
+                      ],
+                      "table-dense": [
+                              "Inter"
+                      ],
+                      "label": [
+                              "Inter"
+                      ],
+                      "body": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "card-title": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "page-title": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "section-title": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "button": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "table-dense": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body": [
+                              "14px",
+                              {
+                                      "lineHeight": "21px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+</head>
+<body class="bg-canvas text-on-surface font-body antialiased min-h-screen flex flex-col md:flex-row overflow-x-hidden">
+<!-- SideNavBar -->
+<nav class="hidden md:flex bg-surface-container-low dark:bg-inverse-surface border-r border-border dark:border-outline-variant fixed left-0 top-0 h-full w-sidebar-collapsed flex-col items-center py-4 gap-4 z-50">
+<!-- Brand Logo Area -->
+<div class="mb-4">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary font-bold text-lg">
+                AC
+             </div>
+</div>
+<!-- Navigation Links -->
+<div class="flex flex-col gap-2 w-full px-2">
+<a aria-label="Home" class="w-full h-12 flex items-center justify-center text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-secondary-fixed-dim transition-all rounded-lg scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+</a>
+<a aria-label="Projects" class="w-full h-12 flex items-center justify-center bg-primary-container text-on-primary-container dark:bg-primary dark:text-on-primary rounded-lg scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+</a>
+<a aria-label="Tasks" class="w-full h-12 flex items-center justify-center text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-secondary-fixed-dim transition-all rounded-lg scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+</a>
+<a aria-label="Team" class="w-full h-12 flex items-center justify-center text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-secondary-fixed-dim transition-all rounded-lg scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+</a>
+<a aria-label="Reports" class="w-full h-12 flex items-center justify-center text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-secondary-fixed-dim transition-all rounded-lg scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="bar_chart">bar_chart</span>
+</a>
+</div>
+<div class="mt-auto flex flex-col gap-2 w-full px-2">
+<a aria-label="Help" class="w-full h-12 flex items-center justify-center text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-secondary-fixed-dim transition-all rounded-lg scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</a>
+<a aria-label="Logout" class="w-full h-12 flex items-center justify-center text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-secondary-fixed-dim transition-all rounded-lg scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Layout Area -->
+<div class="flex-1 flex flex-col w-full md:pl-sidebar-collapsed min-h-screen relative">
+<!-- TopNavBar (Tablet/Desktop) -->
+<header class="bg-surface dark:bg-surface border-b border-border dark:border-outline-variant h-topbar-height w-full flex items-center justify-between px-gutter z-40 sticky top-0">
+<div class="flex items-center gap-4">
+<h1 class="font-page-title text-page-title text-on-surface dark:text-on-surface m-0 leading-none flex items-center gap-2">
+                     Northstar Coffee <span class="font-body text-body text-text-muted hidden sm:inline">— Tablet Overview</span>
+</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-primary hover:bg-primary-hover text-on-primary font-button text-button h-10 px-4 rounded flex items-center gap-2 transition-colors cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined text-xl" data-icon="add">add</span>
+<span class="hidden sm:inline">New content</span>
+</button>
+<div class="flex items-center gap-2">
+<button aria-label="notifications" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-primary-subtle text-on-secondary-container transition-colors cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button aria-label="settings" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-primary-subtle text-on-secondary-container transition-colors cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+<img alt="User profile" class="w-8 h-8 rounded-full border border-border object-cover" data-alt="A professional headshot of an agency user smiling gently in a well-lit modern office environment. Soft natural light illuminates the subject's face against a blurred minimalist background featuring neutral tones and subtle greenery. High-quality corporate portraiture style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8A6kI104I-PNmNwViTM3X5eNQgKb8jjwQVgxyWDpHzm2xqLcqyIjzYwmS2weJx4G8ixHRGaAWFs-CKNGPANzoQgSj2j9KV9krb1TBpQhPiAuHkG2PXdDHhd1krtj6-UC0JTg9L9pWL0fBQ13HWvctNY9_ROzr9RVRKoCd2eROM8AYpqYizf6v9L5nYBaihP7OryMfacTKbGMV81fLfWmIY2DSWa-C-HPVkZRc6FLOQ3RerNeaEjxdw-_PYctVYsm0VH5EX0a89Xw"/>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 p-screen-padding w-full max-w-[1024px] mx-auto">
+<div class="flex items-center justify-between mb-6">
+<h2 class="font-section-title text-section-title text-on-surface">September 2026 Overview</h2>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-surface border border-border rounded-lg px-3 py-1.5 shadow-sm">
+<span class="material-symbols-outlined text-success text-sm" data-icon="check_circle" data-weight="fill">check_circle</span>
+<span class="font-label text-label text-on-surface">Delivery Health: On track</span>
+</div>
+<div class="flex flex-col bg-surface border border-border rounded-lg px-3 py-1.5 shadow-sm w-48">
+<div class="flex justify-between items-center mb-1">
+<span class="font-label text-label text-on-surface">Plan Coverage</span>
+<span class="font-label text-label text-text-muted">18/20</span>
+</div>
+<div class="w-full bg-surface-subtle h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 90%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+<!-- KPI Section (Spans 8 cols) -->
+<div class="md:col-span-8 flex flex-col gap-4">
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+<!-- KPI Card 1 -->
+<div class="bg-surface border border-border rounded-xl p-card-padding flex flex-col justify-between hover:border-primary-subtle transition-colors cursor-pointer min-h-[100px]">
+<span class="font-label text-label text-text-muted uppercase tracking-wider">Draft</span>
+<span class="font-page-title text-page-title text-on-surface">3</span>
+</div>
+<!-- KPI Card 2 -->
+<div class="bg-surface border border-border rounded-xl p-card-padding flex flex-col justify-between hover:border-primary-subtle transition-colors cursor-pointer min-h-[100px]">
+<span class="font-label text-label text-text-muted uppercase tracking-wider">Awaiting review</span>
+<span class="font-page-title text-page-title text-on-surface">4</span>
+</div>
+<!-- KPI Card 3 -->
+<div class="bg-surface border border-border rounded-xl p-card-padding flex flex-col justify-between hover:border-primary-subtle transition-colors cursor-pointer min-h-[100px]">
+<span class="font-label text-label text-text-muted uppercase tracking-wider">In design</span>
+<span class="font-page-title text-page-title text-on-surface">5</span>
+</div>
+<!-- KPI Card 4 -->
+<div class="bg-surface border border-border rounded-xl p-card-padding flex flex-col justify-between hover:border-primary-subtle transition-colors cursor-pointer min-h-[100px]">
+<span class="font-label text-label text-text-muted uppercase tracking-wider">Ready</span>
+<span class="font-page-title text-page-title text-on-surface">3</span>
+</div>
+<!-- KPI Card 5 -->
+<div class="bg-surface border border-border rounded-xl p-card-padding flex flex-col justify-between hover:border-primary-subtle transition-colors cursor-pointer min-h-[100px]">
+<span class="font-label text-label text-text-muted uppercase tracking-wider">Published</span>
+<span class="font-page-title text-page-title text-on-surface">3</span>
+</div>
+<!-- KPI Card 6 -->
+<div class="bg-surface border border-danger rounded-xl p-card-padding flex flex-col justify-between bg-danger-subtle cursor-pointer min-h-[100px]">
+<span class="font-label text-label text-danger uppercase tracking-wider">Overdue</span>
+<span class="font-page-title text-page-title text-danger">1</span>
+</div>
+<!-- KPI Card 7 -->
+<div class="bg-surface border border-warning rounded-xl p-card-padding flex flex-col justify-between bg-warning-subtle cursor-pointer min-h-[100px]">
+<span class="font-label text-label text-warning uppercase tracking-wider">Blocked</span>
+<span class="font-page-title text-page-title text-warning">1</span>
+</div>
+</div>
+<!-- Action List -->
+<div class="bg-surface border border-border rounded-xl overflow-hidden mt-2">
+<div class="p-card-padding border-b border-border bg-surface-subtle">
+<h3 class="font-card-title text-card-title text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-warning" data-icon="error">error</span>
+                                 Needs your action
+                             </h3>
+</div>
+<div class="flex flex-col">
+<!-- Item 1 -->
+<div class="p-4 border-b border-border hover:bg-surface-subtle transition-colors flex items-center justify-between min-h-[64px] cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-primary-subtle flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="videocam">videocam</span>
+</div>
+<div>
+<p class="font-body text-body text-on-surface font-medium">Maple Pecan Latte Reel</p>
+<p class="font-label text-label text-text-muted">Instagram Reels • Due today</p>
+</div>
+</div>
+<button class="h-10 px-4 rounded bg-surface border border-border text-on-surface font-button text-button hover:bg-surface-subtle transition-colors">
+                                    Review
+                                </button>
+</div>
+<!-- Item 2 -->
+<div class="p-4 border-b border-border hover:bg-surface-subtle transition-colors flex items-center justify-between min-h-[64px] cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-secondary-container flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined" data-icon="article">article</span>
+</div>
+<div>
+<p class="font-body text-body text-on-surface font-medium">Ethical Sourcing Story</p>
+<p class="font-label text-label text-text-muted">Blog Post • Needs approval</p>
+</div>
+</div>
+<button class="h-10 px-4 rounded bg-surface border border-border text-on-surface font-button text-button hover:bg-surface-subtle transition-colors">
+                                    Review
+                                </button>
+</div>
+<!-- Item 3 -->
+<div class="p-4 hover:bg-surface-subtle transition-colors flex items-center justify-between min-h-[64px] cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="image">image</span>
+</div>
+<div>
+<p class="font-body text-body text-on-surface font-medium">Fall Menu Carousel</p>
+<p class="font-label text-label text-text-muted">LinkedIn • Missing assets</p>
+</div>
+</div>
+<button class="h-10 px-4 rounded bg-surface border border-border text-on-surface font-button text-button hover:bg-surface-subtle transition-colors">
+                                    Add assets
+                                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Timeline Section (Spans 4 cols) -->
+<div class="md:col-span-4">
+<div class="bg-surface border border-border rounded-xl p-card-padding h-full min-h-[400px]">
+<h3 class="font-card-title text-card-title text-on-surface mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="calendar_today">calendar_today</span>
+                            This week
+                        </h3>
+<div class="relative border-l-2 border-surface-subtle ml-3 space-y-6">
+<!-- Timeline Item 1 -->
+<div class="relative pl-6">
+<div class="absolute w-3 h-3 bg-surface border-2 border-primary rounded-full -left-[7px] top-1.5"></div>
+<p class="font-label text-label text-text-muted mb-1">Mon, Sep 14</p>
+<div class="bg-surface border border-border rounded-lg p-3 hover:border-primary-subtle transition-colors cursor-pointer">
+<p class="font-body text-body text-on-surface font-medium">Weekly Promo Email</p>
+<div class="flex items-center gap-2 mt-2">
+<span class="inline-flex items-center gap-1 bg-success-subtle text-success px-2 py-0.5 rounded text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span> Published
+                                        </span>
+</div>
+</div>
+</div>
+<!-- Timeline Item 2 -->
+<div class="relative pl-6">
+<div class="absolute w-3 h-3 bg-primary rounded-full -left-[7px] top-1.5 shadow-[0_0_0_4px_#EEF2FF]"></div>
+<p class="font-label text-label text-text-muted mb-1">Today, Sep 16</p>
+<div class="bg-surface border border-primary-subtle shadow-sm rounded-lg p-3 hover:border-primary transition-colors cursor-pointer">
+<p class="font-body text-body text-on-surface font-medium">Maple Pecan Latte Reel</p>
+<div class="flex items-center gap-2 mt-2">
+<span class="inline-flex items-center gap-1 bg-warning-subtle text-warning px-2 py-0.5 rounded text-xs font-medium">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule">schedule</span> Due 5:00 PM
+                                        </span>
+</div>
+</div>
+</div>
+<!-- Timeline Item 3 -->
+<div class="relative pl-6">
+<div class="absolute w-3 h-3 bg-surface border-2 border-border rounded-full -left-[7px] top-1.5"></div>
+<p class="font-label text-label text-text-muted mb-1">Thu, Sep 18</p>
+<div class="bg-surface border border-border rounded-lg p-3 opacity-70 hover:opacity-100 transition-opacity cursor-pointer">
+<p class="font-body text-body text-on-surface font-medium">Barista Spotlight: Sarah</p>
+<div class="flex items-center gap-2 mt-2">
+<span class="inline-flex items-center gap-1 bg-surface-subtle text-text-muted px-2 py-0.5 rounded text-xs font-medium">
+                                            In design
+                                        </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

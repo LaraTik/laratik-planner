@@ -1,0 +1,377 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>StudioFlow - Planning</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#283141",
+                        "surface-tint": "#4d44e3",
+                        "surface-container-lowest": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#e7eeff",
+                        "on-primary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "text-muted": "#7B8495",
+                        "surface-variant": "#dae3f8",
+                        "on-tertiary-fixed": "#001d32",
+                        "primary-fixed": "#e2dfff",
+                        "warning": "#B45309",
+                        "info-subtle": "#F0F9FF",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "secondary-container": "#d7dff9",
+                        "primary-subtle": "#EEF2FF",
+                        "on-tertiary": "#ffffff",
+                        "focus-ring": "#6366F1",
+                        "inverse-on-surface": "#ecf0ff",
+                        "surface-container-highest": "#dae3f8",
+                        "on-primary-container": "#dad7ff",
+                        "error": "#ba1a1a",
+                        "border": "#DDE1E6",
+                        "success-subtle": "#ECFDF3",
+                        "success": "#15803D",
+                        "primary-hover": "#4338CA",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "danger": "#B91C1C",
+                        "surface-subtle": "#F1F3F5",
+                        "secondary": "#555e74",
+                        "outline-variant": "#c7c4d8",
+                        "on-surface": "#131c2b",
+                        "on-secondary": "#ffffff",
+                        "surface-bright": "#f9f9ff",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "inverse-primary": "#c3c0ff",
+                        "on-tertiary-container": "#bfdfff",
+                        "danger-subtle": "#FEF2F2",
+                        "outline": "#777587",
+                        "on-secondary-container": "#5a6278",
+                        "tertiary-fixed": "#cde5ff",
+                        "surface-container-low": "#f0f3ff",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "surface-container-high": "#dfe8fe",
+                        "tertiary": "#004c77",
+                        "on-secondary-fixed": "#121b2e",
+                        "primary": "#3525cd",
+                        "warning-subtle": "#FFF7E6",
+                        "on-primary-fixed": "#0f0069",
+                        "on-background": "#131c2b",
+                        "background": "#f9f9ff",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "canvas": "#F7F7F5",
+                        "surface-dim": "#d1daef",
+                        "primary-container": "#4f46e5",
+                        "secondary-fixed": "#d9e2fc",
+                        "tertiary-container": "#00659c",
+                        "surface": "#FFFFFF",
+                        "on-surface-variant": "#464555"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sidebar-expanded": "248px",
+                        "card-padding": "16px",
+                        "sidebar-collapsed": "72px",
+                        "screen-padding": "24px",
+                        "gutter": "16px",
+                        "base": "4px",
+                        "topbar-height": "64px"
+                    },
+                    "fontFamily": {
+                        "page-title": ["Inter"],
+                        "label": ["Inter"],
+                        "body": ["Inter"],
+                        "button": ["Inter"],
+                        "section-title": ["Inter"],
+                        "card-title": ["Inter"],
+                        "table-dense": ["Inter"]
+                    },
+                    "fontSize": {
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-canvas text-on-surface font-body min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-surface h-topbar-height fixed top-0 right-0 w-[calc(100%-248px)] border-b border-border z-20 flex justify-between items-center px-screen-padding transition-all duration-200">
+<!-- Search Bar on Left -->
+<div class="flex items-center w-96 relative">
+<span class="material-symbols-outlined absolute left-3 text-on-secondary-container">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-subtle border-none rounded focus:ring-2 focus:ring-focus-ring focus:bg-surface transition-colors font-body text-body text-on-surface placeholder:text-on-secondary-container h-10" placeholder="Search content, campaigns, or tasks..." type="text">
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<button aria-label="Notifications" class="p-2 text-on-secondary-container hover:bg-surface-container-low rounded transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button aria-label="Help" class="p-2 text-on-secondary-container hover:bg-surface-container-low rounded transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+<button class="bg-primary-container text-on-primary font-button text-button px-4 h-10 rounded shadow-sm hover:bg-primary-hover transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Create content
+            </button>
+<div class="h-8 w-px bg-border mx-2"></div>
+<img alt="Maya Chen's profile" class="w-8 h-8 rounded-full object-cover border border-border" data-alt="A professional studio headshot of Maya Chen, a creative director, taken against a minimalist white background. The lighting is soft and bright, emphasizing a modern, approachable, and competent workspace aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPrIukedDbuiiLgvfBhYWjE3gMx4KE5Xi7gIpVGGN1sfZH4KyRp3fsTgyYEKusBIOR2hVY4kf8eEx1nYRZQdMaOBxz4gMw-E2CFHYSDg2RtxoRmEqW496Mutg13N7TwV10sx2_k5Wb7bmS8UTVuNdnFHQGpzJhUjJHAwACj91DvQq70ysrmllZmlXe36bfkBbJThlFXDOJlwhwwgvxZEoMdGg1m4ZX4k5fEUhyNlqBnOujkSp1_BzASR7FVIK4z_rseSdw3q-GsoY">
+</div>
+</header>
+<!-- SideNavBar -->
+<nav class="bg-surface w-sidebar-expanded h-screen fixed left-0 top-0 border-r border-border z-30 flex flex-col py-4">
+<!-- Brand Area -->
+<div class="px-screen-padding mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center text-on-primary font-bold text-lg shadow-sm">
+                N
+            </div>
+<div>
+<h1 class="font-section-title text-section-title font-bold text-on-surface leading-tight">StudioFlow</h1>
+<p class="font-label text-label text-on-secondary-container leading-tight">Northstar Coffee</p>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<div class="flex-1 overflow-y-auto">
+<ul class="flex flex-col gap-1 px-4">
+<li class="">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-secondary-container hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">assignment</span>
+<span class="font-body text-body font-medium">My Work</span>
+</a>
+</li>
+<li class="">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-secondary-container hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body text-body font-medium">Overview</span>
+</a>
+</li>
+<li class="">
+<!-- Active State -->
+<a class="flex items-center gap-3 px-3 py-2 rounded bg-primary-subtle text-primary font-bold border-r-2 border-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-weight="fill">event_note</span>
+<span class="font-body text-body">Planning</span>
+</a>
+</li>
+<li class="">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-secondary-container hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="font-body text-body font-medium">Calendar</span>
+</a>
+</li>
+<li class="">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-secondary-container hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">rate_review</span>
+<span class="font-body text-body font-medium">Reviews</span>
+</a>
+</li>
+<li class="">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-secondary-container hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">share</span>
+<span class="font-body text-body font-medium">Social Channels</span>
+</a>
+</li>
+<li class="">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-secondary-container hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-body text-body font-medium">Brand Kit</span>
+</a>
+</li>
+<li class="">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-secondary-container hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-body text-body font-medium">Team</span>
+</a>
+</li>
+</ul>
+<div class="mt-8 mb-4 px-screen-padding">
+<p class="font-label text-label text-outline uppercase tracking-wider">System</p>
+</div>
+<ul class="flex flex-col gap-1 px-4">
+<li class="">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-secondary-container hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body text-body font-medium">Settings</span>
+</a>
+</li>
+<li class="">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-secondary-container hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="font-body text-body font-medium">Admin</span>
+</a>
+</li>
+<li class="">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-secondary-container hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-body text-body font-medium">Help</span>
+</a>
+</li>
+</ul>
+</div>
+<!-- Bottom Area -->
+<div class="px-4 mt-auto">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-on-secondary-container hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">swap_horiz</span>
+<span class="font-body text-body font-medium">Workspace Switcher</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="ml-[248px] mt-[64px] p-screen-padding min-h-[calc(100vh-64px)] flex flex-col gap-6">
+<!-- Page Header Area -->
+<div class="flex flex-col gap-4">
+<!-- Title & Top Level Actions -->
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-4">
+<h2 class="font-page-title text-page-title text-on-surface">Planning</h2>
+<!-- Date Selector -->
+<div class="flex items-center bg-surface border border-border rounded px-2 h-10 shadow-sm">
+<button class="p-1 text-on-secondary-container hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<span class="font-body text-body font-semibold px-4 text-on-surface">September 2026</span>
+<button class="p-1 text-on-secondary-container hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+<!-- Timezone -->
+<div class="flex items-center gap-1 text-on-secondary-container font-body text-body text-sm bg-surface-subtle px-3 py-1 rounded-full border border-border">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+                        Europe/Vienna
+                    </div>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex bg-surface border border-border rounded shadow-sm overflow-hidden mr-2">
+<button class="px-3 py-1.5 bg-primary-subtle text-primary border-r border-border flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-weight="fill">list</span>
+<span class="font-button text-button text-xs">List</span>
+</button>
+<button class="px-3 py-1.5 text-on-secondary-container hover:bg-surface-subtle flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[18px]">view_kanban</span>
+<span class="font-button text-button text-xs font-normal">Board</span>
+</button>
+</div>
+<button class="h-10 px-4 bg-surface border border-border rounded font-button text-button text-on-surface hover:bg-surface-subtle transition-colors shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">calendar_month</span>
+                        View calendar
+                    </button>
+<button class="h-10 px-4 bg-surface border border-border rounded font-button text-button text-on-surface hover:bg-surface-subtle transition-colors shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">library_add</span>
+                        Batch add ideas
+                    </button>
+<!-- Primary CTA duplicated here for logical flow on large screens -->
+<button class="h-10 px-4 bg-primary-container text-on-primary rounded font-button text-button hover:bg-primary-hover transition-colors shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                        Create content
+                    </button>
+</div>
+</div>
+<!-- Summary Bar -->
+<div class="flex gap-4">
+<div class="bg-surface border border-border rounded p-3 flex-1 flex items-center gap-3 shadow-sm">
+<div class="w-10 h-10 rounded-full bg-primary-subtle flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">flag</span>
+</div>
+<div>
+<p class="font-label text-label text-on-secondary-container">Total Planned</p>
+<p class="font-section-title text-section-title font-bold text-on-surface">18<span class="text-on-secondary-container font-normal text-sm ml-1">/24</span></p>
+</div>
+</div>
+<div class="bg-surface border border-border rounded p-3 flex-1 flex items-center gap-3 shadow-sm">
+<div class="w-10 h-10 rounded-full bg-danger-subtle flex items-center justify-center text-danger">
+<span class="material-symbols-outlined">warning</span>
+</div>
+<div>
+<p class="font-label text-label text-on-secondary-container">At Risk</p>
+<p class="font-section-title text-section-title font-bold text-on-surface">3</p>
+</div>
+</div>
+<div class="bg-surface border border-border rounded p-3 flex-1 flex items-center gap-3 shadow-sm">
+<div class="w-10 h-10 rounded-full bg-warning-subtle flex items-center justify-center text-warning">
+<span class="material-symbols-outlined">rate_review</span>
+</div>
+<div>
+<p class="font-label text-label text-on-secondary-container">Needs Review</p>
+<p class="font-section-title text-section-title font-bold text-on-surface">4</p>
+</div>
+</div>
+<div class="bg-surface border border-border rounded p-3 flex-1 flex items-center gap-3 shadow-sm">
+<div class="w-10 h-10 rounded-full bg-success-subtle flex items-center justify-center text-success">
+<span class="material-symbols-outlined">check_circle</span>
+</div>
+<div>
+<p class="font-label text-label text-on-secondary-container">Ready</p>
+<p class="font-section-title text-section-title font-bold text-on-surface">2</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Table Container -->
+<div class="bg-surface border border-border rounded shadow-sm flex flex-col flex-1 overflow-hidden">
+<!-- Filter Bar -->
+<div class="p-4 border-b border-border flex flex-col gap-3 bg-surface-bright">
+<div class="flex justify-between items-center gap-4">
+<!-- Quick Filters -->
+<div class="flex flex-wrap items-center gap-2 flex-1"><div class="flex items-center bg-surface border border-border rounded h-8 px-2 min-w-[200px]"><span class="material-symbols-outlined text-[18px] text-on-secondary-container mr-2">filter_alt</span><input class="w-full bg-transparent border-none p-0 focus:ring-0 text-sm font-body placeholder:text-on-secondary-container" placeholder="Filter current view..." type="text"></div><div class="h-5 w-px bg-border mx-1"></div><button class="h-8 px-3 bg-surface border border-border rounded-full font-label text-label text-on-surface hover:bg-surface-subtle transition-colors flex items-center gap-1">Status <span class="material-symbols-outlined text-[16px] text-on-secondary-container">arrow_drop_down</span></button><button class="h-8 px-3 bg-surface border border-border rounded-full font-label text-label text-on-surface hover:bg-surface-subtle transition-colors flex items-center gap-1">Format <span class="material-symbols-outlined text-[16px] text-on-secondary-container">arrow_drop_down</span></button><button class="h-8 px-3 bg-surface border border-border rounded-full font-label text-label text-on-surface hover:bg-surface-subtle transition-colors flex items-center gap-1">Channel <span class="material-symbols-outlined text-[16px] text-on-secondary-container">arrow_drop_down</span></button><button class="h-8 px-3 bg-surface border border-border rounded-full font-label text-label text-on-surface hover:bg-surface-subtle transition-colors flex items-center gap-1">Campaign <span class="material-symbols-outlined text-[16px] text-on-secondary-container">arrow_drop_down</span></button><button class="h-8 px-3 bg-surface border border-border rounded-full font-label text-label text-on-surface hover:bg-surface-subtle transition-colors flex items-center gap-1">Pillar <span class="material-symbols-outlined text-[16px] text-on-secondary-container">arrow_drop_down</span></button><button class="h-8 px-3 bg-surface border border-border rounded-full font-label text-label text-on-surface hover:bg-surface-subtle transition-colors flex items-center gap-1">Owner <span class="material-symbols-outlined text-[16px] text-on-secondary-container">arrow_drop_down</span></button><button class="h-8 px-3 bg-surface border border-border rounded-full font-label text-label text-on-surface hover:bg-surface-subtle transition-colors flex items-center gap-1">Designer <span class="material-symbols-outlined text-[16px] text-on-secondary-container">arrow_drop_down</span></button><button class="h-8 px-3 bg-surface border border-border rounded-full font-label text-label text-on-surface hover:bg-surface-subtle transition-colors flex items-center gap-1">Risk <span class="material-symbols-outlined text-[16px] text-on-secondary-container">arrow_drop_down</span></button></div>
+<!-- Table Controls -->
+<div class="flex items-center gap-2">
+<button class="text-on-secondary-container hover:text-on-surface transition-colors font-label text-label flex items-center gap-1 px-2 py-1 rounded hover:bg-surface-subtle">
+<span class="material-symbols-outlined text-[18px]">bookmark</span> Saved Views
+                        </button>
+<div class="h-4 w-px bg-border"></div>
+<button class="text-on-secondary-container hover:text-on-surface transition-colors" title="Density: Compact">
+<span class="material-symbols-outlined">density_small</span>
+</button>
+<button class="text-on-secondary-container hover:text-on-surface transition-colors" title="Customize Columns">
+<span class="material-symbols-outlined">view_column</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Bulk Action Bar (Simulated Active State) -->
+<div class="bg-primary-subtle border-b border-border px-4 py-2 flex items-center justify-between"><div class="flex items-center gap-3"><span class="font-label text-label text-primary font-bold">2 items selected</span><div class="h-4 w-px bg-primary-fixed-dim"></div><button class="font-button text-button text-primary text-sm hover:underline flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">person_add</span> Assign</button><button class="font-button text-button text-primary text-sm hover:underline flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">campaign</span> Add campaign</button><button class="font-button text-button text-primary text-sm hover:underline flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">category</span> Set pillar</button><button class="font-button text-button text-primary text-sm hover:underline flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">archive</span> Archive</button></div><button class="text-primary hover:bg-primary-fixed rounded p-1 transition-colors"><span class="material-symbols-outlined text-[20px]">close</span></button></div>
+<!-- Data Table -->
+<div class="overflow-x-auto flex-1">
+<table class="w-full text-left border-collapse min-w-[1200px]">
+<thead class="bg-surface-subtle border-b border-border font-label text-label text-on-secondary-container uppercase tracking-wider sticky top-0 z-10"><tr><th class="py-3 px-4 w-12 text-center"><input checked="" class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer" type="checkbox"></th><th class="py-3 px-4 w-40">Date / Time</th><th class="py-3 px-4 min-w-[250px]">Content</th><th class="py-3 px-4 w-32">Format</th><th class="py-3 px-4 w-24">Channels</th><th class="py-3 px-4 w-40">Status</th><th class="py-3 px-4 w-32">Owner</th><th class="py-3 px-4 w-32">Designer</th><th class="py-3 px-4 w-48">Risk / Next Milestone</th><th class="py-3 px-4 w-16 text-right"></th></tr></thead>
+<tbody class="font-table-dense text-table-dense text-on-surface divide-y divide-border"><!-- Week 1 --><tr class="bg-surface-bright border-b border-border/50"><td class="py-2 px-4 font-label text-label text-on-surface font-semibold bg-surface-container-low" colspan="10">Week of Sep 1–7</td></tr><tr class="hover:bg-surface-subtle transition-colors group h-[52px]"><td class="py-2 px-4 text-center"><input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer" type="checkbox"></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-medium">Sep 2, 09:00 AM</span></div></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-semibold truncate">Autumn Roast Spotlight</span><span class="text-xs text-on-secondary-container flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">sell</span> Autumn Launch</span></div></td><td class="py-2 px-4 text-on-secondary-container">Short-form Video</td><td class="py-2 px-4"><div class="flex gap-1 text-on-secondary-container"><span class="material-symbols-outlined text-[16px]">photo_camera</span><span class="material-symbols-outlined text-[16px]">music_note</span></div></td><td class="py-2 px-4"><span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-success-subtle text-success font-label text-label"><span class="material-symbols-outlined text-[14px]">check_circle</span> Published</span></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-surface-dim text-on-surface flex items-center justify-center text-xs font-semibold">MC</div></div></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-primary-fixed-dim text-on-primary-fixed flex items-center justify-center text-xs font-semibold">ER</div></div></td><td class="py-2 px-4 text-on-secondary-container text-xs">Final Export</td><td class="py-2 px-4 text-right"><button class="text-on-secondary-container hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[20px]">more_vert</span></button></td></tr><tr class="hover:bg-surface-subtle transition-colors group h-[52px]"><td class="py-2 px-4 text-center"><input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer" type="checkbox"></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-medium">Sep 4, 10:00 AM</span></div></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-semibold truncate">Labor Day Social Campaign</span><span class="text-xs text-on-secondary-container flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">sell</span> Holiday</span></div></td><td class="py-2 px-4 text-on-secondary-container">Carousel</td><td class="py-2 px-4"><div class="flex gap-1 text-on-secondary-container"><span class="material-symbols-outlined text-[16px]">photo_camera</span><span class="material-symbols-outlined text-[16px]">facebook</span></div></td><td class="py-2 px-4"><span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-warning-subtle text-warning font-label text-label border border-warning/20"><span class="material-symbols-outlined text-[14px]">rate_review</span> Content Review</span></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-surface-dim text-on-surface flex items-center justify-center text-xs font-semibold">JD</div></div></td><td class="py-2 px-4">-</td><td class="py-2 px-4 text-danger text-xs font-medium">Overdue</td><td class="py-2 px-4 text-right"><button class="text-on-secondary-container hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[20px]">more_vert</span></button></td></tr><tr class="hover:bg-surface-subtle transition-colors group h-[52px]"><td class="py-2 px-4 text-center"><input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer" type="checkbox"></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-medium">Sep 6, 02:00 PM</span></div></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-semibold truncate">Barista Tips: Perfect Pour</span><span class="text-xs text-on-secondary-container flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">sell</span> Education</span></div></td><td class="py-2 px-4 text-on-secondary-container">Article</td><td class="py-2 px-4"><div class="flex gap-1 text-on-secondary-container"><span class="material-symbols-outlined text-[16px]">language</span></div></td><td class="py-2 px-4"><span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-primary-subtle text-primary font-label text-label">Approved for Design</span></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-surface-dim text-on-surface flex items-center justify-center text-xs font-semibold">MC</div></div></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-primary-fixed-dim text-on-primary-fixed flex items-center justify-center text-xs font-semibold">ER</div></div></td><td class="py-2 px-4 text-on-secondary-container text-xs">Scripting</td><td class="py-2 px-4 text-right"><button class="text-on-secondary-container hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[20px]">more_vert</span></button></td></tr><tr class="bg-surface-bright"><td class="py-2 px-4" colspan="10"><button class="text-on-secondary-container hover:text-on-surface flex items-center gap-2 text-xs font-medium"><span class="material-symbols-outlined text-[16px]">add</span> Quick add idea</button></td></tr><!-- Week 2 --><tr class="bg-surface-bright border-b border-border/50"><td class="py-2 px-4 font-label text-label text-on-surface font-semibold bg-surface-container-low" colspan="10">Week of Sep 8–14</td></tr><tr class="hover:bg-surface-subtle transition-colors group h-[52px]"><td class="py-2 px-4 text-center"><input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer" type="checkbox"></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-medium">Sep 9, 11:00 AM</span></div></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-semibold truncate">Sustainability Report Reel</span><span class="text-xs text-on-secondary-container flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">sell</span> Impact</span></div></td><td class="py-2 px-4 text-on-secondary-container">Short-form Video</td><td class="py-2 px-4"><div class="flex gap-1 text-on-secondary-container"><span class="material-symbols-outlined text-[16px]">photo_camera</span><span class="material-symbols-outlined text-[16px] text-primary" title="Schedule Override">event_repeat</span></div></td><td class="py-2 px-4"><span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-subtle text-on-surface-variant font-label text-label">In Design</span></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-surface-dim text-on-surface flex items-center justify-center text-xs font-semibold">JD</div></div></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-primary-fixed-dim text-on-primary-fixed flex items-center justify-center text-xs font-semibold">ER</div></div></td><td class="py-2 px-4 text-warning text-xs font-medium">Unresolved Question (3)</td><td class="py-2 px-4 text-right"><button class="text-on-secondary-container hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[20px]">more_vert</span></button></td></tr><tr class="hover:bg-surface-subtle transition-colors group h-[52px]"><td class="py-2 px-4 text-center"><input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer" type="checkbox"></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-medium">Sep 11, 03:00 PM</span></div></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-semibold truncate">New Mug Collection</span><span class="text-xs text-on-secondary-container flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">sell</span> Merch</span></div></td><td class="py-2 px-4 text-on-secondary-container">Image</td><td class="py-2 px-4"><div class="flex gap-1 text-on-secondary-container"><span class="material-symbols-outlined text-[16px]">photo_camera</span></div></td><td class="py-2 px-4"><span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-warning-subtle text-warning font-label text-label">Creative Review</span></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-surface-dim text-on-surface flex items-center justify-center text-xs font-semibold">MC</div></div></td><td class="py-2 px-4">-</td><td class="py-2 px-4 text-on-secondary-container text-xs">Awaiting Feedback</td><td class="py-2 px-4 text-right"><button class="text-on-secondary-container hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[20px]">more_vert</span></button></td></tr><tr class="hover:bg-surface-subtle transition-colors group h-[52px]"><td class="py-2 px-4 text-center"><input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer" type="checkbox"></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-medium">Sep 13, 09:00 AM</span></div></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-semibold truncate">Roasting Process BTS</span><span class="text-xs text-on-secondary-container flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">sell</span> Education</span></div></td><td class="py-2 px-4 text-on-secondary-container">Short-form Video</td><td class="py-2 px-4"><div class="flex gap-1 text-on-secondary-container"><span class="material-symbols-outlined text-[16px]">music_note</span></div></td><td class="py-2 px-4"><span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-success-subtle text-success font-label text-label">Ready to Publish</span></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-surface-dim text-on-surface flex items-center justify-center text-xs font-semibold">JD</div></div></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-primary-fixed-dim text-on-primary-fixed flex items-center justify-center text-xs font-semibold">ER</div></div></td><td class="py-2 px-4 text-on-secondary-container text-xs">Scheduled</td><td class="py-2 px-4 text-right"><button class="text-on-secondary-container hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[20px]">more_vert</span></button></td></tr><tr class="bg-surface-bright"><td class="py-2 px-4" colspan="10"><button class="text-on-secondary-container hover:text-on-surface flex items-center gap-2 text-xs font-medium"><span class="material-symbols-outlined text-[16px]">add</span> Quick add idea</button></td></tr><!-- Week 3 --><tr class="bg-surface-bright border-b border-border/50"><td class="py-2 px-4 font-label text-label text-on-surface font-semibold bg-surface-container-low" colspan="10">Week of Sep 15–21</td></tr><tr class="hover:bg-surface-subtle transition-colors group h-[52px]"><td class="py-2 px-4 text-center"><input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer" type="checkbox"></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-medium">Sep 16, 10:00 AM</span></div></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-semibold truncate">Community Event Recap</span><span class="text-xs text-on-secondary-container flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">sell</span> Community</span></div></td><td class="py-2 px-4 text-on-secondary-container">Carousel</td><td class="py-2 px-4"><div class="flex gap-1 text-on-secondary-container"><span class="material-symbols-outlined text-[16px]">photo_camera</span><span class="material-symbols-outlined text-[16px]">facebook</span></div></td><td class="py-2 px-4"><span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-danger-subtle text-danger font-label text-label">Changes Requested</span></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-surface-dim text-on-surface flex items-center justify-center text-xs font-semibold">MC</div></div></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-primary-fixed-dim text-on-primary-fixed flex items-center justify-center text-xs font-semibold">ER</div></div></td><td class="py-2 px-4 text-on-secondary-container text-xs">Re-editing</td><td class="py-2 px-4 text-right"><button class="text-on-secondary-container hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[20px]">more_vert</span></button></td></tr><tr class="hover:bg-surface-subtle transition-colors group h-[52px]"><td class="py-2 px-4 text-center"><input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer" type="checkbox"></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-medium">Sep 18, 01:00 PM</span></div></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-semibold truncate">Coffee Pairing Guide</span><span class="text-xs text-on-secondary-container flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">sell</span> Education</span></div></td><td class="py-2 px-4 text-on-secondary-container">Article</td><td class="py-2 px-4"><div class="flex gap-1 text-on-secondary-container"><span class="material-symbols-outlined text-[16px]">language</span></div></td><td class="py-2 px-4"><span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-subtle text-on-surface-variant font-label text-label">Draft</span></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-surface-dim text-on-surface flex items-center justify-center text-xs font-semibold">JD</div></div></td><td class="py-2 px-4">-</td><td class="py-2 px-4 text-on-secondary-container text-xs">Outline</td><td class="py-2 px-4 text-right"><button class="text-on-secondary-container hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[20px]">more_vert</span></button></td></tr><tr class="hover:bg-surface-subtle transition-colors group h-[52px]"><td class="py-2 px-4 text-center"><input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer" type="checkbox"></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-medium">Sep 20, 04:00 PM</span></div></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-semibold truncate">Fall Menu Teaser</span><span class="text-xs text-on-secondary-container flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">sell</span> Autumn Launch</span></div></td><td class="py-2 px-4 text-on-secondary-container">Short-form Video</td><td class="py-2 px-4"><div class="flex gap-1 text-on-secondary-container"><span class="material-symbols-outlined text-[16px]">photo_camera</span><span class="material-symbols-outlined text-[16px]">music_note</span></div></td><td class="py-2 px-4"><span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-danger-subtle text-danger font-label text-label">Blocked</span></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-surface-dim text-on-surface flex items-center justify-center text-xs font-semibold">MC</div></div></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-primary-fixed-dim text-on-primary-fixed flex items-center justify-center text-xs font-semibold">ER</div></div></td><td class="py-2 px-4 text-danger text-xs font-medium">Missing Assets</td><td class="py-2 px-4 text-right"><button class="text-on-secondary-container hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[20px]">more_vert</span></button></td></tr><tr class="bg-surface-bright"><td class="py-2 px-4" colspan="10"><button class="text-on-secondary-container hover:text-on-surface flex items-center gap-2 text-xs font-medium"><span class="material-symbols-outlined text-[16px]">add</span> Quick add idea</button></td></tr><!-- Week 4 --><tr class="bg-surface-bright border-b border-border/50"><td class="py-2 px-4 font-label text-label text-on-surface font-semibold bg-surface-container-low" colspan="10">Week of Sep 22–30</td></tr><tr class="hover:bg-surface-subtle transition-colors group h-[52px]"><td class="py-2 px-4 text-center"><input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer" type="checkbox"></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-medium">Sep 23, 09:00 AM</span></div></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-semibold truncate">Meet the Roaster: Part 2</span><span class="text-xs text-on-secondary-container flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">sell</span> Team Spotlight</span></div></td><td class="py-2 px-4 text-on-secondary-container">Carousel</td><td class="py-2 px-4"><div class="flex gap-1 text-on-secondary-container"><span class="material-symbols-outlined text-[16px]">photo_camera</span></div></td><td class="py-2 px-4"><span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-subtle text-on-surface-variant font-label text-label">Draft</span></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-surface-dim text-on-surface flex items-center justify-center text-xs font-semibold">JD</div></div></td><td class="py-2 px-4">-</td><td class="py-2 px-4 text-on-secondary-container text-xs">Interviewing</td><td class="py-2 px-4 text-right"><button class="text-on-secondary-container hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[20px]">more_vert</span></button></td></tr><tr class="hover:bg-surface-subtle transition-colors group h-[52px]"><td class="py-2 px-4 text-center"><input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer" type="checkbox"></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-medium">Sep 25, 11:00 AM</span></div></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-semibold truncate">Brewing at Home Series</span><span class="text-xs text-on-secondary-container flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">sell</span> Education</span></div></td><td class="py-2 px-4 text-on-secondary-container">Short-form Video</td><td class="py-2 px-4"><div class="flex gap-1 text-on-secondary-container"><span class="material-symbols-outlined text-[16px]">music_note</span></div></td><td class="py-2 px-4"><span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-subtle text-on-surface-variant font-label text-label">In Design</span></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-surface-dim text-on-surface flex items-center justify-center text-xs font-semibold">MC</div></div></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-primary-fixed-dim text-on-primary-fixed flex items-center justify-center text-xs font-semibold">ER</div></div></td><td class="py-2 px-4 text-on-secondary-container text-xs">Color Grading</td><td class="py-2 px-4 text-right"><button class="text-on-secondary-container hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[20px]">more_vert</span></button></td></tr><tr class="hover:bg-surface-subtle transition-colors group h-[52px]"><td class="py-2 px-4 text-center"><input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer" type="checkbox"></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-medium">Sep 28, 02:00 PM</span></div></td><td class="py-2 px-4"><div class="flex flex-col"><span class="font-semibold truncate">October Preview</span><span class="text-xs text-on-secondary-container flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">sell</span> Planning</span></div></td><td class="py-2 px-4 text-on-secondary-container">Image</td><td class="py-2 px-4"><div class="flex gap-1 text-on-secondary-container"><span class="material-symbols-outlined text-[16px]">photo_camera</span></div></td><td class="py-2 px-4"><span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-subtle text-on-surface-variant font-label text-label">Draft</span></td><td class="py-2 px-4"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-surface-dim text-on-surface flex items-center justify-center text-xs font-semibold">JD</div></div></td><td class="py-2 px-4">-</td><td class="py-2 px-4 text-on-secondary-container text-xs">Brainstorming</td><td class="py-2 px-4 text-right"><button class="text-on-secondary-container hover:text-on-surface opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[20px]">more_vert</span></button></td></tr><tr class="bg-surface-bright"><td class="py-2 px-4" colspan="10"><button class="text-on-secondary-container hover:text-on-surface flex items-center gap-2 text-xs font-medium"><span class="material-symbols-outlined text-[16px]">add</span> Quick add idea</button></td></tr></tbody>
+</table>
+</div>
+<!-- Quick Add Footer inside table container -->
+<div class="border-t border-border p-2 bg-surface-bright flex items-center">
+<button class="w-full text-left py-2 px-4 text-on-secondary-container hover:text-on-surface hover:bg-surface-subtle rounded transition-colors font-body text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span> Add row
+                 </button>
+</div>
+</div>
+</main>
+
+
+</body></html>

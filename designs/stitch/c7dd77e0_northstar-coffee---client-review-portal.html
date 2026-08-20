@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee - Client Review Portal</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Config defined by the Design System -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary": "#555e74",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "surface-tint": "#4d44e3",
+                    "on-tertiary": "#ffffff",
+                    "info-subtle": "#F0F9FF",
+                    "on-primary-fixed": "#0f0069",
+                    "surface": "#FFFFFF",
+                    "focus-ring": "#6366F1",
+                    "on-background": "#131c2b",
+                    "surface-bright": "#f9f9ff",
+                    "secondary-container": "#d7dff9",
+                    "primary-hover": "#4338CA",
+                    "surface-variant": "#dae3f8",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "background": "#f9f9ff",
+                    "on-error": "#ffffff",
+                    "border": "#DDE1E6",
+                    "primary-subtle": "#EEF2FF",
+                    "on-surface-variant": "#464555",
+                    "on-secondary-container": "#5a6278",
+                    "danger": "#B91C1C",
+                    "error": "#ba1a1a",
+                    "on-tertiary-fixed-variant": "#004b74",
+                    "canvas": "#F7F7F5",
+                    "tertiary-fixed-dim": "#94ccff",
+                    "tertiary": "#004c77",
+                    "outline": "#777587",
+                    "primary": "#3525cd",
+                    "surface-subtle": "#F1F3F5",
+                    "text-muted": "#7B8495",
+                    "on-secondary-fixed-variant": "#3e475b",
+                    "danger-subtle": "#FEF2F2",
+                    "inverse-surface": "#283141",
+                    "on-primary": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-container": "#bfdfff",
+                    "tertiary-container": "#00659c",
+                    "on-secondary-fixed": "#121b2e",
+                    "surface-container-highest": "#dae3f8",
+                    "surface-dim": "#d1daef",
+                    "on-primary-container": "#dad7ff",
+                    "surface-container": "#e7eeff",
+                    "outline-variant": "#c7c4d8",
+                    "tertiary-fixed": "#cde5ff",
+                    "warning": "#B45309",
+                    "primary-fixed": "#e2dfff",
+                    "inverse-primary": "#c3c0ff",
+                    "error-container": "#ffdad6",
+                    "on-secondary": "#ffffff",
+                    "success-subtle": "#ECFDF3",
+                    "success": "#15803D",
+                    "inverse-on-surface": "#ecf0ff",
+                    "surface-container-high": "#dfe8fe",
+                    "secondary-fixed": "#d9e2fc",
+                    "warning-subtle": "#FFF7E6",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed": "#001d32",
+                    "on-surface": "#131c2b",
+                    "surface-container-low": "#f0f3ff",
+                    "primary-container": "#4f46e5",
+                    "secondary-fixed-dim": "#bdc6e0"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "screen-padding": "24px",
+                    "topbar-height": "64px",
+                    "sidebar-collapsed": "72px",
+                    "gutter": "16px",
+                    "card-padding": "16px",
+                    "sidebar-expanded": "248px",
+                    "base": "4px"
+            },
+            "fontFamily": {
+                    "table-dense": [
+                            "Inter"
+                    ],
+                    "body": [
+                            "Inter"
+                    ],
+                    "page-title": [
+                            "Inter"
+                    ],
+                    "button": [
+                            "Inter"
+                    ],
+                    "label": [
+                            "Inter"
+                    ],
+                    "section-title": [
+                            "Inter"
+                    ],
+                    "card-title": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "table-dense": [
+                            "13px",
+                            {
+                                    "lineHeight": "18px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body": [
+                            "14px",
+                            {
+                                    "lineHeight": "21px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "page-title": [
+                            "28px",
+                            {
+                                    "lineHeight": "36px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "button": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "label": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "section-title": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "card-title": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="bg-canvas text-on-surface font-body antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<nav class="fixed top-0 left-0 w-full h-topbar-height z-50 flex justify-between items-center px-screen-padding bg-surface dark:bg-surface-dim border-b border-border dark:border-outline-variant transition-all duration-200 ease-in-out">
+<div class="flex items-center gap-4">
+<span class="font-page-title text-page-title text-primary dark:text-primary-fixed-dim">Client Portal</span>
+<span class="text-text-muted">|</span>
+<span class="font-section-title text-section-title text-on-surface font-medium">Northstar Coffee</span>
+</div>
+<div class="flex items-center gap-4">
+<button aria-label="help" class="text-secondary dark:text-secondary-fixed-dim hover:text-primary-hover dark:hover:text-primary-fixed transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-subtle">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<button aria-label="notifications" class="text-secondary dark:text-secondary-fixed-dim hover:text-primary-hover dark:hover:text-primary-fixed transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-subtle relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-border">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="A professional headshot of Claire Martin, a modern corporate client, wearing a tailored blazer against a clean, well-lit minimalist background. The lighting is soft and flattering, typical of a high-end agency environment, with a warm-white color balance." src="https://lh3.googleusercontent.com/aida-public/AB6AXuABRVQlLFCp-KBb4tK58WcTkbZh2xs5Hg4wmFQBuCOzA2dnlOZYBF3bKzuc2EU8UJp8L2G_bU5qt1cWeSmEErSzdMnjLsyWYv_7NcXYGxF2NdjUGd7Q5pm-gvKeP_3QEklJbOn0wRh5d_vLbruK9cNfsN__TH5i8d5JcA0wMPSBixBWcDWQvY8iPW0apJGsDS3MYcNIExjg7H9pnAtYJOPwggAD9cTFfgWErJElCK10QKluseLsKIBC_3u5nJAW-M9Gba0hRwpuRE4"/>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 mt-[64px] px-screen-padding py-8 max-w-7xl mx-auto w-full flex flex-col gap-8">
+<!-- Page Header -->
+<header class="flex flex-col gap-4">
+<div>
+<h1 class="font-page-title text-page-title text-on-surface">Creative review</h1>
+<p class="font-body text-body text-text-muted mt-1">1 item needs your decision</p>
+</div>
+<!-- Tabs -->
+<div class="flex items-center gap-8 border-b border-border">
+<button class="font-label text-label text-primary dark:text-primary-fixed-dim border-b-2 border-primary dark:border-primary-fixed-dim pb-3 -mb-[1px]">Needs review</button>
+<button class="font-label text-label text-secondary dark:text-secondary-fixed-dim pb-3 hover:text-on-surface transition-colors">Reviewed</button>
+</div>
+</header>
+<!-- Two Column Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Left Column: Carousel Preview (7 columns) -->
+<div class="lg:col-span-7 flex flex-col gap-4">
+<!-- Preview Canvas -->
+<div class="bg-surface rounded-xl border border-border overflow-hidden flex flex-col">
+<!-- Carousel Toolbar -->
+<div class="h-12 border-b border-border flex items-center justify-between px-4 bg-surface-subtle">
+<span class="font-label text-label text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">view_carousel</span>
+                            Autumn roast launch (Carousel, Version 3)
+                        </span>
+<div class="flex items-center gap-2">
+<button aria-label="Zoom out" class="w-8 h-8 flex items-center justify-center text-secondary hover:text-primary transition-colors rounded hover:bg-border">
+<span class="material-symbols-outlined text-[20px]">zoom_out</span>
+</button>
+<span class="font-label text-label text-secondary w-10 text-center">100%</span>
+<button aria-label="Zoom in" class="w-8 h-8 flex items-center justify-center text-secondary hover:text-primary transition-colors rounded hover:bg-border">
+<span class="material-symbols-outlined text-[20px]">zoom_in</span>
+</button>
+<div class="w-[1px] h-4 bg-outline-variant mx-1"></div>
+<button aria-label="Download" class="w-8 h-8 flex items-center justify-center text-secondary hover:text-primary transition-colors rounded hover:bg-border">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+</div>
+</div>
+<!-- Main Image Area -->
+<div class="relative bg-[#E5E5E5] flex items-center justify-center aspect-[4/5] md:aspect-square overflow-hidden group">
+<img alt="Autumn roast slide preview" class="w-full h-full object-cover shadow-sm transition-transform duration-300" data-alt="A beautifully styled, high-resolution lifestyle photograph of a steaming cup of artisan autumn roast coffee sitting on a rustic wooden table beside scattered dried autumn leaves and cinnamon sticks. The lighting is dramatic, warm, and inviting, with rich earthy tones, perfect for a premium coffee brand's social media campaign." src="https://lh3.googleusercontent.com/aida-public/AB6AXuArznoObgWP5TaP3rmTCB_E6PjzToREOw3iVm2GRDggrtSArCGTH80kU9lLFZZtTsSit2E7W7PXxASDrbdpnJUYW9NJyRtrrl32Kx0yVif0KaZ4iFtsQWmCy8NJ7ztZYPEM38AflIk0yj5dtLRwsgUr7GZueZzUPEXg7-vIceVfmO_JDQ0_b-OB6u9hS39nzaGZ-B86bG3KsL2yaBwEr6UeSUrZvVAVFIdq2aurPdCFXfzwX-LDEQ4SoYpGIvb8QN06BJ0xMjaUqEk"/>
+<!-- Navigation Overlay -->
+<div class="absolute inset-0 flex items-center justify-between px-4 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="w-10 h-10 rounded-full bg-surface/90 shadow flex items-center justify-center text-on-surface hover:text-primary transition-colors hover:scale-105 active:scale-95">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-surface/90 shadow flex items-center justify-center text-on-surface hover:text-primary transition-colors hover:scale-105 active:scale-95">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Thumbnail Strip -->
+<div class="p-4 bg-surface flex justify-center gap-3 border-t border-border overflow-x-auto">
+<div class="w-16 h-16 rounded border-2 border-primary overflow-hidden cursor-pointer relative shrink-0">
+<img alt="Slide 1" class="w-full h-full object-cover" data-alt="Thumbnail showing a close-up of dark roasted coffee beans, richly lit with warm tones, part of a premium coffee brand's social carousel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC6mubNyxGFSoCm0tRbjtNKFNH3hb2JIAgn-SliJOuA-_JNp6_CJRB0zzxJX3ejLa67sC-xdI74SB2dYtb-0cC22g4ClIWl3qEs-h1Gt6HSmIm_d9vUAC4oKkuPpEDIigjhoNpYaHpjhrMZRQlh1sg9C8CNbJIENhx_7ofvy9x2iMtT61nZnan9JdWZ53YS1ioj47oipC4JeIY_CycOeU3BCB42qRoXE36edUMLtK2uVfmzwtpK1nXwyndWDHxNMvL8tML3-ixml7M"/>
+</div>
+<div class="w-16 h-16 rounded border border-border overflow-hidden cursor-pointer opacity-70 hover:opacity-100 transition-opacity shrink-0">
+<img alt="Slide 2" class="w-full h-full object-cover" data-alt="Thumbnail showing a barista pouring latte art with autumnal spices, warm lighting, part of a premium coffee brand's social carousel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUL-saxjEqwF7sutKNDlPNoEz4-2uGLj3AUQxSDjHuGLooIDIAuiAKZ_vFbhYUinFaLoTTbzid3mDSLu6Gn77Qow0PKoV7t6sZj-KYCQxsWHHiF4KLHnQi--F6G6RdJD-rR-8-m5tGaYVDvaXPK2mYj358CCcPFYn3J9YUFwNUvBuCjfaQvkrO1vyYbPKkpv6U3OkHDao2a78H9R0m-vo4-7tZ5i45HQc11mtpB0OdzwG4RS6z0aZTEGbYVi307fgiQrl4MnQiquQ"/>
+</div>
+<div class="w-16 h-16 rounded border border-border overflow-hidden cursor-pointer opacity-70 hover:opacity-100 transition-opacity shrink-0">
+<img alt="Slide 3" class="w-full h-full object-cover" data-alt="Thumbnail showing a cozy outdoor autumn scene with someone holding a coffee mug, soft focus background, part of a premium coffee brand's social carousel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIbW2wYlppCgDH707SrWVG2HP6-wfSOK7rRK6LY-2Y4kBP7cwDqWdGVDlrVPgDnCvjzzeQYMbCM4PfVa3ou3db1haTxz4vqCNyKNSMaEo5vFRD5zTETO727Y9X7HD7laRdMpwk7BPIQIwwWtLzMedMDkieStOpZASEFGYxVGv45Etg_CrgaGMLmG8f-xoJOiB99qIhAL1zdX7g72EA9ei-0zZubYaMhabzxKi2NfFKur9p7PANUnX-ZQSPg1_VlMGC6SJCEH1IOEM"/>
+</div>
+<div class="w-16 h-16 rounded border border-border overflow-hidden cursor-pointer opacity-70 hover:opacity-100 transition-opacity shrink-0">
+<img alt="Slide 4" class="w-full h-full object-cover" data-alt="Thumbnail showing the Autumn Roast coffee packaging bag with stylized typography and fallen leaves, part of a premium coffee brand's social carousel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1S24g8aQMy-LQKgumLcbcsRQE_fxzRSAl5AE5jhwsnSgOGiOGa2zaANim0e_1Xt6QGUbpOCEtrEuc3TrLpwi3PrfI7aOcuhbzwtrV9bPu1ACSWrOUmXp5ra312E4mVlYjNIZqv-e0KQXC_v04wMhn7oFC34ygefKkGA9pwpbpijhcnQV0vYVpjOQzGxQmmoXeK9kZNSBAUdYFrGlMb8mwtsLR_rtqH9z4aFl3Y-_QuZh9hFXelcZcW19hp_FXuefMLIaS86S1qRw"/>
+</div>
+<div class="w-16 h-16 rounded border border-border overflow-hidden cursor-pointer opacity-70 hover:opacity-100 transition-opacity shrink-0">
+<img alt="Slide 5" class="w-full h-full object-cover" data-alt="Thumbnail showing a promotional call to action graphic for a coffee brand, clean typography over a warm autumn background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDFQIEsUxvq77Ff_umeH1OqYHwnr-qX8mzHywhXG-lhu6jbe0W_DAzzGLgL35AcPkyckMf09ZHL8SFRVC_QphLoz3PkM5LNdnfFhYhV1BjjcHRkinNyWZ9sLbRJa-O8WPYh5HhB_87yOXiD-apJ4s4tTxvScCn6QXhDJyNxlqpJ2WTDfw4NeiG-q53SJURfD8ELzc2Uzb1ydD_34YVkka9tnXlmA_Byqha65So36VeVoZMbZpI4KV0X3Q5kB03vbojhBXO7rWGFbdE"/>
+</div>
+</div>
+</div>
+<div class="flex justify-end">
+<button class="font-button text-button text-secondary hover:text-primary flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[18px]">open_in_new</span>
+                        Open delivery link
+                    </button>
+</div>
+</div>
+<!-- Right Column: Approval Card & Details (5 columns) -->
+<div class="lg:col-span-5 flex flex-col gap-6">
+<!-- Creative Approval Card -->
+<div class="bg-surface rounded-xl border border-border p-card-padding shadow-sm flex flex-col gap-6">
+<div>
+<h2 class="font-card-title text-card-title text-on-surface">Creative approval</h2>
+<div class="flex flex-col gap-1 mt-3">
+<span class="font-label text-label text-text-muted">Submitted by</span>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full overflow-hidden bg-surface-subtle">
+<img alt="Maya Chen" class="w-full h-full object-cover" data-alt="A small profile picture of Maya Chen, a creative designer, looking professional and friendly against a simple white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8VS_ksD1gDnOX5aTRSBCvrHaK6c86zUQr8Z4QSam9QQ96VvPpp1IusKDRy_cwy5ghiukUorELaVPz7fe_jexQj3lzkf_Na42T-rd2xoLzAUIh70R-42H1XdthOzvB5rV8sd0jB55NqGzPtUjIJhTkWnqbMWRjpaRCFW39ZJXDXh5Bzi2TpleT0Kurt7VXgjgBZjWyqmToH96wlGsxXIdAkXmyAc5wb1tVOh-ZVx6jS2tPZkGaPsLKk6i5U3tc5-rPMhWgFZcwNPY"/>
+</div>
+<span class="font-body text-body text-on-surface font-medium">Maya Chen (Designer)</span>
+</div>
+</div>
+<div class="flex flex-col gap-1 mt-3">
+<span class="font-label text-label text-text-muted">Agency contact</span>
+<div class="flex items-center gap-2">
+<span class="font-body text-body text-on-surface font-medium">Daniel Kim</span>
+</div>
+</div>
+</div>
+<!-- Meta Details -->
+<div class="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+<div class="flex flex-col gap-1">
+<span class="font-label text-label text-text-muted flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                Schedule
+                            </span>
+<span class="font-body text-body text-on-surface">Sep 18 2026<br/>10:00 AM (Europe/Vienna)</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-label text-label text-text-muted flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">campaign</span>
+                                Channels
+                            </span>
+<div class="flex flex-wrap gap-2 mt-1">
+<span class="px-2 py-0.5 rounded-full bg-surface-subtle border border-border font-label text-label text-secondary">Instagram</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-subtle border border-border font-label text-label text-secondary">Facebook</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-subtle border border-border font-label text-label text-secondary">LinkedIn</span>
+</div>
+</div>
+</div>
+<!-- Strategic Brief -->
+<div class="flex flex-col gap-2 pt-4 border-t border-border">
+<span class="font-label text-label text-text-muted">Strategic brief</span>
+<p class="font-body text-body text-on-surface bg-canvas p-3 rounded-lg border border-border">
+                            Introduce the new seasonal blend to drive early morning foot traffic and online bean sales. Tone should be warm, inviting, and slightly nostalgic.
+                        </p>
+</div>
+<!-- Caption Preview -->
+<div class="flex flex-col gap-2 pt-4 border-t border-border">
+<span class="font-label text-label text-text-muted">Planned caption</span>
+<div class="bg-surface-subtle p-3 rounded-lg border border-border">
+<p class="font-body text-body text-on-surface">
+                                Crisp mornings call for warm cups. 🍂 Meet our new Autumn Roast—notes of toasted pecan, maple, and a hint of cinnamon. Available in-store and online starting tomorrow.<br/><br/>#NorthstarCoffee #AutumnRoast #CoffeeLovers
+                            </p>
+</div>
+</div>
+</div>
+<!-- Decision Area -->
+<div class="bg-surface rounded-xl border border-border p-card-padding shadow-sm flex flex-col gap-5 border-l-4 border-l-primary">
+<h3 class="font-card-title text-card-title text-on-surface">Your decision</h3>
+<div class="flex flex-col gap-3">
+<button class="w-full h-10 rounded-lg bg-primary-container text-on-primary font-button text-button flex items-center justify-center gap-2 hover:bg-primary-hover transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+                            Approve
+                        </button>
+<button class="w-full h-10 rounded-lg bg-surface border border-border text-on-surface font-button text-button flex items-center justify-center gap-2 hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit_note</span>
+                            Request changes
+                        </button>
+</div>
+<div class="flex flex-col gap-1 pt-4">
+<label class="font-label text-label text-on-surface flex justify-between" for="feedback">
+                            Feedback for the agency
+                        </label>
+<textarea class="w-full rounded-lg border border-border bg-surface p-3 font-body text-body text-on-surface focus:ring-2 focus:ring-focus-ring focus:border-transparent outline-none resize-none" id="feedback" placeholder="Add your comments here..." rows="3"></textarea>
+<p class="font-label text-[11px] text-text-muted">A comment is required when requesting changes.</p>
+</div>
+<div class="flex items-start gap-2 bg-info-subtle p-3 rounded-lg border border-blue-100">
+<span class="material-symbols-outlined text-[16px] text-tertiary-container mt-0.5">lock</span>
+<p class="font-body text-table-dense text-tertiary-container">
+                            You will not see the agency's internal discussions. This feedback goes directly to your agency contact.
+                        </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Shared Conversation Section -->
+<div class="mt-4 pt-8 border-t border-border flex flex-col gap-6">
+<h3 class="font-section-title text-section-title text-on-surface">Shared conversation</h3>
+<div class="max-w-3xl flex flex-col gap-6">
+<!-- Agency Comment -->
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-subtle shrink-0">
+<img alt="Daniel Kim" class="w-full h-full object-cover" data-alt="A professional profile picture of Daniel Kim, agency account manager, wearing a smart casual shirt in a modern office setting with bright, natural lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBU7Qv1H809A4M-M7J8wd0AvoEIuv4Xuo9V8P95116ePxqaxdBXIKTW9uQC23qiPq3AU22ixAGBEI9VkRyhFyQysiXHrGaHFFfu2BASRoiQNZuMuRNwpxhdBj3_lL8PPtZZWWnapJnM-R7VOTaiJCKDy0-fKK7IWoUJiBaFvuPbqmaeGGhWMWlN1yQZftcUhaoMTfDqcrvM1HwaXXY4R2LBWE1LQ6e9iCv3WrkRlp3ygIqKSO8tSFx7qBDgho9MaCFOwsLJw900Dss"/>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-baseline gap-2">
+<span class="font-body text-body text-on-surface font-medium">Daniel Kim</span>
+<span class="font-label text-label text-text-muted">Agency contact • Sep 10, 2:15 PM</span>
+</div>
+<div class="bg-surface border border-border p-3 rounded-lg rounded-tl-none font-body text-body text-on-surface">
+                            Hi Claire! Here is version 3 of the carousel. Maya updated the slide 2 crop as you requested, and we dialed back the contrast on the packaging shot to make the text more legible. Let us know if this is good to go for next week's schedule!
+                        </div>
+</div>
+</div>
+<!-- Agency Comment (Designer) -->
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-subtle shrink-0">
+<img alt="Maya Chen" class="w-full h-full object-cover" data-alt="A small profile picture of Maya Chen, a creative designer, looking professional and friendly against a simple white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuDa5Gaqp2Eks9YYoTRhZDjG84o7W-f1xpcojTBd2G82zhab8QAQbCeDWhY8GgIZSSHQvKCTkb_N4NDyM_jimCxCsvhpz6DGYSo9MbWh-wPHMmopzcG7ut3Lo_W6vo7AL9JLg5-eUdAnrsvtBjkRbrZmwsXyfOI-GFsmYG0af1Pvr8vclYOcHZWev_nmDgop5LTrNPvtGD4F1lSl009OU3IjuK3FVVJUyIpG_RHmXpq1B_39LCJaAzTajJSuihf0WkQ12Ry85uk3k"/>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-baseline gap-2">
+<span class="font-body text-body text-on-surface font-medium">Maya Chen</span>
+<span class="font-label text-label text-text-muted">Designer • Sep 10, 2:40 PM</span>
+</div>
+<div class="bg-surface border border-border p-3 rounded-lg rounded-tl-none font-body text-body text-on-surface">
+                            Just a quick note that the final high-res files will be exported without the internal watermarks once approved.
+                        </div>
+</div>
+</div>
+<!-- Reply Field -->
+<div class="flex gap-4 mt-2">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-subtle border border-border shrink-0">
+<img alt="Claire Martin" class="w-full h-full object-cover" data-alt="A professional headshot of Claire Martin, a modern corporate client, wearing a tailored blazer against a clean, well-lit minimalist background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQnuse46gkF_JxaKKO9icbIlPJQ5RTftHmaHMthJ401CbMNj-1ErZclhYy1vOiW8Pu6MNoR8Sh4td3ff2Qk5d48FEKfzkuYHQVpR-4IX80XnqJoCDQuUicsw_ADBKvSUG8yKbm79gqg1p0fTcWsDXtPEREthOMuZoBUnz7Z38mWYHsTlNcLpIZ2cp14gUUhHgVKSDN9MlwgPEpG4dlXebNVnjcvdzIHHN4kHinThf_87iH9Yd-6IKqtPl-4GyJVQkUEDe0k-Ox4Do"/>
+</div>
+<div class="flex-1 flex flex-col gap-2">
+<div class="relative">
+<textarea class="w-full rounded-lg border border-border bg-surface p-3 pr-12 font-body text-body text-on-surface focus:ring-2 focus:ring-focus-ring focus:border-transparent outline-none resize-none" placeholder="Reply to Daniel and Maya..." rows="2"></textarea>
+<button class="absolute bottom-3 right-3 text-secondary hover:text-primary transition-colors">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
