@@ -62,7 +62,6 @@ export async function signInDevUser(input: DevSignInInput): Promise<DevSignInRes
   }
 
   const role: "agency_admin" | "user" = input.role === "user" ? "user" : "agency_admin";
-  const name = input.name?.trim() || email.split("@")[0]!;
 
   // Find or create the user. Email-verified at sign-in time.
   const existing = await db
@@ -70,6 +69,12 @@ export async function signInDevUser(input: DevSignInInput): Promise<DevSignInRes
     .from(users)
     .where(sql`lower(${users.email}) = ${email}`)
     .limit(1);
+
+  // Name resolution order:
+  //   1. Caller-supplied name on this call
+  //   2. Stored name on an existing user (preserves the name they signed in with)
+  //   3. Email local-part as a last-resort default
+  const name = input.name?.trim() || existing[0]?.name || email.split("@")[0]!;
 
   let userId: string;
   if (existing[0]) {
