@@ -115,21 +115,33 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
             <CardTitle className="mb-3">Color Palette</CardTitle>
             {assetsByKind.color.length ? (
               <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {assetsByKind.color.map((asset) => (
-                  <li
-                    key={asset.id}
-                    className="border-border bg-surface-subtle flex items-center gap-3 rounded-[var(--radius-control)] border p-3"
-                  >
-                    <span
-                      className="border-border h-10 w-10 shrink-0 rounded border"
-                      style={{ backgroundColor: asset.url ?? "#e5e7eb" }}
-                      aria-hidden="true"
-                    />
-                    <span className="text-body text-fg-primary truncate font-semibold">
-                      {asset.name}
-                    </span>
-                  </li>
-                ))}
+                {assetsByKind.color.map((asset) => {
+                  // The hex lives in the jsonb `value` column. Older
+                  // rows may have it under different keys; we try a
+                  // few candidates and fall back to a neutral swatch.
+                  const v = (asset.value ?? {}) as Record<string, unknown>;
+                  const hex =
+                    (typeof v.hex === "string" && v.hex) ||
+                    (typeof v.color === "string" && v.color) ||
+                    (typeof v.value === "string" && v.value) ||
+                    "#e5e7eb";
+                  return (
+                    <li
+                      key={asset.id}
+                      className="border-border bg-surface-subtle flex items-center gap-3 rounded-[var(--radius-control)] border p-3"
+                    >
+                      <span
+                        className="border-border h-10 w-10 shrink-0 rounded border"
+                        style={{ backgroundColor: hex }}
+                        aria-hidden="true"
+                      />
+                      <span className="text-body text-fg-primary truncate font-semibold">
+                        {asset.name}
+                      </span>
+                      <span className="text-label text-fg-muted ml-auto font-mono">{hex}</span>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="text-body text-fg-muted py-4">No color tokens yet.</p>
