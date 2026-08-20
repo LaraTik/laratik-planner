@@ -38,7 +38,7 @@ export function MobileNav({ canCreate }: { canCreate: boolean }) {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "text-label focus-visible:ring-focus-ring flex min-h-[var(--control-touch)] flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-2 font-semibold transition focus-visible:ring-2 focus-visible:outline-none",
+                  "text-label focus-visible:ring-focus-ring flex min-h-[var(--control-touch)] flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-2 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
                   active
                     ? "bg-primary-subtle text-primary"
                     : "text-fg-secondary hover:bg-surface-subtle",

@@ -26,7 +26,7 @@ export function MonthNav({ month, buildHref, className }: MonthNavProps) {
       <Link
         aria-label="Previous month"
         href={buildHref(-1)}
-        className="border-border bg-surface focus-visible:ring-focus-ring rounded-[var(--radius-control)] border p-2 transition focus:outline-none focus-visible:ring-2"
+        className="border-border bg-surface focus-visible:ring-focus-ring rounded-[var(--radius-control)] border p-2 transition-colors focus:outline-none focus-visible:ring-2"
       >
         <ChevronLeft className="h-4 w-4" />
       </Link>
@@ -34,7 +34,7 @@ export function MonthNav({ month, buildHref, className }: MonthNavProps) {
       <Link
         aria-label="Next month"
         href={buildHref(1)}
-        className="border-border bg-surface focus-visible:ring-focus-ring rounded-[var(--radius-control)] border p-2 transition focus:outline-none focus-visible:ring-2"
+        className="border-border bg-surface focus-visible:ring-focus-ring rounded-[var(--radius-control)] border p-2 transition-colors focus:outline-none focus-visible:ring-2"
       >
         <ChevronRight className="h-4 w-4" />
       </Link>

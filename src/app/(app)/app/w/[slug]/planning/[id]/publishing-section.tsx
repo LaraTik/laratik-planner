@@ -82,7 +82,7 @@ export function PublishingSection({
                 <p className="text-label text-fg-muted mt-1 break-all">
                   <a
                     href={pub.publishedUrl}
-                    className="text-primary underline-offset-4 hover:underline"
+                    className="text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
                     target="_blank"
                     rel="noreferrer"
                   >

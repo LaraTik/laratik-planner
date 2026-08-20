@@ -50,7 +50,7 @@ export default async function WorkflowBoardPage({ params }: { params: Promise<{ 
                     <Link
                       key={item.id}
                       href={`/app/w/${slug}/planning/${item.id}`}
-                      className="border-border bg-surface hover:border-primary focus-visible:ring-focus-ring block rounded-[var(--radius-control)] border p-3 transition focus:outline-none focus-visible:ring-2"
+                      className="border-border bg-surface hover:border-primary focus-visible:ring-focus-ring block rounded-[var(--radius-control)] border p-3 transition-colors focus:outline-none focus-visible:ring-2"
                     >
                       <p className="text-body text-fg-primary line-clamp-2 font-semibold">
                         {item.title}

@@ -41,7 +41,7 @@ export default async function DesignQueuePage({ params }: { params: Promise<{ sl
             <Link
               key={row.id}
               href={`/app/w/${slug}/planning/${row.id}`}
-              className="border-border bg-surface hover:border-primary focus-visible:ring-focus-ring rounded-[var(--radius-card)] border p-4 transition focus:outline-none focus-visible:ring-2"
+              className="border-border bg-surface hover:border-primary focus-visible:ring-focus-ring rounded-[var(--radius-card)] border p-4 transition-colors focus:outline-none focus-visible:ring-2"
             >
               <p className="text-body text-fg-primary font-semibold">{row.title}</p>
               <p className="text-label text-fg-muted my-3">

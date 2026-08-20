@@ -83,13 +83,13 @@ export default async function WorkspaceOverviewPage({
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/app/w/${slug}/planning`}
-              className="border-border bg-surface text-fg-primary hover:bg-surface-subtle text-body inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold transition"
+              className="border-border bg-surface text-fg-primary hover:bg-surface-subtle text-body inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold transition-colors"
             >
               Planning
             </Link>
             <Link
               href={`/app/w/${slug}/calendar`}
-              className="border-border bg-surface text-fg-primary hover:bg-surface-subtle text-body inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold transition"
+              className="border-border bg-surface text-fg-primary hover:bg-surface-subtle text-body inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold transition-colors"
             >
               Calendar
             </Link>

@@ -21,7 +21,7 @@ export function KpiCard({ label, value, icon, href, danger = false }: KpiCardPro
   return (
     <Link
       href={href}
-      className="border-border bg-surface hover:border-primary focus-visible:ring-focus-ring rounded-[var(--radius-card)] border p-4 transition focus:outline-none focus-visible:ring-2"
+      className="border-border bg-surface hover:border-primary focus-visible:ring-focus-ring rounded-[var(--radius-card)] border p-4 transition-colors focus:outline-none focus-visible:ring-2"
     >
       <div className={cn(danger ? "text-danger" : "text-primary")}>{icon}</div>
       <p className="text-title-page text-fg-primary mt-3 font-semibold">{value}</p>

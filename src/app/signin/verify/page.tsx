@@ -24,7 +24,7 @@ export default function VerifyRequestPage() {
         Didn&apos;t get it? Check spam, or{" "}
         <Link
           href="/signin"
-          className="text-primary underline underline-offset-4 hover:no-underline"
+          className="text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-2 py-1 underline underline-offset-4 hover:no-underline focus:outline-none focus-visible:ring-2"
         >
           try again
         </Link>

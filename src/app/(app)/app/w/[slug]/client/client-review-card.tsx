@@ -70,7 +70,7 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
                 href={link.url}
                 target="_blank"
                 rel="noreferrer"
-                className="text-body text-primary inline-flex items-center gap-1 font-semibold hover:underline"
+                className="text-body text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-1 font-semibold hover:underline focus:outline-none focus-visible:ring-2"
               >
                 {link.label}
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />

@@ -41,7 +41,10 @@ export function PageHeader({
     >
       <div className="min-w-0 flex-1">
         {eyebrow ? <p className="text-label text-fg-muted">{eyebrow}</p> : null}
-        <h1 id={titleId} className="text-title-page text-fg-primary font-semibold break-words">
+        <h1
+          id={titleId}
+          className="text-title-page text-fg-primary font-semibold text-balance break-words"
+        >
           {title}
         </h1>
         {description ? <p className="text-body text-fg-secondary mt-1">{description}</p> : null}

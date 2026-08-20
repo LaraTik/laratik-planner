@@ -55,7 +55,7 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
                     href={row.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-label text-primary inline-flex items-center gap-1 underline-offset-4 hover:underline"
+                    className="text-label text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
                   >
                     Open account <ExternalLink className="h-3 w-3" />
                   </a>

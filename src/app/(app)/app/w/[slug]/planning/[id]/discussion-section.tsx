@@ -213,7 +213,7 @@ function CommentItem({
             <button
               type="button"
               onClick={onReply}
-              className="text-label text-primary hover:underline focus:outline-none focus-visible:underline"
+              className="text-label text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-1.5 py-0.5 hover:underline focus:outline-none focus-visible:ring-2"
             >
               <Reply className="mr-1 inline h-3 w-3" aria-hidden="true" /> Reply
             </button>

@@ -82,7 +82,7 @@ export function Sidebar({ user }: { user: { name: string; isAdmin: boolean } }) 
           href="/app/account"
           aria-current={isActivePath("/app/account", pathname) ? "page" : undefined}
           className={cn(
-            "focus-visible:ring-focus-ring flex items-center gap-3 rounded-[var(--radius-control)] px-2 py-2 transition focus:outline-none focus-visible:ring-2",
+            "focus-visible:ring-focus-ring flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-2 transition-colors focus:outline-none focus-visible:ring-2",
             isActivePath("/app/account", pathname)
               ? "bg-primary-subtle text-primary"
               : "hover:bg-surface-subtle",
@@ -134,7 +134,7 @@ function SidebarLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "text-body focus-visible:ring-focus-ring flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 font-semibold transition focus-visible:ring-2 focus-visible:outline-none",
+        "text-body focus-visible:ring-focus-ring flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
         active ? "bg-primary-subtle text-primary" : "text-fg-primary hover:bg-surface-subtle",
       )}
     >

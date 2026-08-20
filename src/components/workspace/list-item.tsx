@@ -60,9 +60,18 @@ export function ListItem({
   const padding = density === "compact" ? "py-2" : "py-3";
   return (
     <li
-      className={cn("hover:bg-surface-subtle focus-within:bg-surface-subtle transition", className)}
+      className={cn(
+        "hover:bg-surface-subtle focus-within:bg-surface-subtle transition-colors",
+        className,
+      )}
     >
-      <Link href={href} className={cn("flex items-center gap-3 px-4 sm:gap-4", padding)}>
+      <Link
+        href={href}
+        className={cn(
+          "focus-visible:bg-surface-subtle focus-visible:ring-focus-ring flex items-center gap-3 px-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset sm:gap-4",
+          padding,
+        )}
+      >
         {leading ? (
           <span className="hidden shrink-0 sm:inline-flex" aria-hidden="true">
             {leading}

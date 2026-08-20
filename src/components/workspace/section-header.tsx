@@ -30,7 +30,7 @@ export function SectionHeader({
       {actionHref && actionLabel ? (
         <Link
           href={actionHref}
-          className="text-label text-primary underline-offset-4 hover:underline"
+          className="text-label text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 transition-colors hover:underline focus:outline-none focus-visible:ring-2"
         >
           {actionLabel} →
         </Link>
