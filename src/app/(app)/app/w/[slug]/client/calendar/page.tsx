@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { and, eq, gte, inArray, isNull, lt } from "drizzle-orm";
+import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
@@ -53,7 +54,15 @@ export default async function ClientCalendarPage({
       <PageHeader
         eyebrow={workspace.name}
         title="Client calendar"
-        description="Read-only approved and review-stage content for this month."
+        description={
+          <>
+            Read-only approved and review-stage content for this month.
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {workspace.timezone}
+            </span>
+          </>
+        }
       />
       <Card padding="none">
         <ul className="divide-border divide-y">

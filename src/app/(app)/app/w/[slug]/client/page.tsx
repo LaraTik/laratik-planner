@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { and, eq, inArray, isNull } from "drizzle-orm";
+import { Calendar, Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
@@ -66,12 +67,21 @@ export default async function ClientReviewPortalPage({
       <PageHeader
         eyebrow={workspace.name}
         title="Client review"
-        description="Creative deliveries waiting for your decision."
+        description={
+          <>
+            Creative deliveries waiting for your decision.
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {workspace.timezone}
+            </span>
+          </>
+        }
         action={
           <Link
             href={`/app/w/${slug}/client/calendar`}
-            className="border-border bg-surface text-body hover:bg-surface-subtle inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 py-2 font-semibold transition-colors"
+            className="border-border bg-surface text-body hover:bg-surface-subtle inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] border px-3 py-2 font-semibold transition-colors"
           >
+            <Calendar className="h-4 w-4" aria-hidden="true" />
             View calendar
           </Link>
         }

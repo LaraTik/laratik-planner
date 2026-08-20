@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { and, count, eq, gte } from "drizzle-orm";
+import { Bot, Clock, ShieldCheck } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
@@ -9,7 +10,6 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
-import { Bot, ShieldCheck } from "lucide-react";
 
 export default async function AiSettingsPage({ params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();
@@ -31,7 +31,15 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
       <PageHeader
         eyebrow={workspace.name}
         title="AI settings"
-        description="Environment-managed assistance with human-controlled insert and replace."
+        description={
+          <>
+            Environment-managed assistance with human-controlled insert and replace.
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {workspace.timezone}
+            </span>
+          </>
+        }
       />
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
