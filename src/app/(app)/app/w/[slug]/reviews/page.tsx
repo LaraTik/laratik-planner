@@ -10,6 +10,7 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Card } from "@/components/ui/card";
+import { KpiTile } from "@/components/workspace/kpi-tile";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlanningViewToggle } from "@/components/workspace/planning-view-toggle";
 import { humanFormat } from "@/lib/content/status";
@@ -69,52 +70,22 @@ export default async function ReviewsQueuePage({ params }: { params: Promise<{ s
       />
 
       <section aria-label="Reviews KPIs" className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Card padding="sm" className="flex flex-col gap-1.5">
-          <span className="text-label text-fg-muted inline-flex items-center gap-1.5 font-semibold tracking-wide uppercase">
-            <Inbox className="h-3.5 w-3.5" aria-hidden="true" />
-            Pending
-          </span>
-          <span className="text-title-page text-fg-primary text-3xl leading-none font-bold">
-            {rows.length}
-          </span>
-        </Card>
-        <Card
-          padding="sm"
-          className={
-            overdueCount > 0
-              ? "border-danger-subtle bg-danger-subtle flex flex-col gap-1.5"
-              : "flex flex-col gap-1.5"
-          }
-        >
-          <span
-            className={
-              overdueCount > 0
-                ? "text-label text-danger inline-flex items-center gap-1.5 font-semibold tracking-wide uppercase"
-                : "text-label text-fg-muted inline-flex items-center gap-1.5 font-semibold tracking-wide uppercase"
-            }
-          >
-            <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
-            Overdue
-          </span>
-          <span
-            className={
-              overdueCount > 0
-                ? "text-title-page text-danger text-3xl leading-none font-bold"
-                : "text-title-page text-fg-primary text-3xl leading-none font-bold"
-            }
-          >
-            {overdueCount}
-          </span>
-        </Card>
-        <Card padding="sm" className="flex flex-col gap-1.5">
-          <span className="text-label text-fg-muted inline-flex items-center gap-1.5 font-semibold tracking-wide uppercase">
-            <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-            On time
-          </span>
-          <span className="text-title-page text-fg-primary text-3xl leading-none font-bold">
-            {rows.length - overdueCount}
-          </span>
-        </Card>
+        <KpiTile
+          icon={<Inbox className="h-3.5 w-3.5" aria-hidden="true" />}
+          label="Pending"
+          value={rows.length}
+        />
+        <KpiTile
+          icon={<Calendar className="h-3.5 w-3.5" aria-hidden="true" />}
+          label="Overdue"
+          value={overdueCount}
+          tone={overdueCount > 0 ? "danger" : "default"}
+        />
+        <KpiTile
+          icon={<Clock className="h-3.5 w-3.5" aria-hidden="true" />}
+          label="On time"
+          value={rows.length - overdueCount}
+        />
       </section>
 
       {rows.length ? (
