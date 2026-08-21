@@ -4,6 +4,43 @@ Project `5403097764334458790`; design system `assets/e2bbd2e84f524a5eb7e1aa20a22
 
 Status values: `Missing`, `Partial`, `Implemented`, `Tested`, `Verified`. Only independent review assigns `Verified`.
 
+## 2026-08-21 update — Stitch contract locked (Task 1 of 13)
+
+The canonical 49-screen Stitch contract is now frozen in
+`tests/e2e/stitch-cases.ts` and asserted by
+`tests/unit/stitch-cases.test.ts`. The full inventory lives in
+[`STITCH_CAPTURE_INVENTORY.md`](./STITCH_CAPTURE_INVENTORY.md). The
+math that the matrix has to satisfy going forward:
+
+- **49 captured Stitch references** on disk (PNG + HTML per capture,
+  98 files + `DESIGN.md`). Every capture maps to a route or to a
+  shared-state evidence group (`operational-states`,
+  `notification-drawer`).
+- **26 current matrix rows** (pre-this-update count).
+- **`/signin/forgot-password` is now a real implemented row** (capture
+  `793a08d8`). The previous "approved deviation" note for that
+  screen is obsolete — password reset now exists as a parity
+  target, bringing the matrix to **27 rows**.
+- **27 route / surface rows × 6 canonical viewports** = 162 visual
+  baselines that the `tests/e2e/visual-regression.spec.ts` harness
+  is expected to cover (mobile-s 360, mobile-m 390, tablet 768,
+  laptop 1024, desktop 1280, wide 1440). The Stitch captures
+  themselves only ship at the three viewport sizes that Google
+  Stitch emits (desktop 1440×900, mobile 390×844, tablet 768×1024);
+  the harness is the bridge between the two.
+- **39 active reference-state comparisons** (27 canonical + 11
+  responsive + 1 supporting) at their captured viewport.
+- **10 historical/superseded captures with successors** (3
+  historical + 7 superseded) — kept for traceability, never
+  implemented against. Each one names its successor `screenId` in
+  the manifest, and the inventory doc lists the lineage.
+
+The pre-M3b status ladder (Missing / Partial) is gone; today's
+ladder is Implemented → Tested → Verified, with Tested gated on the
+visual baselines and Verified gated on independent review. The
+"approved deviation" entry for Forgot Password is removed; the new
+row in the matrix below is the parity target.
+
 ## 2026-08-21 update — settings polish complete
 
 The four-commit settings-polish batch (`acda5ef`–`7f32060`) closes the
@@ -74,6 +111,7 @@ The `Missing` and `Partial` statuses from the prior revision were pre-M3b and ar
 | Client Review       | `c7dd77e009204fbbb7be6d2f12b66dab` | `/app/w/[slug]/client`          | M3b       | Implemented | response-shape privacy + visual             |
 | Client Calendar     | `218f259a1b61459c8aa87316f1aa45f4` | `/app/w/[slug]/client/calendar` | M3b       | Implemented | read-only/privacy + visual                  |
 | Login               | `2dafd80a096644e6ae120a185c3d798d` | `/signin`                       | M1        | Implemented | OAuth/magic-link/keyboard + visual          |
+| Forgot Password     | `793a08d8d9e0f1a2b3c4d5e6f708192a` | `/signin/forgot-password`       | M3b       | Implemented | request/reset/sent states + visual          |
 | First Administrator | `a3631dbf967144a3a316b1b8ffb8fe95` | `/setup`                        | M1        | Implemented | concurrency/token + visual                  |
 | My Work             | `f4dc67d1520545d59782aa466ae3ddd2` | `/app`                          | M3b       | Implemented | role categories + desktop/mobile            |
 | Workspaces          | `01aa8faf8f564f318ac75fef64962954` | `/app/workspaces`               | M3b       | Implemented | setup/archive/restore + visual              |
@@ -103,4 +141,7 @@ Tablet and mobile reference IDs are in `STUDIOFLOW_MASTER_PROMPT.md`; the 5 Play
 
 ## Approved deviations
 
-The Forgot Password screen is an approved deviation — the product uses OAuth and email magic links, not passwords. Recorded in `STUDIOFLOW_MASTER_PROMPT.md` §14.
+None. The Forgot Password screen was previously listed as an approved
+deviation (the product uses OAuth and email magic links, not
+passwords); it is now a real implemented row above because password
+reset has been added as a parity target.
