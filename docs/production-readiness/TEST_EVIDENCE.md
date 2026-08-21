@@ -92,3 +92,36 @@ TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_t
   pnpm test:integration                 # 20/20 (CI gate)
 pnpm test:e2e                           # 144 pass, 10 skip
 ```
+
+## 2026-08-21 — Administration E2E journey (plan Task 6)
+
+Added the complete end-to-end administration journey for the Brand Kit (creating + archiving publishing rules and linked resources) and the role-based access tests that gate it. Extended the dev seed route to return a deterministic `contentItemId` so the visual harness (Task 7) and the e2e flow can resolve `{contentItemId}` placeholders.
+
+- **Spec filename:** `tests/e2e/administration.spec.ts`
+- **Roles covered:** `workspace_manager`, `content_planner`, `viewer`, `client_reviewer`
+- **Asserts:**
+  - `workspace_manager` creates a publishing rule and a linked resource, both visible in the list.
+  - `content_planner` creates a rule, archives it, and the row disappears.
+  - `viewer` sees approved rule text but no `Create rule` / `Link resource` / archive controls.
+  - `client_reviewer` cannot open `/app/w/[slug]/brand-kit` (404 / "Page not found" heading, no bento grid).
+  - Archived records disappear after reload.
+  - Cross-workspace archive is a no-op: workspace B's manager cannot archive a rule from workspace A — the rule is still present in A after the attempt.
+- **Seed extension:** `src/app/api/dev/seed/route.ts` now returns `contentItemId`. The seed looks up the canonical "Autumn Blend Reveal" row by `(workspace_id, title)` and inserts it (with all workspace channels) only if missing. The `_helpers.ts` `SeedResult` type is widened to surface the new field; no call sites needed changes.
+- **Verification commands used in this env:**
+  - `pnpm format:check` → pass.
+  - `pnpm exec tsc --noEmit` → pass.
+  - `pnpm exec eslint . --max-warnings=0` → pass.
+  - `pnpm exec vitest run` → 66 files, 583 / 583 pass.
+- **Playwright run:** **skipped: no browser/DB in this env.** The parent session should run the focused + full role/administration set after Task 6 lands:
+
+  ```bash
+  # Focused administration journey (chromium only)
+  TEST_DATABASE_URL=postgresql://planner:planner@localhost:5432/planner_test \
+    pnpm test:e2e:isolated -- administration.spec.ts --project=chromium
+
+  # Full role + administration set
+  TEST_DATABASE_URL=postgresql://planner:planner@localhost:5432/planner_test \
+    pnpm test:e2e:isolated -- administration.spec.ts role-authorization.spec.ts --project=chromium
+  ```
+
+  Both runs are expected to PASS with mandatory role-based assertions and no conditional skips.

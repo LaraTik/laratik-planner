@@ -42,6 +42,14 @@ export type SeedResult = {
   workspaceId: string;
   workspaceSlug: string;
   channelIds: string[];
+  /**
+   * ID of the canonical "Autumn Blend Reveal" content item seeded
+   * for the workspace. The visual-regression spec (Task 7) and the
+   * planning-detail captures resolve `{contentItemId}` from this
+   * field. Tests that need a planning-detail URL can do
+   * `/app/w/${seeded.workspaceSlug}/planning/${seeded.contentItemId}`.
+   */
+  contentItemId: string;
 };
 
 /**

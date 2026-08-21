@@ -4,6 +4,8 @@ import {
   agencies,
   agencyMemberships,
   bootstrapLocks,
+  contentItemChannels,
+  contentItems,
   socialChannels,
   users,
   workspaceMembershipRoles,
@@ -35,10 +37,14 @@ import { serverEnv } from "@/lib/validation/env";
  *
  * Returns:
  *   {
- *     userId, agencyId, workspaceId, channelIds: string[]
+ *     userId, agencyId, workspaceId, channelIds: string[],
+ *     contentItemId: string
  *   }
  *
  * The returned IDs are stable across re-runs (deterministic slugs).
+ * `contentItemId` resolves the canonical "Autumn Blend Reveal"
+ * fixture for the workspace — used by the visual-regression spec
+ * (Task 7) and the planning-detail captures.
  * Production builds return 404.
  */
 export const dynamic = "force-dynamic";
@@ -51,6 +57,7 @@ type SeedBody = {
   agencySlug?: string;
   workspaceName?: string;
   workspaceSlug?: string;
+  contentItemTitle?: string;
   agencyAdmin?: boolean;
   workspaceRoles?: (
     | "workspace_manager"
@@ -70,6 +77,10 @@ const FIXTURES = {
   agencySlug: "test-agency",
   workspaceName: "Acme",
   workspaceSlug: "acme",
+  // Title used to look up the deterministic content item. The
+  // visual-regression spec (Task 7) and the planning detail captures
+  // both resolve `{contentItemId}` from this row.
+  contentItemTitle: "Autumn Blend Reveal",
   channels: [
     { platform: "instagram" as const, accountName: "Acme IG", handle: "@acme" },
     { platform: "linkedin" as const, accountName: "Acme LinkedIn", handle: "acme" },
@@ -90,6 +101,7 @@ export async function POST(req: NextRequest) {
     agencySlug: body.agencySlug ?? FIXTURES.agencySlug,
     workspaceName: body.workspaceName ?? FIXTURES.workspaceName,
     workspaceSlug: body.workspaceSlug ?? FIXTURES.workspaceSlug,
+    contentItemTitle: body.contentItemTitle ?? FIXTURES.contentItemTitle,
     agencyAdmin: body.agencyAdmin ?? true,
     workspaceRoles: body.workspaceRoles ?? [],
   };
@@ -112,6 +124,7 @@ async function seedInternal(f: {
   agencySlug: string;
   workspaceName: string;
   workspaceSlug: string;
+  contentItemTitle: string;
   agencyAdmin: boolean;
   workspaceRoles: (
     | "workspace_manager"
@@ -285,6 +298,58 @@ async function seedInternal(f: {
     }
   }
 
+  // ─── Deterministic content item (Task 6) ─────────────────────────────
+  // The visual-regression spec (Task 7) and the planning-detail
+  // captures need a stable `{contentItemId}` placeholder. We look up
+  // by `workspace_id` + `title` (the first non-archived match wins)
+  // and only insert if absent. The seeded item connects to every
+  // channel created above, matching the production "select all
+  // active channels by default" rule from §8.
+  const existingContentItem = await db
+    .select({ id: contentItems.id })
+    .from(contentItems)
+    .where(
+      and(eq(contentItems.workspaceId, workspaceId), eq(contentItems.title, f.contentItemTitle)),
+    )
+    .limit(1);
+
+  let contentItemId: string;
+  if (existingContentItem[0]) {
+    contentItemId = existingContentItem[0].id;
+  } else {
+    const [created] = await db
+      .insert(contentItems)
+      .values({
+        workspaceId,
+        title: f.contentItemTitle,
+        format: "static_post",
+        brief: "Seeded fixture content item for visual regression captures.",
+        // The plan requires a stable schedule; default to 7 days in
+        // the future, which is well within the bounded test window
+        // but does not collide with the explicit quick-create test.
+        plannedPublishAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        contentOwnerId: userId,
+        createdBy: userId,
+      })
+      .returning({ id: contentItems.id });
+    contentItemId = created!.id;
+
+    // Connect every channel the seed just created. We use
+    // onConflictDoNothing because a previous interrupted run may
+    // have inserted the row but failed to return.
+    if (channelIds.length > 0) {
+      await db
+        .insert(contentItemChannels)
+        .values(
+          channelIds.map((socialChannelId) => ({
+            contentItemId,
+            socialChannelId,
+          })),
+        )
+        .onConflictDoNothing();
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     userId,
@@ -292,6 +357,7 @@ async function seedInternal(f: {
     workspaceId,
     workspaceSlug: f.workspaceSlug,
     channelIds,
+    contentItemId,
     fixtures: f,
   });
 }
@@ -302,7 +368,7 @@ export async function GET() {
   }
   return NextResponse.json({
     ok: true,
-    info: "POST {} to seed an agency + workspace + user + channels. Returns IDs.",
+    info: "POST {} to seed an agency + workspace + user + channels + a canonical content item. Returns IDs.",
     fixtures: FIXTURES,
   });
 }
