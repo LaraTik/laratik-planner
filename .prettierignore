@@ -9,3 +9,6 @@ src/lib/db/migrations/*.sql
 # doing so would mutate the canonical references and break any future
 # visual-diff harness that compares against the raw Stitch output.
 designs/stitch/
+
+# pnpm lockfile is auto-generated and shouldn't be hand-formatted
+pnpm-lock.yaml

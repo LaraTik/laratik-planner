@@ -275,7 +275,7 @@ export function ChannelRowActions({ slug, channel }: { slug: string; channel: Ch
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem
-            onSelect={(e) => {
+            onSelect={(e: Event) => {
               e.preventDefault();
               setDrawerOpen(true);
             }}
@@ -284,7 +284,7 @@ export function ChannelRowActions({ slug, channel }: { slug: string; channel: Ch
           </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
-            onSelect={(e) => {
+            onSelect={(e: Event) => {
               e.preventDefault();
               setConfirmOpen(true);
             }}
