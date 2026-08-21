@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type Workspace = { id: string; name: string; slug: string };
 
@@ -13,6 +14,11 @@ type Workspace = { id: string; name: string; slug: string };
  * (or all agency workspaces for admins), with a "+ New workspace"
  * affordance and a keyboard-friendly popover (arrow keys + Enter +
  * Escape).
+ *
+ * The popover is Radix-powered and portal-mounted, so it escapes any
+ * `overflow: hidden` / stacking-context ancestor that would otherwise
+ * clip the menu (the original `position: absolute` popover was hidden
+ * behind the topbar/sidebar's clip boundary).
  *
  * Server-renders the workspace list as a prop, so the initial paint
  * is instant; the popover only opens on user interaction.
@@ -30,43 +36,33 @@ export function WorkspaceSwitcher({
 }) {
   const [open, setOpen] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(0);
-  const triggerRef = React.useRef<HTMLButtonElement | null>(null);
   const listRef = React.useRef<HTMLUListElement | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
-  // Close on outside click + Escape
-  React.useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (
-        triggerRef.current?.contains(e.target as Node) ||
-        listRef.current?.contains(e.target as Node)
-      )
-        return;
-      setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setOpen(false);
-        triggerRef.current?.focus();
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  // Focus the active item when the popover opens
-  React.useEffect(() => {
-    if (open && listRef.current) {
+  // When the popover opens, jump activeIndex to the current workspace
+  // (so arrow-key navigation starts at the highlighted row, not index 0).
+  // Done in onOpenChange rather than a useEffect to avoid the
+  // react-hooks/set-state-in-effect lint rule (synchronous setState
+  // inside an effect causes cascading renders).
+  const onPopoverOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
       const idx = options.findIndex((w) => w.id === active?.id);
       setActiveIndex(idx >= 0 ? idx : 0);
     }
-  }, [open, options, active?.id]);
+    setOpen(nextOpen);
+  };
+
+  // PopoverContent auto-focuses the first tabbable child on open. The
+  // listbox is the only tabbable element above the "New workspace"
+  // footer link, so Radix's default focus lands on the listbox and our
+  // arrow-key handlers receive keypresses immediately. We override the
+  // auto-focus to be explicit (and to keep the focus visible — the
+  // listbox is the thing the user is interacting with).
+  const onOpenAutoFocus = (e: Event) => {
+    e.preventDefault();
+    listRef.current?.focus();
+  };
 
   const choose = (w: Workspace) => {
     setOpen(false);
@@ -113,27 +109,31 @@ export function WorkspaceSwitcher({
   }
 
   return (
-    <div className="relative">
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-label={`Active workspace: ${active.name}. Click to switch.`}
-        data-testid={testId}
-        className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2"
+    <Popover open={open} onOpenChange={onPopoverOpenChange}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-label={`Active workspace: ${active.name}. Click to switch.`}
+          data-testid={testId}
+          className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-surface-subtle inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2"
+        >
+          <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
+            {active.name.charAt(0).toUpperCase()}
+          </span>
+          <span className="hidden sm:inline">{active.name}</span>
+          <ChevronsUpDown className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={6}
+        onOpenAutoFocus={onOpenAutoFocus}
+        className="p-0"
       >
-        <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
-          {active.name.charAt(0).toUpperCase()}
-        </span>
-        <span className="hidden sm:inline">{active.name}</span>
-        <ChevronsUpDown className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />
-      </button>
-
-      {open ? (
         <div
-          className="border-border bg-surface absolute left-0 z-50 mt-1.5 w-72 overflow-hidden rounded-[var(--radius-card)] border shadow-lg"
+          className="border-border bg-surface overflow-hidden rounded-[var(--radius-card)]"
           role="presentation"
         >
           <div className="text-label text-fg-muted border-border border-b px-3 py-2 font-semibold tracking-wide uppercase">
@@ -183,18 +183,19 @@ export function WorkspaceSwitcher({
           </ul>
           {canCreate ? (
             <div className="border-border border-t p-1.5">
-              <Link
-                href="/app/workspaces/new"
-                onClick={() => setOpen(false)}
-                className="text-body text-fg-primary hover:bg-surface-subtle flex items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 font-semibold"
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                New workspace
-              </Link>
+              <PopoverClose asChild>
+                <Link
+                  href="/app/workspaces/new"
+                  className="text-body text-fg-primary hover:bg-surface-subtle flex items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 font-semibold"
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  New workspace
+                </Link>
+              </PopoverClose>
             </div>
           ) : null}
         </div>
-      ) : null}
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }
