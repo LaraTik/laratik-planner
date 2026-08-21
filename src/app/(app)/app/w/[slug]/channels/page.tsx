@@ -9,12 +9,122 @@ import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { ChannelForm } from "./channel-form";
 import { archiveChannelAction } from "./actions";
+
+type ChannelRow = typeof socialChannels.$inferSelect;
+
+/**
+ * Column definitions for the channels table. Hoisted out of the page
+ * so the JSX stays focused on data + layout. The `archiveChannelAction`
+ * is bound per row by the row's `<form>` below.
+ */
+function channelsColumns(props: {
+  slug: string;
+  canManage: boolean;
+  archiveChannelAction: typeof import("./actions").archiveChannelAction;
+}): DataTableColumnDef<ChannelRow>[] {
+  return [
+    {
+      key: "platform",
+      header: "Platform",
+      cell: (row) => (
+        <div className="flex items-center gap-3">
+          <PlatformIcon platform={row.platform} tile />
+          <span className="text-body text-fg-primary font-medium">
+            {platformLabel(row.platform)}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "account",
+      header: "Account",
+      cell: (row) => (
+        <div className="text-body text-fg-primary flex flex-col">
+          <span className="font-medium">{row.accountName}</span>
+          {row.handle ? <span className="text-label text-fg-muted">@{row.handle}</span> : null}
+        </div>
+      ),
+    },
+    {
+      key: "url",
+      header: "Profile URL",
+      hideOn: "lg",
+      cellClassName: "text-body text-fg-muted hidden max-w-[200px] truncate lg:table-cell",
+      cell: (row) =>
+        row.url ? (
+          <a
+            href={row.url}
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-fg-primary inline-flex items-center gap-1"
+          >
+            <span className="truncate">{row.url}</span>
+            <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+          </a>
+        ) : (
+          <span className="text-fg-muted">&mdash;</span>
+        ),
+    },
+    {
+      key: "state",
+      header: "State",
+      cell: (row) =>
+        row.isActive ? (
+          <Badge variant="success">
+            <span className="bg-success h-1.5 w-1.5 rounded-full" aria-hidden="true" />
+            Active
+          </Badge>
+        ) : (
+          <Badge variant="outline">
+            <span className="bg-fg-secondary h-1.5 w-1.5 rounded-full" aria-hidden="true" />
+            Inactive
+          </Badge>
+        ),
+    },
+    {
+      key: "owner",
+      header: "Owner / Contact",
+      hideOn: "md",
+      cell: (row) => row.accountType || <span className="text-fg-muted">&mdash;</span>,
+    },
+    {
+      key: "updated",
+      header: "Last updated",
+      hideOn: "xl",
+      cell: (row) => formatRelativeDate(row.updatedAt),
+    },
+    {
+      key: "actions",
+      header: "",
+      headerClassName: "w-12",
+      cellClassName: "text-right",
+      cell: (row) =>
+        props.canManage ? (
+          <form action={props.archiveChannelAction.bind(null, props.slug, row.id)}>
+            <Button
+              size="icon"
+              variant="ghost"
+              type="submit"
+              aria-label={`Archive ${row.accountName}`}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </form>
+        ) : (
+          <span aria-hidden="true">
+            <MoreHorizontal className="text-fg-muted h-4 w-4" />
+          </span>
+        ),
+    },
+  ];
+}
 
 /**
  * Channels (M3.3) — Stitch-aligned table view of a workspace's social
@@ -72,115 +182,17 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
       {rows.length ? (
         <Card padding="none" className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left" data-testid="channels-table">
-              <thead>
-                <tr className="bg-surface-subtle border-border border-b">
-                  <th className="text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase">
-                    Platform
-                  </th>
-                  <th className="text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase">
-                    Account
-                  </th>
-                  <th className="text-label text-fg-secondary hidden px-4 py-3 font-semibold tracking-wide uppercase lg:table-cell">
-                    Profile URL
-                  </th>
-                  <th className="text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase">
-                    State
-                  </th>
-                  <th className="text-label text-fg-secondary hidden px-4 py-3 font-semibold tracking-wide uppercase md:table-cell">
-                    Owner / Contact
-                  </th>
-                  <th className="text-label text-fg-secondary hidden px-4 py-3 font-semibold tracking-wide uppercase xl:table-cell">
-                    Last updated
-                  </th>
-                  <th className="text-label text-fg-secondary w-12 px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-border text-table-dense divide-y">
-                {rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="hover:bg-surface-subtle transition-colors"
-                    data-testid={`channel-row-${row.id}`}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <PlatformIcon platform={row.platform} tile />
-                        <span className="text-body text-fg-primary font-medium">
-                          {platformLabel(row.platform)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="text-body text-fg-primary px-4 py-3">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{row.accountName}</span>
-                        {row.handle ? (
-                          <span className="text-label text-fg-muted">@{row.handle}</span>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td className="text-body text-fg-muted hidden max-w-[200px] truncate px-4 py-3 lg:table-cell">
-                      {row.url ? (
-                        <a
-                          href={row.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="hover:text-fg-primary inline-flex items-center gap-1"
-                        >
-                          <span className="truncate">{row.url}</span>
-                          <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
-                        </a>
-                      ) : (
-                        <span className="text-fg-muted">&mdash;</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {row.isActive ? (
-                        <Badge variant="success">
-                          <span
-                            className="bg-success h-1.5 w-1.5 rounded-full"
-                            aria-hidden="true"
-                          />
-                          Active
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline">
-                          <span
-                            className="bg-fg-secondary h-1.5 w-1.5 rounded-full"
-                            aria-hidden="true"
-                          />
-                          Inactive
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="text-body text-fg-secondary hidden px-4 py-3 md:table-cell">
-                      {row.accountType || <span className="text-fg-muted">&mdash;</span>}
-                    </td>
-                    <td className="text-body text-fg-muted hidden px-4 py-3 xl:table-cell">
-                      {formatRelativeDate(row.updatedAt)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {canManage ? (
-                        <form action={archiveChannelAction.bind(null, slug, row.id)}>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            type="submit"
-                            aria-label={`Archive ${row.accountName}`}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </form>
-                      ) : (
-                        <span aria-hidden="true">
-                          <MoreHorizontal className="text-fg-muted h-4 w-4" />
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable
+              data-testid="channels-table"
+              getRowKey={(row) => row.id}
+              getRowTestId={(row) => `channel-row-${row.id}`}
+              rows={rows}
+              columns={channelsColumns({
+                slug,
+                canManage,
+                archiveChannelAction,
+              })}
+            />
           </div>
         </Card>
       ) : (

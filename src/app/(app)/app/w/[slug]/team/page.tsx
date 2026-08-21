@@ -16,10 +16,77 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { IconTile } from "@/components/workspace/icon-button";
 import { PageHeader } from "@/components/workspace/page-header";
 import { isAgencyAdmin } from "@/lib/auth/policy";
+
+type MemberRow = {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+  isAgencyAdmin: boolean;
+  roles: string[];
+};
+
+function teamColumns(): DataTableColumnDef<MemberRow>[] {
+  return [
+    {
+      key: "member",
+      header: "Member",
+      cell: (member) => (
+        <div className="flex items-center gap-3">
+          <IconTile size="md" tone="primary" aria-hidden="true">
+            {member.name.charAt(0).toUpperCase()}
+          </IconTile>
+          <div className="min-w-0">
+            <p className="text-body text-fg-primary font-semibold">{member.name}</p>
+            <p className="text-label text-fg-secondary truncate">{member.email}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "roles",
+      header: "Roles",
+      cell: (member) => (
+        <div className="flex flex-wrap gap-1">
+          {member.isAgencyAdmin ? <Badge variant="info">Agency admin</Badge> : null}
+          {member.roles.length === 0 ? (
+            <span className="text-fg-muted">&mdash;</span>
+          ) : (
+            member.roles.map((role) => <Badge key={role}>{ROLE_LABEL[role] ?? role}</Badge>)
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "last-active",
+      header: "Last active",
+      hideOn: "md",
+      cell: (member) =>
+        member.status === "active" ? "Active now" : <span className="text-fg-muted">—</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (member) =>
+        member.status === "active" ? (
+          <Badge variant="success">
+            <span className="bg-success h-1.5 w-1.5 rounded-full" aria-hidden="true" />
+            Active
+          </Badge>
+        ) : (
+          <Badge variant="danger">
+            <span className="bg-danger h-1.5 w-1.5 rounded-full" aria-hidden="true" />
+            Inactive
+          </Badge>
+        ),
+    },
+  ];
+}
 
 const ROLE_LABEL: Record<string, string> = {
   workspace_manager: "Workspace Manager",
@@ -180,79 +247,13 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left" data-testid="team-table">
-                <thead>
-                  <tr className="bg-surface-subtle border-border border-b">
-                    <th className="text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase">
-                      Member
-                    </th>
-                    <th className="text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase">
-                      Roles
-                    </th>
-                    <th className="text-label text-fg-secondary hidden px-4 py-3 font-semibold tracking-wide uppercase md:table-cell">
-                      Last active
-                    </th>
-                    <th className="text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-border text-table-dense divide-y">
-                  {[...members.entries()].map(([id, member]) => (
-                    <tr
-                      key={id}
-                      className="hover:bg-surface-subtle transition-colors"
-                      data-testid={`team-member-${id}`}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <IconTile size="md" tone="primary" aria-hidden="true">
-                            {member.name.charAt(0).toUpperCase()}
-                          </IconTile>
-                          <div className="min-w-0">
-                            <p className="text-body text-fg-primary font-semibold">{member.name}</p>
-                            <p className="text-label text-fg-secondary truncate">{member.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {member.isAgencyAdmin ? <Badge variant="info">Agency admin</Badge> : null}
-                          {member.roles.length === 0 ? (
-                            <span className="text-fg-muted">&mdash;</span>
-                          ) : (
-                            member.roles.map((role) => (
-                              <Badge key={role}>{ROLE_LABEL[role] ?? role}</Badge>
-                            ))
-                          )}
-                        </div>
-                      </td>
-                      <td className="text-body text-fg-muted hidden px-4 py-3 md:table-cell">
-                        {member.status === "active" ? "Active now" : "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        {member.status === "active" ? (
-                          <Badge variant="success">
-                            <span
-                              className="bg-success h-1.5 w-1.5 rounded-full"
-                              aria-hidden="true"
-                            />
-                            Active
-                          </Badge>
-                        ) : (
-                          <Badge variant="danger">
-                            <span
-                              className="bg-danger h-1.5 w-1.5 rounded-full"
-                              aria-hidden="true"
-                            />
-                            Inactive
-                          </Badge>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable
+                data-testid="team-table"
+                getRowKey={(m) => m.id}
+                getRowTestId={(m) => `team-member-${m.id}`}
+                rows={[...members.entries()].map(([id, member]) => ({ id, ...member }))}
+                columns={teamColumns()}
+              />
             </div>
             <div className="border-border text-label text-fg-secondary flex items-center justify-between border-t px-4 py-3">
               <span>
