@@ -1,6 +1,16 @@
 import { redirect, notFound } from "next/navigation";
 import { and, eq, isNull } from "drizzle-orm";
-import { Archive, Clock, Palette, Tag, Trash2, Type } from "lucide-react";
+import {
+  Archive,
+  Clock,
+  ExternalLink,
+  Folder,
+  Link as LinkIcon,
+  Palette,
+  Plus,
+  Tag,
+  Trash2,
+} from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { brandAssets, brandVoiceRules } from "@/lib/db/schema";
@@ -13,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/workspace/page-header";
+import { WorkspaceTopTabs } from "@/components/workspace/top-tabs";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { ColorForm } from "./color-form";
 import { VoiceForm } from "./voice-form";
@@ -29,14 +40,24 @@ import {
  * Brand kit (Goal 4 master prompt §3) — workspace-scoped reference
  * for visual assets and writing guidance.
  *
- * The Stitch design (project 5403097764334458790, screen 16aaf0a9)
- * ships 8 sections: Logo Assets, Color Palette, Typography,
- * Voice & Tone, Content Pillars, Publishing Rules, Linked Resources,
- * Recent Updates. v1 stores assets (logo, color, font, other) and
- * voice rules in Postgres; the page renders them with section
- * anchors + cards. New sections (typography fonts, color swatches,
- * content pillars) can be added as M3.x follow-ups without changing
- * the page structure.
+ * Round 3 (commit G, Brand Kit) refactored the layout to match the
+ * Stitch design (project 5403097764334458790, screen 16aaf0a9): a
+ * 12-column Bento grid replaces the 200px left-rail nav, and a
+ * sticky `<WorkspaceTopTabs />` strip below the page header provides
+ * the same jump-to-section affordance in less vertical space.
+ *
+ * Section grid (per the Stitch HTML):
+ *
+ *   row 1  col-span-12  Brand identity (read-only summary card)
+ *   row 2  col-span-8   Logo Assets        col-span-4  Color Palette
+ *   row 3  col-span-12  Typography
+ *   row 4  col-span-6   Voice & tone       col-span-6  Content Pillars
+ *   row 5  col-span-4   Publishing Rules   col-span-4  Linked Resources
+ *                                  col-span-4  (placeholder until R3-F)
+ *   row 6  col-span-12  Recent Updates
+ *
+ * The Publishing Rules + Linked Resources cards render an EmptyState
+ * stub in this commit; the data layer for them ships in commit R3-F.
  */
 export default async function BrandKitPage({ params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();
@@ -65,13 +86,12 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
     other: assets.filter((a) => a.kind === "other"),
   } as const;
 
-  const sections: { id: string; label: string; count: number }[] = [
-    { id: "logo", label: "Logo Assets", count: assetsByKind.logo.length },
-    { id: "color", label: "Color Palette", count: assetsByKind.color.length },
-    { id: "typography", label: "Typography", count: assetsByKind.font.length },
-    { id: "voice", label: "Voice & Tone", count: rules.length },
-    { id: "pillars", label: "Content Pillars", count: pillars.length },
-    { id: "recent", label: "Recent Updates", count: recent.length },
+  const tabs: { id: string; label: string; count?: number }[] = [
+    { id: "overview", label: "Overview" },
+    { id: "logo", label: "Assets", count: assetsByKind.logo.length },
+    { id: "guidelines", label: "Guidelines" },
+    { id: "voice", label: "Voice & tone", count: rules.length },
+    { id: "publishing", label: "Publishing rules" },
   ];
 
   return (
@@ -88,346 +108,459 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
             </span>
           </>
         }
+        action={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              size="default"
+              data-testid="brand-kit-add-asset"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Add asset
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              size="default"
+              data-testid="brand-kit-edit"
+              asChild
+            >
+              <a href="#logo">Edit brand kit</a>
+            </Button>
+          </>
+        }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
-        <nav aria-label="Brand kit sections" className="lg:sticky lg:top-20 lg:self-start">
-          <ul className="space-y-1">
-            {sections.map((section) => (
-              <li key={section.id}>
-                <a
-                  href={`#${section.id}`}
-                  data-testid={`brand-kit-nav-${section.id}`}
-                  className="text-body text-fg-secondary hover:bg-surface-subtle hover:text-fg-primary flex items-center justify-between rounded-[var(--radius-control)] px-3 py-2 font-semibold transition-colors"
-                >
-                  <span>{section.label}</span>
-                  <span className="text-label text-fg-muted">{section.count}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
+      <WorkspaceTopTabs tabs={tabs} ariaLabel="Brand kit sections" />
 
-        <div className="space-y-4">
-          <Card id="logo">
-            <CardTitle className="mb-3 inline-flex items-center gap-2">
-              <Palette className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-              Logo Assets
-            </CardTitle>
-            {canManage ? <LogoForm slug={slug} workspaceId={workspace.id} /> : null}
-            {assetsByKind.logo.length ? (
-              <ul className="divide-border divide-y">
-                {assetsByKind.logo.map((asset) => {
-                  // Preview URL: prefer the storage path (uploaded
-                  // file) over the external URL. We wrap external
-                  // URLs as data-less <img> tags; the storage helper
-                  // returns a signed download URL when a path is
-                  // present.
-                  const previewSrc = asset.storagePath
-                    ? getSignedDownloadUrl(asset.storagePath)
-                    : asset.externalUrl;
-                  return (
-                    <li
-                      key={asset.id}
-                      className="flex items-center justify-between gap-3 py-3"
-                      data-testid={`brand-asset-${asset.id}`}
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        {previewSrc ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={previewSrc}
-                            alt=""
-                            width={40}
-                            height={40}
-                            className="border-border bg-surface-subtle h-10 w-10 shrink-0 rounded border object-contain"
-                          />
-                        ) : (
-                          <span
-                            aria-hidden="true"
-                            className="border-border bg-surface-subtle h-10 w-10 shrink-0 rounded border"
-                          />
-                        )}
-                        <div className="min-w-0">
-                          <p className="text-body text-fg-primary truncate font-semibold">
-                            {asset.name}
-                          </p>
-                          <p className="text-label text-fg-muted">
-                            {asset.storagePath
-                              ? "Uploaded file"
-                              : asset.externalUrl
-                                ? "External URL"
-                                : "Logo"}
-                          </p>
-                        </div>
-                      </div>
-                      {canManage ? (
-                        <form action={archiveLogoAssetAction.bind(null, slug, asset.id)}>
-                          <Button
-                            type="submit"
-                            size="icon"
-                            variant="ghost"
-                            aria-label={`Archive logo ${asset.name}`}
-                          >
-                            <Trash2 className="h-4 w-4" aria-hidden="true" />
-                          </Button>
-                        </form>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="text-body text-fg-muted py-4">No logo assets yet.</p>
-            )}
-          </Card>
+      <div
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:gap-6"
+        data-testid="brand-kit-bento"
+      >
+        {/* Row 1 — Brand identity (full width) */}
+        <Card id="overview" className="scroll-mt-20 lg:col-span-12" aria-label="Brand identity">
+          <div className="flex flex-col items-start gap-6 sm:flex-row">
+            <div
+              className="border-border bg-surface-subtle flex h-24 w-24 shrink-0 items-center justify-center rounded-[var(--radius-control)] border sm:h-32 sm:w-32"
+              aria-hidden="true"
+            >
+              <Palette className="text-fg-muted h-12 w-12" />
+            </div>
+            <div className="flex-1">
+              <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                <CardTitle>{workspace.name}</CardTitle>
+                <Badge variant="info">Primary Brand</Badge>
+              </div>
+              <p className="text-body text-fg-secondary mb-4 max-w-2xl">
+                The shared source for visual assets and writing guidance. Update the logo, color
+                palette, and typography so every planner, designer, and reviewer ships in one voice.
+              </p>
+              <div className="flex flex-wrap gap-6">
+                <div className="flex flex-col gap-1">
+                  <span className="text-label text-fg-muted font-semibold tracking-wider uppercase">
+                    Timezone
+                  </span>
+                  <span className="text-body text-fg-primary inline-flex items-center gap-1 font-semibold">
+                    <Clock className="text-fg-muted h-4 w-4" aria-hidden="true" />
+                    {workspace.timezone}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
 
-          <Card id="color">
-            <CardTitle className="mb-3">Color Palette</CardTitle>
-            {canManage ? <ColorForm slug={slug} /> : null}
-            {assetsByKind.color.length ? (
-              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {assetsByKind.color.map((asset) => {
-                  // The hex lives in the jsonb `value` column. Older
-                  // rows may have it under different keys; we try a
-                  // few candidates and fall back to a neutral swatch.
-                  const v = (asset.value ?? {}) as Record<string, unknown>;
-                  const hex =
-                    (typeof v.hex === "string" && v.hex) ||
-                    (typeof v.color === "string" && v.color) ||
-                    (typeof v.value === "string" && v.value) ||
-                    "#e5e7eb";
-                  return (
-                    <li
-                      key={asset.id}
-                      className="border-border bg-surface-subtle flex items-center gap-3 rounded-[var(--radius-control)] border p-3"
-                    >
-                      <span
-                        className="border-border h-10 w-10 shrink-0 rounded border"
-                        style={{ backgroundColor: hex }}
-                        aria-hidden="true"
-                      />
-                      <span className="text-body text-fg-primary truncate font-semibold">
-                        {asset.name}
-                      </span>
-                      <span className="text-label text-fg-muted ml-auto font-mono">{hex}</span>
-                      {canManage ? (
-                        <form
-                          action={archiveColorAssetAction.bind(null, slug, asset.id)}
-                          className="ml-2"
-                        >
-                          <Button
-                            type="submit"
-                            size="icon"
-                            variant="ghost"
-                            aria-label={`Archive ${asset.name}`}
-                          >
-                            <Archive className="h-4 w-4" />
-                          </Button>
-                        </form>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="text-body text-fg-muted py-4">No color tokens yet.</p>
-            )}
-          </Card>
-
-          <Card id="typography">
-            <CardTitle className="mb-3 inline-flex items-center gap-2">
-              <Type className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-              Typography
-            </CardTitle>
-            {canManage ? <TypographyForm slug={slug} /> : null}
-            {assetsByKind.font.length ? (
-              <ul className="grid gap-3 sm:grid-cols-2">
-                {assetsByKind.font.map((asset) => {
-                  // `value` jsonb holds { family, weight, role }.
-                  // Older rows may have these at different keys; we
-                  // try a few candidates and fall back to a safe
-                  // default.
-                  const v = (asset.value ?? {}) as Record<string, unknown>;
-                  const family =
-                    (typeof v.family === "string" && v.family) ||
-                    (typeof v.name === "string" && v.name) ||
-                    "Inter";
-                  const weight =
-                    typeof v.weight === "number"
-                      ? v.weight
-                      : typeof v.weight === "string"
-                        ? Number(v.weight) || 400
-                        : 400;
-                  const role = typeof v.role === "string" ? v.role.toLowerCase() : "body";
-                  const sampleText = "The quick brown fox jumps over the lazy dog";
-                  const sampleSize = role === "headline" ? 28 : role === "accent" ? 22 : 16;
-                  return (
-                    <li
-                      key={asset.id}
-                      data-testid={`brand-font-${asset.id}`}
-                      className="border-border bg-surface-subtle flex flex-col gap-2 rounded-[var(--radius-control)] border p-3"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex min-w-0 flex-col">
-                          <p className="text-body text-fg-primary truncate font-semibold">
-                            {asset.name}
-                          </p>
-                          <p className="text-label text-fg-muted">
-                            {family} {weight} · {role}
-                          </p>
-                        </div>
-                        {canManage ? (
-                          <form action={archiveFontAssetAction.bind(null, slug, asset.id)}>
-                            <Button
-                              type="submit"
-                              size="icon"
-                              variant="ghost"
-                              aria-label={`Archive font ${asset.name}`}
-                            >
-                              <Trash2 className="h-4 w-4" aria-hidden="true" />
-                            </Button>
-                          </form>
-                        ) : null}
-                      </div>
-                      <p
-                        className="border-border bg-surface rounded-[var(--radius-control)] border p-2"
-                        style={{
-                          fontFamily: `"${family}", system-ui, sans-serif`,
-                          fontWeight: weight,
-                          fontSize: `${sampleSize}px`,
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        {sampleText}
-                      </p>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="text-body text-fg-muted py-4">No fonts catalogued yet.</p>
-            )}
-          </Card>
-
-          <Card id="voice">
-            <CardTitle className="mb-3">Voice &amp; Tone</CardTitle>
-            {canManage ? <VoiceForm slug={slug} /> : null}
-            {rules.length ? (
-              <ul className="space-y-2">
-                {rules.map((rule) => (
+        {/* Row 2 — Logo (8) + Color (4) */}
+        <Card
+          id="logo"
+          className="scroll-mt-20 lg:col-span-8"
+          aria-label="Logo assets"
+          data-testid="brand-kit-section-logo"
+        >
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <CardTitle>Logo Assets</CardTitle>
+            {canManage ? (
+              <a
+                href="#logo"
+                className="text-body text-primary hover:underline"
+                data-testid="brand-kit-logo-add-link"
+              >
+                Add asset
+              </a>
+            ) : null}
+          </div>
+          {canManage ? <LogoForm slug={slug} workspaceId={workspace.id} /> : null}
+          {assetsByKind.logo.length ? (
+            <ul className="divide-border divide-y">
+              {assetsByKind.logo.map((asset) => {
+                // Preview URL: prefer the storage path (uploaded
+                // file) over the external URL. We wrap external
+                // URLs as data-less <img> tags; the storage helper
+                // returns a signed download URL when a path is
+                // present.
+                const previewSrc = asset.storagePath
+                  ? getSignedDownloadUrl(asset.storagePath)
+                  : asset.externalUrl;
+                return (
                   <li
-                    key={rule.id}
-                    data-testid={`brand-voice-rule-${rule.id}`}
-                    className="bg-surface-subtle flex items-start gap-3 rounded-[var(--radius-control)] p-3"
+                    key={asset.id}
+                    className="flex items-center justify-between gap-3 py-3"
+                    data-testid={`brand-asset-${asset.id}`}
                   >
-                    <Badge
-                      className="shrink-0 capitalize"
-                      variant={
-                        rule.ruleType === "dont"
-                          ? "danger"
-                          : rule.ruleType === "do"
-                            ? "success"
-                            : "info"
-                      }
-                    >
-                      {rule.ruleType}
-                    </Badge>
-                    <p className="text-body text-fg-primary flex-1">{rule.content}</p>
+                    <div className="flex min-w-0 items-center gap-3">
+                      {previewSrc ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={previewSrc}
+                          alt=""
+                          width={40}
+                          height={40}
+                          className="border-border bg-surface-subtle h-10 w-10 shrink-0 rounded border object-contain"
+                        />
+                      ) : (
+                        <span
+                          aria-hidden="true"
+                          className="border-border bg-surface-subtle h-10 w-10 shrink-0 rounded border"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-body text-fg-primary truncate font-semibold">
+                          {asset.name}
+                        </p>
+                        <p className="text-label text-fg-muted">
+                          {asset.storagePath
+                            ? "Uploaded file"
+                            : asset.externalUrl
+                              ? "External URL"
+                              : "Logo"}
+                        </p>
+                      </div>
+                    </div>
                     {canManage ? (
-                      <form action={archiveVoiceRuleAction.bind(null, slug, rule.id)}>
+                      <form action={archiveLogoAssetAction.bind(null, slug, asset.id)}>
                         <Button
                           type="submit"
                           size="icon"
                           variant="ghost"
-                          aria-label={`Archive voice rule ${rule.id}`}
+                          aria-label={`Archive logo ${asset.name}`}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                      </form>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-body text-fg-muted py-4">No logo assets yet.</p>
+          )}
+        </Card>
+
+        <Card
+          id="color"
+          className="scroll-mt-20 lg:col-span-4"
+          aria-label="Color palette"
+          data-testid="brand-kit-section-color"
+        >
+          <CardTitle className="mb-3">Color Palette</CardTitle>
+          {canManage ? <ColorForm slug={slug} /> : null}
+          {assetsByKind.color.length ? (
+            <ul className="space-y-3">
+              {assetsByKind.color.map((asset) => {
+                // The hex lives in the jsonb `value` column. Older
+                // rows may have it under different keys; we try a
+                // few candidates and fall back to a neutral swatch.
+                const v = (asset.value ?? {}) as Record<string, unknown>;
+                const hex =
+                  (typeof v.hex === "string" && v.hex) ||
+                  (typeof v.color === "string" && v.color) ||
+                  (typeof v.value === "string" && v.value) ||
+                  "#e5e7eb";
+                return (
+                  <li
+                    key={asset.id}
+                    className="flex items-center gap-3"
+                    data-testid={`brand-color-${asset.id}`}
+                  >
+                    <span
+                      className="border-border h-10 w-10 shrink-0 rounded border"
+                      style={{ backgroundColor: hex }}
+                      aria-hidden="true"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-label text-fg-primary truncate font-bold">{asset.name}</p>
+                      <p className="text-label text-fg-muted font-mono">{hex}</p>
+                    </div>
+                    {canManage ? (
+                      <form action={archiveColorAssetAction.bind(null, slug, asset.id)}>
+                        <Button
+                          type="submit"
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Archive ${asset.name}`}
                         >
                           <Archive className="h-4 w-4" />
                         </Button>
                       </form>
                     ) : null}
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <EmptyState
-                icon={<Palette className="h-7 w-7" />}
-                title="No voice guidance"
-                description="Add do/dont/consider rules so the team writes in one voice."
-              />
-            )}
-          </Card>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-body text-fg-muted py-4">No color tokens yet.</p>
+          )}
+        </Card>
 
-          <Card id="pillars">
-            <CardTitle className="mb-3 inline-flex items-center gap-2">
-              <Tag className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-              Content Pillars
-            </CardTitle>
-            {pillars.length ? (
-              <ul className="divide-border divide-y">
-                {pillars.map((pillar) => (
+        {/* Row 3 — Typography (12) */}
+        <Card
+          id="guidelines"
+          className="scroll-mt-20 lg:col-span-12"
+          aria-label="Typography"
+          data-testid="brand-kit-section-typography"
+        >
+          <CardTitle className="mb-3">Typography</CardTitle>
+          {canManage ? <TypographyForm slug={slug} /> : null}
+          {assetsByKind.font.length ? (
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {assetsByKind.font.map((asset) => {
+                // `value` jsonb holds { family, weight, role }.
+                // Older rows may have these at different keys; we
+                // try a few candidates and fall back to a safe
+                // default.
+                const v = (asset.value ?? {}) as Record<string, unknown>;
+                const family =
+                  (typeof v.family === "string" && v.family) ||
+                  (typeof v.name === "string" && v.name) ||
+                  "Inter";
+                const weight =
+                  typeof v.weight === "number"
+                    ? v.weight
+                    : typeof v.weight === "string"
+                      ? Number(v.weight) || 400
+                      : 400;
+                const role = typeof v.role === "string" ? v.role.toLowerCase() : "body";
+                const sampleText = "The quick brown fox jumps over the lazy dog";
+                const sampleSize = role === "headline" ? 28 : role === "accent" ? 22 : 16;
+                return (
                   <li
-                    key={pillar.id}
-                    className="flex items-center justify-between py-3"
-                    data-testid={`brand-pillar-${pillar.id}`}
+                    key={asset.id}
+                    data-testid={`brand-font-${asset.id}`}
+                    className="border-border bg-surface-subtle flex flex-col gap-2 rounded-[var(--radius-control)] border p-3"
                   >
-                    <div className="flex items-center gap-3">
-                      {pillar.color ? (
-                        <span
-                          className="border-border h-4 w-4 shrink-0 rounded-full border"
-                          style={{ backgroundColor: pillar.color }}
-                          aria-hidden="true"
-                        />
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 flex-col">
+                        <p className="text-body text-fg-primary truncate font-semibold">
+                          {asset.name}
+                        </p>
+                        <p className="text-label text-fg-muted">
+                          {family} {weight} · {role}
+                        </p>
+                      </div>
+                      {canManage ? (
+                        <form action={archiveFontAssetAction.bind(null, slug, asset.id)}>
+                          <Button
+                            type="submit"
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Archive font ${asset.name}`}
+                          >
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                        </form>
                       ) : null}
-                      <span className="text-body text-fg-primary font-semibold">{pillar.name}</span>
                     </div>
-                    {pillar.description ? (
-                      <span className="text-label text-fg-muted ml-3 truncate">
-                        {pillar.description}
-                      </span>
-                    ) : null}
+                    <p
+                      className="border-border bg-surface rounded-[var(--radius-control)] border p-2"
+                      style={{
+                        fontFamily: `"${family}", system-ui, sans-serif`,
+                        fontWeight: weight,
+                        fontSize: `${sampleSize}px`,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {sampleText}
+                    </p>
                   </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-body text-fg-muted py-4">No content pillars yet.</p>
-            )}
-          </Card>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-body text-fg-muted py-4">No fonts catalogued yet.</p>
+          )}
+        </Card>
 
-          <Card id="recent">
-            <CardTitle className="mb-3">Recent Updates</CardTitle>
-            {recent.length ? (
-              <div className="overflow-x-auto">
-                <table className="text-body w-full text-left">
-                  <thead>
-                    <tr className="text-label text-fg-muted">
-                      <th className="pr-3 pb-2 font-semibold">Date</th>
-                      <th className="pr-3 pb-2 font-semibold">Description</th>
-                      <th className="pb-2 font-semibold">User</th>
+        {/* Row 4 — Voice & tone (6) + Content Pillars (6) */}
+        <Card
+          id="voice"
+          className="scroll-mt-20 lg:col-span-6"
+          aria-label="Voice and tone"
+          data-testid="brand-kit-section-voice"
+        >
+          <CardTitle className="mb-3">Voice &amp; Tone</CardTitle>
+          {canManage ? <VoiceForm slug={slug} /> : null}
+          {rules.length ? (
+            <ul className="space-y-2">
+              {rules.map((rule) => (
+                <li
+                  key={rule.id}
+                  data-testid={`brand-voice-rule-${rule.id}`}
+                  className="bg-surface-subtle flex items-start gap-3 rounded-[var(--radius-control)] p-3"
+                >
+                  <Badge
+                    className="shrink-0 capitalize"
+                    variant={
+                      rule.ruleType === "dont"
+                        ? "danger"
+                        : rule.ruleType === "do"
+                          ? "success"
+                          : "info"
+                    }
+                  >
+                    {rule.ruleType}
+                  </Badge>
+                  <p className="text-body text-fg-primary flex-1">{rule.content}</p>
+                  {canManage ? (
+                    <form action={archiveVoiceRuleAction.bind(null, slug, rule.id)}>
+                      <Button
+                        type="submit"
+                        size="icon"
+                        variant="ghost"
+                        aria-label={`Archive voice rule ${rule.id}`}
+                      >
+                        <Archive className="h-4 w-4" />
+                      </Button>
+                    </form>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              icon={<Palette className="h-7 w-7" />}
+              title="No voice guidance"
+              description="Add do/dont/consider rules so the team writes in one voice."
+            />
+          )}
+        </Card>
+
+        <Card
+          id="pillars"
+          className="scroll-mt-20 lg:col-span-6"
+          aria-label="Content pillars"
+          data-testid="brand-kit-section-pillars"
+        >
+          <CardTitle className="mb-3 inline-flex items-center gap-2">
+            <Tag className="text-fg-secondary h-4 w-4" aria-hidden="true" />
+            Content Pillars
+          </CardTitle>
+          {pillars.length ? (
+            <ul className="divide-border divide-y">
+              {pillars.map((pillar) => (
+                <li
+                  key={pillar.id}
+                  className="flex items-center justify-between py-3"
+                  data-testid={`brand-pillar-${pillar.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    {pillar.color ? (
+                      <span
+                        className="border-border h-4 w-4 shrink-0 rounded-full border"
+                        style={{ backgroundColor: pillar.color }}
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                    <span className="text-body text-fg-primary font-semibold">{pillar.name}</span>
+                  </div>
+                  {pillar.description ? (
+                    <span className="text-label text-fg-muted ml-3 truncate">
+                      {pillar.description}
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-body text-fg-muted py-4">No content pillars yet.</p>
+          )}
+        </Card>
+
+        {/* Row 5 — Publishing Rules (4) + Linked Resources (4) + gap placeholder (4) */}
+        <Card
+          id="publishing"
+          className="scroll-mt-20 lg:col-span-4"
+          aria-label="Publishing rules"
+          data-testid="brand-kit-section-publishing"
+        >
+          <CardTitle className="mb-3">Publishing Rules</CardTitle>
+          <EmptyState
+            icon={<LinkIcon className="h-7 w-7" />}
+            title="No publishing rules yet"
+            description="The team is finalizing alt-text, hashtag, and compliance rules in R3-F."
+          />
+        </Card>
+
+        <Card
+          id="linked"
+          className="scroll-mt-20 lg:col-span-4"
+          aria-label="Linked resources"
+          data-testid="brand-kit-section-linked"
+        >
+          <CardTitle className="mb-3">Linked Resources</CardTitle>
+          <EmptyState
+            icon={<Folder className="h-7 w-7" />}
+            title="No linked resources yet"
+            description="Connect Drive, Figma, and Canva once the linking surface lands in R3-F."
+            action={
+              <Button type="button" variant="secondary" size="sm">
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                Link a resource
+              </Button>
+            }
+          />
+        </Card>
+
+        {/* Row 6 — Recent Updates (12) */}
+        <Card
+          id="recent"
+          className="scroll-mt-20 lg:col-span-12"
+          aria-label="Recent updates"
+          data-testid="brand-kit-section-recent"
+        >
+          <CardTitle className="mb-3">Recent Updates</CardTitle>
+          {recent.length ? (
+            <div className="overflow-x-auto">
+              <table className="text-body w-full text-left">
+                <thead>
+                  <tr className="text-label text-fg-muted">
+                    <th className="pr-3 pb-2 font-semibold">Date</th>
+                    <th className="pr-3 pb-2 font-semibold">Description</th>
+                    <th className="pb-2 font-semibold">User</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-border divide-y">
+                  {recent.map((update, index) => (
+                    <tr key={`${update.kind}-${index}`} data-testid="brand-recent-row">
+                      <td className="text-fg-secondary py-2 pr-3">
+                        {formatRelativeDate(update.updatedAt)}
+                      </td>
+                      <td className="text-fg-primary py-2 pr-3">{update.description}</td>
+                      <td className="py-2">
+                        <span className="bg-surface-subtle text-fg-secondary text-label inline-flex h-6 w-6 items-center justify-center rounded-full font-semibold">
+                          M
+                        </span>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-border divide-y">
-                    {recent.map((update, index) => (
-                      <tr key={`${update.kind}-${index}`} data-testid="brand-recent-row">
-                        <td className="text-fg-secondary py-2 pr-3">
-                          {formatRelativeDate(update.updatedAt)}
-                        </td>
-                        <td className="text-fg-primary py-2 pr-3">{update.description}</td>
-                        <td className="py-2">
-                          <span className="bg-surface-subtle text-fg-secondary text-label inline-flex h-6 w-6 items-center justify-center rounded-full font-semibold">
-                            M
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-body text-fg-muted py-4">No recent updates yet.</p>
-            )}
-          </Card>
-        </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-body text-fg-muted py-4">No recent updates yet.</p>
+          )}
+        </Card>
       </div>
     </div>
   );
