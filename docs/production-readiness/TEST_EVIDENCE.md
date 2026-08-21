@@ -52,13 +52,13 @@ The per-glob **regression floor** in `vitest.config.ts` is set at the current pe
 
 ## Browser evidence
 
-| Suite                                        | Result                                                      | Source                                                                                      |
-| -------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Playwright `chromium`                        | 144 pass, 10 skip                                           | `pnpm test:e2e:run` (split into `e2e.yml` so the slow suite does not gate deploy)           |
-| Playwright `chromium` + `firefox` + `webkit` | Green on `main`                                             | `tests/e2e/`; see `tests/e2e/mobile-safari.spec.ts` and the `playwright.config.ts` projects |
-| Playwright `mobile-chrome` + `mobile-safari` | Green on `main`                                             | Pixel 7 viewport; mobile-only spec gating via `test.skip(({ isMobile }) => isMobile, ...)`  |
-| axe-core per route                           | No serious/critical issue on canonical authenticated routes | `tests/e2e/a11y-routes.spec.ts` (M3b `23706b1`)                                             |
-| Visual regression (QA-004)                   | `test.skip` by default                                      | Baselines pending first capture on a stable UI render (`--update-snapshots`)                |
+| Suite                                        | Result                                                                               | Source                                                                                                                                   |
+| -------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Playwright `chromium`                        | 144 pass, 10 skip                                                                    | `pnpm test:e2e:run` (split into `e2e.yml` so the slow suite does not gate deploy)                                                        |
+| Playwright `chromium` + `firefox` + `webkit` | Green on `main`                                                                      | `tests/e2e/`; see `tests/e2e/mobile-safari.spec.ts` and the `playwright.config.ts` projects                                              |
+| Playwright `mobile-chrome` + `mobile-safari` | Green on `main`                                                                      | Pixel 7 viewport; mobile-only spec gating via `test.skip(({ isMobile }) => isMobile, ...)`                                               |
+| axe-core per route                           | No serious/critical issue on canonical authenticated routes                          | `tests/e2e/a11y-routes.spec.ts` (M3b `23706b1`)                                                                                          |
+| Visual regression (QA-004)                   | **Captured (no longer `test.skip`)** — 39 exact-reference + 138 responsive baselines | `a9fa300` + `3d40183`; deploy gated on the critical visual tests. See `docs/production-readiness/VISUAL_REVIEW.md` for the reviewer log. |
 
 ## Critical baseline weaknesses — pre-M3, all closed
 
@@ -334,3 +334,34 @@ above remain authoritative.
 | `pnpm audit --prod`     | No known vulnerabilities                                       | `pnpm audit --prod` clean.                                                                             |
 | `pnpm build`            | **Skipped: symlinked node_modules not supported by Turbopack** | Worktree-only limitation. Re-run in the main checkout. The Task 9 change set adds no application code. |
 | `pnpm test:integration` | **Skipped: no DB in this env** (`TEST_DATABASE_URL` unset)     | Guard correctly refuses to run; CI runs this gate separately.                                          |
+
+## 2026-08-22 — Documentation reconciliation (plan Task 11)
+
+All status documents (this file, `PRODUCTION_READINESS_TRACKER.md`,
+`SCREEN_PARITY.md`, `UAT_RELEASE.md`, `DESIGN_AUDIT.md`,
+`docs/implementation/progress.md`, `AGENTS.md`, `README.md`, `issues.md`)
+now use the same shared definitions and the same shared release verdict.
+
+- **49 captured Stitch references** (PNG + HTML each, 98 files + `DESIGN.md`).
+- **27 canonical route/surface rows** including `/signin/forgot-password`.
+- **23 unique routes** deduped from the 27 canonical cases (the responsive matrix iterates over these).
+- **39 active exact-reference comparisons** (27 canonical + 11 responsive + 1 supporting) at the Stitch capture viewport.
+- **10 historical/superseded exclusions** with successors (3 historical + 7 superseded).
+- **138 responsive baselines** (23 unique routes × 6 viewports: 360, 390, 768, 1024, 1280, 1440).
+
+**Shared release verdict:** `READY FOR INDEPENDENT REVIEW` (2026-08-21). The
+`PRODUCTION_READINESS_TRACKER.md` top-of-file verdict and the
+`UAT_RELEASE.md` `Final decision` table now match — both say
+`READY FOR INDEPENDENT REVIEW` with the same `2026-08-21` date and the
+same path to `READY` (Task 13). The `issues.md` P1 entries #1 and #2 are
+closed with their landed commit SHAs (`439a52d`–`6056b93` for Brand Kit
+R1–R4, `acda5ef`–`7f32060` for the settings-wide polish, `a9fa300` +
+`3d40183` for the visual baseline gate).
+
+The only remaining "16 canonical routes" / "skip-by-default" /
+`NOT PRODUCTION READY` strings in the docs are intentional historical
+quotations (e.g. `TEST_EVIDENCE.md` line 143: "UAT verdict bumped from
+`NOT PRODUCTION READY` (2026-08-19) to `READY FOR INDEPENDENT REVIEW`
+(2026-08-21)"). The only `R3-F` references are in
+`docs/superpowers/plans/2026-08-21-stitch-production-completion.md`,
+which is the historical plan file.

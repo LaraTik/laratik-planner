@@ -40,7 +40,7 @@ pnpm audit --prod
 pnpm test:e2e
 ```
 
-Integration tests require a disposable database whose URL contains `test` or `ci`; the runner refuses any other database name. Browser CI covers Chromium, Firefox, WebKit, and mobile Chrome. Mobile Safari and the per-viewport visual baselines are still tracked under UI-010 (Partial) in [`PRODUCTION_READINESS_TRACKER.md`](./PRODUCTION_READINESS_TRACKER.md).
+Integration tests require a disposable database whose URL contains `test` or `ci`; the runner refuses any other database name. Browser CI covers Chromium, Firefox, WebKit, mobile Chrome, and mobile Safari. The 138 responsive visual baselines (23 unique routes × 6 viewports) are captured by the dedicated `visual-chromium` project and gated in [`PRODUCTION_READINESS_TRACKER.md`](./PRODUCTION_READINESS_TRACKER.md) under QA-004.
 
 ## Deployment
 

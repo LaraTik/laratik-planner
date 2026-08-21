@@ -16,20 +16,24 @@ math that the matrix has to satisfy going forward:
   98 files + `DESIGN.md`). Every capture maps to a route or to a
   shared-state evidence group (`operational-states`,
   `notification-drawer`).
-- **26 current matrix rows** (pre-this-update count).
-- **`/signin/forgot-password` is now a real implemented row** (capture
-  `793a08d8`). The previous "approved deviation" note for that
-  screen is obsolete — password reset now exists as a parity
-  target, bringing the matrix to **27 rows**.
-- **27 route / surface rows × 6 canonical viewports** = 162 visual
-  baselines that the `tests/e2e/visual-regression.spec.ts` harness
-  is expected to cover (mobile-s 360, mobile-m 390, tablet 768,
-  laptop 1024, desktop 1280, wide 1440). The Stitch captures
-  themselves only ship at the three viewport sizes that Google
-  Stitch emits (desktop 1440×900, mobile 390×844, tablet 768×1024);
-  the harness is the bridge between the two.
+- **27 current matrix rows** including `/signin/forgot-password`
+  (capture `793a08d8`). The previous "approved deviation" note for
+  that screen is obsolete — password reset now exists as a parity
+  target, brought online by `c46fc21`.
+- **23 unique routes deduped from the 27 canonical cases** (the
+  `operational-states` evidence group is not a route, and four
+  routes host multiple canonical rows). 23 × 6 viewports
+  (mobile-s 360, mobile-m 390, tablet 768, laptop 1024, desktop
+  1280, wide 1440) = **138 responsive baselines** that the
+  `tests/e2e/visual-regression.spec.ts` responsive matrix captures.
+  The Stitch captures themselves only ship at the three viewport
+  sizes that Google Stitch emits (desktop 1440×900, mobile
+  390×844, tablet 768×1024); the harness is the bridge between the
+  two.
 - **39 active reference-state comparisons** (27 canonical + 11
-  responsive + 1 supporting) at their captured viewport.
+  responsive + 1 supporting) at their captured viewport. These are
+  the exact-reference screenshots the dedicated `visual-chromium`
+  Playwright project produces.
 - **10 historical/superseded captures with successors** (3
   historical + 7 superseded) — kept for traceability, never
   implemented against. Each one names its successor `screenId` in
@@ -78,9 +82,9 @@ behind the previous Brand-Kit R3 / Side-Nav fix (`b66d7ba`) and the
 auth / channels / user-management / workspace-switcher popover fix
 batch (`c46fc21`–`96a256a`).
 
-## 2026-08-20 update
+## 2026-08-20 update (superseded by 2026-08-21 entries above and below)
 
-After the M0–M4 visual refactor (`docs/visual-parity/PLAN.md`), every workspace-scoped page now ships a **Stitch-aligned PageHeader** with eyebrow / title / description / `workspace.timezone` pill, a **`PlanningViewToggle`** (List/Board/Calendar) where it makes sense, a per-card or per-row **status colour-code**, and `data-testid` hooks for visual regression. The visual-regression harness now covers 25 routes × 6 viewports (150 baselines, all `test.skip`-by-default until the first `--update-snapshots` run).
+The M0–M4 visual refactor (`docs/visual-parity/PLAN.md`) delivered a **Stitch-aligned PageHeader** (eyebrow / title / description / `workspace.timezone` pill), a **`PlanningViewToggle`** (List/Board/Calendar) where it makes sense, per-card or per-row **status colour-code**, and `data-testid` hooks for visual regression on every workspace-scoped page. The visual-regression harness that this update commissioned was later extended by the 2026-08-21 entries: 39 active exact-reference snapshots + 138 responsive baselines (23 unique routes × 6 viewports), with the deploy gate now depending on the critical visual tests.
 
 ## 2026-08-19 update
 
@@ -130,10 +134,10 @@ The `Missing` and `Partial` statuses from the prior revision were pre-M3b and ar
 `Tested` is reserved for rows whose "Required proof" is **captured in the repository** (visual baseline, behavioral log, signed manual checklist). The current state:
 
 - **Behavioral evidence** (axe-core per route, role-by-route matrix, E2E happy paths) — captured in `tests/e2e/`. Re-runs on `main` are green per `docs/production-readiness/TEST_EVIDENCE.md`.
-- **Visual baselines (QA-004)** — spec exists at `tests/e2e/visual-regression.spec.ts` and is `test.skip` by default. After the M0–M3 + M4 visual refactor (`docs/visual-parity/PLAN.md`), the harness covers **25 canonical routes × 6 viewports = 150 baselines** (mobile-s 360, mobile-m 390, tablet 768, laptop 1024, desktop 1280, wide 1440). First capture requires `playwright test --update-snapshots visual-regression.spec.ts` on a stable render, then a reviewer signs the diff.
-- **Manual a11y checklist (QA-005)** — automated a11y passes; screen-reader / zoom / reduced-motion manual sign-off is pending an owner action (recorded separately, not in this matrix).
+- **Visual baselines (QA-004)** — captured (no longer `test.skip`-by-default). The dedicated `visual-chromium` Playwright project covers **39 active exact-reference comparisons** (27 canonical + 11 responsive + 1 supporting) at the Stitch capture viewport and **138 responsive baselines** (23 unique routes × 6 viewports: mobile-s 360, mobile-m 390, tablet 768, laptop 1024, desktop 1280, wide 1440). Deploy now gates on the critical visual tests via `.github/workflows/ci.yml` + `.github/workflows/deploy.yml` (Task 7 commit `3d40183`). Independent reviewer sign-off (Task 13) is the only remaining step.
+- **Manual a11y checklist (QA-005)** — automated a11y sweep found a real `meta-refresh` WCAG 2.2.2 violation on authenticated routes (`issues.md` P1 entry #3); manual screen-reader / zoom / reduced-motion sign-off is pending the fix and an owner action.
 
-The matrix ladder is therefore: every row `Implemented` (today) → `Tested` after QA-004 capture + QA-005 sign-off → `Verified` after independent review of the captured baselines.
+The matrix ladder is therefore: every row `Implemented` (today) → `Tested` after QA-005 sign-off → `Verified` after independent review of the captured baselines.
 
 ## Responsive baselines
 

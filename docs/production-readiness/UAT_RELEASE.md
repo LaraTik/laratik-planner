@@ -1,12 +1,12 @@
 # Production UAT and release verdict
 
-> **Read this first.** This file describes the §23 30-step **UAT** gate, which is independent from the **deploy** gate in `PRODUCTION_READINESS_TRACKER.md`. Both gates must pass for `READY`; either failing blocks release. As of 2026-08-21 the deploy gate is `READY ✅` (awaiting independent reviewer sign-off → `Verified`); the UAT gate is `READY FOR INDEPENDENT REVIEW` (evidence contracts in place, owner-side checks and the §23 journey still need to be run by the independent reviewer). They are not contradictions — they are two different gates.
+> **Read this first.** This file describes the §23 30-step **UAT** gate, which is independent from the **deploy** gate in `PRODUCTION_READINESS_TRACKER.md`. Both gates must pass for `READY`; either failing blocks release. As of 2026-08-21 the shared release verdict across both this file and `PRODUCTION_READINESS_TRACKER.md` is `READY FOR INDEPENDENT REVIEW`. The independent reviewer (Task 13) flips it to `READY` after the §23 journey and the external owner gates below are signed.
 
 ## Two-gate summary
 
 | Gate                                      | Owner                | Status as of 2026-08-21                                                                            | How it flips                                                                                                                                                   |
 | ----------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Deploy**                                | Implementation       | `READY ✅` (awaiting independent reviewer sign-off → `Verified`)                                   | Independent reviewer flips to `Verified` after the §23 journey and external owner gates are signed.                                                            |
+| **Deploy**                                | Implementation       | `READY FOR INDEPENDENT REVIEW` (awaiting independent reviewer sign-off → `READY`)                  | Independent reviewer flips to `READY` after the §23 journey and external owner gates are signed.                                                               |
 | **UAT (§23 journey + external services)** | Independent reviewer | `READY FOR INDEPENDENT REVIEW` (evidence contracts in place; §23 journey and owner checks pending) | Run the 30-step primary journey with separated Maya / Omar / Elena / Jon / Sophie / Daniel accounts; complete the owner checks below; sign the final decision. |
 
 ## UAT verdict
@@ -144,9 +144,9 @@ block every later step and must be fixed first.
 
 ## Final decision
 
-| Reviewer           | Commit / image | Date       | Verdict                                                      | Unresolved risks                                    |
-| ------------------ | -------------- | ---------- | ------------------------------------------------------------ | --------------------------------------------------- |
-| Independent review | —              | 2026-08-21 | `READY FOR INDEPENDENT REVIEW` (evidence contracts in place) | See tracker; §23 journey + owner checks not yet run |
+| Reviewer           | Commit / image | Date       | Verdict                                                                        | Unresolved risks                                    |
+| ------------------ | -------------- | ---------- | ------------------------------------------------------------------------------ | --------------------------------------------------- |
+| Independent review | —              | 2026-08-21 | `READY FOR INDEPENDENT REVIEW` (shared with `PRODUCTION_READINESS_TRACKER.md`) | See tracker; §23 journey + owner checks not yet run |
 
 The final decision flips to `READY` when **all** of the following are true:
 
