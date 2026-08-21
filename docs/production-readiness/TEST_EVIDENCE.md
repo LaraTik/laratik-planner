@@ -125,3 +125,84 @@ Added the complete end-to-end administration journey for the Brand Kit (creating
   ```
 
   Both runs are expected to PASS with mandatory role-based assertions and no conditional skips.
+
+## 2026-08-21 — Accessibility + UAT + external services evidence contracts (plan Task 8)
+
+Three new owner-side evidence contracts land with Task 8. They are the
+**human / external-service** side of the §23 / §24 release gate; the
+automated axe-core sweep is below. All three are `Ready for
+independent review` and the per-row `Pass` cells are intentionally
+empty until an operator runs the check on a real account.
+
+| New file                                                                                  | What it captures                                                                                                                                                                                                                                                                                     | Status (2026-08-21)                                          |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `docs/production-readiness/ACCESSIBILITY_CHECKLIST.md`                                    | One row per canonical surface (27 rows from `tests/e2e/stitch-cases.ts` `classification === "canonical"`), columns: keyboard-only, focus, screen-reader name/role/value + heading hierarchy, 200% zoom, reduced-motion, 360px reflow + 44px targets, reviewer, browser/AT, date, result, issue link. | Template complete; rows empty awaiting independent review.   |
+| `docs/production-readiness/EXTERNAL_SERVICES_UAT.md`                                      | One row per external-service check across Google OAuth (3), Mailcow SMTP (3), MiniMax AI (3), Sentry (4), encrypted offsite backup (2), credential rotation (5).                                                                                                                                     | Template complete; rows empty awaiting owner + date.         |
+| `docs/production-readiness/UAT_RELEASE.md` § "2026-08-21 — 30-step separated-account UAT" | 30 steps from `STUDIOFLOW_MASTER_PROMPT.md` §23, the 6 separated accounts (Maya / Omar / Elena / Jon / Sophie / Daniel), and a 30-row record table (account / operator / date / environment / result / evidence link).                                                                               | Template complete; rows empty awaiting independent reviewer. |
+
+UAT verdict bumped from `NOT PRODUCTION READY` (2026-08-19) to
+`READY FOR INDEPENDENT REVIEW` (2026-08-21). The final `READY`
+verdict is still owned by the independent reviewer after the §23
+journey and every owner gate above have a real `Pass` row.
+
+### Automated accessibility sweep — `pnpm test:a11y`
+
+- **Command (chromium, the only project that completed the full
+  sweep in this env):**
+
+  ```bash
+  AUTH_SECRET="$(openssl rand -base64 32)" \
+  TEST_DATABASE_URL=postgresql://planner:planner@localhost:5432/planner_test \
+  DATABASE_URL=postgresql://planner:planner@localhost:5432/planner_test \
+  NODE_ENV=development \
+    pnpm exec playwright test tests/e2e/a11y-routes.spec.ts --project=chromium --reporter=list
+  ```
+
+- **Result:** **FAIL — 3 critical axe-core violations on
+  authenticated routes + downstream timeout.**
+  The public a11y tests in `tests/e2e/a11y.spec.ts` are green (4 / 4
+  on chromium). Of the 6 authenticated routes scanned, 3 fail with
+  the same `meta-refresh` WCAG 2.2.2 violation and 3 pass.
+
+  Failing routes (chromium):
+
+  - `/app` — `[critical] meta-refresh — Delayed refresh under 20 hours must not be used (1 node(s))` on `#__next-page-redirect`
+  - `/app/w/[slug]` (workspace overview) — same `meta-refresh` violation
+  - `/app/w/[slug]/planning` (planning list) — same `meta-refresh` violation
+  - `/app/w/[slug]/planning/[id]` (content detail) — test
+    timeout (downstream of the same root cause; the
+    `createDraft` helper visits `/app/w/acme/planning/new` which
+    also redirects)
+  - `/app/workspaces` and `/app/account` — pass on a fresh dev
+    server (the prior cached "green" report was a stale dev-server
+    state; rerunning on a fresh server exposes the bug on every
+    `/app/*` route that runs through `(app)/layout.tsx`).
+
+- **Root cause (initial diagnosis, not fixed in Task 8):**
+  `auth()` returns `null` for every `/app/*` page render under the
+  dev sign-in cookie. The proxy's `getToken()` in `src/proxy.ts`
+  correctly recognises the cookie and lets the request through, but
+  the page-side `auth()` call still gets `null`, so the page calls
+  `redirect("/signin")`. Next.js then renders the redirect as a
+  `<meta http-equiv="refresh" content="1;url=/signin">` tag, which
+  axe-core flags as a critical WCAG 2.2.2 violation.
+
+- **Action taken:** the failure is logged in
+  `issues.md` (P1 entry #3) with the exact reproduction, observed
+  output and a suggested next step (focused P1 fix in a separate
+  worktree). The `QA-005` row in
+  `PRODUCTION_READINESS_TRACKER.md` stays at `Partial` — it cannot
+  flip to `Tested` until the meta-refresh bug is closed. No test
+  assertions were lowered or skipped to get the test to pass.
+
+- **Other browsers (firefox, webkit, mobile-chrome,
+  mobile-safari):** not run in this env to keep the worker scope
+  bounded. The chromium result is the authoritative finding; the
+  same root cause is expected to surface on every browser project
+  once the dev-server state is fresh. The full multi-project sweep
+  is the responsibility of the follow-up P1 fix.
+
+- **The intended axe-core posture for the release gate is unchanged:**
+  zero serious/critical violations on every canonical authenticated
+  route. The Task 8 sweep documents the current state; the fix is
+  the next worker.
