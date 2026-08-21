@@ -54,6 +54,9 @@ const CANONICAL_ROUTES = [
   "/app/w/acme/ai-settings",
   "/app/w/acme/client",
   "/app/w/acme/client/calendar",
+  // Note: /app/w/acme/planning/[id] is omitted — needs a real content
+  // item UUID, which the dev seed doesn't create. Cover via content
+  // flow E2E instead.
 ] as const;
 
 const VIEWPORTS = [
