@@ -4,6 +4,43 @@ Project `5403097764334458790`; design system `assets/e2bbd2e84f524a5eb7e1aa20a22
 
 Status values: `Missing`, `Partial`, `Implemented`, `Tested`, `Verified`. Only independent review assigns `Verified`.
 
+## 2026-08-21 update — settings polish complete
+
+The four-commit settings-polish batch (`acda5ef`–`7f32060`) closes the
+remaining page-level polish for the four workspace- and agency-scoped
+admin surfaces that were the last non-M3b stragglers:
+
+- **Channels** (`/app/w/[slug]/channels`) — `AddChannelButton` client
+  CTA that focuses the inline form; `CardTitle` + `CardDescription`
+  on the add card; `FormField` adoption on all three inputs (label /
+  hint / required / `aria-required`); `channels-empty-state` testid;
+  6 tests (`channel-form.test.tsx` 4 + `add-channel-button.test.tsx` 2).
+- **Team** (`/app/w/[slug]/team`) — pending/members card testids;
+  empty-state copy tailored to actor permission (read-only vs
+  manager); `member-edit-trigger` testid + `aria-label` on the per-row
+  Edit button; 2 tests.
+- **Workspace Settings** (`/app/w/[slug]/settings`) — reorganized so
+  every section nav link points to a real anchor (`#lifecycle`,
+  `#lead-times`, `#approvals`, `#defaults`); `Label htmlFor` + `id` +
+  `aria-required` + `*` marker on every required control;
+  `settings-form-card` + `settings-readonly-*` testids; focus ring +
+  `text-fg-primary` on the shared `controlClass`; 4 tests.
+- **Agency Settings** (`/app/agency-settings`) — Lucide `Building2` /
+  `Server` / `KeyRound` / `ArrowLeft` icons (replaces the generic
+  `Settings`); `border-b last:border-0` card rhythm matching
+  brand-kit / workspace-settings; `CardDescription` under each card
+  title; 8 data-testids (`agency-settings-{identity,services}`,
+  `agency-name`, etc.); 5 tests including forbidden fallback and
+  the no-emoji rule.
+
+The polish pass patterns (PageHeader, Card, Badge, FormField, Drawer,
+section nav vs top tabs, auth gates, test mock pattern) are captured
+in `docs/design/SETTINGS_UI_LEARNINGS.md` so future passes do not
+re-derive the rules. Pushed to `main` (commits `acda5ef`–`7f32060`)
+behind the previous Brand-Kit R3 / Side-Nav fix (`b66d7ba`) and the
+auth / channels / user-management / workspace-switcher popover fix
+batch (`c46fc21`–`96a256a`).
+
 ## 2026-08-20 update
 
 After the M0–M4 visual refactor (`docs/visual-parity/PLAN.md`), every workspace-scoped page now ships a **Stitch-aligned PageHeader** with eyebrow / title / description / `workspace.timezone` pill, a **`PlanningViewToggle`** (List/Board/Calendar) where it makes sense, a per-card or per-row **status colour-code**, and `data-testid` hooks for visual regression. The visual-regression harness now covers 25 routes × 6 viewports (150 baselines, all `test.skip`-by-default until the first `--update-snapshots` run).

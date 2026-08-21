@@ -26,37 +26,47 @@ An item may be marked `Tested` only when its evidence column contains the exact 
 
 ## Refinements (2026-08-21)
 
-Sixteen atomic commits in one day, all on `main`. Every commit
+Twenty-one atomic commits in one day, all on `main`. Every commit
 passes `pnpm verify` (format / lint / typecheck / unit / build) and
-`pnpm audit --prod` (0 advisories). Pushed to origin in two batches
-during the day.
+`pnpm audit --prod` (0 advisories). Pushed to origin in three
+batches during the day. The 4 settings-polish commits
+(`acda5ef`–`7f32060`) close the polish pass on channels, team,
+workspace-settings and agency-settings per
+`docs/design/SETTINGS_UI_LEARNINGS.md`; the chore commit `d8fd846`
+adds `issues.md` (the agent triage queue) to the repo.
 
-| Commit         | Focus                                                   | Files  | +         | -        | Tests    | Verifies                                                                                                                        |
-| -------------- | ------------------------------------------------------- | ------ | --------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `471e5cf`      | FormSubmitButton + KPI refactor + brand-kit voice rules | 12     | +227      | -87      | +8       | All 6 forms share one submit primitive; planning uses `calculateWorkspaceKpis`; voice rules inline `[Tone] content`             |
-| `0838de8`      | Email + AI service tests + dev/signin FormSubmitButton  | 3      | +364      | -4       | +16      | 5 email tests, 11 AI tests (gate / fetch / response parse / prompt shape)                                                       |
-| `7b2ced5`      | PlanningFilters + content/status tests                  | 4      | +290      | -41      | +19      | 14 status tests (exhaustiveness invariants), 5 filters tests                                                                    |
-| `f7a6531`      | DataTable (channels + team pages)                       | 4      | +410      | -182     | +7       | Typed `<DataTable<T>>` with `hideOn`; -190 lines of duplicate table styling                                                     |
-| `792f5e6`      | Tracker refinement log + KpiCard tests                  | 3      | +262      | -1       | +4       | Tracker log bumped to "Refinements 2026-08-21"; 4 KpiCard tests for the extracted-but-untested primitive                        |
-| `907f3be`      | KpiTile extracted from users page                       | 3      | +176      | -53      | +7       | `KpiTile` extracted (typed `tone` prop owns border+icon color); 7 tests for tone/label/data-testid forwarding                   |
-| `a271731`      | Workspaces page adopts KpiTile + DataTable              | 2      | +65       | -91      | +0       | Kills the last inlined KpiTile (drops `text-warning`/`text-success` icon double-styling); columns helper takes lookup maps      |
-| `67b7ebd`      | Library page adopts DataTable for Content pillars       | 1      | +28       | -36      | +0       | Pillars table moves to `<DataTable>`; -8 lines of hand-rolled table styling                                                     |
-| `ca7ea77`      | CommentItem + CommentForm extracted from discussion     | 5      | +676      | -243     | +38      | 362-line `discussion-section.tsx` becomes a 131-line orchestrator; 21 comment-item + 17 comment-form tests                      |
-| `8d5f74c`      | WorkflowBoard extracted (board page)                    | 3      | +247      | -51      | +11      | 93 → 55 lines in board page; typed `<WorkflowBoard>` with `WorkflowBoardColumn` + `WorkflowBoardItem` types                     |
-| `6bf94bf`      | Reviews adopts KpiTile for Pending/Overdue/On-time      | 1      | +17       | -46      | +0       | Three inlined "mini-KPI" cards collapse into `<KpiTile tone="danger">` for overdue                                              |
-| `f814f45`      | RecentItemsCard extracted + Button asChild on overview  | 3      | +236      | -71      | +10      | 256 → 215 lines in workspace overview; action links use `<Button asChild>`; 10 RecentItemsCard tests                            |
-| `1df8f32`      | ReviewRow extracted (reviews queue)                     | 3      | +209      | -28      | +13      | 161 → 124 lines in reviews; 13 tests cover due-date visibility, overdue predicate, gate humanization                            |
-| `8c16f28`      | Centralize `.replace(/_/g, " ")` in `humanize()`        | 7      | +16       | -10      | +0       | 7 call sites switch to `humanize()` / `humanFormat()`; title-case behaviour now consistent app-wide                             |
-| `029d945`      | NotificationItem extracted (notifications bell)         | 3      | +214      | -49      | +12      | 40-line inline `<li>` per row collapses into 8-line map; bell 227 → 192 lines; 12 tests covering unread + mark-on-open          |
-| `0571e69`      | Discussions service schema tests                        | 1      | +166      | -0       | +18      | 18 tests for `CreateCommentSchema` + `ResolveCommentSchema` + visibility/label unions; covers body length cap + UUID validation |
-| **Cumulative** |                                                         | **55** | **+3603** | **-993** | **+163** | **27→42 test files, 120→283 tests**                                                                                             |
+| Commit         | Focus                                                        | Files  | +         | -         | Tests    | Verifies                                                                                                                                          |
+| -------------- | ------------------------------------------------------------ | ------ | --------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `471e5cf`      | FormSubmitButton + KPI refactor + brand-kit voice rules      | 12     | +227      | -87       | +8       | All 6 forms share one submit primitive; planning uses `calculateWorkspaceKpis`; voice rules inline `[Tone] content`                               |
+| `0838de8`      | Email + AI service tests + dev/signin FormSubmitButton       | 3      | +364      | -4        | +16      | 5 email tests, 11 AI tests (gate / fetch / response parse / prompt shape)                                                                         |
+| `7b2ced5`      | PlanningFilters + content/status tests                       | 4      | +290      | -41       | +19      | 14 status tests (exhaustiveness invariants), 5 filters tests                                                                                      |
+| `f7a6531`      | DataTable (channels + team pages)                            | 4      | +410      | -182      | +7       | Typed `<DataTable<T>>` with `hideOn`; -190 lines of duplicate table styling                                                                       |
+| `792f5e6`      | Tracker refinement log + KpiCard tests                       | 3      | +262      | -1        | +4       | Tracker log bumped to "Refinements 2026-08-21"; 4 KpiCard tests for the extracted-but-untested primitive                                          |
+| `907f3be`      | KpiTile extracted from users page                            | 3      | +176      | -53       | +7       | `KpiTile` extracted (typed `tone` prop owns border+icon color); 7 tests for tone/label/data-testid forwarding                                     |
+| `a271731`      | Workspaces page adopts KpiTile + DataTable                   | 2      | +65       | -91       | +0       | Kills the last inlined KpiTile (drops `text-warning`/`text-success` icon double-styling); columns helper takes lookup maps                        |
+| `67b7ebd`      | Library page adopts DataTable for Content pillars            | 1      | +28       | -36       | +0       | Pillars table moves to `<DataTable>`; -8 lines of hand-rolled table styling                                                                       |
+| `ca7ea77`      | CommentItem + CommentForm extracted from discussion          | 5      | +676      | -243      | +38      | 362-line `discussion-section.tsx` becomes a 131-line orchestrator; 21 comment-item + 17 comment-form tests                                        |
+| `8d5f74c`      | WorkflowBoard extracted (board page)                         | 3      | +247      | -51       | +11      | 93 → 55 lines in board page; typed `<WorkflowBoard>` with `WorkflowBoardColumn` + `WorkflowBoardItem` types                                       |
+| `6bf94bf`      | Reviews adopts KpiTile for Pending/Overdue/On-time           | 1      | +17       | -46       | +0       | Three inlined "mini-KPI" cards collapse into `<KpiTile tone="danger">` for overdue                                                                |
+| `f814f45`      | RecentItemsCard extracted + Button asChild on overview       | 3      | +236      | -71       | +10      | 256 → 215 lines in workspace overview; action links use `<Button asChild>`; 10 RecentItemsCard tests                                              |
+| `1df8f32`      | ReviewRow extracted (reviews queue)                          | 3      | +209      | -28       | +13      | 161 → 124 lines in reviews; 13 tests cover due-date visibility, overdue predicate, gate humanization                                              |
+| `8c16f28`      | Centralize `.replace(/_/g, " ")` in `humanize()`             | 7      | +16       | -10       | +0       | 7 call sites switch to `humanize()` / `humanFormat()`; title-case behaviour now consistent app-wide                                               |
+| `029d945`      | NotificationItem extracted (notifications bell)              | 3      | +214      | -49       | +12      | 40-line inline `<li>` per row collapses into 8-line map; bell 227 → 192 lines; 12 tests covering unread + mark-on-open                            |
+| `0571e69`      | Discussions service schema tests                             | 1      | +166      | -0        | +18      | 18 tests for `CreateCommentSchema` + `ResolveCommentSchema` + visibility/label unions; covers body length cap + UUID validation                   |
+| `acda5ef`      | Settings polish — channels (Stitch top tabs, CTA, FormField) | 6      | +488      | -33       | +6       | `AddChannelButton` client component; `FormField` adoption on add card; `channels-empty-state` testid; SETTINGS_UI_LEARNINGS doc                   |
+| `dfda274`      | Settings polish — team (card layout, edit trigger testids)   | 2      | +65       | -6        | +2       | `member-edit-trigger` testid+aria-label; team-empty-state tone matches actor permission; pending/members card testids                             |
+| `a8dacb8`      | Settings polish — workspace settings (section nav anchors)   | 3      | +284      | -44       | +4       | Reorganized into 4 anchor sections (`#lifecycle`, `#lead-times`, `#approvals`, `#defaults`); `Label htmlFor`+`aria-required`; settings-form tests |
+| `7f32060`      | Settings polish — agency-settings (cards, Lucide icons)      | 2      | +137      | -23       | +5       | Lucide `Building2`/`Server`/`KeyRound` icons; `border-b` card rhythm; 5 data-testids; 5 page tests including forbidden + no-emoji                 |
+| `d8fd846`      | chore: add issues.md as agent triage working notes           | 1      | +118      | -0        | +0       | Cross-session triage queue (P0–P3 severity, skill, branch strategy); tracked in `docs/design/SETTINGS_UI_LEARNINGS.md` patterns                   |
+| **Cumulative** |                                                              | **73** | **+4991** | **-1099** | **+202** | **42→47 test files, 283→485 tests**                                                                                                               |
 
 Reusable components added in this batch (all extracted from inlined
 page-local code): `FormSubmitButton`, `PlanningFilters`, `DataTable`,
 `KpiTile`, `CommentItem`, `CommentForm`, `WorkflowBoard`,
-`RecentItemsCard`, `ReviewRow`. `AD-001` (component-library
-extraction) component count moved from **19 → 38** (33 new shared
-primitives + 5 new co-located modules: comments, board).
+`RecentItemsCard`, `ReviewRow`, `AddChannelButton`. `AD-001`
+(component-library extraction) component count moved from **19 → 40**
+(35 new shared primitives + 5 new co-located modules: comments,
+board, channel-form, channel-button, settings-form).
 
 ## P0 release blockers
 
