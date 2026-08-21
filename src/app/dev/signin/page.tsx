@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { serverEnv } from "@/lib/validation/env";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
+import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { devSignInAction } from "./actions";
 
 /**
@@ -109,9 +109,12 @@ export default async function DevSignInPage({
             </span>
           </label>
         </fieldset>
-        <Button type="submit" className="w-full" size="lg">
-          Sign in and go to {callbackUrl}
-        </Button>
+        <FormSubmitButton
+          className="w-full"
+          size="lg"
+          label={`Sign in and go to ${callbackUrl}`}
+          pendingLabel="Signing in…"
+        />
       </form>
 
       <p className="text-label text-fg-muted text-center">
