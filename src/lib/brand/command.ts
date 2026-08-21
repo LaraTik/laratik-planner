@@ -106,3 +106,43 @@ export const BrandVoiceRuleCommandSchema = z.discriminatedUnion("ruleType", [
 ]);
 
 export type BrandVoiceRuleCommand = z.infer<typeof BrandVoiceRuleCommandSchema>;
+
+/**
+ * Publishing-rule command (STUDIOFLOW_MASTER_PROMPT.md §11.x) — editorial
+ * guardrails grouped by intent. The discriminator (`ruleType`) mirrors
+ * the `brand_publishing_rule.rule_type` Postgres enum constraint, so a
+ * value that passes this schema is guaranteed to satisfy the DB check
+ * (`brand_publishing_rule_type_valid`).
+ *
+ * Soft-archive only — `brand_publishing_rule` has an `archived_at`
+ * column, so `archiveBrandPublishingRule` flips it to a non-null
+ * timestamp instead of deleting the row.
+ */
+export const BrandPublishingRuleCommandSchema = z.object({
+  ruleType: z.enum(["alt_text", "hashtag", "compliance", "channel", "general"]),
+  title: z.string().trim().min(1).max(80),
+  content: z.string().trim().min(1).max(1000),
+});
+
+export type BrandPublishingRuleCommand = z.infer<typeof BrandPublishingRuleCommandSchema>;
+
+/**
+ * Linked-resource command — a URL pointing at an external design or
+ * asset library the team uses to source on-brand material. The
+ * `provider` discriminator maps to the
+ * `brand_linked_resource_provider_valid` check constraint; the URL
+ * must be HTTPS to match the social-channel invariant and to avoid
+ * leaking credentials over cleartext.
+ */
+export const BrandLinkedResourceCommandSchema = z.object({
+  provider: z.enum(["google_drive", "figma", "canva", "dropbox", "other"]),
+  name: z.string().trim().min(1).max(120),
+  url: z
+    .string()
+    .trim()
+    .url()
+    .refine((value) => value.startsWith("https://"), "Use HTTPS"),
+  description: z.string().trim().max(280).optional(),
+});
+
+export type BrandLinkedResourceCommand = z.infer<typeof BrandLinkedResourceCommandSchema>;
