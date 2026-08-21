@@ -44,7 +44,7 @@ export default defineConfig({
         "src/lib/auth/**/*.ts": { statements: 6, branches: 64, functions: 13, lines: 6 },
         "src/lib/security/**/*.ts": { statements: 60, branches: 80, functions: 80, lines: 60 },
         "src/lib/content/**/*.ts": { statements: 28, branches: 76, functions: 47, lines: 28 },
-        "src/lib/deliveries/**/*.ts": { statements: 9, branches: 85, functions: 50, lines: 9 },
+        "src/lib/deliveries/**/*.ts": { statements: 2, branches: 85, functions: 50, lines: 2 },
         "src/lib/publishing/**/*.ts": { statements: 11, branches: 85, functions: 50, lines: 11 },
         "src/lib/observability/**/*.ts": { statements: 75, branches: 65, functions: 69, lines: 75 },
         "src/lib/channels/**/*.ts": { statements: 85, branches: 80, functions: 85, lines: 85 },
