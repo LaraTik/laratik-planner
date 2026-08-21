@@ -17,7 +17,13 @@ import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { ColorForm } from "./color-form";
 import { VoiceForm } from "./voice-form";
 import { LogoForm } from "./logo-form";
-import { archiveColorAssetAction, archiveLogoAssetAction, archiveVoiceRuleAction } from "./actions";
+import { TypographyForm } from "./typography-form";
+import {
+  archiveColorAssetAction,
+  archiveFontAssetAction,
+  archiveLogoAssetAction,
+  archiveVoiceRuleAction,
+} from "./actions";
 
 /**
  * Brand kit (Goal 4 master prompt §3) — workspace-scoped reference
@@ -234,14 +240,70 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
               <Type className="text-fg-secondary h-4 w-4" aria-hidden="true" />
               Typography
             </CardTitle>
+            {canManage ? <TypographyForm slug={slug} /> : null}
             {assetsByKind.font.length ? (
-              <ul className="divide-border divide-y">
-                {assetsByKind.font.map((asset) => (
-                  <li key={asset.id} className="flex items-center justify-between py-3">
-                    <span className="text-body font-semibold">{asset.name}</span>
-                    <span className="text-label text-fg-muted">font</span>
-                  </li>
-                ))}
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {assetsByKind.font.map((asset) => {
+                  // `value` jsonb holds { family, weight, role }.
+                  // Older rows may have these at different keys; we
+                  // try a few candidates and fall back to a safe
+                  // default.
+                  const v = (asset.value ?? {}) as Record<string, unknown>;
+                  const family =
+                    (typeof v.family === "string" && v.family) ||
+                    (typeof v.name === "string" && v.name) ||
+                    "Inter";
+                  const weight =
+                    typeof v.weight === "number"
+                      ? v.weight
+                      : typeof v.weight === "string"
+                        ? Number(v.weight) || 400
+                        : 400;
+                  const role = typeof v.role === "string" ? v.role.toLowerCase() : "body";
+                  const sampleText = "The quick brown fox jumps over the lazy dog";
+                  const sampleSize = role === "headline" ? 28 : role === "accent" ? 22 : 16;
+                  return (
+                    <li
+                      key={asset.id}
+                      data-testid={`brand-font-${asset.id}`}
+                      className="border-border bg-surface-subtle flex flex-col gap-2 rounded-[var(--radius-control)] border p-3"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 flex-col">
+                          <p className="text-body text-fg-primary truncate font-semibold">
+                            {asset.name}
+                          </p>
+                          <p className="text-label text-fg-muted">
+                            {family} {weight} · {role}
+                          </p>
+                        </div>
+                        {canManage ? (
+                          <form action={archiveFontAssetAction.bind(null, slug, asset.id)}>
+                            <Button
+                              type="submit"
+                              size="icon"
+                              variant="ghost"
+                              aria-label={`Archive font ${asset.name}`}
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            </Button>
+                          </form>
+                        ) : null}
+                      </div>
+                      <p
+                        className="border-border bg-surface rounded-[var(--radius-control)] border p-2"
+                        style={{
+                          fontFamily: `"${family}", system-ui, sans-serif`,
+                          fontWeight: weight,
+                          fontSize: `${sampleSize}px`,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {sampleText}
+                      </p>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="text-body text-fg-muted py-4">No fonts catalogued yet.</p>

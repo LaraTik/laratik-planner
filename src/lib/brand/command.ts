@@ -23,8 +23,19 @@ const hexColor = z
   .trim()
   .regex(/^#[0-9a-fA-F]{6}$/, "Use #RRGGBB format");
 
-const fontWeight = z.enum(["300", "400", "500", "600", "700", "800"]);
 const fontRole = z.enum(["headline", "body", "accent", "mono"]);
+
+// Font weight is a multiple of 100 between 100 and 900 inclusive
+// (the standard CSS weight scale). We accept a number rather than
+// a string union so the UI can use a number input, and validate
+// the multiple-of-100 constraint at the schema level so the
+// server can trust the value without re-checking.
+const fontWeight = z
+  .number()
+  .int()
+  .min(100)
+  .max(900)
+  .refine((w) => w % 100 === 0, "Weight must be a multiple of 100");
 
 const logoCommand = z.object({
   kind: z.literal("logo"),

@@ -146,12 +146,12 @@ describe("BrandAssetCommandSchema — font variant", () => {
     const result = BrandAssetCommandSchema.safeParse({
       kind: "font",
       name: "Heading",
-      value: { family: "Inter", weight: "600", role: "headline" },
+      value: { family: "Inter", weight: 600, role: "headline" },
     });
     expect(result.success).toBe(true);
   });
 
-  it.each(["300", "400", "500", "600", "700", "800"] as const)("accepts weight %s", (weight) => {
+  it.each([100, 200, 300, 400, 500, 600, 700, 800, 900] as const)("accepts weight %i", (weight) => {
     const result = BrandAssetCommandSchema.safeParse({
       kind: "font",
       name: "Body",
@@ -164,16 +164,37 @@ describe("BrandAssetCommandSchema — font variant", () => {
     const result = BrandAssetCommandSchema.safeParse({
       kind: "font",
       name: "Body",
-      value: { family: "Inter", weight: "400", role },
+      value: { family: "Inter", weight: 400, role },
     });
     expect(result.success).toBe(true);
   });
 
-  it("rejects an unknown weight", () => {
+  it("rejects a weight of 950 (out of CSS range)", () => {
     const result = BrandAssetCommandSchema.safeParse({
       kind: "font",
       name: "Body",
-      value: { family: "Inter", weight: "900", role: "body" },
+      value: { family: "Inter", weight: 950, role: "body" },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a weight that is not a multiple of 100 (e.g. 425)", () => {
+    const result = BrandAssetCommandSchema.safeParse({
+      kind: "font",
+      name: "Body",
+      value: { family: "Inter", weight: 425, role: "body" },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toMatch(/multiple of 100/);
+    }
+  });
+
+  it("rejects a non-integer weight (e.g. 400.5)", () => {
+    const result = BrandAssetCommandSchema.safeParse({
+      kind: "font",
+      name: "Body",
+      value: { family: "Inter", weight: 400.5, role: "body" },
     });
     expect(result.success).toBe(false);
   });
@@ -182,7 +203,7 @@ describe("BrandAssetCommandSchema — font variant", () => {
     const result = BrandAssetCommandSchema.safeParse({
       kind: "font",
       name: "Body",
-      value: { family: "Inter", weight: "400", role: "footer" },
+      value: { family: "Inter", weight: 400, role: "footer" },
     });
     expect(result.success).toBe(false);
   });
@@ -191,7 +212,7 @@ describe("BrandAssetCommandSchema — font variant", () => {
     const result = BrandAssetCommandSchema.safeParse({
       kind: "font",
       name: "Body",
-      value: { family: "", weight: "400", role: "body" },
+      value: { family: "", weight: 400, role: "body" },
     });
     expect(result.success).toBe(false);
   });
@@ -200,7 +221,7 @@ describe("BrandAssetCommandSchema — font variant", () => {
     const result = BrandAssetCommandSchema.safeParse({
       kind: "font",
       name: "Body",
-      value: { family: "x".repeat(121), weight: "400", role: "body" },
+      value: { family: "x".repeat(121), weight: 400, role: "body" },
     });
     expect(result.success).toBe(false);
   });

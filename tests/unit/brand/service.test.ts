@@ -118,6 +118,8 @@ const {
   archiveBrandAsset,
   createLogoAsset,
   archiveLogoAsset,
+  createFontAsset,
+  archiveFontAsset,
   createBrandVoiceRule,
   archiveBrandVoiceRule,
   listBrandAssets,
@@ -281,6 +283,68 @@ describe("archiveLogoAsset", () => {
   it("throws PermissionDeniedError when the actor is not a workspace_manager", async () => {
     policyMock.hasWorkspaceRole.mockResolvedValue(false);
     await expect(archiveLogoAsset(actor, workspaceId, "logo-1")).rejects.toBeInstanceOf(
+      PermissionDeniedError,
+    );
+  });
+});
+
+describe("createFontAsset", () => {
+  it("requires workspace_manager role", async () => {
+    await createFontAsset(actor, workspaceId, {
+      name: "Heading",
+      family: "Inter",
+      weight: 700,
+      role: "headline",
+    });
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, [
+      "workspace_manager",
+    ]);
+  });
+
+  it("inserts a font asset with family/weight/role in the value jsonb", async () => {
+    await createFontAsset(actor, workspaceId, {
+      name: "Body",
+      family: "Roboto",
+      weight: 400,
+      role: "body",
+    });
+    expect(dbMock.state.insertCalls).toHaveLength(1);
+    const values = dbMock.state.insertCalls[0]?.values as Record<string, unknown>;
+    expect(values).toMatchObject({
+      workspaceId,
+      createdBy: actor.id,
+      kind: "font",
+      name: "Body",
+      value: { family: "Roboto", weight: 400, role: "body" },
+    });
+  });
+
+  it("throws PermissionDeniedError when the actor is not a workspace_manager", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    await expect(
+      createFontAsset(actor, workspaceId, {
+        name: "Body",
+        family: "Inter",
+        weight: 400,
+        role: "body",
+      }),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+});
+
+describe("archiveFontAsset", () => {
+  it("requires workspace_manager role and updates the row with archivedAt", async () => {
+    await archiveFontAsset(actor, workspaceId, "font-1");
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, [
+      "workspace_manager",
+    ]);
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+    expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: expect.any(Date) });
+  });
+
+  it("throws PermissionDeniedError when the actor is not a workspace_manager", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    await expect(archiveFontAsset(actor, workspaceId, "font-1")).rejects.toBeInstanceOf(
       PermissionDeniedError,
     );
   });

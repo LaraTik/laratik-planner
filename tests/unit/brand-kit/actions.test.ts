@@ -79,6 +79,8 @@ const {
   archiveColorAssetAction,
   createLogoAssetAction,
   archiveLogoAssetAction,
+  createFontAssetAction,
+  archiveFontAssetAction,
   createVoiceRuleAction,
   archiveVoiceRuleAction,
 } = await import("@/app/(app)/app/w/[slug]/brand-kit/actions");
@@ -336,5 +338,94 @@ describe("archiveLogoAssetAction", () => {
     authMock.auth.mockResolvedValue(null);
     await archiveLogoAssetAction(slug, "logo-1");
     expect(dbMock.state.updateCalls).toHaveLength(0);
+  });
+});
+
+describe("createFontAssetAction", () => {
+  it("inserts a font asset with family/weight/role in the value jsonb", async () => {
+    const { revalidatePath } = await import("next/cache");
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createFontAssetAction(
+      slug,
+      {},
+      formData({ name: "Body", family: "Roboto", weight: "400", role: "body" }),
+    );
+    expect(result).toEqual({ success: true });
+    expect(dbMock.state.insertCalls).toHaveLength(1);
+    expect(dbMock.state.insertCalls[0]?.values).toMatchObject({
+      workspaceId: workspace.id,
+      createdBy: session.user.id,
+      kind: "font",
+      name: "Body",
+      value: { family: "Roboto", weight: 400, role: "body" },
+    });
+    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
+  });
+
+  it("rejects a non-integer weight (the action parses the form value as an int)", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createFontAssetAction(
+      slug,
+      {},
+      formData({ name: "Body", family: "Inter", weight: "400.5", role: "body" }),
+    );
+    expect(result.error).toMatch(/whole number/);
+    expect(dbMock.state.insertCalls).toHaveLength(0);
+  });
+
+  it("rejects a weight that isn't a multiple of 100", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createFontAssetAction(
+      slug,
+      {},
+      formData({ name: "Body", family: "Inter", weight: "425", role: "body" }),
+    );
+    expect(result.error).toMatch(/multiple of 100/);
+    expect(dbMock.state.insertCalls).toHaveLength(0);
+  });
+
+  it("rejects when the caller is not a workspace_manager", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    const result = await createFontAssetAction(
+      slug,
+      {},
+      formData({ name: "Body", family: "Inter", weight: "400", role: "body" }),
+    );
+    expect(result).toEqual({ error: "Workspace manager access is required." });
+    expect(dbMock.state.insertCalls).toHaveLength(0);
+  });
+
+  it("rejects an unknown role", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createFontAssetAction(
+      slug,
+      {},
+      formData({ name: "Body", family: "Inter", weight: "400", role: "footer" }),
+    );
+    expect(result.error).toBeDefined();
+    expect(dbMock.state.insertCalls).toHaveLength(0);
+  });
+});
+
+describe("archiveFontAssetAction", () => {
+  it("updates the row with archivedAt when the caller is a workspace_manager", async () => {
+    const { revalidatePath } = await import("next/cache");
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await archiveFontAssetAction(slug, "font-1");
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+    expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: expect.any(Date) });
+    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 });

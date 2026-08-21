@@ -117,6 +117,48 @@ export async function archiveLogoAsset(
     .where(and(eq(brandAssets.id, assetId), eq(brandAssets.workspaceId, workspaceId)));
 }
 
+/**
+ * Round 2 typed wrappers for the font variant. Mirrors
+ * `createLogoAsset`/`archiveLogoAsset` above.
+ */
+export type FontAssetInput = {
+  name: string;
+  family: string;
+  weight: number;
+  role: "headline" | "body" | "accent" | "mono";
+};
+
+export async function createFontAsset(
+  actor: Actor,
+  workspaceId: string,
+  input: FontAssetInput,
+): Promise<void> {
+  await requireManager(actor, workspaceId, "create font asset");
+  await db.insert(brandAssets).values({
+    workspaceId,
+    createdBy: actor.id,
+    kind: "font",
+    name: input.name,
+    value: {
+      family: input.family,
+      weight: input.weight,
+      role: input.role,
+    },
+  });
+}
+
+export async function archiveFontAsset(
+  actor: Actor,
+  workspaceId: string,
+  assetId: string,
+): Promise<void> {
+  await requireManager(actor, workspaceId, "archive font asset");
+  await db
+    .update(brandAssets)
+    .set({ archivedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(brandAssets.id, assetId), eq(brandAssets.workspaceId, workspaceId)));
+}
+
 export async function archiveBrandAsset(
   actor: Actor,
   workspaceId: string,
