@@ -15,19 +15,19 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { ChannelForm } from "./channel-form";
-import { archiveChannelAction } from "./actions";
+import { ChannelRowActions } from "./channel-edit-drawer";
 
 type ChannelRow = typeof socialChannels.$inferSelect;
 
 /**
  * Column definitions for the channels table. Hoisted out of the page
- * so the JSX stays focused on data + layout. The `archiveChannelAction`
- * is bound per row by the row's `<form>` below.
+ * so the JSX stays focused on data + layout. Row actions render
+ * through the `ChannelRowActions` client component (kebab menu +
+ * edit drawer + archive confirm).
  */
 function channelsColumns(props: {
   slug: string;
   canManage: boolean;
-  archiveChannelAction: typeof import("./actions").archiveChannelAction;
 }): DataTableColumnDef<ChannelRow>[] {
   return [
     {
@@ -107,18 +107,9 @@ function channelsColumns(props: {
       cellClassName: "text-right",
       cell: (row) =>
         props.canManage ? (
-          <form action={props.archiveChannelAction.bind(null, props.slug, row.id)}>
-            <Button
-              size="icon"
-              variant="ghost"
-              type="submit"
-              aria-label={`Archive ${row.accountName}`}
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </form>
+          <ChannelRowActions slug={props.slug} channel={row} />
         ) : (
-          <span aria-hidden="true">
+          <span aria-hidden="true" className="inline-flex h-10 w-10 items-center justify-center">
             <MoreHorizontal className="text-fg-muted h-4 w-4" />
           </span>
         ),
@@ -190,7 +181,6 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
               columns={channelsColumns({
                 slug,
                 canManage,
-                archiveChannelAction,
               })}
             />
           </div>
