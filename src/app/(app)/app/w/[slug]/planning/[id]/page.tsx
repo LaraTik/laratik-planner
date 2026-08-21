@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getContentItem, UPDATEABLE_STATUSES } from "@/lib/content/service";
-import { listApprovalsForItem } from "@/lib/deliveries/service";
+import { listApprovalsForItem, listDeliveriesForItem } from "@/lib/deliveries/service";
 import { listPublicationsForItem } from "@/lib/publishing/service";
 import { listCommentsForItem } from "@/lib/discussions/service";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
@@ -42,10 +42,11 @@ export default async function ContentDetailPage({
   const item = await getContentItem({ id: session.user.id }, id);
   if (!item || item.workspaceId !== ws.id) notFound();
 
-  const [approvals, publications, discussionComments] = await Promise.all([
+  const [approvals, publications, discussionComments, deliveries] = await Promise.all([
     listApprovalsForItem({ id: session.user.id }, id),
     listPublicationsForItem({ id: session.user.id }, id).catch(() => []),
     listCommentsForItem({ id: session.user.id }, id).catch(() => []),
+    listDeliveriesForItem({ id: session.user.id }, id).catch(() => []),
   ]);
 
   const actorRoles = {
@@ -142,6 +143,16 @@ export default async function ContentDetailPage({
         contentStatus={item.status}
         isDesigner={actorRoles.isDesigner}
         isManager={actorRoles.isManager}
+        deliveries={deliveries.map((d) => ({
+          id: d.id,
+          versionNumber: d.versionNumber,
+          description: d.description,
+          designerNote: d.designerNote,
+          submittedAt: d.submittedAt.toISOString(),
+          isFinalApproved: d.isFinalApproved,
+          submittedBy: d.submittedBy,
+          links: d.links,
+        }))}
       />
 
       <PublishingSection

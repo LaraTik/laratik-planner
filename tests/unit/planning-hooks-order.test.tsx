@@ -139,6 +139,7 @@ describe("planning detail components — hooks order guard", () => {
           contentStatus="draft"
           isDesigner={false}
           isManager={false}
+          deliveries={[]}
         />,
       );
       // State B: can submit, opens form. Same instance.
@@ -150,6 +151,7 @@ describe("planning detail components — hooks order guard", () => {
             contentStatus="in_design"
             isDesigner
             isManager
+            deliveries={[]}
           />,
         ),
       );

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, max, sql } from "drizzle-orm";
+import { and, eq, inArray, max, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   activityEvents,
@@ -8,6 +8,7 @@ import {
   contentItems,
   deliveryLinks,
   deliveryVersions,
+  users,
   workspaceSettings,
 } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
@@ -329,4 +330,109 @@ export async function listApprovalsForItem(actor: Actor, contentItemId: string) 
     .from(approvalRequests)
     .where(eq(approvalRequests.contentItemId, contentItemId))
     .orderBy(sql`${approvalRequests.requestedAt} DESC`);
+}
+
+/**
+ * STUDIOFLOW_MASTER_PROMPT.md §10 — list every delivery version for a
+ * content item, newest first, with the links and submitter display
+ * name. Read by the content-detail page so designers and reviewers
+ * can see what was actually submitted.
+ *
+ * Authorization: any workspace member (same as `listApprovalsForItem`).
+ */
+export type DeliveryListItem = {
+  id: string;
+  versionNumber: number;
+  description: string;
+  designerNote: string | null;
+  submittedAt: Date;
+  isFinalApproved: boolean;
+  submittedBy: { id: string; name: string };
+  links: {
+    id: string;
+    provider: string;
+    label: string;
+    url: string;
+    isPreview: boolean;
+  }[];
+};
+
+export async function listDeliveriesForItem(
+  actor: Actor,
+  contentItemId: string,
+): Promise<DeliveryListItem[]> {
+  const [item] = await db
+    .select({ workspaceId: contentItems.workspaceId })
+    .from(contentItems)
+    .where(eq(contentItems.id, contentItemId))
+    .limit(1);
+  if (!item) throw new Error("Content item not found");
+  await requirePolicy(
+    hasWorkspaceRole(actor, item.workspaceId, [
+      "workspace_manager",
+      "content_planner",
+      "designer",
+      "internal_reviewer",
+      "client_reviewer",
+      "publisher",
+      "viewer",
+    ]),
+    "list_deliveries",
+  );
+
+  const versionRows = await db
+    .select({
+      id: deliveryVersions.id,
+      versionNumber: deliveryVersions.versionNumber,
+      description: deliveryVersions.description,
+      designerNote: deliveryVersions.designerNote,
+      submittedAt: deliveryVersions.submittedAt,
+      isFinalApproved: deliveryVersions.isFinalApproved,
+      submittedBy: users.id,
+      submittedByName: users.displayName,
+    })
+    .from(deliveryVersions)
+    .innerJoin(users, eq(users.id, deliveryVersions.submittedBy))
+    .where(eq(deliveryVersions.contentItemId, contentItemId))
+    .orderBy(sql`${deliveryVersions.versionNumber} DESC`);
+
+  if (versionRows.length === 0) return [];
+
+  const versionIds = versionRows.map((v) => v.id);
+  const linkRows = await db
+    .select({
+      id: deliveryLinks.id,
+      deliveryVersionId: deliveryLinks.deliveryVersionId,
+      provider: deliveryLinks.provider,
+      label: deliveryLinks.label,
+      url: deliveryLinks.url,
+      isPreview: deliveryLinks.isPreview,
+    })
+    .from(deliveryLinks)
+    .where(inArray(deliveryLinks.deliveryVersionId, versionIds))
+    .orderBy(sql`${deliveryLinks.createdAt} ASC`);
+
+  const linksByVersion = new Map<string, DeliveryListItem["links"]>();
+  for (const link of linkRows) {
+    const list = linksByVersion.get(link.deliveryVersionId) ?? [];
+    list.push({
+      id: link.id,
+      provider: link.provider,
+      label: link.label,
+      url: link.url,
+      isPreview: link.isPreview,
+    });
+    linksByVersion.set(link.deliveryVersionId, list);
+  }
+
+  return versionRows.map((v) => ({
+    id: v.id,
+    versionNumber: v.versionNumber,
+    description: v.description,
+    designerNote: v.designerNote,
+    submittedAt: v.submittedAt,
+    isFinalApproved: v.isFinalApproved,
+    submittedBy: { id: v.submittedBy, name: v.submittedByName },
+    links: linksByVersion.get(v.id) ?? [],
+  }));
 }
