@@ -14,6 +14,11 @@ import { MonthNav } from "@/components/workspace/month-nav";
 import { PlanningKpiBar } from "@/components/workspace/planning-kpi-bar";
 import { PlanningViewToggle } from "@/components/workspace/planning-view-toggle";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import {
+  type KpiContentFormat,
+  type KpiContentStatus,
+  calculateWorkspaceKpis,
+} from "@/lib/dashboard/kpis";
 
 /**
  * Planning list (Goal 6 master prompt §3 Monthly Planning List).
@@ -75,24 +80,20 @@ export default async function PlanningPage({
   // KPI tile counts — derived from the unfiltered list so the tiles
   // always reflect the full month, not whatever filter the user has
   // applied. The current filter still drives the rendered list.
+  // Math is shared with the workspace overview (calculateWorkspaceKpis)
+  // so the two pages can never disagree.
   const allMonthItems = await listWorkspaceContent({ id: session.user.id }, ws.id, {
     monthStart,
     monthEnd,
   });
-  const nowMs = new Date().getTime();
-  const actionableMonth = allMonthItems.filter((i) => i.status !== "cancelled");
-  const kpiTotal = actionableMonth.length;
-  const kpiAtRisk = actionableMonth.filter(
-    (i) =>
-      i.plannedPublishAt.getTime() < nowMs &&
-      !["ready_to_publish", "partially_published", "published"].includes(i.status),
-  ).length;
-  const kpiNeedsReview = actionableMonth.filter((i) =>
-    ["content_review", "creative_review", "changes_requested"].includes(i.status),
-  ).length;
-  const kpiReady = actionableMonth.filter((i) =>
-    ["ready_to_publish", "partially_published"].includes(i.status),
-  ).length;
+  const kpis = calculateWorkspaceKpis({
+    now: new Date(),
+    monthlyTarget: null,
+    items: allMonthItems.map((i) => ({
+      status: i.status as KpiContentStatus,
+      plannedPublishAt: i.plannedPublishAt,
+    })) as { status: KpiContentStatus; plannedPublishAt: Date; format?: KpiContentFormat }[],
+  });
 
   const monthParam = (offset: number) => {
     const date = new Date(now.getFullYear(), now.getMonth() + offset, 1);
@@ -140,10 +141,10 @@ export default async function PlanningPage({
       />
 
       <PlanningKpiBar
-        total={kpiTotal}
-        atRisk={kpiAtRisk}
-        needsReview={kpiNeedsReview}
-        ready={kpiReady}
+        total={kpis.totalIdeas}
+        atRisk={kpis.atRisk}
+        needsReview={kpis.needsReview}
+        ready={kpis.ready}
         baseHref={`/app/w/${slug}/planning`}
         currentQuery={
           new URLSearchParams(

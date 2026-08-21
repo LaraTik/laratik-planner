@@ -2,22 +2,13 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
+import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { quickCreateAction } from "../actions";
 
 const initial: { error?: string } = {};
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending} size="lg">
-      {pending ? "Creating…" : "Create draft"}
-    </Button>
-  );
-}
 
 export function QuickCreateForm({
   workspaceSlug,
@@ -115,7 +106,7 @@ export function QuickCreateForm({
       ) : null}
 
       <div className="flex items-center gap-3 pt-2">
-        <SubmitButton />
+        <FormSubmitButton label="Create draft" pendingLabel="Creating…" size="lg" />
         <Button variant="ghost" asChild>
           <a href={`/app/w/${workspaceSlug}/planning`}>Cancel</a>
         </Button>

@@ -102,7 +102,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
                     data-testid={`brand-asset-${asset.id}`}
                   >
                     <span className="text-body font-semibold">{asset.name}</span>
-                    <Badge>logo</Badge>
+                    <span className="text-label text-fg-muted">logo</span>
                   </li>
                 ))}
               </ul>
@@ -158,7 +158,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
                 {assetsByKind.font.map((asset) => (
                   <li key={asset.id} className="flex items-center justify-between py-3">
                     <span className="text-body font-semibold">{asset.name}</span>
-                    <Badge>font</Badge>
+                    <span className="text-label text-fg-muted">font</span>
                   </li>
                 ))}
               </ul>
@@ -175,9 +175,10 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
                   <li
                     key={rule.id}
                     data-testid={`brand-voice-rule-${rule.id}`}
-                    className="bg-surface-subtle rounded-[var(--radius-control)] p-3"
+                    className="bg-surface-subtle flex items-start gap-3 rounded-[var(--radius-control)] p-3"
                   >
                     <Badge
+                      className="shrink-0 capitalize"
                       variant={
                         rule.ruleType === "dont"
                           ? "danger"
@@ -188,7 +189,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
                     >
                       {rule.ruleType}
                     </Badge>
-                    <p className="text-body text-fg-primary mt-2">{rule.content}</p>
+                    <p className="text-body text-fg-primary">{rule.content}</p>
                   </li>
                 ))}
               </ul>

@@ -99,6 +99,16 @@ export function calculateWorkspaceKpis(input: {
     ["ready_to_publish", "partially_published", "published"].includes(item.status),
   ).length;
   const deliveryHealthPercent = totalIdeas ? Math.round((completed / totalIdeas) * 100) : 100;
+  // Planning-page metrics. needsReview = items in a review state
+  // (content/creative/changes). ready = items cleared to publish
+  // (ready_to_publish or partially_published) — both can be acted on
+  // by a publisher without further review.
+  const needsReview = actionable.filter((item) =>
+    ["content_review", "creative_review", "changes_requested"].includes(item.status),
+  ).length;
+  const ready = actionable.filter((item) =>
+    ["ready_to_publish", "partially_published"].includes(item.status),
+  ).length;
 
   return {
     totalIdeas,
@@ -107,6 +117,8 @@ export function calculateWorkspaceKpis(input: {
     atRisk,
     coveragePercent,
     deliveryHealthPercent,
+    needsReview,
+    ready,
     onTrack: atRisk === 0 && (coveragePercent === null || coveragePercent >= 100),
     onTrackCount: totalIdeas - atRisk - actionable.filter((i) => i.status === "blocked").length,
     atRiskCount: atRisk,

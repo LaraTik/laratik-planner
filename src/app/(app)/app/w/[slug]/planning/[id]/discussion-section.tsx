@@ -4,6 +4,7 @@ import * as React from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { createCommentAction, resolveCommentAction } from "../actions";
 import { CheckCircle, MessageCircle, Reply } from "lucide-react";
 
@@ -33,15 +34,6 @@ type RoleFlags = {
   isClientReviewer: boolean;
   isPublisher: boolean;
 };
-
-function SubmitButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="sm" disabled={pending} aria-busy={pending}>
-      {pending ? "Posting…" : label}
-    </Button>
-  );
-}
 
 function CommentForm({
   workspaceSlug,
@@ -139,7 +131,11 @@ function CommentForm({
               Cancel
             </Button>
           ) : null}
-          <SubmitButton label={parentCommentId ? "Reply" : "Comment"} />
+          <FormSubmitButton
+            size="sm"
+            label={parentCommentId ? "Reply" : "Comment"}
+            pendingLabel="Posting…"
+          />
         </div>
       </div>
       {state?.error ? (

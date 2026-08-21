@@ -2,22 +2,12 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
+import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { sendInviteAction } from "./actions";
 
 const initialState: { error?: string; success?: boolean; devLink?: string | null } = {};
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Sending…" : "Send invitation"}
-    </Button>
-  );
-}
 
 export function SendInviteForm({ workspaces }: { workspaces: { id: string; name: string }[] }) {
   const [state, formAction] = useActionState(sendInviteAction, initialState);
@@ -106,7 +96,7 @@ export function SendInviteForm({ workspaces }: { workspaces: { id: string; name:
         </p>
       ) : null}
 
-      <SubmitButton />
+      <FormSubmitButton label="Send invitation" pendingLabel="Sending…" />
     </form>
   );
 }

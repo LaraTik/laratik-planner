@@ -1,8 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
-import { Button } from "@/components/ui/button";
+import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { updateWorkspaceSettingsAction, type SettingsActionState } from "./actions";
 
 type PersonOption = { id: string; label: string };
@@ -121,7 +120,7 @@ export function SettingsForm({
           Workspace defaults saved.
         </p>
       ) : null}
-      <SaveButton />
+      <FormSubmitButton label="Save defaults" pendingLabel="Saving…" />
     </form>
   );
 }
@@ -174,13 +173,5 @@ function PersonField({
         ))}
       </select>
     </Field>
-  );
-}
-function SaveButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Saving…" : "Save defaults"}
-    </Button>
   );
 }

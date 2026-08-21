@@ -43,6 +43,59 @@ describe("workspace KPI calculation", () => {
   });
 });
 
+describe("planning-page KPI metrics (needsReview / ready)", () => {
+  it("counts content_review, creative_review, and changes_requested as needsReview", () => {
+    const result = calculateWorkspaceKpis({
+      now: new Date("2026-08-19T10:00:00Z"),
+      monthlyTarget: null,
+      items: [
+        { status: "content_review", plannedPublishAt: new Date("2026-08-25T00:00:00Z") },
+        { status: "creative_review", plannedPublishAt: new Date("2026-08-25T00:00:00Z") },
+        { status: "changes_requested", plannedPublishAt: new Date("2026-08-25T00:00:00Z") },
+        { status: "draft", plannedPublishAt: new Date("2026-08-25T00:00:00Z") }, // not in review
+        { status: "cancelled", plannedPublishAt: new Date("2026-08-25T00:00:00Z") }, // excluded
+      ],
+    });
+    expect(result.needsReview).toBe(3);
+  });
+
+  it("counts ready_to_publish and partially_published as ready", () => {
+    const result = calculateWorkspaceKpis({
+      now: new Date("2026-08-19T10:00:00Z"),
+      monthlyTarget: null,
+      items: [
+        { status: "ready_to_publish", plannedPublishAt: new Date("2026-08-20T00:00:00Z") },
+        { status: "partially_published", plannedPublishAt: new Date("2026-08-19T00:00:00Z") },
+        { status: "published", plannedPublishAt: new Date("2026-08-10T00:00:00Z") }, // already published, not "ready"
+        { status: "creative_review", plannedPublishAt: new Date("2026-08-20T00:00:00Z") }, // not yet ready
+      ],
+    });
+    expect(result.ready).toBe(2);
+  });
+
+  it("planning KPIs agree with workspace KPIs (same source of truth)", () => {
+    const now = new Date("2026-08-19T10:00:00Z");
+    const items = [
+      { status: "draft" as const, plannedPublishAt: new Date("2026-08-18T10:00:00Z") },
+      { status: "ready_to_publish" as const, plannedPublishAt: new Date("2026-08-20T10:00:00Z") },
+      { status: "content_review" as const, plannedPublishAt: new Date("2026-08-22T00:00:00Z") },
+      { status: "creative_review" as const, plannedPublishAt: new Date("2026-08-23T00:00:00Z") },
+      { status: "published" as const, plannedPublishAt: new Date("2026-08-10T00:00:00Z") },
+      {
+        status: "partially_published" as const,
+        plannedPublishAt: new Date("2026-08-19T12:00:00Z"),
+      },
+    ];
+    const result = calculateWorkspaceKpis({ now, monthlyTarget: null, items });
+    // 5 actionable (cancelled excluded) + 1 at risk (the overdue draft)
+    expect(result.totalIdeas).toBe(6);
+    expect(result.atRisk).toBe(1);
+    expect(result.needsReview).toBe(2);
+    expect(result.ready).toBe(2);
+    expect(result.published).toBe(1);
+  });
+});
+
 describe("calculateOverviewMetrics (workspace overview screen)", () => {
   it("returns all 8 format buckets in the canonical order, zero-filled", () => {
     const result = calculateOverviewMetrics({

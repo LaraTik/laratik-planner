@@ -1,19 +1,10 @@
 "use client";
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 import { createChannelAction } from "./actions";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
 
-function Submit() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Adding…" : "Add channel"}
-    </Button>
-  );
-}
 export function ChannelForm({ slug }: { slug: string }) {
   const [state, action] = useActionState(
     createChannelAction.bind(null, slug),
@@ -52,7 +43,7 @@ export function ChannelForm({ slug }: { slug: string }) {
           <Input className="mt-1" name="url" type="url" placeholder="https://…" />
         </label>
         <div className="flex items-end">
-          <Submit />
+          <FormSubmitButton label="Add channel" pendingLabel="Adding…" />
         </div>
         {state?.error ? (
           <p role="alert" className="text-label text-danger sm:col-span-2 xl:col-span-5">

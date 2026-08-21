@@ -1,17 +1,9 @@
 "use client";
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 import { batchCreateAction } from "../actions";
 import { Button } from "@/components/ui/button";
+import { FormSubmitButton } from "@/components/forms/form-submit-button";
 
-function Submit() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Creating…" : "Create drafts"}
-    </Button>
-  );
-}
 export function BatchForm({ slug }: { slug: string }) {
   const [state, action] = useActionState(
     batchCreateAction.bind(null, slug),
@@ -38,7 +30,7 @@ export function BatchForm({ slug }: { slug: string }) {
         </p>
       ) : null}
       <div className="flex gap-2">
-        <Submit />
+        <FormSubmitButton label="Create drafts" pendingLabel="Creating…" />
         <Button variant="ghost" asChild>
           <a href={`/app/w/${slug}/planning`}>Cancel</a>
         </Button>
