@@ -11,6 +11,7 @@ import { InvitationList } from "./invitation-list";
 import { MemberList } from "./member-list";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { KpiTile } from "@/components/workspace/kpi-tile";
 import { PageHeader } from "@/components/workspace/page-header";
 import { Building2, Mail, UserCheck, UserX } from "lucide-react";
 
@@ -75,13 +76,13 @@ export default async function UsersPage() {
           tone="success"
         />
         <KpiTile
-          icon={<Mail className="text-warning h-4 w-4" aria-hidden="true" />}
+          icon={<Mail className="h-4 w-4" aria-hidden="true" />}
           label="Pending invitations"
           value={pending.length}
           tone="warning"
         />
         <KpiTile
-          icon={<UserX className="text-fg-muted h-4 w-4" aria-hidden="true" />}
+          icon={<UserX className="h-4 w-4" aria-hidden="true" />}
           label="Deactivated"
           value={deactivatedCount}
         />
@@ -133,36 +134,6 @@ export default async function UsersPage() {
           }))}
         />
       </Card>
-    </div>
-  );
-}
-
-function KpiTile({
-  icon,
-  label,
-  value,
-  tone = "default",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  tone?: "default" | "success" | "warning";
-}) {
-  const toneClass =
-    tone === "success"
-      ? "border-l-4 border-l-success"
-      : tone === "warning"
-        ? "border-l-4 border-l-warning"
-        : "";
-  return (
-    <div
-      className={`border-border bg-surface rounded-[var(--radius-card)] border p-4 ${toneClass}`}
-    >
-      <div className="text-fg-muted mb-2 flex items-center gap-2">
-        {icon}
-        <span className="text-label font-medium tracking-wider uppercase">{label}</span>
-      </div>
-      <p className="text-title-page text-fg-primary font-semibold">{value}</p>
     </div>
   );
 }
