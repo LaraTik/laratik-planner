@@ -1,20 +1,15 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { Bell, Check, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { markAllReadAction, markReadAction } from "@/app/(app)/actions";
+import {
+  NotificationItem,
+  type NotificationListItem,
+} from "@/components/app-shell/notification-item";
 
-type NotificationRow = {
-  id: string;
-  kind: string;
-  title: string;
-  body: string;
-  actionUrl: string | null;
-  readAt: string | null;
-  createdAt: string;
-};
+type NotificationRow = NotificationListItem;
 
 /**
  * Notifications bell — bell icon with unread badge, plus a popover
@@ -178,45 +173,12 @@ export function NotificationsBell({
               role="list"
             >
               {items.map((n) => (
-                <li
+                <NotificationItem
                   key={n.id}
-                  className={[
-                    "hover:bg-canvas flex items-start gap-2 px-3 py-2",
-                    n.readAt ? "" : "bg-primary-subtle/20",
-                  ].join(" ")}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-body text-fg-primary font-semibold">{n.title}</p>
-                    <p className="text-label text-fg-secondary">{n.body}</p>
-                    <p className="text-label text-fg-muted mt-0.5">
-                      {new Date(n.createdAt).toLocaleString()}
-                    </p>
-                    {n.actionUrl ? (
-                      <Link
-                        href={n.actionUrl}
-                        className="text-label text-primary hover:underline"
-                        onClick={() => {
-                          if (!n.readAt) {
-                            void markOne(n.id);
-                          }
-                          setOpen(false);
-                        }}
-                      >
-                        Open →
-                      </Link>
-                    ) : null}
-                  </div>
-                  {!n.readAt ? (
-                    <button
-                      type="button"
-                      aria-label="Mark read"
-                      onClick={() => void markOne(n.id)}
-                      className="text-fg-muted hover:text-fg-primary"
-                    >
-                      <Check className="h-3 w-3" aria-hidden="true" />
-                    </button>
-                  ) : null}
-                </li>
+                  item={n}
+                  onMarkRead={(id) => void markOne(id)}
+                  onActionClick={() => setOpen(false)}
+                />
               ))}
             </ul>
           )}
