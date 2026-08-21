@@ -7,6 +7,7 @@ import { campaigns, contentPillars, contentTemplates } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionHeader } from "@/components/workspace/section-header";
 
@@ -130,32 +131,12 @@ export default async function PlanningLibraryPage({
           <p className="text-body text-fg-muted px-4 py-6">No content pillars yet.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="bg-surface-subtle border-border border-b">
-                  <th className="text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase">
-                    Pillar
-                  </th>
-                  <th className="text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase">
-                    Description
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-border text-table-dense divide-y">
-                {pillars.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="hover:bg-surface-subtle transition-colors"
-                    data-testid={`library-pillar-${row.id}`}
-                  >
-                    <td className="text-body text-fg-primary px-4 py-3 font-medium">{row.name}</td>
-                    <td className="text-body text-fg-secondary px-4 py-3">
-                      {row.description ?? <span className="text-fg-muted">&mdash;</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable
+              getRowKey={(p) => p.id}
+              getRowTestId={(p) => `library-pillar-${p.id}`}
+              rows={pillars}
+              columns={pillarColumns()}
+            />
           </div>
         )}
       </Card>
@@ -203,4 +184,24 @@ function formatCampaignWindow(start: Date | string | null, end: Date | string | 
   if (start) return `From ${fmt(start)}`;
   if (end) return `Until ${fmt(end)}`;
   return "No window set";
+}
+
+function pillarColumns(): DataTableColumnDef<typeof contentPillars.$inferSelect>[] {
+  return [
+    {
+      key: "name",
+      header: "Pillar",
+      cell: (p) => <span className="text-body text-fg-primary font-medium">{p.name}</span>,
+    },
+    {
+      key: "description",
+      header: "Description",
+      cell: (p) =>
+        p.description ? (
+          <span className="text-body text-fg-secondary">{p.description}</span>
+        ) : (
+          <span className="text-fg-muted">&mdash;</span>
+        ),
+    },
+  ];
 }
