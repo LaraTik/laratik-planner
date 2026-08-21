@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
 import { transitionAction, decideApprovalAction, claimAction } from "../actions";
+import { humanize } from "@/lib/content/status";
 import { CheckCircle, XCircle, ArrowRight, Ban, Play } from "lucide-react";
 
 type Role =
@@ -80,7 +81,7 @@ export function WorkflowBar({
           const current = s === status;
           return (
             <Badge key={s} variant={current ? "primary" : past ? "success" : "outline"}>
-              {s.replace(/_/g, " ")}
+              {humanize(s)}
             </Badge>
           );
         })}
@@ -201,7 +202,7 @@ export function WorkflowBar({
               key={a.id}
               className="border-border bg-surface-subtle text-body flex flex-wrap items-center gap-3 rounded-[var(--radius-control)] border p-2"
             >
-              <span className="font-semibold">{a.gate.replace(/_/g, " ")}</span>
+              <span className="font-semibold">{humanize(a.gate)}</span>
               <Badge
                 variant={
                   a.status === "approved"

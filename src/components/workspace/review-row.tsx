@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { humanFormat } from "@/lib/content/status";
+import { humanFormat, humanize } from "@/lib/content/status";
 
 /**
  * Minimal shape the review queue row needs. The page supplies the DB
@@ -67,7 +67,7 @@ export function ReviewRow({
             {due ? ` · due ${due.toLocaleDateString()}` : ""}
           </p>
         </div>
-        <Badge variant={isOverdue ? overdueVariant : "info"}>{item.gate.replace(/_/g, " ")}</Badge>
+        <Badge variant={isOverdue ? overdueVariant : "info"}>{humanize(item.gate)}</Badge>
       </Link>
     </li>
   );

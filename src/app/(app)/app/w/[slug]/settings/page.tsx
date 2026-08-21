@@ -10,6 +10,7 @@ import {
   workspaceSettings,
 } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import { humanize } from "@/lib/content/status";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -183,7 +184,7 @@ export default async function WorkspaceSettingsPage({
               </Card>
               <Card id="approvals">
                 <CardTitle className="mb-4">Approval mode</CardTitle>
-                <Setting label="Mode" value={values.approvalMode.replace(/_/g, " ")} />
+                <Setting label="Mode" value={humanize(values.approvalMode)} />
               </Card>
             </div>
           )}

@@ -6,6 +6,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
 import { submitDeliveryAction } from "../actions";
+import { humanize } from "@/lib/content/status";
 import { Package } from "lucide-react";
 
 const PROVIDERS = [
@@ -114,7 +115,7 @@ export function DeliverySection({
               >
                 {PROVIDERS.map((p) => (
                   <option key={p} value={p}>
-                    {p.replace(/_/g, " ")}
+                    {humanize(p)}
                   </option>
                 ))}
               </select>

@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionHeader } from "@/components/workspace/section-header";
+import { humanFormat } from "@/lib/content/status";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "outline"> = {
   active: "success",
@@ -164,7 +165,7 @@ export default async function PlanningLibraryPage({
               >
                 <div className="min-w-0">
                   <p className="text-body text-fg-primary font-semibold">{row.name}</p>
-                  <p className="text-label text-fg-muted mt-0.5">{row.format.replace(/_/g, " ")}</p>
+                  <p className="text-label text-fg-muted mt-0.5">{humanFormat(row.format)}</p>
                 </div>
               </li>
             ))}

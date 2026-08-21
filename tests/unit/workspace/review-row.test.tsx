@@ -57,9 +57,10 @@ describe("ReviewRow", () => {
     expect(link).toBeInTheDocument();
   });
 
-  it("humanizes the gate name (underscores → spaces)", () => {
+  it("humanizes the gate name (underscores → spaces, title case)", () => {
     renderRow({ gate: "creative_client" });
-    expect(screen.getByText("creative client")).toBeInTheDocument();
+    // humanize() capitalises each word: "creative_client" → "Creative Client"
+    expect(screen.getByText("Creative Client")).toBeInTheDocument();
   });
 
   it("marks the row as overdue when dueAt is in the past", () => {

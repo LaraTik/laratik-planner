@@ -9,6 +9,7 @@ import { getClientWorkspace } from "@/lib/workspaces/context";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { StatusBadge } from "@/components/content/status-badge";
+import { humanFormat } from "@/lib/content/status";
 
 export default async function ClientCalendarPage({
   params,
@@ -74,7 +75,7 @@ export default async function ClientCalendarPage({
               </time>
               <div className="min-w-0 flex-1">
                 <p className="text-body font-semibold">{row.title}</p>
-                <p className="text-label text-fg-secondary">{row.format.replace(/_/g, " ")}</p>
+                <p className="text-label text-fg-secondary">{humanFormat(row.format)}</p>
               </div>
               <StatusBadge status={row.status} />
             </li>
