@@ -13,8 +13,18 @@ name: E2E
 #   pnpm test:e2e:isolated
 #   pnpm test:visual
 #
-# The full pipeline gates deploys: any required failure uploads
+# The full pipeline is a required release-candidate check on PRs and
+# pushes to `main` (plus manual dispatch). It runs the 5-browser
+# functional matrix (chromium / firefox / webkit / mobile-chrome /
+# mobile-safari) and the dedicated `visual-chromium` project. Visual
+# captures only fire after the functional matrix is green so a broken
+# build doesn't regenerate baselines. Any required failure uploads
 # `playwright-report`, `test-results`, and visual diffs as artifacts.
+#
+# Production deploy does NOT wait for this workflow — the critical
+# visual gate is in `.github/workflows/ci.yml` so the deploy workflow
+# only blocks on the Chromium subset (functional + visual baseline).
+# See `docs/testing/strategy.md` (Release gates) for the full contract.
 
 on:
   pull_request:
@@ -66,6 +76,16 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:migrate
+      - name: Cache Playwright browsers
+        # The 5-browser matrix downloads ~500 MB of browser binaries;
+        # cache them by lockfile hash so the release-candidate check
+        # stays fast on warm runs.
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - name: Run functional Playwright matrix (5 browsers, no visual specs)
         run: pnpm test:e2e:isolated

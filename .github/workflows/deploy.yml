@@ -1,5 +1,17 @@
 name: Deploy
 
+# Deploy fires when the authoritative `CI` workflow completes
+# successfully on `main`. As of Task 10, that workflow already runs
+# the full release-gate contract — format, lint, typecheck, unit,
+# integration, migration, coverage, audit, Chromium critical E2E,
+# visual baseline, production build, and Docker smoke — so this
+# workflow can stay narrow. The full 5-browser E2E matrix in
+# `.github/workflows/e2e.yml` is a required release-candidate check
+# on PRs + main but is not on the deploy critical path.
+#
+# See `docs/testing/strategy.md` (Release gates) and
+# `docs/operations/runbook.md` for the full contract.
+
 on:
   workflow_run:
     workflows: [CI]
