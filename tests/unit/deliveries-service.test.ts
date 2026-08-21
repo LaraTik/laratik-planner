@@ -144,6 +144,7 @@ const {
   decideApproval,
   listApprovalsForItem,
   listDeliveriesForItem,
+  listDeliveryVersionsForItem,
   SubmitDeliverySchema,
   DecideApprovalSchema,
 } = await import("@/lib/deliveries/service");
@@ -663,5 +664,182 @@ describe("deriveCreativeApprovalOutcome", () => {
       approvalMode: "internal_then_client",
     });
     expect(out.changeRequestGate).toBe("creative_client");
+  });
+});
+
+describe("listDeliveryVersionsForItem", () => {
+  it("throws when the content item is missing", async () => {
+    dbMock.state.selectResults.push([]);
+    await expect(listDeliveryVersionsForItem(actor, contentItemId)).rejects.toThrow(/not found/i);
+  });
+
+  it("throws PermissionDeniedError when the actor has no access to the workspace", async () => {
+    dbMock.state.selectResults.push([{ workspaceId: "ws-1" }]);
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    await expect(listDeliveryVersionsForItem(actor, contentItemId)).rejects.toThrow(
+      /permission denied/i,
+    );
+  });
+
+  it("returns [] when there are no delivery versions", async () => {
+    dbMock.state.selectResults.push([{ workspaceId: "ws-1" }]);
+    dbMock.state.selectResults.push([]);
+    const rows = await listDeliveryVersionsForItem(actor, contentItemId);
+    expect(rows).toEqual([]);
+  });
+
+  it("returns versions newest-first, each with its links ordered by createdAt", async () => {
+    dbMock.state.selectResults.push([{ workspaceId: "ws-1" }]);
+    // 2 versions, returned by the DB in newest-first order
+    dbMock.state.selectResults.push([
+      {
+        id: "v-2",
+        versionNumber: 2,
+        description: "V2",
+        designerNote: "tweak",
+        submittedAt: new Date("2026-08-20T10:00:00.000Z"),
+        isFinalApproved: true,
+        submittedBy: "u-1",
+        submittedByName: "Maya",
+        submittedByEmail: "maya@x",
+      },
+      {
+        id: "v-1",
+        versionNumber: 1,
+        description: "V1",
+        designerNote: null,
+        submittedAt: new Date("2026-08-15T10:00:00.000Z"),
+        isFinalApproved: false,
+        submittedBy: "u-2",
+        submittedByName: "Omar",
+        submittedByEmail: "omar@x",
+      },
+    ]);
+    // Links for the 2 versions, in createdAt ASC
+    dbMock.state.selectResults.push([
+      {
+        id: "l-1",
+        deliveryVersionId: "v-1",
+        provider: "figma",
+        label: "Figma",
+        url: "https://figma.com/1",
+        isPreview: false,
+      },
+      {
+        id: "l-2",
+        deliveryVersionId: "v-2",
+        provider: "google_drive",
+        label: "Drive",
+        url: "https://drive.google.com/2",
+        isPreview: true,
+      },
+    ]);
+    const rows = await listDeliveryVersionsForItem(actor, contentItemId);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.versionNumber).toBe(2);
+    expect(rows[1]?.versionNumber).toBe(1);
+    // isFinalApproved is exposed
+    expect(rows[0]?.isFinalApproved).toBe(true);
+    expect(rows[1]?.isFinalApproved).toBe(false);
+    // Each version carries its own links
+    expect(rows[0]?.links).toHaveLength(1);
+    expect(rows[1]?.links).toHaveLength(1);
+    expect(rows[0]?.links[0]?.url).toBe("https://drive.google.com/2");
+    expect(rows[1]?.links[0]?.url).toBe("https://figma.com/1");
+  });
+
+  it("exposes the version number, description, designer note, submitter, and submitted timestamp", async () => {
+    dbMock.state.selectResults.push([{ workspaceId: "ws-1" }]);
+    dbMock.state.selectResults.push([
+      {
+        id: "v-1",
+        versionNumber: 1,
+        description: "Final creatives, v1",
+        designerNote: "Headline needs tighter kerning",
+        submittedAt: new Date("2026-08-15T10:00:00.000Z"),
+        isFinalApproved: true,
+        submittedBy: "u-1",
+        submittedByName: "Maya",
+        submittedByEmail: "maya@x",
+      },
+    ]);
+    dbMock.state.selectResults.push([]);
+    const rows = await listDeliveryVersionsForItem(actor, contentItemId);
+    expect(rows[0]?.versionNumber).toBe(1);
+    expect(rows[0]?.description).toBe("Final creatives, v1");
+    expect(rows[0]?.designerNote).toBe("Headline needs tighter kerning");
+    expect(rows[0]?.submittedBy).toEqual({ id: "u-1", name: "Maya" });
+    expect(rows[0]?.submittedAt).toBeInstanceOf(Date);
+  });
+
+  it("client_reviewer actor: never returns internal-only fields (designerNote, submitterEmail)", async () => {
+    dbMock.state.selectResults.push([{ workspaceId: "ws-1" }]);
+    dbMock.state.selectResults.push([
+      {
+        id: "v-1",
+        versionNumber: 1,
+        description: "V1",
+        designerNote: "Internal brand color tweak",
+        submittedAt: new Date("2026-08-15T10:00:00.000Z"),
+        isFinalApproved: false,
+        submittedBy: "u-1",
+        submittedByName: "Maya",
+        submittedByEmail: "maya@x",
+      },
+    ]);
+    dbMock.state.selectResults.push([]);
+    const rows = await listDeliveryVersionsForItem({ id: "client-1" }, contentItemId, {
+      isClientReviewer: true,
+    });
+    expect(rows[0]?.designerNote).toBeNull();
+    // Submitter name is also redacted for client reviewers.
+    expect(rows[0]?.submittedBy.name).toBe("");
+    // The email field is never returned at all (client projection).
+    expect((rows[0] as unknown as { submitterEmail?: string }).submitterEmail).toBeUndefined();
+  });
+
+  it("non-client actor: receives the full designer note and submitter name", async () => {
+    dbMock.state.selectResults.push([{ workspaceId: "ws-1" }]);
+    dbMock.state.selectResults.push([
+      {
+        id: "v-1",
+        versionNumber: 1,
+        description: "V1",
+        designerNote: "Internal note",
+        submittedAt: new Date("2026-08-15T10:00:00.000Z"),
+        isFinalApproved: false,
+        submittedBy: "u-1",
+        submittedByName: "Maya",
+        submittedByEmail: "maya@x",
+      },
+    ]);
+    dbMock.state.selectResults.push([]);
+    const rows = await listDeliveryVersionsForItem({ id: "internal-1" }, contentItemId, {
+      isClientReviewer: false,
+    });
+    expect(rows[0]?.designerNote).toBe("Internal note");
+    expect(rows[0]?.submittedBy.name).toBe("Maya");
+  });
+
+  it("scopes authorization to the same role set as approvals (manager/planner/designer/reviewer/publisher/viewer/client_reviewer)", async () => {
+    dbMock.state.selectResults.push([{ workspaceId: "ws-1" }]);
+    dbMock.state.selectResults.push([]);
+    await listDeliveryVersionsForItem(actor, contentItemId);
+    // The hasWorkspaceRole call must have been made with the same
+    // inclusive role set as listApprovalsForItem / listDeliveriesForItem.
+    const roleCall = policyMock.hasWorkspaceRole.mock.calls[0] as unknown as [
+      unknown,
+      unknown,
+      string[],
+    ];
+    expect(roleCall[2]).toEqual([
+      "workspace_manager",
+      "content_planner",
+      "designer",
+      "internal_reviewer",
+      "client_reviewer",
+      "publisher",
+      "viewer",
+    ]);
   });
 });

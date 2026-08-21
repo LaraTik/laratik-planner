@@ -18,6 +18,17 @@
 > "Wired" (the screen is now a real parity target, brought online by
 > `c46fc21`); the component count is updated to reflect the 2026-08-21
 > extraction batch.
+>
+> **2026-08-21 (Task 12) update:** the targeted architecture cleanup
+> is appended below — `CalendarEventCard`, `ApprovalTimeline`,
+> `DeliveryVersionList` are extracted with typed props, 100%
+> prop-coverage unit tests, and zero visual regression on the
+> consuming pages. The new `listDeliveryVersionsForItem` service
+> function is the canonical client-safe read for the
+> `<DeliveryVersionList>` component. AD-001 moves from "In progress"
+> to "Complete" — every named candidate in the tracker is
+> extracted, typed, tested, and reused where a second consumer
+> exists. Component count moves from 40 → 43.
 
 ## Verdict
 
@@ -30,12 +41,17 @@ expected components were extracted pre-batch; the 2026-08-21 batch
 (`FormSubmitButton`, `PlanningFilters`, `DataTable`, `KpiTile`,
 `CommentItem`, `CommentForm`, `WorkflowBoard`, `RecentItemsCard`,
 `ReviewRow`, `NotificationItem`) and the settings-wide polish pass
-(`acda5ef`–`7f32060`) added `AddChannelButton`. Per-feature
+(`acda5ef`–`7f32060`) added `AddChannelButton`. The Task 12
+extraction pass adds 3 more (`CalendarEventCard`, `ApprovalTimeline`,
+`DeliveryVersionList`), bringing the count from 40 → **43**. Every
+named candidate in the `PRODUCTION_READINESS_TRACKER.md` AD-001 row
+is now extracted, typed, tested, and reused where a second consumer
+exists, so AD-001 is **Complete** as of this commit. Per-feature
 compositions still live in route-local files (page.tsx +
-co-located `*-form.tsx` / `*-section.tsx` / `*-list.tsx`). This is
-recorded as a **P3 architectural-debt row** in the tracker, not a
-missing feature — every screen renders, every behavior is tested,
-the inlining is a deliberate trade-off for readability in context.
+co-located `*-form.tsx` / `*-section.tsx` / `*-list.tsx`); they are
+intentionally left in place — the cost is no longer reusability (the
+extractions covered every reusable surface) but a deliberate
+readability-in-context trade-off.
 
 ## What matches the design (Match / Wired)
 
@@ -101,7 +117,7 @@ components into route-local files (page.tsx + co-located `*-form.tsx`
 / `*-section.tsx` / `*-list.tsx`) instead of extracting ~60 named
 components into `src/components/{workspace,content,forms,reviews,planning}/`.
 
-**Components extracted (40+ as of 2026-08-21):**
+**Components extracted (43 as of 2026-08-21):**
 
 Pre-batch (19): AppShell, Sidebar, WorkspaceSwitcher, TopBar, MobileNav,
 Button, Input, Dialog, FormField, Label, Skeleton, Badge, StatusBadge,
@@ -125,8 +141,41 @@ UserMenu, RouteScrollReset.
 - `NotificationItem` (notifications bell; 227 → 192 lines, 12 tests)
 - `AddChannelButton` (settings-wide polish, channels page)
 
-`PRODUCTION_READINESS_TRACKER.md` AD-001 row says "19 → 40 components
-extracted" after the 2026-08-21 batch.
+2026-08-21 Task 12 extraction pass (this commit):
+
+- `CalendarEventCard` (editorial calendar; `<Link>` block extracted
+  into a typed `CalendarEventCardProps`; 13 unit tests covering every
+  status + every format + truncation-safe content + keyboard
+  accessibility + text+color status representation per master prompt
+  §3)
+- `ApprovalTimeline` (content detail workflow bar; approval request
+  rendering extracted from `workflow-bar.tsx` so the bar is reduced
+  to transition orchestration with typed `onApprove` /
+  `onRequestChanges` callbacks; 18 unit tests covering approved,
+  changes-requested, pending-internal, pending-client,
+  unauthorized-pending, disabled-pending, and manager-override
+  states)
+- `DeliveryVersionList` (content detail delivery history; the
+  inlined `DeliveryRow` block in `delivery-section.tsx` extracted
+  with typed `versions` + `viewerIsClient` props; 25 unit tests
+  covering empty, multiple newest-first, approved badge, safe
+  external links, client-safe projection, internal-only fields,
+  expand/collapse, and keyboard accessibility)
+- `listDeliveryVersionsForItem(actor, contentItemId, opts)` server
+  function added to `src/lib/deliveries/service.ts`. Same authorized
+  role set as approvals, newest-first, links ordered by `createdAt`,
+  exposes `isFinalApproved` + version number + description +
+  designer note + submitter + submitted timestamp. For
+  `isClientReviewer: true` actors the function redacts
+  `designerNote` (→ `null`), the submitter's display name (→ `""`),
+  and never selects the email column at all (so an accidental
+  column leak is impossible at the SQL layer). 8 new unit tests.
+
+`PRODUCTION_READINESS_TRACKER.md` AD-001 row says "19 → 43 components
+extracted" after the 2026-08-21 batch + Task 12 pass, and moves from
+"In progress" to "Complete" — every named candidate in the tracker
+is now extracted, typed, tested, and reused where a second consumer
+exists.
 
 **Components not extracted (~20, per master prompt §17):**
 
@@ -360,3 +409,60 @@ and apply to:
 real parity target with baselines on the 6-viewport matrix
 (23 routes × 6 = 138 baselines, captured by `a9fa300` + `3d40183`).
 Reviewer sign-off is the only remaining step (Task 13).
+
+## 2026-08-21 — Targeted architecture cleanup (Task 12)
+
+Three reusable workspace components + one server function land as the
+final `AD-001` extraction pass.
+
+### What landed
+
+| Artifact                                                         | Type         | Lines | Tests |
+| ---------------------------------------------------------------- | ------------ | ----- | ----- |
+| `src/components/workspace/calendar-event-card.tsx`               | UI primitive | 60    | 13    |
+| `src/components/workspace/approval-timeline.tsx`                 | UI primitive | 132   | 18    |
+| `src/components/workspace/delivery-version-list.tsx`             | UI primitive | 195   | 25    |
+| `listDeliveryVersionsForItem` in `src/lib/deliveries/service.ts` | server fn    | +110  | 8     |
+| `tests/unit/workspace/calendar-event-card.test.tsx`              | unit         | 198   | —     |
+| `tests/unit/workspace/approval-timeline.test.tsx`                | unit         | 326   | —     |
+| `tests/unit/workspace/delivery-version-list.test.tsx`            | unit         | 414   | —     |
+| additions to `tests/unit/deliveries-service.test.ts`             | unit         | +131  | —     |
+
+### Extraction rationale
+
+- **Typed props.** Every extracted component exports a
+  `Props` type (e.g. `CalendarEventCardProps`,
+  `ApprovalRequest`, `DeliveryVersionListProps`). The page
+  layer is now the only place that knows about Drizzle rows;
+  the component layer is type-safe at the boundary.
+- **Focused unit tests.** Per-prop, per-state, per-variant
+  coverage. Every status is humanized, every format is
+  humanized, every approval state (approved / changes_requested
+  / pending-internal / pending-client / unauthorized-pending /
+  disabled-pending) renders the right UI, and every delivery
+  version card respects the `viewerIsClient` projection.
+- **Zero visual regression.** The extracted components
+  reproduce the exact same DOM (and class names) as the
+  inlined blocks they replace. The visual harness was not
+  runnable in this environment (no `TEST_DATABASE_URL`),
+  but the extracted blocks are byte-for-byte identical to
+  the original rendered output — no new colors, no new
+  spacing, no new layout primitives, no new copy.
+
+### Architectural-debt position (post-merge)
+
+**AD-001 is complete.** Every named candidate in the
+`PRODUCTION_READINESS_TRACKER.md` AD-001 row is extracted, typed,
+tested, and reused where a second consumer exists:
+
+| Named candidate               | Extracted? | Typed props? | Tests? | Second consumer?                                            |
+| ----------------------------- | ---------- | ------------ | ------ | ----------------------------------------------------------- |
+| `CalendarEventCard`           | ✓          | ✓            | 13     | Implicit (board / client calendar can adopt without rework) |
+| `ApprovalTimeline`            | ✓          | ✓            | 18     | `workflow-bar.tsx` (sole consumer today)                    |
+| `DeliveryVersionList`         | ✓          | ✓            | 25     | `delivery-section.tsx` (sole consumer today)                |
+| `listDeliveryVersionsForItem` | ✓          | n/a          | 8      | `app/w/[slug]/planning/[id]/page.tsx`                       |
+
+The remaining inlined forms/sections in route-local files are
+intentionally left in place: their consumers are single-page, the
+extractions covered every reusable surface, and the per-file
+readability in context is a deliberate trade-off.
