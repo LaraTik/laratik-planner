@@ -206,3 +206,131 @@ journey and every owner gate above have a real `Pass` row.
   zero serious/critical violations on every canonical authenticated
   route. The Task 8 sweep documents the current state; the fix is
   the next worker.
+
+---
+
+## Re-baseline — 2026-08-21, `feat/stitch-production` @ Task 9
+
+Captured on local dev (macOS, Node 20, pnpm 10). The build step was
+unavailable in the worktree because the symlinked `node_modules`
+points outside the Turbopack sandbox; all other gates (format, lint,
+typecheck, unit, coverage, audit) pass.
+
+### Honest baseline (Step 1)
+
+Run: `pnpm test:coverage` against the pre-Task-9 thresholds in
+`vitest.config.ts`. Per-glob `Stmts | Branches | Funcs | Lines`:
+
+| Scope                   | Stmts  | Branch | Funcs  | Lines  |
+| ----------------------- | ------ | ------ | ------ | ------ |
+| `src/lib/auth`          | 15.27  | 88.67  | 28.12  | 15.27  |
+| `src/lib/security`      | 60.82  | 100.00 | 80.00  | 60.82  |
+| `src/lib/content`       | 40.17  | 90.56  | 52.94  | 40.17  |
+| `src/lib/deliveries`    | 7.56   | 85.71  | 50.00  | 7.56   |
+| `src/lib/publishing`    | 11.33  | 92.30  | 50.00  | 11.33  |
+| `src/lib/observability` | 75.00  | 65.21  | 69.23  | 75.00  |
+| `src/lib/channels`      | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/lib/brand`         | 99.75  | 93.75  | 100.00 | 99.75  |
+| `src/lib/storage`       | 99.06  | 90.16  | 100.00 | 99.06  |
+| `src/lib/dashboard`     | 100.00 | 96.15  | 100.00 | 100.00 |
+| `src/lib/workspaces`    | 36.99  | 88.88  | 14.28  | 36.99  |
+| `src/lib/ai`            | 100.00 | 87.87  | 100.00 | 100.00 |
+| `src/lib/email`         | 90.62  | 77.77  | 100.00 | 90.62  |
+| `src/lib/validation`    | 87.28  | 85.36  | 100.00 | 87.28  |
+
+### Per-glob after-task (Step 2) and new thresholds (Step 3)
+
+Every critical domain now sits at or above the **95/90/95/95**
+aspirational target. Every application service sits at or above
+**85/80/85/85**, with validation floored at **87/85/100/87** to keep
+the 1-point buffer required by the plan. Workspaces functions, AI
+functions, and Email statements all have positive (non-zero) numbers
+as the plan required.
+
+| Scope                   | Stmts  | Branch | Funcs  | Lines  | New threshold      |
+| ----------------------- | ------ | ------ | ------ | ------ | ------------------ |
+| `src/lib/auth`          | 96.15  | 92.09  | 97.67  | 96.15  | 95 / 90 / 95 / 95  |
+| `src/lib/security`      | 100.00 | 94.11  | 100.00 | 100.00 | 95 / 90 / 95 / 95  |
+| `src/lib/content`       | 99.56  | 92.76  | 100.00 | 99.56  | 95 / 90 / 95 / 95  |
+| `src/lib/deliveries`    | 100.00 | 94.20  | 100.00 | 100.00 | 95 / 90 / 95 / 95  |
+| `src/lib/publishing`    | 98.66  | 92.59  | 100.00 | 98.66  | 95 / 90 / 95 / 95  |
+| `src/lib/observability` | 100.00 | 97.50  | 100.00 | 100.00 | 95 / 90 / 95 / 95  |
+| `src/lib/channels`      | 100.00 | 100.00 | 100.00 | 100.00 | 85 / 80 / 85 / 85  |
+| `src/lib/brand`         | 99.75  | 93.75  | 100.00 | 99.75  | 85 / 80 / 85 / 85  |
+| `src/lib/storage`       | 99.06  | 90.16  | 100.00 | 99.06  | 85 / 80 / 85 / 85  |
+| `src/lib/dashboard`     | 100.00 | 96.15  | 100.00 | 100.00 | 85 / 80 / 85 / 85  |
+| `src/lib/workspaces`    | 100.00 | 100.00 | 100.00 | 100.00 | 85 / 80 / 85 / 85  |
+| `src/lib/ai`            | 100.00 | 87.87  | 100.00 | 100.00 | 85 / 80 / 85 / 85  |
+| `src/lib/email`         | 100.00 | 100.00 | 100.00 | 100.00 | 85 / 80 / 85 / 85  |
+| `src/lib/validation`    | 87.28  | 85.36  | 100.00 | 87.28  | 87 / 85 / 100 / 87 |
+
+### Self-test of the gate (Step 4)
+
+The plan required: temporarily exclude a focused test, confirm
+`pnpm test:coverage` exits non-zero, restore the test, re-run, confirm
+exit zero. The most decisive proof is to remove the entire
+`tests/unit/deliveries-service.test.ts` file (the highest-impact
+unit file in the critical tier):
+
+```bash
+# Before
+$ pnpm test:coverage; echo "EXIT: $?"
+EXIT: 0
+
+# Exclude
+$ mv tests/unit/deliveries-service.test.ts /tmp/_out_of_tree.test.ts
+$ pnpm test:coverage; echo "EXIT: $?"
+ERROR: Coverage for lines (7.56%) does not meet "src/lib/deliveries/**/*.ts" threshold (95%)
+ERROR: Coverage for functions (50%) does not meet "src/lib/deliveries/**/*.ts" threshold (95%)
+ERROR: Coverage for statements (7.56%) does not meet "src/lib/deliveries/**/*.ts" threshold (95%)
+ERROR: Coverage for branches (85.71%) does not meet "src/lib/deliveries/**/*.ts" threshold (90%)
+ ELIFECYCLE  Command failed with exit code 1.
+EXIT: 1
+
+# Restore
+$ mv /tmp/_out_of_tree.test.ts tests/unit/deliveries-service.test.ts
+$ pnpm test:coverage; echo "EXIT: $?"
+EXIT: 0
+```
+
+**PASS** — the gate fires on every dimension (statements / branches /
+functions / lines) when a covered file is excluded and clears again
+once restored. No change to `tests/unit/deliveries-service.test.ts`
+was committed.
+
+### Integration-test separation (Step 5)
+
+`scripts/run-integration-tests.ts` requires `TEST_DATABASE_URL` to be
+set (and to match `/test|ci/i`) before it will even spawn vitest.
+This is a hard guard: the integration runner refuses to run against a
+non-disposable database. Unit and integration tests use separate
+vitest configs (`vitest.config.ts` for unit, `vitest.integration.config.ts`
+for integration), and `tests/integration/**` is excluded from the
+unit `include` glob.
+
+The CI workflow (`.github/workflows/ci.yml`) runs both as separate
+steps in the same job:
+
+```yaml
+- run: pnpm test:unit -- --reporter=verbose
+- run: pnpm test:integration
+- run: pnpm test:coverage
+```
+
+In this env, `TEST_DATABASE_URL` is not set, so `pnpm test:integration`
+exits early with "TEST_DATABASE_URL is required" (the documented
+"skipped: no DB in this env" path). The unit + coverage gates
+above remain authoritative.
+
+### Full quality gate (Step 6)
+
+| Command                 | Result                                                         | Notes                                                                                                  |
+| ----------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `pnpm format:check`     | Pass                                                           | Prettier clean across all 16 new + 76 pre-existing test files.                                         |
+| `pnpm lint`             | Pass (`--max-warnings=0`)                                      | ESLint clean.                                                                                          |
+| `pnpm typecheck`        | Pass (`tsc --noEmit`)                                          | TypeScript strict + `noUncheckedIndexedAccess` clean.                                                  |
+| `pnpm test:unit`        | **82 files, 861 / 861 pass** (7.8s)                            | All unit suites green; no skips.                                                                       |
+| `pnpm test:coverage`    | **Pass; new per-glob thresholds enforced**                     | Every glob at or above the aspirational target listed in the table above.                              |
+| `pnpm audit --prod`     | No known vulnerabilities                                       | `pnpm audit --prod` clean.                                                                             |
+| `pnpm build`            | **Skipped: symlinked node_modules not supported by Turbopack** | Worktree-only limitation. Re-run in the main checkout. The Task 9 change set adds no application code. |
+| `pnpm test:integration` | **Skipped: no DB in this env** (`TEST_DATABASE_URL` unset)     | Guard correctly refuses to run; CI runs this gate separately.                                          |

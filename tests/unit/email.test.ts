@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 // `server-only` is a Next.js convention that throws at build time if it
 // leaks into client code. Vitest resolves it to an empty module, so we
@@ -14,8 +14,8 @@ vi.mock("nodemailer", () => ({
   },
 }));
 
-const envValues = {
-  NODE_ENV: "test" as const,
+const envValues: Record<string, unknown> = {
+  NODE_ENV: "test",
   SMTP_HOST: "smtp.example.com",
   SMTP_PORT: 587,
   SMTP_USER: "user@example.com",
@@ -125,5 +125,66 @@ describe("sendEmail", () => {
     expect(sendMailMock).toHaveBeenCalledWith(
       expect.objectContaining({ to: "alice@example.com, bob@example.com" }),
     );
+  });
+});
+
+describe("getMailer / sendEmail when SMTP is not configured", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    envValues["SMTP_HOST"] = "";
+    envValues["SMTP_USER"] = "";
+    createTransportMock.mockClear();
+    sendMailMock.mockClear();
+  });
+
+  afterEach(() => {
+    envValues["SMTP_HOST"] = "smtp.example.com";
+    envValues["SMTP_USER"] = "user@example.com";
+  });
+
+  it("getMailer returns null when SMTP_HOST is missing", async () => {
+    const email = await loadEmail();
+    expect(email.getMailer()).toBeNull();
+    expect(createTransportMock).not.toHaveBeenCalled();
+  });
+
+  it("getMailer returns null when SMTP_USER is missing", async () => {
+    envValues["SMTP_HOST"] = "smtp.example.com";
+    envValues["SMTP_USER"] = "";
+    const email = await loadEmail();
+    expect(email.getMailer()).toBeNull();
+    expect(createTransportMock).not.toHaveBeenCalled();
+  });
+
+  it("sendEmail returns null and does not call sendMail when SMTP is unconfigured", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const email = await loadEmail();
+    const result = await email.sendEmail({
+      to: "alice@example.com",
+      subject: "Hello",
+      text: "World",
+    });
+    expect(result).toBeNull();
+    expect(sendMailMock).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+});
+
+describe("getMailer when SMTP_PORT is 465 (secure: true)", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    envValues["SMTP_PORT"] = 465;
+    createTransportMock.mockClear();
+  });
+
+  afterEach(() => {
+    envValues["SMTP_PORT"] = 587;
+  });
+
+  it("passes secure: true when port is 465", async () => {
+    const email = await loadEmail();
+    email.getMailer();
+    expect(createTransportMock).toHaveBeenCalledWith(expect.objectContaining({ secure: true }));
   });
 });
