@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
-import { getContentItem } from "@/lib/content/service";
+import { getContentItem, UPDATEABLE_STATUSES } from "@/lib/content/service";
 import { listApprovalsForItem } from "@/lib/deliveries/service";
 import { listPublicationsForItem } from "@/lib/publishing/service";
 import { listCommentsForItem } from "@/lib/discussions/service";
@@ -16,6 +16,7 @@ import { DeliverySection } from "./delivery-section";
 import { PublishingSection } from "./publishing-section";
 import { DiscussionSection } from "./discussion-section";
 import { Button } from "@/components/ui/button";
+import { EditIdeaButton } from "./edit-button";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 
 export async function generateMetadata({
@@ -75,6 +76,10 @@ export default async function ContentDetailPage({
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={statusBadgeVariant(item.status)}>{humanStatus(item.status)}</Badge>
+            {(actorRoles.isManager || actorRoles.isPlanner) &&
+            UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number]) ? (
+              <EditIdeaButton workspaceSlug={slug} contentItemId={item.id} />
+            ) : null}
             <Button variant="ghost" size="sm" asChild>
               <Link href={`/app/w/${slug}/planning`}>← Planning</Link>
             </Button>

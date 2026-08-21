@@ -8,9 +8,11 @@ import { workspaces } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import {
   QuickCreateSchema,
+  UpdateContentSchema,
   quickCreateContentItem,
   transitionContent,
   claimAsDesigner,
+  updateContentItem,
   type WorkflowAction,
   batchCreateContentItems,
 } from "@/lib/content/service";
@@ -61,6 +63,43 @@ export async function quickCreateAction(workspaceSlug: string, _prev: unknown, f
   const id = await quickCreateContentItem(actor, parsed.data);
   revalidatePath(`/app/w/${workspaceSlug}/planning`);
   redirect(`/app/w/${workspaceSlug}/planning/${id}`);
+}
+
+export async function updateContentItemAction(
+  workspaceSlug: string,
+  contentItemId: string,
+  _prev: unknown,
+  formData: FormData,
+) {
+  const { actor } = await requireWorkspaceContext(workspaceSlug);
+  const channelIdsRaw = formData.getAll("channelIds").map(String);
+  const parsed = UpdateContentSchema.safeParse({
+    title: formData.get("title"),
+    format: formData.get("format"),
+    brief: formData.get("brief") ?? "",
+    plannedPublishAt: formData.get("plannedPublishAt"),
+    channelIds: channelIdsRaw,
+  });
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+    };
+  }
+  try {
+    await updateContentItem(actor, {
+      contentItemId,
+      title: parsed.data.title,
+      format: parsed.data.format,
+      brief: parsed.data.brief ?? "",
+      plannedPublishAt: parsed.data.plannedPublishAt,
+      channelIds: parsed.data.channelIds,
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/app/w/${workspaceSlug}/planning`);
+  revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
+  redirect(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
 }
 
 export async function batchCreateAction(workspaceSlug: string, _prev: unknown, formData: FormData) {

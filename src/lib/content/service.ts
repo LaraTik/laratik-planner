@@ -65,6 +65,30 @@ export const QuickCreateSchema = z.object({
 
 export type QuickCreateInput = z.infer<typeof QuickCreateSchema>;
 
+/**
+ * Editable content shape — same validation rules as QuickCreateSchema,
+ * minus the workspaceId (resolved from the content item itself) and the
+ * optional fields that don't apply to an edit. Reused by the planning
+ * edit form so the rules stay in one place.
+ */
+export const UpdateContentSchema = z.object({
+  title: z.string().min(2).max(200),
+  format: z.enum([
+    "static_post",
+    "carousel",
+    "story",
+    "short_form_video",
+    "long_form_video",
+    "live_content",
+    "article",
+    "other",
+  ]),
+  brief: z.string().max(2000).optional().default(""),
+  plannedPublishAt: z.coerce.date(),
+  channelIds: z.array(z.string().uuid()).optional(),
+});
+export type UpdateContentInput = z.infer<typeof UpdateContentSchema>;
+
 // ─── Quick Create ────────────────────────────────────────────────────────
 export async function quickCreateContentItem(actor: Actor, input: QuickCreateInput) {
   await requirePolicy(
@@ -142,6 +166,93 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
     revalidatePath(`/app/w/`);
     return created!.id;
   });
+}
+
+/**
+ * Update an editable content idea.
+ *
+ * Editability is intentionally narrow (master prompt §10): once a planner
+ * has submitted an item for review, the title/format/schedule are frozen
+ * so downstream reviewers can rely on a stable contract. Items past
+ * `draft | changes_requested` therefore reject updates with a friendly
+ * `notEditable` error. Service throws; the calling action surfaces the
+ * message to the form.
+ */
+export const UPDATEABLE_STATUSES = ["draft", "changes_requested"] as const;
+
+export async function updateContentItem(
+  actor: Actor,
+  input: {
+    contentItemId: string;
+    title: string;
+    format: UpdateContentInput["format"];
+    brief: string;
+    plannedPublishAt: Date;
+    channelIds: string[] | undefined;
+  },
+): Promise<void> {
+  const [item] = await db
+    .select({
+      id: contentItems.id,
+      workspaceId: contentItems.workspaceId,
+      status: contentItems.status,
+    })
+    .from(contentItems)
+    .where(eq(contentItems.id, input.contentItemId))
+    .limit(1);
+  if (!item) throw new Error("Content item not found");
+
+  await requirePolicy(
+    hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),
+    "update_content",
+  );
+
+  if (!UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number])) {
+    throw new Error(
+      `This idea is in ${item.status.replaceAll("_", " ")} and can no longer be edited.`,
+    );
+  }
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(contentItems)
+      .set({
+        title: input.title,
+        format: input.format,
+        brief: input.brief,
+        plannedPublishAt: input.plannedPublishAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(contentItems.id, input.contentItemId));
+
+    // Replace the channel set if one was provided. `undefined` keeps the
+    // current selection (the form only sends what the user changed).
+    if (input.channelIds) {
+      await tx
+        .delete(contentItemChannels)
+        .where(eq(contentItemChannels.contentItemId, input.contentItemId));
+      if (input.channelIds.length > 0) {
+        await tx.insert(contentItemChannels).values(
+          input.channelIds.map((socialChannelId) => ({
+            contentItemId: input.contentItemId,
+            socialChannelId,
+          })),
+        );
+      }
+    }
+
+    await tx.insert(activityEvents).values({
+      workspaceId: item.workspaceId,
+      contentItemId: item.id,
+      actorId: actor.id,
+      kind: "content_updated",
+      summary: `Updated idea: ${input.title}`,
+      beforeData: { status: item.status },
+      afterData: { title: input.title, format: input.format },
+    });
+  });
+
+  revalidatePath(`/app/w/`);
 }
 
 /** Create an entire pasted batch atomically; one invalid row rolls back all rows. */
