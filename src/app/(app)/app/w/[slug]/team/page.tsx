@@ -240,7 +240,7 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="workspace-team">
       <PageHeader
         eyebrow={workspace.name}
         title="Team and access"
@@ -266,7 +266,7 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
       />
 
       {pendingInvitations.length ? (
-        <Card padding="none" className="overflow-hidden">
+        <Card padding="none" className="overflow-hidden" data-testid="team-pending-card">
           <div className="border-border border-b px-4 py-3">
             <h2 className="text-title-card text-fg-primary font-semibold">Pending invitations</h2>
             <p className="text-label text-fg-muted mt-0.5">
@@ -296,13 +296,17 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
         </Card>
       ) : null}
 
-      <Card padding="none" className="overflow-hidden">
+      <Card padding="none" className="overflow-hidden" data-testid="team-members-card">
         {members.size === 0 ? (
-          <div className="p-6">
+          <div className="p-6" data-testid="team-empty-state">
             <EmptyState
               icon={<Users className="h-8 w-8" />}
               title="No members yet"
-              description="Invite agency teammates to give them access to this workspace."
+              description={
+                canInvite
+                  ? "Invite agency teammates to give them access to this workspace."
+                  : "Once a workspace manager invites agency teammates, they will appear in this list."
+              }
             />
           </div>
         ) : (
@@ -322,7 +326,7 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
               />
             </div>
             <div className="border-border text-label text-fg-secondary flex items-center justify-between border-t px-4 py-3">
-              <span>
+              <span data-testid="team-count">
                 Showing {members.size} of {members.size} members
               </span>
             </div>
