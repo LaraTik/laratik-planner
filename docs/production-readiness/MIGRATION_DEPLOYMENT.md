@@ -53,6 +53,69 @@ The pre-M3a baseline listed four release blockers. Each is now closed:
 
 Drill mechanics (refusing to run against non-test DBs, drill 5/5 forward-only rationale, idempotency): see [`MIGRATION_DRILL_RESULTS.md`](./MIGRATION_DRILL_RESULTS.md).
 
+## Migration 0005 — Brand Kit publishing rules and linked resources
+
+**Filename:** `src/lib/db/migrations/0005_brand_kit_rules_resources.sql`
+**SHA-256:** `a9ac811e561d602267075ef2d50ba8bca30f068014d0eaea4d82b209f49a4567`
+**Journal tag:** `0005_brand_kit_rules_resources`
+
+### Forward behavior
+
+Additive only. Two new tables are created:
+
+- `brand_publishing_rule` — workspace-scoped editorial guardrails
+  (`rule_type` ∈ `alt_text | hashtag | compliance | channel | general`,
+  CHECK `brand_publishing_rule_type_valid`).
+- `brand_linked_resource` — links to external design/asset libraries
+  (`provider` ∈ `google_drive | figma | canva | dropbox | other`,
+  CHECK `brand_linked_resource_provider_valid`; URL must be HTTPS,
+  CHECK `brand_linked_resource_url_https`).
+
+No existing table has column changes. No existing index, check, or
+foreign key is modified. Total table count after migration: 41.
+
+### Compatibility statement
+
+Pre-migration application images remain compatible because both new
+tables are additive: no service query references them yet, so an
+older binary running against the post-migration schema behaves
+identically to one running against the pre-migration schema. Forward
+direction verified by `pnpm migration-drill` (drill 1 — from-zero
+applies all six migrations cleanly) and by the integration test
+`tests/integration/brand-kit.test.ts` (3 tests pass after the
+migration is applied).
+
+### Backup + rollback procedure
+
+Because the system is forward-only (no down-migrations), the rollback
+is the documented forward-fix migration or, in the worst case,
+restoring the pre-migration backup. For this migration specifically:
+
+1. **Normal app rollback** — pin `image:` in `docker-compose.yml` back
+   to the captured previous SHA and `docker compose up -d --no-deps
+app`. The previous binary never writes to `brand_publishing_rule`
+   or `brand_linked_resource`, so it is safe to leave the new tables
+   in place.
+2. **Schema rollback (if the new tables must be removed)** — restore
+   the pre-migration `pg_dump` taken by `scripts/vps/backup.sh`
+   immediately before the deploy. The two new tables are dropped with
+   the restore (or by a one-off `DROP TABLE` if you want to keep
+   forward-only and skip the restore). Do NOT edit the applied
+   migration file.
+
+### Tests
+
+- `tests/integration/brand-kit.test.ts` — three DB-level invariants:
+  (1) `brand_publishing_rule` is tenant-scoped and
+  soft-archivable (`archived_at IS NULL` on insert), (2) a
+  non-HTTPS `brand_linked_resource.url` is rejected by
+  `brand_linked_resource_url_https`, (3) unsupported
+  `brand_publishing_rule.rule_type` and `brand_linked_resource.provider`
+  values are rejected by their respective CHECK constraints.
+- `pnpm migration-drill` — from-zero + in-place + backup + restore +
+  failed-migration abort all PASS with the new migration included
+  (drill 1, 2026-08-21, local dev).
+
 ## Rollback story (forward-only)
 
 There are no down-migrations. Rollback is the documented procedure:
