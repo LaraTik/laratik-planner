@@ -43,6 +43,8 @@ const policyMock = vi.hoisted(() => ({
 const serviceMock = vi.hoisted(() => ({
   listContentPillars: vi.fn(),
   listRecentBrandUpdates: vi.fn(),
+  listBrandPublishingRules: vi.fn(),
+  listBrandLinkedResources: vi.fn(),
 }));
 
 const storageMock = vi.hoisted(() => ({
@@ -56,6 +58,8 @@ vi.mock("@/lib/auth/policy", () => ({ hasWorkspaceRole: policyMock.hasWorkspaceR
 vi.mock("@/lib/brand/service", () => ({
   listContentPillars: serviceMock.listContentPillars,
   listRecentBrandUpdates: serviceMock.listRecentBrandUpdates,
+  listBrandPublishingRules: serviceMock.listBrandPublishingRules,
+  listBrandLinkedResources: serviceMock.listBrandLinkedResources,
 }));
 vi.mock("@/lib/storage", () => ({ getSignedDownloadUrl: storageMock.getSignedDownloadUrl }));
 
@@ -84,6 +88,12 @@ vi.mock("@/app/(app)/app/w/[slug]/brand-kit/logo-form", () => ({
 vi.mock("@/app/(app)/app/w/[slug]/brand-kit/typography-form", () => ({
   TypographyForm: () => <div data-testid="mock-typography-form" />,
 }));
+vi.mock("@/app/(app)/app/w/[slug]/brand-kit/publishing-rule-form", () => ({
+  PublishingRuleForm: () => <div data-testid="mock-publishing-rule-form" />,
+}));
+vi.mock("@/app/(app)/app/w/[slug]/brand-kit/linked-resource-form", () => ({
+  LinkedResourceForm: () => <div data-testid="mock-linked-resource-form" />,
+}));
 
 // Server actions — never invoked from these tests but the page
 // imports them for the archive `<form action={...}>` bindings.
@@ -92,6 +102,10 @@ vi.mock("@/app/(app)/app/w/[slug]/brand-kit/actions", () => ({
   archiveFontAssetAction: vi.fn(),
   archiveLogoAssetAction: vi.fn(),
   archiveVoiceRuleAction: vi.fn(),
+  archivePublishingRuleAction: vi.fn(),
+  archiveLinkedResourceAction: vi.fn(),
+  createPublishingRuleAction: vi.fn(),
+  createLinkedResourceAction: vi.fn(),
 }));
 
 // ─── Imports under test ──────────────────────────────────────────────
@@ -117,6 +131,17 @@ beforeEach(() => {
   policyMock.hasWorkspaceRole.mockReset();
   serviceMock.listContentPillars.mockReset();
   serviceMock.listRecentBrandUpdates.mockReset();
+  serviceMock.listBrandPublishingRules.mockReset();
+  serviceMock.listBrandLinkedResources.mockReset();
+  // Default listers resolve to empty arrays so the page can render
+  // without the test having to mock every one. Individual tests can
+  // override the resolved value after `beforeEach` but before
+  // `renderPageForManager()` / `renderPageForViewer()` to set
+  // specific rows.
+  serviceMock.listContentPillars.mockResolvedValue([]);
+  serviceMock.listRecentBrandUpdates.mockResolvedValue([]);
+  serviceMock.listBrandPublishingRules.mockResolvedValue([]);
+  serviceMock.listBrandLinkedResources.mockResolvedValue([]);
   storageMock.getSignedDownloadUrl.mockReset();
 });
 
@@ -124,8 +149,6 @@ async function renderPageForManager(): Promise<ReturnType<typeof render>> {
   authMock.auth.mockResolvedValue(session);
   workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
   policyMock.hasWorkspaceRole.mockResolvedValue(true);
-  serviceMock.listContentPillars.mockResolvedValue([]);
-  serviceMock.listRecentBrandUpdates.mockResolvedValue([]);
   const BrandKitPage = await loadPage();
   return render(await BrandKitPage({ params: Promise.resolve({ slug }) }));
 }
@@ -134,8 +157,6 @@ async function renderPageForViewer(): Promise<ReturnType<typeof render>> {
   authMock.auth.mockResolvedValue(session);
   workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
   policyMock.hasWorkspaceRole.mockResolvedValue(false);
-  serviceMock.listContentPillars.mockResolvedValue([]);
-  serviceMock.listRecentBrandUpdates.mockResolvedValue([]);
   const BrandKitPage = await loadPage();
   return render(await BrandKitPage({ params: Promise.resolve({ slug }) }));
 }
@@ -215,5 +236,38 @@ describe("BrandKitPage layout (Round 3 / commit G)", () => {
     // The Edit CTA is a stub anchor — it jumps the user to the
     // first editable section (logo).
     expect(edit.closest("a")).toHaveAttribute("href", "#logo");
+  });
+
+  it("renders publishing rules and linked resources from the service", async () => {
+    serviceMock.listBrandPublishingRules.mockResolvedValue([
+      {
+        id: "rule-1",
+        ruleType: "alt_text",
+        title: "Describe visuals",
+        content: "Use meaningful alt text.",
+      },
+    ]);
+    serviceMock.listBrandLinkedResources.mockResolvedValue([
+      {
+        id: "link-1",
+        provider: "figma",
+        name: "Design library",
+        url: "https://figma.com/file/example",
+        description: null,
+      },
+    ]);
+    await renderPageForManager();
+    expect(screen.getByText("Describe visuals")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Design library" })).toHaveAttribute(
+      "href",
+      "https://figma.com/file/example",
+    );
+  });
+
+  it("shows create and archive controls only to authorized Brand Kit editors", async () => {
+    await renderPageForViewer();
+    expect(screen.queryByTestId("mock-publishing-rule-form")).toBeNull();
+    expect(screen.queryByTestId("mock-linked-resource-form")).toBeNull();
+    expect(screen.queryByRole("button", { name: /archive/i })).toBeNull();
   });
 });
