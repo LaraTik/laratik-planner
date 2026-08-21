@@ -1,16 +1,21 @@
 import { redirect, notFound } from "next/navigation";
 import { and, eq, isNull } from "drizzle-orm";
-import { Clock, Palette, Tag, Type } from "lucide-react";
+import { Archive, Clock, Palette, Tag, Type } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { brandAssets, brandVoiceRules } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { listContentPillars, listRecentBrandUpdates } from "@/lib/brand/service";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/workspace/page-header";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import { ColorForm } from "./color-form";
+import { VoiceForm } from "./voice-form";
+import { archiveColorAssetAction, archiveVoiceRuleAction } from "./actions";
 
 /**
  * Brand kit (Goal 4 master prompt §3) — workspace-scoped reference
@@ -31,6 +36,8 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
+  const actor = { id: session.user.id };
+  const canManage = await hasWorkspaceRole(actor, workspace.id, ["workspace_manager"]);
   const [assets, rules, pillars, recent] = await Promise.all([
     db
       .select()
@@ -119,6 +126,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
 
           <Card id="color">
             <CardTitle className="mb-3">Color Palette</CardTitle>
+            {canManage ? <ColorForm slug={slug} /> : null}
             {assetsByKind.color.length ? (
               <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {assetsByKind.color.map((asset) => {
@@ -145,6 +153,21 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
                         {asset.name}
                       </span>
                       <span className="text-label text-fg-muted ml-auto font-mono">{hex}</span>
+                      {canManage ? (
+                        <form
+                          action={archiveColorAssetAction.bind(null, slug, asset.id)}
+                          className="ml-2"
+                        >
+                          <Button
+                            type="submit"
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Archive ${asset.name}`}
+                          >
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                        </form>
+                      ) : null}
                     </li>
                   );
                 })}
@@ -175,6 +198,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
 
           <Card id="voice">
             <CardTitle className="mb-3">Voice &amp; Tone</CardTitle>
+            {canManage ? <VoiceForm slug={slug} /> : null}
             {rules.length ? (
               <ul className="space-y-2">
                 {rules.map((rule) => (
@@ -195,7 +219,19 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
                     >
                       {rule.ruleType}
                     </Badge>
-                    <p className="text-body text-fg-primary">{rule.content}</p>
+                    <p className="text-body text-fg-primary flex-1">{rule.content}</p>
+                    {canManage ? (
+                      <form action={archiveVoiceRuleAction.bind(null, slug, rule.id)}>
+                        <Button
+                          type="submit"
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Archive voice rule ${rule.id}`}
+                        >
+                          <Archive className="h-4 w-4" />
+                        </Button>
+                      </form>
+                    ) : null}
                   </li>
                 ))}
               </ul>
