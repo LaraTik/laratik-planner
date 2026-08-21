@@ -1,19 +1,19 @@
 import { redirect, notFound } from "next/navigation";
 import { and, desc, eq, isNull } from "drizzle-orm";
-import { Clock, ExternalLink, MoreHorizontal, Plus, Radio } from "lucide-react";
+import { Clock, ExternalLink, MoreHorizontal, Radio } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { socialChannels } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import { AddChannelButton } from "./add-channel-button";
 import { ChannelForm } from "./channel-form";
 import { ChannelRowActions } from "./channel-edit-drawer";
 
@@ -158,14 +158,7 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
             </span>
           </>
         }
-        action={
-          canManage ? (
-            <Button type="button" variant="default">
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Add channel
-            </Button>
-          ) : null
-        }
+        action={canManage ? <AddChannelButton formId="channel-add-card" /> : null}
       />
 
       {canManage ? <ChannelForm slug={slug} /> : null}
@@ -186,7 +179,7 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
           </div>
         </Card>
       ) : (
-        <Card variant="dashed" padding="lg">
+        <Card variant="dashed" padding="lg" data-testid="channels-empty-state">
           <EmptyState
             icon={<Radio className="h-8 w-8" />}
             title="No social channels"
