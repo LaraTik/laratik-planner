@@ -59,7 +59,7 @@ export default async function ContentDetailPage({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="workspace-content-detail">
       <PageHeader
         eyebrow={ws.name}
         title={item.title}

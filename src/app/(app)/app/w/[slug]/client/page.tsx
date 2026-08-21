@@ -63,7 +63,7 @@ export default async function ClientReviewPortalPage({
         .where(inArray(deliveryLinks.deliveryVersionId, versionIds))
     : [];
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="workspace-client-review">
       <PageHeader
         eyebrow={workspace.name}
         title="Client review"

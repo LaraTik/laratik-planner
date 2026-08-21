@@ -79,7 +79,7 @@ export default async function WorkspaceSettingsPage({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="workspace-settings">
       <PageHeader
         eyebrow={workspace.name}
         title="Workspace settings"

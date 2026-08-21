@@ -27,7 +27,7 @@ export default async function WorkflowBoardPage({ params }: { params: Promise<{ 
   if (!workspace) notFound();
   const items = await listWorkspaceContent({ id: session.user.id }, workspace.id, { limit: 300 });
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="workspace-board">
       <PageHeader
         eyebrow={workspace.name}
         title="Workflow board"

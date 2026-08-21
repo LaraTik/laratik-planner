@@ -48,7 +48,7 @@ export default async function AgencySettingsPage() {
   ]);
   if (!agency) redirect("/setup");
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="agency-settings">
       <PageHeader
         title="Agency Settings"
         description="Agency identity, access footprint, and environment-managed services."

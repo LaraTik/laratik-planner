@@ -59,7 +59,7 @@ export default async function AccountPage() {
     .limit(20);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6" data-testid="account-page">
       <PageHeader
         title="Account"
         description="Your profile, agency membership, and sign-in options."

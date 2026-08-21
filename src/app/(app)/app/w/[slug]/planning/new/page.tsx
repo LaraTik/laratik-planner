@@ -57,7 +57,7 @@ export default async function QuickCreatePage({ params }: { params: Promise<{ sl
     );
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6" data-testid="workspace-planning-new">
       <PageHeader
         title="Quick Create"
         description={

@@ -50,7 +50,7 @@ export default async function ClientCalendarPage({
       ),
     );
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="workspace-client-calendar">
       <PageHeader
         eyebrow={workspace.name}
         title="Client calendar"

@@ -129,7 +129,7 @@ export default async function NewWorkspacePage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="mx-auto max-w-xl space-y-6" data-testid="workspaces-new-form">
       <PageHeader
         title="New workspace"
         description="A workspace is one client brand. Each has its own planning, content, and team."

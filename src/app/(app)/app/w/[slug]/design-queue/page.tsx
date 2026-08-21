@@ -29,7 +29,7 @@ export default async function DesignQueuePage({ params }: { params: Promise<{ sl
       ),
     );
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="workspace-design-queue">
       <PageHeader
         eyebrow={workspace.name}
         title="Unassigned design queue"

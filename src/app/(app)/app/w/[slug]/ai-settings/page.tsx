@@ -27,7 +27,7 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
     .where(and(eq(aiUsageEvents.workspaceId, workspace.id), gte(aiUsageEvents.createdAt, since)));
   const enabled = serverEnv.AI_FEATURE_ENABLED && !!serverEnv.MINIMAX_API_KEY;
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="workspace-ai-settings">
       <PageHeader
         eyebrow={workspace.name}
         title="AI settings"

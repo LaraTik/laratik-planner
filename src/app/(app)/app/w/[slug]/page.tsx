@@ -6,7 +6,7 @@ import { contentItems, workspaceSettings } from "@/lib/db/schema";
 import { and, desc, eq, gte, isNull, lt } from "drizzle-orm";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Card } from "@/components/ui/card";
-import { Calendar, CalendarPlus, FileText, ListChecks, Plus } from "lucide-react";
+import { Calendar, CalendarPlus, Clock, FileText, ListChecks, Plus } from "lucide-react";
 import { calculateOverviewMetrics } from "@/lib/dashboard/kpis";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { StatusBadge } from "@/components/content/status-badge";
@@ -117,7 +117,7 @@ export default async function WorkspaceOverviewPage({
     .slice(0, 5);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="workspace-overview">
       <PageHeader
         eyebrow={ws.name}
         title={
@@ -128,7 +128,15 @@ export default async function WorkspaceOverviewPage({
             </span>
           </span>
         }
-        description={ws.timezone}
+        description={
+          <>
+            Plan coverage, delivery health, and at-risk items for {monthLabel}.
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {ws.timezone}
+            </span>
+          </>
+        }
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Link

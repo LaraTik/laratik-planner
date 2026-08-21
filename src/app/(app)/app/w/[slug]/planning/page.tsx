@@ -102,7 +102,7 @@ export default async function PlanningPage({
   const hasFilter = Boolean(selectedStatus || filters.risk);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="workspace-planning">
       <PageHeader
         eyebrow={ws.name}
         title="Planning"

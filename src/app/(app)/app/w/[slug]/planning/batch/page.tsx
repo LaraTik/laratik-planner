@@ -20,7 +20,7 @@ export default async function BatchAddPage({ params }: { params: Promise<{ slug:
   )
     notFound();
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6" data-testid="workspace-planning-batch">
       <PageHeader
         eyebrow={workspace.name}
         title="Batch add"

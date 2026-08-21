@@ -52,7 +52,7 @@ export default async function EditorialCalendarPage({
     a.getDate() === b.getDate();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="workspace-calendar">
       <PageHeader
         eyebrow={workspace.name}
         title="Editorial calendar"
