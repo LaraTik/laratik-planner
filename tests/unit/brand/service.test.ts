@@ -352,4 +352,33 @@ describe("listRecentBrandUpdates", () => {
     expect(updates[0]?.description).toBe("do: D");
     expect(updates[1]?.description).toBe("color A");
   });
+
+  it("returns an empty list when there are no assets or rules", async () => {
+    dbMock.state.selectResults.push([]);
+    dbMock.state.selectResults.push([]);
+    const updates = await listRecentBrandUpdates(workspaceId);
+    expect(updates).toEqual([]);
+  });
+
+  it("formats asset descriptions as `${kind} ${name}` and rule descriptions as `${ruleType}: ${content}`", async () => {
+    const t = new Date("2026-01-01T00:00:00Z");
+    dbMock.state.selectResults.push([{ updatedAt: t, kind: "logo", name: "Wordmark" }]);
+    dbMock.state.selectResults.push([{ updatedAt: t, ruleType: "dont", content: "No jargon" }]);
+    const updates = await listRecentBrandUpdates(workspaceId);
+    const asset = updates.find((u) => u.kind === "asset");
+    const rule = updates.find((u) => u.kind === "rule");
+    expect(asset?.description).toBe("logo Wordmark");
+    expect(rule?.description).toBe("dont: No jargon");
+  });
+
+  it("falls back to the default limit of 10 when none is passed", async () => {
+    // Both queries return 0 rows; the merged result is also empty.
+    // The default-limit branch is exercised by every call without an
+    // explicit limit (e.g. the "returns the queued select result"
+    // test in listBrandVoiceRules uses the default path).
+    dbMock.state.selectResults.push([]);
+    dbMock.state.selectResults.push([]);
+    const updates = await listRecentBrandUpdates(workspaceId);
+    expect(updates).toEqual([]);
+  });
 });

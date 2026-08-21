@@ -1,14 +1,16 @@
 import { redirect, notFound } from "next/navigation";
 import { and, eq, isNull } from "drizzle-orm";
-import { Clock, Palette, Type } from "lucide-react";
+import { Clock, Palette, Tag, Type } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { brandAssets, brandVoiceRules } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import { listContentPillars, listRecentBrandUpdates } from "@/lib/brand/service";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/workspace/page-header";
+import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 
 /**
  * Brand kit (Goal 4 master prompt §3) — workspace-scoped reference
@@ -29,12 +31,14 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
-  const [assets, rules] = await Promise.all([
+  const [assets, rules, pillars, recent] = await Promise.all([
     db
       .select()
       .from(brandAssets)
       .where(and(eq(brandAssets.workspaceId, workspace.id), isNull(brandAssets.archivedAt))),
     db.select().from(brandVoiceRules).where(eq(brandVoiceRules.workspaceId, workspace.id)),
+    listContentPillars(workspace.id),
+    listRecentBrandUpdates(workspace.id),
   ]);
 
   // Group assets by kind so the "Logo Assets" / "Color Palette" /
@@ -51,6 +55,8 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
     { id: "color", label: "Color Palette", count: assetsByKind.color.length },
     { id: "typography", label: "Typography", count: assetsByKind.font.length },
     { id: "voice", label: "Voice & Tone", count: rules.length },
+    { id: "pillars", label: "Content Pillars", count: pillars.length },
+    { id: "recent", label: "Recent Updates", count: recent.length },
   ];
 
   return (
@@ -199,6 +205,76 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
                 title="No voice guidance"
                 description="Add do/dont/consider rules so the team writes in one voice."
               />
+            )}
+          </Card>
+
+          <Card id="pillars">
+            <CardTitle className="mb-3 inline-flex items-center gap-2">
+              <Tag className="text-fg-secondary h-4 w-4" aria-hidden="true" />
+              Content Pillars
+            </CardTitle>
+            {pillars.length ? (
+              <ul className="divide-border divide-y">
+                {pillars.map((pillar) => (
+                  <li
+                    key={pillar.id}
+                    className="flex items-center justify-between py-3"
+                    data-testid={`brand-pillar-${pillar.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {pillar.color ? (
+                        <span
+                          className="border-border h-4 w-4 shrink-0 rounded-full border"
+                          style={{ backgroundColor: pillar.color }}
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                      <span className="text-body text-fg-primary font-semibold">{pillar.name}</span>
+                    </div>
+                    {pillar.description ? (
+                      <span className="text-label text-fg-muted ml-3 truncate">
+                        {pillar.description}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-body text-fg-muted py-4">No content pillars yet.</p>
+            )}
+          </Card>
+
+          <Card id="recent">
+            <CardTitle className="mb-3">Recent Updates</CardTitle>
+            {recent.length ? (
+              <div className="overflow-x-auto">
+                <table className="text-body w-full text-left">
+                  <thead>
+                    <tr className="text-label text-fg-muted">
+                      <th className="pr-3 pb-2 font-semibold">Date</th>
+                      <th className="pr-3 pb-2 font-semibold">Description</th>
+                      <th className="pb-2 font-semibold">User</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-border divide-y">
+                    {recent.map((update, index) => (
+                      <tr key={`${update.kind}-${index}`} data-testid="brand-recent-row">
+                        <td className="text-fg-secondary py-2 pr-3">
+                          {formatRelativeDate(update.updatedAt)}
+                        </td>
+                        <td className="text-fg-primary py-2 pr-3">{update.description}</td>
+                        <td className="py-2">
+                          <span className="bg-surface-subtle text-fg-secondary text-label inline-flex h-6 w-6 items-center justify-center rounded-full font-semibold">
+                            M
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-body text-fg-muted py-4">No recent updates yet.</p>
             )}
           </Card>
         </div>
