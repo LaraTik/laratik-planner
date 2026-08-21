@@ -5,9 +5,21 @@ import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import { brandAssets, brandVoiceRules } from "@/lib/db/schema";
-import { BrandAssetCommandSchema, BrandVoiceRuleCommandSchema } from "@/lib/brand/command";
+import {
+  BrandAssetCommandSchema,
+  BrandLinkedResourceCommandSchema,
+  BrandPublishingRuleCommandSchema,
+  BrandVoiceRuleCommandSchema,
+} from "@/lib/brand/command";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
-import { createFontAsset, createLogoAsset } from "@/lib/brand/service";
+import {
+  createFontAsset,
+  createLogoAsset,
+  archiveBrandLinkedResource,
+  archiveBrandPublishingRule,
+  createBrandLinkedResource,
+  createBrandPublishingRule,
+} from "@/lib/brand/service";
 
 /**
  * Brand Kit server actions (STUDIOFLOW_MASTER_PROMPT.md §11.x).
@@ -218,5 +230,88 @@ export async function archiveVoiceRuleAction(slug: string, ruleId: string): Prom
   await db
     .delete(brandVoiceRules)
     .where(and(eq(brandVoiceRules.id, ruleId), eq(brandVoiceRules.workspaceId, workspace.id)));
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+}
+
+// ─── Publishing rules (Task 4) ─────────────────────────────────────────
+// Publishing rules drive the editor's draft-time hints, so the role
+// gate is wider than the brand-asset gate: `content_planner` may
+// also create / archive. We mirror the service layer's policy
+// (`BRAND_MANAGER_ROLES`) at the action layer so unauthorised
+// callers are rejected before the service mutator is invoked.
+
+const BRAND_MANAGER_ROLES = ["workspace_manager", "content_planner"] as const;
+
+export async function createPublishingRuleAction(
+  slug: string,
+  _previous: unknown,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Sign in is required." };
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return { error: "Workspace not found." };
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [...BRAND_MANAGER_ROLES])))
+    return { error: "Brand manager access is required." };
+
+  const parsed = BrandPublishingRuleCommandSchema.safeParse({
+    ruleType: readString(formData, "ruleType"),
+    title: readString(formData, "title"),
+    content: readString(formData, "content"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form." };
+
+  await createBrandPublishingRule({ id: session.user.id }, workspace.id, parsed.data);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+  return { success: true };
+}
+
+export async function archivePublishingRuleAction(slug: string, ruleId: string): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return;
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [...BRAND_MANAGER_ROLES])))
+    return;
+  await archiveBrandPublishingRule({ id: session.user.id }, workspace.id, ruleId);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+}
+
+// ─── Linked resources (Task 4) ─────────────────────────────────────────
+
+export async function createLinkedResourceAction(
+  slug: string,
+  _previous: unknown,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Sign in is required." };
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return { error: "Workspace not found." };
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [...BRAND_MANAGER_ROLES])))
+    return { error: "Brand manager access is required." };
+
+  const descriptionRaw = readString(formData, "description");
+  const parsed = BrandLinkedResourceCommandSchema.safeParse({
+    provider: readString(formData, "provider"),
+    name: readString(formData, "name"),
+    url: readString(formData, "url"),
+    description: descriptionRaw.length > 0 ? descriptionRaw : undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form." };
+
+  await createBrandLinkedResource({ id: session.user.id }, workspace.id, parsed.data);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+  return { success: true };
+}
+
+export async function archiveLinkedResourceAction(slug: string, resourceId: string): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return;
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [...BRAND_MANAGER_ROLES])))
+    return;
+  await archiveBrandLinkedResource({ id: session.user.id }, workspace.id, resourceId);
   revalidatePath(`/app/w/${slug}/brand-kit`);
 }
