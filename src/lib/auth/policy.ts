@@ -230,3 +230,37 @@ export async function requirePolicy(predicate: Promise<boolean>, action: string)
     throw new PermissionDeniedError(action);
   }
 }
+
+/**
+ * Can the actor edit a target user's agency-level fields (isAgencyAdmin flag
+ * and per-workspace role assignments)?
+ *
+ * Agency admins can manage any other active member of the same agency, but
+ * not themselves for the agency-admin toggle (lockout protection is
+ * enforced separately by `assertCanDemoteAgencyAdmin` in
+ * `src/lib/auth/member-safety.ts`).
+ *
+ * The target's existing agency-membership row must exist and be active
+ * (deactivated members cannot be re-edited by this helper — the UI hides
+ * the Edit affordance for them).
+ */
+export async function canManageAgencyMember(
+  actor: Actor,
+  targetUserId: string,
+  agencyId: string,
+): Promise<boolean> {
+  if (actor.id === targetUserId) return false;
+  if (!(await isAgencyAdmin(actor, agencyId))) return false;
+  const [row] = await db
+    .select({ x: sql<number>`1` })
+    .from(agencyMemberships)
+    .where(
+      and(
+        eq(agencyMemberships.agencyId, agencyId),
+        eq(agencyMemberships.userId, targetUserId),
+        eq(agencyMemberships.status, "active"),
+      ),
+    )
+    .limit(1);
+  return !!row;
+}

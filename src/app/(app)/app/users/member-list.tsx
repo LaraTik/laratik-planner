@@ -3,28 +3,48 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { UserCheck, UserX } from "lucide-react";
+import { Pencil, UserCheck, UserX } from "lucide-react";
 import { toggleDeactivationAction } from "./actions";
+import { MemberEditDrawer, type MemberEditWorkspace } from "./member-edit-drawer";
+
+type MemberRow = {
+  id: string;
+  name: string;
+  email: string;
+  isAgencyAdmin: boolean;
+  status: string;
+  role: string;
+  joinedAt: string;
+};
 
 export function MemberList({
+  actorId,
+  workspaces,
+  rolesByUser,
   members,
 }: {
-  members: {
-    id: string;
-    name: string;
-    email: string;
-    isAgencyAdmin: boolean;
-    status: string;
-    role: string;
-    joinedAt: string;
-  }[];
+  actorId: string;
+  workspaces: { id: string; name: string }[];
+  rolesByUser: Record<string, Record<string, string>>;
+  members: MemberRow[];
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<MemberRow | null>(null);
 
   if (members.length === 0) {
     return <p className="text-body text-fg-muted">No members yet.</p>;
   }
+
+  // The drawer's per-workspace role pre-fill — the page pre-computed the
+  // per-user map so the drawer can seed its initial state on open.
+  const editingWorkspaces: MemberEditWorkspace[] = editing
+    ? workspaces.map((w) => ({
+        id: w.id,
+        name: w.name,
+        currentRole: rolesByUser[editing.id]?.[w.id] ?? "",
+      }))
+    : [];
 
   return (
     <>
@@ -39,6 +59,7 @@ export function MemberList({
       <ul className="divide-border divide-y" data-testid="users-member-list">
         {members.map((m) => {
           const active = m.status === "active";
+          const canEdit = active; // deactivated members are not editable here
           return (
             <li key={m.id} className="text-body flex items-center gap-3 py-3">
               <div className="bg-surface-subtle text-fg-primary text-label flex h-8 w-8 items-center justify-center rounded-full font-semibold">
@@ -54,6 +75,17 @@ export function MemberList({
               <Badge variant={active ? "success" : "default"}>
                 {active ? "Active" : "Deactivated"}
               </Badge>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={pending || !canEdit}
+                onClick={() => setEditing(m)}
+                aria-label={`Edit ${m.name}`}
+                data-testid={`users-member-edit-${m.id}`}
+              >
+                <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                Edit
+              </Button>
               <Button
                 size="sm"
                 variant="ghost"
@@ -83,6 +115,25 @@ export function MemberList({
           );
         })}
       </ul>
+      <MemberEditDrawer
+        subject={
+          editing
+            ? {
+                id: editing.id,
+                name: editing.name,
+                email: editing.email,
+                status: editing.status === "active" ? "active" : "deactivated",
+                isAgencyAdmin: editing.isAgencyAdmin,
+              }
+            : null
+        }
+        actorIsAgencyAdmin
+        actorUserId={actorId}
+        workspaces={editingWorkspaces}
+        onOpenChange={(open) => {
+          if (!open) setEditing(null);
+        }}
+      />
     </>
   );
 }

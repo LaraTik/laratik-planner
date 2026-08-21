@@ -3,8 +3,8 @@ import { auth } from "@/lib/auth/config";
 import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { workspaces } from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
+import { workspaceMembershipRoles, workspaceMemberships, workspaces } from "@/lib/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
 import { listAgencyMembers, listInvitations } from "@/lib/auth/invitations";
 import { SendInviteForm } from "./send-invite-form";
 import { InvitationList } from "./invitation-list";
@@ -57,6 +57,35 @@ export default async function UsersPage() {
       .from(workspaces)
       .where(and(eq(workspaces.agencyId, agencyId))),
   ]);
+
+  // Per-user, per-workspace role lookup so the Edit drawer can pre-select
+  // the current role in each workspace select. Active memberships only —
+  // deactivated memberships aren't editable in this surface.
+  const memberRows = await db
+    .select({
+      userId: workspaceMemberships.userId,
+      workspaceId: workspaceMemberships.workspaceId,
+      role: workspaceMembershipRoles.role,
+    })
+    .from(workspaceMemberships)
+    .innerJoin(
+      workspaceMembershipRoles,
+      eq(workspaceMembershipRoles.workspaceMembershipId, workspaceMemberships.id),
+    )
+    .where(
+      and(
+        inArray(
+          workspaceMemberships.workspaceId,
+          allWorkspaces.map((w) => w.id),
+        ),
+        eq(workspaceMemberships.status, "active"),
+      ),
+    );
+  const rolesByUser: Record<string, Record<string, string>> = {};
+  for (const r of memberRows) {
+    const bucket = (rolesByUser[r.userId] ??= {});
+    bucket[r.workspaceId] = r.role;
+  }
 
   const activeCount = members.filter((m) => m.status === "active").length;
   const deactivatedCount = members.length - activeCount;
@@ -123,6 +152,9 @@ export default async function UsersPage() {
           <Badge variant="info">{members.length}</Badge>
         </CardHeader>
         <MemberList
+          actorId={session.user.id}
+          workspaces={allWorkspaces.map((w) => ({ id: w.id, name: w.name }))}
+          rolesByUser={rolesByUser}
           members={members.map((m) => ({
             id: m.userId,
             name: m.name ?? m.email,

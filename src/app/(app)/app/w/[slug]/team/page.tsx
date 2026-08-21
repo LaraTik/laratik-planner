@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { Clock, UserPlus, Users } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
@@ -11,6 +11,7 @@ import {
   users,
   workspaceMemberships,
   workspaceMembershipRoles,
+  workspaces,
 } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { IconTile } from "@/components/workspace/icon-button";
 import { PageHeader } from "@/components/workspace/page-header";
 import { isAgencyAdmin } from "@/lib/auth/policy";
+import { MemberEditTrigger } from "./member-edit-trigger";
 
 type MemberRow = {
   id: string;
@@ -31,7 +33,12 @@ type MemberRow = {
   roles: string[];
 };
 
-function teamColumns(): DataTableColumnDef<MemberRow>[] {
+function teamColumns(args: {
+  actorId: string;
+  actorIsAgencyAdmin: boolean;
+  memberRolesByWorkspace: Record<string, Record<string, string>>;
+  allWorkspaces: { id: string; name: string }[];
+}): DataTableColumnDef<MemberRow>[] {
   return [
     {
       key: "member",
@@ -84,6 +91,27 @@ function teamColumns(): DataTableColumnDef<MemberRow>[] {
             Inactive
           </Badge>
         ),
+    },
+    {
+      key: "actions",
+      header: <span className="sr-only">Actions</span>,
+      cell: (member) => (
+        <MemberEditTrigger
+          member={{
+            id: member.id,
+            name: member.name,
+            email: member.email,
+            isAgencyAdmin: member.isAgencyAdmin,
+          }}
+          actorId={args.actorId}
+          actorIsAgencyAdmin={args.actorIsAgencyAdmin}
+          workspaces={args.allWorkspaces.map((w) => ({
+            id: w.id,
+            name: w.name,
+            currentRole: args.memberRolesByWorkspace[member.id]?.[w.id] ?? "",
+          }))}
+        />
+      ),
     },
   ];
 }
@@ -178,6 +206,39 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
     )
     .orderBy(desc(invitations.createdAt));
 
+  // All agency workspaces + per-member role map for the Edit drawer.
+  // The drawer pre-fills every workspace select, not just the current
+  // workspace's role, so managers can adjust access in any workspace
+  // from a single team-page row.
+  const allWorkspaces = await db
+    .select({ id: workspaces.id, name: workspaces.name })
+    .from(workspaces)
+    .where(eq(workspaces.agencyId, workspace.agencyId));
+  const roleRows = await db
+    .select({
+      userId: workspaceMemberships.userId,
+      workspaceId: workspaceMemberships.workspaceId,
+      role: workspaceMembershipRoles.role,
+    })
+    .from(workspaceMemberships)
+    .innerJoin(
+      workspaceMembershipRoles,
+      eq(workspaceMembershipRoles.workspaceMembershipId, workspaceMemberships.id),
+    )
+    .where(
+      and(
+        inArray(
+          workspaceMemberships.workspaceId,
+          allWorkspaces.map((w) => w.id),
+        ),
+        eq(workspaceMemberships.status, "active"),
+      ),
+    );
+  const memberRolesByWorkspace: Record<string, Record<string, string>> = {};
+  for (const r of roleRows) {
+    (memberRolesByWorkspace[r.userId] ??= {})[r.workspaceId] = r.role;
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -252,7 +313,12 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
                 getRowKey={(m) => m.id}
                 getRowTestId={(m) => `team-member-${m.id}`}
                 rows={[...members.entries()].map(([id, member]) => ({ id, ...member }))}
-                columns={teamColumns()}
+                columns={teamColumns({
+                  actorId: session.user.id,
+                  actorIsAgencyAdmin: canInvite,
+                  memberRolesByWorkspace,
+                  allWorkspaces,
+                })}
               />
             </div>
             <div className="border-border text-label text-fg-secondary flex items-center justify-between border-t px-4 py-3">
