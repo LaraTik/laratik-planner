@@ -5,6 +5,10 @@
 > All 49 PNGs + 49 HTMLs + the canonical `DESIGN.md` live in `./designs/stitch/`.
 > The Stitch thumbnail (`f2bf40ae…`) is the canonical Workspace Overview.
 >
+> **Refreshing the captured copy:** see [`MCP.md`](./MCP.md) for the auth, tools,
+> gotchas, and commit recipe. Refresh only when the user reports an upstream
+> change — the captured copy is the in-repo canonical artifact for builds.
+>
 > This plan supersedes `docs/production-readiness/DESIGN_AUDIT.md` and
 > `docs/production-readiness/SCREEN_PARITY.md` for the work it covers.
 > Both documents will be updated as each milestone lands.
