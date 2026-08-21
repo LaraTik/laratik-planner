@@ -67,6 +67,12 @@ services:
     # Bind mount for the SQLite Sentry cache (if used) and any local files
     volumes:
       - app-data:/app/data
+      # Brand-kit logo / asset uploads (local-volume storage
+      # adapter — see `src/lib/storage/`). The directory is
+      # created + chowned to `nextjs:nodejs` at image build time
+      # in the Dockerfile runtime stage so the app can write here
+      # without sudo.
+      - app-uploads:/data/uploads
 
   migrate:
     image: ${MIGRATOR_IMAGE:-ghcr.io/laratik/laratik-planner-migrator:${IMAGE_TAG:-latest}}
@@ -108,6 +114,8 @@ volumes:
     name: laratik-planner-pgdata
   app-data:
     name: laratik-planner-app-data
+  app-uploads:
+    name: laratik-planner-app-uploads
 
 networks:
   internal:

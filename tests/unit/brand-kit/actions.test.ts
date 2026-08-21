@@ -77,6 +77,8 @@ vi.mock("@/lib/auth/policy", () => ({ hasWorkspaceRole: policyMock.hasWorkspaceR
 const {
   createColorAssetAction,
   archiveColorAssetAction,
+  createLogoAssetAction,
+  archiveLogoAssetAction,
   createVoiceRuleAction,
   archiveVoiceRuleAction,
 } = await import("@/app/(app)/app/w/[slug]/brand-kit/actions");
@@ -248,5 +250,91 @@ describe("archiveVoiceRuleAction", () => {
     expect(dbMock.state.deleteCalls).toHaveLength(1);
     expect(dbMock.state.updateCalls).toHaveLength(0);
     expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
+  });
+});
+
+describe("createLogoAssetAction", () => {
+  it("inserts a logo asset with storagePath and revalidates the page", async () => {
+    const { revalidatePath } = await import("next/cache");
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createLogoAssetAction(
+      slug,
+      {},
+      formData({ name: "Wordmark", storagePath: "ws-1/abc-123.png" }),
+    );
+    expect(result).toEqual({ success: true });
+    expect(dbMock.state.insertCalls).toHaveLength(1);
+    expect(dbMock.state.insertCalls[0]?.values).toMatchObject({
+      workspaceId: workspace.id,
+      createdBy: session.user.id,
+      kind: "logo",
+      name: "Wordmark",
+      storagePath: "ws-1/abc-123.png",
+    });
+    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
+  });
+
+  it("rejects when the caller is not a workspace_manager", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    const result = await createLogoAssetAction(
+      slug,
+      {},
+      formData({ name: "Wordmark", storagePath: "ws-1/abc-123.png" }),
+    );
+    expect(result).toEqual({ error: "Workspace manager access is required." });
+    expect(dbMock.state.insertCalls).toHaveLength(0);
+  });
+
+  it("rejects when both externalUrl and storagePath are provided", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createLogoAssetAction(
+      slug,
+      {},
+      formData({
+        name: "Wordmark",
+        externalUrl: "https://cdn.example.com/logo.svg",
+        storagePath: "ws-1/abc-123.png",
+      }),
+    );
+    expect(result.error).toMatch(/Pick one/);
+    expect(dbMock.state.insertCalls).toHaveLength(0);
+  });
+
+  it("rejects an empty name", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createLogoAssetAction(
+      slug,
+      {},
+      formData({ name: "", storagePath: "ws-1/abc-123.png" }),
+    );
+    expect(result.error).toBeDefined();
+    expect(dbMock.state.insertCalls).toHaveLength(0);
+  });
+});
+
+describe("archiveLogoAssetAction", () => {
+  it("updates the row with archivedAt when the caller is a workspace_manager", async () => {
+    const { revalidatePath } = await import("next/cache");
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await archiveLogoAssetAction(slug, "logo-1");
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+    expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: expect.any(Date) });
+    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
+  });
+
+  it("returns silently when there is no session", async () => {
+    authMock.auth.mockResolvedValue(null);
+    await archiveLogoAssetAction(slug, "logo-1");
+    expect(dbMock.state.updateCalls).toHaveLength(0);
   });
 });

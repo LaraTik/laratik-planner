@@ -116,6 +116,8 @@ vi.mock("@/lib/auth/policy", async () => {
 const {
   createBrandAsset,
   archiveBrandAsset,
+  createLogoAsset,
+  archiveLogoAsset,
   createBrandVoiceRule,
   archiveBrandVoiceRule,
   listBrandAssets,
@@ -210,6 +212,75 @@ describe("archiveBrandAsset", () => {
   it("throws PermissionDeniedError when the actor is not a workspace_manager", async () => {
     policyMock.hasWorkspaceRole.mockResolvedValue(false);
     await expect(archiveBrandAsset(actor, workspaceId, "asset-1")).rejects.toBeInstanceOf(
+      PermissionDeniedError,
+    );
+  });
+});
+
+describe("createLogoAsset", () => {
+  it("requires workspace_manager role", async () => {
+    await createLogoAsset(actor, workspaceId, {
+      name: "Wordmark",
+      storagePath: "ws-1/abc.png",
+    });
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, [
+      "workspace_manager",
+    ]);
+  });
+
+  it("inserts a logo asset with storagePath when provided", async () => {
+    await createLogoAsset(actor, workspaceId, {
+      name: "Wordmark",
+      storagePath: "ws-1/abc-123.png",
+    });
+    expect(dbMock.state.insertCalls).toHaveLength(1);
+    const values = dbMock.state.insertCalls[0]?.values as Record<string, unknown>;
+    expect(values).toMatchObject({
+      workspaceId,
+      createdBy: actor.id,
+      kind: "logo",
+      name: "Wordmark",
+      storagePath: "ws-1/abc-123.png",
+      externalUrl: null,
+      value: {},
+    });
+  });
+
+  it("inserts a logo asset with externalUrl when provided", async () => {
+    await createLogoAsset(actor, workspaceId, {
+      name: "Mark",
+      externalUrl: "https://cdn.example.com/mark.svg",
+    });
+    const values = dbMock.state.insertCalls[0]?.values as Record<string, unknown>;
+    expect(values).toMatchObject({
+      kind: "logo",
+      name: "Mark",
+      externalUrl: "https://cdn.example.com/mark.svg",
+      storagePath: null,
+    });
+  });
+
+  it("throws PermissionDeniedError when the actor is not a workspace_manager", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    await expect(
+      createLogoAsset(actor, workspaceId, { name: "Wordmark", storagePath: "ws-1/x.png" }),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+});
+
+describe("archiveLogoAsset", () => {
+  it("requires workspace_manager role and updates the row with archivedAt", async () => {
+    await archiveLogoAsset(actor, workspaceId, "logo-1");
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, [
+      "workspace_manager",
+    ]);
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+    expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: expect.any(Date) });
+  });
+
+  it("throws PermissionDeniedError when the actor is not a workspace_manager", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    await expect(archiveLogoAsset(actor, workspaceId, "logo-1")).rejects.toBeInstanceOf(
       PermissionDeniedError,
     );
   });

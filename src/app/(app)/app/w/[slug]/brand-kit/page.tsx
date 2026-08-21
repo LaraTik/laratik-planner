@@ -1,12 +1,13 @@
 import { redirect, notFound } from "next/navigation";
 import { and, eq, isNull } from "drizzle-orm";
-import { Archive, Clock, Palette, Tag, Type } from "lucide-react";
+import { Archive, Clock, Palette, Tag, Trash2, Type } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { brandAssets, brandVoiceRules } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { listContentPillars, listRecentBrandUpdates } from "@/lib/brand/service";
+import { getSignedDownloadUrl } from "@/lib/storage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -15,7 +16,8 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { ColorForm } from "./color-form";
 import { VoiceForm } from "./voice-form";
-import { archiveColorAssetAction, archiveVoiceRuleAction } from "./actions";
+import { LogoForm } from "./logo-form";
+import { archiveColorAssetAction, archiveLogoAssetAction, archiveVoiceRuleAction } from "./actions";
 
 /**
  * Brand kit (Goal 4 master prompt §3) — workspace-scoped reference
@@ -106,18 +108,68 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
               <Palette className="text-fg-secondary h-4 w-4" aria-hidden="true" />
               Logo Assets
             </CardTitle>
+            {canManage ? <LogoForm slug={slug} workspaceId={workspace.id} /> : null}
             {assetsByKind.logo.length ? (
               <ul className="divide-border divide-y">
-                {assetsByKind.logo.map((asset) => (
-                  <li
-                    key={asset.id}
-                    className="flex items-center justify-between py-3"
-                    data-testid={`brand-asset-${asset.id}`}
-                  >
-                    <span className="text-body font-semibold">{asset.name}</span>
-                    <span className="text-label text-fg-muted">logo</span>
-                  </li>
-                ))}
+                {assetsByKind.logo.map((asset) => {
+                  // Preview URL: prefer the storage path (uploaded
+                  // file) over the external URL. We wrap external
+                  // URLs as data-less <img> tags; the storage helper
+                  // returns a signed download URL when a path is
+                  // present.
+                  const previewSrc = asset.storagePath
+                    ? getSignedDownloadUrl(asset.storagePath)
+                    : asset.externalUrl;
+                  return (
+                    <li
+                      key={asset.id}
+                      className="flex items-center justify-between gap-3 py-3"
+                      data-testid={`brand-asset-${asset.id}`}
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        {previewSrc ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={previewSrc}
+                            alt=""
+                            width={40}
+                            height={40}
+                            className="border-border bg-surface-subtle h-10 w-10 shrink-0 rounded border object-contain"
+                          />
+                        ) : (
+                          <span
+                            aria-hidden="true"
+                            className="border-border bg-surface-subtle h-10 w-10 shrink-0 rounded border"
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-body text-fg-primary truncate font-semibold">
+                            {asset.name}
+                          </p>
+                          <p className="text-label text-fg-muted">
+                            {asset.storagePath
+                              ? "Uploaded file"
+                              : asset.externalUrl
+                                ? "External URL"
+                                : "Logo"}
+                          </p>
+                        </div>
+                      </div>
+                      {canManage ? (
+                        <form action={archiveLogoAssetAction.bind(null, slug, asset.id)}>
+                          <Button
+                            type="submit"
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Archive logo ${asset.name}`}
+                          >
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                        </form>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="text-body text-fg-muted py-4">No logo assets yet.</p>

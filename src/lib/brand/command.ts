@@ -35,6 +35,7 @@ const logoCommand = z.object({
     .url()
     .refine((value) => value.startsWith("https://"), "Use HTTPS")
     .optional(),
+  storagePath: z.string().trim().min(1).max(255).optional(),
 });
 
 const colorCommand = z.object({
@@ -53,11 +54,22 @@ const fontCommand = z.object({
   }),
 });
 
-export const BrandAssetCommandSchema = z.discriminatedUnion("kind", [
-  logoCommand,
-  colorCommand,
-  fontCommand,
-]);
+export const BrandAssetCommandSchema = z
+  .discriminatedUnion("kind", [logoCommand, colorCommand, fontCommand])
+  .superRefine((value, ctx) => {
+    // Logo variant: external URL and uploaded file are mutually
+    // exclusive. We check at the union level because Zod's
+    // `discriminatedUnion` doesn't allow `.refine()` on its
+    // members, but `superRefine` on the union is the documented
+    // escape hatch.
+    if (value.kind === "logo" && value.externalUrl && value.storagePath) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Pick one: external URL or uploaded file.",
+        path: ["externalUrl"],
+      });
+    }
+  });
 
 export type BrandAssetCommand = z.infer<typeof BrandAssetCommandSchema>;
 

@@ -70,7 +70,51 @@ export async function createBrandAsset(
     name: input.name,
     value: "value" in input ? input.value : {},
     externalUrl: "externalUrl" in input ? (input.externalUrl ?? null) : null,
+    storagePath: "storagePath" in input ? (input.storagePath ?? null) : null,
   });
+}
+
+/**
+ * Round 2 typed wrappers for the logo variant. These are the public
+ * service entry points used by the brand-kit logo form action —
+ * the generic `createBrandAsset` still works for any kind, but
+ * the typed wrappers give the form layer a clean, kind-scoped
+ * surface and make the authz pattern (requireManager) obvious to
+ * future readers.
+ */
+export type LogoAssetInput = {
+  name: string;
+  externalUrl?: string | undefined;
+  storagePath?: string | undefined;
+};
+
+export async function createLogoAsset(
+  actor: Actor,
+  workspaceId: string,
+  input: LogoAssetInput,
+): Promise<void> {
+  await requireManager(actor, workspaceId, "create logo asset");
+  await db.insert(brandAssets).values({
+    workspaceId,
+    createdBy: actor.id,
+    kind: "logo",
+    name: input.name,
+    externalUrl: input.externalUrl ?? null,
+    storagePath: input.storagePath ?? null,
+    value: {},
+  });
+}
+
+export async function archiveLogoAsset(
+  actor: Actor,
+  workspaceId: string,
+  assetId: string,
+): Promise<void> {
+  await requireManager(actor, workspaceId, "archive logo asset");
+  await db
+    .update(brandAssets)
+    .set({ archivedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(brandAssets.id, assetId), eq(brandAssets.workspaceId, workspaceId)));
 }
 
 export async function archiveBrandAsset(

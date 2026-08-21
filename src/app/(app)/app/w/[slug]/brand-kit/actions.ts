@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { brandAssets, brandVoiceRules } from "@/lib/db/schema";
 import { BrandAssetCommandSchema, BrandVoiceRuleCommandSchema } from "@/lib/brand/command";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import { createLogoAsset } from "@/lib/brand/service";
 
 /**
  * Brand Kit server actions (STUDIOFLOW_MASTER_PROMPT.md §11.x).
@@ -60,6 +61,54 @@ export async function createColorAssetAction(
 }
 
 export async function archiveColorAssetAction(slug: string, assetId: string): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return;
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
+    return;
+  await db
+    .update(brandAssets)
+    .set({ archivedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(brandAssets.id, assetId), eq(brandAssets.workspaceId, workspace.id)));
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+}
+
+export async function createLogoAssetAction(
+  slug: string,
+  _previous: unknown,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Sign in is required." };
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return { error: "Workspace not found." };
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
+    return { error: "Workspace manager access is required." };
+
+  const name = readString(formData, "name");
+  const externalUrl = readString(formData, "externalUrl") || undefined;
+  const storagePath = readString(formData, "storagePath") || undefined;
+
+  const parsed = BrandAssetCommandSchema.safeParse({
+    kind: "logo",
+    name,
+    externalUrl,
+    storagePath,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form." };
+  if (parsed.data.kind !== "logo") return { error: "Check the form." };
+
+  await createLogoAsset({ id: session.user.id }, workspace.id, {
+    name: parsed.data.name,
+    externalUrl: parsed.data.externalUrl,
+    storagePath: parsed.data.storagePath,
+  });
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+  return { success: true };
+}
+
+export async function archiveLogoAssetAction(slug: string, assetId: string): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) return;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);

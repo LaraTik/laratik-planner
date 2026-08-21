@@ -48,6 +48,14 @@ ENV APP_VERSION=$APP_VERSION
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
+# Brand-kit local-volume storage (see `src/lib/storage/`). Create
+# the uploads dir at image build time and chown it to the runtime
+# user so the `nextjs` user can read+write. A named volume
+# (`laratik-planner-app-uploads` in `docker-compose.yml`) is then
+# mounted over this empty dir, so the chown propagates to the
+# mounted volume on first start.
+RUN mkdir -p /data/uploads && chown -R nextjs:nodejs /data/uploads
+
 # Static assets + standalone server
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

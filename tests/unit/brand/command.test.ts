@@ -39,6 +39,41 @@ describe("BrandAssetCommandSchema — logo variant", () => {
     const result = BrandAssetCommandSchema.parse({ kind: "logo", name: "  Wordmark  " });
     expect(result).toMatchObject({ kind: "logo", name: "Wordmark" });
   });
+
+  it("accepts a storagePath from the local-volume upload", () => {
+    const result = BrandAssetCommandSchema.safeParse({
+      kind: "logo",
+      name: "Wordmark",
+      storagePath: "ws-1/abc-123.png",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a storagePath with characters that would be rejected at the storage layer (the schema is permissive; path safety is enforced at write time)", () => {
+    // The command schema only checks the length and presence of
+    // the path; the actual filesystem write (via `writeFile` in
+    // `src/lib/storage/index.ts`) is what rejects traversal
+    // attempts. See `assertWithinRoot`.
+    const result = BrandAssetCommandSchema.safeParse({
+      kind: "logo",
+      name: "Wordmark",
+      storagePath: "/etc/passwd",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects when both externalUrl and storagePath are present", () => {
+    const result = BrandAssetCommandSchema.safeParse({
+      kind: "logo",
+      name: "Wordmark",
+      externalUrl: "https://cdn.example.com/logo.svg",
+      storagePath: "ws-1/abc-123.png",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toMatch(/Pick one/);
+    }
+  });
 });
 
 describe("BrandAssetCommandSchema — color variant", () => {
