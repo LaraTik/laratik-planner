@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/content/status-badge";
 import { PageHeader } from "@/components/workspace/page-header";
 import { ListCard, ListItem } from "@/components/workspace/list-item";
 import { MonthNav } from "@/components/workspace/month-nav";
+import { PlanningFilters } from "@/components/workspace/planning-filters";
 import { PlanningKpiBar } from "@/components/workspace/planning-kpi-bar";
 import { PlanningViewToggle } from "@/components/workspace/planning-view-toggle";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -158,47 +159,13 @@ export default async function PlanningPage({
 
       <div className="border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-card)] border p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <MonthNav month={now} buildHref={buildMonthHref} />
-        <form className="flex flex-wrap items-center gap-2">
-          <input
-            type="hidden"
-            name="month"
-            value={`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`}
-          />
-          <select
-            name="status"
-            aria-label="Filter by status"
-            defaultValue={selectedStatus ?? ""}
-            className="border-border bg-surface text-body h-10 rounded-[var(--radius-control)] border px-3"
-          >
-            <option value="">All statuses</option>
-            {ALL_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {status.replace(/_/g, " ")}
-              </option>
-            ))}
-          </select>
-          <select
-            name="density"
-            aria-label="List density"
-            defaultValue={density}
-            className="border-border bg-surface text-body h-10 rounded-[var(--radius-control)] border px-3"
-          >
-            <option value="comfortable">Comfortable</option>
-            <option value="compact">Compact</option>
-          </select>
-          <Button variant="outline" type="submit">
-            Apply
-          </Button>
-          {hasFilter ? (
-            <Button variant="ghost" asChild>
-              <Link
-                href={`/app/w/${slug}/planning?month=${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`}
-              >
-                Clear
-              </Link>
-            </Button>
-          ) : null}
-        </form>
+        <PlanningFilters
+          slug={slug}
+          monthParam={monthParam(0)}
+          selectedStatus={selectedStatus}
+          density={density}
+          hasFilter={hasFilter}
+        />
       </div>
 
       {items.length === 0 ? (
