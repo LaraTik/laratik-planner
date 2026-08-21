@@ -20,7 +20,10 @@ export default async function AcceptInvitationPage({
 
   if (!token) {
     return (
-      <main className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-16 text-center">
+      <main
+        className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-16 text-center"
+        data-testid="accept-invitation-page"
+      >
         <h1 className="text-title-page text-fg-primary font-semibold">Invalid invitation</h1>
         <p className="text-body text-fg-secondary mt-2">
           The link is missing the invitation token. Please check the link in your email.
@@ -37,7 +40,10 @@ export default async function AcceptInvitationPage({
 
   if (result.status === "invalid") {
     return (
-      <main className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-16 text-center">
+      <main
+        className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-16 text-center"
+        data-testid="accept-invitation-page"
+      >
         <h1 className="text-title-page text-fg-primary font-semibold">Invalid invitation</h1>
         <p className="text-body text-fg-secondary mt-2">
           The link is invalid or has been revoked. Ask your admin to send a new one.

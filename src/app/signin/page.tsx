@@ -52,7 +52,10 @@ export default async function SignInPage({
   );
 
   return (
-    <main className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 py-16">
+    <main
+      className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 py-16"
+      data-testid="signin-page"
+    >
       <header className="flex flex-col items-center gap-2 text-center">
         <p className="border-border bg-surface text-label text-fg-muted rounded-full border px-3 py-1">
           laratik-planner

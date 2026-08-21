@@ -9,7 +9,10 @@ export const metadata = { title: "Check your email" };
 
 export default function VerifyRequestPage() {
   return (
-    <main className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-6 px-6 py-16 text-center">
+    <main
+      className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-6 px-6 py-16 text-center"
+      data-testid="signin-verify-page"
+    >
       <div className="border-border bg-surface rounded-full border p-3">
         <Mail className="text-primary h-6 w-6" aria-hidden="true" />
       </div>

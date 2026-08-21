@@ -45,7 +45,10 @@ export default async function DevSignInPage({
     rawCallback.startsWith("/") && !rawCallback.startsWith("//") ? rawCallback : "/app";
 
   return (
-    <main className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 py-16">
+    <main
+      className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 py-16"
+      data-testid="dev-signin-page"
+    >
       <header className="flex flex-col items-center gap-2 text-center">
         <p className="border-warning/20 bg-warning-subtle text-warning text-label rounded-full border px-3 py-1">
           🛠 Dev mode — not available in production

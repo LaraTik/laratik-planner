@@ -14,7 +14,10 @@ export const metadata = {
  */
 export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col justify-center gap-10 px-6 py-16">
+    <main
+      className="mx-auto flex min-h-screen max-w-5xl flex-col justify-center gap-10 px-6 py-16"
+      data-testid="landing-page"
+    >
       <div className="flex flex-col items-center gap-4 text-center">
         <p className="border-primary/20 bg-primary-subtle text-label text-primary rounded-full border px-3 py-1">
           Social content operations, in one place
