@@ -115,6 +115,7 @@ export default async function AgencySettingsPage() {
               label="MiniMax AI"
               enabled={serverEnv.AI_FEATURE_ENABLED && !!serverEnv.MINIMAX_API_KEY}
               testId="agency-service-minimax-ai"
+              href="/app/agency-settings/ai"
             />
             <Service
               label="Sentry"
@@ -146,14 +147,40 @@ function Row({ label, value, testId }: { label: string; value: string; testId?: 
   );
 }
 
-function Service({ label, enabled, testId }: { label: string; enabled: boolean; testId?: string }) {
+function Service({
+  label,
+  enabled,
+  testId,
+  href,
+}: {
+  label: string;
+  enabled: boolean;
+  testId?: string;
+  href?: string;
+}) {
+  const inner = (
+    <>
+      <span className="text-body text-fg-primary">{label}</span>
+      <Badge variant={enabled ? "success" : "outline"}>{enabled ? "Configured" : "Disabled"}</Badge>
+    </>
+  );
+  if (href) {
+    return (
+      <Link
+        href={href}
+        data-testid={testId}
+        className="border-border focus-visible:ring-focus-ring flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border-b pb-3 last:border-0 last:pb-0 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+      >
+        {inner}
+      </Link>
+    );
+  }
   return (
     <div
       className="border-border flex flex-wrap items-center justify-between gap-2 border-b pb-3 last:border-0 last:pb-0"
       data-testid={testId}
     >
-      <span className="text-body text-fg-primary">{label}</span>
-      <Badge variant={enabled ? "success" : "outline"}>{enabled ? "Configured" : "Disabled"}</Badge>
+      {inner}
     </div>
   );
 }

@@ -35,8 +35,8 @@ yarn-error.log*
 .env.*.local
 
 # worktrees
-.worktrees/
-worktrees/
+/.worktrees/
+/worktrees/
 
 # editor
 .vscode/

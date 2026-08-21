@@ -17,6 +17,21 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { SettingsForm } from "./settings-form";
 
+/**
+ * Workspace settings overview.
+ *
+ * The section navigation now lives in the main sidebar as a nested
+ * group (Settings → Lifecycle / Lead times / Assignment defaults /
+ * Approval mode / AI assistance). This page is the settings LANDING
+ * (defaults to the Lifecycle section). Each sub-section is reachable
+ * via the sidebar; deep links (`#lead-times`, `#defaults`, `#approvals`)
+ * scroll to the right fieldset on first render.
+ *
+ * The left-rail section nav that previously sat inside the page has
+ * been removed — it duplicated the sidebar and made the layout feel
+ * nested twice. The PageHeader description still names the 8 sections
+ * the Stitch design plans for, so the roadmap is visible.
+ */
 export default async function WorkspaceSettingsPage({
   params,
 }: {
@@ -67,18 +82,6 @@ export default async function WorkspaceSettingsPage({
     defaultClientReviewerId: null,
   };
 
-  // Section anchors — the Stitch design has a sticky left nav with
-  // 8+ settings sections. v1 ships one combined form; the section
-  // list here documents the eventual split (Lifecycle / Defaults /
-  // Targets / AI assistance / Archive) and provides anchor IDs so
-  // the per-section nav can land on the right card group.
-  const sections: { id: string; label: string }[] = [
-    { id: "lifecycle", label: "Lifecycle" },
-    { id: "lead-times", label: "Lead times" },
-    { id: "defaults", label: "Assignment defaults" },
-    { id: "approvals", label: "Approval mode" },
-  ];
-
   return (
     <div className="space-y-6" data-testid="workspace-settings">
       <PageHeader
@@ -95,105 +98,109 @@ export default async function WorkspaceSettingsPage({
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
-        {/* Section nav (Stitch has 8+ entries; v1 lists the 4 we ship). */}
-        <nav
-          aria-label="Settings sections"
-          className="lg:sticky lg:top-20 lg:self-start"
-          data-testid="settings-section-nav"
+      {/* Roadmap of the full settings surface (matches Stitch 2f6acd26
+          8-section layout). The sidebar is the primary nav; this strip
+          documents the eventual surface and links to the AI section
+          which lives on its own route. */}
+      <nav
+        aria-label="Settings sections (overview)"
+        className="border-border bg-surface-subtle flex flex-wrap gap-2 rounded-[var(--radius-control)] border p-2"
+        data-testid="settings-overview-strip"
+      >
+        {[
+          { id: "lifecycle", label: "Lifecycle" },
+          { id: "lead-times", label: "Lead times" },
+          { id: "defaults", label: "Assignment defaults" },
+          { id: "approvals", label: "Approval mode" },
+        ].map((s) => (
+          <a
+            key={s.id}
+            href={`#${s.id}`}
+            data-testid={`settings-strip-${s.id}`}
+            className="text-label text-fg-secondary hover:bg-surface focus-visible:ring-focus-ring hover:text-fg-primary rounded-[var(--radius-control)] px-2.5 py-1 font-semibold focus:outline-none focus-visible:ring-2"
+          >
+            {s.label}
+          </a>
+        ))}
+        <a
+          href={`/app/w/${slug}/ai-settings`}
+          data-testid="settings-strip-ai"
+          className="text-label text-primary hover:bg-surface focus-visible:ring-focus-ring ml-auto rounded-[var(--radius-control)] px-2.5 py-1 font-semibold focus:outline-none focus-visible:ring-2"
         >
-          <ul className="space-y-1">
-            {sections.map((section) => (
-              <li key={section.id}>
-                <a
-                  href={`#${section.id}`}
-                  data-testid={`settings-nav-${section.id}`}
-                  className="text-body text-fg-secondary hover:bg-surface-subtle hover:text-fg-primary focus-visible:ring-focus-ring block rounded-[var(--radius-control)] px-3 py-2 font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-                >
-                  {section.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
+          AI assistance →
+        </a>
+      </nav>
 
-        <div className="space-y-4">
-          {canManage ? (
-            <Card data-testid="settings-form-card">
-              <CardTitle className="mb-1" id="lifecycle">
-                Lifecycle
-              </CardTitle>
-              <p className="text-body text-fg-muted mb-6 max-w-3xl">
-                Standard workflow stages. Status flags like Changes Requested, Blocked, Cancelled,
-                and Overdue are functional states applied to items within these stages, not distinct
-                columns.
-              </p>
-              <SettingsForm
-                slug={slug}
-                values={{ ...values, timezone: workspace.timezone }}
-                designers={peopleForRole(membershipRows, "designer")}
-                internalReviewers={peopleForRole(membershipRows, "internal_reviewer")}
-                clientReviewers={peopleForRole(membershipRows, "client_reviewer")}
-              />
+      <div className="space-y-4">
+        {canManage ? (
+          <Card data-testid="settings-form-card">
+            <CardTitle className="mb-1" id="lifecycle">
+              Lifecycle
+            </CardTitle>
+            <p className="text-body text-fg-muted mb-6 max-w-3xl">
+              Standard workflow stages. Status flags like Changes Requested, Blocked, Cancelled, and
+              Overdue are functional states applied to items within these stages, not distinct
+              columns.
+            </p>
+            <SettingsForm
+              slug={slug}
+              values={{ ...values, timezone: workspace.timezone }}
+              designers={peopleForRole(membershipRows, "designer")}
+              internalReviewers={peopleForRole(membershipRows, "internal_reviewer")}
+              clientReviewers={peopleForRole(membershipRows, "client_reviewer")}
+            />
+          </Card>
+        ) : (
+          <div className="space-y-4" data-testid="settings-readonly">
+            <Card id="lifecycle" data-testid="settings-readonly-lifecycle">
+              <CardTitle className="mb-4">Lifecycle</CardTitle>
+              <dl className="space-y-3">
+                <Setting label="Timezone" value={workspace.timezone} />
+                <Setting
+                  label="Monthly target"
+                  value={values.monthlyTarget ? String(values.monthlyTarget) : "Not set"}
+                />
+              </dl>
             </Card>
-          ) : (
-            <div className="space-y-4" data-testid="settings-readonly">
-              <Card id="lifecycle" data-testid="settings-readonly-lifecycle">
-                <CardTitle className="mb-4">Lifecycle</CardTitle>
-                <dl className="space-y-3">
-                  <Setting label="Timezone" value={workspace.timezone} />
-                  <Setting
-                    label="Monthly target"
-                    value={values.monthlyTarget ? String(values.monthlyTarget) : "Not set"}
-                  />
-                </dl>
-              </Card>
-              <Card id="lead-times" data-testid="settings-readonly-lead-times">
-                <CardTitle className="mb-4">Lead times</CardTitle>
-                <dl className="space-y-3">
-                  <Setting
-                    label="Content approval"
-                    value={`${values.contentApprovalLeadDays} days`}
-                  />
-                  <Setting
-                    label="Design complete"
-                    value={`${values.designCompleteLeadDays} days`}
-                  />
-                  <Setting
-                    label="Creative approval"
-                    value={`${values.creativeApprovalLeadDays} days`}
-                  />
-                  <Setting
-                    label="Ready to publish"
-                    value={`${values.readyToPublishLeadDays} day${values.readyToPublishLeadDays === 1 ? "" : "s"}`}
-                  />
-                </dl>
-              </Card>
-              <Card id="defaults" data-testid="settings-readonly-defaults">
-                <CardTitle className="mb-4">Assignment defaults</CardTitle>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <Assignment label="Designer" configured={!!values.defaultDesignerId} />
-                  <Assignment
-                    label="Content reviewer"
-                    configured={!!values.defaultContentReviewerId}
-                  />
-                  <Assignment
-                    label="Internal creative reviewer"
-                    configured={!!values.defaultInternalCreativeReviewerId}
-                  />
-                  <Assignment
-                    label="Client reviewer"
-                    configured={!!values.defaultClientReviewerId}
-                  />
-                </div>
-              </Card>
-              <Card id="approvals" data-testid="settings-readonly-approvals">
-                <CardTitle className="mb-4">Approval mode</CardTitle>
-                <Setting label="Mode" value={humanize(values.approvalMode)} />
-              </Card>
-            </div>
-          )}
-        </div>
+            <Card id="lead-times" data-testid="settings-readonly-lead-times">
+              <CardTitle className="mb-4">Lead times</CardTitle>
+              <dl className="space-y-3">
+                <Setting
+                  label="Content approval"
+                  value={`${values.contentApprovalLeadDays} days`}
+                />
+                <Setting label="Design complete" value={`${values.designCompleteLeadDays} days`} />
+                <Setting
+                  label="Creative approval"
+                  value={`${values.creativeApprovalLeadDays} days`}
+                />
+                <Setting
+                  label="Ready to publish"
+                  value={`${values.readyToPublishLeadDays} day${values.readyToPublishLeadDays === 1 ? "" : "s"}`}
+                />
+              </dl>
+            </Card>
+            <Card id="defaults" data-testid="settings-readonly-defaults">
+              <CardTitle className="mb-4">Assignment defaults</CardTitle>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Assignment label="Designer" configured={!!values.defaultDesignerId} />
+                <Assignment
+                  label="Content reviewer"
+                  configured={!!values.defaultContentReviewerId}
+                />
+                <Assignment
+                  label="Internal creative reviewer"
+                  configured={!!values.defaultInternalCreativeReviewerId}
+                />
+                <Assignment label="Client reviewer" configured={!!values.defaultClientReviewerId} />
+              </div>
+            </Card>
+            <Card id="approvals" data-testid="settings-readonly-approvals">
+              <CardTitle className="mb-4">Approval mode</CardTitle>
+              <Setting label="Mode" value={humanize(values.approvalMode)} />
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
