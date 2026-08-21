@@ -7,8 +7,10 @@ import { contentItems, socialChannels, workspaces, workspaceMemberships } from "
 import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { IconTile } from "@/components/workspace/icon-button";
+import { KpiTile } from "@/components/workspace/kpi-tile";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
@@ -171,13 +173,13 @@ export default async function WorkspacesPage() {
           value={totalIdeas}
         />
         <KpiTile
-          icon={<AlertTriangle className="text-warning h-4 w-4" aria-hidden="true" />}
+          icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
           label="Need review"
           value={needsReview}
           tone="warning"
         />
         <KpiTile
-          icon={<Send className="text-success h-4 w-4" aria-hidden="true" />}
+          icon={<Send className="h-4 w-4" aria-hidden="true" />}
           label="Ready to publish"
           value={readyToPublish}
           tone="success"
@@ -209,91 +211,17 @@ export default async function WorkspacesPage() {
       ) : (
         <Card padding="none" className="overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left" data-testid="workspaces-table">
-              <thead>
-                <tr className="bg-surface-subtle border-border border-b">
-                  <th className="text-label text-fg-secondary w-1/3 px-4 py-3 font-semibold tracking-wide uppercase">
-                    Brand
-                  </th>
-                  <th className="text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase">
-                    Channels
-                  </th>
-                  <th className="text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase">
-                    Members
-                  </th>
-                  <th className="text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase">
-                    Last activity
-                  </th>
-                  <th className="text-label text-fg-secondary w-12 px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-border text-table-dense divide-y">
-                {rows.map((ws) => {
-                  const channelCount = channelCounts.get(ws.id) ?? 0;
-                  const memberCount = memberCounts.get(ws.id) ?? 0;
-                  const samples = sampleChannels.get(ws.id) ?? [];
-                  return (
-                    <tr
-                      key={ws.id}
-                      className="hover:bg-surface-subtle transition-colors"
-                      data-testid={`workspaces-row-${ws.id}`}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <IconTile size="md" tone="primary" aria-hidden="true">
-                            {ws.name.charAt(0).toUpperCase()}
-                          </IconTile>
-                          <div className="min-w-0">
-                            <Link
-                              href={`/app/w/${ws.slug}`}
-                              className="text-body text-fg-primary hover:text-primary block truncate font-semibold"
-                            >
-                              {ws.name}
-                            </Link>
-                            <p className="text-label text-fg-muted truncate">
-                              {ws.slug}.planner.laratik.com
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {channelCount === 0 ? (
-                          <span className="text-fg-muted">No channels</span>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <div className="flex -space-x-1">
-                              {samples.map((p) => (
-                                <span
-                                  key={p}
-                                  className="border-border bg-surface ring-surface inline-flex h-6 w-6 items-center justify-center rounded-full border ring-1"
-                                  title={platformLabel(p)}
-                                >
-                                  <PlatformIcon platform={p} className="h-3 w-3" />
-                                </span>
-                              ))}
-                            </div>
-                            <span className="text-label text-fg-secondary">
-                              {channelCount} channel{channelCount === 1 ? "" : "s"}
-                            </span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="text-body text-fg-primary px-4 py-3 font-medium">
-                        {memberCount} member{memberCount === 1 ? "" : "s"}
-                      </td>
-                      <td className="text-body text-fg-muted px-4 py-3">
-                        {formatRelativeDate(ws.updatedAt)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Button asChild size="sm" variant="ghost">
-                          <Link href={`/app/w/${ws.slug}`}>Open</Link>
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <DataTable
+              data-testid="workspaces-table"
+              getRowKey={(ws) => ws.id}
+              getRowTestId={(ws) => `workspaces-row-${ws.id}`}
+              rows={rows}
+              columns={workspacesColumns({
+                channelCounts,
+                sampleChannels,
+                memberCounts,
+              })}
+            />
           </div>
         </Card>
       )}
@@ -301,32 +229,100 @@ export default async function WorkspacesPage() {
   );
 }
 
-function KpiTile({
-  icon,
-  label,
-  value,
-  tone = "default",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  tone?: "default" | "warning" | "success";
-}) {
-  const toneClass =
-    tone === "warning"
-      ? "border-l-4 border-l-warning"
-      : tone === "success"
-        ? "border-l-4 border-l-success"
-        : "";
-  return (
-    <div
-      className={`border-border bg-surface rounded-[var(--radius-card)] border p-4 ${toneClass}`}
-    >
-      <div className="text-fg-muted mb-2 flex items-center gap-2">
-        {icon}
-        <span className="text-label font-medium">{label}</span>
-      </div>
-      <p className="text-title-page text-fg-primary font-semibold">{value}</p>
-    </div>
-  );
+type WorkspaceRow = {
+  id: string;
+  name: string;
+  slug: string;
+  status: "active" | "archived";
+  updatedAt: Date;
+};
+type ChannelCountMap = Map<string, number>;
+type SampleChannelMap = Map<string, string[]>;
+type MemberCountMap = Map<string, number>;
+
+function workspacesColumns(props: {
+  channelCounts: ChannelCountMap;
+  sampleChannels: SampleChannelMap;
+  memberCounts: MemberCountMap;
+}): DataTableColumnDef<WorkspaceRow>[] {
+  return [
+    {
+      key: "brand",
+      header: "Brand",
+      headerClassName: "w-1/3",
+      cell: (ws) => (
+        <div className="flex items-center gap-3">
+          <IconTile size="md" tone="primary" aria-hidden="true">
+            {ws.name.charAt(0).toUpperCase()}
+          </IconTile>
+          <div className="min-w-0">
+            <Link
+              href={`/app/w/${ws.slug}`}
+              className="text-body text-fg-primary hover:text-primary block truncate font-semibold"
+            >
+              {ws.name}
+            </Link>
+            <p className="text-label text-fg-muted truncate">{ws.slug}.planner.laratik.com</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "channels",
+      header: "Channels",
+      cell: (ws) => {
+        const channelCount = props.channelCounts.get(ws.id) ?? 0;
+        const samples = props.sampleChannels.get(ws.id) ?? [];
+        if (channelCount === 0) {
+          return <span className="text-fg-muted">No channels</span>;
+        }
+        return (
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-1">
+              {samples.map((p) => (
+                <span
+                  key={p}
+                  className="border-border bg-surface ring-surface inline-flex h-6 w-6 items-center justify-center rounded-full border ring-1"
+                  title={platformLabel(p)}
+                >
+                  <PlatformIcon platform={p} className="h-3 w-3" />
+                </span>
+              ))}
+            </div>
+            <span className="text-label text-fg-secondary">
+              {channelCount} channel{channelCount === 1 ? "" : "s"}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: "members",
+      header: "Members",
+      cell: (ws) => {
+        const memberCount = props.memberCounts.get(ws.id) ?? 0;
+        return (
+          <span className="text-body text-fg-primary font-medium">
+            {memberCount} member{memberCount === 1 ? "" : "s"}
+          </span>
+        );
+      },
+    },
+    {
+      key: "last-activity",
+      header: "Last activity",
+      cell: (ws) => formatRelativeDate(ws.updatedAt),
+    },
+    {
+      key: "actions",
+      header: "",
+      headerClassName: "w-12",
+      cellClassName: "text-right",
+      cell: (ws) => (
+        <Button asChild size="sm" variant="ghost">
+          <Link href={`/app/w/${ws.slug}`}>Open</Link>
+        </Button>
+      ),
+    },
+  ];
 }
