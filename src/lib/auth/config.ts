@@ -1,10 +1,12 @@
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 import Nodemailer from "next-auth/providers/nodemailer";
+import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/lib/db";
 import { accounts, sessions, users, verificationTokens } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/validation/env";
+import { findUserByEmailAndPassword } from "@/lib/auth/password";
 
 /**
  * NextAuth v5 configuration.
@@ -32,6 +34,41 @@ export const authConfig: NextAuthConfig = {
   trustHost: serverEnv.AUTH_TRUST_HOST,
 
   providers: [
+    // Password sign-in (Credentials provider). Backed by the
+    // `passwordHash` column on the `user` table (see
+    // src/lib/auth/password.ts). Always enabled — there is no env
+    // gate because the user can always set a password via the reset
+    // flow even if their original sign-in was OAuth.
+    Credentials({
+      id: "credentials",
+      name: "Email + Password",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+        remember: { label: "Remember me", type: "checkbox" },
+      },
+      async authorize(creds) {
+        const email = typeof creds?.email === "string" ? creds.email : "";
+        const password = typeof creds?.password === "string" ? creds.password : "";
+        if (!email || !password) return null;
+        const user = await findUserByEmailAndPassword(email, password);
+        if (!user) return null;
+        // "Remember me" is passed through to the JWT callback which
+        // sets token.exp accordingly. Truthy form values ("on", "true",
+        // "1") are treated as on; absent or anything else → off.
+        const remember =
+          creds?.remember === "on" || creds?.remember === "true" || creds?.remember === "1";
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name ?? user.email,
+          // Custom field — not in the User type but passed through to
+          // the jwt() callback. Cast to any in the JWT callback to
+          // access it.
+          ...({ remember } as Record<string, unknown>),
+        } as Awaited<ReturnType<NonNullable<typeof Credentials.prototype.authorize>>>;
+      },
+    }),
     ...(serverEnv.GOOGLE_CLIENT_ID && serverEnv.GOOGLE_CLIENT_SECRET
       ? [
           Google({
@@ -79,6 +116,12 @@ export const authConfig: NextAuthConfig = {
     /**
      * Persist the user id + role into the JWT on first sign-in. On
      * subsequent calls the token is decoded directly from the cookie.
+     *
+     * The Credentials provider passes a `remember` flag through the
+     * `user` object on first sign-in. When remember=false, we set
+     * `token.exp` to 24h so the session dies sooner than the
+     * config-level 30-day maxAge. When remember=true (or for
+     * OAuth/magic-link), the default 30-day cap applies.
      */
     async jwt({ token, user }) {
       if (user) {
@@ -87,6 +130,11 @@ export const authConfig: NextAuthConfig = {
         // by the bootstrap flow (see src/lib/auth/bootstrap.ts) or by an
         // existing admin via the User Management UI (Goal 4).
         token.role = (user as { role?: string }).role ?? "user";
+        const remember = (user as { remember?: boolean }).remember;
+        if (remember === false) {
+          // 24 hours from now
+          token.exp = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
+        }
       }
       return token;
     },

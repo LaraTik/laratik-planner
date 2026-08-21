@@ -4,7 +4,7 @@ import { signIn } from "@/lib/auth/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
-import { Mail, AlertCircle, Wrench } from "lucide-react";
+import { AlertCircle, Wrench } from "lucide-react";
 import { authError } from "./auth-error-codes";
 import { serverEnv } from "@/lib/validation/env";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -13,19 +13,26 @@ import { headers } from "next/headers";
 /**
  * Sign-in page (Goal 2).
  *
- * Two entry paths:
- *  1. "Sign in with Google" — OAuth redirect
- *  2. "Email me a sign-in link" — passwordless magic link via Mailcow
+ * Three entry paths:
+ *  1. Email + password (Credentials provider, the primary path per
+ *     the Stitch design)
+ *  2. "Sign in with Google" — OAuth (secondary, shown below the
+ *     primary card on the same page)
+ *  3. "Email me a sign-in link" — passwordless magic link via
+ *     Mailcow (secondary, shown below the primary card on the same
+ *     page)
+ *
+ * Tradeoff: the Stitch design is a single card focused on email +
+ * password. Keeping Google + magic-link on this page (rather than
+ * moving them to /signin/providers) keeps the page count low and
+ * the sign-in flow single-page for users who can't remember their
+ * password. The Google + magic-link options are visually de-
+ * emphasized below a horizontal divider so the password card is the
+ * focal point.
  *
  * After successful sign-in, the NextAuth callback redirects to:
  *  - /setup if no agency exists yet (first admin)
  *  - /app otherwise
- *
- * UX details:
- *  - The email field autoFocuses so the user can start typing immediately
- *  - Submitting the form via Enter works (no JS required — pure form action)
- *  - The Google button is keyboard-accessible (real <button>)
- *  - Server-side errors (e.g. wrong email) are rendered above the form
  */
 export const metadata = { title: "Sign in" };
 
@@ -50,6 +57,7 @@ export default async function SignInPage({
     serverEnv.SMTP_PASSWORD &&
     serverEnv.SMTP_FROM
   );
+  const hasSecondary = googleEnabled || emailEnabled;
 
   return (
     <main
@@ -60,72 +68,60 @@ export default async function SignInPage({
         <p className="border-border bg-surface text-label text-fg-muted rounded-full border px-3 py-1">
           laratik-planner
         </p>
-        <h1 className="text-title-page text-fg-primary font-semibold tracking-tight">Sign in</h1>
+        <h1 className="text-title-page text-primary font-bold tracking-tight">StudioFlow</h1>
         <p className="text-body text-fg-secondary max-w-sm">
-          Use your work Google account, or get a one-time sign-in link by email.
+          Plan, approve, and publish with clarity.
         </p>
       </header>
 
-      {errorCode ? (
-        <div
-          role="alert"
-          className="border-danger/20 bg-danger-subtle text-danger flex items-start gap-2 rounded-[var(--radius-card)] border px-4 py-3 text-sm"
-        >
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>{authError(errorCode)}</span>
-        </div>
-      ) : null}
-
-      {serverEnv.NODE_ENV !== "production" ? (
-        <div
-          role="note"
-          className="border-warning/20 bg-warning-subtle text-warning flex items-start gap-2 rounded-[var(--radius-card)] border px-4 py-3 text-sm"
-        >
-          <Wrench className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>
-            Dev mode:{" "}
-            <Link href="/dev/signin" className="font-semibold underline-offset-4 hover:underline">
-              one-click sign-in
-            </Link>{" "}
-            bypasses Google and SMTP (returns 404 in production builds).
-          </span>
-        </div>
-      ) : null}
-
       <div className="w-full space-y-3">
-        {googleEnabled ? (
-          <form
-            action={async () => {
-              "use server";
-              await signIn("google", { redirectTo: callbackUrl });
-            }}
-          >
-            <Button type="submit" variant="default" className="w-full" size="lg">
-              <GoogleIcon className="h-4 w-4" />
-              Continue with Google
-            </Button>
-          </form>
-        ) : null}
+        <div className="border-border bg-surface rounded-[var(--radius-card)] border p-8 shadow-sm">
+          {errorCode ? (
+            <div
+              role="alert"
+              data-testid="signin-error"
+              className="border-danger/20 bg-danger-subtle text-danger mb-5 flex items-start gap-3 rounded-[var(--radius-control)] border p-3"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <div className="flex flex-col">
+                <span className="text-label font-semibold">Sign-in failed</span>
+                <span className="text-body">{authError(errorCode)}</span>
+              </div>
+            </div>
+          ) : null}
 
-        {googleEnabled && emailEnabled ? (
-          <div className="flex items-center gap-3 py-2" role="separator" aria-label="or">
-            <hr className="border-border flex-1" />
-            <span className="text-label text-fg-muted">or</span>
-            <hr className="border-border flex-1" />
-          </div>
-        ) : null}
+          {serverEnv.NODE_ENV !== "production" ? (
+            <div
+              role="note"
+              className="border-warning/20 bg-warning-subtle text-warning mb-5 flex items-start gap-3 rounded-[var(--radius-control)] border p-3 text-sm"
+            >
+              <Wrench className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>
+                Dev mode:{" "}
+                <Link
+                  href="/dev/signin"
+                  className="font-semibold underline-offset-4 hover:underline"
+                >
+                  one-click sign-in
+                </Link>{" "}
+                bypasses Google and SMTP (returns 404 in production builds).
+              </span>
+            </div>
+          ) : null}
 
-        {emailEnabled ? (
           <form
             action={async (formData) => {
               "use server";
               const email = String(formData.get("email") ?? "").trim();
-              if (!email) return;
-              // Rate-limit magic-link requests per email so an attacker
-              // can't spam arbitrary laratik.com or gmail.com addresses
-              // with sign-in links (phishing / social-engineering vector).
-              // The signin page itself stays public; the rate limit just
-              // throttles per (scope, subject) at the DB level.
+              const password = String(formData.get("password") ?? "");
+              if (!email || !password) {
+                redirect(
+                  `/signin?error=CredentialsSignin&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+                );
+              }
+              // Rate-limit per (email, source IP) to throttle password
+              // guessing. Same composite as magic-link so an attacker
+              // can't rotate between the two to bypass the limit.
               const h = await headers();
               const requestId = h.get("x-request-id");
               const subject = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? email;
@@ -136,42 +132,136 @@ export default async function SignInPage({
               });
               if (!limit.allowed) {
                 redirect(
-                  `/signin?error=EmailSignin&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+                  `/signin?error=CredentialsSignin&callbackUrl=${encodeURIComponent(callbackUrl)}`,
                 );
               }
-              await signIn("nodemailer", { email, redirectTo: callbackUrl });
+              await signIn("credentials", {
+                email,
+                password,
+                redirectTo: callbackUrl,
+              });
             }}
-            className="space-y-3"
+            className="flex flex-col gap-5"
           >
-            <FormField id="email" label="Work email" required>
+            <FormField id="email" label="Email address" required>
               <Input
                 type="email"
                 name="email"
                 autoComplete="email"
                 autoFocus
                 required
-                placeholder="you@company.com"
+                placeholder="name@agency.com"
               />
             </FormField>
-            <Button type="submit" variant="secondary" className="w-full" size="lg">
-              <Mail className="h-4 w-4" aria-hidden="true" />
-              Email me a sign-in link
+
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="text-label text-fg-primary font-medium">
+                  Password
+                </label>
+                <Link
+                  href="/signin/forgot-password"
+                  className="text-label text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                required
+                placeholder="Enter your password"
+              />
+            </div>
+
+            <label className="text-label text-fg-primary flex items-center gap-2">
+              <input
+                id="remember"
+                name="remember"
+                type="checkbox"
+                value="on"
+                className="border-border text-primary focus:ring-focus-ring bg-surface h-4 w-4 cursor-pointer rounded"
+              />
+              Remember me for 30 days
+            </label>
+
+            <Button type="submit" className="mt-2 w-full" size="lg">
+              Sign in
             </Button>
           </form>
-        ) : null}
-        {!googleEnabled && !emailEnabled ? (
-          <p
-            role="alert"
-            className="border-warning/20 bg-warning-subtle text-body text-warning rounded-[var(--radius-card)] border p-4 text-center"
-          >
-            Sign-in providers are not configured. Contact the platform administrator.
-          </p>
+        </div>
+
+        {hasSecondary ? (
+          <>
+            <div className="flex items-center gap-3 py-2" role="separator" aria-label="or">
+              <hr className="border-border flex-1" />
+              <span className="text-label text-fg-muted">or</span>
+              <hr className="border-border flex-1" />
+            </div>
+
+            {googleEnabled ? (
+              <form
+                action={async () => {
+                  "use server";
+                  await signIn("google", { redirectTo: callbackUrl });
+                }}
+              >
+                <Button type="submit" variant="secondary" className="w-full" size="lg">
+                  <GoogleIcon className="h-4 w-4" />
+                  Continue with Google
+                </Button>
+              </form>
+            ) : null}
+
+            {emailEnabled ? (
+              <form
+                action={async (formData) => {
+                  "use server";
+                  const email = String(formData.get("email") ?? "").trim();
+                  if (!email) return;
+                  const h = await headers();
+                  const requestId = h.get("x-request-id");
+                  const subject = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? email;
+                  const limit = await enforceRateLimit({
+                    scope: "magic_link_request",
+                    subject: `${email}::${subject}`,
+                    ...(requestId ? { requestId } : {}),
+                  });
+                  if (!limit.allowed) {
+                    redirect(
+                      `/signin?error=EmailSignin&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+                    );
+                  }
+                  await signIn("nodemailer", { email, redirectTo: callbackUrl });
+                }}
+                className="space-y-2"
+              >
+                <Input
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  required
+                  placeholder="Work email"
+                />
+                <Button type="submit" variant="secondary" className="w-full" size="lg">
+                  Email me a sign-in link
+                </Button>
+              </form>
+            ) : null}
+          </>
         ) : null}
       </div>
 
-      <p className="text-label text-fg-muted text-center">
-        Invitation-only access. Ask your agency administrator if you need an account.
-      </p>
+      <footer className="flex flex-col items-center gap-3">
+        <p className="text-label text-secondary text-center">
+          Need access? Contact your agency administrator.
+        </p>
+        <p className="text-label text-fg-muted text-center">
+          © {new Date().getFullYear()} laratik-planner Agency Platform
+        </p>
+      </footer>
     </main>
   );
 }
