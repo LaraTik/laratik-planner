@@ -97,13 +97,18 @@ export default async function WorkspaceSettingsPage({
 
       <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
         {/* Section nav (Stitch has 8+ entries; v1 lists the 4 we ship). */}
-        <nav aria-label="Settings sections" className="lg:sticky lg:top-20 lg:self-start">
+        <nav
+          aria-label="Settings sections"
+          className="lg:sticky lg:top-20 lg:self-start"
+          data-testid="settings-section-nav"
+        >
           <ul className="space-y-1">
             {sections.map((section) => (
               <li key={section.id}>
                 <a
                   href={`#${section.id}`}
-                  className="text-body text-fg-secondary hover:bg-surface-subtle hover:text-fg-primary block rounded-[var(--radius-control)] px-3 py-2 font-semibold transition-colors"
+                  data-testid={`settings-nav-${section.id}`}
+                  className="text-body text-fg-secondary hover:bg-surface-subtle hover:text-fg-primary focus-visible:ring-focus-ring block rounded-[var(--radius-control)] px-3 py-2 font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                 >
                   {section.label}
                 </a>
@@ -114,8 +119,8 @@ export default async function WorkspaceSettingsPage({
 
         <div className="space-y-4">
           {canManage ? (
-            <Card>
-              <CardTitle className="mb-4" id="lifecycle">
+            <Card data-testid="settings-form-card">
+              <CardTitle className="mb-1" id="lifecycle">
                 Lifecycle
               </CardTitle>
               <p className="text-body text-fg-muted mb-6 max-w-3xl">
@@ -132,8 +137,8 @@ export default async function WorkspaceSettingsPage({
               />
             </Card>
           ) : (
-            <div className="space-y-4">
-              <Card id="lifecycle">
+            <div className="space-y-4" data-testid="settings-readonly">
+              <Card id="lifecycle" data-testid="settings-readonly-lifecycle">
                 <CardTitle className="mb-4">Lifecycle</CardTitle>
                 <dl className="space-y-3">
                   <Setting label="Timezone" value={workspace.timezone} />
@@ -143,7 +148,7 @@ export default async function WorkspaceSettingsPage({
                   />
                 </dl>
               </Card>
-              <Card id="lead-times">
+              <Card id="lead-times" data-testid="settings-readonly-lead-times">
                 <CardTitle className="mb-4">Lead times</CardTitle>
                 <dl className="space-y-3">
                   <Setting
@@ -164,7 +169,7 @@ export default async function WorkspaceSettingsPage({
                   />
                 </dl>
               </Card>
-              <Card id="defaults">
+              <Card id="defaults" data-testid="settings-readonly-defaults">
                 <CardTitle className="mb-4">Assignment defaults</CardTitle>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <Assignment label="Designer" configured={!!values.defaultDesignerId} />
@@ -182,7 +187,7 @@ export default async function WorkspaceSettingsPage({
                   />
                 </div>
               </Card>
-              <Card id="approvals">
+              <Card id="approvals" data-testid="settings-readonly-approvals">
                 <CardTitle className="mb-4">Approval mode</CardTitle>
                 <Setting label="Mode" value={humanize(values.approvalMode)} />
               </Card>
