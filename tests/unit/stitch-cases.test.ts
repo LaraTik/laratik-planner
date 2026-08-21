@@ -1,7 +1,15 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { STITCH_CASES, type StitchCase } from "../../tests/e2e/stitch-cases";
+import {
+  CANONICAL_SURFACES,
+  REGRESSION_VIEWPORTS,
+  SETUP_FUNCTIONS,
+  STITCH_CASES,
+  type StitchCase,
+  resolveStitchRoute,
+  screenshotNameFor,
+} from "../../tests/e2e/stitch-cases";
 
 /**
  * Lock the canonical 49-screen Stitch contract: 39 active targets and 10
@@ -81,5 +89,74 @@ describe("canonical Stitch capture manifest", () => {
         true,
       );
     }
+  });
+});
+
+describe("visual regression harness contract (Task 7)", () => {
+  it("enforces the 39 active / 10 historical+superseded split for implementation targets", () => {
+    const active = (e: StitchCase) =>
+      e.classification === "canonical" ||
+      e.classification === "responsive" ||
+      e.classification === "supporting";
+    const excluded = (e: StitchCase) =>
+      e.classification === "historical" || e.classification === "superseded";
+    expect(STITCH_CASES.filter(active)).toHaveLength(39);
+    expect(STITCH_CASES.filter(excluded)).toHaveLength(10);
+  });
+
+  it("enforces 27 canonical surfaces", () => {
+    const canonical = STITCH_CASES.filter((e) => e.classification === "canonical");
+    expect(canonical).toHaveLength(27);
+  });
+
+  it("declares the six regression viewports (360, 390, 768, 1024, 1280, 1440)", () => {
+    const widths = REGRESSION_VIEWPORTS.map((v) => v.width);
+    expect(widths).toEqual([360, 390, 768, 1024, 1280, 1440]);
+  });
+
+  it("resolves {contentItemId} placeholders when given a SeedResult", () => {
+    const seed = { contentItemId: "abc-123" };
+    for (const entry of STITCH_CASES) {
+      if (!entry.route) continue;
+      const resolved = resolveStitchRoute(entry.route, seed);
+      expect(
+        resolved.includes("{contentItemId}"),
+        `unresolved placeholder for ${entry.screenId}: ${resolved}`,
+      ).toBe(false);
+      if (entry.route.includes("{contentItemId}")) {
+        expect(resolved).toContain("abc-123");
+      }
+    }
+  });
+
+  it("rejects duplicate screenshot names", () => {
+    const names = new Set<string>();
+    for (const entry of STITCH_CASES) {
+      for (const viewport of REGRESSION_VIEWPORTS) {
+        const name = screenshotNameFor(entry, viewport);
+        expect(names.has(name), `duplicate screenshot name ${name}`).toBe(false);
+        names.add(name);
+      }
+    }
+  });
+
+  it("every state has a deterministic setup function", () => {
+    const seen = new Set<string>();
+    for (const entry of STITCH_CASES) {
+      if (entry.evidenceGroup) continue; // shared evidence groups, not state-driven
+      seen.add(entry.state);
+    }
+    for (const state of seen) {
+      expect(
+        typeof SETUP_FUNCTIONS[state as keyof typeof SETUP_FUNCTIONS],
+        `missing setup for ${state}`,
+      ).toBe("function");
+    }
+  });
+
+  it("CANONICAL_SURFACES is the unique-route list of the 27 canonical Stitch cases", () => {
+    const canonical = STITCH_CASES.filter((e) => e.classification === "canonical");
+    const uniqueRoutes = new Set(canonical.map((e) => e.route).filter((r): r is string => !!r));
+    expect([...uniqueRoutes].sort()).toEqual([...CANONICAL_SURFACES].sort());
   });
 });

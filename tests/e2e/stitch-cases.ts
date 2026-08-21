@@ -373,3 +373,131 @@ export const STITCH_CASES: StitchCase[] = [
     classification: "canonical",
   }),
 ];
+
+// ─── Task 7: visual regression harness contract ─────────────────────────────
+//
+// The 6 viewports the visual-regression harness baselines against. The
+// Stitch captures only ship at three viewport sizes (desktop 1440×900,
+// mobile 390×844, tablet 768×1024); the harness is the bridge between
+// those and the actual responsive matrix the production UI is built for.
+export const REGRESSION_VIEWPORTS = [
+  { name: "mobile-s", width: 360, height: 800 },
+  { name: "mobile-m", width: 390, height: 844 },
+  { name: "tablet", width: 768, height: 1024 },
+  { name: "laptop", width: 1024, height: 768 },
+  { name: "desktop", width: 1280, height: 800 },
+  { name: "wide", width: 1440, height: 900 },
+] as const;
+
+export type RegressionViewportName = (typeof REGRESSION_VIEWPORTS)[number]["name"];
+
+/**
+ * A viewport descriptor used by the harness. The responsive matrix
+ * always uses the six `REGRESSION_VIEWPORTS`; the exact-reference
+ * loop uses the viewport the Stitch case was captured at, which may
+ * be one of the same six or the canonical desktop/mobile/tablet
+ * variant. We keep the type wide so the exact-reference case can
+ * carry its own width/height.
+ */
+export type RegressionViewport = {
+  readonly name: string;
+  readonly width: number;
+  readonly height: number;
+};
+
+/**
+ * Minimal shape the harness needs to resolve `{contentItemId}` from a
+ * dev-seed result. `SeedResult` (in `_helpers.ts`) is structurally
+ * assignable, but we only need this subset for route substitution.
+ */
+export type SeedResultLike = { contentItemId: string };
+
+/**
+ * Replace `{contentItemId}` placeholders in a route template with the
+ * actual content item ID from the dev seed. Other placeholders (none
+ * today) pass through untouched.
+ */
+export function resolveStitchRoute(route: string, seed: SeedResultLike): string {
+  return route.replace(/\{contentItemId\}/g, seed.contentItemId);
+}
+
+/**
+ * Stable screenshot name for a Stitch case at a given viewport. Used
+ * by both the exact-reference loop and the responsive matrix so a
+ * reviewer can find every capture deterministically.
+ */
+export function screenshotNameFor(entry: StitchCase, viewport: RegressionViewport): string {
+  return `${entry.classification}-${entry.screenId}-${viewport.name}.png`;
+}
+
+/**
+ * Slug used for the responsive matrix (27 surfaces × 6 viewports). The
+ * matrix uses the surface string (route or evidence-group key) as the
+ * prefix so the parity doc and the harness stay in lockstep.
+ */
+export function responsiveScreenshotName(surface: string, viewport: RegressionViewport): string {
+  return `responsive-${slugify(surface)}-${viewport.name}.png`;
+}
+
+function slugify(value: string): string {
+  return value
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+}
+
+/**
+ * Unique routes implied by the 27 canonical Stitch cases (the
+ * `operational-states` evidence group is shared state, not a route,
+ * so it is intentionally excluded — the Stitch review of `21068e5a`
+ * covers it against the captured PNG/HTML). The responsive matrix
+ * renders every route at every regression viewport
+ * (24 routes × 6 = 144 baselines).
+ */
+export const CANONICAL_SURFACES: readonly string[] = (() => {
+  const surfaces = new Set<string>();
+  for (const entry of STITCH_CASES) {
+    if (entry.classification !== "canonical") continue;
+    if (entry.route) surfaces.add(entry.route);
+  }
+  return [...surfaces].sort();
+})();
+
+/**
+ * Setup function contract: a Playwright page operation that puts the
+ * browser into the case's declared `state` (empty list, failed
+ * delivery, approved decision, etc.) before the harness takes a
+ * screenshot. Every entry in `SETUP_FUNCTIONS` MUST be idempotent
+ * and MUST throw if called when `process.env.NODE_ENV === "production"`.
+ */
+export type SetupState = (page: Page, seed: SeedResultLike) => Promise<void>;
+
+// Imported at the bottom of the file so the test helpers can sit next
+// to the manifest that drives them. Imported via require to keep the
+// type-only re-export side effect free for unit tests.
+import type { Page } from "@playwright/test";
+import {
+  setupApprovedState,
+  setupDecisionState,
+  setupDiscussionState,
+  setupEmptyState,
+  setupFailedState,
+  setupFinalState,
+  setupNotificationDrawer,
+} from "./stitch-state-helpers";
+
+/**
+ * Map from `StitchState` to its deterministic setup function. The
+ * `default` state needs no special preparation; the page is just
+ * navigated to the resolved route.
+ */
+export const SETUP_FUNCTIONS: Record<StitchState, SetupState> = {
+  default: async () => {},
+  empty: setupEmptyState,
+  final: setupFinalState,
+  failed: setupFailedState,
+  approved: setupApprovedState,
+  discussion: setupDiscussionState,
+  decision: setupDecisionState,
+  drawer: setupNotificationDrawer,
+};
