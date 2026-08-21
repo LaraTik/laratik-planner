@@ -48,6 +48,7 @@ export default defineConfig({
         "src/lib/publishing/**/*.ts": { statements: 11, branches: 85, functions: 50, lines: 11 },
         "src/lib/observability/**/*.ts": { statements: 75, branches: 65, functions: 69, lines: 75 },
         "src/lib/channels/**/*.ts": { statements: 85, branches: 80, functions: 85, lines: 85 },
+        "src/lib/brand/**/*.ts": { statements: 85, branches: 80, functions: 85, lines: 85 },
         "src/lib/dashboard/**/*.ts": { statements: 85, branches: 80, functions: 85, lines: 85 },
         "src/lib/workspaces/**/*.ts": { statements: 20, branches: 50, functions: 0, lines: 20 },
         "src/lib/ai/**/*.ts": { statements: 0, branches: 0, functions: 0, lines: 0 },
