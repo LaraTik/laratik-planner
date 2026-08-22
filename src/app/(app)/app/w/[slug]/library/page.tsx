@@ -61,7 +61,7 @@ export default async function PlanningLibraryPage({
       ),
   ]);
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="library-campaigns">
       <PageHeader
         eyebrow={workspace.name}
         title="Planning library"
@@ -93,7 +93,7 @@ export default async function PlanningLibraryPage({
             No campaigns yet. Create one from the planning list to bundle related ideas.
           </p>
         ) : (
-          <ul className="divide-border divide-y" data-testid="library-campaigns">
+          <ul className="divide-border divide-y" data-testid="library-campaign-list">
             {campaignRows.map((row) => (
               <li
                 key={row.id}

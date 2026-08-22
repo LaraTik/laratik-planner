@@ -13,6 +13,17 @@ const DEFAULT_EMAIL = "test@laratik.local";
 const DEFAULT_NAME = "Test User";
 
 /**
+ * Capture-mode timeout for the dev endpoints. The CI visual-capture
+ * step runs under a 25-min budget; a hung dev-sign-in or dev-seed
+ * request should fail fast so the rest of the suite can still
+ * capture what it can. The compare step keeps the default Playwright
+ * 30s timeout (set by the framework + playwright.config.ts) so a
+ * slow-but-correctly-rendered route does not falsely fail.
+ */
+const CAPTURE_MODE_HTTP_TIMEOUT_MS = 10_000;
+const isCaptureMode = process.env.PW_VISUAL_CAPTURE === "1";
+
+/**
  * Sign the test user in by hitting the dev sign-in endpoint. Sets the
  * `authjs.session-token` cookie on the Playwright context. The response
  * also sets the cookie on the response, so we just need to perform the
@@ -28,6 +39,10 @@ export async function devSignIn(
       name: options.name ?? DEFAULT_NAME,
       role: options.role ?? "agency_admin",
     },
+    // Lower the request timeout in capture mode so a hung sign-in
+    // does not eat the entire per-test budget. The compare step
+    // passes no timeout, falling back to the framework default.
+    ...(isCaptureMode ? { timeout: CAPTURE_MODE_HTTP_TIMEOUT_MS } : {}),
   });
   if (!res.ok()) {
     const text = await res.text();
@@ -72,6 +87,10 @@ export async function devSeed(
       ...(options.agencyAdmin !== undefined ? { agencyAdmin: options.agencyAdmin } : {}),
       ...(options.workspaceRoles ? { workspaceRoles: options.workspaceRoles } : {}),
     },
+    // Lower the request timeout in capture mode so a hung seed
+    // does not eat the entire per-test budget. The compare step
+    // passes no timeout, falling back to the framework default.
+    ...(isCaptureMode ? { timeout: CAPTURE_MODE_HTTP_TIMEOUT_MS } : {}),
   });
   if (!res.ok()) {
     const text = await res.text();
