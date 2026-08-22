@@ -143,8 +143,14 @@ function WorkspaceRoleGrid({ workspaces }: { workspaces: { id: string; name: str
     <>
       {workspaces.map((w) => (
         <div key={w.id} className="flex items-center gap-3">
-          <span className="text-body text-fg-primary w-40 truncate">{w.name}</span>
+          <label
+            htmlFor={`invite-workspace-role-${w.id}`}
+            className="text-body text-fg-primary w-40 truncate"
+          >
+            {w.name}
+          </label>
           <select
+            id={`invite-workspace-role-${w.id}`}
             value={selectedRoles[w.id] ?? ""}
             onChange={(e) => {
               const next = { ...selectedRoles };

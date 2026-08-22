@@ -87,11 +87,19 @@ export default defineConfig({
   ],
 
   // Boot the Next.js dev server before tests if not already running.
+  //
+  // Task: clear `.next` before each dev-server boot. The Next.js 16.3.1
+  // build manifest on the Linux CI runner is occasionally written as
+  // an empty file (see commit c1c8dca log: `Error: Manifest file is
+  // empty` → `AppRouteRouteModule.loadManifests` 500 on every app
+  // route). Clearing the cache before boot forces a fresh manifest
+  // and prevents the dev-sign-in 500 from cascading into every other
+  // test that needs an authenticated session.
   ...(process.env.PLAYWRIGHT_NO_WEBSERVER
     ? {}
     : {
         webServer: {
-          command: "pnpm exec next dev --webpack",
+          command: "rm -rf .next && pnpm exec next dev --webpack",
           url: BASE_URL,
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,

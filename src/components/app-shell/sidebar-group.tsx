@@ -76,7 +76,11 @@ export function SidebarGroup({
         </button>
       </div>
       {open ? (
-        <ul className="ml-4 space-y-0.5 border-l border-[var(--color-border)] pl-3" role="group">
+        // Plain `<ul>` (no role override) so the implicit `list` role is
+        // preserved for the nested `<li>` children. Previously this
+        // element had `role="group"`, which axe's `listitem` rule
+        // rejected because list-items require a list-role parent.
+        <ul className="ml-4 space-y-0.5 border-l border-[var(--color-border)] pl-3">
           {React.Children.toArray(children).filter(Boolean)}
         </ul>
       ) : null}
