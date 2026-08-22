@@ -25,15 +25,18 @@ math that the matrix has to satisfy going forward:
   routes host multiple canonical rows). 23 × 6 viewports
   (mobile-s 360, mobile-m 390, tablet 768, laptop 1024, desktop
   1280, wide 1440) = **138 responsive baselines** that the
-  `tests/e2e/visual-regression.spec.ts` responsive matrix captures.
-  The Stitch captures themselves only ship at the three viewport
-  sizes that Google Stitch emits (desktop 1440×900, mobile
-  390×844, tablet 768×1024); the harness is the bridge between the
-  two.
+  `tests/e2e/visual-regression.spec.ts` responsive matrix
+  **must capture** (status: PENDING — no baselines are committed
+  yet; see `TEST_EVIDENCE.md` and the `Captured` flag in
+  `tests/unit/stitch-cases.test.ts`). The Stitch captures
+  themselves only ship at the three viewport sizes that Google
+  Stitch emits (desktop 1440×900, mobile 390×844, tablet
+  768×1024); the harness is the bridge between the two.
 - **39 active reference-state comparisons** (27 canonical + 11
   responsive + 1 supporting) at their captured viewport. These are
   the exact-reference screenshots the dedicated `visual-chromium`
-  Playwright project produces.
+  Playwright project **must capture** (status: PENDING — no
+  baselines are committed yet).
 - **10 historical/superseded captures with successors** (3
   historical + 7 superseded) — kept for traceability, never
   implemented against. Each one names its successor `screenId` in
@@ -99,45 +102,47 @@ The `Missing` and `Partial` statuses from the prior revision were pre-M3b and ar
 
 ## Matrix
 
-| Area                | Screen ID                          | Intended route/surface          | Milestone | Status      | Required proof for `Verified`               |
-| ------------------- | ---------------------------------- | ------------------------------- | --------- | ----------- | ------------------------------------------- |
-| Workspace Overview  | `f2bf40ae3420498a89916892864a95d9` | `/app/w/[slug]`                 | M2        | Implemented | KPI behavior + desktop/tablet/mobile visual |
-| Monthly Planning    | `96f0dd19cc194373a56b78f813388750` | `/app/w/[slug]/planning`        | M3b       | Implemented | filters/month/density + responsive visual   |
-| Workflow Board      | `f9e58e53b3dd4b61914ce4638a8e8652` | `/app/w/[slug]/board`           | M3b       | Implemented | status consistency + desktop/mobile         |
-| Quick Create        | `9794f1aaedf4415ca45ea078ef9f1a27` | `/app/w/[slug]/planning/new`    | M2        | Implemented | defaults/formats + desktop/mobile           |
-| Batch Add           | `43a166eded3d4edd8c90512958dbcc11` | `/app/w/[slug]/planning/batch`  | M2        | Implemented | parser/validation + visual                  |
-| Content Detail      | `f7159c3ea90242d88d7dc15ea6a3fd02` | `/app/w/[slug]/planning/[id]`   | M2        | Implemented | full role journey + desktop/tablet/mobile   |
-| Delivery Review     | `879e7539314c4b9aa4f3c2b8df5c888d` | `/app/w/[slug]/reviews`         | M2        | Implemented | V1/V2/approval + visual                     |
-| Calendar            | `8c0ec0b08e4440fcab83f25817647214` | `/app/w/[slug]/calendar`        | M3b       | Implemented | month/week/DST/move + responsive            |
-| Reviews             | `bb6ac00d2518497eb0200c5911ed9612` | `/app/w/[slug]/reviews`         | M3b       | Implemented | queue/roles + responsive                    |
-| Publishing          | `9cf65ebdff874456bbf5317161783dac` | `/app/w/[slug]/design-queue`    | M3b       | Implemented | per-channel flow + desktop/mobile           |
-| Publishing Recovery | `382b940536414e8ab7d2c2d4f1c68624` | `/app/w/[slug]/design-queue`    | M3b       | Implemented | failed/retry flow                           |
-| Client Review       | `c7dd77e009204fbbb7be6d2f12b66dab` | `/app/w/[slug]/client`          | M3b       | Implemented | response-shape privacy + visual             |
-| Client Calendar     | `218f259a1b61459c8aa87316f1aa45f4` | `/app/w/[slug]/client/calendar` | M3b       | Implemented | read-only/privacy + visual                  |
-| Login               | `2dafd80a096644e6ae120a185c3d798d` | `/signin`                       | M1        | Implemented | OAuth/magic-link/keyboard + visual          |
-| Forgot Password     | `793a08d8d9e0f1a2b3c4d5e6f708192a` | `/signin/forgot-password`       | M3b       | Implemented | request/reset/sent states + visual          |
-| First Administrator | `a3631dbf967144a3a316b1b8ffb8fe95` | `/setup`                        | M1        | Implemented | concurrency/token + visual                  |
-| My Work             | `f4dc67d1520545d59782aa466ae3ddd2` | `/app`                          | M3b       | Implemented | role categories + desktop/mobile            |
-| Workspaces          | `01aa8faf8f564f318ac75fef64962954` | `/app/workspaces`               | M3b       | Implemented | setup/archive/restore + visual              |
-| User Management     | `89113980349a4be89a72b4acb00c8667` | `/app/users`                    | M1        | Implemented | access editing + visual                     |
-| Planning Library    | `7493876f69694919943a1ae5495ccfbd` | `/app/w/[slug]/library`         | M3b       | Implemented | campaigns/pillars/templates                 |
-| Design Queue        | `5ad5fffcb25c48b9b8c6867b713c453d` | `/app/w/[slug]/design-queue`    | M3b       | Implemented | atomic claim + visual                       |
-| Social Channels     | `45d945d704bc449188d1e0c0e336ab05` | `/app/w/[slug]/channels`        | M3b       | Implemented | CRUD/archive + visual                       |
-| Team & Invitations  | `2db8ec6ed9ad46b1933db661f07d3d1c` | `/app/w/[slug]/team`            | M3b       | Implemented | role/privacy + visual                       |
-| Workspace Settings  | `2f6acd26c17c40858d61e2ca577dd36f` | `/app/w/[slug]/settings`        | M3b       | Implemented | defaults/targets/approval mode              |
-| Agency AI Settings  | `cb0de669a5c644b083acf3edb377a87b` | `/app/agency-settings`          | M3b       | Implemented | safe config/test/usage                      |
-| Brand Kit           | `16aaf0a9ada7414088b5abdc45062923` | `/app/w/[slug]/brand-kit`       | M3b       | Implemented | fields/private assets + visual              |
-| Operational States  | `21068e5ad24645849c5b721b3227aa95` | shared states                   | M3b       | Implemented | loading/empty/error/denied/archived         |
+> **Screen ID format**: the table below uses the 8-character capture prefix that matches the on-disk filename in `designs/stitch/`. The full 32-character Stitch ID is recorded in the Google Stitch project and can be regenerated from `docs/visual-parity/MCP.md`; only the 8-character prefix is portable in the repo.
+
+| Area                | Screen ID  | Intended route/surface          | Milestone | Status      | Required proof for `Verified`               |
+| ------------------- | ---------- | ------------------------------- | --------- | ----------- | ------------------------------------------- |
+| Workspace Overview  | `f2bf40ae` | `/app/w/[slug]`                 | M2        | Implemented | KPI behavior + desktop/tablet/mobile visual |
+| Monthly Planning    | `96f0dd19` | `/app/w/[slug]/planning`        | M3b       | Implemented | filters/month/density + responsive visual   |
+| Workflow Board      | `f9e58e53` | `/app/w/[slug]/board`           | M3b       | Implemented | status consistency + desktop/mobile         |
+| Quick Create        | `9794f1aa` | `/app/w/[slug]/planning/new`    | M2        | Implemented | defaults/formats + desktop/mobile           |
+| Batch Add           | `43a166ed` | `/app/w/[slug]/planning/batch`  | M2        | Implemented | parser/validation + visual                  |
+| Content Detail      | `f7159c3e` | `/app/w/[slug]/planning/[id]`   | M2        | Implemented | full role journey + desktop/tablet/mobile   |
+| Delivery Review     | `879e7539` | `/app/w/[slug]/reviews`         | M2        | Implemented | V1/V2/approval + visual                     |
+| Calendar            | `8c0ec0b0` | `/app/w/[slug]/calendar`        | M3b       | Implemented | month/week/DST/move + responsive            |
+| Reviews             | `bb6ac00d` | `/app/w/[slug]/reviews`         | M3b       | Implemented | queue/roles + responsive                    |
+| Publishing          | `9cf65ebd` | `/app/w/[slug]/design-queue`    | M3b       | Implemented | per-channel flow + desktop/mobile           |
+| Publishing Recovery | `382b9405` | `/app/w/[slug]/design-queue`    | M3b       | Implemented | failed/retry flow                           |
+| Client Review       | `c7dd77e0` | `/app/w/[slug]/client`          | M3b       | Implemented | response-shape privacy + visual             |
+| Client Calendar     | `218f259a` | `/app/w/[slug]/client/calendar` | M3b       | Implemented | read-only/privacy + visual                  |
+| Login               | `2dafd80a` | `/signin`                       | M1        | Implemented | OAuth/magic-link/keyboard + visual          |
+| Forgot Password     | `793a08d8` | `/signin/forgot-password`       | M3b       | Implemented | request/reset/sent states + visual          |
+| First Administrator | `a3631dbf` | `/setup`                        | M1        | Implemented | concurrency/token + visual                  |
+| My Work             | `f4dc67d1` | `/app`                          | M3b       | Implemented | role categories + desktop/mobile            |
+| Workspaces          | `01aa8faf` | `/app/workspaces`               | M3b       | Implemented | setup/archive/restore + visual              |
+| User Management     | `89113980` | `/app/users`                    | M1        | Implemented | access editing + visual                     |
+| Planning Library    | `7493876f` | `/app/w/[slug]/library`         | M3b       | Implemented | campaigns/pillars/templates                 |
+| Design Queue        | `5ad5fffc` | `/app/w/[slug]/design-queue`    | M3b       | Implemented | atomic claim + visual                       |
+| Social Channels     | `45d945d7` | `/app/w/[slug]/channels`        | M3b       | Implemented | CRUD/archive + visual                       |
+| Team & Invitations  | `2db8ec6e` | `/app/w/[slug]/team`            | M3b       | Implemented | role/privacy + visual                       |
+| Workspace Settings  | `2f6acd26` | `/app/w/[slug]/settings`        | M3b       | Implemented | defaults/targets/approval mode              |
+| Agency AI Settings  | `cb0de669` | `/app/agency-settings`          | M3b       | Implemented | safe config/test/usage                      |
+| Brand Kit           | `16aaf0a9` | `/app/w/[slug]/brand-kit`       | M3b       | Implemented | fields/private assets + visual              |
+| Operational States  | `21068e5a` | shared states                   | M3b       | Implemented | loading/empty/error/denied/archived         |
 
 ## Why no row is `Tested` yet
 
 `Tested` is reserved for rows whose "Required proof" is **captured in the repository** (visual baseline, behavioral log, signed manual checklist). The current state:
 
 - **Behavioral evidence** (axe-core per route, role-by-route matrix, E2E happy paths) — captured in `tests/e2e/`. Re-runs on `main` are green per `docs/production-readiness/TEST_EVIDENCE.md`.
-- **Visual baselines (QA-004)** — captured (no longer `test.skip`-by-default). The dedicated `visual-chromium` Playwright project covers **39 active exact-reference comparisons** (27 canonical + 11 responsive + 1 supporting) at the Stitch capture viewport and **138 responsive baselines** (23 unique routes × 6 viewports: mobile-s 360, mobile-m 390, tablet 768, laptop 1024, desktop 1280, wide 1440). Deploy now gates on the critical visual tests via `.github/workflows/ci.yml` + `.github/workflows/deploy.yml` (Task 7 commit `3d40183`). Independent reviewer sign-off (Task 13) is the only remaining step.
+- **Visual baselines (QA-004)** — **PENDING**. The harness is wired (175 visual tests in the `visual-chromium` Playwright project, `test.skip` removed) but **no baselines are committed**. The 39 exact-reference + 138 responsive baselines must be re-captured on the CI runner (Linux, portable filenames) via `TEST_DATABASE_URL=... pnpm test:visual:update` and then reviewed against the 49-case `STITCH_CASES` manifest. A 2026-08-22 commit (`f406fbc`) untracked 122 darwin-path snapshot files that were accidentally committed and were not portable to the Ubuntu CI runner. Deploy now gates on the critical visual tests via `.github/workflows/ci.yml` + `.github/workflows/deploy.yml` (Task 7 commit `3d40183`) — the gate will fail the first deploy until baselines are committed.
 - **Manual a11y checklist (QA-005)** — automated a11y sweep found a real `meta-refresh` WCAG 2.2.2 violation on authenticated routes (`issues.md` P1 entry #3); manual screen-reader / zoom / reduced-motion sign-off is pending the fix and an owner action.
 
-The matrix ladder is therefore: every row `Implemented` (today) → `Tested` after QA-005 sign-off → `Verified` after independent review of the captured baselines.
+The matrix ladder is therefore: every row `Implemented` (today) → `Tested` after the visual baselines are captured on CI AND QA-005 is signed off → `Verified` after independent review of the captured baselines.
 
 ## Responsive baselines
 

@@ -13,7 +13,7 @@
 - **Skills:** `/ui-ux-pro-max` auto on any visual delta. `/frontend-design` on
   new components or screens. `/grill-me` when the fix has design ambiguity.
 - **Subagent:** `worker` per fix (bounded deliverable: files, acceptance,
-  CI green). `verifier` for P0 only.
+  CI green on `9a6f80d` after the 2026-08-22 cleanup. `verifier` for P0 only.
 - **Branch strategy:** direct to `main`, atomic commit per fix. No PRs
   (per `AGENTS.md` hard rule). Deploy fires on CI success.
 - **CI gate:** `pnpm verify` (= `format:check && lint --max-warnings=0 &&
@@ -78,7 +78,7 @@ Two new tables (`brand_publishing_rules` + `brand_linked_resources`) per user ch
 
 #### Visual parity
 
-Stitch Bento composition landed in `b66d7ba`. `designs/stitch/16aaf0a9_northstar-coffee---brand-kit.html` is now a real parity target with baselines on the 6-viewport matrix (23 routes × 6 = 138 baselines captured by `a9fa300` + `3d40183`). Reviewer sign-off is still pending Task 13.
+Stitch Bento composition landed in `b66d7ba`. `designs/stitch/16aaf0a9_northstar-coffee---brand-kit.html` is now a real parity target. **Visual baselines are PENDING on `main`** (the 138 baselines that `a9fa300` + `3d40183` are wired to capture have not been committed — see `f406fbc` for the cleanup of the accidentally-committed 122 darwin-path snapshots). Reviewer sign-off is still pending Task 13.
 
 ---
 
@@ -124,7 +124,7 @@ section patterns.
 
 **Settings-wide polish SHIPPED to main** (`acda5ef`–`7f32060`). Channels, team, workspace-settings, agency-settings all aligned to their Stitch captures using `docs/design/SETTINGS_UI_LEARNINGS.md` patterns.
 
-**Visual baselines ENFORCED in CI** (`a9fa300` + `3d40183`). 39 active exact-reference snapshots and 138 responsive baselines (23 unique routes × 6 viewports) are captured by the dedicated `visual-chromium` project; deploy is now gated on the critical visual tests via `.github/workflows/ci.yml` + `.github/workflows/deploy.yml`.
+**Visual baselines harness is ENFORCED in CI** (`a9fa300` + `3d40183`) but **no baselines are committed** as of `f406fbc` (2026-08-22). The harness runs 39 active exact-reference snapshots + 138 responsive baselines through the dedicated `visual-chromium` project; deploy is gated on the critical visual tests via `.github/workflows/ci.yml` + `.github/workflows/deploy.yml`. **The first deploy will fail until the 39 + 138 baselines are captured on the CI runner (Linux, portable filenames) via `TEST_DATABASE_URL=... pnpm test:visual:update`.** The 122 darwin-path snapshots that were committed in `a853683` were untracked in `f406fbc` because their filenames embed an absolute worktree path and the host OS — not portable to the Ubuntu CI runner.
 
 **Coverage thresholds RESTORED to production targets** (`fd4a6e0` + `298edee`). Critical domains at 95/90/95/95; services at 85/80/85/85; validation at 87/85/100/87. 861/861 unit tests pass. Evidence: `docs/production-readiness/TEST_EVIDENCE.md` § "Re-baseline — 2026-08-21, `feat/stitch-production` @ Task 9".
 
