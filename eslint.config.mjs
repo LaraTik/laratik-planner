@@ -14,6 +14,12 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "test-results/**",
     "next-env.d.ts",
+    // Worktree directory contains its own checkout, build artifacts, and
+    // node_modules — never lint it from the parent repo.
+    ".worktrees/**",
+    // Visual-regression snapshots are generated artifacts (absolute-path
+    // filenames, OS-specific suffixes). Not source.
+    "tests/e2e/visual-regression.spec.ts-snapshots/**",
   ]),
 ]);
 

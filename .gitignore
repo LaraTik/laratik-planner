@@ -38,8 +38,12 @@ yarn-error.log*
 /.worktrees/
 /worktrees/
 
-# worktree-local Playwright snapshots (absolute-path leak from subagent runs)
-tests/e2e/visual-regression.spec.ts-snapshots/-Users-*
+# Visual-regression snapshots are generated artifacts. Filenames embed the
+# absolute path of the worktree that produced them and the host OS
+# (e.g. `darwin`), so they are not portable. They must be re-captured on
+# the CI runner (Linux) and committed as a deliberate baseline update
+# once reviewed.
+tests/e2e/visual-regression.spec.ts-snapshots/
 
 # editor
 .vscode/
