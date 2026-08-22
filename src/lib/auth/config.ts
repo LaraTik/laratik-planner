@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { accounts, sessions, users, verificationTokens } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/validation/env";
 import { findUserByEmailAndPassword } from "@/lib/auth/password";
+import { sendVerificationEmail } from "@/lib/email";
 
 /**
  * NextAuth v5 configuration.
@@ -91,6 +92,17 @@ export const authConfig: NextAuthConfig = {
                 : {}),
             },
             from: serverEnv.SMTP_FROM,
+            // Custom sender: throws `EmailSignInError` (locally defined
+            // in src/lib/email/index.ts to mirror @auth/core 0.41.x's
+            // upstream type, including `type` and `cause.err`) on SMTP
+            // failure. The default upstream sender throws a plain
+            // `Error`, which the catch block in @auth/core's
+            // `lib/index.js:131` re-classifies to `?error=Configuration`
+            // and buries the actual reason. With this hook, the server
+            // log line from `logger.error(error)` now shows the real
+            // Nodemailer error + stack, making the next prod SMTP
+            // failure self-diagnosing.
+            sendVerificationRequest: sendVerificationEmail,
           }),
         ]
       : []),

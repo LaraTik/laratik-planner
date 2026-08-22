@@ -188,3 +188,159 @@ describe("getMailer when SMTP_PORT is 465 (secure: true)", () => {
     expect(createTransportMock).toHaveBeenCalledWith(expect.objectContaining({ secure: true }));
   });
 });
+
+// ─── sendVerificationEmail (NextAuth Nodemailer provider hook) ─────────────
+
+// Imported lazily so the @auth/core/errors import (which happens when
+// the email module is loaded) is resolved after the nodemailer mock
+// is installed. The module's `cached` transporter is reset per test
+// via vi.resetModules().
+
+const verificationParams = {
+  identifier: "alice@example.com",
+  url: "https://planner.laratik.com/api/auth/callback/nodemailer?token=abc&email=alice%40example.com",
+  provider: { from: "laratik-planner <no-reply@laratik.com>" },
+};
+
+describe("sendVerificationEmail", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    createTransportMock.mockClear();
+    sendMailMock.mockClear();
+  });
+
+  it("sends a magic-link email to the identifier with the NextAuth-shaped subject", async () => {
+    sendMailMock.mockResolvedValue({ messageId: "msg-magic-1", rejected: [], pending: [] });
+    const email = await loadEmail();
+    await email.sendVerificationEmail(verificationParams);
+    expect(sendMailMock).toHaveBeenCalledTimes(1);
+    const [call] = sendMailMock.mock.calls[0]!;
+    expect(call).toEqual(
+      expect.objectContaining({
+        to: "alice@example.com",
+        from: "laratik-planner <no-reply@laratik.com>",
+        subject: "Sign in to planner.laratik.com",
+        text: expect.stringContaining("https://planner.laratik.com/api/auth/callback/nodemailer"),
+        html: expect.stringContaining("https://planner.laratik.com/api/auth/callback/nodemailer"),
+      }),
+    );
+  });
+
+  it("uses the theme brandColor / buttonText in the HTML body when provided", async () => {
+    sendMailMock.mockResolvedValue({ messageId: "msg-magic-2", rejected: [], pending: [] });
+    const email = await loadEmail();
+    await email.sendVerificationEmail({
+      ...verificationParams,
+      theme: { brandColor: "#3525cd", buttonText: "#ffffff" },
+    });
+    const [call] = sendMailMock.mock.calls[0]!;
+    expect(call.html).toContain("#3525cd");
+    expect(call.html).toContain("#ffffff");
+  });
+
+  it("falls back to the provider.from when serverEnv.SMTP_FROM is empty", async () => {
+    // The provider arg in real NextAuth always carries the configured from.
+    // We pass a custom one and confirm it's preferred over the env.
+    sendMailMock.mockResolvedValue({ messageId: "msg-magic-3", rejected: [], pending: [] });
+    const email = await loadEmail();
+    await email.sendVerificationEmail({
+      ...verificationParams,
+      provider: { from: "Custom Sender <custom@example.com>" },
+    });
+    const [call] = sendMailMock.mock.calls[0]!;
+    expect(call.from).toBe("Custom Sender <custom@example.com>");
+  });
+
+  it("throws EmailSignInError when Nodemailer.sendMail rejects the recipient", async () => {
+    sendMailMock.mockResolvedValue({
+      messageId: "msg-magic-4",
+      rejected: ["alice@example.com"],
+      pending: [],
+    });
+    const email = await loadEmail();
+    await expect(email.sendVerificationEmail(verificationParams)).rejects.toBeInstanceOf(
+      email.EmailSignInError,
+    );
+    await expect(email.sendVerificationEmail(verificationParams)).rejects.toThrow(
+      /alice@example\.com/,
+    );
+  });
+
+  it("throws EmailSignInError when Nodemailer.sendMail lists a pending recipient", async () => {
+    sendMailMock.mockResolvedValue({
+      messageId: "msg-magic-5",
+      rejected: [],
+      pending: ["alice@example.com"],
+    });
+    const email = await loadEmail();
+    await expect(email.sendVerificationEmail(verificationParams)).rejects.toBeInstanceOf(
+      email.EmailSignInError,
+    );
+  });
+
+  it("throws EmailSignInError that wraps the original Nodemailer/network error as `cause.err`", async () => {
+    const networkErr = Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:587"), {
+      code: "ECONNREFUSED",
+    });
+    sendMailMock.mockRejectedValue(networkErr);
+    const email = await loadEmail();
+    let caught: unknown;
+    try {
+      await email.sendVerificationEmail(verificationParams);
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(email.EmailSignInError);
+    // The wrapped error message preserves the underlying reason so
+    // the server log line is diagnostic, not the bare "Configuration".
+    expect((caught as Error).message).toContain("ECONNREFUSED");
+    // `cause.err` should be the original error so the AuthError
+    // formatter in @auth/core can print its stack + code.
+    const cause = (caught as Error & { cause?: { err?: Error } }).cause;
+    expect(cause?.err).toBe(networkErr);
+  });
+
+  it("wraps non-Error rejections so the cause is still an Error instance", async () => {
+    // Some Nodemailer failure modes reject with strings (rare but observed
+    // in older versions). The wrapper should still preserve a cause.err.
+    sendMailMock.mockRejectedValue("connection reset by peer");
+    const email = await loadEmail();
+    let caught: unknown;
+    try {
+      await email.sendVerificationEmail(verificationParams);
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(email.EmailSignInError);
+    const cause = (caught as Error & { cause?: { err?: Error } }).cause;
+    expect(cause?.err).toBeInstanceOf(Error);
+    expect(cause?.err?.message).toBe("connection reset by peer");
+  });
+});
+
+describe("sendVerificationEmail when SMTP is not configured", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    envValues["SMTP_HOST"] = "";
+    envValues["SMTP_USER"] = "";
+    createTransportMock.mockClear();
+    sendMailMock.mockClear();
+  });
+
+  afterEach(() => {
+    envValues["SMTP_HOST"] = "smtp.example.com";
+    envValues["SMTP_USER"] = "user@example.com";
+  });
+
+  it("throws EmailSignInError with a clear missing-config message", async () => {
+    const email = await loadEmail();
+    await expect(email.sendVerificationEmail(verificationParams)).rejects.toBeInstanceOf(
+      email.EmailSignInError,
+    );
+    await expect(email.sendVerificationEmail(verificationParams)).rejects.toThrow(
+      /SMTP not configured/,
+    );
+    // sendMail must never be called if there is no mailer.
+    expect(sendMailMock).not.toHaveBeenCalled();
+  });
+});

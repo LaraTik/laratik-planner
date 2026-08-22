@@ -19,8 +19,8 @@ const nextAuthMocks = vi.hoisted(() => {
         auth: vi.fn(),
       };
     }),
-    google: vi.fn(() => ({ id: "google" })),
-    nodemailer: vi.fn(() => ({ id: "nodemailer" })),
+    google: vi.fn((config: unknown) => ({ id: "google", ...(config as object) })),
+    nodemailer: vi.fn((config: unknown) => ({ id: "nodemailer", ...(config as object) })),
     credentials: vi.fn((config: object) => ({ id: "credentials", ...config })),
   };
 });
@@ -31,6 +31,20 @@ vi.mock("next-auth", () => ({
   Google: nextAuthMocks.google,
   Nodemailer: nextAuthMocks.nodemailer,
   Credentials: nextAuthMocks.credentials,
+}));
+
+// The auth config imports providers from their subpath modules. Mock
+// each one explicitly so the providers array is built from the test
+// doubles above (the root `next-auth` mock alone doesn't cover the
+// `next-auth/providers/<name>` subpath imports).
+vi.mock("next-auth/providers/nodemailer", () => ({
+  default: nextAuthMocks.nodemailer,
+}));
+vi.mock("next-auth/providers/google", () => ({
+  default: nextAuthMocks.google,
+}));
+vi.mock("next-auth/providers/credentials", () => ({
+  default: nextAuthMocks.credentials,
 }));
 
 const envValues: Record<string, unknown> = {
@@ -188,6 +202,31 @@ describe("authConfig", () => {
     expect(out1).toBeNull();
     expect(out2).toBeNull();
     expect(out3).toBeNull();
+  });
+});
+
+describe("Nodemailer provider wiring", () => {
+  it("is constructed with our custom sendVerificationRequest so SMTP errors surface as EmailSignInError", () => {
+    // The Nodemailer provider is the third entry in the providers
+    // array: [Credentials, (Google if configured), Nodemailer]. The
+    // mock records every call we made to it, so we can assert the
+    // final invocation passed our `sendVerificationEmail` wrapper.
+    const calls = nextAuthMocks.nodemailer.mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    const lastConfig = calls[calls.length - 1]![0] as {
+      sendVerificationRequest?: { name?: string };
+      server?: { host?: string; port?: number };
+      from?: string;
+    };
+    expect(lastConfig.server?.host).toBe("smtp.example.com");
+    expect(lastConfig.server?.port).toBe(587);
+    expect(lastConfig.from).toBe("no-reply@example.com");
+    expect(typeof lastConfig.sendVerificationRequest).toBe("function");
+    // The wrapper is the `sendVerificationEmail` re-export from
+    // @/lib/email. Spot-check by name to keep this test stable across
+    // refactors (and prove the function comes from our module, not the
+    // upstream default).
+    expect(lastConfig.sendVerificationRequest?.name).toBe("sendVerificationEmail");
   });
 });
 
