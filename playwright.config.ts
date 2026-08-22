@@ -28,6 +28,20 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   timeout: 30_000,
   expect: { timeout: 5_000 },
+  // Task 8: portable visual-baseline filenames. The default
+  // Playwright template embeds the absolute test file path
+  // ({testFilePath}) and the host OS ({platform} / {snapshotSuffix})
+  // into every snapshot filename, which makes baselines captured on
+  // macOS non-portable to the Linux CI runner (see commit f406fbc).
+  // The reduced template keeps `{snapshotDir}` (the testDir) and
+  // `{testFileName}-snapshots/` (the per-test snapshot directory)
+  // so the snapshots still land in
+  // `tests/e2e/visual-regression.spec.ts-snapshots/`, but drops
+  // every token that would embed the absolute path, the project
+  // name, or the host platform. The `{arg}` and `{ext}` are owned
+  // by the helpers in `tests/e2e/stitch-cases.ts`, which produces
+  // the same string on every host.
+  snapshotPathTemplate: "{snapshotDir}/{testFileName}-snapshots/{arg}{ext}",
 
   use: {
     baseURL: BASE_URL,

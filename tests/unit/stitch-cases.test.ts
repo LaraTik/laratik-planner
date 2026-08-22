@@ -8,6 +8,7 @@ import {
   STITCH_CASES,
   type StitchCase,
   resolveStitchRoute,
+  responsiveScreenshotName,
   screenshotNameFor,
 } from "../../tests/e2e/stitch-cases";
 
@@ -158,5 +159,132 @@ describe("visual regression harness contract (Task 7)", () => {
     const canonical = STITCH_CASES.filter((e) => e.classification === "canonical");
     const uniqueRoutes = new Set(canonical.map((e) => e.route).filter((r): r is string => !!r));
     expect([...uniqueRoutes].sort()).toEqual([...CANONICAL_SURFACES].sort());
+  });
+});
+
+/**
+ * Lock the portable naming contract for visual baselines. The
+ * filenames must be:
+ *   - relative POSIX (no absolute path, no Windows backslashes)
+ *   - platform-agnostic (no `darwin`, `linux`, or `win32` suffix)
+ *   - split under `reference/` and `responsive/` so the exact-reference
+ *     and the responsive-matrix captures never collide
+ *   - identical on every host so a capture from a macOS developer
+ *     matches a capture from the Linux CI runner.
+ */
+describe("portable visual-baseline naming (Task 8)", () => {
+  const platformSuffixes = ["darwin", "linux", "win32"] as const;
+  // A single representative viewport pair keeps the test compact
+  // while still exercising the exact-reference and the responsive
+  // helpers. The wider uniqueness sweep below iterates over
+  // `REGRESSION_VIEWPORTS` for full coverage.
+  const mobileS = { name: "mobile-s", width: 360, height: 800 } as const;
+  const wide = { name: "wide", width: 1440, height: 900 } as const;
+  const desktop = { name: "desktop", width: 1280, height: 800 } as const;
+
+  it("screenshotNameFor returns a relative POSIX path under reference/", () => {
+    // STITCH_CASES is the 49-entry manifest; [0] is the canonical
+    // workspaces surface (01aa8faf). The `!` asserts the array is
+    // non-empty (covered by the manifest test above).
+    const entry = STITCH_CASES[0]!;
+    const name = screenshotNameFor(entry, mobileS);
+    expect(name).toBe(`reference/${entry.classification}-${entry.screenId}-mobile-s.png`);
+    // POSIX-relative, no leading slash, no drive letter, no backslashes.
+    expect(name.startsWith("/")).toBe(false);
+    expect(name.startsWith("reference/")).toBe(true);
+    expect(name.includes("\\")).toBe(false);
+  });
+
+  it("responsiveScreenshotName returns a relative POSIX path under responsive/", () => {
+    const name = responsiveScreenshotName("/app/w/acme/calendar", wide);
+    expect(name).toBe("responsive/app-w-acme-calendar-wide.png");
+    expect(name.startsWith("responsive/")).toBe(true);
+    expect(name.startsWith("/")).toBe(false);
+    expect(name.includes("\\")).toBe(false);
+  });
+
+  it("strips the host OS suffix (darwin / linux / win32) from every name", () => {
+    for (const entry of STITCH_CASES) {
+      for (const viewport of REGRESSION_VIEWPORTS) {
+        const name = screenshotNameFor(entry, viewport);
+        for (const suffix of platformSuffixes) {
+          expect(
+            name.toLowerCase().includes(`-${suffix}`),
+            `${name} embeds platform suffix ${suffix}`,
+          ).toBe(false);
+        }
+      }
+      const responsiveName = responsiveScreenshotName(
+        entry.route ?? entry.evidenceGroup ?? entry.screenId,
+        desktop,
+      );
+      for (const suffix of platformSuffixes) {
+        expect(
+          responsiveName.toLowerCase().includes(`-${suffix}`),
+          `${responsiveName} embeds platform suffix ${suffix}`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it("produces no absolute path segments anywhere in the name", () => {
+    // Drive letters (Windows), leading-slash POSIX, `Users/...` (macOS),
+    // and `home/...` / `root/...` (Linux) must not appear.
+    const absoluteSignals = ["/Users/", "/home/", "/root/", "C:\\", "D:\\", "/private/"];
+    for (const entry of STITCH_CASES) {
+      for (const viewport of REGRESSION_VIEWPORTS) {
+        const name = screenshotNameFor(entry, viewport);
+        for (const signal of absoluteSignals) {
+          expect(name.includes(signal), `${name} leaks absolute path ${signal}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it("keeps exact-reference and responsive-matrix captures in separate subdirectories", () => {
+    const entry = STITCH_CASES[0]!;
+    const referenceName = screenshotNameFor(entry, desktop);
+    const responsiveName = responsiveScreenshotName(
+      entry.route ?? entry.evidenceGroup ?? entry.screenId,
+      desktop,
+    );
+    expect(referenceName.startsWith("reference/")).toBe(true);
+    expect(responsiveName.startsWith("responsive/")).toBe(true);
+    // The filename portion (after the subdir) is also distinct so a
+    // grep for either surface pulls only its own directory.
+    expect(referenceName.slice("reference/".length)).not.toBe(
+      responsiveName.slice("responsive/".length),
+    );
+  });
+
+  it("still produces unique names across every (entry, viewport) pair", () => {
+    const names = new Set<string>();
+    for (const entry of STITCH_CASES) {
+      for (const viewport of REGRESSION_VIEWPORTS) {
+        const name = screenshotNameFor(entry, viewport);
+        expect(names.has(name), `duplicate screenshot name ${name}`).toBe(false);
+        names.add(name);
+      }
+    }
+    // 49 cases × 6 viewports = 294 distinct names under `reference/`.
+    expect(names.size).toBe(STITCH_CASES.length * REGRESSION_VIEWPORTS.length);
+  });
+
+  it("still produces unique names for the responsive matrix across every (surface, viewport) pair", () => {
+    const names = new Set<string>();
+    for (const surface of CANONICAL_SURFACES) {
+      for (const viewport of REGRESSION_VIEWPORTS) {
+        const name = responsiveScreenshotName(surface, viewport);
+        expect(names.has(name), `duplicate responsive name ${name}`).toBe(false);
+        names.add(name);
+      }
+    }
+    expect(names.size).toBe(CANONICAL_SURFACES.length * REGRESSION_VIEWPORTS.length);
+  });
+
+  it("responsive names are stable across hosts (same input → same output)", () => {
+    const a = responsiveScreenshotName("/app/w/acme/calendar", wide);
+    const b = responsiveScreenshotName("/app/w/acme/calendar", wide);
+    expect(a).toBe(b);
   });
 });

@@ -155,9 +155,21 @@ jobs:
       SMTP_FROM: "ci <ci@planner.test>"
       TEST_DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
 
+    # The capture + commit step below pushes the freshly generated
+    # visual baselines back to the branch so the deploy gate can
+    # compare against portable Linux-captured PNGs.
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # The capture step below pushes a follow-up commit with
+          # the generated baselines, so the workflow needs write
+          # access to the working tree (already covered by the
+          # `permissions: contents: write` above).
+          fetch-depth: 0
         timeout-minutes: 5
 
       - name: Setup pnpm
@@ -196,9 +208,45 @@ jobs:
         run: pnpm db:migrate
         timeout-minutes: 10
 
+      - name: Capture visual baselines (Linux)
+        # Task 8: generate portable baselines on the Linux CI runner.
+        # The harness in tests/e2e/stitch-cases.ts produces
+        # platform-agnostic names under
+        # tests/e2e/visual-regression.spec.ts-snapshots/{reference,responsive}/
+        # (see playwright.config.ts `snapshotPathTemplate`); the
+        # commit step below force-adds them despite the local
+        # `.gitignore` rule that protects against accidental
+        # non-portable commits. The directory is intentionally
+        # ignored locally so a developer on macOS can never commit
+        # darwin-suffixed baselines by mistake.
+        run: pnpm test:visual:update
+        timeout-minutes: 25
+
+      - name: Commit updated visual baselines
+        # Only push the snapshot directory if the capture actually
+        # produced a diff (no-op for runs that did not touch the
+        # UI). We use `git add -f` because the snapshot directory
+        # is in .gitignore; the force-add is what makes the
+        # CI-driven capture a deliberate, auditable commit.
+        # `if: success()` keeps a half-finished capture (e.g. a
+        # Playwright crash mid-run) from being committed as a
+        # partial baseline set.
+        if: success()
+        run: |
+          if [[ -n "$(git status --porcelain -- tests/e2e/visual-regression.spec.ts-snapshots/)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add -f tests/e2e/visual-regression.spec.ts-snapshots/
+            git commit -m "test(visual): capture portable baselines on Linux"
+            git push
+          fi
+        timeout-minutes: 5
+
       - name: Critical browser and visual tests
-        # Runs after migrations, before the heavy build/Docker step
-        # so a failing visual snapshot doesn't burn build minutes.
+        # Runs after the capture/commit step so the visual part
+        # compares against the freshly committed Linux baselines.
+        # The deploy gate (this same workflow) trusts the
+        # committed PNGs as the source of truth.
         run: pnpm test:e2e:critical
         timeout-minutes: 25
 

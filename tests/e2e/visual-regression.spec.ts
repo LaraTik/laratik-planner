@@ -205,7 +205,11 @@ test.describe("visual regression (exact reference)", () => {
 
       // The exact-reference snapshots live in their own directory so
       // the responsive matrix and the per-case captures never collide.
-      const referencePath = testInfo.snapshotPath("reference", safeName);
+      // The helper returns `reference/...png` (Task 8 — portable,
+      // no absolute path, no host OS suffix); the Playwright
+      // `snapshotPathTemplate` reduces that to
+      // `<snapshotDir>/reference/<name>.png` on every host.
+      const referencePath = testInfo.snapshotPath(safeName);
       await expect(page).toHaveScreenshot(referencePath, {
         maxDiffPixelRatio: 0.01,
       });
@@ -236,10 +240,9 @@ test.describe("visual regression (responsive matrix)", () => {
 
         // The responsive matrix snapshots live in their own directory
         // so the exact-reference loop and the matrix never collide.
-        const responsivePath = testInfo.snapshotPath(
-          "responsive",
-          responsiveScreenshotName(surface, viewport),
-        );
+        // The helper returns `responsive/...png` (Task 8 — portable,
+        // no absolute path, no host OS suffix).
+        const responsivePath = testInfo.snapshotPath(responsiveScreenshotName(surface, viewport));
         await expect(page).toHaveScreenshot(responsivePath, {
           maxDiffPixelRatio: 0.01,
         });
