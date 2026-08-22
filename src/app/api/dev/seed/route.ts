@@ -6,6 +6,7 @@ import {
   bootstrapLocks,
   contentItemChannels,
   contentItems,
+  platformAdministrators,
   socialChannels,
   users,
   workspaceMembershipRoles,
@@ -69,6 +70,17 @@ type SeedBody = {
     | "publisher"
     | "viewer"
   )[];
+  /**
+   * When true, the seeded user is granted a row in
+   * `platform_administrator` (with `revoked_at` null). This is the
+   * M1.8 hook for the platform-overview e2e: a non-platform-admin
+   * user sees the Forbidden surface; a platform admin sees the
+   * overview. Idempotent: re-running the seed keeps the grant.
+   *
+   * Always optional — the existing fixtures and tests must keep
+   * working unchanged.
+   */
+  platformAdmin?: boolean;
 };
 
 const FIXTURES = {
@@ -105,6 +117,7 @@ export async function POST(req: NextRequest) {
     contentItemTitle: body.contentItemTitle ?? FIXTURES.contentItemTitle,
     agencyAdmin: body.agencyAdmin ?? true,
     workspaceRoles: body.workspaceRoles ?? [],
+    platformAdmin: body.platformAdmin ?? false,
   };
 
   try {
@@ -136,6 +149,7 @@ async function seedInternal(f: {
     | "publisher"
     | "viewer"
   )[];
+  platformAdmin: boolean;
 }) {
   // ─── User ────────────────────────────────────────────────────────────────
   let userId: string;
@@ -199,6 +213,27 @@ async function seedInternal(f: {
       target: [agencyMemberships.agencyId, agencyMemberships.userId],
       set: { isAgencyAdmin: f.agencyAdmin, status: "active" },
     });
+
+  // ─── Platform admin grant (M1.8) ───────────────────────────────────────
+  // The `platform_administrator` table holds global platform-level
+  // authority (separate from agency-level authority). For E2E we
+  // upsert a live grant (`revoked_at` null) when the fixture says so
+  // and revoke any prior grant when it does not. The seed is the
+  // only place tests can flip platform-admin state.
+  if (f.platformAdmin) {
+    await db
+      .insert(platformAdministrators)
+      .values({ userId, grantedBy: userId })
+      .onConflictDoUpdate({
+        target: platformAdministrators.userId,
+        set: { revokedAt: null, grantedBy: userId },
+      });
+  } else {
+    await db
+      .update(platformAdministrators)
+      .set({ revokedAt: new Date() })
+      .where(eq(platformAdministrators.userId, userId));
+  }
 
   // ─── Bootstrap lock ─────────────────────────────────────────────────────
   await db.insert(bootstrapLocks).values({ agencyId, completedBy: userId }).onConflictDoNothing();
@@ -359,6 +394,7 @@ async function seedInternal(f: {
     workspaceSlug: f.workspaceSlug,
     channelIds,
     contentItemId,
+    platformAdmin: f.platformAdmin,
     fixtures: f,
   });
 }
