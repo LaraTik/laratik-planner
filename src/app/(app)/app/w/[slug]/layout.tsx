@@ -60,12 +60,13 @@ export default async function WorkspaceLayout({
   if (!ctx) notFound();
 
   // Step 2 — resolve the workspace within the resolved agency.
-  // The helper applies the anti-IDOR membership gate first; a
-  // non-member gets `null` here, which we render as 404.
-  const internalWorkspace = await getAccessibleWorkspace(actor, slug, ctx.agencyId);
-  const clientWorkspace = internalWorkspace
-    ? null
-    : await getClientWorkspace(actor, slug, ctx.agencyId);
+  // The helper applies the anti-IDOR membership gate first (via
+  // `resolveActiveAgencyContext` internally, which subsumes the
+  // explicit-param contract from M1.4); a non-member gets `null`
+  // here, which we render as 404. The `ctx` we already computed
+  // is the membership gate — the helper re-validates it.
+  const internalWorkspace = await getAccessibleWorkspace(actor, slug);
+  const clientWorkspace = internalWorkspace ? null : await getClientWorkspace(actor, slug);
 
   // Render children only if the user has access (internal or
   // client). Returning the children (not a redirect) keeps the

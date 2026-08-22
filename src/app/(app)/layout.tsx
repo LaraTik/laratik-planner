@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
+import { isAgencyAdmin } from "@/lib/auth/policy";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { currentActor } from "@/lib/auth/current-actor";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { countUnreadNotifications, listNotificationsForUser } from "@/lib/notifications/service";
 import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
@@ -24,12 +26,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/signin");
   }
 
-  const agencyId = await activeAgencyId();
+  const actor = await currentActor();
+  if (!actor) {
+    redirect("/signin");
+  }
+  const ctx = await resolveActiveAgencyContext({ actor });
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) {
     redirect("/setup");
   }
 
-  const actor = { id: session.user.id };
   const isAdmin = await isAgencyAdmin(actor, agencyId);
   const [notifications, unreadCount, switcher] = await Promise.all([
     listNotificationsForUser(actor, { limit: 10 }),

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, isAgencyAdmin, PermissionDeniedError } from "@/lib/auth/policy";
+import { isAgencyAdmin, PermissionDeniedError } from "@/lib/auth/policy";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { currentActor } from "@/lib/auth/current-actor";
 import { db } from "@/lib/db";
 import {
   agencies,
@@ -43,10 +45,13 @@ async function createWorkspaceAction(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not signed in");
 
-  const agencyId = await activeAgencyId();
+  const actor = await currentActor();
+  if (!actor) throw new Error("Not signed in");
+  const ctx = await resolveActiveAgencyContext({ actor });
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) throw new Error("Agency not configured");
 
-  if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
+  if (!(await isAgencyAdmin(actor, agencyId))) {
     throw new PermissionDeniedError("create_workspace");
   }
 
@@ -108,8 +113,11 @@ async function createWorkspaceAction(formData: FormData) {
 export default async function NewWorkspacePage() {
   const session = await auth();
   if (!session?.user?.id) return null;
-  const agencyId = await activeAgencyId();
-  const isAdmin = agencyId ? await isAgencyAdmin({ id: session.user.id }, agencyId) : false;
+  const actor = await currentActor();
+  if (!actor) return null;
+  const ctx = actor ? await resolveActiveAgencyContext({ actor }) : null;
+  const agencyId = ctx?.agencyId ?? null;
+  const isAdmin = agencyId ? await isAgencyAdmin(actor, agencyId) : false;
 
   if (!isAdmin) {
     return (

@@ -2,8 +2,9 @@ import { redirect, notFound } from "next/navigation";
 import { and, count, eq, gte } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowUpRight, Bot, Clock, ShieldCheck, Sparkles } from "lucide-react";
-import { auth } from "@/lib/auth/config";
-import { activeAgencyId, hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
+import { hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { currentActor } from "@/lib/auth/current-actor";
 import { db } from "@/lib/db";
 import { aiFeatureSettings, aiUsageEvents } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/validation/env";
@@ -63,15 +64,15 @@ const ALL_CAPABILITIES = [
 ] as const;
 
 export default async function AiSettingsPage({ params }: { params: Promise<{ slug: string }> }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
-  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  const actor = await currentActor();
+  if (!actor) redirect("/signin");
+  const workspace = await getAccessibleWorkspace(actor, slug);
   if (!workspace) notFound();
-  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
-    notFound();
+  if (!(await hasWorkspaceRole(actor, workspace.id, ["workspace_manager"]))) notFound();
 
-  const agencyId = await activeAgencyId();
+  const ctx = await resolveActiveAgencyContext({ actor });
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) notFound();
 
   const since = new Date();
@@ -83,7 +84,7 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
       .select({ value: count() })
       .from(aiUsageEvents)
       .where(and(eq(aiUsageEvents.workspaceId, workspace.id), gte(aiUsageEvents.createdAt, since))),
-    isAgencyAdmin({ id: session.user.id }, agencyId),
+    isAgencyAdmin(actor, agencyId),
   ]);
 
   const envEnabled = serverEnv.AI_FEATURE_ENABLED && !!serverEnv.MINIMAX_API_KEY;

@@ -36,13 +36,36 @@ const dbMock = vi.hoisted(() => {
 });
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 
+// M1.6 — the SUT now reads `resolveActiveAgencyContext({ actor })`
+// (which reads cookies()). We mock `next/headers` so the unit test
+// can stand up without a real Next request.
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(async () => ({
+    get: () => undefined,
+    set: () => undefined,
+    delete: () => undefined,
+  })),
+}));
+
 // Stub the auth policy module. We re-mock per-test in beforeEach to
-// return different values for `activeAgencyId` / `isAgencyAdmin`.
+// return different values for `isAgencyAdmin`.
 const policyMock = vi.hoisted(() => ({
-  activeAgencyId: vi.fn(async () => "agency-1" as string | null),
   isAgencyAdmin: vi.fn(async () => false as boolean),
 }));
-vi.mock("@/lib/auth/policy", () => policyMock);
+vi.mock("@/lib/auth/policy", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/auth/policy")>("@/lib/auth/policy");
+  return { ...actual, isAgencyAdmin: policyMock.isAgencyAdmin };
+});
+
+const resolverMock = vi.hoisted(() => ({
+  resolverResult: { agencyId: "agency-1", source: "fallback-single-agency" as const } as {
+    agencyId: string;
+    source: "requested" | "cookie" | "fallback-single-agency";
+  } | null,
+}));
+vi.mock("@/lib/auth/agency-context", () => ({
+  resolveActiveAgencyContext: vi.fn(async () => resolverMock.resolverResult),
+}));
 
 // --- import the SUT (AFTER mocks) ------------------------------------------
 
@@ -53,15 +76,14 @@ const { listSwitcherWorkspaces } = await import("@/lib/workspaces/context");
 beforeEach(() => {
   dbMock.state.memberRows = [];
   dbMock.state.adminRows = [];
-  policyMock.activeAgencyId.mockReset();
+  resolverMock.resolverResult = { agencyId: "agency-1", source: "fallback-single-agency" };
   policyMock.isAgencyAdmin.mockReset();
-  policyMock.activeAgencyId.mockResolvedValue("agency-1");
   policyMock.isAgencyAdmin.mockResolvedValue(false);
 });
 
 describe("listSwitcherWorkspaces", () => {
   it("returns an empty list with isAdmin=false when the user has no active agency", async () => {
-    policyMock.activeAgencyId.mockResolvedValue(null);
+    resolverMock.resolverResult = null;
     const result = await listSwitcherWorkspaces({ id: "user-1" });
     expect(result).toEqual({ options: [], isAdmin: false });
   });

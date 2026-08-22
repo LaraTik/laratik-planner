@@ -153,33 +153,16 @@ describe("findWorkspaceBySlug — explicit requestedAgencyId", () => {
   });
 });
 
-describe("findWorkspaceBySlug — no requestedAgencyId (singleton fallback)", () => {
-  it("3) returns the workspace by (activeAgencyId, slug) when the singleton is set", async () => {
-    policyMock.activeAgencyId.mockResolvedValue(agencyA);
-    dbMock.state.limitResults = [[workspaceA]];
-
-    const result = await context.findWorkspaceBySlug(actor, slug);
-    expect(result).toEqual(workspaceA);
-  });
-
-  it("4) returns null when there is no active agency", async () => {
-    policyMock.activeAgencyId.mockResolvedValue(null);
-    const result = await context.findWorkspaceBySlug(actor, slug);
-    expect(result).toBeNull();
-    // No workspace lookup should have been issued
-    expect(dbMock.select).not.toHaveBeenCalled();
-  });
-
-  it("5) cross-agency slug collision — never returns the other agency's workspace", async () => {
+describe("findWorkspaceBySlug — explicit requestedAgencyId (cross-agency slug collision)", () => {
+  it("3) cross-agency slug collision — never returns the other agency's workspace", async () => {
     // Two agencies, two workspaces with the same slug. Actor is a
-    // member of agency A. With the singleton pointing at A, the
-    // helper must return A's row — never B's.
-    policyMock.activeAgencyId.mockResolvedValue(agencyA);
+    // member of agency A. Explicitly requesting A returns A's row.
+    policyMock.isAgencyMember.mockResolvedValue(true);
     dbMock.state.limitResults = [[workspaceA]]; // (A, slug) → ws-A
     // Even if the DB query were sloppy and returned B's row, the
-    // helper must filter by the active agency. We assert the
+    // helper must filter by the requested agency. We assert the
     // correct row is returned.
-    const result = await context.findWorkspaceBySlug(actor, slug);
+    const result = await context.findWorkspaceBySlug(actor, slug, agencyA);
     expect(result).toEqual(workspaceA);
     expect(result?.id).toBe("ws-A");
     expect(result?.id).not.toBe("ws-B");
@@ -189,7 +172,8 @@ describe("findWorkspaceBySlug — no requestedAgencyId (singleton fallback)", ()
     // actor in A.
     expect(result).not.toEqual(workspaceB);
 
-    // And: explicitly requesting agency B as a non-member returns null.
+    // And: explicitly requesting agency B as a non-member returns null
+    // (membership gate short-circuits BEFORE the workspace read).
     policyMock.isAgencyMember.mockResolvedValue(false);
     const denied = await context.findWorkspaceBySlug(actor, slug, agencyB);
     expect(denied).toBeNull();

@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Bot, KeyRound, Server } from "lucide-react";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
+import { isAgencyAdmin } from "@/lib/auth/policy";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { currentActor } from "@/lib/auth/current-actor";
 import { serverEnv } from "@/lib/validation/env";
 import { PageHeader } from "@/components/workspace/page-header";
 import { AiSettingsForm } from "./ai-settings-form";
@@ -26,9 +28,12 @@ export const metadata = { title: "AI configuration" };
 export default async function AgencyAiSettingsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
-  const agencyId = await activeAgencyId();
+  const actor = await currentActor();
+  if (!actor) redirect("/signin");
+  const ctx = await resolveActiveAgencyContext({ actor });
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) redirect("/setup");
-  if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
+  if (!(await isAgencyAdmin(actor, agencyId))) {
     return (
       <div className="space-y-4" data-testid="agency-ai-forbidden">
         <PageHeader
