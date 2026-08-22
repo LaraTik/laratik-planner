@@ -268,6 +268,69 @@ const formatBootstrapError = (error: unknown): string => {
   return String(error);
 };
 
+/**
+ * Pre-warm every route once before any test runs.
+ *
+ * In dev mode the Next.js server compiles each route on first request;
+ * that cost is paid inside the per-test budget in capture mode, and the
+ * cumulative cost across 23+ mobile surfaces blows the 25-min
+ * capture-step job budget. We pay it ONCE here, in a hidden page
+ * context, before any test runs. The hidden context is closed before
+ * the tests start so it does not pollute the tests' own contexts (each
+ * test still creates its own page).
+ *
+ * The hook is declared at file scope so it runs once per worker before
+ * any test in the file. A module-scope `warmedUp` flag is a defense-
+ * in-depth guard in case the runner re-evaluates the hook.
+ */
+let warmedUp = false;
+test.beforeAll(async ({ browser }, testInfo) => {
+  if (warmedUp) return;
+  warmedUp = true;
+
+  // The default `test.beforeAll` timeout is 30s; the pre-warm visits
+  // ~30 routes and pays the dev compile cost on each, so 10 minutes
+  // gives comfortable headroom for the cold case while still failing
+  // fast if the dev server is stuck.
+  testInfo.setTimeout(10 * 60 * 1000);
+
+  // Union of every route the suite will visit: the responsive matrix
+  // (CANONICAL_SURFACES) plus the exact-reference cases (STITCH_CASES
+  // that have a `route` and are not historical/superseded). Deduping
+  // avoids paying the compile cost twice for a route that appears in
+  // both lists.
+  const routes = new Set<string>(CANONICAL_SURFACES);
+  for (const entry of STITCH_CASES) {
+    if (entry.classification === "historical" || entry.classification === "superseded") continue;
+    if (entry.route) routes.add(entry.route);
+  }
+  const routeList = [...routes].sort();
+  console.log(
+    `[visual] pre-warming ${routeList.length} routes to pay the dev compile cost upfront`,
+  );
+
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await devSignIn(page.request);
+    for (const route of routeList) {
+      try {
+        await page.goto(route, { waitUntil: "domcontentloaded", timeout: 60_000 });
+      } catch (error) {
+        // Best-effort: a broken route is still a broken route, but
+        // failing the whole pre-warm on one stuck route would defeat
+        // the purpose. The actual tests will log the broken route
+        // again with more context.
+        console.warn(`[visual] pre-warm ${route} failed: ${formatBootstrapError(error)}`);
+      }
+    }
+  } finally {
+    await context.close();
+  }
+
+  console.log(`[visual] pre-warm complete (${routeList.length} routes)`);
+});
+
 // ─── Phase 1: exact reference (one capture per active case) ─────────────
 
 test.describe("visual regression (exact reference)", () => {
