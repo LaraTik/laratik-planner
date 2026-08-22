@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   agencies,
@@ -207,35 +207,41 @@ async function workspaceIdForContent(contentItemId: string): Promise<string> {
 }
 
 /**
- * Active agency singleton (master prompt §8 invariant).
+ * Return the id of the agency that the **bootstrap / setup path**
+ * should use when no actor is available to drive a per-request
+ * resolution.
  *
- * @deprecated M1.6 — this helper assumes there is exactly one agency
- * in the system (the "singleton"). In a multi-agency deployment the
- * active agency is per-actor, not global. Replace callsites with:
+ * The single-agency era had a DB-enforced singleton (the unique
+ * index on `singleton_key` + the `singleton_key = true` check + a
+ * NOT NULL default). All three are gone after migration 0008
+ * (M1.7), so "the one active agency" is no longer a query that
+ * returns a single row by invariant — it is a query that returns
+ * the most-recently-created row.
  *
- *   const actor = await currentActor();
- *   const { agencyId } = await resolveActiveAgencyContext({ actor });
- *   if (!agencyId) { /* route decides what to do *\/ }
+ * This helper is **only** for the bootstrap / dev-seed / setup
+ * flows that run before the request layer can call
+ * `resolveActiveAgencyContext(actor)` (M1.3). For every other code
+ * path, the agency for the current request comes from
+ * `resolveActiveAgencyContext` — that helper does the right thing
+ * for multi-agency actors (cookie + explicit override +
+ * single-membership fallback), whereas this one just picks a row
+ * out of the agency table.
  *
- * This export is retained for two narrow bootstrap paths that have
- * NOT yet been migrated to the resolver (and are explicitly out of
- * scope for M1.6):
- *   1. `src/app/setup/page.tsx` — the first-agency-admin wizard
- *      exists BEFORE any user is an "actor" in the multi-agency
- *      sense (the actor becomes the first agency admin only after
- *      the wizard completes). The singleton check is correct here.
- *   2. `src/app/api/bootstrap/status|routes.ts` — same reason.
- *   3. The migration's compatibility check (see M1.7) reads the
- *      singleton as the "legacy" agency to be backfilled.
+ * Ordering by `created_at DESC` is the deterministic "newest wins"
+ * rule. In a single-agency deployment this is equivalent to the
+ * legacy `WHERE singleton_key = true` lookup. In a multi-agency
+ * deployment the bootstrap path is the only consumer and there
+ * is no "active agency" in the legacy sense; "newest" is the
+ * closest analog to "the one that was just provisioned".
  *
- * Do NOT introduce NEW callsites. New code MUST go through
- * `resolveActiveAgencyContext` + `currentActor`.
+ * @returns the most-recently-created agency id, or `null` when the
+ *   agency table is empty.
  */
-export async function activeAgencyId(): Promise<string | null> {
+export async function firstAgencyForBootstrap(): Promise<string | null> {
   const [a] = await db
     .select({ id: agencies.id })
     .from(agencies)
-    .where(eq(agencies.singletonKey, true))
+    .orderBy(desc(agencies.createdAt))
     .limit(1);
   return a?.id ?? null;
 }

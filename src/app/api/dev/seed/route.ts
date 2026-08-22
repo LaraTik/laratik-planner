@@ -13,6 +13,7 @@ import {
   workspaces,
 } from "@/lib/db/schema";
 import { and, eq, sql } from "drizzle-orm";
+import { firstAgencyForBootstrap } from "@/lib/auth/policy";
 import { serverEnv } from "@/lib/validation/env";
 
 /**
@@ -163,22 +164,22 @@ async function seedInternal(f: {
     userId = created!.id;
   }
 
-  // ─── Agency (singleton) ─────────────────────────────────────────────────
+  // ─── Agency (legacy: pick the most-recent one, or create) ───────────────
+  // After M1.7 the agency table is multi-row. The dev seed is the
+  // bootstrap path for local development; we reuse any existing
+  // agency (the one the dev already created) instead of always
+  // inserting a new one. This keeps the helper idempotent and avoids
+  // piling up duplicate "Test Agency" rows in the dev DB.
   let agencyId: string;
-  const existingAgency = await db
-    .select({ id: agencies.id })
-    .from(agencies)
-    .where(eq(agencies.singletonKey, true))
-    .limit(1);
-  if (existingAgency[0]) {
-    agencyId = existingAgency[0].id;
+  const existingAgencyId = await firstAgencyForBootstrap();
+  if (existingAgencyId) {
+    agencyId = existingAgencyId;
   } else {
     const [created] = await db
       .insert(agencies)
       .values({
         name: f.agencyName,
         slug: f.agencySlug,
-        singletonKey: true,
         bootstrapCompletedAt: new Date(),
       })
       .returning({ id: agencies.id });

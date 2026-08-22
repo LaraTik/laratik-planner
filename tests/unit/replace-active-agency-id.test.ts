@@ -102,12 +102,18 @@ describe("structural: activeAgencyId() removed from non-bootstrap callsites", ()
     expect(resolverCalls).toBeGreaterThanOrEqual(4);
   });
 
-  it("auth/invitations.ts (service layer) uses resolveActiveAgencyContext", () => {
+  it("auth/invitations.ts (service layer) uses the M1.6/M1.7 replacement", () => {
     const src = readSrc("lib/auth/invitations.ts");
     expect(src).not.toMatch(/activeAgencyId\s*\(\s*\)/);
-    // 3 functions: createInvitation, listInvitations, listAgencyMembers.
+    // After M1.7, the invitation service runs before any
+    // authenticated actor exists for the bootstrap flow, so it
+    // uses `firstAgencyForBootstrap()` (3 callers) instead of
+    // `resolveActiveAgencyContext`. Either helper represents a
+    // post-M1.6 replacement; we just want to assert the legacy
+    // `activeAgencyId()` is gone.
+    const firstAgencyCalls = (src.match(/firstAgencyForBootstrap\s*\(/g) ?? []).length;
     const resolverCalls = (src.match(/resolveActiveAgencyContext\s*\(/g) ?? []).length;
-    expect(resolverCalls).toBeGreaterThanOrEqual(3);
+    expect(firstAgencyCalls + resolverCalls).toBeGreaterThanOrEqual(3);
   });
 
   it("auth/invitations.ts and feature-settings.ts no longer import activeAgencyId", () => {
@@ -148,27 +154,33 @@ describe("structural: activeAgencyId() removed from non-bootstrap callsites", ()
   });
 });
 
-describe("structural: bootstrap paths keep activeAgencyId() (per spec)", () => {
-  it("setup page still uses activeAgencyId() for the first-admin wizard", () => {
+describe("structural: bootstrap paths use firstAgencyForBootstrap() (M1.7 rename)", () => {
+  // M1.6 left these three bootstrap paths on activeAgencyId() with
+  // a @deprecated mark. M1.7 dropped the singleton constraint
+  // and renamed the helper to firstAgencyForBootstrap() (which
+  // returns the most-recently-created agency since the singleton
+  // invariant no longer holds). The bootstrap paths are the
+  // ONLY remaining callers per the spec.
+  it("setup page uses firstAgencyForBootstrap() for the first-admin wizard", () => {
     const src = readSrc("app/setup/page.tsx");
-    expect(src).toMatch(/activeAgencyId\s*\(\s*\)/);
+    expect(src).toMatch(/firstAgencyForBootstrap\s*\(\s*\)/);
   });
 
-  it("bootstrap status route still uses activeAgencyId()", () => {
+  it("bootstrap status route uses firstAgencyForBootstrap()", () => {
     const src = readSrc("app/api/bootstrap/status/route.ts");
-    expect(src).toMatch(/activeAgencyId\s*\(\s*\)/);
+    expect(src).toMatch(/firstAgencyForBootstrap\s*\(\s*\)/);
   });
 
-  it("bootstrap admin route still uses activeAgencyId()", () => {
+  it("bootstrap admin route uses firstAgencyForBootstrap()", () => {
     const src = readSrc("app/api/bootstrap/admin/route.ts");
-    expect(src).toMatch(/activeAgencyId\s*\(\s*\)/);
+    expect(src).toMatch(/firstAgencyForBootstrap\s*\(\s*\)/);
   });
 
-  it("policy.ts still exports activeAgencyId (now @deprecated)", () => {
+  it("policy.ts exports firstAgencyForBootstrap (activeAgencyId is gone)", () => {
     const src = readSrc("lib/auth/policy.ts");
-    expect(src).toMatch(/export\s+async\s+function\s+activeAgencyId/);
-    // The deprecation marker is on the JSDoc immediately above the export.
-    expect(src).toMatch(/@deprecated/);
+    expect(src).toMatch(/export\s+async\s+function\s+firstAgencyForBootstrap/);
+    // The legacy `activeAgencyId` symbol is fully removed in M1.7.
+    expect(src).not.toMatch(/export\s+async\s+function\s+activeAgencyId/);
   });
 });
 
@@ -375,11 +387,16 @@ describe("replace-active-agency-id: equivalence with legacy activeAgencyId()", (
     // findSingleActiveAgency(): 1 row → [{ agencyId: "agency-singleton" }]
     dbMock.state.limitResults = [[{ id: "agency-singleton" }], [{ agencyId: "agency-singleton" }]];
 
-    const { activeAgencyId } = await import("@/lib/auth/policy");
+    const { firstAgencyForBootstrap } = await import("@/lib/auth/policy");
     const { resolveActiveAgencyContext } = await import("@/lib/auth/agency-context");
     const { currentActor } = await import("@/lib/auth/current-actor");
 
-    const legacy = await activeAgencyId();
+    // After M1.7, `activeAgencyId()` is removed. The bootstrap
+    // equivalent is `firstAgencyForBootstrap()` (which queries by
+    // `created_at DESC` since the singleton constraint is gone).
+    // We assert equivalence at the helper level: both return the
+    // single agency in a single-agency deployment.
+    const legacy = await firstAgencyForBootstrap();
     const actor = await currentActor();
     const resolved = actor ? await resolveActiveAgencyContext({ actor }) : null;
 

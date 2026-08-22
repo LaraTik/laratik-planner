@@ -17,7 +17,7 @@ import { join } from "node:path";
  *     `Credentials…` copy that the design system does not change)
  *
  * If a future polish pass needs to assert runtime behaviour (e.g.
- * fetch mocking for `activeAgencyId`), it should do so in a separate
+ * fetch mocking for `firstAgencyForBootstrap`), it should do so in a separate
  * `agency-settings-flow.test.tsx` rather than broadening this guard.
  */
 describe("agency-settings page structure", () => {

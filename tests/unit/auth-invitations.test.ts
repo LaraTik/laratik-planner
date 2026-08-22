@@ -167,41 +167,14 @@ const dbMock = vi.hoisted(() => {
 
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 
-// M1.6 — the SUT now reads `currentActor()` (which reads `auth()`) and
-// then `resolveActiveAgencyContext({ actor })` (which reads cookies()).
-// We mock both so the unit test can flip the auth outcome without
-// standing up a real Next request.
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(async () => ({
-    get: () => undefined,
-    set: () => undefined,
-    delete: () => undefined,
-  })),
-}));
-
-vi.mock("@/lib/auth/config", () => ({
-  auth: vi.fn(async () => ({ user: { id: "user-1" } })),
-}));
-
-vi.mock("@/lib/auth/current-actor", () => ({
-  currentActor: vi.fn(async () => ({ id: "user-1" })),
-}));
-
 const policyMock = vi.hoisted(() => ({
-  resolverResult: { agencyId: "agency-1", source: "fallback-single-agency" as const } as {
-    agencyId: string;
-    source: "requested" | "cookie" | "fallback-single-agency";
-  } | null,
+  firstAgencyForBootstrap: vi.fn(async () => "agency-1" as string | null),
 }));
 
 vi.mock("@/lib/auth/policy", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/policy")>("@/lib/auth/policy");
-  return actual;
+  return { ...actual, firstAgencyForBootstrap: policyMock.firstAgencyForBootstrap };
 });
-
-vi.mock("@/lib/auth/agency-context", () => ({
-  resolveActiveAgencyContext: vi.fn(async () => policyMock.resolverResult),
-}));
 
 const memberSafetyMock = vi.hoisted(() => ({
   assertCanDeactivateAgencyMember: vi.fn(),
@@ -247,7 +220,8 @@ beforeEach(() => {
   dbMock.state.deleteCalls = [];
   dbMock.state.transactionCalls = 0;
   dbMock.state.executeCalls = [];
-  policyMock.resolverResult = { agencyId: "agency-1", source: "fallback-single-agency" };
+  policyMock.firstAgencyForBootstrap.mockReset();
+  policyMock.firstAgencyForBootstrap.mockResolvedValue("agency-1");
   memberSafetyMock.assertCanDeactivateAgencyMember.mockReset();
   emailMock.sendEmail.mockReset();
   emailMock.sendEmail.mockResolvedValue({ id: "msg-1" });
@@ -257,7 +231,7 @@ beforeEach(() => {
 
 describe("createInvitation", () => {
   it("throws when no agency is configured", async () => {
-    policyMock.resolverResult = null;
+    policyMock.firstAgencyForBootstrap.mockResolvedValue(null);
     await expect(
       createInvitation({
         email: "x@example.com",
@@ -428,7 +402,7 @@ describe("acceptInvitation", () => {
 
 describe("listInvitations", () => {
   it("returns [] when no agency is configured", async () => {
-    policyMock.resolverResult = null;
+    policyMock.firstAgencyForBootstrap.mockResolvedValue(null);
     expect(await listInvitations()).toEqual([]);
   });
 
@@ -518,7 +492,7 @@ describe("reactivateUser", () => {
 
 describe("listAgencyMembers", () => {
   it("returns [] when no agency is configured", async () => {
-    policyMock.resolverResult = null;
+    policyMock.firstAgencyForBootstrap.mockResolvedValue(null);
     expect(await listAgencyMembers()).toEqual([]);
   });
 

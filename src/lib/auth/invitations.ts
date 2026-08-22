@@ -12,14 +12,13 @@ import {
   workspaceMembershipRoles,
   workspaces,
 } from "@/lib/db/schema";
+import { firstAgencyForBootstrap } from "@/lib/auth/policy";
 import { sendEmail } from "@/lib/email";
 import { clientEnv, serverEnv } from "@/lib/validation/env";
 import { invitationIdentityMatches, normalizeEmailAddress } from "@/lib/auth/invitation-identity";
 import { assertCanDeactivateAgencyMember } from "@/lib/auth/member-safety";
 import type { InvitationCommand } from "@/lib/auth/invitation-command";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
-import { currentActor } from "@/lib/auth/current-actor";
 
 /**
  * Invitation service — per master prompt §13:
@@ -47,8 +46,7 @@ function generateToken(): { raw: string; hash: string } {
 export async function createInvitation(
   input: InviteInput & { invitedBy: string },
 ): Promise<{ id: string; acceptUrl: string; expiresAt: Date }> {
-  const ctx = await resolveActiveAgencyContext({ actor: { id: input.invitedBy } });
-  const agencyId = ctx?.agencyId ?? null;
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) throw new Error("Agency not configured");
   const normalizedEmail = normalizeEmailAddress(input.email);
 
@@ -285,9 +283,7 @@ async function workspaceIdsForInvitationInTx(
  * List active invitations for the agency.
  */
 export async function listInvitations() {
-  const actor = await currentActor();
-  const ctx = actor ? await resolveActiveAgencyContext({ actor }) : null;
-  const agencyId = ctx?.agencyId ?? null;
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) return [];
   return db
     .select()
@@ -455,9 +451,7 @@ export async function reactivateUser(input: {
  * All members of the agency (used by User Management UI).
  */
 export async function listAgencyMembers() {
-  const actor = await currentActor();
-  const ctx = actor ? await resolveActiveAgencyContext({ actor }) : null;
-  const agencyId = ctx?.agencyId ?? null;
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) return [];
   return db
     .select({
