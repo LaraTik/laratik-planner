@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
@@ -305,7 +305,170 @@ export async function clearActiveAgencyCookie(): Promise<void> {
   cookieStore.delete(AGENCY_CONTEXT_COOKIE_NAME);
 }
 
+// ─── Resolver (Milestone 1.3) ────────────────────────────────────────────
+
+export type ResolveActiveAgencyContextInput = {
+  actor: Actor;
+  /**
+   * Explicit override, typically from `?agency=<id>` or a path
+   * segment. Empty string, `null`, and `undefined` are all treated
+   * as "not provided" and the resolver falls through to the cookie
+   * / fallback paths.
+   */
+  requestedAgencyId?: string | null;
+};
+
+export type ResolvedAgencyContext = {
+  actor: Actor;
+  agencyId: string;
+  /**
+   * Which priority level produced the resolution. Useful for
+   * logging / observability and for callers that want to
+   * differentiate "user explicitly asked" from "we picked for them".
+   */
+  source: "requested" | "cookie" | "fallback-single-agency";
+};
+
+/**
+ * Resolve the active agency for the current request.
+ *
+ * Priority chain (highest wins):
+ *
+ *   1. `requestedAgencyId` — explicit override. On membership
+ *      failure the resolver returns `null` and does NOT fall
+ *      through. Silently downgrading an explicit request would
+ *      hide a permission denial and let a user land on a workspace
+ *      they have not been granted access to.
+ *   2. The signed `laratik_active_agency` cookie. The decoder
+ *      already does the membership re-check, so a decoded value
+ *      is already authorized. A decoder `null` (tampered,
+ *      expired, missing-membership, no secret) is fail-closed:
+ *      the resolver returns `null` and does NOT fall through to
+ *      the fallback. A stale cookie must lose authority, not be
+ *      replaced with an "even older" default.
+ *   3. Fallback — the actor's **only** active agency. If the
+ *      actor has 0 or 2+ active agencies, the resolver returns
+ *      `null` (the route layer will prompt the user via the
+ *      agency switcher).
+ *
+ * Why a chain (not a single source):
+ *   - The explicit override is needed for "switch agency" links
+ *     that navigate to a workspace in a different agency than the
+ *     cookie names. The cookie must NEVER block an explicit
+ *     request.
+ *   - The cookie is the stickiness mechanism: once a user lands
+ *     in agency B, they stay there until they ask for A.
+ *   - The fallback lets a brand-new user with exactly one agency
+ *     land on a working page without the agency switcher ever
+ *     having to fire. (Pre-existing single-agency users must keep
+ *     working without any change to their UX.)
+ *
+ * Returns `null` when no priority level yields a valid agency.
+ * The caller decides how to surface that (404, redirect to
+ * agency switcher, re-prompt for sign-in, etc.). This helper
+ * never throws on application-level denial — it returns `null`.
+ *
+ * Async because `cookies()` is async in Next.js 16.
+ */
+export async function resolveActiveAgencyContext(
+  input: ResolveActiveAgencyContextInput,
+): Promise<ResolvedAgencyContext | null> {
+  const { actor, requestedAgencyId } = input;
+
+  // Step 1 — explicit override. Treat empty string as "not
+  // provided" so a stray `?agency=` (no value) does not silently
+  // short-circuit the chain.
+  if (requestedAgencyId && requestedAgencyId.length > 0) {
+    const ok = await isActiveMember(actor, requestedAgencyId);
+    if (!ok) {
+      // Fail-closed. The caller (route / action) decides what to
+      // do: 403, redirect to agency switcher, etc. We deliberately
+      // do NOT fall through — silently downgrading the explicit
+      // request would let a user accidentally land on data they
+      // do not have access to.
+      return null;
+    }
+    return {
+      actor,
+      agencyId: requestedAgencyId,
+      source: "requested",
+    };
+  }
+
+  // Step 2 — signed cookie. `decodeAgencyContext` performs the
+  // membership re-check at step 4 of its check order; a non-null
+  // return is therefore already authorized. A null return covers
+  // tampered, expired, no-membership, no-secret, and DB-error
+  // paths — all fail-closed.
+  const cookieStore = await cookies();
+  const cookieEntry = cookieStore.get(AGENCY_CONTEXT_COOKIE_NAME);
+  if (cookieEntry?.value) {
+    const decoded = await decodeAgencyContext(cookieEntry.value, actor);
+    if (decoded) {
+      return {
+        actor,
+        agencyId: decoded.agencyId,
+        source: "cookie",
+      };
+    }
+    // Fail-closed. Do NOT fall through to the fallback path — a
+    // stale cookie must lose authority, not be replaced with the
+    // user's "older" default. The caller can `clearActiveAgencyCookie()`
+    // and re-prompt the user.
+    return null;
+  }
+
+  // Step 3 — fallback: the actor's only active agency. The
+  // `limit(2)` plus length-check makes a 2+ membership a null
+  // return without an extra query; the agency switcher (M1.5)
+  // is the user-facing resolution path for the multi-membership
+  // case.
+  const fallback = await findSingleActiveAgency(actor);
+  if (fallback) {
+    return {
+      actor,
+      agencyId: fallback,
+      source: "fallback-single-agency",
+    };
+  }
+
+  return null;
+}
+
 // ─── Internal helpers ────────────────────────────────────────────────────
+
+/**
+ * Look up the actor's only active agency membership. Returns
+ * `null` when the actor has 0 or 2+ active agencies. Ordering by
+ * `created_at ASC` is the deterministic tie-breaker for the
+ * single-membership case (the test asserts that the fallback is
+ * stable across calls).
+ *
+ * The `limit(2)` is the key trick: a user with 0 memberships
+ * returns an empty array, a user with 1 returns a 1-row array,
+ * and a user with 2+ returns a 2-row array. We never need to
+ * count *all* memberships — a 2+ actor must use the agency
+ * switcher, not an auto-pick. This keeps the query O(1) in the
+ * returned-row count regardless of how many agencies the actor
+ * belongs to.
+ */
+async function findSingleActiveAgency(actor: Actor): Promise<string | null> {
+  try {
+    const rows = await db
+      .select({ agencyId: agencyMemberships.agencyId })
+      .from(agencyMemberships)
+      .where(and(eq(agencyMemberships.userId, actor.id), eq(agencyMemberships.status, "active")))
+      .orderBy(asc(agencyMemberships.createdAt))
+      .limit(2);
+    if (rows.length !== 1) return null;
+    return rows[0]!.agencyId;
+  } catch {
+    // Defensive: a DB error during fallback must NEVER crash the
+    // request that triggered it. The resolver returns null, and
+    // the route layer treats null as "no valid agency context".
+    return null;
+  }
+}
 
 async function isActiveMember(actor: Actor, agencyId: string): Promise<boolean> {
   try {
