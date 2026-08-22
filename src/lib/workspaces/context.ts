@@ -3,16 +3,50 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { workspaceMemberships, workspaces } from "@/lib/db/schema";
 import {
-  activeAgencyId,
   canAccessClientWorkspace,
   canAccessInternalWorkspace,
   isAgencyAdmin,
+  isAgencyMember,
   type Actor,
 } from "@/lib/auth/policy";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 
-async function findWorkspaceBySlug(slug: string) {
-  const agencyId = await activeAgencyId();
-  if (!agencyId) return null;
+/**
+ * Milestone 1.4 — workspace-by-slug resolution is agency-scoped.
+ *
+ * A workspace's identity is the tuple `(agencyId, slug)`. Before
+ * M1.4, `findWorkspaceBySlug(slug)` looked the slug up by the
+ * active-agency singleton; the singleton was the only agency, so
+ * the singleton+slug pair was effectively `(agencyId, slug)`.
+ * With multiple agencies on the same deployment, the singleton
+ * is replaced by a per-request resolution
+ * (`resolveActiveAgencyContext` in `@/lib/auth/agency-context`),
+ * and the slug must be looked up inside the agency the actor
+ * actually wants — never across.
+ *
+ * Anti-IDOR contract (Milestone 1.4 + 1.6 merged): the helper
+ * never returns a workspace the actor cannot access.
+ *   - When `requestedAgencyId` is provided, the membership check
+ *     is the gate; a non-member is denied BEFORE the workspace
+ *     row is read, so a guessed slug in another agency cannot
+ *     leak the existence (or content) of the other agency's
+ *     workspace.
+ *   - When `requestedAgencyId` is NOT provided, the helper
+ *     delegates to `resolveActiveAgencyContext` (M1.6), which
+ *     performs the same membership gate via the resolver's
+ *     priority chain. The net effect is identical: non-members
+ *     never reach `lookupWorkspace`.
+ * The route layer turns the `null` into a 404, not a 403 — a
+ * 403 would let an attacker enumerate slugs by toggling the
+ * response code; a 404 hides the existence.
+ *
+ * The optional `requestedAgencyId` parameter is preserved from
+ * M1.4 because the layout and the integration tests assert the
+ * explicit-control contract (caller chooses the agency; helper
+ * gates on membership). M1.6 callers that want the implicit
+ * resolver path simply omit the parameter.
+ */
+async function lookupWorkspace(agencyId: string, slug: string) {
   const [workspace] = await db
     .select()
     .from(workspaces)
@@ -21,32 +55,75 @@ async function findWorkspaceBySlug(slug: string) {
   return workspace ?? null;
 }
 
-export async function getAccessibleWorkspace(actor: Actor, slug: string) {
-  const workspace = await findWorkspaceBySlug(slug);
-  if (!workspace || !(await canAccessInternalWorkspace(actor, workspace.id))) return null;
+export async function findWorkspaceBySlug(actor: Actor, slug: string, requestedAgencyId?: string) {
+  let agencyId: string | null;
+  if (requestedAgencyId) {
+    // Anti-IDOR gate: explicit agency context requires the actor
+    // to be a member. A non-member sees null (the route renders
+    // 404, not 403) so cross-tenant slug guessing returns the
+    // same response as a non-existent slug.
+    const isMember = await isAgencyMember(actor, requestedAgencyId);
+    if (!isMember) return null;
+    agencyId = requestedAgencyId;
+  } else {
+    // Implicit path (M1.6): delegate to the resolver. The
+    // resolver performs the membership gate internally, so the
+    // anti-IDOR contract holds here too.
+    const ctx = await resolveActiveAgencyContext({ actor });
+    agencyId = ctx?.agencyId ?? null;
+  }
+  if (!agencyId) return null;
+  return lookupWorkspace(agencyId, slug);
+}
+
+/**
+ * Look up an active workspace by `(agencyId, slug)` and gate on
+ * an internal-workspace role. The role check is the
+ * `canAccessInternalWorkspace` policy helper; agency admins pass
+ * (see `hasWorkspaceRole` in `@/lib/auth/policy`).
+ *
+ * Returns `null` for: no workspace at `(agencyId, slug)`, or
+ * the actor is not a member of `requestedAgencyId` when one is
+ * given, or the actor does not hold an internal role.
+ */
+export async function getAccessibleWorkspace(
+  actor: Actor,
+  slug: string,
+  requestedAgencyId?: string,
+) {
+  const workspace = await findWorkspaceBySlug(actor, slug, requestedAgencyId);
+  if (!workspace) return null;
+  if (!(await canAccessInternalWorkspace(actor, workspace.id))) return null;
   return workspace;
 }
 
-export async function getClientWorkspace(actor: Actor, slug: string) {
-  const workspace = await findWorkspaceBySlug(slug);
-  if (!workspace || !(await canAccessClientWorkspace(actor, workspace.id))) return null;
+/**
+ * Look up an active workspace by `(agencyId, slug)` and gate on
+ * the client-reviewer role only. Same shape as
+ * `getAccessibleWorkspace`; the gate is `canAccessClientWorkspace`.
+ */
+export async function getClientWorkspace(actor: Actor, slug: string, requestedAgencyId?: string) {
+  const workspace = await findWorkspaceBySlug(actor, slug, requestedAgencyId);
+  if (!workspace) return null;
+  if (!(await canAccessClientWorkspace(actor, workspace.id))) return null;
   return workspace;
 }
 
 /**
  * Every workspace in the current agency the actor can switch to.
  *
- * Members see their own active memberships. Agency admins additionally
- * see every other active workspace in the agency, with member rows
- * first so the order matches what the user expects. Used by the
- * workspace switcher in the sidebar.
+ * Members see their own active memberships. Agency admins
+ * additionally see every other active workspace in the agency,
+ * with member rows first so the order matches what the user
+ * expects. Used by the workspace switcher in the sidebar.
  */
 export type SwitcherWorkspace = { id: string; name: string; slug: string };
 
 export async function listSwitcherWorkspaces(
   actor: Actor,
 ): Promise<{ options: SwitcherWorkspace[]; isAdmin: boolean }> {
-  const agencyId = await activeAgencyId();
+  const ctx = await resolveActiveAgencyContext({ actor });
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) return { options: [], isAdmin: false };
   const isAdmin = await isAgencyAdmin(actor, agencyId);
 

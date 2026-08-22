@@ -16,9 +16,15 @@ import { agencyMemberStatusEnum } from "./enums";
 
 /**
  * STUDIOFLOW_MASTER_PROMPT.md §8 — Identity & tenancy.
- * Invariant: production contains exactly one active agency row. The
- * singleton_key unique index + check enforces that at the DB level; the
- * `bootstrap_locks` table records the one-time first-admin write.
+ *
+ * Multi-agency (M1.7): the `agency` table no longer enforces a
+ * singleton invariant. Multiple agencies can coexist, each with their
+ * own workspaces, members, and invitations. The unique index on
+ * `lower(slug)` still keeps slugs unique within a deployment; a
+ * deployment is partitioned by agency row, not by a global singleton.
+ * The `bootstrap_locks` table records the first-admin write per
+ * agency (and is unused post-bootstrap; legacy rows from the
+ * single-agency era are kept for audit).
  */
 
 // ─── users ─────────────────────────────────────────────────────────────────
@@ -65,10 +71,14 @@ export const agencies = pgTable(
     id: idColumn(),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
-    // Master prompt: "production contains exactly one active agency row.
-    // Do not hard-code its UUID." We enforce this with a unique index
-    // on a constant true + a check that singleton_key is true.
-    singletonKey: boolean("singleton_key").notNull().default(true),
+    // `singleton_key` was the single-agency-era invariant column
+    // (NOT NULL DEFAULT true + unique index + check). All three
+    // constraints were dropped in migration 0008 (M1.7). The column
+    // itself is removed from this schema; the Postgres column is
+    // intentionally kept as a nullable back-compat read shim for
+    // any legacy query that still names it. New code must not
+    // reference `singleton_key`; a follow-up migration will drop
+    // the column once reads have been audited and removed.
     bootstrapCompletedAt: timestamp("bootstrap_completed_at", {
       withTimezone: true,
       mode: "date",
@@ -76,11 +86,7 @@ export const agencies = pgTable(
     settings: jsonb("settings"),
     ...timestamps,
   },
-  (t) => [
-    uniqueIndex("agency_slug_unique").on(sql`lower(${t.slug})`),
-    uniqueIndex("agency_singleton_unique").on(t.singletonKey),
-    check("agency_singleton_true", sql`${t.singletonKey} = true`),
-  ],
+  (t) => [uniqueIndex("agency_slug_unique").on(sql`lower(${t.slug})`)],
 );
 
 // ─── agency_memberships ────────────────────────────────────────────────────
@@ -118,6 +124,35 @@ export const bootstrapLocks = pgTable("bootstrap_lock", {
     .notNull()
     .default(sql`now()`),
 });
+
+// ─── platform_administrator ────────────────────────────────────────────────
+// Milestone 1.1 (M1.1) — platform-level authority that is **separate from**
+// agency-level authority. A platform admin can manage agencies (create,
+// suspend, change plans) without being a member of any specific agency.
+// Platform routes (M2) gate on this table; they must NOT acquire tenant
+// content access automatically.
+//
+// `user_id` is the primary key: at most one live grant per user.
+// `revoked_at` is the soft-revocation timestamp — kept forever for audit
+// trail of "who was ever a platform admin". The `isPlatformAdmin` helper
+// filters `revoked_at IS NULL` so revoked admins are not live admins.
+// No `agency_id` column: platform authority is global, not per-agency
+// (see plan §1.1; the absence is intentional).
+export const platformAdministrators = pgTable(
+  "platform_administrator",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    grantedBy: uuid("granted_by").references(() => users.id, { onDelete: "set null" }),
+    grantedAt: timestamp("granted_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "date" }),
+    reason: text("reason"),
+  },
+  (t) => [index("platform_administrator_granted_at_idx").on(t.grantedAt)],
+);
 
 // ─── accounts / sessions / verificationTokens (NextAuth Drizzle adapter) ───
 // Re-exported here for completeness; the actual shape comes from

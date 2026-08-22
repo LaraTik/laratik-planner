@@ -23,6 +23,7 @@ function makeDrizzleMock(state: DrizzleState) {
     chain.from = vi.fn(() => chain);
     chain.innerJoin = vi.fn(() => chain);
     chain.where = vi.fn(() => chain);
+    chain.orderBy = vi.fn(() => chain);
     chain.limit = vi.fn(() => {
       const rows = state.selectResults.shift() ?? [];
       return Promise.resolve(rows);
@@ -236,15 +237,15 @@ describe("canReview", () => {
   });
 });
 
-describe("activeAgencyId", () => {
-  it("returns the singleton agency id when present", async () => {
+describe("firstAgencyForBootstrap", () => {
+  it("returns the most-recently-created agency id when at least one exists", async () => {
     dbMock.state.selectResults.push([{ id: "agency-1" }]);
-    expect(await policy.activeAgencyId()).toBe("agency-1");
+    expect(await policy.firstAgencyForBootstrap()).toBe("agency-1");
   });
 
   it("returns null when no agency exists", async () => {
     dbMock.state.selectResults.push([]);
-    expect(await policy.activeAgencyId()).toBeNull();
+    expect(await policy.firstAgencyForBootstrap()).toBeNull();
   });
 });
 

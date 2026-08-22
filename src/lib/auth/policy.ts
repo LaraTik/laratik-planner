@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   agencies,
@@ -206,12 +206,42 @@ async function workspaceIdForContent(contentItemId: string): Promise<string> {
   return row.workspaceId;
 }
 
-/** Active agency singleton (master prompt §8 invariant). */
-export async function activeAgencyId(): Promise<string | null> {
+/**
+ * Return the id of the agency that the **bootstrap / setup path**
+ * should use when no actor is available to drive a per-request
+ * resolution.
+ *
+ * The single-agency era had a DB-enforced singleton (the unique
+ * index on `singleton_key` + the `singleton_key = true` check + a
+ * NOT NULL default). All three are gone after migration 0008
+ * (M1.7), so "the one active agency" is no longer a query that
+ * returns a single row by invariant — it is a query that returns
+ * the most-recently-created row.
+ *
+ * This helper is **only** for the bootstrap / dev-seed / setup
+ * flows that run before the request layer can call
+ * `resolveActiveAgencyContext(actor)` (M1.3). For every other code
+ * path, the agency for the current request comes from
+ * `resolveActiveAgencyContext` — that helper does the right thing
+ * for multi-agency actors (cookie + explicit override +
+ * single-membership fallback), whereas this one just picks a row
+ * out of the agency table.
+ *
+ * Ordering by `created_at DESC` is the deterministic "newest wins"
+ * rule. In a single-agency deployment this is equivalent to the
+ * legacy `WHERE singleton_key = true` lookup. In a multi-agency
+ * deployment the bootstrap path is the only consumer and there
+ * is no "active agency" in the legacy sense; "newest" is the
+ * closest analog to "the one that was just provisioned".
+ *
+ * @returns the most-recently-created agency id, or `null` when the
+ *   agency table is empty.
+ */
+export async function firstAgencyForBootstrap(): Promise<string | null> {
   const [a] = await db
     .select({ id: agencies.id })
     .from(agencies)
-    .where(eq(agencies.singletonKey, true))
+    .orderBy(desc(agencies.createdAt))
     .limit(1);
   return a?.id ?? null;
 }

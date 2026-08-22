@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, hasWorkspaceRole } from "@/lib/auth/policy";
+import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { currentActor } from "@/lib/auth/current-actor";
 import { db } from "@/lib/db";
 import { aiFeatureSettings, aiUsageEvents, contentItems, workspaces } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -59,8 +61,11 @@ export async function POST(req: NextRequest) {
 
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  const actor = await currentActor();
+  if (!actor) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
-  const agencyId = await activeAgencyId();
+  const ctx = await resolveActiveAgencyContext({ actor });
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) return NextResponse.json({ error: "Agency not configured" }, { status: 409 });
 
   const parsed = Body.safeParse(await req.json().catch(() => null));

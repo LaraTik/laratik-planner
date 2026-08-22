@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
+import { isAgencyAdmin } from "@/lib/auth/policy";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { currentActor } from "@/lib/auth/current-actor";
 import { serverEnv } from "@/lib/validation/env";
 import {
   AI_CAPABILITIES,
@@ -21,12 +23,15 @@ import {
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not signed in");
-  const agencyId = await activeAgencyId();
+  const actor = await currentActor();
+  if (!actor) throw new Error("Not signed in");
+  const ctx = await resolveActiveAgencyContext({ actor });
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) throw new Error("Agency not configured");
-  if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
+  if (!(await isAgencyAdmin(actor, agencyId))) {
     throw new Error("Only agency admins can change AI settings");
   }
-  return { actor: { id: session.user.id }, agencyId };
+  return { actor, agencyId };
 }
 
 export type AiSettingsActionState = {

@@ -8,8 +8,10 @@ import {
   aiUsageEvents,
   type aiFeatureSettings as AiFeatureSettings,
 } from "@/lib/db/schema";
-import { activeAgencyId, isAgencyAdmin, type Actor } from "@/lib/auth/policy";
+import { isAgencyAdmin, type Actor } from "@/lib/auth/policy";
 import { requirePolicy } from "@/lib/auth/policy";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { currentActor } from "@/lib/auth/current-actor";
 import { serverEnv } from "@/lib/validation/env";
 
 /**
@@ -61,7 +63,9 @@ export type MonthlyUsage = {
 };
 
 export async function getAiFeatureSettings(): Promise<AiFeatureSettingsRow | null> {
-  const agencyId = await activeAgencyId();
+  const actor = await currentActor();
+  const ctx = actor ? await resolveActiveAgencyContext({ actor }) : null;
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) return null;
   const [row] = await db
     .select()
@@ -72,7 +76,9 @@ export async function getAiFeatureSettings(): Promise<AiFeatureSettingsRow | nul
 }
 
 export async function getMonthlyUsage(days = 30): Promise<MonthlyUsage> {
-  const agencyId = await activeAgencyId();
+  const actor = await currentActor();
+  const ctx = actor ? await resolveActiveAgencyContext({ actor }) : null;
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) {
     return { total: 0, succeeded: 0, failed: 0, byCapability: [] };
   }
@@ -125,12 +131,10 @@ export async function updateAiFeatureSettings(
   actor: Actor,
   input: UpdateAiSettingsInput,
 ): Promise<AiFeatureSettingsRow> {
-  await requirePolicy(
-    activeAgencyId().then((id) => isAgencyAdmin(actor, id ?? "")),
-    "update_ai_settings",
-  );
-  const agencyId = await activeAgencyId();
+  const ctx = await resolveActiveAgencyContext({ actor });
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) throw new Error("Agency not configured");
+  await requirePolicy(isAgencyAdmin(actor, agencyId), "update_ai_settings");
   // Validate model against the server allowlist. The allowlist is the
   // env's MINIMAX_MODEL plus the two documented alternates. Unknown
   // model strings are rejected to keep the setting truthful.
@@ -186,12 +190,10 @@ export async function updateAiFeatureSettings(
 export async function testAiConnection(
   actor: Actor,
 ): Promise<{ ok: boolean; latencyMs: number | null }> {
-  await requirePolicy(
-    activeAgencyId().then((id) => isAgencyAdmin(actor, id ?? "")),
-    "test_ai_connection",
-  );
-  const agencyId = await activeAgencyId();
+  const ctx = await resolveActiveAgencyContext({ actor });
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) throw new Error("Agency not configured");
+  await requirePolicy(isAgencyAdmin(actor, agencyId), "test_ai_connection");
   if (!serverEnv.AI_FEATURE_ENABLED || !serverEnv.MINIMAX_API_KEY) {
     await recordConnectionTest(agencyId, actor.id, false);
     return { ok: false, latencyMs: null };

@@ -111,6 +111,16 @@ const serverSchema = z.object({
   // Cron + bootstrap
   CRON_SECRET: stringOrEmpty,
   BOOTSTRAP_SETUP_TOKEN: stringOrEmpty,
+
+  // Agency context cookie (Milestone 1.2) — server-only HMAC secret.
+  // 32+ bytes (≥ 32 ASCII chars). The agency-context helper fails closed
+  // if this is missing in production. Generate with:
+  //   openssl rand -base64 32
+  // Optional in dev/test; the agency-context helper falls back to a
+  // derived dev key so unit tests can run without configuring the env.
+  AGENCY_COOKIE_SECRET: optionalInDev(
+    z.string().min(32, "AGENCY_COOKIE_SECRET must be ≥ 32 bytes (use: openssl rand -base64 32)"),
+  ),
 });
 
 const _serverParsed = serverSchema.safeParse(process.env);

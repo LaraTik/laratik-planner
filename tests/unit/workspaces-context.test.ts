@@ -35,8 +35,22 @@ const dbMock = vi.hoisted(() => {
 
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 
+// M1.6 — the SUT now reads `resolveActiveAgencyContext({ actor })`
+// (which reads cookies()). We mock `next/headers` so the unit test
+// can stand up without a real Next request.
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(async () => ({
+    get: () => undefined,
+    set: () => undefined,
+    delete: () => undefined,
+  })),
+}));
+
 const policyMock = vi.hoisted(() => ({
-  activeAgencyId: vi.fn(async () => "agency-1" as string | null),
+  resolverResult: { agencyId: "agency-1", source: "fallback-single-agency" as const } as {
+    agencyId: string;
+    source: "requested" | "cookie" | "fallback-single-agency";
+  } | null,
   isAgencyAdmin: vi.fn(async () => false as boolean),
   canAccessInternalWorkspace: vi.fn(async () => false as boolean),
   canAccessClientWorkspace: vi.fn(async () => false as boolean),
@@ -44,8 +58,17 @@ const policyMock = vi.hoisted(() => ({
 
 vi.mock("@/lib/auth/policy", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/policy")>("@/lib/auth/policy");
-  return { ...actual, ...policyMock };
+  return {
+    ...actual,
+    isAgencyAdmin: policyMock.isAgencyAdmin,
+    canAccessInternalWorkspace: policyMock.canAccessInternalWorkspace,
+    canAccessClientWorkspace: policyMock.canAccessClientWorkspace,
+  };
 });
+
+vi.mock("@/lib/auth/agency-context", () => ({
+  resolveActiveAgencyContext: vi.fn(async () => policyMock.resolverResult),
+}));
 
 const context = await import("@/lib/workspaces/context");
 
@@ -53,8 +76,7 @@ const actor = { id: "user-1" };
 
 beforeEach(() => {
   dbMock.state.selectResults = [];
-  policyMock.activeAgencyId.mockReset();
-  policyMock.activeAgencyId.mockResolvedValue("agency-1");
+  policyMock.resolverResult = { agencyId: "agency-1", source: "fallback-single-agency" };
   policyMock.isAgencyAdmin.mockReset();
   policyMock.isAgencyAdmin.mockResolvedValue(false);
   policyMock.canAccessInternalWorkspace.mockReset();
@@ -65,7 +87,7 @@ beforeEach(() => {
 
 describe("getAccessibleWorkspace", () => {
   it("returns null when there is no active agency", async () => {
-    policyMock.activeAgencyId.mockResolvedValue(null);
+    policyMock.resolverResult = null;
     const result = await context.getAccessibleWorkspace(actor, "any");
     expect(result).toBeNull();
   });
@@ -106,7 +128,7 @@ describe("getClientWorkspace", () => {
 
 describe("listSwitcherWorkspaces", () => {
   it("returns empty options and isAdmin=false when no agency exists", async () => {
-    policyMock.activeAgencyId.mockResolvedValue(null);
+    policyMock.resolverResult = null;
     const result = await context.listSwitcherWorkspaces(actor);
     expect(result).toEqual({ options: [], isAdmin: false });
   });

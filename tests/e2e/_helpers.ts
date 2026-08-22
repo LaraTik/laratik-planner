@@ -132,6 +132,13 @@ export async function devSeed(
     workspaceSlug?: string;
     agencyAdmin?: boolean;
     workspaceRoles?: Exclude<FixtureRole, "agency_admin">[];
+    /**
+     * M1.8 — when true, the seeded user receives a live
+     * `platform_administrator` row (revoked_at null). When false
+     * (default), any prior grant is revoked. The platform-overview
+     * e2e exercises both branches.
+     */
+    platformAdmin?: boolean;
   } = {},
 ): Promise<SeedResult> {
   return withRetry(async () => {
@@ -141,6 +148,7 @@ export async function devSeed(
         workspaceSlug: options.workspaceSlug ?? "acme",
         ...(options.agencyAdmin !== undefined ? { agencyAdmin: options.agencyAdmin } : {}),
         ...(options.workspaceRoles ? { workspaceRoles: options.workspaceRoles } : {}),
+        ...(options.platformAdmin !== undefined ? { platformAdmin: options.platformAdmin } : {}),
       },
       // Lower the request timeout in capture mode so a hung seed
       // does not eat the entire per-test budget. The compare step

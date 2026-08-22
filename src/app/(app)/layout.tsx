@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
+import { isAgencyAdmin } from "@/lib/auth/policy";
+import { listActorAgencies, resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { currentActor } from "@/lib/auth/current-actor";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { countUnreadNotifications, listNotificationsForUser } from "@/lib/notifications/service";
 import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
@@ -24,18 +26,30 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/signin");
   }
 
-  const agencyId = await activeAgencyId();
+  const actor = await currentActor();
+  if (!actor) {
+    redirect("/signin");
+  }
+  const ctx = await resolveActiveAgencyContext({ actor });
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) {
     redirect("/setup");
   }
 
-  const actor = { id: session.user.id };
   const isAdmin = await isAgencyAdmin(actor, agencyId);
-  const [notifications, unreadCount, switcher] = await Promise.all([
+  const [notifications, unreadCount, switcher, agencyOptions] = await Promise.all([
     listNotificationsForUser(actor, { limit: 10 }),
     countUnreadNotifications(actor),
     listSwitcherWorkspaces(actor),
+    listActorAgencies(actor),
   ]);
+
+  // The "active" agency for the sidebar switcher is the singleton
+  // (M1.2 / M1.6 invariant). When M1.6 lands and the resolver
+  // becomes the canonical source, this becomes the resolver result
+  // — for M1.5 the singleton is the only agency and therefore the
+  // only valid active row.
+  const activeAgency = agencyOptions.find((a) => a.id === agencyId) ?? null;
 
   return (
     <AppShell
@@ -47,6 +61,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         isAdmin,
       }}
       workspaces={switcher.options}
+      agencySwitcher={{ active: activeAgency, options: agencyOptions }}
       canCreateWorkspace={switcher.isAdmin}
       notifications={notifications.map((n) => ({
         id: n.id,

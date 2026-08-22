@@ -12,7 +12,7 @@ import {
   workspaceMembershipRoles,
   workspaces,
 } from "@/lib/db/schema";
-import { activeAgencyId } from "@/lib/auth/policy";
+import { firstAgencyForBootstrap } from "@/lib/auth/policy";
 import { sendEmail } from "@/lib/email";
 import { clientEnv, serverEnv } from "@/lib/validation/env";
 import { invitationIdentityMatches, normalizeEmailAddress } from "@/lib/auth/invitation-identity";
@@ -46,7 +46,7 @@ function generateToken(): { raw: string; hash: string } {
 export async function createInvitation(
   input: InviteInput & { invitedBy: string },
 ): Promise<{ id: string; acceptUrl: string; expiresAt: Date }> {
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) throw new Error("Agency not configured");
   const normalizedEmail = normalizeEmailAddress(input.email);
 
@@ -283,7 +283,7 @@ async function workspaceIdsForInvitationInTx(
  * List active invitations for the agency.
  */
 export async function listInvitations() {
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) return [];
   return db
     .select()
@@ -451,7 +451,7 @@ export async function reactivateUser(input: {
  * All members of the agency (used by User Management UI).
  */
 export async function listAgencyMembers() {
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) return [];
   return db
     .select({

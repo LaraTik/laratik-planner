@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { isActivePath } from "@/lib/utils";
 import { WorkspaceSwitcher } from "./workspace-switcher";
+import { AgencySwitcher, type AgencyRow } from "./agency-switcher";
 import { SidebarGroup, SidebarLink, SidebarSubLink } from "./sidebar-group";
 
 /**
@@ -57,11 +58,13 @@ export function Sidebar({
   user,
   workspaces,
   workspaceSwitcherOptions,
+  agencySwitcher,
   canCreateWorkspace,
 }: {
   user: { name: string; isAdmin: boolean };
   workspaces: { id: string; slug: string; name: string }[];
   workspaceSwitcherOptions: { id: string; name: string; slug: string }[];
+  agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   canCreateWorkspace: boolean;
 }) {
   const pathname = usePathname();
@@ -271,8 +274,20 @@ export function Sidebar({
           Help
         </SidebarLink>
 
-        {/* Workspace switcher lives in the sidebar bottom (per Stitch). */}
+        {/* Agency switcher lives above the workspace switcher (per
+            M1.5 + Stitch design). The active agency scopes the
+            workspace list the user can pick from, so the agency
+            switcher is the outermost switcher. */}
         <div className="pt-2">
+          <AgencySwitcher
+            active={agencySwitcher.active}
+            options={agencySwitcher.options}
+            testId="sidebar-agency-switcher-trigger"
+          />
+        </div>
+
+        {/* Workspace switcher lives in the sidebar bottom (per Stitch). */}
+        <div className="pt-1">
           <WorkspaceSwitcher
             active={currentWorkspace ?? workspaceSwitcherOptions[0] ?? null}
             options={workspaceSwitcherOptions}

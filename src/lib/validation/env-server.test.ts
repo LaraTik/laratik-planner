@@ -41,6 +41,7 @@ const ENV_KEYS_TO_RESTORE = [
   "GOOGLE_CLIENT_SECRET",
   "NEXT_PUBLIC_APP_URL",
   "NEXT_PUBLIC_SENTRY_DSN",
+  "AGENCY_COOKIE_SECRET",
 ] as const;
 
 const originalEnv: Record<string, string | undefined> = {};
@@ -102,6 +103,7 @@ describe("env server schema (coercion branches)", () => {
     setEnv("AUTH_SECRET", "x".repeat(32));
     setEnv("GOOGLE_CLIENT_ID", "id");
     setEnv("GOOGLE_CLIENT_SECRET", "secret");
+    setEnv("AGENCY_COOKIE_SECRET", "x".repeat(64));
     const { serverEnv } = await importFreshEnv();
     expect(serverEnv.NODE_ENV).toBe("production");
   });
@@ -201,6 +203,7 @@ describe("env module-level failure branches", () => {
     setEnv("NODE_ENV", "production");
     setEnv("DATABASE_URL", "postgres://example.com/db");
     setEnv("AUTH_SECRET", "x".repeat(32));
+    setEnv("AGENCY_COOKIE_SECRET", "x".repeat(64));
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await expect(importFreshEnv()).rejects.toThrow(/Invalid provider configuration/);
     errorSpy.mockRestore();
@@ -222,6 +225,7 @@ describe("env module-level failure branches", () => {
     setEnv("AUTH_SECRET", "x".repeat(32));
     setEnv("GOOGLE_CLIENT_ID", "id");
     setEnv("GOOGLE_CLIENT_SECRET", "secret");
+    setEnv("AGENCY_COOKIE_SECRET", "x".repeat(64));
     const { serverEnv } = await importFreshEnv();
     expect(serverEnv.NODE_ENV).toBe("production");
     expect(serverEnv.GOOGLE_CLIENT_ID).toBe("id");
