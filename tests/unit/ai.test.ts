@@ -226,3 +226,119 @@ describe("draftCaption", () => {
     expect(userMsg.content).not.toContain("Audience:");
   });
 });
+
+describe("improveBrief", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    fetchMock.mockReset();
+    envValues.AI_FEATURE_ENABLED = true;
+    envValues.MINIMAX_API_KEY = "sk-1234";
+  });
+
+  it("returns null when AI is disabled", async () => {
+    envValues.AI_FEATURE_ENABLED = false;
+    const ai = await loadAi();
+    const result = await ai.improveBrief({ title: "Drop", brief: "x", format: "reel" });
+    expect(result).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("builds the Hook/Main/CTA prompt and returns the joined text", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        content: [{ type: "text", text: "Hook: ...\nMain message: ...\nCTA: ..." }],
+        usage: { input_tokens: 9, output_tokens: 4 },
+      }),
+    });
+    const ai = await loadAi();
+    const result = await ai.improveBrief({
+      title: "Spring drop",
+      brief: "Tease the launch",
+      format: "reel",
+      audience: "Gen Z creators",
+    });
+    expect(result).toMatch(/Hook:[\s\S]*Main message:[\s\S]*CTA:/);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.system).toMatch(/Hook:[\s\S]*Main message:[\s\S]*CTA:/);
+    const userMsg = body.messages[0];
+    expect(userMsg.content).toContain("Title: Spring drop");
+    expect(userMsg.content).toContain("Format: reel");
+    expect(userMsg.content).toContain("Audience: Gen Z creators");
+    expect(userMsg.content).toContain("Brief: Tease the launch");
+  });
+
+  it("substitutes '(empty)' for an empty brief and omits audience when missing", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ content: [{ type: "text", text: "x" }] }),
+    });
+    const ai = await loadAi();
+    await ai.improveBrief({ title: "x", brief: "", format: "static_post" });
+    const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
+    const userMsg = body.messages[0];
+    expect(userMsg.content).toContain("Brief: (empty)");
+    expect(userMsg.content).not.toContain("Audience:");
+  });
+});
+
+describe("checkCompleteness", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    fetchMock.mockReset();
+    envValues.AI_FEATURE_ENABLED = true;
+    envValues.MINIMAX_API_KEY = "sk-1234";
+  });
+
+  it("returns null when AI is disabled", async () => {
+    envValues.AI_FEATURE_ENABLED = false;
+    const ai = await loadAi();
+    const result = await ai.checkCompleteness({ title: "Drop", brief: "x", format: "reel" });
+    expect(result).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("builds the Score/Missing prompt and returns the joined text", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        content: [{ type: "text", text: "Score: 80\nMissing: Hook, CTA" }],
+        usage: { input_tokens: 9, output_tokens: 4 },
+      }),
+    });
+    const ai = await loadAi();
+    const result = await ai.checkCompleteness({
+      title: "Spring drop",
+      brief: "Tease the launch",
+      format: "reel",
+      audience: "Gen Z creators",
+    });
+    expect(result).toMatch(/Score: 80[\s\S]*Missing:/);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.system).toMatch(/Score:[\s\S]*Missing:/);
+    const userMsg = body.messages[0];
+    expect(userMsg.content).toContain("Title: Spring drop");
+    expect(userMsg.content).toContain("Format: reel");
+    expect(userMsg.content).toContain("Audience: Gen Z creators");
+    expect(userMsg.content).toContain("Brief: Tease the launch");
+  });
+
+  it("substitutes '(empty)' for an empty brief and omits audience when missing", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ content: [{ type: "text", text: "x" }] }),
+    });
+    const ai = await loadAi();
+    await ai.checkCompleteness({ title: "x", brief: "", format: "static_post" });
+    const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
+    const userMsg = body.messages[0];
+    expect(userMsg.content).toContain("Brief: (empty)");
+    expect(userMsg.content).not.toContain("Audience:");
+  });
+});
