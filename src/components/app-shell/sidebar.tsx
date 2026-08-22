@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
+  Bot,
   Briefcase,
   CalendarDays,
   ClipboardList,
@@ -20,8 +21,8 @@ import {
   Users,
 } from "lucide-react";
 import { isActivePath } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 import { WorkspaceSwitcher } from "./workspace-switcher";
+import { SidebarGroup, SidebarLink, SidebarSubLink } from "./sidebar-group";
 
 /**
  * Primary navigation sidebar.
@@ -35,12 +36,15 @@ import { WorkspaceSwitcher } from "./workspace-switcher";
  *      - Workspace tabs (vertical): Overview, Planning, Calendar,
  *        Reviews, Social Channels, Brand Kit, Team
  *      - Create content (primary button, bottom of nav)
- *      - Settings, Admin, Help, Workspace Switcher (bottom)
+ *      - Settings (expandable group): Lifecycle, Lead times,
+ *        Assignment defaults, Approval mode, AI assistance
+ *      - Help, Workspace Switcher (bottom)
  *
  *  - On a global page (/app, /app/workspaces, /app/users, ...):
  *      - Brand: logo only
  *      - My Work, Workspaces
  *      - (admin only) User Management, Agency Settings
+ *        (with nested: General, AI configuration)
  *      - Help, Workspace Switcher (bottom)
  *
  * The active path uses `isActivePath` from `src/lib/utils.ts` so the
@@ -152,6 +156,51 @@ export function Sidebar({
             >
               Team
             </SidebarLink>
+
+            <div className="pt-2" />
+
+            <SidebarGroup
+              href={`${wsBase}/settings`}
+              icon={<Settings className="h-4 w-4" />}
+              label="Settings"
+              pathname={pathname}
+              defaultOpen={isActivePath(`${wsBase}/settings`, pathname)}
+              parentTestId="sidebar-settings"
+            >
+              <SidebarSubLink
+                href={`${wsBase}/settings#lifecycle`}
+                active={
+                  pathname === `${wsBase}/settings` &&
+                  !!pathname.match(/#lifecycle$|^\/app\/w\/[^/]+\/settings$/)
+                }
+              >
+                Lifecycle
+              </SidebarSubLink>
+              <SidebarSubLink
+                href={`${wsBase}/settings#lead-times`}
+                active={pathname.includes("/settings") && pathname.endsWith("#lead-times")}
+              >
+                Lead times
+              </SidebarSubLink>
+              <SidebarSubLink
+                href={`${wsBase}/settings#defaults`}
+                active={pathname.includes("/settings") && pathname.endsWith("#defaults")}
+              >
+                Assignment defaults
+              </SidebarSubLink>
+              <SidebarSubLink
+                href={`${wsBase}/settings#approvals`}
+                active={pathname.includes("/settings") && pathname.endsWith("#approvals")}
+              >
+                Approval mode
+              </SidebarSubLink>
+              <SidebarSubLink
+                href={`${wsBase}/ai-settings`}
+                active={isActivePath(`${wsBase}/ai-settings`, pathname)}
+              >
+                <Bot className="h-3.5 w-3.5" aria-hidden="true" /> AI assistance
+              </SidebarSubLink>
+            </SidebarGroup>
           </div>
         ) : (
           <>
@@ -174,13 +223,27 @@ export function Sidebar({
                 >
                   User Management
                 </SidebarLink>
-                <SidebarLink
+                <SidebarGroup
                   href="/app/agency-settings"
                   icon={<Shield className="h-4 w-4" />}
-                  active={isActivePath("/app/agency-settings", pathname)}
+                  label="Agency Settings"
+                  pathname={pathname}
+                  defaultOpen={isActivePath("/app/agency-settings", pathname)}
+                  parentTestId="sidebar-agency-settings"
                 >
-                  Agency Settings
-                </SidebarLink>
+                  <SidebarSubLink
+                    href="/app/agency-settings"
+                    active={isActivePath("/app/agency-settings", pathname, { exact: true })}
+                  >
+                    General
+                  </SidebarSubLink>
+                  <SidebarSubLink
+                    href="/app/agency-settings/ai"
+                    active={isActivePath("/app/agency-settings/ai", pathname)}
+                  >
+                    <Bot className="h-3.5 w-3.5" aria-hidden="true" /> AI configuration
+                  </SidebarSubLink>
+                </SidebarGroup>
               </>
             ) : null}
           </>
@@ -198,26 +261,6 @@ export function Sidebar({
             <Plus className="h-4 w-4" aria-hidden="true" />
             Create content
           </Link>
-        ) : null}
-
-        {inWorkspace ? (
-          <SidebarLink
-            href={`${wsBase}/settings`}
-            icon={<Settings className="h-4 w-4" />}
-            active={isActivePath(`${wsBase}/settings`, pathname)}
-          >
-            Settings
-          </SidebarLink>
-        ) : null}
-
-        {user.isAdmin && inWorkspace ? (
-          <SidebarLink
-            href={`${wsBase}/team`}
-            icon={<Shield className="h-4 w-4" />}
-            active={isActivePath(`${wsBase}/team`, pathname)}
-          >
-            Admin
-          </SidebarLink>
         ) : null}
 
         <SidebarLink
@@ -239,34 +282,6 @@ export function Sidebar({
         </div>
       </div>
     </nav>
-  );
-}
-
-function SidebarLink({
-  href,
-  icon,
-  children,
-  active,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-  active: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "text-body focus-visible:ring-focus-ring flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
-        active ? "bg-primary-subtle text-primary" : "text-fg-primary hover:bg-surface-subtle",
-      )}
-    >
-      <span className={cn(active ? "text-primary" : "text-fg-secondary")} aria-hidden="true">
-        {icon}
-      </span>
-      {children}
-    </Link>
   );
 }
 

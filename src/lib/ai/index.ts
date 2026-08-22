@@ -118,3 +118,85 @@ export async function draftCaption(input: {
   });
   return result?.content ?? null;
 }
+
+/**
+ * Tighten a brief into a Hook → Main message → CTA structure.
+ * Returns a multi-line rewrite the user can copy into the brief
+ * field. Same "draft only — no DB write" rule as the rest of the
+ * AI surface.
+ */
+export async function improveBrief(input: {
+  title: string;
+  brief: string;
+  format: string;
+  audience?: string;
+}): Promise<string | null> {
+  if (!isAiEnabled()) return null;
+  const result = await chat({
+    temperature: 0.6,
+    maxTokens: 600,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a senior social media strategist. Rewrite the brief into three clear lines: " +
+          "'Hook: ...' (one sentence that earns the scroll-stop), 'Main message: ...' (the single thing the audience should remember), " +
+          "'CTA: ...' (the next action you want them to take). Use plain text — no markdown, no preamble, no labels other than the three line prefixes. " +
+          "If the brief is empty, return a placeholder line for each so the user can fill them in.",
+      },
+      {
+        role: "user",
+        content: [
+          `Title: ${input.title}`,
+          `Format: ${input.format}`,
+          input.audience ? `Audience: ${input.audience}` : null,
+          `Brief: ${input.brief || "(empty)"}`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      },
+    ],
+  });
+  return result?.content ?? null;
+}
+
+/**
+ * Score a brief on a 0-100 readiness scale and list the missing
+ * pieces. The human-readable form is meant to be copied into the
+ * "More details" disclosure on the content detail page so the planner
+ * can see what to fix before creative handoff.
+ */
+export async function checkCompleteness(input: {
+  title: string;
+  brief: string;
+  format: string;
+  audience?: string;
+}): Promise<string | null> {
+  if (!isAiEnabled()) return null;
+  const result = await chat({
+    temperature: 0.3,
+    maxTokens: 500,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a creative director reviewing a social-media brief. Return a two-line report: " +
+          "'Score: NN' (0-100) and 'Missing: ...' (comma-separated list of the missing pieces from " +
+          "Hook, Main message, CTA, Audience, Hashtags, References, Scenes, Captions). If the brief is complete, " +
+          "write 'Score: 100' and 'Missing: none'. Plain text, no markdown, no preamble.",
+      },
+      {
+        role: "user",
+        content: [
+          `Title: ${input.title}`,
+          `Format: ${input.format}`,
+          input.audience ? `Audience: ${input.audience}` : null,
+          `Brief: ${input.brief || "(empty)"}`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      },
+    ],
+  });
+  return result?.content ?? null;
+}

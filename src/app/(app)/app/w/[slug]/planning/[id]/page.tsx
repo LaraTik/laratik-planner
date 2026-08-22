@@ -6,7 +6,7 @@ import { getContentItem, UPDATEABLE_STATUSES } from "@/lib/content/service";
 import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
 import { listPublicationsForItem } from "@/lib/publishing/service";
 import { listCommentsForItem } from "@/lib/discussions/service";
-import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { activeAgencyId, hasWorkspaceRole } from "@/lib/auth/policy";
 import { statusBadgeVariant, humanStatus, humanFormat } from "@/lib/content/status";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -15,9 +15,14 @@ import { WorkflowBar } from "./workflow-bar";
 import { DeliverySection } from "./delivery-section";
 import { PublishingSection } from "./publishing-section";
 import { DiscussionSection } from "./discussion-section";
+import { AiAssistanceSection } from "./ai-assistance-section";
 import { Button } from "@/components/ui/button";
 import { EditIdeaButton } from "./edit-button";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import { db } from "@/lib/db";
+import { aiFeatureSettings } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { isAiEnabled } from "@/lib/ai";
 
 export async function generateMetadata({
   params,
@@ -61,6 +66,25 @@ export default async function ContentDetailPage({
       isClientReviewer: actorRoles.isClientReviewer,
     }).catch(() => []),
   ]);
+
+  // AI capability allowlist for the section on this page. Read the
+  // agency feature row once; the section falls back to a "all on"
+  // view when no row exists (default agency on) so the buttons
+  // surface even before an admin saves settings.
+  const agencyId = await activeAgencyId();
+  const aiLive = isAiEnabled();
+  const [feature] = agencyId
+    ? await db
+        .select()
+        .from(aiFeatureSettings)
+        .where(eq(aiFeatureSettings.agencyId, agencyId))
+        .limit(1)
+    : [];
+  const enabledCapabilities = new Set<string>(
+    feature?.enabledCapabilities && feature.enabledCapabilities.length > 0
+      ? feature.enabledCapabilities
+      : ["caption_drafts", "brief_improvement", "completeness_check"],
+  );
 
   return (
     <div className="space-y-6" data-testid="workspace-content-detail">
@@ -122,6 +146,16 @@ export default async function ContentDetailPage({
           </ul>
         )}
       </Card>
+
+      {aiLive ? (
+        <AiAssistanceSection
+          workspaceSlug={slug}
+          contentItemId={item.id}
+          isManager={actorRoles.isManager}
+          isPlanner={actorRoles.isPlanner}
+          enabledCapabilities={enabledCapabilities}
+        />
+      ) : null}
 
       <WorkflowBar
         workspaceSlug={slug}

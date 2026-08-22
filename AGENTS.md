@@ -168,6 +168,35 @@ laratik-planner/
 - ✅ Disk hygiene before deploy: ensure VPS `/` is < 70% (use the vps-ops `disk-cleanup.sh apply` if needed)
 - ✅ Log rotation per container, not just daemon default (already in compose: 10m × 5)
 
+## Settings architecture
+
+Settings is a **nested group in the main sidebar**, not an inline nav inside a settings page. The Stitch design (`2f6acd26`) has 8+ sections; the inline 200px rail we shipped first was a stopgap that made the page feel nested twice. The rules:
+
+- **Workspace manager sidebar** — `Settings` is a top-level expandable group under the workspace tabs. Sub-items live as `SidebarSubLink` inside it. Current sections: `Lifecycle`, `Lead times`, `Assignment defaults`, `Approval mode`, `AI assistance`.
+- **Admin sidebar (global)** — `Agency Settings` is a top-level expandable group under the Admin section. Sub-items: `General` (the existing agency overview) and `AI configuration` (the editable surface at `/app/agency-settings/ai`).
+- **Sections share one page when the data is one row.** Lifecycle / Lead times / Assignment defaults / Approval mode all read from the same `workspace_settings` row and live as anchor fieldsets on `/w/[slug]/settings`. Don't split them into separate routes until the data diverges.
+- **AI lives inside Settings on both sides.** Agency admins configure at `/app/agency-settings/ai`. Workspace managers and planners see a read-only status card at `/w/[slug]/ai-settings` with a link to the agency config. The capability toggles are the agency's, not the workspace's.
+- **New section** = add a `SidebarSubLink` in `src/components/app-shell/sidebar.tsx`, an anchor `id` on a `<Card>` or `<fieldset>` in the page, and the corresponding `Section` shape in the page's data load. Don't add a route unless the section needs its own server-only auth path.
+- **Settings pages are not full-page replacements of the sidebar.** They are scrollable surfaces with the sidebar as the primary nav. The settings page may show a compact "overview strip" linking each section (the current implementation does this), but never a duplicate vertical nav.
+
+## Content `formatPayload` rule
+
+Per StudioFlow §11/§17/§23: Quick Create has exactly 4 fields (title, format, planned date, short brief). Format-specific structured fields (Hook, Main message, CTA, scenes, captions, references, etc.) live in `content_item.format_payload` (jsonb) and are edited under a **More details** disclosure on the content detail page.
+
+- Do NOT add columns to `content_item` for these fields. The schema is already jsonb-shaped (§8: "default `{ schemaVersion: 1 }` enforced in service"). Adding columns duplicates the JSONB, breaks the format-driven UX, and requires a backfill migration.
+- The per-format schemas are the source of truth: see `docs/content/format-payload-schemas.md`. Update that file when a format gains a field; the implementation derives from it.
+- The `brief` field is a one-line text intent. It is separate from `formatPayload` (the structured creative contract). Rewriting the brief for clarity does not reset creative's notes, and vice versa.
+
+## AI integration
+
+Per StudioFlow §15:
+
+- **Configuration is agency-level.** Key in `ai_feature_setting.agency_id` (PK). The full API key is NEVER stored in this table — only a 4-character masked suffix when the key is a managed secret. Default `key_source` is `environment`. The UI only shows provider, model, last-test result, 30-day usage, and capability toggles.
+- **Six capabilities** defined in §15: `campaign_ideas`, `brief_improvement`, `caption_drafts`, `platform_adaptation`, `related_format_ideas`, `completeness_check`. The current end-to-end set is `caption_drafts` + `brief_improvement` + `completeness_check`. The other three return `501` from `/api/ai/generate` until implemented; do NOT silently fall back to a different capability.
+- **Drafts only.** The route returns a `text` field; the user is responsible for `Insert / Replace / Copy / Try Again`. The route never writes to the DB on the user's behalf. `ai_usage_event.capability` records which capability was used.
+- **Allowlist is server-enforced.** The agency's `enabled_capabilities` is the gate. The route returns `403` for a disabled capability. The UI hides the button but the server is the source of truth.
+- **Capability allowlist is the full set** (not the 3 working ones). Disabling `brief_improvement` in agency settings hides the button on the content detail page. The allowlist size is what the agency admin sees, not what is currently implemented.
+
 ## Goal progress (live)
 
 | #   | Goal                                                        | Status | Notes                                                                                                                                |
@@ -217,6 +246,7 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 - `docs/visual-parity/MCP.md` — how to refresh the captured Stitch copy from the live MCP (auth, tools, gotchas, commit recipe)
 - `docs/production-readiness/DESIGN_AUDIT.md` — structural audit that drove the M2/M3 refactor
 - `docs/production-readiness/SCREEN_PARITY.md` — 27-row matrix tracking each Stitch screen against a laratik-planner route; the responsive matrix (23 unique routes × 6 viewports = 138 baselines) lives in `tests/e2e/visual-regression.spec.ts` and is gated by `tests/unit/stitch-cases.test.ts`
+- `docs/content/format-payload-schemas.md` — per-format `formatPayload` jsonb schemas (the structured fields under "More details")
 - `designs/stitch/DESIGN.md` — the captured token reference (color/typography/spacing)
 
 <!-- BEGIN:nextjs-agent-rules -->

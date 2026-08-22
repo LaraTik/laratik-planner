@@ -3,9 +3,9 @@ import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { activeAgencyId, hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
-import { aiUsageEvents, contentItems, workspaces } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { draftCaption, isAiEnabled } from "@/lib/ai";
+import { aiFeatureSettings, aiUsageEvents, contentItems, workspaces } from "@/lib/db/schema";
+import { and, eq } from "drizzle-orm";
+import { checkCompleteness, draftCaption, improveBrief, isAiEnabled } from "@/lib/ai";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { publicProviderError } from "@/lib/security/public-error";
 import { randomUUID } from "node:crypto";
@@ -15,15 +15,38 @@ import { logError } from "@/lib/observability/logger";
 /**
  * POST /api/ai/generate
  *
- * Body: { contentItemId }
- * Auth: signed in + workspace member
+ * Body: { contentItemId, capability? }
+ *   - capability: one of the §15 capabilities
+ *       "caption_drafts"        (default — backwards compatible)
+ *       "brief_improvement"
+ *       "completeness_check"
+ *       "platform_adaptation"   (not yet implemented)
+ *       "campaign_ideas"        (not yet implemented)
+ *       "related_format_ideas"  (not yet implemented)
  *
- * Returns a generated caption draft. The user is responsible for saving
- * it (we never auto-write to the DB — master prompt §0.13 "AI never
- * bypasses human control").
+ * Auth: signed in + workspace member with manager or planner role.
+ * The agency feature-settings `enabledCapabilities` allowlist is the
+ * authoritative gate; the route refuses a capability that is off.
+ *
+ * Returns a draft text only — the user is responsible for saving it
+ * (we never auto-write to the DB — master prompt §0.13 "AI never
+ * bypasses human control"). The route also writes a usage event with
+ * the capability name so the agency-level usage card can break down
+ * counts by capability.
  */
 const Body = z.object({
   contentItemId: z.string().uuid(),
+  capability: z
+    .enum([
+      "caption_drafts",
+      "brief_improvement",
+      "completeness_check",
+      "platform_adaptation",
+      "campaign_ideas",
+      "related_format_ideas",
+    ])
+    .optional()
+    .default("caption_drafts"),
 });
 
 export async function POST(req: NextRequest) {
@@ -57,6 +80,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Capability allowlist — refuse if the agency has not enabled it.
+  const [feature] = await db
+    .select()
+    .from(aiFeatureSettings)
+    .where(eq(aiFeatureSettings.agencyId, agencyId))
+    .limit(1);
+  const allowed = new Set(feature?.enabledCapabilities ?? []);
+  if (allowed.size > 0 && !allowed.has(parsed.data.capability)) {
+    return NextResponse.json(
+      {
+        error: `Capability "${parsed.data.capability}" is disabled in agency settings.`,
+      },
+      { status: 403 },
+    );
+  }
+
   const [item] = await db
     .select()
     .from(contentItems)
@@ -83,13 +122,34 @@ export async function POST(req: NextRequest) {
 
   try {
     const usageRequestId = requestId ?? randomUUID();
-    const caption = await draftCaption({
+    const baseInput = {
       title: item.title,
       brief: item.brief,
       format: item.format,
       audience: ws.name,
-    });
-    if (!caption) {
+    };
+    let text: string | null = null;
+    switch (parsed.data.capability) {
+      case "caption_drafts":
+        text = await draftCaption(baseInput);
+        break;
+      case "brief_improvement":
+        text = await improveBrief(baseInput);
+        break;
+      case "completeness_check":
+        text = await checkCompleteness(baseInput);
+        break;
+      case "platform_adaptation":
+      case "campaign_ideas":
+      case "related_format_ideas":
+        return NextResponse.json(
+          { error: `Capability "${parsed.data.capability}" is not yet implemented.` },
+          { status: 501 },
+        );
+      default:
+        return NextResponse.json({ error: "Unknown capability" }, { status: 400 });
+    }
+    if (!text) {
       return NextResponse.json({ error: "AI returned no result" }, { status: 502 });
     }
     await db.insert(aiUsageEvents).values({
@@ -97,13 +157,13 @@ export async function POST(req: NextRequest) {
       workspaceId: ws.id,
       contentItemId: item.id,
       userId: session.user.id,
-      capability: "caption_draft",
+      capability: parsed.data.capability,
       model: serverEnv.MINIMAX_MODEL,
       requestId: usageRequestId,
       succeeded: true,
       contextManifest: { categories: ["title", "brief", "format", "workspace_name"] },
     });
-    return NextResponse.json({ caption });
+    return NextResponse.json({ text, capability: parsed.data.capability });
   } catch (e) {
     logError("ai.provider_failed", {
       cause: e,
@@ -114,3 +174,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: publicProviderError("ai", e).message }, { status: 502 });
   }
 }
+
+// silence unused import warning for the `and` helper that may be used
+// by future capability additions (kept here so the import surface is
+// stable for unit tests that mock the schema queries).
+void and;
