@@ -23,7 +23,12 @@ export default defineConfig({
   testIgnore: ["**/_helpers.ts"], // shared helpers — not test files
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // Visual-capture retries: the capture step is best-effort and runs
+  // with PW_VISUAL_CAPTURE=1, so retrying a broken route twice only
+  // burns the 25-min job budget. The compare step (no flag set) keeps
+  // the 2-retry budget so flaky network conditions get a second
+  // chance before the build fails.
+  retries: process.env.CI && process.env.PW_VISUAL_CAPTURE !== "1" ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? "github" : "list",
   timeout: 30_000,

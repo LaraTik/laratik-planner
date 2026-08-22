@@ -51,7 +51,7 @@ export default async function ReviewsQueuePage({ params }: { params: Promise<{ s
   const overdueCount = rows.filter((r) => r.dueAt && r.dueAt < new Date()).length;
   const nowMs = new Date().getTime();
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="reviews-kpi-row">
       <PageHeader
         eyebrow={workspace.name}
         title="Reviews queue"
