@@ -119,6 +119,35 @@ export const bootstrapLocks = pgTable("bootstrap_lock", {
     .default(sql`now()`),
 });
 
+// ─── platform_administrator ────────────────────────────────────────────────
+// Milestone 1.1 (M1.1) — platform-level authority that is **separate from**
+// agency-level authority. A platform admin can manage agencies (create,
+// suspend, change plans) without being a member of any specific agency.
+// Platform routes (M2) gate on this table; they must NOT acquire tenant
+// content access automatically.
+//
+// `user_id` is the primary key: at most one live grant per user.
+// `revoked_at` is the soft-revocation timestamp — kept forever for audit
+// trail of "who was ever a platform admin". The `isPlatformAdmin` helper
+// filters `revoked_at IS NULL` so revoked admins are not live admins.
+// No `agency_id` column: platform authority is global, not per-agency
+// (see plan §1.1; the absence is intentional).
+export const platformAdministrators = pgTable(
+  "platform_administrator",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    grantedBy: uuid("granted_by").references(() => users.id, { onDelete: "set null" }),
+    grantedAt: timestamp("granted_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "date" }),
+    reason: text("reason"),
+  },
+  (t) => [index("platform_administrator_granted_at_idx").on(t.grantedAt)],
+);
+
 // ─── accounts / sessions / verificationTokens (NextAuth Drizzle adapter) ───
 // Re-exported here for completeness; the actual shape comes from
 // @auth/drizzle-adapter's default Postgres schema, but we customize the
