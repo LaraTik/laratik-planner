@@ -6,7 +6,9 @@ import { getContentItem, UPDATEABLE_STATUSES } from "@/lib/content/service";
 import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
 import { listPublicationsForItem } from "@/lib/publishing/service";
 import { listCommentsForItem } from "@/lib/discussions/service";
-import { activeAgencyId, hasWorkspaceRole } from "@/lib/auth/policy";
+import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { currentActor } from "@/lib/auth/current-actor";
 import { statusBadgeVariant, humanStatus, humanFormat } from "@/lib/content/status";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -40,29 +42,29 @@ export default async function ContentDetailPage({
   const { slug, id } = await params;
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
+  const actor = await currentActor();
+  if (!actor) redirect("/signin");
 
-  const ws = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  const ws = await getAccessibleWorkspace(actor, slug);
   if (!ws) notFound();
 
-  const item = await getContentItem({ id: session.user.id }, id);
+  const item = await getContentItem(actor, id);
   if (!item || item.workspaceId !== ws.id) notFound();
 
   const actorRoles = {
-    isManager: await hasWorkspaceRole({ id: session.user.id }, ws.id, ["workspace_manager"]),
-    isPlanner: await hasWorkspaceRole({ id: session.user.id }, ws.id, ["content_planner"]),
-    isDesigner: await hasWorkspaceRole({ id: session.user.id }, ws.id, ["designer"]),
-    isInternalReviewer: await hasWorkspaceRole({ id: session.user.id }, ws.id, [
-      "internal_reviewer",
-    ]),
-    isClientReviewer: await hasWorkspaceRole({ id: session.user.id }, ws.id, ["client_reviewer"]),
-    isPublisher: await hasWorkspaceRole({ id: session.user.id }, ws.id, ["publisher"]),
+    isManager: await hasWorkspaceRole(actor, ws.id, ["workspace_manager"]),
+    isPlanner: await hasWorkspaceRole(actor, ws.id, ["content_planner"]),
+    isDesigner: await hasWorkspaceRole(actor, ws.id, ["designer"]),
+    isInternalReviewer: await hasWorkspaceRole(actor, ws.id, ["internal_reviewer"]),
+    isClientReviewer: await hasWorkspaceRole(actor, ws.id, ["client_reviewer"]),
+    isPublisher: await hasWorkspaceRole(actor, ws.id, ["publisher"]),
   };
 
   const [approvals, publications, discussionComments, deliveries] = await Promise.all([
-    listApprovalsForItem({ id: session.user.id }, id),
-    listPublicationsForItem({ id: session.user.id }, id).catch(() => []),
-    listCommentsForItem({ id: session.user.id }, id).catch(() => []),
-    listDeliveryVersionsForItem({ id: session.user.id }, id, {
+    listApprovalsForItem(actor, id),
+    listPublicationsForItem(actor, id).catch(() => []),
+    listCommentsForItem(actor, id).catch(() => []),
+    listDeliveryVersionsForItem(actor, id, {
       isClientReviewer: actorRoles.isClientReviewer,
     }).catch(() => []),
   ]);
@@ -77,7 +79,7 @@ export default async function ContentDetailPage({
   // passing one across the server→client boundary throws "An error
   // occurred in the Server Components render" (minified to React
   // error #441) in production builds.
-  const agencyId = await activeAgencyId();
+  const agencyId = (await resolveActiveAgencyContext({ actor }))?.agencyId ?? null;
   const aiLive = isAiEnabled();
   const [feature] = agencyId
     ? await db
@@ -222,7 +224,7 @@ export default async function ContentDetailPage({
           editedAt: c.editedAt ? c.editedAt.toISOString() : null,
           resolvedAt: c.resolvedAt ? c.resolvedAt.toISOString() : null,
         }))}
-        currentUserId={session.user.id}
+        currentUserId={actor.id}
         roles={actorRoles}
         canPostInternal={
           actorRoles.isManager ||

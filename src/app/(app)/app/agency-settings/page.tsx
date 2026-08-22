@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
+import { isAgencyAdmin } from "@/lib/auth/policy";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { currentActor } from "@/lib/auth/current-actor";
 import { redirect } from "next/navigation";
 import { ArrowLeft, Building2, KeyRound, Server } from "lucide-react";
 import { db } from "@/lib/db";
@@ -32,9 +34,12 @@ export const metadata = { title: "Agency Settings" };
 export default async function AgencySettingsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
-  const agencyId = await activeAgencyId();
+  const actor = await currentActor();
+  if (!actor) redirect("/signin");
+  const ctx = await resolveActiveAgencyContext({ actor });
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) redirect("/setup");
-  if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
+  if (!(await isAgencyAdmin(actor, agencyId))) {
     return (
       <div className="space-y-4" data-testid="agency-settings-forbidden">
         <PageHeader

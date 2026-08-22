@@ -206,7 +206,31 @@ async function workspaceIdForContent(contentItemId: string): Promise<string> {
   return row.workspaceId;
 }
 
-/** Active agency singleton (master prompt §8 invariant). */
+/**
+ * Active agency singleton (master prompt §8 invariant).
+ *
+ * @deprecated M1.6 — this helper assumes there is exactly one agency
+ * in the system (the "singleton"). In a multi-agency deployment the
+ * active agency is per-actor, not global. Replace callsites with:
+ *
+ *   const actor = await currentActor();
+ *   const { agencyId } = await resolveActiveAgencyContext({ actor });
+ *   if (!agencyId) { /* route decides what to do *\/ }
+ *
+ * This export is retained for two narrow bootstrap paths that have
+ * NOT yet been migrated to the resolver (and are explicitly out of
+ * scope for M1.6):
+ *   1. `src/app/setup/page.tsx` — the first-agency-admin wizard
+ *      exists BEFORE any user is an "actor" in the multi-agency
+ *      sense (the actor becomes the first agency admin only after
+ *      the wizard completes). The singleton check is correct here.
+ *   2. `src/app/api/bootstrap/status|routes.ts` — same reason.
+ *   3. The migration's compatibility check (see M1.7) reads the
+ *      singleton as the "legacy" agency to be backfilled.
+ *
+ * Do NOT introduce NEW callsites. New code MUST go through
+ * `resolveActiveAgencyContext` + `currentActor`.
+ */
 export async function activeAgencyId(): Promise<string | null> {
   const [a] = await db
     .select({ id: agencies.id })

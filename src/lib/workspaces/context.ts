@@ -3,15 +3,16 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { workspaceMemberships, workspaces } from "@/lib/db/schema";
 import {
-  activeAgencyId,
   canAccessClientWorkspace,
   canAccessInternalWorkspace,
   isAgencyAdmin,
   type Actor,
 } from "@/lib/auth/policy";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 
-async function findWorkspaceBySlug(slug: string) {
-  const agencyId = await activeAgencyId();
+async function findWorkspaceBySlug(actor: Actor, slug: string) {
+  const ctx = await resolveActiveAgencyContext({ actor });
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) return null;
   const [workspace] = await db
     .select()
@@ -22,13 +23,13 @@ async function findWorkspaceBySlug(slug: string) {
 }
 
 export async function getAccessibleWorkspace(actor: Actor, slug: string) {
-  const workspace = await findWorkspaceBySlug(slug);
+  const workspace = await findWorkspaceBySlug(actor, slug);
   if (!workspace || !(await canAccessInternalWorkspace(actor, workspace.id))) return null;
   return workspace;
 }
 
 export async function getClientWorkspace(actor: Actor, slug: string) {
-  const workspace = await findWorkspaceBySlug(slug);
+  const workspace = await findWorkspaceBySlug(actor, slug);
   if (!workspace || !(await canAccessClientWorkspace(actor, workspace.id))) return null;
   return workspace;
 }
@@ -46,7 +47,8 @@ export type SwitcherWorkspace = { id: string; name: string; slug: string };
 export async function listSwitcherWorkspaces(
   actor: Actor,
 ): Promise<{ options: SwitcherWorkspace[]; isAdmin: boolean }> {
-  const agencyId = await activeAgencyId();
+  const ctx = await resolveActiveAgencyContext({ actor });
+  const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) return { options: [], isAdmin: false };
   const isAdmin = await isAgencyAdmin(actor, agencyId);
 
