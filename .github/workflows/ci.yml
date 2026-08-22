@@ -21,6 +21,14 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Nightly SMTP cert-expiry check (independent of push activity). Uses
+  # the same `check-smtp-cert` script the deploy-gate job runs, so the
+  # contract is identical. Schedule is UTC; 06:00 UTC = 08:00 CET / 07:00
+  # GMT in Europe, which catches European business hours. See the
+  # `check-smtp-cert` job and `scripts/vps/check-smtp-cert.sh` for the
+  # thresholds (warn 30d, critical 14d).
+  schedule:
+    - cron: "0 6 * * *"
 
 # Cancel in-flight runs of the same branch / PR
 concurrency:
@@ -247,3 +255,64 @@ jobs:
           cat /tmp/ready.json 2>/dev/null || true
           echo "─── end /api/health/ready body ───"
         timeout-minutes: 5
+
+  check-smtp-cert:
+    # Gates deploys on the production SMTP cert not being within 14
+    # days of expiry. Why this is a deploy-gate job: the moment the cert
+    # expires, every Nodemailer send (invitation resend, magic-link
+    # sign-in, password reset) starts surfacing the raw OpenSSL error
+    # "certificate has expired" to the user. We caught it the hard way
+    # on 2026-08-22 when the let's-encrypt E7 cert for mail.laratik.com
+    # silently went 1 day past notAfter because the ACME container's
+    # renewal cron was paused. See `scripts/vps/renew-smtp-cert.sh` for
+    # the on-VPS remediation.
+    #
+    # Exit code contract (see scripts/vps/check-smtp-cert.sh):
+    #   0 = healthy (>30d remaining)
+    #   1 = warning (14-30d remaining) — soft fail, logs but does not
+    #       break the deploy gate
+    #   2 = critical (<14d remaining) — hard fail, blocks the deploy
+    #       AND pages on-call via the workflow failure notification
+    #   3 = TLS handshake / parse error — hard fail
+    name: SMTP cert expiry check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        timeout-minutes: 5
+
+      - name: Install openssl (preinstalled on ubuntu-latest, but be explicit)
+        run: sudo apt-get update && sudo apt-get install -y openssl ca-certificates
+        timeout-minutes: 3
+
+      - name: Run cert-expiry probe (always log JSON, never fail this step)
+        # Writes a single JSON line to /tmp/cert.json; the next step
+        # reads it for the gate decision.
+        id: probe
+        run: |
+          set +e
+          SMTP_HOST=mail.laratik.com SMTP_PORT=465 \
+            ./scripts/vps/check-smtp-cert.sh --warn 30 --critical 14 | tee /tmp/cert.json
+          echo "exit=$?" | tee -a /tmp/cert.json
+          exit 0
+        timeout-minutes: 2
+
+      - name: Gate on critical expiry
+        # Re-run the script and propagate its exit code as the job
+        # result. Exit 2 (critical) or 3 (TLS error) fail the job; exit
+        # 1 (warn) is allowed to pass — it pages but does not block.
+        run: |
+          SMTP_HOST=mail.laratik.com SMTP_PORT=465 \
+            ./scripts/vps/check-smtp-cert.sh --warn 30 --critical 14 > /dev/null
+        timeout-minutes: 2
+
+      - name: Annotate run with cert status (for the GH Actions UI)
+        # Always succeed; just surfaces the JSON in the GH Actions run
+        # summary so on-call can read it without re-running locally.
+        if: always()
+        run: |
+          echo "## SMTP cert status" >> $GITHUB_STEP_SUMMARY
+          cat /tmp/cert.json 2>/dev/null >> $GITHUB_STEP_SUMMARY \
+            || echo '{"note":"cert.json not produced (probe step skipped)"}' >> $GITHUB_STEP_SUMMARY
+        timeout-minutes: 1

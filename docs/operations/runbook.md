@@ -319,13 +319,70 @@ critical CI subset is green; it does not re-run e2e against the VPS.
 
 ## Troubleshooting
 
-| Symptom                              | First check                                        | Fix                                                                                                                            |
-| ------------------------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `502 Bad Gateway` from Traefik       | `docker compose ps` — is the app up?               | `docker compose up -d --no-deps app`                                                                                           |
-| `db: down` in `/api/health`          | `docker compose logs postgres`                     | Check `pgdata` volume, `POSTGRES_PASSWORD` in `.env`                                                                           |
-| `ok: false` in `/api/health`         | Same as above                                      |                                                                                                                                |
-| Health check passes but UI is broken | `docker compose logs --tail=200 app`               | Likely a code issue — pull logs and diagnose                                                                                   |
-| Stuck deploy                         | `docker compose ps` + `docker image ls`            | `docker image prune -f`, then `./scripts/deploy.sh` again                                                                      |
-| Out of disk                          | `df -h /`                                          | `disk-cleanup.sh apply` (see above)                                                                                            |
-| Magic link not arriving              | Mailcow queue: `https://mail.laratik.com/` → Queue | Check `SMTP_USER` + `SMTP_PASSWORD`, then `docker compose logs app                                                             | grep email` |
-| Google OAuth fails                   | Google Cloud Console → OAuth client                | Check `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`, redirect URI must be `https://planner.laratik.com/api/auth/callback/google` |
+| Symptom                                                             | First check                                        | Fix                                                                                                                            |
+| ------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `502 Bad Gateway` from Traefik                                      | `docker compose ps` — is the app up?               | `docker compose up -d --no-deps app`                                                                                           |
+| `db: down` in `/api/health`                                         | `docker compose logs postgres`                     | Check `pgdata` volume, `POSTGRES_PASSWORD` in `.env`                                                                           |
+| `ok: false` in `/api/health`                                        | Same as above                                      |                                                                                                                                |
+| Health check passes but UI is broken                                | `docker compose logs --tail=200 app`               | Likely a code issue — pull logs and diagnose                                                                                   |
+| Stuck deploy                                                        | `docker compose ps` + `docker image ls`            | `docker image prune -f`, then `./scripts/deploy.sh` again                                                                      |
+| Out of disk                                                         | `df -h /`                                          | `disk-cleanup.sh apply` (see above)                                                                                            |
+| Magic link not arriving                                             | Mailcow queue: `https://mail.laratik.com/` → Queue | Check `SMTP_USER` + `SMTP_PASSWORD`, then `docker compose logs app                                                             | grep email` |
+| Google OAuth fails                                                  | Google Cloud Console → OAuth client                | Check `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`, redirect URI must be `https://planner.laratik.com/api/auth/callback/google` |
+| "certificate has expired" on /signin, /app/users, or password reset | `./scripts/vps/check-smtp-cert.sh`                 | See [SMTP certificate management](#smtp-certificate-management) below                                                          |
+
+## SMTP certificate management
+
+The production SMTP transport (Nodemailer → Mailcow at `mail.laratik.com:465`) uses a Let's Encrypt certificate served by Mailcow's built-in ACME client (or the `acme-companion` sidecar, depending on the install). If that cert expires without being renewed, every email send surfaces the raw OpenSSL error `"certificate has expired"` to the user — including invitation resend, magic-link sign-in, password reset, and any future notification/digest email.
+
+We hit this on **2026-08-22** when the Let's Encrypt E7 cert for `mail.laratik.com` went 1 day past `notAfter` because the ACME container's renewal cron was paused. The CI gate below now catches this scenario before it can break production.
+
+### Health check (gating)
+
+The CI job [`check-smtp-cert`](../../.github/workflows/ci.yml) runs `scripts/vps/check-smtp-cert.sh` against `mail.laratik.com:465` on every push to `main`, every PR, and once per day via `cron: "0 6 * * *"`. Exit codes:
+
+| Exit | Days remaining | Behavior                                                                                 |
+| ---- | -------------- | ---------------------------------------------------------------------------------------- |
+| `0`  | > 30           | Job passes, deploy is unblocked                                                          |
+| `1`  | 14–30          | Job passes (warning), but CI log + run summary surface the cert status for visibility    |
+| `2`  | < 14           | Job **fails**, deploy is blocked, on-call is paged via the workflow failure notification |
+| `3`  | n/a            | TLS handshake / cert parse error — job **fails**                                         |
+
+The job's run summary always carries the full JSON (`status`, `daysLeft`, `notAfter`, `subject`, `issuer`) so the on-call can read it without re-running locally.
+
+### Remediation: how to renew
+
+If `check-smtp-cert` fails (or you receive the daily cron email), SSH to laratik-vps and run:
+
+```bash
+ssh laratik-vps
+cd /opt/laratik-planner
+git pull
+./scripts/vps/renew-smtp-cert.sh
+```
+
+The script:
+
+1. **Auto-detects the ACME client** — tries Mailcow's bundled `acme.sh` first, falls back to `acme-companion`'s `/app/force_renew` (or `certbot` inside the container).
+2. **Force-renews** the `mail.laratik.com` cert.
+3. **Restarts** `postfix-mailcow` + `nginx-mailcow` so the new cert is picked up immediately (Mailcow's containers only re-read the cert on restart).
+4. **Verifies** by re-running `check-smtp-cert.sh` with relaxed thresholds (warn 60 / critical 30) — the script prints `✅ Cert verified` if the new cert is > 60 days out.
+
+If the script reports a renewal failure, the underlying cause is almost always one of:
+
+- **ACME cron paused** (most common): the container's internal cron stopped after a Mailcow update or a manual restart. Fix with `docker restart <acme-container>` and watch `docker logs --tail 200 <acme-container> | grep -i renew` for the next 5 minutes.
+- **DNS-01 challenge failure**: the API token (Cloudflare / Hetzner / etc.) inside the ACME container has expired. Re-issue the token and re-run the script.
+- **HTTP-01 challenge failure**: port 80 inbound to the VPS is blocked at the firewall. Check the Mailcow UI's `acme.sh` log for the exact reason.
+
+### Local cron (recommended)
+
+Add the following entry to the VPS-side root crontab so you receive an email alert 30/14/7 days before expiry, even if CI is somehow down:
+
+```cron
+# Daily SMTP cert-expiry check at 07:30 UTC. Exit 1 = warn (14-30d), exit 2 = critical (<14d).
+# Cron only mails the local root user when the command exits non-zero, so this gives you
+# exactly the warning tiers you want without extra plumbing.
+30 7 * * * /opt/laratik-planner/scripts/vps/check-smtp-cert.sh >/dev/null
+```
+
+`cron` on the VPS already delivers root's mail to a reachable address (see the existing `monitoring` block in vps-ops `gitops`). The exit-code-as-severity pattern is the simplest reliable alerting without an external dependency.
