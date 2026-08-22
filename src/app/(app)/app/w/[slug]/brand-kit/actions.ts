@@ -19,6 +19,10 @@ import {
   archiveBrandPublishingRule,
   createBrandLinkedResource,
   createBrandPublishingRule,
+  restoreBrandAsset,
+  restoreBrandVoiceRule,
+  restoreBrandPublishingRule,
+  restoreBrandLinkedResource,
 } from "@/lib/brand/service";
 
 /**
@@ -313,5 +317,83 @@ export async function archiveLinkedResourceAction(slug: string, resourceId: stri
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [...BRAND_MANAGER_ROLES])))
     return;
   await archiveBrandLinkedResource({ id: session.user.id }, workspace.id, resourceId);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+}
+
+// ─── Restore actions (Round 4) ────────────────────────────────────────────
+//
+// Each `restoreXAction` mirrors its `archiveXAction` and is invoked from
+// the Sonner "Undo" affordance after a soft-delete. The actions flip
+// `archived_at` back to `null` via the service layer (which enforces the
+// same role check as the archive path) and revalidate the page so the
+// row reappears in its section grid.
+//
+// Permissions are identical to the archive path: brand-manager roles
+// (workspace_manager / content_planner) for publishing rules + linked
+// resources, workspace_manager only for assets + voice rules.
+
+export async function restoreColorAssetAction(slug: string, assetId: string): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return;
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
+    return;
+  await restoreBrandAsset({ id: session.user.id }, workspace.id, assetId);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+}
+
+export async function restoreLogoAssetAction(slug: string, assetId: string): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return;
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
+    return;
+  await restoreBrandAsset({ id: session.user.id }, workspace.id, assetId);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+}
+
+export async function restoreFontAssetAction(slug: string, assetId: string): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return;
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
+    return;
+  await restoreBrandAsset({ id: session.user.id }, workspace.id, assetId);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+}
+
+export async function restoreVoiceRuleAction(slug: string, ruleId: string): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return;
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
+    return;
+  await restoreBrandVoiceRule({ id: session.user.id }, workspace.id, ruleId);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+}
+
+export async function restorePublishingRuleAction(slug: string, ruleId: string): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return;
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [...BRAND_MANAGER_ROLES])))
+    return;
+  await restoreBrandPublishingRule({ id: session.user.id }, workspace.id, ruleId);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+}
+
+export async function restoreLinkedResourceAction(slug: string, resourceId: string): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return;
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [...BRAND_MANAGER_ROLES])))
+    return;
+  await restoreBrandLinkedResource({ id: session.user.id }, workspace.id, resourceId);
   revalidatePath(`/app/w/${slug}/brand-kit`);
 }

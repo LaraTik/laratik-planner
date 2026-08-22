@@ -7,6 +7,7 @@ import {
   brandPublishingRules,
   brandVoiceRules,
   contentPillars,
+  users,
 } from "@/lib/db/schema";
 import { hasWorkspaceRole, PermissionDeniedError, type Actor } from "@/lib/auth/policy";
 import type {
@@ -55,11 +56,13 @@ export async function listBrandAssets(
 
 export async function listBrandVoiceRules(
   workspaceId: string,
-  opts?: { ruleType?: BrandVoiceRuleType },
+  opts?: { ruleType?: BrandVoiceRuleType; includeArchived?: boolean },
 ): Promise<BrandVoiceRuleRow[]> {
-  const where = opts?.ruleType
-    ? and(eq(brandVoiceRules.workspaceId, workspaceId), eq(brandVoiceRules.ruleType, opts.ruleType))
-    : eq(brandVoiceRules.workspaceId, workspaceId);
+  const workspaceCond = eq(brandVoiceRules.workspaceId, workspaceId);
+  const archivedCond = !opts?.includeArchived ? isNull(brandVoiceRules.archivedAt) : undefined;
+  const ruleTypeCond = opts?.ruleType ? eq(brandVoiceRules.ruleType, opts.ruleType) : undefined;
+  const where =
+    archivedCond || ruleTypeCond ? and(workspaceCond, archivedCond, ruleTypeCond) : workspaceCond;
   return db
     .select()
     .from(brandVoiceRules)
@@ -132,6 +135,24 @@ export async function archiveLogoAsset(
     .where(and(eq(brandAssets.id, assetId), eq(brandAssets.workspaceId, workspaceId)));
 }
 
+export async function restoreLogoAsset(
+  actor: Actor,
+  workspaceId: string,
+  assetId: string,
+): Promise<void> {
+  await requireManager(actor, workspaceId, "restore logo asset");
+  await db
+    .update(brandAssets)
+    .set({ archivedAt: null, updatedAt: new Date() })
+    .where(
+      and(
+        eq(brandAssets.id, assetId),
+        eq(brandAssets.workspaceId, workspaceId),
+        eq(brandAssets.kind, "logo"),
+      ),
+    );
+}
+
 /**
  * Round 2 typed wrappers for the font variant. Mirrors
  * `createLogoAsset`/`archiveLogoAsset` above.
@@ -174,6 +195,24 @@ export async function archiveFontAsset(
     .where(and(eq(brandAssets.id, assetId), eq(brandAssets.workspaceId, workspaceId)));
 }
 
+export async function restoreFontAsset(
+  actor: Actor,
+  workspaceId: string,
+  assetId: string,
+): Promise<void> {
+  await requireManager(actor, workspaceId, "restore font asset");
+  await db
+    .update(brandAssets)
+    .set({ archivedAt: null, updatedAt: new Date() })
+    .where(
+      and(
+        eq(brandAssets.id, assetId),
+        eq(brandAssets.workspaceId, workspaceId),
+        eq(brandAssets.kind, "font"),
+      ),
+    );
+}
+
 export async function archiveBrandAsset(
   actor: Actor,
   workspaceId: string,
@@ -183,6 +222,18 @@ export async function archiveBrandAsset(
   await db
     .update(brandAssets)
     .set({ archivedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(brandAssets.id, assetId), eq(brandAssets.workspaceId, workspaceId)));
+}
+
+export async function restoreBrandAsset(
+  actor: Actor,
+  workspaceId: string,
+  assetId: string,
+): Promise<void> {
+  await requireManager(actor, workspaceId, "restore brand asset");
+  await db
+    .update(brandAssets)
+    .set({ archivedAt: null, updatedAt: new Date() })
     .where(and(eq(brandAssets.id, assetId), eq(brandAssets.workspaceId, workspaceId)));
 }
 
@@ -207,11 +258,25 @@ export async function archiveBrandVoiceRule(
   ruleId: string,
 ): Promise<void> {
   await requireManager(actor, workspaceId, "archive brand voice rule");
-  // `brand_voice_rules` has no `archivedAt` column (see channels.ts:73)
-  // — we hard-delete and rely on FK cascade + audit log if needed in
-  // a later round. For now, the only safe operation is remove.
+  // Soft-archive (migration 0006 added `archived_at`). The page uses
+  // `listBrandVoiceRules` with the default `includeArchived: false`,
+  // so an archived rule disappears from the section immediately; the
+  // undo toast can call `restoreBrandVoiceRule` to bring it back.
   await db
-    .delete(brandVoiceRules)
+    .update(brandVoiceRules)
+    .set({ archivedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(brandVoiceRules.id, ruleId), eq(brandVoiceRules.workspaceId, workspaceId)));
+}
+
+export async function restoreBrandVoiceRule(
+  actor: Actor,
+  workspaceId: string,
+  ruleId: string,
+): Promise<void> {
+  await requireManager(actor, workspaceId, "restore brand voice rule");
+  await db
+    .update(brandVoiceRules)
+    .set({ archivedAt: null, updatedAt: new Date() })
     .where(and(eq(brandVoiceRules.id, ruleId), eq(brandVoiceRules.workspaceId, workspaceId)));
 }
 
@@ -303,6 +368,20 @@ export async function archiveBrandPublishingRule(
     );
 }
 
+export async function restoreBrandPublishingRule(
+  actor: Actor,
+  workspaceId: string,
+  ruleId: string,
+): Promise<void> {
+  await requireBrandManager(actor, workspaceId, "restore brand publishing rule");
+  await db
+    .update(brandPublishingRules)
+    .set({ archivedAt: null, updatedAt: new Date() })
+    .where(
+      and(eq(brandPublishingRules.id, ruleId), eq(brandPublishingRules.workspaceId, workspaceId)),
+    );
+}
+
 export async function createBrandLinkedResource(
   actor: Actor,
   workspaceId: string,
@@ -338,6 +417,23 @@ export async function archiveBrandLinkedResource(
     );
 }
 
+export async function restoreBrandLinkedResource(
+  actor: Actor,
+  workspaceId: string,
+  resourceId: string,
+): Promise<void> {
+  await requireBrandManager(actor, workspaceId, "restore brand linked resource");
+  await db
+    .update(brandLinkedResources)
+    .set({ archivedAt: null, updatedAt: new Date() })
+    .where(
+      and(
+        eq(brandLinkedResources.id, resourceId),
+        eq(brandLinkedResources.workspaceId, workspaceId),
+      ),
+    );
+}
+
 export type ContentPillarSummary = {
   id: string;
   name: string;
@@ -363,14 +459,19 @@ export type BrandRecentUpdate = {
   updatedAt: Date;
   kind: "asset" | "rule" | "publishing_rule" | "linked_resource";
   description: string;
+  actor: {
+    id: string;
+    displayName: string;
+    image: string | null;
+  } | null;
 };
 
 /**
  * Recent brand-kit updates — a union of the most recent `brand_assets`,
  * `brand_voice_rules`, `brand_publishing_rule`, and
  * `brand_linked_resource` rows by `updated_at`, sorted desc, sliced to
- * `limit`. The merge is done in JS (four cheap queries) to keep the SQL
- * portable and the test surface small.
+ * `limit`. The merge is done in JS (four cheap queries, each with a
+ * `users` join) to keep the SQL portable and the test surface small.
  *
  * **Privacy note:** the `linked_resource` rows expose only
  * `${provider} ${name}` — the actual `url` is intentionally stripped
@@ -378,19 +479,31 @@ export type BrandRecentUpdate = {
  * resource exists but cannot pivot to the upstream library via the
  * activity feed. The full URL is still served by
  * `listBrandLinkedResources` (which renders the brand-kit page).
+ *
+ * Round 4: each row now carries the actor (`created_by`) — name +
+ * avatar — so the Recent Updates table can render a real user chip
+ * instead of the previous hardcoded "M" placeholder.
  */
 export async function listRecentBrandUpdates(
   workspaceId: string,
   limit = 10,
 ): Promise<BrandRecentUpdate[]> {
+  const actorSelect = {
+    actorId: users.id,
+    actorName: users.displayName,
+    actorImage: users.image,
+  };
+
   const [assetRows, ruleRows, publishingRows, resourceRows] = await Promise.all([
     db
       .select({
         updatedAt: brandAssets.updatedAt,
         kind: brandAssets.kind,
         name: brandAssets.name,
+        ...actorSelect,
       })
       .from(brandAssets)
+      .leftJoin(users, eq(users.id, brandAssets.createdBy))
       .where(and(eq(brandAssets.workspaceId, workspaceId), isNull(brandAssets.archivedAt)))
       .orderBy(desc(brandAssets.updatedAt))
       .limit(limit),
@@ -399,9 +512,11 @@ export async function listRecentBrandUpdates(
         updatedAt: brandVoiceRules.updatedAt,
         ruleType: brandVoiceRules.ruleType,
         content: brandVoiceRules.content,
+        ...actorSelect,
       })
       .from(brandVoiceRules)
-      .where(eq(brandVoiceRules.workspaceId, workspaceId))
+      .leftJoin(users, eq(users.id, brandVoiceRules.createdBy))
+      .where(and(eq(brandVoiceRules.workspaceId, workspaceId), isNull(brandVoiceRules.archivedAt)))
       .orderBy(desc(brandVoiceRules.updatedAt))
       .limit(limit),
     db
@@ -409,8 +524,10 @@ export async function listRecentBrandUpdates(
         updatedAt: brandPublishingRules.updatedAt,
         ruleType: brandPublishingRules.ruleType,
         title: brandPublishingRules.title,
+        ...actorSelect,
       })
       .from(brandPublishingRules)
+      .leftJoin(users, eq(users.id, brandPublishingRules.createdBy))
       .where(
         and(
           eq(brandPublishingRules.workspaceId, workspaceId),
@@ -424,8 +541,10 @@ export async function listRecentBrandUpdates(
         updatedAt: brandLinkedResources.updatedAt,
         provider: brandLinkedResources.provider,
         name: brandLinkedResources.name,
+        ...actorSelect,
       })
       .from(brandLinkedResources)
+      .leftJoin(users, eq(users.id, brandLinkedResources.createdBy))
       .where(
         and(
           eq(brandLinkedResources.workspaceId, workspaceId),
@@ -436,27 +555,40 @@ export async function listRecentBrandUpdates(
       .limit(limit),
   ]);
 
+  const toActor = (row: {
+    actorId: string | null;
+    actorName: string | null;
+    actorImage: string | null;
+  }) =>
+    row.actorId
+      ? { id: row.actorId, displayName: row.actorName ?? "Unknown", image: row.actorImage ?? null }
+      : null;
+
   const merged: BrandRecentUpdate[] = [
     ...assetRows.map((row) => ({
       updatedAt: row.updatedAt,
       kind: "asset" as const,
       description: `${row.kind} ${row.name}`,
+      actor: toActor(row),
     })),
     ...ruleRows.map((row) => ({
       updatedAt: row.updatedAt,
       kind: "rule" as const,
       description: `${row.ruleType}: ${row.content}`,
+      actor: toActor(row),
     })),
     ...publishingRows.map((row) => ({
       updatedAt: row.updatedAt,
       kind: "publishing_rule" as const,
       description: `${row.ruleType}: ${row.title}`,
+      actor: toActor(row),
     })),
     ...resourceRows.map((row) => ({
       updatedAt: row.updatedAt,
       kind: "linked_resource" as const,
       // No URL — see the privacy note on the function docblock.
       description: `${row.provider} ${row.name}`,
+      actor: toActor(row),
     })),
   ];
 

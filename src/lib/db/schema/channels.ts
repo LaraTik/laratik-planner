@@ -70,6 +70,13 @@ export const brandAssets = pgTable(
 );
 
 // ─── brand_voice_rules ────────────────────────────────────────────────────
+//
+// Soft-archive support added in the Brand Kit polish round
+// (commit "fix(brand-kit): undoable archive + empty states +
+// recent-updates user join"). Migration 0006 adds the `archived_at`
+// column so voice rules can be restored from the undo toast instead
+// of being hard-deleted — same lifecycle as `brand_asset`,
+// `brand_publishing_rule`, and `brand_linked_resource`.
 export const brandVoiceRules = pgTable(
   "brand_voice_rule",
   {
@@ -80,6 +87,7 @@ export const brandVoiceRules = pgTable(
     ruleType: text("rule_type").notNull(), // 'tone' | 'do' | 'dont'
     content: text("content").notNull(),
     sortOrder: text("sort_order").notNull().default("0"), // string for sortable insertion
+    archivedAt: archivedAt(),
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),

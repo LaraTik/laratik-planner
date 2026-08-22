@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const inter = Inter({
@@ -28,7 +29,17 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} h-full`}>
-      <body className="bg-canvas text-fg-primary min-h-full">{children}</body>
+      <body className="bg-canvas text-fg-primary min-h-full">
+        {children}
+        {/*
+          Sonner toaster. Mounted once at the root so any client
+          component (forms, archive buttons) can call `toast(...)`
+          without owning its own host. `richColors` keeps
+          success/error/warning visually distinct; `closeButton`
+          makes the undo affordance reachable on touch.
+        */}
+        <Toaster richColors closeButton position="bottom-right" />
+      </body>
     </html>
   );
 }
