@@ -71,6 +71,12 @@ export default async function ContentDetailPage({
   // agency feature row once; the section falls back to a "all on"
   // view when no row exists (default agency on) so the buttons
   // surface even before an admin saves settings.
+  //
+  // We pass a plain string[] (not a Set) to the client component.
+  // `Set` is not in React's supported RSC serialisation surface, so
+  // passing one across the server→client boundary throws "An error
+  // occurred in the Server Components render" (minified to React
+  // error #441) in production builds.
   const agencyId = await activeAgencyId();
   const aiLive = isAiEnabled();
   const [feature] = agencyId
@@ -80,11 +86,10 @@ export default async function ContentDetailPage({
         .where(eq(aiFeatureSettings.agencyId, agencyId))
         .limit(1)
     : [];
-  const enabledCapabilities = new Set<string>(
+  const enabledCapabilities: string[] =
     feature?.enabledCapabilities && feature.enabledCapabilities.length > 0
       ? feature.enabledCapabilities
-      : ["caption_drafts", "brief_improvement", "completeness_check"],
-  );
+      : ["caption_drafts", "brief_improvement", "completeness_check"];
 
   return (
     <div className="space-y-6" data-testid="workspace-content-detail">

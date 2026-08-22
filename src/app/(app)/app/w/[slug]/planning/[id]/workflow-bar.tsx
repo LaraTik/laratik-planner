@@ -17,16 +17,30 @@ type Role =
   | "isClientReviewer"
   | "isPublisher";
 
+// Full workflow ladder including every status the content state machine
+// can produce. The earlier 8-item list was missing `changes_requested`,
+// `blocked`, and `cancelled`, which caused `STATUSES.indexOf(status)` to
+// return -1 for those branch states. With idx = -1 the `sIdx < idx` past
+// predicate was never true, so every badge rendered as `outline` and the
+// current state was invisible. The minified production build also
+// surfaced this as React error #441 (server components render) on
+// post-action revalidation, because the inconsistent status set made
+// the rendered HTML diverge from the client's expected shape during
+// the re-render that follows `transitionContent`'s
+// `revalidatePath("/app/w/")` call.
 const STATUSES = [
   "draft",
   "content_review",
+  "changes_requested",
   "approved_for_design",
   "in_design",
   "creative_review",
   "ready_to_publish",
   "partially_published",
   "published",
-];
+  "blocked",
+  "cancelled",
+] as const;
 
 export function WorkflowBar({
   workspaceSlug,
@@ -75,17 +89,24 @@ export function WorkflowBar({
       <CardTitle className="mb-3">Workflow</CardTitle>
 
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
-        {STATUSES.map((s) => {
-          const idx = STATUSES.indexOf(status);
-          const sIdx = STATUSES.indexOf(s);
-          const past = sIdx < idx;
-          const current = s === status;
-          return (
-            <Badge key={s} variant={current ? "primary" : past ? "success" : "outline"}>
-              {humanize(s)}
-            </Badge>
-          );
-        })}
+        {(() => {
+          // Compute `idx` once per render instead of inside the map
+          // (O(n²) → O(n)). The `>= 0` guard keeps `past` correct for
+          // any unexpected status the page might pass in before the
+          // render throws — see the comment on STATUSES above for why
+          // this matters on the post-`revalidatePath` re-render.
+          const idx = STATUSES.indexOf(status as (typeof STATUSES)[number]);
+          return STATUSES.map((s) => {
+            const sIdx = STATUSES.indexOf(s);
+            const past = idx >= 0 && sIdx >= 0 && sIdx < idx;
+            const current = s === status;
+            return (
+              <Badge key={s} variant={current ? "primary" : past ? "success" : "outline"}>
+                {humanize(s)}
+              </Badge>
+            );
+          });
+        })()}
       </div>
 
       {blockedReason ? (

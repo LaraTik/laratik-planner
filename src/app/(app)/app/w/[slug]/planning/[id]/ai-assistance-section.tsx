@@ -64,7 +64,13 @@ export function AiAssistanceSection({
   contentItemId: string;
   isManager: boolean;
   isPlanner: boolean;
-  enabledCapabilities: Set<string>;
+  /**
+   * Plain string array (not Set) — the page is a Server Component and
+   * must serialise everything it passes across the RSC boundary. A
+   * `Set` here would throw "An error occurred in the Server Components
+   * render" (minified to React #441) when AI is enabled in prod.
+   */
+  enabledCapabilities: string[];
 }) {
   const [draft, setDraft] = React.useState<{
     capabilityId: string;
@@ -135,7 +141,7 @@ export function AiAssistanceSection({
 
       <ul className="mt-4 grid gap-2 sm:grid-cols-3" data-testid="ai-capability-actions">
         {CAPABILITIES.filter((c) => c.status === "ready").map((cap) => {
-          const on = enabledCapabilities.has(
+          const on = enabledCapabilities.includes(
             cap.id === "draft_caption"
               ? "caption_drafts"
               : cap.id === "improve_brief"
