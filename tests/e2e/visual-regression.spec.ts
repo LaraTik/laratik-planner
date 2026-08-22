@@ -362,15 +362,18 @@ test.describe("visual regression (exact reference)", () => {
 // step is already fast (warm dev server, real DB, no flake budget
 // to spend) and the strict contract must not be weakened.
 test.describe("visual regression (responsive matrix)", () => {
-  if (isCaptureMode) {
-    // Force sequential execution in capture mode so the dev server
-    // is not being hammered by parallel tests. Each test triggers
-    // some next.js dev compilation; doing them serially keeps the
-    // wall-clock time bounded.
-    test.describe.configure({ mode: "serial" });
-  }
   for (const surface of CANONICAL_SURFACES) {
     test.describe(`surface ${surface}`, () => {
+      if (isCaptureMode) {
+        // Force sequential execution per-surface in capture mode so
+        // the dev server is not being hammered by parallel tests
+        // within one surface, while still allowing different
+        // surfaces to interleave. Per-surface scope also caps the
+        // blast radius: if one viewport test fails, only the
+        // remaining 5 viewports of that surface are skipped, not
+        // the other 22 surfaces' viewports.
+        test.describe.configure({ mode: "serial" });
+      }
       // Shared across all viewports for this surface in capture
       // mode. Populated in `test.beforeAll`; each test still calls
       // `devSignIn` on its own page request context (cookie scope is
