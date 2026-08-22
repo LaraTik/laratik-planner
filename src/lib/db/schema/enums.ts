@@ -14,6 +14,36 @@ export const agencyMemberStatusEnum = pgEnum("agency_member_status", ["active", 
 
 export const workspaceStatusEnum = pgEnum("workspace_status", ["active", "archived"]);
 
+// ─── Plans & entitlements (M2) ───────────────────────────────────────────────
+/**
+ * Per master prompt §4 / M2.1 — grace policy for agencies that exceed a
+ * plan's hard-stop percentage. The two-value enum keeps the service
+ * contract simple: `block` (enforce immediately) or `allow_grace` (let
+ * the agency keep going but flag them on the platform console).
+ *
+ * `null` is permitted in the `agency_entitlement.grace_policy` column
+ * to mean "inherit from the plan template" (or, for the `Custom` plan,
+ * "must be overridden by the agency admin").
+ */
+export const agencyEntitlementGracePolicyEnum = pgEnum("agency_entitlement_grace_policy", [
+  "block",
+  "allow_grace",
+]);
+
+/**
+ * M2.1 — threshold event severity emitted by the usage-tracking service
+ * (M2.3). The three levels line up with the platform-console status
+ * pill (healthy / warning / urgent / over_limit) and the threshold
+ * boundaries in master prompt §4: 80% = warning, 90% = urgent,
+ * 100%+ = over_limit. Uniqueness on (agency_id, resource, level) is
+ * the dedupe mechanism — see schema/plans.ts.
+ */
+export const agencyUsageThresholdLevelEnum = pgEnum("agency_usage_threshold_level", [
+  "warning",
+  "urgent",
+  "over_limit",
+]);
+
 export const workspaceRoleEnum = pgEnum("workspace_role", [
   "workspace_manager",
   "content_planner",
