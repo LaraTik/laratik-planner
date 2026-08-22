@@ -3,7 +3,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
-import { agencyMemberships } from "@/lib/db/schema";
+import { agencies, agencyMemberships } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/validation/env";
 import type { Actor } from "@/lib/auth/policy";
 
@@ -433,6 +433,81 @@ export async function resolveActiveAgencyContext(
   }
 
   return null;
+}
+
+// ─── Listing (Milestone 1.5) ──────────────────────────────────────────────
+
+/**
+ * One row of the agency switcher list — the agency itself plus the
+ * actor's per-membership `is_agency_admin` flag, so the UI can badge
+ * admin rows without a second round-trip.
+ */
+export type ActorAgency = {
+  id: string;
+  name: string;
+  slug: string;
+  isAdmin: boolean;
+};
+
+/**
+ * List every agency the actor is an *active* member of, ordered by
+ * membership age (ASC) so the user's first joined agency is at the
+ * top of the switcher.
+ *
+ * Contract:
+ *  - Filters at the SQL layer (`status = 'active'`) — deactivated /
+ *    suspended memberships never appear in the result.
+ *  - Joins `agency_membership` to `agency` to return the agency name
+ *    and slug (the sidebar popover rows display both).
+ *  - Surfaces the per-membership `is_agency_admin` flag renamed to
+ *    `isAdmin` for the UI; this is the only place the sidebar learns
+ *    which row to badge as "admin".
+ *  - Returns `[]` (never null / undefined) when the actor has zero
+ *    active memberships; the sidebar's `active` prop falls back to
+ *    the first option or renders the empty state.
+ *
+ * Ordering choice (`agency_membership.created_at ASC`):
+ *  - Matches the tie-breaker `resolveActiveAgencyContext`
+ *    (`findSingleActiveAgency`) uses for the single-membership
+ *    fallback path, so a user with one agency lands on the same row
+ *    they would see at the top of the switcher.
+ *  - "First joined first" is the deterministic UX a multi-agency
+ *    user expects (the agency they woke up in stays at the top until
+ *    they switch).
+ *
+ * This helper is the data source for the agency switcher UI in the
+ * sidebar. It is intentionally narrow (no agency-level settings, no
+ * member counts, no workspace list) — the workspace switcher owns
+ * the workspace list, and agency-level admin surfaces live on
+ * separate routes (M2+).
+ */
+export async function listActorAgencies(actor: Actor): Promise<ActorAgency[]> {
+  const rows = await db
+    .select({
+      id: agencies.id,
+      name: agencies.name,
+      slug: agencies.slug,
+      isAdmin: agencyMemberships.isAgencyAdmin,
+    })
+    .from(agencyMemberships)
+    .innerJoin(agencies, eq(agencies.id, agencyMemberships.agencyId))
+    .where(and(eq(agencyMemberships.userId, actor.id), eq(agencyMemberships.status, "active")))
+    .orderBy(asc(agencyMemberships.createdAt))
+    .limit(50);
+  // Project to the documented shape at the function boundary so
+  // callers (and tests) cannot accidentally rely on the raw
+  // drizzle row leaking extra columns. The select() projection
+  // does the same job server-side, but the explicit map makes the
+  // contract enforceable from a unit test and survives future
+  // schema additions (e.g. a new `agency_membership.is_billing`
+  // column would not appear in the switcher without an explicit
+  // add here).
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    slug: r.slug,
+    isAdmin: r.isAdmin,
+  }));
 }
 
 // ─── Internal helpers ────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { Topbar } from "./topbar";
 import { MobileNav } from "./mobile-nav";
 import { NotificationsBell } from "./notifications-bell";
 import { RouteScrollReset } from "./route-scroll-reset";
+import type { AgencyRow } from "./agency-switcher";
 
 /**
  * App shell — sidebar (left, persistent on desktop) + topbar (right
@@ -27,6 +28,7 @@ import { RouteScrollReset } from "./route-scroll-reset";
 export function AppShell({
   user,
   workspaces,
+  agencySwitcher,
   canCreateWorkspace,
   notifications,
   unreadCount,
@@ -40,6 +42,7 @@ export function AppShell({
     isAdmin: boolean;
   };
   workspaces: { id: string; slug: string; name: string }[];
+  agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   canCreateWorkspace: boolean;
   notifications: {
     id: string;
@@ -74,6 +77,7 @@ export function AppShell({
           user={user}
           workspaces={workspaces}
           workspaceSwitcherOptions={workspaces}
+          agencySwitcher={agencySwitcher}
           canCreateWorkspace={canCreateWorkspace}
         />
       </aside>

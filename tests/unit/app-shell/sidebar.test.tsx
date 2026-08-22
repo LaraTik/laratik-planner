@@ -29,6 +29,15 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+// The agency switcher calls a `"use server"` action (next-auth → auth/config).
+// Vitest's CJS/ESM resolution chokes on next-auth's `import "next/server"`
+// (no `.js` extension). We mock the action surface so the import graph
+// stops at the agency-switcher module boundary.
+const switchActiveAgencyMock = vi.hoisted(() => vi.fn(async () => true));
+vi.mock("@/lib/auth/agency-actions", () => ({
+  switchActiveAgency: switchActiveAgencyMock,
+}));
+
 const baseProps = {
   user: { name: "Lara", isAdmin: false },
   workspaces: [
@@ -39,6 +48,10 @@ const baseProps = {
     { id: "ws-1", name: "Northstar Coffee", slug: "northstar" },
     { id: "ws-2", name: "Autumn Blend", slug: "autumn" },
   ],
+  agencySwitcher: {
+    active: { id: "agency-1", name: "Test Agency", slug: "test-agency", isAdmin: true },
+    options: [{ id: "agency-1", name: "Test Agency", slug: "test-agency", isAdmin: true }],
+  },
   canCreateWorkspace: false,
 };
 
@@ -136,5 +149,35 @@ describe("Sidebar (workspace-aware)", () => {
     // is responsible for the 404.
     expect(screen.getByRole("link", { name: "My Work" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Overview" })).toBeNull();
+  });
+});
+
+describe("Sidebar (agency switcher wiring — M1.5)", () => {
+  beforeEach(() => {
+    usePathnameMock.mockReset();
+    usePathnameMock.mockReturnValue("/app");
+  });
+
+  it("renders the agency switcher trigger with the active agency name", () => {
+    render(<Sidebar {...baseProps} />);
+    const trigger = screen.getByTestId("sidebar-agency-switcher-trigger");
+    expect(trigger).toBeInTheDocument();
+    expect(trigger).toHaveAttribute("aria-label", "Active agency: Test Agency. Click to switch.");
+  });
+
+  it("places the agency switcher above the workspace switcher in the DOM order", () => {
+    render(<Sidebar {...baseProps} />);
+    const agency = screen.getByTestId("sidebar-agency-switcher-trigger");
+    const workspace = screen.getByTestId("sidebar-workspace-switcher-trigger");
+    // document order: agency appears before workspace
+    expect(
+      agency.compareDocumentPosition(workspace) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("renders a disabled 'No agency' trigger when the user has zero memberships", () => {
+    render(<Sidebar {...baseProps} agencySwitcher={{ active: null, options: [] }} />);
+    const trigger = screen.getByRole("button", { name: "No agencies" });
+    expect(trigger).toBeDisabled();
   });
 });
