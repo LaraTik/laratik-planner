@@ -97,38 +97,102 @@ throughout the run. Real names are never recorded in this table.
 
 ### Record
 
-| Step | Account | Operator | Date | Environment | Result | Evidence link |
-| ---- | ------- | -------- | ---- | ----------- | ------ | ------------- |
-| 1    |         |          |      |             |        |               |
-| 2    |         |          |      |             |        |               |
-| 3    |         |          |      |             |        |               |
-| 4    |         |          |      |             |        |               |
-| 5    |         |          |      |             |        |               |
-| 6    |         |          |      |             |        |               |
-| 7    |         |          |      |             |        |               |
-| 8    |         |          |      |             |        |               |
-| 9    |         |          |      |             |        |               |
-| 10   |         |          |      |             |        |               |
-| 11   |         |          |      |             |        |               |
-| 12   |         |          |      |             |        |               |
-| 13   |         |          |      |             |        |               |
-| 14   |         |          |      |             |        |               |
-| 15   |         |          |      |             |        |               |
-| 16   |         |          |      |             |        |               |
-| 17   |         |          |      |             |        |               |
-| 18   |         |          |      |             |        |               |
-| 19   |         |          |      |             |        |               |
-| 20   |         |          |      |             |        |               |
-| 21   |         |          |      |             |        |               |
-| 22   |         |          |      |             |        |               |
-| 23   |         |          |      |             |        |               |
-| 24   |         |          |      |             |        |               |
-| 25   |         |          |      |             |        |               |
-| 26   |         |          |      |             |        |               |
-| 27   |         |          |      |             |        |               |
-| 28   |         |          |      |             |        |               |
-| 29   |         |          |      |             |        |               |
-| 30   |         |          |      |             |        |               |
+> **Column legend (added in 2026-08-22 pre-fill).** The first four
+> `Auto-check …` columns are auto-derived from the code and the test
+> surface; the remaining six columns still require the real operator
+>
+> - reviewer (account, operator, date, environment, result, evidence
+>   link). The `Automated result` column reads the latest green/red
+>   state of the named test on `96e7048` (see
+>   [`TEST_EVIDENCE.md`](./TEST_EVIDENCE.md) § "Re-baseline —
+>   2026-08-21"); a `PASS` here is **not** a substitute for the
+>   reviewer's pass — the journey is human-in-the-loop and only an
+>   operator running the named account on the named date can sign it
+>   off.
+>
+> * `Required account role` — single role from §21 ("Separated
+>   accounts") that must drive the named step; multi-account steps
+>   (e.g. step 7 "each invitation is accepted") show the role of
+>   the accepting account.
+> * `Required data state` — preconditions the operator must have
+>   already created (or that the dev seed supplies) before the step
+>   can be run against the real production build.
+> * `Test command` — the e2e or integration test that exercises the
+>   same service-layer transition; the unit-only steps fall back to
+>   the unit test that pins the contract.
+> * `Automated result`:
+>   - `PASS` — the named test is green on `96e7048` AND covers the
+>     whole step.
+>   - `PARTIAL` — the named test covers a subset of the step (e.g.
+>     service-layer only, no UI assertion) OR the step is exercised
+>     by the journey integration test indirectly.
+>   - `OUT OF SCOPE` — no automated test covers this step; the
+>     reviewer must run it manually against the real production
+>     build.
+
+| Step | Auto-check: required account role                | Auto-check: required data state                         | Auto-check: test command                                                                                                                                                                                          | Auto-check: automated result                                                                                                                                | Account | Operator | Date | Environment | Result | Evidence link |
+| ---- | ------------------------------------------------ | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------- | ---- | ----------- | ------ | ------------- |
+| 1    | (none — no session)                              | empty deployment, no agency row                         | `tests/e2e/health.spec.ts`, `tests/e2e/public.spec.ts` (`/api/bootstrap/status`), `tests/integration/schema.test.ts` (singleton agency)                                                                           | PARTIAL (singleton-agency invariant + status API pinned; no e2e asserts "fresh deploy ⇒ no agency row" in one assertion)                                    |         |          |      |             |        |               |
+| 2    | agency_admin (Maya)                              | step 1 satisfied                                        | `tests/e2e/auth-gate.spec.ts` (`/signin` redirect), `tests/integration/bootstrap` (Maya becomes first admin)                                                                                                      | PARTIAL (service layer only — no e2e signs up the first admin)                                                                                              |         |          |      |             |        |               |
+| 3    | agency_admin (Maya, second browser)              | step 2 satisfied, second browser                        | `tests/integration/schema.test.ts` (singleton agency invariant)                                                                                                                                                   | PARTIAL (DB invariant pinned; UI not in e2e)                                                                                                                |         |          |      |             |        |               |
+| 4    | workspace_manager (Maya)                         | step 2 satisfied, no workspace yet                      | `tests/e2e/workspace.spec.ts` ("admin can create a new workspace via the form")                                                                                                                                   | PASS                                                                                                                                                        |         |          |      |             |        |               |
+| 5    | workspace_manager (Maya)                         | step 4 satisfied, Northstar Coffee created              | `tests/e2e/workspace.spec.ts` (settings update), `tests/integration/journey.test.ts` (workspace settings + role rows)                                                                                             | PASS                                                                                                                                                        |         |          |      |             |        |               |
+| 6    | workspace_manager (Maya)                         | step 5 satisfied                                        | `tests/integration/invitation-concurrency.test.ts` (invitation rows), `tests/unit/invitation-command.test.ts` (schema), `tests/unit/email.test.ts` (SMTP transport)                                               | PARTIAL (concurrency pinned; multi-inviter happy path not in e2e)                                                                                           |         |          |      |             |        |               |
+| 7    | mixed (Maya + each invitee)                      | step 6 invitations sent and accepted                    | `tests/integration/client-isolation.test.ts` (client_reviewer denied internal), `tests/integration/journey.test.ts` ("client_reviewer cannot read internal content")                                              | PASS                                                                                                                                                        |         |          |      |             |        |               |
+| 8    | content_planner (Omar)                           | step 7 satisfied, Omar signed in                        | `tests/e2e/content-flow.spec.ts` ("the new draft appears in the planning list")                                                                                                                                   | PASS                                                                                                                                                        |         |          |      |             |        |               |
+| 9    | content_planner (Omar)                           | step 8 satisfied, on `/app/w/acme/planning/new`         | `tests/e2e/content-flow.spec.ts` ("planner can quick-create a draft and submit for review" — first 2 asserts)                                                                                                     | PARTIAL (form fills + submit green; no explicit assertion that ONLY Title/Format/Date/Brief are initially visible)                                          |         |          |      |             |        |               |
+| 10   | content_planner (Omar)                           | step 9 satisfied, Quick Create open                     | `tests/e2e/content-flow.spec.ts` ("planner can quick-create a draft …" — submit), `tests/integration/journey.test.ts` ("§23 step 11: Quick Create applies workspace settings defaults")                           | PASS                                                                                                                                                        |         |          |      |             |        |               |
+| 11   | content_planner (Omar)                           | step 10 draft created                                   | `tests/integration/journey.test.ts` ("§23 step 11: Quick Create applies workspace settings defaults")                                                                                                             | PASS                                                                                                                                                        |         |          |      |             |        |               |
+| 12   | content_planner (Omar)                           | step 10 draft created, detail page open                 | `tests/e2e/content-flow.spec.ts` ("the new draft appears in the planning list" — for the save + persist path)                                                                                                     | PARTIAL (UI for the More-details fields is hand-tested today; no e2e for the Hook→Main→CTA blocks)                                                          |         |          |      |             |        |               |
+| 13   | content_planner (Omar)                           | step 12 satisfied, "Submit for review" click            | `tests/e2e/content-flow.spec.ts` ("planner can quick-create a draft and submit for review" — second half), `tests/integration/journey.test.ts` ("submit_content_review from 'draft' allowed for content_planner") | PASS                                                                                                                                                        |         |          |      |             |        |               |
+| 14   | internal_reviewer (Jon) + content_planner (Omar) | step 13 satisfied, item in `content_review`             | `tests/e2e/discussions.spec.ts` ("a comment can be resolved (and un-resolved)" — exercises the comments surface)                                                                                                  | PARTIAL (workflow rules + comments e2e; full Jon-then-Omar round-trip not in e2e)                                                                           |         |          |      |             |        |               |
+| 15   | internal_reviewer (Jon) + designer (Elena)       | step 14 resubmitted and re-approved                     | `tests/e2e/content-flow.spec.ts` ("full happy path: planner drafts, reviewer approves → approved_for_design"), `tests/integration/journey.test.ts` ("approve_content" workflow rule)                              | PASS                                                                                                                                                        |         |          |      |             |        |               |
+| 16   | designer (Elena) + client_reviewer (Sophie)      | step 15 satisfied, item in `in_design`                  | `tests/integration/client-isolation.test.ts` (Sophie cannot read internal comments), `tests/e2e/discussions.spec.ts` (visibility selector)                                                                        | PARTIAL (visibility selector pinned; full Elena-to-Sophie handoff not in e2e)                                                                               |         |          |      |             |        |               |
+| 17   | designer (Elena) + client_reviewer (Sophie)      | step 16 question posted                                 | `tests/e2e/discussions.spec.ts` ("posting a comment shows it in the thread with the open-count badge", "a comment can be resolved")                                                                               | PASS                                                                                                                                                        |         |          |      |             |        |               |
+| 18   | designer (Elena)                                 | step 17 question resolved, item in `creative_review`    | `tests/unit/deliveries-service.test.ts` (SubmitDeliverySchema + submitDelivery), `tests/unit/creative-approval.test.ts`                                                                                           | PARTIAL (service-layer only; UI delivery-form not in e2e)                                                                                                   |         |          |      |             |        |               |
+| 19   | designer (Elena) + internal_reviewer (Jon)       | step 18 V1 submitted                                    | `tests/unit/deliveries-service.test.ts` (`listDeliveriesForItem`, `listDeliveryVersionsForItem`), `tests/unit/creative-approval.test.ts` (V1/V2 request-changes → resubmit round-trip)                            | PARTIAL (service-layer version history; no e2e for the round-trip)                                                                                          |         |          |      |             |        |               |
+| 20   | internal_reviewer (Jon)                          | step 19 V2 submitted, Jon reviews                       | `tests/unit/creative-approval.test.ts` ("deriveCreativeApprovalOutcome"), `tests/integration/journey.test.ts` ("approve_internal_creative" rule)                                                                  | PARTIAL (service-layer only)                                                                                                                                |         |          |      |             |        |               |
+| 21   | client_reviewer (Sophie)                         | step 20 satisfied, item in `creative_review` for client | `tests/integration/client-isolation.test.ts` (Sophie can see V2 and client-visible thread, not internal), `tests/e2e/role-authorization.spec.ts` ("review roles see only their review surface")                   | PASS                                                                                                                                                        |         |          |      |             |        |               |
+| 22   | client_reviewer (Sophie)                         | step 21 satisfied, on `/app/w/acme/client`              | `tests/unit/creative-approval.test.ts` (approve_client_creative rule), `tests/integration/journey.test.ts` ("approve_client_creative" rule)                                                                       | PARTIAL (service-layer only; client-portal UI is manual)                                                                                                    |         |          |      |             |        |               |
+| 23   | publisher (Daniel)                               | step 22 satisfied, item in `ready_to_publish`           | `tests/unit/publishing-service.test.ts` (recordPublication), `tests/unit/publishing-aggregate.test.ts` (derivePublicationAggregate)                                                                               | PARTIAL (service-layer only; UI publish flow is manual)                                                                                                     |         |          |      |             |        |               |
+| 24   | publisher (Daniel)                               | step 23, one channel published, one failed              | `tests/unit/publishing-service.test.ts` (recordPublication error path), `tests/unit/publication-aggregate.test.ts` (Partially Published derivation)                                                               | PARTIAL (service-layer only)                                                                                                                                |         |          |      |             |        |               |
+| 25   | publisher (Daniel)                               | step 24, one channel Failed, then Published             | `tests/unit/publishing-service.test.ts` (recordPublication retry), `tests/unit/publishing-aggregate.test.ts` (Published derivation)                                                                               | PARTIAL (service-layer only)                                                                                                                                |         |          |      |             |        |               |
+| 26   | publisher (Daniel)                               | step 25, one channel Skipped                            | `tests/unit/publishing-aggregate.test.ts` (Skipped + Published aggregate)                                                                                                                                         | PARTIAL (service-layer only)                                                                                                                                |         |          |      |             |        |               |
+| 27   | workspace_manager (Maya) / any internal          | step 26 satisfied, item is `published`                  | `tests/integration/journey.test.ts` ("approve_client_creative" → "published" terminal state), `tests/unit/publication-aggregate.test.ts` (Published final)                                                        | PARTIAL (service-layer + integration; UI overview/board/calendar consistency is manual)                                                                     |         |          |      |             |        |               |
+| 28   | workspace_manager (Maya)                         | step 27, item in `published`                            | `tests/unit/content-service.test.ts` (archive + restore), `tests/integration/brand-kit.test.ts` (archive filter)                                                                                                  | PARTIAL (service-layer archive/unarchive pinned; no e2e round-trip)                                                                                         |         |          |      |             |        |               |
+| 29   | mixed (any internal role on mobile viewport)     | step 28, mobile-chrome project                          | `tests/e2e/mobile.spec.ts` (bottom nav + 44px touch target), `tests/e2e/mobile-safari.spec.ts`                                                                                                                    | PARTIAL (layout + touch target pinned; review-decision / publish-confirm on mobile not in e2e)                                                              |         |          |      |             |        |               |
+| 30   | mixed (any role, keyboard-only)                  | step 29, fresh browser, Tab-only input                  | `tests/e2e/mobile.spec.ts` (mobile nav), `tests/e2e/role-authorization.spec.ts` (review surfaces), `tests/e2e/a11y-routes.spec.ts` (axe per route on chromium — keyboard nav indirectly)                          | PARTIAL (keyboard nav indirectly covered; full Login → Quick Create → review-request → review-decision → calendar-move keyboard flow not in any single e2e) |         |          |      |             |        |               |
+
+### Auto-check coverage (2026-08-22 pre-fill on `96e7048`)
+
+- **Required account role + required data state** are pre-filled for
+  all 30 steps; they are derived from §21 (separated accounts) +
+  §23 (primary acceptance journey) and the order in which each step
+  logically depends on the prior step.
+- **Test command + automated result** are pre-filled for all 30
+  steps from the test surface in `tests/e2e/*`, `tests/integration/*`
+  and `tests/unit/*`. Distribution:
+  - **PASS** (10/30): steps 4, 5, 7, 8, 10, 11, 13, 15, 17, 21
+    — the workspace create + settings flow, the Quick Create +
+    planner→internal-reviewer transition, the comment thread,
+    and the client-isolation contract all have a fully green e2e
+    or integration test on `96e7048`.
+  - **PARTIAL** (20/30): steps 1, 2, 3, 6, 9, 12, 14, 16, 18, 19,
+    20, 22, 23, 24, 25, 26, 27, 28, 29, 30 — service-layer or
+    schema invariants are pinned in unit or integration tests,
+    but no e2e drives the named step end-to-end against the real
+    production build with the named account on the named date.
+    The operator must run these manually.
+  - **OUT OF SCOPE** (0/30): none of the 30 steps lacks any
+    automated test surface at all.
+- **pending reviewer** — `Account`, `Operator`, `Date`,
+  `Environment`, `Result` and `Evidence link` are still empty in
+  every row; the reviewer fills those against the real production
+  build. The `Automated result` column is **not** a substitute for
+  the reviewer's pass — the §23 journey is deliberately
+  human-in-the-loop and a `PASS` automated result on step N does
+  not let the reviewer sign the row off without running the named
+  account on the named date.
 
 ### Pass criteria
 

@@ -425,18 +425,42 @@ export function resolveStitchRoute(route: string, seed: SeedResultLike): string 
  * Stable screenshot name for a Stitch case at a given viewport. Used
  * by both the exact-reference loop and the responsive matrix so a
  * reviewer can find every capture deterministically.
+ *
+ * Task 8: the returned name is the on-disk baseline path. It must
+ * be portable across hosts (no absolute path, no `darwin`/`linux`/
+ * `win32` suffix) and live under `reference/` so it never collides
+ * with the responsive-matrix captures. The Playwright
+ * `snapshotPathTemplate` in `playwright.config.ts` reduces this to
+ * `<snapshotDir>/reference/<classification>-<screenId>-<viewport>.png`
+ * on every host.
  */
+const PORTABLE_VIEWPORT_NAME: Record<string, string> = {
+  "mobile-s": "mobile-s",
+  "mobile-m": "mobile-m",
+  tablet: "tablet",
+  laptop: "laptop",
+  desktop: "desktop",
+  wide: "wide",
+};
+
 export function screenshotNameFor(entry: StitchCase, viewport: RegressionViewport): string {
-  return `${entry.classification}-${entry.screenId}-${viewport.name}.png`;
+  const viewportName = PORTABLE_VIEWPORT_NAME[viewport.name] ?? viewport.name;
+  return `reference/${entry.classification}-${entry.screenId}-${viewportName}.png`;
 }
 
 /**
  * Slug used for the responsive matrix (27 surfaces × 6 viewports). The
  * matrix uses the surface string (route or evidence-group key) as the
  * prefix so the parity doc and the harness stay in lockstep.
+ *
+ * Task 8: lives under `responsive/` so the exact-reference loop and
+ * the responsive-matrix captures never share filenames, and the
+ * returned string is a portable POSIX path (no leading slash, no
+ * host OS suffix).
  */
 export function responsiveScreenshotName(surface: string, viewport: RegressionViewport): string {
-  return `responsive-${slugify(surface)}-${viewport.name}.png`;
+  const viewportName = PORTABLE_VIEWPORT_NAME[viewport.name] ?? viewport.name;
+  return `responsive/${slugify(surface)}-${viewportName}.png`;
 }
 
 function slugify(value: string): string {
