@@ -32,6 +32,19 @@ export type InviteActionState = {
   devLink?: string | null;
 };
 
+/**
+ * Result shape for the per-invitation actions (resend, revoke).
+ *
+ * Both actions are wired into a React `useTransition` in the client —
+ * they MUST never throw, because an unhandled rejection from a
+ * server action inside a transition replaces the whole page with the
+ * error boundary (the "We hit an error rendering this page" screen)
+ * instead of just surfacing the failure to the user. They translate
+ * every business / infrastructure failure into an `{ error }` shape;
+ * the client renders the message inline.
+ */
+export type InvitationActionState = { error?: string; success?: boolean };
+
 function formatRateLimitRetry(seconds: number): string {
   if (seconds >= 3600) {
     const hours = Math.round(seconds / 3600);
@@ -131,13 +144,13 @@ export async function sendInviteAction(
   };
 }
 
-export async function resendInviteAction(invitationId: string) {
+export async function resendInviteAction(invitationId: string): Promise<InvitationActionState> {
   const session = await auth();
   if (!session?.user?.id) return { error: "Not signed in" };
   const agencyId = await activeAgencyId();
   if (!agencyId) return { error: "Agency not configured" };
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
-    throw new PermissionDeniedError("resend_invite");
+    return { error: "Only agency administrators can resend invitations." };
   }
   const rateLimit = await enforceRateLimit({
     scope: "invitation_resend",
@@ -148,20 +161,40 @@ export async function resendInviteAction(invitationId: string) {
     const rule = rateLimitRuleFor("invitation_resend");
     return { error: formatRateLimitRetry(rateLimit.retryAfterSeconds ?? rule.windowSeconds) };
   }
-  await resendInvitation(invitationId, session.user.id);
+  try {
+    await resendInvitation(invitationId, session.user.id);
+  } catch (e) {
+    // resendInvitation throws plain `Error`s for two known business
+    // outcomes: the invitation no longer exists, or it's no longer
+    // pending (revoked / expired / accepted). Either way, the row the
+    // user clicked against is stale and the next render will refresh
+    // the list — surface the literal message verbatim so the user
+    // understands why the click didn't take effect.
+    console.error("[resendInviteAction] failed", e);
+    return {
+      error: e instanceof Error && e.message ? e.message : "The invitation could not be resent.",
+    };
+  }
   revalidatePath("/app/users");
   return { success: true };
 }
 
-export async function revokeInviteAction(invitationId: string) {
+export async function revokeInviteAction(invitationId: string): Promise<InvitationActionState> {
   const session = await auth();
   if (!session?.user?.id) return { error: "Not signed in" };
   const agencyId = await activeAgencyId();
   if (!agencyId) return { error: "Agency not configured" };
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
-    throw new PermissionDeniedError("revoke_invite");
+    return { error: "Only agency administrators can revoke invitations." };
   }
-  await revokeInvitation(invitationId);
+  try {
+    await revokeInvitation(invitationId);
+  } catch (e) {
+    console.error("[revokeInviteAction] failed", e);
+    return {
+      error: e instanceof Error && e.message ? e.message : "The invitation could not be revoked.",
+    };
+  }
   revalidatePath("/app/users");
   return { success: true };
 }
