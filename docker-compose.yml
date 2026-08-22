@@ -39,6 +39,14 @@ services:
       # router silently fails to register. See AGENTS.md "Traefik upstream
       # pinning" and the vps-ops evo/bot compose files for the pattern.
       - traefik.http.services.laratik-planner.loadbalancer.server.url=http://laratik-planner-app-1:3000
+      # Readiness probe for Traefik: hit /api/health/ready so a broken
+      # DB connection removes the container from the load balancer
+      # without restarting the process. Liveness (for autoheal + Docker
+      # HEALTHCHECK below) stays on /api/health/live. See
+      # docs/testing/strategy.md (Release gates).
+      - traefik.http.services.laratik-planner.loadbalancer.healthcheck.path=/api/health/ready
+      - traefik.http.services.laratik-planner.loadbalancer.healthcheck.interval=10s
+      - traefik.http.services.laratik-planner.loadbalancer.healthcheck.timeout=5s
       - traefik.http.middlewares.laratik-planner-secure.headers.stsSeconds=31536000
       - traefik.http.middlewares.laratik-planner-secure.headers.stsIncludeSubdomains=true
       - traefik.http.middlewares.laratik-planner-secure.headers.stsPreload=true
@@ -54,7 +62,14 @@ services:
       # creates a router — so the planner subdomain 404s with no
       # visible error. Same trap called out in the vps-ops evolution /
       # whatsapp-bot compose files.
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/api/health"]
+      #
+      # Liveness only — a transient DB hiccup should not cause autoheal
+      # to restart the container (that just churns the process and
+      # makes the outage worse). The Traefik loadbalancer probes
+      # /api/health/ready separately via the labels above, so the
+      # container is removed from rotation on a DB outage without a
+      # restart. See docs/testing/strategy.md (Release gates).
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/api/health/live"]
       interval: 30s
       timeout: 5s
       retries: 3

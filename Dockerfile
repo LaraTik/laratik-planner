@@ -64,8 +64,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs
 EXPOSE 3000
 
-# Health check — Traefik + autoheal rely on this endpoint
+# Health check — Docker liveness only. Use the liveness probe so a
+# transient DB hiccup does NOT cause autoheal to restart the container
+# (a restart does not fix DB connectivity and just churns the process).
+# Readiness (DB + schema check) lives at /api/health/ready, which
+# Traefik and the deploy gate probe separately. See
+# docs/testing/strategy.md (Release gates) for the full contract.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD wget -q --spider http://localhost:3000/api/health || exit 1
+    CMD wget -q --spider http://127.0.0.1:3000/api/health/live || exit 1
 
 CMD ["node", "server.js"]

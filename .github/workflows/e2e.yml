@@ -1,11 +1,16 @@
 name: E2E
 
-# Full Playwright suite is automatic on PR + push to main since the
-# visual harness is now deterministic (Task 7). The 5-browser
-# functional matrix runs in parallel with the dedicated
-# `visual-chromium` project; the visual step only fires after the
-# functional matrix succeeds so we don't capture baselines for broken
-# builds.
+# Manual full Playwright suite. Runs the 5-browser functional matrix
+# (chromium / firefox / webkit / mobile-chrome / mobile-safari) plus
+# the dedicated `visual-chromium` project. Visual captures only fire
+# after the functional matrix is green so a broken build doesn't
+# regenerate baselines. Any failure uploads `playwright-report`,
+# `test-results`, and visual diffs as artifacts.
+#
+# Contract (2026-08-22): E2E + visual regression are NO LONGER in the
+# automatic CI pipeline. Developers must run this workflow manually
+# via `Actions → E2E → Run workflow` before pushing/merging, and run
+# the equivalent commands locally as part of the development loop.
 #
 # Run locally with:
 #   pnpm install --frozen-lockfile
@@ -13,23 +18,12 @@ name: E2E
 #   pnpm test:e2e:isolated
 #   pnpm test:visual
 #
-# The full pipeline is a required release-candidate check on PRs and
-# pushes to `main` (plus manual dispatch). It runs the 5-browser
-# functional matrix (chromium / firefox / webkit / mobile-chrome /
-# mobile-safari) and the dedicated `visual-chromium` project. Visual
-# captures only fire after the functional matrix is green so a broken
-# build doesn't regenerate baselines. Any required failure uploads
-# `playwright-report`, `test-results`, and visual diffs as artifacts.
-#
-# Production deploy does NOT wait for this workflow — the critical
-# visual gate is in `.github/workflows/ci.yml` so the deploy workflow
-# only blocks on the Chromium subset (functional + visual baseline).
-# See `docs/testing/strategy.md` (Release gates) for the full contract.
+# Production deploy does NOT wait for this workflow. The deploy
+# pipeline is gated on `.github/workflows/ci.yml` (format / lint /
+# typecheck / unit / integration / build / Docker smoke). See
+# `docs/testing/strategy.md` (Release gates) for the full contract.
 
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:

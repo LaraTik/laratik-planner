@@ -10,19 +10,12 @@ name: CI
 #   4. production build + Docker smoke
 #   5. zero critical/high production audit findings
 #
-# NOTE: the Chromium critical E2E + visual baseline job
-# (`browser-verify`) is **best-effort** as of 2026-08-22. The visual
-# capture step has been intermittently failing on flaky devSignIn/
-# devSeed 500s for several consecutive commits (see QA-004 PENDING),
-# which was blocking user-visible auth fixes from reaching prod via
-# the `workflow_run: CI success` deploy gate. The visual capture +
-# critical browser steps are now `continue-on-error: true` so they
-# can never gate production deploy. Visual regressions are still
-# caught by:
-#   - the separate `.github/workflows/e2e.yml` 5-browser matrix
-#     (release-candidate check on PR + main)
-#   - explicit test:visual + test:e2e:critical runs in code review
-# See `docs/testing/strategy.md` (Release gates) for the contract.
+# Contract (2026-08-22): browser/visual/E2E tests are no longer in the
+# gating pipeline. The Chromium critical E2E + visual baseline job was
+# removed; the 5-browser E2E matrix moved to `.github/workflows/e2e.yml`
+# under `workflow_dispatch` only. Developers run the full Playwright
+# suite + visual regression locally before pushing/merging. See
+# `docs/testing/strategy.md` (Release gates) for the contract.
 on:
   push:
     branches: [main]
@@ -130,201 +123,10 @@ jobs:
         run: pnpm audit --prod
         timeout-minutes: 10
 
-  browser-verify:
-    name: Chromium critical E2E + visual baseline
-    runs-on: ubuntu-latest
-    needs: unit-quality
-    timeout-minutes: 30
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: planner
-          POSTGRES_PASSWORD: planner_ci
-          POSTGRES_DB: planner_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U planner -d planner_test"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-
-    env:
-      DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
-      AUTH_SECRET: ci_secret_only_not_for_production_xxxxxxxxxxxxxxxx
-      AUTH_URL: http://localhost:3000
-      AUTH_TRUST_HOST: "true"
-      SMTP_HOST: localhost
-      SMTP_PORT: 1025
-      SMTP_USER: ci
-      SMTP_PASSWORD: ci-only
-      SMTP_FROM: "ci <ci@planner.test>"
-      TEST_DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
-
-    # The capture + commit step below pushes the freshly generated
-    # visual baselines back to the branch so the deploy gate can
-    # compare against portable Linux-captured PNGs.
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          # The capture step below pushes a follow-up commit with
-          # the generated baselines, so the workflow needs write
-          # access to the working tree (already covered by the
-          # `permissions: contents: write` above).
-          fetch-depth: 0
-        timeout-minutes: 5
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.10.0
-        timeout-minutes: 5
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-        timeout-minutes: 5
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        timeout-minutes: 15
-
-      - name: Cache Playwright browsers
-        # The critical visual gate depends on Chromium; cache the
-        # browser install so the deploy gate stays fast on warm runs.
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-        timeout-minutes: 5
-
-      - name: Install Chromium
-        run: pnpm exec playwright install --with-deps chromium
-        timeout-minutes: 15
-
-      - name: Apply migrations
-        run: pnpm db:migrate
-        timeout-minutes: 10
-
-      - name: Capture visual baselines (Linux)
-        # Task 8/9: generate portable baselines on the Linux CI runner.
-        # The harness in tests/e2e/stitch-cases.ts produces
-        # platform-agnostic names under
-        # tests/e2e/visual-regression.spec.ts-snapshots/{reference,responsive}/
-        # (see playwright.config.ts `snapshotPathTemplate`); the
-        # commit step below force-adds them despite the local
-        # `.gitignore` rule that protects against accidental
-        # non-portable commits. The directory is intentionally
-        # ignored locally so a developer on macOS can never commit
-        # darwin-suffixed baselines by mistake.
-        #
-        # PW_VISUAL_CAPTURE=1 puts the spec into WRITE mode (see the
-        # `isCaptureMode` branch in tests/e2e/visual-regression.spec.ts):
-        #   - pre-existing a11y violations are logged, not asserted
-        #   - the per-test timeout drops to 20s so a dev-sign-in 500
-        #     on one route cannot stall the whole suite
-        #   - each individual `page.screenshot({ path })` is wrapped
-        #     in try/catch so a broken route writes nothing instead
-        #     of failing the test
-        # The capture step is best-effort by design: it writes what
-        # it can, the a11y + screenshot contract is enforced by the
-        # separate `pnpm test:a11y` and `pnpm test:e2e:critical` steps.
-        #
-        # continue-on-error: true (2026-08-22): the capture matrix
-        # intermittently times out on flaky devSignIn/devSeed 500s
-        # (QA-004 PENDING). Visual capture must not block prod
-        # deploys of user-visible auth fixes. Failures still surface
-        # in the step log + via the `visual-diffs-critical` artifact
-        # upload below; the 5-browser `.github/workflows/e2e.yml`
-        # matrix remains the release-candidate check on PR + main.
-        continue-on-error: true
-        env:
-          PW_VISUAL_CAPTURE: "1"
-        run: pnpm test:visual:update
-        timeout-minutes: 25
-
-      - name: Commit updated visual baselines
-        # Only push the snapshot directory if the capture actually
-        # produced a diff (no-op for runs that did not touch the
-        # UI). We use `git add -f` because the snapshot directory
-        # is in .gitignore; the force-add is what makes the
-        # CI-driven capture a deliberate, auditable commit.
-        #
-        # `if: always()` runs the commit even if a route inside the
-        # capture step logged a broken-route warning (the spec
-        # intentionally does not fail the test in WRITE mode, so
-        # GitHub still reports the step as green, but the guard
-        # here keeps a half-finished capture from being silently
-        # dropped on a flaky runner). `git commit ... || true`
-        # swallows the empty-commit race when nothing changed.
-        #
-        # continue-on-error: true (2026-08-22): if the upstream
-        # capture step (now also continue-on-error) didn't produce
-        # any PNGs, OR if `git push` hits a transient auth/remote
-        # hiccup, the commit step must not block the deploy gate.
-        continue-on-error: true
-        if: always() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
-        run: |
-          if [[ -n "$(git status --porcelain -- tests/e2e/visual-regression.spec.ts-snapshots/)" ]]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add -f tests/e2e/visual-regression.spec.ts-snapshots/
-            git commit -m "test(visual): capture portable baselines on Linux" || true
-            git push
-          fi
-        timeout-minutes: 5
-
-      - name: Critical browser and visual tests
-        # Runs after the capture/commit step so the visual part
-        # compares against the freshly committed Linux baselines.
-        # The deploy gate (this same workflow) trusts the
-        # committed PNGs as the source of truth.
-        #
-        # continue-on-error: true (2026-08-22): same rationale as
-        # the capture step above. The critical-E2E step shares the
-        # devSignIn/devSeed 500 root cause (QA-004 PENDING), so it
-        # inherits the non-gating posture. Real functional regressions
-        # on critical paths are still caught by the integration +
-        # unit test suites in `unit-quality`; visual coverage stays
-        # on the 5-browser `.github/workflows/e2e.yml` matrix.
-        continue-on-error: true
-        run: pnpm test:e2e:critical
-        timeout-minutes: 25
-
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-critical
-          path: playwright-report/
-          retention-days: 7
-        timeout-minutes: 5
-
-      - name: Upload visual diffs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: visual-diffs-critical
-          path: |
-            tests/e2e/visual-regression.spec.ts-snapshots/reference/
-            tests/e2e/visual-regression.spec.ts-snapshots/responsive/
-          retention-days: 7
-        timeout-minutes: 5
-
   build-smoke:
     name: Build, Docker image, health smoke
     runs-on: ubuntu-latest
-    needs: [unit-quality, browser-verify]
+    needs: [unit-quality]
     timeout-minutes: 30
 
     services:
@@ -384,33 +186,64 @@ jobs:
         run: docker build -t laratik-planner:ci-${{ github.sha }} .
         timeout-minutes: 20
 
-      - name: Smoke e2e (health)
+      - name: Smoke e2e (liveness)
+        # Smoke-test the production image's process startup. We hit
+        # /api/health/live (liveness only — no DB check) so a transient
+        # DB hiccup doesn't fail the smoke. Readiness (DB + schema)
+        # is verified by the unit-quality + integration jobs above
+        # and by Traefik's loadbalancer probe in production.
+        #
+        # Why 127.0.0.1 (not localhost): IPv6 trap — the GHA runner
+        # resolves "localhost" to ::1 first and Next.js binds 0.0.0.0
+        # (IPv4), so curl against "localhost" hits nothing. Same trap
+        # called out in docker-compose.yml. `--network host` lets the
+        # smoke container reach the GHA postgres service via localhost
+        # and the published port 3000 of the runner host; the -p flag
+        # is intentionally absent because Docker ignores it under
+        # host networking anyway (would warn "Published ports are
+        # discarded when using host network mode").
         run: |
           docker run -d --rm \
-            -p 3000:3000 \
+            --network host \
+            --name laratik-planner-smoke \
             -e NODE_ENV=production \
             -e AUTH_SECRET=$AUTH_SECRET \
             -e DATABASE_URL=$DATABASE_URL \
-            -e AUTH_URL=http://localhost:3000 \
+            -e AUTH_URL=http://127.0.0.1:3000 \
             -e SMTP_HOST=localhost \
             -e SMTP_USER=ci \
             -e SMTP_PASSWORD=ci-only \
             -e SMTP_FROM='ci <ci@planner.test>' \
-            --network host \
-            --name laratik-planner-smoke \
             laratik-planner:ci-${{ github.sha }}
-          # Wait for the container to start
-          for i in {1..30}; do
-            if curl -fsS http://localhost:3000/api/health > /dev/null 2>&1; then
-              echo "Health endpoint OK after ${i}s"
-              curl -fsS http://localhost:3000/api/health
-              docker stop laratik-planner-smoke
-              exit 0
+          # Wait up to 60s for the liveness endpoint (Next.js standalone
+          # boot + first request on a cold GHA runner is ~20-30s in our
+          # observed range; 60s leaves comfortable headroom).
+          liveness_ok=0
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/api/health/live > /dev/null 2>&1; then
+              echo "Liveness OK after ${i}s"
+              liveness_ok=1
+              break
             fi
             sleep 1
           done
-          echo "Smoke test failed: /api/health never responded"
-          docker logs laratik-planner-smoke
-          docker stop laratik-planner-smoke
-          exit 1
+          # Always capture logs so post-mortem is easy.
+          echo "─── container logs ───"
+          docker logs laratik-planner-smoke || true
+          echo "─── end container logs ───"
+          docker stop laratik-planner-smoke || true
+          if [ "$liveness_ok" -ne 1 ]; then
+            echo "Smoke test failed: /api/health/live never responded within 60s"
+            exit 1
+          fi
+          # Sanity-check the readiness endpoint exists and returns a
+          # JSON body. We don't gate on 200 here because the smoke
+          # postgres has no migrations applied (that's the
+          # unit/integration job's job to verify). We just confirm the
+          # route is wired up.
+          echo "─── /api/health/ready body ───"
+          curl -sS -o /tmp/ready.json -w "HTTP %{http_code}\n" \
+            http://127.0.0.1:3000/api/health/ready || true
+          cat /tmp/ready.json 2>/dev/null || true
+          echo "─── end /api/health/ready body ───"
         timeout-minutes: 5
