@@ -4,6 +4,7 @@
   "private": true,
   "description": "laratik-planner — social media planning, design, and approvals for one agency. Ported from the StudioFlow master prompt to a self-hosted Next.js + Drizzle + Postgres stack on the LaraTik VPS.",
   "scripts": {
+    "predev": "rm -rf .next/cache",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

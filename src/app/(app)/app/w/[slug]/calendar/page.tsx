@@ -105,7 +105,12 @@ export default async function EditorialCalendarPage({
                     {day}
                   </span>
                   {isToday ? (
-                    <span className="text-label bg-primary text-on-primary rounded-full px-1.5 font-semibold">
+                    // `text-white` (not `text-on-primary`) because the
+                    // project doesn't define an `on-primary` token and
+                    // the inherited `text-fg-primary` (#172033) on the
+                    // indigo `bg-primary` (#4f46e5) only reaches 2.58:1
+                    // — fails WCAG AA. White-on-indigo is 5.85:1.
+                    <span className="text-label bg-primary rounded-full px-1.5 font-semibold text-white">
                       Today
                     </span>
                   ) : null}

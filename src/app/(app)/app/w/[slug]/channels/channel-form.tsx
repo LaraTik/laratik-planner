@@ -31,7 +31,7 @@ export function ChannelForm({ slug }: { slug: string }) {
     {} as { error?: string; success?: boolean },
   );
   return (
-    <Card padding="md" data-testid="channel-add-card">
+    <Card padding="md" data-testid="channel-add-card" id="channel-add-card">
       <CardTitle className="mb-1">Add social channel</CardTitle>
       <CardDescription className="mb-4">
         Track the brand&rsquo;s accounts in one place. New ideas target all active channels by
