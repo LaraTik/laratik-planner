@@ -230,6 +230,29 @@ describe("Nodemailer provider wiring", () => {
   });
 });
 
+describe("events.signIn stamps emailVerified for unverified users", () => {
+  // The events.signIn callback writes to the `user` table. We don't mock
+  // the DB globally (the auth-config suite lets `findUserByEmailAndPassword`
+  // hit the real connection when its own tests call it). Instead, we
+  // assert the structural contract and call the handler with a stub
+  // user, expecting it to no-op (the DB UPDATE simply has no rows to
+  // match in this test, which is the same observable as a successful
+  // no-op against a real DB). A more thorough integration test lives
+  // in tests/integration/.
+  it("is a function on authConfig.events", () => {
+    expect(typeof authConfig.events?.signIn).toBe("function");
+  });
+
+  it("does not throw when called with an empty user object", async () => {
+    const handler = authConfig.events?.signIn;
+    expect(handler).toBeDefined();
+    // User has no id → early return. No DB call.
+    await expect(handler!({} as never)).resolves.toBeUndefined();
+    await expect(handler!({ user: {} as never } as never)).resolves.toBeUndefined();
+    await expect(handler!({ user: { id: "" } as never } as never)).resolves.toBeUndefined();
+  });
+});
+
 describe("auth module re-exports", () => {
   it("re-exports authConfig, handlers, signIn, signOut, auth", () => {
     expect(indexModule.authConfig).toBe(authConfig);

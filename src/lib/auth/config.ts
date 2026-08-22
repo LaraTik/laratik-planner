@@ -3,6 +3,7 @@ import Google from "next-auth/providers/google";
 import Nodemailer from "next-auth/providers/nodemailer";
 import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { accounts, sessions, users, verificationTokens } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/validation/env";
@@ -179,6 +180,42 @@ export const authConfig: NextAuthConfig = {
      * The actual bootstrap logic lives in src/lib/auth/bootstrap.ts and
      * is invoked from the sign-in page when the user has no agency.
      */
+    /**
+     * Stamp `emailVerified` on every successful sign-in for users who
+     * are not yet verified. The credentials / password-reset flow already
+     * does this in src/lib/auth/password.ts. The magic-link / Nodemailer
+     * flow does it on FIRST sign-in (DrizzleAdapter.createUser is called
+     * with `emailVerified: new Date()`) — but NOT on subsequent sign-ins
+     * for the same user, and NOT for users who were created with
+     * `emailVerified = null` via some other path (e.g. an OAuth profile
+     * that @auth/core didn't translate, or a pre-existing account that
+     * somehow lost the stamp).
+     *
+     * Without this event, a user who clicks the magic-link invitation
+     * but happens to have `emailVerified = null` will fail the
+     * `invitationIdentityMatches` check in
+     * src/lib/auth/invitations.ts and the page will render "Invalid
+     * invitation" — even though they ARE the person who received the
+     * email (they have the magic link, the click just signed them in).
+     *
+     * The WHERE clause on `emailVerified IS NULL` makes this a no-op
+     * for already-verified users, so the cost on every sign-in is one
+     * indexed lookup + (almost always) zero row writes.
+     */
+    async signIn({ user }) {
+      if (!user?.id) return;
+      try {
+        await db
+          .update(users)
+          .set({ emailVerified: sql`COALESCE(${users.emailVerified}, NOW())` })
+          .where(and(eq(users.id, user.id), isNull(users.emailVerified)));
+      } catch (err) {
+        // Never fail the sign-in over a verification stamp. The
+        // accept-invitation check would re-fire and surface its own
+        // "Invalid invitation" error if this silently failed.
+        console.error("[auth.events.signIn] failed to stamp emailVerified", err);
+      }
+    },
   },
 };
 
