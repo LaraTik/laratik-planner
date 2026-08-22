@@ -82,14 +82,25 @@ const SNAPSHOT_DIR = "tests/e2e/visual-regression.spec.ts-snapshots";
 const A11Y_TAGS = ["wcag2a", "wcag2aa", "wcag22aa"] as const;
 
 /**
- * Per-test timeout in capture mode. The dev-sign-in 500 on the
- * Linux runner can stall a route past the 30s default; 20s is
- * short enough to fail fast and let the next case run, and long
- * enough to let a healthy route complete on first hit (lazy
+ * Inner `waitForStableDom` timeout in capture mode. The dev-sign-in
+ * 500 on the Linux runner can stall a route past the 30s default;
+ * 20s is short enough to fail fast and let the next case run, and
+ * long enough to let a healthy route complete on first hit (lazy
  * compilation in dev). The compare step keeps the 30s default so
  * a slow-but-correctly-rendered page does not falsely fail.
  */
 const CAPTURE_MODE_TIMEOUT_MS = 20_000;
+
+/**
+ * Per-test budget in capture mode. Separated from
+ * `CAPTURE_MODE_TIMEOUT_MS` because the first viewport in each
+ * surface's serial block pays the cold-compile cost in dev and can
+ * exceed 20s on routes at the smallest viewport (360px). The inner
+ * `waitForStableDom` still uses the 20s cap so a genuinely broken
+ * route fails fast — the 60s budget is only the outer test wall
+ * time, which lets the cold-compile first hit complete.
+ */
+const CAPTURE_MODE_TEST_TIMEOUT_MS = 60_000;
 
 /**
  * CSS injected before each screenshot to hide volatile content
@@ -279,7 +290,7 @@ test.describe("visual regression (exact reference)", () => {
         // Fail fast on broken routes in capture mode so the suite
         // moves on to the next case instead of burning the full
         // 30s default. The compare step keeps the 30s default.
-        testInfo.setTimeout(CAPTURE_MODE_TIMEOUT_MS);
+        testInfo.setTimeout(CAPTURE_MODE_TEST_TIMEOUT_MS);
       }
 
       const viewport: RegressionViewport = {
@@ -392,7 +403,7 @@ test.describe("visual regression (responsive matrix)", () => {
       for (const viewport of REGRESSION_VIEWPORTS) {
         test(`responsive ${surface} @ ${viewport.name}`, async ({ page }, testInfo) => {
           if (isCaptureMode) {
-            testInfo.setTimeout(CAPTURE_MODE_TIMEOUT_MS);
+            testInfo.setTimeout(CAPTURE_MODE_TEST_TIMEOUT_MS);
           }
 
           await page.setViewportSize({ width: viewport.width, height: viewport.height });
