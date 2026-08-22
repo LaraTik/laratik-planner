@@ -36,6 +36,13 @@
       "when": 1787259000000,
       "tag": "0004_audit_followups",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787342202769,
+      "tag": "0005_brand_kit_rules_resources",
+      "breakpoints": true
     }
   ]
 }

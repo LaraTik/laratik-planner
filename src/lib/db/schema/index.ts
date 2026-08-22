@@ -17,3 +17,4 @@ export * from "./publishing";
 export * from "./notifications";
 export * from "./audit";
 export * from "./ai";
+export * from "./brand-kit";

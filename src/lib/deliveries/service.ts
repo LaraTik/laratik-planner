@@ -436,3 +436,130 @@ export async function listDeliveriesForItem(
     links: linksByVersion.get(v.id) ?? [],
   }));
 }
+
+/**
+ * STUDIOFLOW_MASTER_PROMPT.md §10 — list every delivery version for a
+ * content item with a **client-safe projection**.
+ *
+ * Differs from `listDeliveriesForItem` (which is the internal-only
+ * read for the workflow detail page) in that this function:
+ *
+ *  - accepts an `isClientReviewer` flag in `opts` and redacts the
+ *    fields a client must never see: `designerNote`, the submitter's
+ *    full display name, and the submitter's email (which is never
+ *    selected at all in the client projection);
+ *  - is the canonical read used by the `<DeliveryVersionList>`
+ *    component, which intentionally knows nothing about role-based
+ *    redaction.
+ *
+ * Authorization: any workspace member (same as `listApprovalsForItem`).
+ */
+export type DeliveryVersionListItem = {
+  id: string;
+  versionNumber: number;
+  description: string;
+  /** Internal-only; null when the actor is a client reviewer. */
+  designerNote: string | null;
+  submittedAt: Date;
+  isFinalApproved: boolean;
+  /**
+   * Submitter projection. For client reviewers, the `name` is
+   * intentionally blank — the UI renders nothing rather than
+   * leaking identity.
+   */
+  submittedBy: { id: string; name: string };
+  links: {
+    id: string;
+    provider: string;
+    label: string;
+    url: string;
+    isPreview: boolean;
+  }[];
+};
+
+export async function listDeliveryVersionsForItem(
+  actor: Actor,
+  contentItemId: string,
+  opts: { isClientReviewer?: boolean } = {},
+): Promise<DeliveryVersionListItem[]> {
+  const isClientReviewer = Boolean(opts.isClientReviewer);
+
+  const [item] = await db
+    .select({ workspaceId: contentItems.workspaceId })
+    .from(contentItems)
+    .where(eq(contentItems.id, contentItemId))
+    .limit(1);
+  if (!item) throw new Error("Content item not found");
+  await requirePolicy(
+    hasWorkspaceRole(actor, item.workspaceId, [
+      "workspace_manager",
+      "content_planner",
+      "designer",
+      "internal_reviewer",
+      "client_reviewer",
+      "publisher",
+      "viewer",
+    ]),
+    "list_delivery_versions",
+  );
+
+  // The client projection never selects the email column, so an
+  // accidental column leak is impossible at the SQL layer.
+  const versionRows = await db
+    .select({
+      id: deliveryVersions.id,
+      versionNumber: deliveryVersions.versionNumber,
+      description: deliveryVersions.description,
+      designerNote: deliveryVersions.designerNote,
+      submittedAt: deliveryVersions.submittedAt,
+      isFinalApproved: deliveryVersions.isFinalApproved,
+      submittedBy: users.id,
+      submittedByName: users.displayName,
+    })
+    .from(deliveryVersions)
+    .innerJoin(users, eq(users.id, deliveryVersions.submittedBy))
+    .where(eq(deliveryVersions.contentItemId, contentItemId))
+    .orderBy(sql`${deliveryVersions.versionNumber} DESC`);
+
+  if (versionRows.length === 0) return [];
+
+  const versionIds = versionRows.map((v) => v.id);
+  const linkRows = await db
+    .select({
+      id: deliveryLinks.id,
+      deliveryVersionId: deliveryLinks.deliveryVersionId,
+      provider: deliveryLinks.provider,
+      label: deliveryLinks.label,
+      url: deliveryLinks.url,
+      isPreview: deliveryLinks.isPreview,
+    })
+    .from(deliveryLinks)
+    .where(inArray(deliveryLinks.deliveryVersionId, versionIds))
+    .orderBy(sql`${deliveryLinks.createdAt} ASC`);
+
+  const linksByVersion = new Map<string, DeliveryVersionListItem["links"]>();
+  for (const link of linkRows) {
+    const list = linksByVersion.get(link.deliveryVersionId) ?? [];
+    list.push({
+      id: link.id,
+      provider: link.provider,
+      label: link.label,
+      url: link.url,
+      isPreview: link.isPreview,
+    });
+    linksByVersion.set(link.deliveryVersionId, list);
+  }
+
+  return versionRows.map((v) => ({
+    id: v.id,
+    versionNumber: v.versionNumber,
+    description: v.description,
+    designerNote: isClientReviewer ? null : v.designerNote,
+    submittedAt: v.submittedAt,
+    isFinalApproved: v.isFinalApproved,
+    submittedBy: isClientReviewer
+      ? { id: v.submittedBy, name: "" }
+      : { id: v.submittedBy, name: v.submittedByName },
+    links: linksByVersion.get(v.id) ?? [],
+  }));
+}

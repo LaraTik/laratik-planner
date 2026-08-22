@@ -38,6 +38,9 @@ yarn-error.log*
 /.worktrees/
 /worktrees/
 
+# worktree-local Playwright snapshots (absolute-path leak from subagent runs)
+tests/e2e/visual-regression.spec.ts-snapshots/-Users-*
+
 # editor
 .vscode/
 !.vscode/settings.json

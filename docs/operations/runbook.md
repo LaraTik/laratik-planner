@@ -93,8 +93,14 @@ From your **local** machine:
 
 ```bash
 git push origin main
-# CI: quality + e2e (test:e2e:isolated) on the head_sha.
-# On green: deploy workflow SSHes to the VPS and runs scripts/deploy.sh.
+# CI: lint, typecheck, unit, integration, coverage, audit, Chromium
+#      critical E2E + visual baseline, build, Docker smoke on the
+#      head_sha. Full release-gate contract — see
+#      docs/testing/strategy.md (Release gates).
+# E2E (separate workflow, release-candidate only): full 5-browser
+#      functional matrix + visual-chromium on the head_sha. Does NOT
+#      gate deploy.
+# On green CI: deploy workflow SSHes to the VPS and runs scripts/deploy.sh.
 # On red health check: the deploy script rolls back to the previous image automatically.
 ```
 
@@ -252,6 +258,30 @@ pnpm test:e2e:isolated   # the exact CI command
 PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e:smoke
 ```
 
+### CI vs. E2E workflow split
+
+The authoritative deploy-gate workflow is `.github/workflows/ci.yml`
+(Task 10). It runs the full release contract in three dependent jobs
+(`unit-quality` → `browser-verify` → `build-smoke`), including:
+
+- format, lint, typecheck;
+- unit + target coverage (95/90 critical modules, 85/80 application
+  services);
+- integration + migration;
+- `pnpm audit --prod` (zero critical/high production findings);
+- Chromium critical E2E + visual baseline (`pnpm test:e2e:critical`);
+- production build, Docker image build, and a `/api/health` smoke
+  against the built image.
+
+The full Playwright matrix lives in `.github/workflows/e2e.yml` and
+runs the 5-browser functional suite (chromium, firefox, webkit,
+mobile-chrome, mobile-safari) plus the dedicated `visual-chromium`
+project. It is automatic on every PR and push to `main` and is a
+**required release-candidate check**, but production deploy waits
+**only** for the critical CI subset above. If a release candidate
+fails the full E2E workflow, do not promote it to production — fix or
+revert on the PR before merge.
+
 ### Dev-only API helpers
 
 `/api/dev/seed`, `/api/dev/sign-in`, and `/api/dev/sign-out` exist to make E2E tests skip the Google OAuth and Mailcow SMTP flows. They are guarded by `NODE_ENV !== "production"` in two places (the route handler + the proxy allowlist) so production builds return 404.
@@ -265,14 +295,27 @@ PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e:smoke
 
 ### Running on CI
 
-CI runs the full isolated suite on every push and PR to `main`:
+Two workflows run browser tests on every push and PR to `main`:
 
 ```yaml
-# .github/workflows/ci.yml
-- run: pnpm test:e2e:isolated
+# .github/workflows/ci.yml  (deploy-gate)
+- run: pnpm test:e2e:critical # chromium + visual-chromium projects only
 ```
 
-`test:e2e:isolated` provisions its own ephemeral Postgres via Docker, applies migrations, boots `pnpm dev`, and runs the entire Playwright matrix. The deploy workflow only fires after this job is green; it does not re-run e2e against the VPS.
+```yaml
+# .github/workflows/e2e.yml  (release-candidate)
+- run: pnpm test:e2e:isolated # full 5-browser functional matrix
+- run: pnpm test:visual # visual-chromium only (if functional matrix green)
+```
+
+`test:e2e:critical` covers the deploy-critical subset (Chromium
+functional + visual baseline). The full 5-browser matrix and the
+dedicated visual run live in the separate `e2e.yml` workflow and
+remain required for the release candidate, but do not gate deploy.
+See the **CI vs. E2E workflow split** section above and
+[`../testing/strategy.md`](../testing/strategy.md) (Release gates)
+for the full contract. The deploy workflow only fires after the
+critical CI subset is green; it does not re-run e2e against the VPS.
 
 ## Troubleshooting
 

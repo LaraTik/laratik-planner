@@ -69,10 +69,36 @@ const policyMock = vi.hoisted(() => ({
   hasWorkspaceRole: vi.fn(),
 }));
 
+// Service mutator mocks — only the four new mutators (publishing
+// rule + linked resource). All other service exports stay real so
+// the existing logo/font/voice tests, which assert on
+// `dbMock.state.insertCalls`, keep working unchanged. The real
+// service mutators route through the mocked `@/lib/db` and
+// `@/lib/auth/policy` modules above.
+const serviceMock = vi.hoisted(() => ({
+  createBrandPublishingRule: vi.fn(),
+  archiveBrandPublishingRule: vi.fn(),
+  createBrandLinkedResource: vi.fn(),
+  archiveBrandLinkedResource: vi.fn(),
+}));
+
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 vi.mock("@/lib/auth/config", () => ({ auth: authMock.auth }));
 vi.mock("@/lib/workspaces/context", () => workspaceMock);
 vi.mock("@/lib/auth/policy", () => ({ hasWorkspaceRole: policyMock.hasWorkspaceRole }));
+vi.mock("@/lib/brand/service", async () => {
+  // Re-export the real service module so the existing actions
+  // (logo/font/voice) keep their real `createLogoAsset` /
+  // `createFontAsset` / `createBrandVoiceRule` / etc. exports.
+  const actual = await vi.importActual<typeof import("@/lib/brand/service")>("@/lib/brand/service");
+  return {
+    ...actual,
+    createBrandPublishingRule: serviceMock.createBrandPublishingRule,
+    archiveBrandPublishingRule: serviceMock.archiveBrandPublishingRule,
+    createBrandLinkedResource: serviceMock.createBrandLinkedResource,
+    archiveBrandLinkedResource: serviceMock.archiveBrandLinkedResource,
+  };
+});
 
 const {
   createColorAssetAction,
@@ -83,6 +109,10 @@ const {
   archiveFontAssetAction,
   createVoiceRuleAction,
   archiveVoiceRuleAction,
+  createPublishingRuleAction,
+  archivePublishingRuleAction,
+  createLinkedResourceAction,
+  archiveLinkedResourceAction,
 } = await import("@/app/(app)/app/w/[slug]/brand-kit/actions");
 
 const slug = "test-slug";
@@ -102,6 +132,14 @@ beforeEach(() => {
   authMock.auth.mockReset();
   workspaceMock.getAccessibleWorkspace.mockReset();
   policyMock.hasWorkspaceRole.mockReset();
+  serviceMock.createBrandPublishingRule.mockReset();
+  serviceMock.createBrandPublishingRule.mockResolvedValue(undefined);
+  serviceMock.archiveBrandPublishingRule.mockReset();
+  serviceMock.archiveBrandPublishingRule.mockResolvedValue(undefined);
+  serviceMock.createBrandLinkedResource.mockReset();
+  serviceMock.createBrandLinkedResource.mockResolvedValue(undefined);
+  serviceMock.archiveBrandLinkedResource.mockReset();
+  serviceMock.archiveBrandLinkedResource.mockResolvedValue(undefined);
 });
 
 describe("createColorAssetAction", () => {
@@ -426,6 +464,341 @@ describe("archiveFontAssetAction", () => {
     await archiveFontAssetAction(slug, "font-1");
     expect(dbMock.state.updateCalls).toHaveLength(1);
     expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: expect.any(Date) });
+    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
+  });
+});
+
+// ─── Publishing rules (Task 4) ─────────────────────────────────────────
+// These actions delegate to the brand service mutators, so we
+// stub the four service exports above and assert on those mocks
+// (in addition to the existing `dbMock`/`policyMock` invariants).
+
+describe("createPublishingRuleAction", () => {
+  it("rejects an unauthenticated caller", async () => {
+    authMock.auth.mockResolvedValue(null);
+    const result = await createPublishingRuleAction(
+      slug,
+      {},
+      formData({ ruleType: "alt_text", title: "Alt text", content: "Describe the image." }),
+    );
+    expect(result).toEqual({ error: "Sign in is required." });
+    expect(serviceMock.createBrandPublishingRule).not.toHaveBeenCalled();
+  });
+
+  it("rejects a session without a user id", async () => {
+    authMock.auth.mockResolvedValue({ user: {} });
+    const result = await createPublishingRuleAction(
+      slug,
+      {},
+      formData({ ruleType: "alt_text", title: "Alt text", content: "Describe the image." }),
+    );
+    expect(result).toEqual({ error: "Sign in is required." });
+    expect(serviceMock.createBrandPublishingRule).not.toHaveBeenCalled();
+  });
+
+  it("rejects a caller with no accessible workspace", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(null);
+    const result = await createPublishingRuleAction(
+      slug,
+      {},
+      formData({ ruleType: "alt_text", title: "Alt text", content: "Describe the image." }),
+    );
+    expect(result).toEqual({ error: "Workspace not found." });
+    expect(serviceMock.createBrandPublishingRule).not.toHaveBeenCalled();
+  });
+
+  it("rejects a caller without the brand_manager role", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    const result = await createPublishingRuleAction(
+      slug,
+      {},
+      formData({ ruleType: "alt_text", title: "Alt text", content: "Describe the image." }),
+    );
+    expect(result).toEqual({ error: "Brand manager access is required." });
+    expect(serviceMock.createBrandPublishingRule).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown ruleType", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createPublishingRuleAction(
+      slug,
+      {},
+      formData({ ruleType: "marketing", title: "Forbidden", content: "Should not insert." }),
+    );
+    expect(result.error).toBeDefined();
+    expect(serviceMock.createBrandPublishingRule).not.toHaveBeenCalled();
+  });
+
+  it("rejects an empty title", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createPublishingRuleAction(
+      slug,
+      {},
+      formData({ ruleType: "alt_text", title: "", content: "Describe the image." }),
+    );
+    expect(result.error).toBeDefined();
+    expect(serviceMock.createBrandPublishingRule).not.toHaveBeenCalled();
+  });
+
+  it("calls the service mutator with workspaceId + parsed payload + actor, and revalidates", async () => {
+    const { revalidatePath } = await import("next/cache");
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createPublishingRuleAction(
+      slug,
+      {},
+      formData({ ruleType: "alt_text", title: "Alt text", content: "Describe the image." }),
+    );
+    expect(result).toEqual({ success: true });
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(
+      { id: session.user.id },
+      workspace.id,
+      ["workspace_manager", "content_planner"],
+    );
+    expect(serviceMock.createBrandPublishingRule).toHaveBeenCalledWith(
+      { id: session.user.id },
+      workspace.id,
+      expect.objectContaining({
+        ruleType: "alt_text",
+        title: "Alt text",
+        content: "Describe the image.",
+      }),
+    );
+    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
+  });
+});
+
+describe("archivePublishingRuleAction", () => {
+  it("returns silently when there is no session", async () => {
+    authMock.auth.mockResolvedValue(null);
+    await archivePublishingRuleAction(slug, "rule-1");
+    expect(serviceMock.archiveBrandPublishingRule).not.toHaveBeenCalled();
+  });
+
+  it("returns silently when the workspace is not accessible", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(null);
+    await archivePublishingRuleAction(slug, "rule-1");
+    expect(serviceMock.archiveBrandPublishingRule).not.toHaveBeenCalled();
+  });
+
+  it("returns silently when the caller is not a brand_manager", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    await archivePublishingRuleAction(slug, "rule-1");
+    expect(serviceMock.archiveBrandPublishingRule).not.toHaveBeenCalled();
+  });
+
+  it("calls the service mutator with the rule id and workspaceId, then revalidates", async () => {
+    const { revalidatePath } = await import("next/cache");
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await archivePublishingRuleAction(slug, "rule-1");
+    expect(serviceMock.archiveBrandPublishingRule).toHaveBeenCalledWith(
+      { id: session.user.id },
+      workspace.id,
+      "rule-1",
+    );
+    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
+  });
+});
+
+// ─── Linked resources (Task 4) ─────────────────────────────────────────
+
+describe("createLinkedResourceAction", () => {
+  it("rejects an unauthenticated caller", async () => {
+    authMock.auth.mockResolvedValue(null);
+    const result = await createLinkedResourceAction(
+      slug,
+      {},
+      formData({
+        provider: "figma",
+        name: "Library",
+        url: "https://figma.com/file/x",
+      }),
+    );
+    expect(result).toEqual({ error: "Sign in is required." });
+    expect(serviceMock.createBrandLinkedResource).not.toHaveBeenCalled();
+  });
+
+  it("rejects a session without a user id", async () => {
+    authMock.auth.mockResolvedValue({ user: {} });
+    const result = await createLinkedResourceAction(
+      slug,
+      {},
+      formData({
+        provider: "figma",
+        name: "Library",
+        url: "https://figma.com/file/x",
+      }),
+    );
+    expect(result).toEqual({ error: "Sign in is required." });
+    expect(serviceMock.createBrandLinkedResource).not.toHaveBeenCalled();
+  });
+
+  it("rejects a caller with no accessible workspace", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(null);
+    const result = await createLinkedResourceAction(
+      slug,
+      {},
+      formData({
+        provider: "figma",
+        name: "Library",
+        url: "https://figma.com/file/x",
+      }),
+    );
+    expect(result).toEqual({ error: "Workspace not found." });
+    expect(serviceMock.createBrandLinkedResource).not.toHaveBeenCalled();
+  });
+
+  it("rejects a caller without the brand_manager role", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    const result = await createLinkedResourceAction(
+      slug,
+      {},
+      formData({
+        provider: "figma",
+        name: "Library",
+        url: "https://figma.com/file/x",
+      }),
+    );
+    expect(result).toEqual({ error: "Brand manager access is required." });
+    expect(serviceMock.createBrandLinkedResource).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-HTTPS url", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createLinkedResourceAction(
+      slug,
+      {},
+      formData({ provider: "figma", name: "Library", url: "http://figma.com/file/x" }),
+    );
+    expect(result.error).toBeDefined();
+    expect(serviceMock.createBrandLinkedResource).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown provider", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createLinkedResourceAction(
+      slug,
+      {},
+      formData({ provider: "dropbox_clone", name: "Library", url: "https://example.com" }),
+    );
+    expect(result.error).toBeDefined();
+    expect(serviceMock.createBrandLinkedResource).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-URL string", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createLinkedResourceAction(
+      slug,
+      {},
+      formData({ provider: "figma", name: "Library", url: "javascript:alert(1)" }),
+    );
+    expect(result.error).toBeDefined();
+    expect(serviceMock.createBrandLinkedResource).not.toHaveBeenCalled();
+  });
+
+  it("rejects an empty name", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createLinkedResourceAction(
+      slug,
+      {},
+      formData({ provider: "figma", name: "", url: "https://figma.com/file/x" }),
+    );
+    expect(result.error).toBeDefined();
+    expect(serviceMock.createBrandLinkedResource).not.toHaveBeenCalled();
+  });
+
+  it("calls the service mutator with workspaceId + parsed payload + actor, and revalidates", async () => {
+    const { revalidatePath } = await import("next/cache");
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    const result = await createLinkedResourceAction(
+      slug,
+      {},
+      formData({
+        provider: "figma",
+        name: "Master library",
+        url: "https://figma.com/file/example",
+        description: "Approved components",
+      }),
+    );
+    expect(result).toEqual({ success: true });
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(
+      { id: session.user.id },
+      workspace.id,
+      ["workspace_manager", "content_planner"],
+    );
+    expect(serviceMock.createBrandLinkedResource).toHaveBeenCalledWith(
+      { id: session.user.id },
+      workspace.id,
+      expect.objectContaining({
+        provider: "figma",
+        name: "Master library",
+        url: "https://figma.com/file/example",
+        description: "Approved components",
+      }),
+    );
+    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
+  });
+});
+
+describe("archiveLinkedResourceAction", () => {
+  it("returns silently when there is no session", async () => {
+    authMock.auth.mockResolvedValue(null);
+    await archiveLinkedResourceAction(slug, "res-1");
+    expect(serviceMock.archiveBrandLinkedResource).not.toHaveBeenCalled();
+  });
+
+  it("returns silently when the workspace is not accessible", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(null);
+    await archiveLinkedResourceAction(slug, "res-1");
+    expect(serviceMock.archiveBrandLinkedResource).not.toHaveBeenCalled();
+  });
+
+  it("returns silently when the caller is not a brand_manager", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    await archiveLinkedResourceAction(slug, "res-1");
+    expect(serviceMock.archiveBrandLinkedResource).not.toHaveBeenCalled();
+  });
+
+  it("calls the service mutator with the resource id and workspaceId, then revalidates", async () => {
+    const { revalidatePath } = await import("next/cache");
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await archiveLinkedResourceAction(slug, "res-1");
+    expect(serviceMock.archiveBrandLinkedResource).toHaveBeenCalledWith(
+      { id: session.user.id },
+      workspace.id,
+      "res-1",
+    );
     expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 });

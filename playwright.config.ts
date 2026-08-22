@@ -40,11 +40,36 @@ export default defineConfig({
   },
 
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
-    { name: "mobile-chrome", use: { ...devices["Pixel 7"] } },
-    { name: "mobile-safari", use: { ...devices["iPhone 13"] } },
+    {
+      name: "chromium",
+      testIgnore: /visual-regression\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "firefox",
+      testIgnore: /visual-regression\.spec\.ts/,
+      use: { ...devices["Desktop Firefox"] },
+    },
+    {
+      name: "webkit",
+      testIgnore: /visual-regression\.spec\.ts/,
+      use: { ...devices["Desktop Safari"] },
+    },
+    {
+      name: "mobile-chrome",
+      testIgnore: /visual-regression\.spec\.ts/,
+      use: { ...devices["Pixel 7"] },
+    },
+    {
+      name: "mobile-safari",
+      testIgnore: /visual-regression\.spec\.ts/,
+      use: { ...devices["iPhone 13"] },
+    },
+    {
+      name: "visual-chromium",
+      testMatch: /visual-regression\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
 
   // Boot the Next.js dev server before tests if not already running.

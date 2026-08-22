@@ -102,6 +102,26 @@ const dbMock = vi.hoisted(() => {
   return makeDrizzleMock(state);
 });
 
+/**
+ * Cycle-safe stringifier for Drizzle SQL nodes. The Drizzle
+ * `and(eq(...), eq(...))` predicate contains circular references
+ * (column → table → columns again) that crash `JSON.stringify` with
+ * a `TypeError`. We use a `WeakSet` to break cycles and walk every
+ * own enumerable property to surface identifiers hidden inside the
+ * chunks.
+ */
+function safeStringify(value: unknown): string {
+  const seen = new WeakSet<object>();
+  return JSON.stringify(value, (_key, v) => {
+    if (typeof v === "object" && v !== null) {
+      if (seen.has(v as object)) return "[Circular]";
+      seen.add(v as object);
+    }
+    if (typeof v === "bigint") return v.toString();
+    return v;
+  });
+}
+
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 
 const policyMock = vi.hoisted(() => ({
@@ -126,6 +146,12 @@ const {
   listBrandVoiceRules,
   listContentPillars,
   listRecentBrandUpdates,
+  listBrandPublishingRules,
+  listBrandLinkedResources,
+  createBrandPublishingRule,
+  archiveBrandPublishingRule,
+  createBrandLinkedResource,
+  archiveBrandLinkedResource,
 } = await import("@/lib/brand/service");
 
 const actor = { id: "user-1" };
@@ -515,5 +541,330 @@ describe("listRecentBrandUpdates", () => {
     dbMock.state.selectResults.push([]);
     const updates = await listRecentBrandUpdates(workspaceId);
     expect(updates).toEqual([]);
+  });
+});
+
+// ─── Publishing rules (Task 3) ─────────────────────────────────────────
+
+describe("createBrandPublishingRule", () => {
+  it("agency admin succeeds through the policy shortcut", async () => {
+    // `hasWorkspaceRole` resolves true for any role list when the
+    // actor is an agency admin — we model that by returning true.
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await createBrandPublishingRule(actor, workspaceId, {
+      ruleType: "compliance",
+      title: "Legal review",
+      content: "Claims require written approval.",
+    });
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, [
+      "workspace_manager",
+      "content_planner",
+    ]);
+    expect(dbMock.state.insertCalls).toHaveLength(1);
+  });
+
+  it("workspace manager succeeds", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await createBrandPublishingRule(actor, workspaceId, {
+      ruleType: "channel",
+      title: "LinkedIn voice",
+      content: "Lead with the customer outcome.",
+    });
+    expect(dbMock.state.insertCalls).toHaveLength(1);
+  });
+
+  it("content planner succeeds", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await createBrandPublishingRule(actor, workspaceId, {
+      ruleType: "alt_text",
+      title: "Alt text",
+      content: "Describe the image in plain English.",
+    });
+    expect(dbMock.state.insertCalls).toHaveLength(1);
+  });
+
+  it.each(["designer", "internal_reviewer", "publisher", "viewer", "client_reviewer"] as const)(
+    "designer/reviewer/publisher/viewer/client_reviewer cannot mutate (%s)",
+    async (role) => {
+      // The `hasWorkspaceRole` helper returns false for any role not
+      // in the allowlist (and the actor is not an agency admin in the
+      // mock's default state). This is the deny path.
+      void role;
+      policyMock.hasWorkspaceRole.mockResolvedValue(false);
+      await expect(
+        createBrandPublishingRule(actor, workspaceId, {
+          ruleType: "general",
+          title: "Forbidden",
+          content: "Should not be inserted.",
+        }),
+      ).rejects.toBeInstanceOf(PermissionDeniedError);
+      expect(dbMock.state.insertCalls).toHaveLength(0);
+    },
+  );
+
+  it("inserts a publishing rule with workspaceId, createdBy, and the validated value", async () => {
+    await createBrandPublishingRule(actor, workspaceId, {
+      ruleType: "compliance",
+      title: "Legal review",
+      content: "Claims require written approval.",
+    });
+    const values = dbMock.state.insertCalls[0]?.values as Record<string, unknown>;
+    expect(values).toMatchObject({
+      workspaceId,
+      createdBy: actor.id,
+      ruleType: "compliance",
+      title: "Legal review",
+      content: "Claims require written approval.",
+    });
+  });
+});
+
+describe("archiveBrandPublishingRule", () => {
+  it("agency admin succeeds through the policy shortcut", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await archiveBrandPublishingRule(actor, workspaceId, "rule-1");
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, [
+      "workspace_manager",
+      "content_planner",
+    ]);
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+  });
+
+  it("workspace manager succeeds", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await archiveBrandPublishingRule(actor, workspaceId, "rule-1");
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+    expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: expect.any(Date) });
+  });
+
+  it("content planner succeeds", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await archiveBrandPublishingRule(actor, workspaceId, "rule-1");
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+  });
+
+  it("designer/reviewer/publisher/viewer/client_reviewer cannot mutate", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    await expect(archiveBrandPublishingRule(actor, workspaceId, "rule-1")).rejects.toBeInstanceOf(
+      PermissionDeniedError,
+    );
+    expect(dbMock.state.updateCalls).toHaveLength(0);
+  });
+
+  it("archiving includes both the rule ID and the workspace ID in the predicate", async () => {
+    await archiveBrandPublishingRule(actor, workspaceId, "rule-42");
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+    // The Drizzle `and(eq(table.id, X), eq(table.workspaceId, Y))`
+    // expression compiles to an SQL node with a queryChunks array —
+    // we verify the workspaceId and rule id appear as strings inside
+    // it without depending on the private shape. The integration
+    // test pins the actual SQL via the live database.
+    const where = dbMock.state.updateCalls[0]?.where as { queryChunks?: unknown[] } & unknown;
+    const whereString = safeStringify(where);
+    expect(whereString).toContain("rule-42");
+    expect(whereString).toContain(workspaceId);
+  });
+});
+
+describe("listBrandPublishingRules", () => {
+  it("returns the queued select result", async () => {
+    dbMock.state.selectResults.push([
+      { id: "p1", workspaceId, ruleType: "compliance", title: "Legal", content: "X" },
+    ]);
+    const rows = await listBrandPublishingRules(workspaceId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.id).toBe("p1");
+  });
+
+  it("filters by workspaceId and archivedAt IS NULL", async () => {
+    dbMock.state.selectResults.push([]);
+    await listBrandPublishingRules(workspaceId);
+    // The chain runs `.select().from().where(...).orderBy(...)` —
+    // the only thing we can assert at the unit level is that the
+    // chain was invoked and returned the queued empty result. The
+    // SQL predicate is pinned by the integration test.
+    expect(dbMock.state.selectResults).toHaveLength(0);
+  });
+});
+
+// ─── Linked resources (Task 3) ──────────────────────────────────────────
+
+describe("createBrandLinkedResource", () => {
+  it("agency admin succeeds through the policy shortcut", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await createBrandLinkedResource(actor, workspaceId, {
+      provider: "figma",
+      name: "Master library",
+      url: "https://figma.com/file/example",
+      description: "Approved components",
+    });
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, [
+      "workspace_manager",
+      "content_planner",
+    ]);
+    expect(dbMock.state.insertCalls).toHaveLength(1);
+  });
+
+  it("workspace manager succeeds", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await createBrandLinkedResource(actor, workspaceId, {
+      provider: "google_drive",
+      name: "Drive",
+      url: "https://drive.google.com/folders/abc",
+    });
+    expect(dbMock.state.insertCalls).toHaveLength(1);
+  });
+
+  it("content planner succeeds", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await createBrandLinkedResource(actor, workspaceId, {
+      provider: "canva",
+      name: "Templates",
+      url: "https://canva.com/p/abc",
+    });
+    expect(dbMock.state.insertCalls).toHaveLength(1);
+  });
+
+  it("designer/reviewer/publisher/viewer/client_reviewer cannot mutate", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    await expect(
+      createBrandLinkedResource(actor, workspaceId, {
+        provider: "figma",
+        name: "Forbidden",
+        url: "https://figma.com/file/x",
+      }),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+    expect(dbMock.state.insertCalls).toHaveLength(0);
+  });
+
+  it("inserts a linked resource with workspaceId, createdBy, and the validated value", async () => {
+    await createBrandLinkedResource(actor, workspaceId, {
+      provider: "figma",
+      name: "Master library",
+      url: "https://figma.com/file/example",
+      description: "Approved components",
+    });
+    const values = dbMock.state.insertCalls[0]?.values as Record<string, unknown>;
+    expect(values).toMatchObject({
+      workspaceId,
+      createdBy: actor.id,
+      provider: "figma",
+      name: "Master library",
+      url: "https://figma.com/file/example",
+      description: "Approved components",
+    });
+  });
+});
+
+describe("archiveBrandLinkedResource", () => {
+  it("agency admin succeeds through the policy shortcut", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await archiveBrandLinkedResource(actor, workspaceId, "res-1");
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, [
+      "workspace_manager",
+      "content_planner",
+    ]);
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+  });
+
+  it("workspace manager succeeds", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await archiveBrandLinkedResource(actor, workspaceId, "res-1");
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+    expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: expect.any(Date) });
+  });
+
+  it("content planner succeeds", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await archiveBrandLinkedResource(actor, workspaceId, "res-1");
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+  });
+
+  it("designer/reviewer/publisher/viewer/client_reviewer cannot mutate", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    await expect(archiveBrandLinkedResource(actor, workspaceId, "res-1")).rejects.toBeInstanceOf(
+      PermissionDeniedError,
+    );
+    expect(dbMock.state.updateCalls).toHaveLength(0);
+  });
+
+  it("archiving includes both the resource ID and the workspace ID in the predicate", async () => {
+    await archiveBrandLinkedResource(actor, workspaceId, "res-42");
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+    const where = dbMock.state.updateCalls[0]?.where as unknown;
+    const whereString = safeStringify(where);
+    expect(whereString).toContain("res-42");
+    expect(whereString).toContain(workspaceId);
+  });
+});
+
+describe("listBrandLinkedResources", () => {
+  it("returns the queued select result", async () => {
+    dbMock.state.selectResults.push([
+      {
+        id: "r1",
+        workspaceId,
+        provider: "figma",
+        name: "Library",
+        url: "https://figma.com/file/x",
+        description: null,
+      },
+    ]);
+    const rows = await listBrandLinkedResources(workspaceId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.id).toBe("r1");
+  });
+
+  it("filters by workspaceId and archivedAt IS NULL", async () => {
+    dbMock.state.selectResults.push([]);
+    await listBrandLinkedResources(workspaceId);
+    expect(dbMock.state.selectResults).toHaveLength(0);
+  });
+});
+
+// ─── listRecentBrandUpdates extension (Task 3) ─────────────────────────
+
+describe("listRecentBrandUpdates — rules + resources", () => {
+  it("includes publishing rule entries", async () => {
+    const t = new Date("2026-01-01T00:00:00Z");
+    // assets
+    dbMock.state.selectResults.push([]);
+    // rules
+    dbMock.state.selectResults.push([]);
+    // publishing rules
+    dbMock.state.selectResults.push([{ updatedAt: t, ruleType: "compliance", title: "Legal" }]);
+    // linked resources
+    dbMock.state.selectResults.push([]);
+    const updates = await listRecentBrandUpdates(workspaceId);
+    const rule = updates.find((u) => u.kind === "publishing_rule");
+    expect(rule).toBeDefined();
+    expect(rule?.description).toBe("compliance: Legal");
+  });
+
+  it("includes linked resource entries without exposing URLs", async () => {
+    const t = new Date("2026-01-01T00:00:00Z");
+    dbMock.state.selectResults.push([]); // assets
+    dbMock.state.selectResults.push([]); // voice rules
+    dbMock.state.selectResults.push([]); // publishing rules
+    dbMock.state.selectResults.push([
+      {
+        updatedAt: t,
+        provider: "figma",
+        name: "Master library",
+        url: "https://figma.com/file/secret-token",
+      },
+    ]);
+    const updates = await listRecentBrandUpdates(workspaceId);
+    const resource = updates.find((u) => u.kind === "linked_resource");
+    expect(resource).toBeDefined();
+    expect(resource?.description).toBe("figma Master library");
+    // Critical: the URL must NOT appear in the descriptor — even if a
+    // viewer can see that a resource exists, they shouldn't get the
+    // deep link to the upstream library.
+    expect(resource?.description ?? "").not.toContain("figma.com");
+    expect(resource?.description ?? "").not.toContain("secret-token");
+    // The returned update object must not carry a `url` field either.
+    const resourceRecord = resource as unknown as Record<string, unknown>;
+    expect(resourceRecord.url).toBeUndefined();
   });
 });

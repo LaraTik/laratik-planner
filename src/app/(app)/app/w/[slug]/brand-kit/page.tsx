@@ -16,7 +16,12 @@ import { db } from "@/lib/db";
 import { brandAssets, brandVoiceRules } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
-import { listContentPillars, listRecentBrandUpdates } from "@/lib/brand/service";
+import {
+  listBrandLinkedResources,
+  listBrandPublishingRules,
+  listContentPillars,
+  listRecentBrandUpdates,
+} from "@/lib/brand/service";
 import { getSignedDownloadUrl } from "@/lib/storage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,10 +34,14 @@ import { ColorForm } from "./color-form";
 import { VoiceForm } from "./voice-form";
 import { LogoForm } from "./logo-form";
 import { TypographyForm } from "./typography-form";
+import { LinkedResourceForm } from "./linked-resource-form";
+import { PublishingRuleForm } from "./publishing-rule-form";
 import {
   archiveColorAssetAction,
   archiveFontAssetAction,
+  archiveLinkedResourceAction,
   archiveLogoAssetAction,
+  archivePublishingRuleAction,
   archiveVoiceRuleAction,
 } from "./actions";
 
@@ -53,11 +62,13 @@ import {
  *   row 3  col-span-12  Typography
  *   row 4  col-span-6   Voice & tone       col-span-6  Content Pillars
  *   row 5  col-span-4   Publishing Rules   col-span-4  Linked Resources
- *                                  col-span-4  (placeholder until R3-F)
  *   row 6  col-span-12  Recent Updates
  *
- * The Publishing Rules + Linked Resources cards render an EmptyState
- * stub in this commit; the data layer for them ships in commit R3-F.
+ * Publishing rules and linked resources are listers in
+ * `src/lib/brand/service.ts`; the page pulls them in the same
+ * `Promise.all` as the rest of the Brand Kit data. External URLs
+ * are rendered as `<a target="_blank" rel="noreferrer">` and never
+ * fetched server-side.
  */
 export default async function BrandKitPage({ params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();
@@ -67,7 +78,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
   if (!workspace) notFound();
   const actor = { id: session.user.id };
   const canManage = await hasWorkspaceRole(actor, workspace.id, ["workspace_manager"]);
-  const [assets, rules, pillars, recent] = await Promise.all([
+  const [assets, rules, pillars, recent, publishingRules, linkedResources] = await Promise.all([
     db
       .select()
       .from(brandAssets)
@@ -75,6 +86,8 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
     db.select().from(brandVoiceRules).where(eq(brandVoiceRules.workspaceId, workspace.id)),
     listContentPillars(workspace.id),
     listRecentBrandUpdates(workspace.id),
+    listBrandPublishingRules(workspace.id),
+    listBrandLinkedResources(workspace.id),
   ]);
 
   // Group assets by kind so the "Logo Assets" / "Color Palette" /
@@ -494,12 +507,68 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
           aria-label="Publishing rules"
           data-testid="brand-kit-section-publishing"
         >
-          <CardTitle className="mb-3">Publishing Rules</CardTitle>
-          <EmptyState
-            icon={<LinkIcon className="h-7 w-7" />}
-            title="No publishing rules yet"
-            description="The team is finalizing alt-text, hashtag, and compliance rules in R3-F."
-          />
+          <CardTitle className="mb-3 inline-flex items-center gap-2">
+            <LinkIcon className="text-fg-secondary h-4 w-4" aria-hidden="true" />
+            Publishing Rules
+          </CardTitle>
+          {canManage ? <PublishingRuleForm slug={slug} /> : null}
+          {publishingRules.length ? (
+            <ul className="space-y-2" data-testid="brand-kit-publishing-rules">
+              {publishingRules.map((rule) => {
+                const ruleLabel =
+                  rule.ruleType === "alt_text"
+                    ? "Alt text"
+                    : rule.ruleType === "hashtag"
+                      ? "Hashtags"
+                      : rule.ruleType === "compliance"
+                        ? "Compliance"
+                        : rule.ruleType === "channel"
+                          ? "Channel-specific"
+                          : "General";
+                const badgeVariant =
+                  rule.ruleType === "compliance"
+                    ? "warning"
+                    : rule.ruleType === "channel"
+                      ? "info"
+                      : "default";
+                return (
+                  <li
+                    key={rule.id}
+                    data-testid={`brand-publishing-rule-${rule.id}`}
+                    className="bg-surface-subtle flex flex-col gap-1 rounded-[var(--radius-control)] p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <Badge variant={badgeVariant} className="w-fit capitalize">
+                          {ruleLabel}
+                        </Badge>
+                        <p className="text-body text-fg-primary font-semibold">{rule.title}</p>
+                      </div>
+                      {canManage ? (
+                        <form action={archivePublishingRuleAction.bind(null, slug, rule.id)}>
+                          <Button
+                            type="submit"
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Archive publishing rule ${rule.title}`}
+                          >
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                        </form>
+                      ) : null}
+                    </div>
+                    <p className="text-body text-fg-secondary whitespace-pre-line">
+                      {rule.content}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-body text-fg-muted py-4">
+              No publishing rules yet. Add the first one to set guidance for your team.
+            </p>
+          )}
         </Card>
 
         <Card
@@ -508,18 +577,73 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
           aria-label="Linked resources"
           data-testid="brand-kit-section-linked"
         >
-          <CardTitle className="mb-3">Linked Resources</CardTitle>
-          <EmptyState
-            icon={<Folder className="h-7 w-7" />}
-            title="No linked resources yet"
-            description="Connect Drive, Figma, and Canva once the linking surface lands in R3-F."
-            action={
-              <Button type="button" variant="secondary" size="sm">
-                <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                Link a resource
-              </Button>
-            }
-          />
+          <CardTitle className="mb-3 inline-flex items-center gap-2">
+            <Folder className="text-fg-secondary h-4 w-4" aria-hidden="true" />
+            Linked Resources
+          </CardTitle>
+          {canManage ? <LinkedResourceForm slug={slug} /> : null}
+          {linkedResources.length ? (
+            <ul className="space-y-2" data-testid="brand-kit-linked-resources">
+              {linkedResources.map((resource) => {
+                const providerLabel =
+                  resource.provider === "google_drive"
+                    ? "Google Drive"
+                    : resource.provider === "figma"
+                      ? "Figma"
+                      : resource.provider === "canva"
+                        ? "Canva"
+                        : resource.provider === "dropbox"
+                          ? "Dropbox"
+                          : "Other";
+                return (
+                  <li
+                    key={resource.id}
+                    data-testid={`brand-linked-resource-${resource.id}`}
+                    className="bg-surface-subtle flex flex-col gap-1 rounded-[var(--radius-control)] p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <span className="text-label text-fg-muted font-semibold tracking-wider uppercase">
+                          {providerLabel}
+                        </span>
+                        <a
+                          href={resource.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-body text-primary inline-flex items-center gap-1 font-semibold break-all hover:underline"
+                        >
+                          {resource.name}
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        </a>
+                      </div>
+                      {canManage ? (
+                        <form action={archiveLinkedResourceAction.bind(null, slug, resource.id)}>
+                          <Button
+                            type="submit"
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Archive linked resource ${resource.name}`}
+                          >
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                        </form>
+                      ) : null}
+                    </div>
+                    {resource.description ? (
+                      <p className="text-body text-fg-secondary whitespace-pre-line">
+                        {resource.description}
+                      </p>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-body text-fg-muted py-4">
+              No linked resources yet. Link a Google Drive, Figma, or Canva library so the team
+              knows where to source on-brand material.
+            </p>
+          )}
         </Card>
 
         {/* Row 6 — Recent Updates (12) */}

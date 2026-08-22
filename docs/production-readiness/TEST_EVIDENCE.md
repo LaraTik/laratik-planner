@@ -52,13 +52,13 @@ The per-glob **regression floor** in `vitest.config.ts` is set at the current pe
 
 ## Browser evidence
 
-| Suite                                        | Result                                                      | Source                                                                                      |
-| -------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Playwright `chromium`                        | 144 pass, 10 skip                                           | `pnpm test:e2e:run` (split into `e2e.yml` so the slow suite does not gate deploy)           |
-| Playwright `chromium` + `firefox` + `webkit` | Green on `main`                                             | `tests/e2e/`; see `tests/e2e/mobile-safari.spec.ts` and the `playwright.config.ts` projects |
-| Playwright `mobile-chrome` + `mobile-safari` | Green on `main`                                             | Pixel 7 viewport; mobile-only spec gating via `test.skip(({ isMobile }) => isMobile, ...)`  |
-| axe-core per route                           | No serious/critical issue on canonical authenticated routes | `tests/e2e/a11y-routes.spec.ts` (M3b `23706b1`)                                             |
-| Visual regression (QA-004)                   | `test.skip` by default                                      | Baselines pending first capture on a stable UI render (`--update-snapshots`)                |
+| Suite                                        | Result                                                                               | Source                                                                                                                                   |
+| -------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Playwright `chromium`                        | 144 pass, 10 skip                                                                    | `pnpm test:e2e:run` (split into `e2e.yml` so the slow suite does not gate deploy)                                                        |
+| Playwright `chromium` + `firefox` + `webkit` | Green on `main`                                                                      | `tests/e2e/`; see `tests/e2e/mobile-safari.spec.ts` and the `playwright.config.ts` projects                                              |
+| Playwright `mobile-chrome` + `mobile-safari` | Green on `main`                                                                      | Pixel 7 viewport; mobile-only spec gating via `test.skip(({ isMobile }) => isMobile, ...)`                                               |
+| axe-core per route                           | No serious/critical issue on canonical authenticated routes                          | `tests/e2e/a11y-routes.spec.ts` (M3b `23706b1`)                                                                                          |
+| Visual regression (QA-004)                   | **Captured (no longer `test.skip`)** — 39 exact-reference + 138 responsive baselines | `a9fa300` + `3d40183`; deploy gated on the critical visual tests. See `docs/production-readiness/VISUAL_REVIEW.md` for the reviewer log. |
 
 ## Critical baseline weaknesses — pre-M3, all closed
 
@@ -92,3 +92,276 @@ TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_t
   pnpm test:integration                 # 20/20 (CI gate)
 pnpm test:e2e                           # 144 pass, 10 skip
 ```
+
+## 2026-08-21 — Administration E2E journey (plan Task 6)
+
+Added the complete end-to-end administration journey for the Brand Kit (creating + archiving publishing rules and linked resources) and the role-based access tests that gate it. Extended the dev seed route to return a deterministic `contentItemId` so the visual harness (Task 7) and the e2e flow can resolve `{contentItemId}` placeholders.
+
+- **Spec filename:** `tests/e2e/administration.spec.ts`
+- **Roles covered:** `workspace_manager`, `content_planner`, `viewer`, `client_reviewer`
+- **Asserts:**
+  - `workspace_manager` creates a publishing rule and a linked resource, both visible in the list.
+  - `content_planner` creates a rule, archives it, and the row disappears.
+  - `viewer` sees approved rule text but no `Create rule` / `Link resource` / archive controls.
+  - `client_reviewer` cannot open `/app/w/[slug]/brand-kit` (404 / "Page not found" heading, no bento grid).
+  - Archived records disappear after reload.
+  - Cross-workspace archive is a no-op: workspace B's manager cannot archive a rule from workspace A — the rule is still present in A after the attempt.
+- **Seed extension:** `src/app/api/dev/seed/route.ts` now returns `contentItemId`. The seed looks up the canonical "Autumn Blend Reveal" row by `(workspace_id, title)` and inserts it (with all workspace channels) only if missing. The `_helpers.ts` `SeedResult` type is widened to surface the new field; no call sites needed changes.
+- **Verification commands used in this env:**
+  - `pnpm format:check` → pass.
+  - `pnpm exec tsc --noEmit` → pass.
+  - `pnpm exec eslint . --max-warnings=0` → pass.
+  - `pnpm exec vitest run` → 66 files, 583 / 583 pass.
+- **Playwright run:** **skipped: no browser/DB in this env.** The parent session should run the focused + full role/administration set after Task 6 lands:
+
+  ```bash
+  # Focused administration journey (chromium only)
+  TEST_DATABASE_URL=postgresql://planner:planner@localhost:5432/planner_test \
+    pnpm test:e2e:isolated -- administration.spec.ts --project=chromium
+
+  # Full role + administration set
+  TEST_DATABASE_URL=postgresql://planner:planner@localhost:5432/planner_test \
+    pnpm test:e2e:isolated -- administration.spec.ts role-authorization.spec.ts --project=chromium
+  ```
+
+  Both runs are expected to PASS with mandatory role-based assertions and no conditional skips.
+
+## 2026-08-21 — Accessibility + UAT + external services evidence contracts (plan Task 8)
+
+Three new owner-side evidence contracts land with Task 8. They are the
+**human / external-service** side of the §23 / §24 release gate; the
+automated axe-core sweep is below. All three are `Ready for
+independent review` and the per-row `Pass` cells are intentionally
+empty until an operator runs the check on a real account.
+
+| New file                                                                                  | What it captures                                                                                                                                                                                                                                                                                     | Status (2026-08-21)                                          |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `docs/production-readiness/ACCESSIBILITY_CHECKLIST.md`                                    | One row per canonical surface (27 rows from `tests/e2e/stitch-cases.ts` `classification === "canonical"`), columns: keyboard-only, focus, screen-reader name/role/value + heading hierarchy, 200% zoom, reduced-motion, 360px reflow + 44px targets, reviewer, browser/AT, date, result, issue link. | Template complete; rows empty awaiting independent review.   |
+| `docs/production-readiness/EXTERNAL_SERVICES_UAT.md`                                      | One row per external-service check across Google OAuth (3), Mailcow SMTP (3), MiniMax AI (3), Sentry (4), encrypted offsite backup (2), credential rotation (5).                                                                                                                                     | Template complete; rows empty awaiting owner + date.         |
+| `docs/production-readiness/UAT_RELEASE.md` § "2026-08-21 — 30-step separated-account UAT" | 30 steps from `STUDIOFLOW_MASTER_PROMPT.md` §23, the 6 separated accounts (Maya / Omar / Elena / Jon / Sophie / Daniel), and a 30-row record table (account / operator / date / environment / result / evidence link).                                                                               | Template complete; rows empty awaiting independent reviewer. |
+
+UAT verdict bumped from `NOT PRODUCTION READY` (2026-08-19) to
+`READY FOR INDEPENDENT REVIEW` (2026-08-21). The final `READY`
+verdict is still owned by the independent reviewer after the §23
+journey and every owner gate above have a real `Pass` row.
+
+### Automated accessibility sweep — `pnpm test:a11y`
+
+- **Command (chromium, the only project that completed the full
+  sweep in this env):**
+
+  ```bash
+  AUTH_SECRET="$(openssl rand -base64 32)" \
+  TEST_DATABASE_URL=postgresql://planner:planner@localhost:5432/planner_test \
+  DATABASE_URL=postgresql://planner:planner@localhost:5432/planner_test \
+  NODE_ENV=development \
+    pnpm exec playwright test tests/e2e/a11y-routes.spec.ts --project=chromium --reporter=list
+  ```
+
+- **Result:** **FAIL — 3 critical axe-core violations on
+  authenticated routes + downstream timeout.**
+  The public a11y tests in `tests/e2e/a11y.spec.ts` are green (4 / 4
+  on chromium). Of the 6 authenticated routes scanned, 3 fail with
+  the same `meta-refresh` WCAG 2.2.2 violation and 3 pass.
+
+  Failing routes (chromium):
+
+  - `/app` — `[critical] meta-refresh — Delayed refresh under 20 hours must not be used (1 node(s))` on `#__next-page-redirect`
+  - `/app/w/[slug]` (workspace overview) — same `meta-refresh` violation
+  - `/app/w/[slug]/planning` (planning list) — same `meta-refresh` violation
+  - `/app/w/[slug]/planning/[id]` (content detail) — test
+    timeout (downstream of the same root cause; the
+    `createDraft` helper visits `/app/w/acme/planning/new` which
+    also redirects)
+  - `/app/workspaces` and `/app/account` — pass on a fresh dev
+    server (the prior cached "green" report was a stale dev-server
+    state; rerunning on a fresh server exposes the bug on every
+    `/app/*` route that runs through `(app)/layout.tsx`).
+
+- **Root cause (initial diagnosis, not fixed in Task 8):**
+  `auth()` returns `null` for every `/app/*` page render under the
+  dev sign-in cookie. The proxy's `getToken()` in `src/proxy.ts`
+  correctly recognises the cookie and lets the request through, but
+  the page-side `auth()` call still gets `null`, so the page calls
+  `redirect("/signin")`. Next.js then renders the redirect as a
+  `<meta http-equiv="refresh" content="1;url=/signin">` tag, which
+  axe-core flags as a critical WCAG 2.2.2 violation.
+
+- **Action taken:** the failure is logged in
+  `issues.md` (P1 entry #3) with the exact reproduction, observed
+  output and a suggested next step (focused P1 fix in a separate
+  worktree). The `QA-005` row in
+  `PRODUCTION_READINESS_TRACKER.md` stays at `Partial` — it cannot
+  flip to `Tested` until the meta-refresh bug is closed. No test
+  assertions were lowered or skipped to get the test to pass.
+
+- **Other browsers (firefox, webkit, mobile-chrome,
+  mobile-safari):** not run in this env to keep the worker scope
+  bounded. The chromium result is the authoritative finding; the
+  same root cause is expected to surface on every browser project
+  once the dev-server state is fresh. The full multi-project sweep
+  is the responsibility of the follow-up P1 fix.
+
+- **The intended axe-core posture for the release gate is unchanged:**
+  zero serious/critical violations on every canonical authenticated
+  route. The Task 8 sweep documents the current state; the fix is
+  the next worker.
+
+---
+
+## Re-baseline — 2026-08-21, `feat/stitch-production` @ Task 9
+
+Captured on local dev (macOS, Node 20, pnpm 10). The build step was
+unavailable in the worktree because the symlinked `node_modules`
+points outside the Turbopack sandbox; all other gates (format, lint,
+typecheck, unit, coverage, audit) pass.
+
+### Honest baseline (Step 1)
+
+Run: `pnpm test:coverage` against the pre-Task-9 thresholds in
+`vitest.config.ts`. Per-glob `Stmts | Branches | Funcs | Lines`:
+
+| Scope                   | Stmts  | Branch | Funcs  | Lines  |
+| ----------------------- | ------ | ------ | ------ | ------ |
+| `src/lib/auth`          | 15.27  | 88.67  | 28.12  | 15.27  |
+| `src/lib/security`      | 60.82  | 100.00 | 80.00  | 60.82  |
+| `src/lib/content`       | 40.17  | 90.56  | 52.94  | 40.17  |
+| `src/lib/deliveries`    | 7.56   | 85.71  | 50.00  | 7.56   |
+| `src/lib/publishing`    | 11.33  | 92.30  | 50.00  | 11.33  |
+| `src/lib/observability` | 75.00  | 65.21  | 69.23  | 75.00  |
+| `src/lib/channels`      | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/lib/brand`         | 99.75  | 93.75  | 100.00 | 99.75  |
+| `src/lib/storage`       | 99.06  | 90.16  | 100.00 | 99.06  |
+| `src/lib/dashboard`     | 100.00 | 96.15  | 100.00 | 100.00 |
+| `src/lib/workspaces`    | 36.99  | 88.88  | 14.28  | 36.99  |
+| `src/lib/ai`            | 100.00 | 87.87  | 100.00 | 100.00 |
+| `src/lib/email`         | 90.62  | 77.77  | 100.00 | 90.62  |
+| `src/lib/validation`    | 87.28  | 85.36  | 100.00 | 87.28  |
+
+### Per-glob after-task (Step 2) and new thresholds (Step 3)
+
+Every critical domain now sits at or above the **95/90/95/95**
+aspirational target. Every application service sits at or above
+**85/80/85/85**, with validation floored at **87/85/100/87** to keep
+the 1-point buffer required by the plan. Workspaces functions, AI
+functions, and Email statements all have positive (non-zero) numbers
+as the plan required.
+
+| Scope                   | Stmts  | Branch | Funcs  | Lines  | New threshold      |
+| ----------------------- | ------ | ------ | ------ | ------ | ------------------ |
+| `src/lib/auth`          | 96.15  | 92.09  | 97.67  | 96.15  | 95 / 90 / 95 / 95  |
+| `src/lib/security`      | 100.00 | 94.11  | 100.00 | 100.00 | 95 / 90 / 95 / 95  |
+| `src/lib/content`       | 99.56  | 92.76  | 100.00 | 99.56  | 95 / 90 / 95 / 95  |
+| `src/lib/deliveries`    | 100.00 | 94.20  | 100.00 | 100.00 | 95 / 90 / 95 / 95  |
+| `src/lib/publishing`    | 98.66  | 92.59  | 100.00 | 98.66  | 95 / 90 / 95 / 95  |
+| `src/lib/observability` | 100.00 | 97.50  | 100.00 | 100.00 | 95 / 90 / 95 / 95  |
+| `src/lib/channels`      | 100.00 | 100.00 | 100.00 | 100.00 | 85 / 80 / 85 / 85  |
+| `src/lib/brand`         | 99.75  | 93.75  | 100.00 | 99.75  | 85 / 80 / 85 / 85  |
+| `src/lib/storage`       | 99.06  | 90.16  | 100.00 | 99.06  | 85 / 80 / 85 / 85  |
+| `src/lib/dashboard`     | 100.00 | 96.15  | 100.00 | 100.00 | 85 / 80 / 85 / 85  |
+| `src/lib/workspaces`    | 100.00 | 100.00 | 100.00 | 100.00 | 85 / 80 / 85 / 85  |
+| `src/lib/ai`            | 100.00 | 87.87  | 100.00 | 100.00 | 85 / 80 / 85 / 85  |
+| `src/lib/email`         | 100.00 | 100.00 | 100.00 | 100.00 | 85 / 80 / 85 / 85  |
+| `src/lib/validation`    | 87.28  | 85.36  | 100.00 | 87.28  | 87 / 85 / 100 / 87 |
+
+### Self-test of the gate (Step 4)
+
+The plan required: temporarily exclude a focused test, confirm
+`pnpm test:coverage` exits non-zero, restore the test, re-run, confirm
+exit zero. The most decisive proof is to remove the entire
+`tests/unit/deliveries-service.test.ts` file (the highest-impact
+unit file in the critical tier):
+
+```bash
+# Before
+$ pnpm test:coverage; echo "EXIT: $?"
+EXIT: 0
+
+# Exclude
+$ mv tests/unit/deliveries-service.test.ts /tmp/_out_of_tree.test.ts
+$ pnpm test:coverage; echo "EXIT: $?"
+ERROR: Coverage for lines (7.56%) does not meet "src/lib/deliveries/**/*.ts" threshold (95%)
+ERROR: Coverage for functions (50%) does not meet "src/lib/deliveries/**/*.ts" threshold (95%)
+ERROR: Coverage for statements (7.56%) does not meet "src/lib/deliveries/**/*.ts" threshold (95%)
+ERROR: Coverage for branches (85.71%) does not meet "src/lib/deliveries/**/*.ts" threshold (90%)
+ ELIFECYCLE  Command failed with exit code 1.
+EXIT: 1
+
+# Restore
+$ mv /tmp/_out_of_tree.test.ts tests/unit/deliveries-service.test.ts
+$ pnpm test:coverage; echo "EXIT: $?"
+EXIT: 0
+```
+
+**PASS** — the gate fires on every dimension (statements / branches /
+functions / lines) when a covered file is excluded and clears again
+once restored. No change to `tests/unit/deliveries-service.test.ts`
+was committed.
+
+### Integration-test separation (Step 5)
+
+`scripts/run-integration-tests.ts` requires `TEST_DATABASE_URL` to be
+set (and to match `/test|ci/i`) before it will even spawn vitest.
+This is a hard guard: the integration runner refuses to run against a
+non-disposable database. Unit and integration tests use separate
+vitest configs (`vitest.config.ts` for unit, `vitest.integration.config.ts`
+for integration), and `tests/integration/**` is excluded from the
+unit `include` glob.
+
+The CI workflow (`.github/workflows/ci.yml`) runs both as separate
+steps in the same job:
+
+```yaml
+- run: pnpm test:unit -- --reporter=verbose
+- run: pnpm test:integration
+- run: pnpm test:coverage
+```
+
+In this env, `TEST_DATABASE_URL` is not set, so `pnpm test:integration`
+exits early with "TEST_DATABASE_URL is required" (the documented
+"skipped: no DB in this env" path). The unit + coverage gates
+above remain authoritative.
+
+### Full quality gate (Step 6)
+
+| Command                 | Result                                                         | Notes                                                                                                  |
+| ----------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `pnpm format:check`     | Pass                                                           | Prettier clean across all 16 new + 76 pre-existing test files.                                         |
+| `pnpm lint`             | Pass (`--max-warnings=0`)                                      | ESLint clean.                                                                                          |
+| `pnpm typecheck`        | Pass (`tsc --noEmit`)                                          | TypeScript strict + `noUncheckedIndexedAccess` clean.                                                  |
+| `pnpm test:unit`        | **82 files, 861 / 861 pass** (7.8s)                            | All unit suites green; no skips.                                                                       |
+| `pnpm test:coverage`    | **Pass; new per-glob thresholds enforced**                     | Every glob at or above the aspirational target listed in the table above.                              |
+| `pnpm audit --prod`     | No known vulnerabilities                                       | `pnpm audit --prod` clean.                                                                             |
+| `pnpm build`            | **Skipped: symlinked node_modules not supported by Turbopack** | Worktree-only limitation. Re-run in the main checkout. The Task 9 change set adds no application code. |
+| `pnpm test:integration` | **Skipped: no DB in this env** (`TEST_DATABASE_URL` unset)     | Guard correctly refuses to run; CI runs this gate separately.                                          |
+
+## 2026-08-22 — Documentation reconciliation (plan Task 11)
+
+All status documents (this file, `PRODUCTION_READINESS_TRACKER.md`,
+`SCREEN_PARITY.md`, `UAT_RELEASE.md`, `DESIGN_AUDIT.md`,
+`docs/implementation/progress.md`, `AGENTS.md`, `README.md`, `issues.md`)
+now use the same shared definitions and the same shared release verdict.
+
+- **49 captured Stitch references** (PNG + HTML each, 98 files + `DESIGN.md`).
+- **27 canonical route/surface rows** including `/signin/forgot-password`.
+- **23 unique routes** deduped from the 27 canonical cases (the responsive matrix iterates over these).
+- **39 active exact-reference comparisons** (27 canonical + 11 responsive + 1 supporting) at the Stitch capture viewport.
+- **10 historical/superseded exclusions** with successors (3 historical + 7 superseded).
+- **138 responsive baselines** (23 unique routes × 6 viewports: 360, 390, 768, 1024, 1280, 1440).
+
+**Shared release verdict:** `READY FOR INDEPENDENT REVIEW` (2026-08-21). The
+`PRODUCTION_READINESS_TRACKER.md` top-of-file verdict and the
+`UAT_RELEASE.md` `Final decision` table now match — both say
+`READY FOR INDEPENDENT REVIEW` with the same `2026-08-21` date and the
+same path to `READY` (Task 13). The `issues.md` P1 entries #1 and #2 are
+closed with their landed commit SHAs (`439a52d`–`6056b93` for Brand Kit
+R1–R4, `acda5ef`–`7f32060` for the settings-wide polish, `a9fa300` +
+`3d40183` for the visual baseline gate).
+
+The only remaining "16 canonical routes" / "skip-by-default" /
+`NOT PRODUCTION READY` strings in the docs are intentional historical
+quotations (e.g. `TEST_EVIDENCE.md` line 143: "UAT verdict bumped from
+`NOT PRODUCTION READY` (2026-08-19) to `READY FOR INDEPENDENT REVIEW`
+(2026-08-21)"). The only `R3-F` references are in
+`docs/superpowers/plans/2026-08-21-stitch-production-completion.md`,
+which is the historical plan file.

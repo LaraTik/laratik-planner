@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { BrandAssetCommandSchema, BrandVoiceRuleCommandSchema } from "@/lib/brand/command";
+import {
+  BrandAssetCommandSchema,
+  BrandLinkedResourceCommandSchema,
+  BrandPublishingRuleCommandSchema,
+  BrandVoiceRuleCommandSchema,
+} from "@/lib/brand/command";
 
 describe("BrandAssetCommandSchema — logo variant", () => {
   it("accepts a name-only logo", () => {
@@ -300,6 +305,124 @@ describe("BrandVoiceRuleCommandSchema — do/dont variants", () => {
 
   it("rejects an unknown ruleType", () => {
     const result = BrandVoiceRuleCommandSchema.safeParse({ ruleType: "maybe", content: "x" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("BrandPublishingRuleCommandSchema", () => {
+  it("accepts a trimmed compliance rule", () => {
+    expect(
+      BrandPublishingRuleCommandSchema.parse({
+        ruleType: "compliance",
+        title: " Legal review ",
+        content: " Claims require written approval. ",
+      }),
+    ).toEqual({
+      ruleType: "compliance",
+      title: "Legal review",
+      content: "Claims require written approval.",
+    });
+  });
+
+  it("rejects empty and overlong fields", () => {
+    expect(() =>
+      BrandPublishingRuleCommandSchema.parse({ ruleType: "general", title: "", content: "" }),
+    ).toThrow();
+  });
+
+  it("rejects an unknown ruleType", () => {
+    const result = BrandPublishingRuleCommandSchema.safeParse({
+      ruleType: "unknown",
+      title: "X",
+      content: "Y",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a title over 80 chars", () => {
+    const result = BrandPublishingRuleCommandSchema.safeParse({
+      ruleType: "general",
+      title: "x".repeat(81),
+      content: "valid",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects content over 1000 chars", () => {
+    const result = BrandPublishingRuleCommandSchema.safeParse({
+      ruleType: "general",
+      title: "Title",
+      content: "x".repeat(1001),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts every documented ruleType", () => {
+    for (const ruleType of ["alt_text", "hashtag", "compliance", "channel", "general"] as const) {
+      const result = BrandPublishingRuleCommandSchema.safeParse({
+        ruleType,
+        title: "T",
+        content: "C",
+      });
+      expect(result.success).toBe(true);
+    }
+  });
+});
+
+describe("BrandLinkedResourceCommandSchema", () => {
+  it("accepts an HTTPS Figma URL", () => {
+    expect(
+      BrandLinkedResourceCommandSchema.parse({
+        provider: "figma",
+        name: "Master design library",
+        url: "https://figma.com/file/example",
+        description: "Approved components",
+      }).provider,
+    ).toBe("figma");
+  });
+
+  it("rejects HTTP and javascript URLs", () => {
+    for (const url of ["http://example.com", "javascript:alert(1)"]) {
+      expect(() =>
+        BrandLinkedResourceCommandSchema.parse({ provider: "other", name: "Unsafe", url }),
+      ).toThrow();
+    }
+  });
+
+  it("trims whitespace from the name", () => {
+    const result = BrandLinkedResourceCommandSchema.parse({
+      provider: "figma",
+      name: "  Master library  ",
+      url: "https://figma.com/file/x",
+    });
+    expect(result.name).toBe("Master library");
+  });
+
+  it("accepts a description up to 280 chars and trims it", () => {
+    const result = BrandLinkedResourceCommandSchema.parse({
+      provider: "google_drive",
+      name: "Drive",
+      url: "https://drive.google.com/folders/abc",
+      description: "  Approved assets folder.  ",
+    });
+    expect(result.description).toBe("Approved assets folder.");
+  });
+
+  it("rejects a name over 120 chars", () => {
+    const result = BrandLinkedResourceCommandSchema.safeParse({
+      provider: "figma",
+      name: "x".repeat(121),
+      url: "https://figma.com/file/x",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an unknown provider", () => {
+    const result = BrandLinkedResourceCommandSchema.safeParse({
+      provider: "sketch",
+      name: "Sketch file",
+      url: "https://sketch.com/s/x",
+    });
     expect(result.success).toBe(false);
   });
 });

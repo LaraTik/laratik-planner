@@ -1,15 +1,12 @@
-import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { listWorkspaceContent } from "@/lib/content/service";
-import { statusBadgeVariant } from "@/lib/content/status";
-import { Badge } from "@/components/ui/badge";
-import { humanize } from "@/lib/content/status";
 import { PageHeader } from "@/components/workspace/page-header";
 import { MonthNav } from "@/components/workspace/month-nav";
 import { PlanningViewToggle } from "@/components/workspace/planning-view-toggle";
+import { CalendarEventCard } from "@/components/workspace/calendar-event-card";
 import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -114,40 +111,16 @@ export default async function EditorialCalendarPage({
                   ) : null}
                 </div>
                 <div className="mt-2 space-y-1">
-                  {cellItems.map((item) => {
-                    const variant = statusBadgeVariant(item.status);
-                    return (
-                      <Link
-                        key={item.id}
-                        href={`/app/w/${slug}/planning/${item.id}`}
-                        data-testid={`calendar-event-${item.id}`}
-                        className={cn(
-                          "hover:border-primary block rounded border p-2 transition-colors",
-                          // Per status: a left border in the badge color so
-                          // the day cell shows the status at a glance
-                          // without competing with the badge inside.
-                          variant === "success" && "border-l-success border-l-4",
-                          variant === "warning" && "border-l-warning border-l-4",
-                          variant === "danger" && "border-l-danger border-l-4",
-                          variant === "info" && "border-l-info border-l-4",
-                          variant === "primary" && "border-l-primary border-l-4",
-                          variant === "default" && "border-l-border border-l-4",
-                        )}
-                      >
-                        <p className="text-label text-fg-primary truncate font-semibold">
-                          {item.title}
-                        </p>
-                        <div className="mt-1 flex items-center gap-1.5">
-                          <Badge variant={variant} className="text-[10px]">
-                            {humanize(item.status)}
-                          </Badge>
-                          <span className="text-label text-fg-muted truncate">
-                            {humanize(item.format)}
-                          </span>
-                        </div>
-                      </Link>
-                    );
-                  })}
+                  {cellItems.map((item) => (
+                    <CalendarEventCard
+                      key={item.id}
+                      id={item.id}
+                      href={`/app/w/${slug}/planning/${item.id}`}
+                      title={item.title}
+                      status={item.status}
+                      format={item.format}
+                    />
+                  ))}
                 </div>
               </div>
             );

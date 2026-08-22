@@ -1,9 +1,20 @@
 import "server-only";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { brandAssets, brandVoiceRules, contentPillars } from "@/lib/db/schema";
+import {
+  brandAssets,
+  brandLinkedResources,
+  brandPublishingRules,
+  brandVoiceRules,
+  contentPillars,
+} from "@/lib/db/schema";
 import { hasWorkspaceRole, PermissionDeniedError, type Actor } from "@/lib/auth/policy";
-import type { BrandAssetCommand, BrandVoiceRuleCommand } from "@/lib/brand/command";
+import type {
+  BrandAssetCommand,
+  BrandLinkedResourceCommand,
+  BrandPublishingRuleCommand,
+  BrandVoiceRuleCommand,
+} from "@/lib/brand/command";
 
 /**
  * Brand Kit service layer (STUDIOFLOW_MASTER_PROMPT.md §11.x).
@@ -20,9 +31,13 @@ import type { BrandAssetCommand, BrandVoiceRuleCommand } from "@/lib/brand/comma
 
 export type BrandAssetRow = typeof brandAssets.$inferSelect;
 export type BrandVoiceRuleRow = typeof brandVoiceRules.$inferSelect;
+export type BrandPublishingRuleRow = typeof brandPublishingRules.$inferSelect;
+export type BrandLinkedResourceRow = typeof brandLinkedResources.$inferSelect;
 
 export type BrandAssetKind = BrandAssetRow["kind"];
 export type BrandVoiceRuleType = BrandVoiceRuleRow["ruleType"];
+export type BrandPublishingRuleType = BrandPublishingRuleRow["ruleType"];
+export type BrandLinkedResourceProvider = BrandLinkedResourceRow["provider"];
 
 export async function listBrandAssets(
   workspaceId: string,
@@ -200,6 +215,129 @@ export async function archiveBrandVoiceRule(
     .where(and(eq(brandVoiceRules.id, ruleId), eq(brandVoiceRules.workspaceId, workspaceId)));
 }
 
+/**
+ * Round 3 — publishing-rule + linked-resource operations
+ * (STUDIOFLOW_MASTER_PROMPT.md §11.x brand-kit extension).
+ *
+ * Mutations are gated on a *broader* role set than assets/voice rules
+ * because publishing rules drive the editor's draft-time hints and
+ * the resource list is a shared reference. We allow
+ * `workspace_manager` and `content_planner`; designers/reviewers/
+ * publishers/viewers/client reviewers all deny.
+ *
+ * `listRecentBrandUpdates` is extended below to merge rule and
+ * resource rows in, while *stripping* the `url` field for the
+ * activity feed — a viewer can see that a resource exists but
+ * shouldn't get the deep-link to the upstream library.
+ */
+const BRAND_MANAGER_ROLES = ["workspace_manager", "content_planner"] as const;
+
+async function requireBrandManager(
+  actor: Actor,
+  workspaceId: string,
+  action: string,
+): Promise<void> {
+  const allowed = await hasWorkspaceRole(actor, workspaceId, [...BRAND_MANAGER_ROLES]);
+  if (!allowed) throw new PermissionDeniedError(action);
+}
+
+export async function listBrandPublishingRules(
+  workspaceId: string,
+): Promise<BrandPublishingRuleRow[]> {
+  return db
+    .select()
+    .from(brandPublishingRules)
+    .where(
+      and(
+        eq(brandPublishingRules.workspaceId, workspaceId),
+        isNull(brandPublishingRules.archivedAt),
+      ),
+    )
+    .orderBy(asc(brandPublishingRules.sortOrder), asc(brandPublishingRules.createdAt));
+}
+
+export async function listBrandLinkedResources(
+  workspaceId: string,
+): Promise<BrandLinkedResourceRow[]> {
+  return db
+    .select()
+    .from(brandLinkedResources)
+    .where(
+      and(
+        eq(brandLinkedResources.workspaceId, workspaceId),
+        isNull(brandLinkedResources.archivedAt),
+      ),
+    )
+    .orderBy(asc(brandLinkedResources.name));
+}
+
+export async function createBrandPublishingRule(
+  actor: Actor,
+  workspaceId: string,
+  input: BrandPublishingRuleCommand,
+): Promise<void> {
+  await requireBrandManager(actor, workspaceId, "create brand publishing rule");
+  await db.insert(brandPublishingRules).values({
+    workspaceId,
+    createdBy: actor.id,
+    ruleType: input.ruleType,
+    title: input.title,
+    content: input.content,
+    sortOrder: 0,
+  });
+}
+
+export async function archiveBrandPublishingRule(
+  actor: Actor,
+  workspaceId: string,
+  ruleId: string,
+): Promise<void> {
+  await requireBrandManager(actor, workspaceId, "archive brand publishing rule");
+  // Workspace scope is part of the predicate so a workspace-A user
+  // can never archive a workspace-B row, even if they guess the id.
+  await db
+    .update(brandPublishingRules)
+    .set({ archivedAt: new Date(), updatedAt: new Date() })
+    .where(
+      and(eq(brandPublishingRules.id, ruleId), eq(brandPublishingRules.workspaceId, workspaceId)),
+    );
+}
+
+export async function createBrandLinkedResource(
+  actor: Actor,
+  workspaceId: string,
+  input: BrandLinkedResourceCommand,
+): Promise<void> {
+  await requireBrandManager(actor, workspaceId, "create brand linked resource");
+  await db.insert(brandLinkedResources).values({
+    workspaceId,
+    createdBy: actor.id,
+    provider: input.provider,
+    name: input.name,
+    url: input.url,
+    description: input.description ?? null,
+  });
+}
+
+export async function archiveBrandLinkedResource(
+  actor: Actor,
+  workspaceId: string,
+  resourceId: string,
+): Promise<void> {
+  await requireBrandManager(actor, workspaceId, "archive brand linked resource");
+  // Same tenancy-scoped predicate as the asset archive path — the
+  // resource id alone is not enough to identify the row to update.
+  await db
+    .update(brandLinkedResources)
+    .set({ archivedAt: new Date(), updatedAt: new Date() })
+    .where(
+      and(
+        eq(brandLinkedResources.id, resourceId),
+        eq(brandLinkedResources.workspaceId, workspaceId),
+      ),
+    );
+}
+
 export type ContentPillarSummary = {
   id: string;
   name: string;
@@ -223,21 +361,29 @@ export async function listContentPillars(workspaceId: string): Promise<ContentPi
 
 export type BrandRecentUpdate = {
   updatedAt: Date;
-  kind: "asset" | "rule";
+  kind: "asset" | "rule" | "publishing_rule" | "linked_resource";
   description: string;
 };
 
 /**
- * Recent brand-kit updates — a union of the most recent `brand_assets`
- * and `brand_voice_rules` rows by `updated_at`, sorted desc, sliced to
- * `limit`. The merge is done in JS (two cheap queries) to keep the SQL
+ * Recent brand-kit updates — a union of the most recent `brand_assets`,
+ * `brand_voice_rules`, `brand_publishing_rule`, and
+ * `brand_linked_resource` rows by `updated_at`, sorted desc, sliced to
+ * `limit`. The merge is done in JS (four cheap queries) to keep the SQL
  * portable and the test surface small.
+ *
+ * **Privacy note:** the `linked_resource` rows expose only
+ * `${provider} ${name}` — the actual `url` is intentionally stripped
+ * so a viewer with read access to the brand kit can see *that* a
+ * resource exists but cannot pivot to the upstream library via the
+ * activity feed. The full URL is still served by
+ * `listBrandLinkedResources` (which renders the brand-kit page).
  */
 export async function listRecentBrandUpdates(
   workspaceId: string,
   limit = 10,
 ): Promise<BrandRecentUpdate[]> {
-  const [assetRows, ruleRows] = await Promise.all([
+  const [assetRows, ruleRows, publishingRows, resourceRows] = await Promise.all([
     db
       .select({
         updatedAt: brandAssets.updatedAt,
@@ -258,6 +404,36 @@ export async function listRecentBrandUpdates(
       .where(eq(brandVoiceRules.workspaceId, workspaceId))
       .orderBy(desc(brandVoiceRules.updatedAt))
       .limit(limit),
+    db
+      .select({
+        updatedAt: brandPublishingRules.updatedAt,
+        ruleType: brandPublishingRules.ruleType,
+        title: brandPublishingRules.title,
+      })
+      .from(brandPublishingRules)
+      .where(
+        and(
+          eq(brandPublishingRules.workspaceId, workspaceId),
+          isNull(brandPublishingRules.archivedAt),
+        ),
+      )
+      .orderBy(desc(brandPublishingRules.updatedAt))
+      .limit(limit),
+    db
+      .select({
+        updatedAt: brandLinkedResources.updatedAt,
+        provider: brandLinkedResources.provider,
+        name: brandLinkedResources.name,
+      })
+      .from(brandLinkedResources)
+      .where(
+        and(
+          eq(brandLinkedResources.workspaceId, workspaceId),
+          isNull(brandLinkedResources.archivedAt),
+        ),
+      )
+      .orderBy(desc(brandLinkedResources.updatedAt))
+      .limit(limit),
   ]);
 
   const merged: BrandRecentUpdate[] = [
@@ -270,6 +446,17 @@ export async function listRecentBrandUpdates(
       updatedAt: row.updatedAt,
       kind: "rule" as const,
       description: `${row.ruleType}: ${row.content}`,
+    })),
+    ...publishingRows.map((row) => ({
+      updatedAt: row.updatedAt,
+      kind: "publishing_rule" as const,
+      description: `${row.ruleType}: ${row.title}`,
+    })),
+    ...resourceRows.map((row) => ({
+      updatedAt: row.updatedAt,
+      kind: "linked_resource" as const,
+      // No URL — see the privacy note on the function docblock.
+      description: `${row.provider} ${row.name}`,
     })),
   ];
 

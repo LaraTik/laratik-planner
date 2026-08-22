@@ -124,20 +124,21 @@ layout. The visual reference is the Stitch screen
 | Recent Updates   | `recent`     | 12       | 6   |
 
 The row-5 grid leaves a 4-col gap in commit G (Publishing +
-Linked + empty 4-col). R3-F fills the data layer; the empty
-slot will host a future card (e.g. Brand Story, Compliance).
+Linked + empty 4-col). The empty slot is a deliberate breathing
+room — Brand Story, Compliance, or Asset Analytics are all
+candidate cards for the 4-col slot in a later round.
 
 **Anchor-offset rule:** every section card uses
 `className="scroll-mt-20"` so the sticky top tab strip doesn't
 cover the section heading on click. `mt-20` is 80px, which is
 the strip's height plus breathing room.
 
-**Empty states:** use `<EmptyState />` with a Lucide icon
-(no emoji) and a one-sentence description. Empty cards that
-will gain data in a later round (Publishing Rules, Linked
-Resources in R3-F) render an empty state with the "coming in
-R3-F" message so the visual rhythm of the Bento grid is
-preserved.
+**Empty states:** use the existing typography paragraph
+(`text-body text-fg-muted py-4`) for simple "no rows yet"
+copy. Honest descriptions only — never "coming soon" or
+"in a future round" text. The reader can tell an empty
+list from a half-built one by whether the create form is
+present.
 
 **Per-card data-testid:** every section card carries
 `data-testid="brand-kit-section-{id}"` so the unit test can
@@ -236,6 +237,33 @@ const tabs = [
   listener still fires — the strip's state is still useful
   for sighted users who reduced the motion. We do not gate
   the observer on the media query.
+
+---
+
+### Brand Kit — publishing rules + linked resources (2026-08-21)
+
+- The 12-col Stitch Bento is preserved: Publishing (4) + Linked
+  (4) still sit in row 5 with a deliberate 4-col breathing room
+  on the right; the gap is intentional, not a missing card.
+- Both new sections use the existing `<Card>` primitive for
+  the outer shell, `<Badge>` for the rule-type pill, and
+  `<Button size="icon" variant="ghost">` for the per-row
+  archive control. The form layer
+  (`<PublishingRuleForm>` / `<LinkedResourceForm>`) was added
+  in Task 4 and is invoked the same way as the asset / voice
+  forms: `canManage ? <Form slug={slug} /> : null`.
+- Archive controls are gated to `canManage` (workspace_manager
+  or agency admin via the policy helper). The rule/resource
+  _content_ is visible to every workspace member, including
+  viewers and client reviewers — the read-only surface is
+  intact.
+- Linked-resource URLs render as `<a target="_blank"
+rel="noreferrer">` and are never fetched server-side. The
+  recent-updates feed strips the URL out of the activity row
+  for the same privacy reason.
+- Empty states are honest. The "no publishing rules yet" /
+  "no linked resources yet" copy is a single sentence that
+  describes what to do next, not a roadmap placeholder.
 
 ---
 

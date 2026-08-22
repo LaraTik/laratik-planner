@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getContentItem, UPDATEABLE_STATUSES } from "@/lib/content/service";
-import { listApprovalsForItem, listDeliveriesForItem } from "@/lib/deliveries/service";
+import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
 import { listPublicationsForItem } from "@/lib/publishing/service";
 import { listCommentsForItem } from "@/lib/discussions/service";
 import { activeAgencyId, hasWorkspaceRole } from "@/lib/auth/policy";
@@ -47,13 +47,6 @@ export default async function ContentDetailPage({
   const item = await getContentItem({ id: session.user.id }, id);
   if (!item || item.workspaceId !== ws.id) notFound();
 
-  const [approvals, publications, discussionComments, deliveries] = await Promise.all([
-    listApprovalsForItem({ id: session.user.id }, id),
-    listPublicationsForItem({ id: session.user.id }, id).catch(() => []),
-    listCommentsForItem({ id: session.user.id }, id).catch(() => []),
-    listDeliveriesForItem({ id: session.user.id }, id).catch(() => []),
-  ]);
-
   const actorRoles = {
     isManager: await hasWorkspaceRole({ id: session.user.id }, ws.id, ["workspace_manager"]),
     isPlanner: await hasWorkspaceRole({ id: session.user.id }, ws.id, ["content_planner"]),
@@ -64,6 +57,15 @@ export default async function ContentDetailPage({
     isClientReviewer: await hasWorkspaceRole({ id: session.user.id }, ws.id, ["client_reviewer"]),
     isPublisher: await hasWorkspaceRole({ id: session.user.id }, ws.id, ["publisher"]),
   };
+
+  const [approvals, publications, discussionComments, deliveries] = await Promise.all([
+    listApprovalsForItem({ id: session.user.id }, id),
+    listPublicationsForItem({ id: session.user.id }, id).catch(() => []),
+    listCommentsForItem({ id: session.user.id }, id).catch(() => []),
+    listDeliveryVersionsForItem({ id: session.user.id }, id, {
+      isClientReviewer: actorRoles.isClientReviewer,
+    }).catch(() => []),
+  ]);
 
   // AI capability allowlist for the section on this page. Read the
   // agency feature row once; the section falls back to a "all on"
@@ -177,6 +179,7 @@ export default async function ContentDetailPage({
         contentStatus={item.status}
         isDesigner={actorRoles.isDesigner}
         isManager={actorRoles.isManager}
+        viewerIsClient={actorRoles.isClientReviewer}
         deliveries={deliveries.map((d) => ({
           id: d.id,
           versionNumber: d.versionNumber,

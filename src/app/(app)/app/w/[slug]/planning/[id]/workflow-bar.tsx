@@ -7,6 +7,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { transitionAction, decideApprovalAction, claimAction } from "../actions";
 import { humanize } from "@/lib/content/status";
 import { CheckCircle, XCircle, ArrowRight, Ban, Play } from "lucide-react";
+import { ApprovalTimeline } from "@/components/workspace/approval-timeline";
 
 type Role =
   | "isManager"
@@ -195,80 +196,42 @@ export function WorkflowBar({
       </div>
 
       {approvals.length > 0 ? (
-        <div className="mt-4 space-y-1.5">
-          <h3 className="text-label text-fg-muted tracking-wide uppercase">Approval requests</h3>
-          {approvals.map((a) => (
-            <div
-              key={a.id}
-              className="border-border bg-surface-subtle text-body flex flex-wrap items-center gap-3 rounded-[var(--radius-control)] border p-2"
-            >
-              <span className="font-semibold">{humanize(a.gate)}</span>
-              <Badge
-                variant={
-                  a.status === "approved"
-                    ? "success"
-                    : a.status === "changes_requested"
-                      ? "warning"
-                      : "info"
-                }
-              >
-                {a.status}
-              </Badge>
-              <span className="text-label text-fg-muted">
-                {new Date(a.requestedAt).toLocaleString()}
-              </span>
-              {a.status === "pending" &&
-              ((a.gate === "creative_internal" && roles.isInternalReviewer) ||
-                (a.gate === "creative_client" && roles.isClientReviewer) ||
-                (a.gate === "content" && roles.isInternalReviewer)) ? (
-                <div className="ml-auto flex gap-2">
-                  <Button
-                    size="sm"
-                    disabled={pending}
-                    onClick={() =>
-                      start(async () => {
-                        try {
-                          await decideApprovalAction({
-                            workspaceSlug,
-                            approvalRequestId: a.id,
-                            decision: "approved",
-                          });
-                        } catch (e) {
-                          alert((e as Error).message);
-                        }
-                      })
-                    }
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={pending}
-                    onClick={() => {
-                      const feedback = window.prompt("What needs to change?");
-                      if (feedback)
-                        start(async () => {
-                          try {
-                            await decideApprovalAction({
-                              workspaceSlug,
-                              approvalRequestId: a.id,
-                              decision: "changes_requested",
-                              feedback,
-                            });
-                          } catch (e) {
-                            alert((e as Error).message);
-                          }
-                        });
-                    }}
-                  >
-                    Request changes
-                  </Button>
-                </div>
-              ) : null}
-            </div>
-          ))}
-        </div>
+        <ApprovalTimeline
+          approvals={approvals}
+          roles={{
+            isManager: roles.isManager,
+            isInternalReviewer: roles.isInternalReviewer,
+            isClientReviewer: roles.isClientReviewer,
+          }}
+          disabled={pending}
+          onApprove={(approvalRequestId) =>
+            start(async () => {
+              try {
+                await decideApprovalAction({
+                  workspaceSlug,
+                  approvalRequestId,
+                  decision: "approved",
+                });
+              } catch (e) {
+                alert((e as Error).message);
+              }
+            })
+          }
+          onRequestChanges={(approvalRequestId, feedback) =>
+            start(async () => {
+              try {
+                await decideApprovalAction({
+                  workspaceSlug,
+                  approvalRequestId,
+                  decision: "changes_requested",
+                  feedback,
+                });
+              } catch (e) {
+                alert((e as Error).message);
+              }
+            })
+          }
+        />
       ) : null}
     </Card>
   );

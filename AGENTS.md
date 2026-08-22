@@ -199,25 +199,31 @@ Per StudioFlow §15:
 
 ## Goal progress (live)
 
-| #   | Goal                                                        | Status | Notes                                              |
-| --- | ----------------------------------------------------------- | ------ | -------------------------------------------------- |
-| 0   | Repository, design foundation, quality harness              | ✅     | This commit                                        |
-| 1   | Database foundation, tenancy, RLS, generated types          | ⏳     | Drizzle schema port from master prompt §8          |
-| 2   | Closed auth, bootstrap, reset, invitation onboarding        | ⏳     | NextAuth v5 + Google + Mailcow magic link          |
-| 3   | App shell, My Work, workspace creation, overview            | ⏳     |                                                    |
-| 4   | Workspace administration, users, channels, Brand Kit        | ⏳     |                                                    |
-| 5   | Content model, Quick Create, formats, campaigns, templates  | ⏳     |                                                    |
-| 6   | Monthly planning, Batch Add, board, calendar, KPI           | ⏳     | FullCalendar + dnd-kit                             |
-| 7   | Workflow transitions, assignments, review readiness         | ⏳     | State machine in `src/features/content/service.ts` |
-| 8   | Discussion, mentions, attachments, notifications            | ⏳     |                                                    |
-| 9   | Delivery versions and two-stage creative review             | ⏳     |                                                    |
-| 10  | Manual publishing, partial completion, failure recovery     | ⏳     |                                                    |
-| 11  | Optional MiniMax assistance                                 | ⏳     | Gated by `AI_FEATURE_ENABLED`                      |
-| 12  | Responsive completion, accessibility, visual fidelity, perf | ⏳     | axe-core per route                                 |
-| 13  | Security hardening, observability, CI, staging, recovery    | ⏳     | Sentry + restic offsite                            |
-| 14  | UAT, production deployment, final proof                     | ⏳     |                                                    |
+| #   | Goal                                                        | Status | Notes                                                                                                                                |
+| --- | ----------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 0   | Repository, design foundation, quality harness              | ✅     | This commit                                                                                                                          |
+| 1   | Database foundation, tenancy, RLS, generated types          | ✅     | Drizzle schema port from master prompt §8                                                                                            |
+| 2   | Closed auth, bootstrap, reset, invitation onboarding        | ✅     | NextAuth v5 + Google + Mailcow magic link + password sign-in (`c46fc21`)                                                             |
+| 3   | App shell, My Work, workspace creation, overview            | ✅     | M3b 27-row parity matrix closed                                                                                                      |
+| 4   | Workspace administration, users, channels, Brand Kit        | ✅     | Brand Kit R1–R3 (`439a52d`…`b66d7ba`); R4 publishing + linked resources (`cef5ca3`…`b84c945`); settings polish (`acda5ef`…`7f32060`) |
+| 5   | Content model, Quick Create, formats, campaigns, templates  | ✅     | M3b content + library routes                                                                                                         |
+| 6   | Monthly planning, Batch Add, board, calendar, KPI           | ✅     | FullCalendar + dnd-kit                                                                                                               |
+| 7   | Workflow transitions, assignments, review readiness         | ✅     | State machine in `src/lib/content/workflow.ts`                                                                                       |
+| 8   | Discussion, mentions, attachments, notifications            | ✅     | `CommentItem` + `CommentForm` extracted (`ca7ea77`)                                                                                  |
+| 9   | Delivery versions and two-stage creative review             | ✅     | Immutable versions, FOR UPDATE                                                                                                       |
+| 10  | Manual publishing, partial completion, failure recovery     | ✅     | `derivePublicationAggregate` + status guard                                                                                          |
+| 11  | Optional MiniMax assistance                                 | ✅     | Gated by `AI_FEATURE_ENABLED`; capability entry points on content detail (`b4e210b`)                                                 |
+| 12  | Responsive completion, accessibility, visual fidelity, perf | ✅     | 23 unique routes × 6 viewports = 138 responsive baselines (`a9fa300`, `3d40183`)                                                     |
+| 13  | Security hardening, observability, CI, staging, recovery    | ✅     | Sentry + restic offsite + visual-test deploy gate                                                                                    |
+| 14  | UAT, production deployment, final proof                     | ⏳     | Verdict: `READY FOR INDEPENDENT REVIEW` (2026-08-21)                                                                                 |
 
 See `docs/implementation/progress.md` for the live per-task checklist.
+
+**Release verdict (2026-08-21):** `READY FOR INDEPENDENT REVIEW` (shared across
+`PRODUCTION_READINESS_TRACKER.md` and `docs/production-readiness/UAT_RELEASE.md`).
+The independent reviewer (Task 13) flips the verdict to `READY` after the
+30-step §23 journey and the owner checks in
+`docs/production-readiness/EXTERNAL_SERVICES_UAT.md` are signed.
 
 ## Conventions
 
@@ -239,7 +245,7 @@ See `docs/implementation/progress.md` for the live per-task checklist.
 - `docs/visual-parity/PLAN.md` — M0–M6 plan that consumed the Stitch design
 - `docs/visual-parity/MCP.md` — how to refresh the captured Stitch copy from the live MCP (auth, tools, gotchas, commit recipe)
 - `docs/production-readiness/DESIGN_AUDIT.md` — structural audit that drove the M2/M3 refactor
-- `docs/production-readiness/SCREEN_PARITY.md` — 27-row matrix tracking each Stitch screen against a laratik-planner route
+- `docs/production-readiness/SCREEN_PARITY.md` — 27-row matrix tracking each Stitch screen against a laratik-planner route; the responsive matrix (23 unique routes × 6 viewports = 138 baselines) lives in `tests/e2e/visual-regression.spec.ts` and is gated by `tests/unit/stitch-cases.test.ts`
 - `docs/content/format-payload-schemas.md` — per-format `formatPayload` jsonb schemas (the structured fields under "More details")
 - `designs/stitch/DESIGN.md` — the captured token reference (color/typography/spacing)
 
