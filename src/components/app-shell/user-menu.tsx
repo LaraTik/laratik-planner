@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { LogOut, Settings, User as UserIcon } from "lucide-react";
+import { Settings, User as UserIcon } from "lucide-react";
+import { SignOutForm } from "@/app/(app)/app/account/sign-out-form";
 
 /**
  * User menu — avatar trigger that opens a dropdown with the account
@@ -110,15 +111,7 @@ export function UserMenu({
             ) : null}
           </ul>
           <div className="border-border border-t p-1.5">
-            <Link
-              href="/api/auth/signout"
-              role="menuitem"
-              onClick={() => setOpen(false)}
-              className="text-body text-fg-primary hover:bg-surface-subtle flex items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 font-semibold"
-            >
-              <LogOut className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-              Sign out
-            </Link>
+            <SignOutForm variant="menuitem" />
           </div>
         </div>
       ) : null}
