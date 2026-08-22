@@ -32,6 +32,8 @@ function makeDrizzleMock(state: DrizzleState) {
   function makeChain(): Record<string, unknown> {
     const chain: Record<string, unknown> = {};
     chain.from = vi.fn(() => chain);
+    chain.leftJoin = vi.fn(() => chain);
+    chain.innerJoin = vi.fn(() => chain);
     chain.where = vi.fn(() => chain);
     chain.limit = vi.fn(() => {
       const rows = state.selectResults.shift() ?? [];
@@ -142,6 +144,10 @@ const {
   archiveFontAsset,
   createBrandVoiceRule,
   archiveBrandVoiceRule,
+  restoreBrandVoiceRule,
+  restoreBrandAsset,
+  restoreBrandPublishingRule,
+  restoreBrandLinkedResource,
   listBrandAssets,
   listBrandVoiceRules,
   listContentPillars,
@@ -407,14 +413,17 @@ describe("createBrandVoiceRule", () => {
 });
 
 describe("archiveBrandVoiceRule", () => {
-  it("requires workspace_manager role and issues a delete with the ruleId", async () => {
+  it("requires workspace_manager role and soft-archives (update with archivedAt)", async () => {
     await archiveBrandVoiceRule(actor, workspaceId, "rule-1");
     expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, [
       "workspace_manager",
     ]);
-    // `brand_voice_rules` has no archivedAt — we hard-delete.
-    expect(dbMock.state.updateCalls).toHaveLength(0);
-    expect(dbMock.state.deleteCalls).toHaveLength(1);
+    // Round 4: brand_voice_rule gained `archived_at` (migration 0006)
+    // so the archive path is a soft-update, not a hard-delete. The
+    // restore action (`restoreBrandVoiceRule`) flips it back to null.
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+    expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: expect.any(Date) });
+    expect(dbMock.state.deleteCalls).toHaveLength(0);
   });
 
   it("throws PermissionDeniedError when the actor is not a workspace_manager", async () => {
@@ -422,6 +431,17 @@ describe("archiveBrandVoiceRule", () => {
     await expect(archiveBrandVoiceRule(actor, workspaceId, "rule-1")).rejects.toBeInstanceOf(
       PermissionDeniedError,
     );
+  });
+});
+
+describe("restoreBrandVoiceRule", () => {
+  it("requires workspace_manager role and clears archivedAt", async () => {
+    await restoreBrandVoiceRule(actor, workspaceId, "rule-1");
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, [
+      "workspace_manager",
+    ]);
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+    expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: null });
   });
 });
 
@@ -486,10 +506,14 @@ describe("listRecentBrandUpdates", () => {
     const newer = new Date("2026-01-02T00:00:00Z");
     // assets query result
     dbMock.state.selectResults.push([{ updatedAt: older, kind: "color", name: "Brand blue" }]);
-    // rules query result
+    // voice rules query result
     dbMock.state.selectResults.push([
       { updatedAt: newer, ruleType: "tone", content: "Warm and direct." },
     ]);
+    // publishing rules query result
+    dbMock.state.selectResults.push([]);
+    // linked resources query result
+    dbMock.state.selectResults.push([]);
 
     const updates = await listRecentBrandUpdates(workspaceId, 5);
     expect(updates).toHaveLength(2);
@@ -508,6 +532,8 @@ describe("listRecentBrandUpdates", () => {
       { updatedAt: at(1), kind: "color", name: "C" },
     ]);
     dbMock.state.selectResults.push([{ updatedAt: at(4), ruleType: "do", content: "D" }]);
+    dbMock.state.selectResults.push([]);
+    dbMock.state.selectResults.push([]);
     const updates = await listRecentBrandUpdates(workspaceId, 2);
     expect(updates).toHaveLength(2);
     expect(updates[0]?.description).toBe("do: D");
@@ -515,6 +541,8 @@ describe("listRecentBrandUpdates", () => {
   });
 
   it("returns an empty list when there are no assets or rules", async () => {
+    dbMock.state.selectResults.push([]);
+    dbMock.state.selectResults.push([]);
     dbMock.state.selectResults.push([]);
     dbMock.state.selectResults.push([]);
     const updates = await listRecentBrandUpdates(workspaceId);
@@ -525,6 +553,8 @@ describe("listRecentBrandUpdates", () => {
     const t = new Date("2026-01-01T00:00:00Z");
     dbMock.state.selectResults.push([{ updatedAt: t, kind: "logo", name: "Wordmark" }]);
     dbMock.state.selectResults.push([{ updatedAt: t, ruleType: "dont", content: "No jargon" }]);
+    dbMock.state.selectResults.push([]);
+    dbMock.state.selectResults.push([]);
     const updates = await listRecentBrandUpdates(workspaceId);
     const asset = updates.find((u) => u.kind === "asset");
     const rule = updates.find((u) => u.kind === "rule");
@@ -532,15 +562,25 @@ describe("listRecentBrandUpdates", () => {
     expect(rule?.description).toBe("dont: No jargon");
   });
 
-  it("falls back to the default limit of 10 when none is passed", async () => {
-    // Both queries return 0 rows; the merged result is also empty.
-    // The default-limit branch is exercised by every call without an
-    // explicit limit (e.g. the "returns the queued select result"
-    // test in listBrandVoiceRules uses the default path).
+  it("returns an actor for each row when created_by is joined", async () => {
+    // Round 4: listRecentBrandUpdates joins `users` so the page
+    // can render a real avatar/name instead of the hardcoded "M".
+    const t = new Date("2026-01-01T00:00:00Z");
+    dbMock.state.selectResults.push([
+      {
+        updatedAt: t,
+        kind: "logo",
+        name: "Wordmark",
+        actorId: "u-1",
+        actorName: "Maya",
+        actorImage: null,
+      },
+    ]);
+    dbMock.state.selectResults.push([]);
     dbMock.state.selectResults.push([]);
     dbMock.state.selectResults.push([]);
     const updates = await listRecentBrandUpdates(workspaceId);
-    expect(updates).toEqual([]);
+    expect(updates[0]?.actor?.displayName).toBe("Maya");
   });
 });
 
@@ -866,5 +906,51 @@ describe("listRecentBrandUpdates — rules + resources", () => {
     // The returned update object must not carry a `url` field either.
     const resourceRecord = resource as unknown as Record<string, unknown>;
     expect(resourceRecord.url).toBeUndefined();
+  });
+});
+
+// ─── Restore actions (Round 4 — undoable archive) ───────────────────────
+
+describe("restoreBrandAsset", () => {
+  it("requires workspace_manager and clears archivedAt", async () => {
+    await restoreBrandAsset(actor, workspaceId, "asset-1");
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, [
+      "workspace_manager",
+    ]);
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+    expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: null });
+  });
+
+  it("throws PermissionDeniedError for non-managers", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    await expect(restoreBrandAsset(actor, workspaceId, "asset-1")).rejects.toBeInstanceOf(
+      PermissionDeniedError,
+    );
+  });
+});
+
+describe("restoreBrandPublishingRule", () => {
+  it("allows brand-manager roles and clears archivedAt", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await restoreBrandPublishingRule(actor, workspaceId, "rule-1");
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, [
+      "workspace_manager",
+      "content_planner",
+    ]);
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+    expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: null });
+  });
+});
+
+describe("restoreBrandLinkedResource", () => {
+  it("allows brand-manager roles and clears archivedAt", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    await restoreBrandLinkedResource(actor, workspaceId, "res-1");
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, [
+      "workspace_manager",
+      "content_planner",
+    ]);
+    expect(dbMock.state.updateCalls).toHaveLength(1);
+    expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: null });
   });
 });

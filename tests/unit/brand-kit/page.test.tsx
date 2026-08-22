@@ -97,6 +97,8 @@ vi.mock("@/app/(app)/app/w/[slug]/brand-kit/linked-resource-form", () => ({
 
 // Server actions — never invoked from these tests but the page
 // imports them for the archive `<form action={...}>` bindings.
+// Round 4 added `restoreXAction` for every `archiveXAction` so the
+// toast undo button can hit the server.
 vi.mock("@/app/(app)/app/w/[slug]/brand-kit/actions", () => ({
   archiveColorAssetAction: vi.fn(),
   archiveFontAssetAction: vi.fn(),
@@ -104,6 +106,12 @@ vi.mock("@/app/(app)/app/w/[slug]/brand-kit/actions", () => ({
   archiveVoiceRuleAction: vi.fn(),
   archivePublishingRuleAction: vi.fn(),
   archiveLinkedResourceAction: vi.fn(),
+  restoreColorAssetAction: vi.fn(),
+  restoreFontAssetAction: vi.fn(),
+  restoreLogoAssetAction: vi.fn(),
+  restoreVoiceRuleAction: vi.fn(),
+  restorePublishingRuleAction: vi.fn(),
+  restoreLinkedResourceAction: vi.fn(),
   createPublishingRuleAction: vi.fn(),
   createLinkedResourceAction: vi.fn(),
 }));
@@ -163,16 +171,28 @@ async function renderPageForViewer(): Promise<ReturnType<typeof render>> {
 
 // ─── Tests ───────────────────────────────────────────────────────────
 describe("BrandKitPage layout (Round 3 / commit G)", () => {
-  it("renders the five top tabs in Stitch order with the right labels", async () => {
+  it("renders the top tabs in Stitch order with the right labels", async () => {
     await renderPageForManager();
     const tablist = screen.getByTestId("workspace-top-tabs");
     expect(tablist).toBeInTheDocument();
-    const labels = ["Overview", "Assets", "Guidelines", "Voice & tone", "Publishing rules"];
+    const labels = [
+      "Overview",
+      "Logos",
+      "Colors",
+      "Typography",
+      "Voice",
+      "Pillars",
+      "Publishing",
+      "Linked",
+      "Activity",
+    ];
     for (const label of labels) {
       const link = screen.getByRole("link", { name: new RegExp(`^${label}`) });
       expect(link).toBeInTheDocument();
       const href = link.getAttribute("href");
-      expect(href).toMatch(/^#(overview|logo|guidelines|voice|publishing)$/);
+      expect(href).toMatch(
+        /^#(overview|logo|color|guidelines|voice|pillars|publishing|linked|recent)$/,
+      );
     }
   });
 
@@ -225,17 +245,11 @@ describe("BrandKitPage layout (Round 3 / commit G)", () => {
     expect(screen.queryByTestId("mock-voice-form")).toBeNull();
   });
 
-  it("renders the two header CTAs in the PageHeader", async () => {
+  it("renders the Add asset dropdown menu in the PageHeader", async () => {
     await renderPageForManager();
     const add = screen.getByTestId("brand-kit-add-asset");
     expect(add).toBeInTheDocument();
     expect(add).toHaveTextContent(/add asset/i);
-    const edit = screen.getByTestId("brand-kit-edit");
-    expect(edit).toBeInTheDocument();
-    expect(edit).toHaveTextContent(/edit brand kit/i);
-    // The Edit CTA is a stub anchor — it jumps the user to the
-    // first editable section (logo).
-    expect(edit.closest("a")).toHaveAttribute("href", "#logo");
   });
 
   it("renders publishing rules and linked resources from the service", async () => {
@@ -258,10 +272,10 @@ describe("BrandKitPage layout (Round 3 / commit G)", () => {
     ]);
     await renderPageForManager();
     expect(screen.getByText("Describe visuals")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Design library" })).toHaveAttribute(
-      "href",
-      "https://figma.com/file/example",
-    );
+    // Round 4: the link carries an aria-label that names the
+    // resource and announces "in a new tab" for screen readers.
+    const link = screen.getByRole("link", { name: /Design library on Figma in a new tab/ });
+    expect(link).toHaveAttribute("href", "https://figma.com/file/example");
   });
 
   it("shows create and archive controls only to authorized Brand Kit editors", async () => {
