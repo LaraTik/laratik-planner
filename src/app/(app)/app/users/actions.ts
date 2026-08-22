@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, isAgencyAdmin, PermissionDeniedError } from "@/lib/auth/policy";
+import { firstAgencyForBootstrap, isAgencyAdmin, PermissionDeniedError } from "@/lib/auth/policy";
 import { assertCanDemoteAgencyAdmin } from "@/lib/auth/member-safety";
 import {
   agencyMemberships,
@@ -77,7 +77,7 @@ export async function sendInviteAction(
 ): Promise<InviteActionState> {
   const session = await auth();
   if (!session?.user?.id) return { error: "Not signed in. Please sign in again." };
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) return { error: "Agency not configured. Contact the platform admin." };
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
     return { error: "Only agency administrators can send invitations." };
@@ -147,7 +147,7 @@ export async function sendInviteAction(
 export async function resendInviteAction(invitationId: string): Promise<InvitationActionState> {
   const session = await auth();
   if (!session?.user?.id) return { error: "Not signed in" };
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) return { error: "Agency not configured" };
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
     return { error: "Only agency administrators can resend invitations." };
@@ -182,7 +182,7 @@ export async function resendInviteAction(invitationId: string): Promise<Invitati
 export async function revokeInviteAction(invitationId: string): Promise<InvitationActionState> {
   const session = await auth();
   if (!session?.user?.id) return { error: "Not signed in" };
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) return { error: "Agency not configured" };
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
     return { error: "Only agency administrators can revoke invitations." };
@@ -202,7 +202,7 @@ export async function revokeInviteAction(invitationId: string): Promise<Invitati
 export async function toggleDeactivationAction(userId: string, currentlyActive: boolean) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Not signed in" };
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) return { error: "Agency not configured" };
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
     throw new PermissionDeniedError("toggle_user_status");
@@ -288,7 +288,7 @@ export async function updateMemberRolesAction(
 ): Promise<MemberEditState> {
   const session = await auth();
   if (!session?.user?.id) return { error: "Not signed in" };
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) return { error: "Agency not configured" };
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
     throw new PermissionDeniedError("update_member_roles");
@@ -403,7 +403,7 @@ export async function toggleAgencyAdminAction(
 ): Promise<MemberEditState> {
   const session = await auth();
   if (!session?.user?.id) return { error: "Not signed in" };
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) return { error: "Agency not configured" };
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
     throw new PermissionDeniedError("toggle_agency_admin");

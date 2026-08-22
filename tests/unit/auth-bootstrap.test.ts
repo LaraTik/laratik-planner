@@ -25,6 +25,7 @@ function makeDrizzleMock(state: DrizzleState) {
     chain.from = vi.fn(() => chain);
     chain.innerJoin = vi.fn(() => chain);
     chain.where = vi.fn(() => chain);
+    chain.orderBy = vi.fn(() => chain);
     chain.limit = vi.fn(() => {
       const rows = state.selectResults.shift() ?? [];
       return Promise.resolve(rows);

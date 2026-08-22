@@ -36,7 +36,7 @@ const dbMock = vi.hoisted(() => {
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 
 const policyMock = vi.hoisted(() => ({
-  activeAgencyId: vi.fn(async () => "agency-1" as string | null),
+  firstAgencyForBootstrap: vi.fn(async () => "agency-1" as string | null),
   isAgencyAdmin: vi.fn(async () => false as boolean),
   canAccessInternalWorkspace: vi.fn(async () => false as boolean),
   canAccessClientWorkspace: vi.fn(async () => false as boolean),
@@ -53,8 +53,8 @@ const actor = { id: "user-1" };
 
 beforeEach(() => {
   dbMock.state.selectResults = [];
-  policyMock.activeAgencyId.mockReset();
-  policyMock.activeAgencyId.mockResolvedValue("agency-1");
+  policyMock.firstAgencyForBootstrap.mockReset();
+  policyMock.firstAgencyForBootstrap.mockResolvedValue("agency-1");
   policyMock.isAgencyAdmin.mockReset();
   policyMock.isAgencyAdmin.mockResolvedValue(false);
   policyMock.canAccessInternalWorkspace.mockReset();
@@ -65,7 +65,7 @@ beforeEach(() => {
 
 describe("getAccessibleWorkspace", () => {
   it("returns null when there is no active agency", async () => {
-    policyMock.activeAgencyId.mockResolvedValue(null);
+    policyMock.firstAgencyForBootstrap.mockResolvedValue(null);
     const result = await context.getAccessibleWorkspace(actor, "any");
     expect(result).toBeNull();
   });
@@ -106,7 +106,7 @@ describe("getClientWorkspace", () => {
 
 describe("listSwitcherWorkspaces", () => {
   it("returns empty options and isAdmin=false when no agency exists", async () => {
-    policyMock.activeAgencyId.mockResolvedValue(null);
+    policyMock.firstAgencyForBootstrap.mockResolvedValue(null);
     const result = await context.listSwitcherWorkspaces(actor);
     expect(result).toEqual({ options: [], isAdmin: false });
   });

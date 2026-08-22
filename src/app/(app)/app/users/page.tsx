@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
+import { firstAgencyForBootstrap, isAgencyAdmin } from "@/lib/auth/policy";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { workspaceMembershipRoles, workspaceMemberships, workspaces } from "@/lib/db/schema";
@@ -33,7 +33,7 @@ export const metadata = { title: "User Management" };
 export default async function UsersPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) redirect("/setup");
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
     return (

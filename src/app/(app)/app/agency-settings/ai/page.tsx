@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Bot, KeyRound, Server } from "lucide-react";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
+import { firstAgencyForBootstrap, isAgencyAdmin } from "@/lib/auth/policy";
 import { serverEnv } from "@/lib/validation/env";
 import { PageHeader } from "@/components/workspace/page-header";
 import { AiSettingsForm } from "./ai-settings-form";
@@ -26,7 +26,7 @@ export const metadata = { title: "AI configuration" };
 export default async function AgencyAiSettingsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) redirect("/setup");
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
     return (

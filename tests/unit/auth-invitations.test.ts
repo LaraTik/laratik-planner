@@ -168,12 +168,12 @@ const dbMock = vi.hoisted(() => {
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 
 const policyMock = vi.hoisted(() => ({
-  activeAgencyId: vi.fn(async () => "agency-1" as string | null),
+  firstAgencyForBootstrap: vi.fn(async () => "agency-1" as string | null),
 }));
 
 vi.mock("@/lib/auth/policy", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/policy")>("@/lib/auth/policy");
-  return { ...actual, activeAgencyId: policyMock.activeAgencyId };
+  return { ...actual, firstAgencyForBootstrap: policyMock.firstAgencyForBootstrap };
 });
 
 const memberSafetyMock = vi.hoisted(() => ({
@@ -220,8 +220,8 @@ beforeEach(() => {
   dbMock.state.deleteCalls = [];
   dbMock.state.transactionCalls = 0;
   dbMock.state.executeCalls = [];
-  policyMock.activeAgencyId.mockReset();
-  policyMock.activeAgencyId.mockResolvedValue("agency-1");
+  policyMock.firstAgencyForBootstrap.mockReset();
+  policyMock.firstAgencyForBootstrap.mockResolvedValue("agency-1");
   memberSafetyMock.assertCanDeactivateAgencyMember.mockReset();
   emailMock.sendEmail.mockReset();
   emailMock.sendEmail.mockResolvedValue({ id: "msg-1" });
@@ -231,7 +231,7 @@ beforeEach(() => {
 
 describe("createInvitation", () => {
   it("throws when no agency is configured", async () => {
-    policyMock.activeAgencyId.mockResolvedValue(null);
+    policyMock.firstAgencyForBootstrap.mockResolvedValue(null);
     await expect(
       createInvitation({
         email: "x@example.com",
@@ -402,7 +402,7 @@ describe("acceptInvitation", () => {
 
 describe("listInvitations", () => {
   it("returns [] when no agency is configured", async () => {
-    policyMock.activeAgencyId.mockResolvedValue(null);
+    policyMock.firstAgencyForBootstrap.mockResolvedValue(null);
     expect(await listInvitations()).toEqual([]);
   });
 
@@ -492,7 +492,7 @@ describe("reactivateUser", () => {
 
 describe("listAgencyMembers", () => {
   it("returns [] when no agency is configured", async () => {
-    policyMock.activeAgencyId.mockResolvedValue(null);
+    policyMock.firstAgencyForBootstrap.mockResolvedValue(null);
     expect(await listAgencyMembers()).toEqual([]);
   });
 

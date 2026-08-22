@@ -3,7 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { workspaceMemberships, workspaces } from "@/lib/db/schema";
 import {
-  activeAgencyId,
+  firstAgencyForBootstrap,
   canAccessClientWorkspace,
   canAccessInternalWorkspace,
   isAgencyAdmin,
@@ -11,7 +11,7 @@ import {
 } from "@/lib/auth/policy";
 
 async function findWorkspaceBySlug(slug: string) {
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) return null;
   const [workspace] = await db
     .select()
@@ -46,7 +46,7 @@ export type SwitcherWorkspace = { id: string; name: string; slug: string };
 export async function listSwitcherWorkspaces(
   actor: Actor,
 ): Promise<{ options: SwitcherWorkspace[]; isAdmin: boolean }> {
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) return { options: [], isAdmin: false };
   const isAdmin = await isAgencyAdmin(actor, agencyId);
 

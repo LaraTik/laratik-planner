@@ -3,7 +3,7 @@ import { and, count, eq, gte } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowUpRight, Bot, Clock, ShieldCheck, Sparkles } from "lucide-react";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
+import { firstAgencyForBootstrap, hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import { aiFeatureSettings, aiUsageEvents } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/validation/env";
@@ -71,7 +71,7 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
     notFound();
 
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) notFound();
 
   const since = new Date();

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { bootstrapFirstAdmin } from "@/lib/auth/bootstrap";
-import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
+import { firstAgencyForBootstrap, isAgencyAdmin } from "@/lib/auth/policy";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { db } from "@/lib/db";
 import { securityAuditEvents } from "@/lib/db/schema";
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   }
 
   // If an agency admin already exists, refuse
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (agencyId && (await isAgencyAdmin({ id: session.user.id }, agencyId))) {
     return NextResponse.json({ error: "Already configured", agencyId }, { status: 409 });
   }

@@ -51,13 +51,17 @@ describe("schema invariants", () => {
     await pool.end();
   });
 
-  // ─── Singleton agency invariant (master prompt §8) ─────────────────────
-  describe("singleton agency", () => {
-    it("allows exactly one agency row", async () => {
+  // ─── Agency uniqueness invariants (master prompt §8) ───────────────────
+  // After M1.7 the singleton invariant is intentionally gone — the
+  // agency table allows any number of rows. The remaining uniqueness
+  // invariant is the per-deployment `lower(slug)` index, asserted by
+  // the multi-agency suite in `agency-singleton-constraint.test.ts`.
+  describe("agency slug uniqueness", () => {
+    it("rejects a second agency with a case-different but slug-equal name", async () => {
       await db.insert(agencies).values({ name: "Acme", slug: "acme" });
       await expectPgConstraint(
-        db.insert(agencies).values({ name: "Other", slug: "other" }),
-        "agency_singleton_unique",
+        db.insert(agencies).values({ name: "ACME Copy", slug: "ACME" }),
+        "agency_slug_unique",
       );
     });
   });

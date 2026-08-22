@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
+import { firstAgencyForBootstrap, isAgencyAdmin } from "@/lib/auth/policy";
 import { redirect } from "next/navigation";
 import { ArrowLeft, Building2, KeyRound, Server } from "lucide-react";
 import { db } from "@/lib/db";
@@ -32,7 +32,7 @@ export const metadata = { title: "Agency Settings" };
 export default async function AgencySettingsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) redirect("/setup");
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
     return (

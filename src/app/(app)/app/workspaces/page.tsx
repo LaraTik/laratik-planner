@@ -4,7 +4,7 @@ import { Folder, Lightbulb, Plus, Send, AlertTriangle, Building } from "lucide-r
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { contentItems, socialChannels, workspaces, workspaceMemberships } from "@/lib/db/schema";
-import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
+import { firstAgencyForBootstrap, isAgencyAdmin } from "@/lib/auth/policy";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
@@ -36,7 +36,7 @@ export const metadata = { title: "Workspaces" };
 export default async function WorkspacesPage() {
   const session = await auth();
   if (!session?.user?.id) return null;
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) return null;
   const isAdmin = await isAgencyAdmin({ id: session.user.id }, agencyId);
   const now = new Date();

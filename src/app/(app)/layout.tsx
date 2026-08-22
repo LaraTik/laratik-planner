@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
+import { firstAgencyForBootstrap, isAgencyAdmin } from "@/lib/auth/policy";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { countUnreadNotifications, listNotificationsForUser } from "@/lib/notifications/service";
 import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
@@ -24,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/signin");
   }
 
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) {
     redirect("/setup");
   }

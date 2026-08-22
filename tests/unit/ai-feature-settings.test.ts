@@ -18,7 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  *
  * The policy module is partially mocked: `requirePolicy`,
  * `PermissionDeniedError`, and the `Actor` type come from the real
- * module (so the SUT's actual flow is exercised). `activeAgencyId` and
+ * module (so the SUT's actual flow is exercised). `firstAgencyForBootstrap` and
  * `isAgencyAdmin` are stubbed so we can flip the auth outcome.
  */
 
@@ -125,7 +125,7 @@ vi.mock("@/lib/validation/env", () => ({
 }));
 
 const policyOverrides = vi.hoisted(() => ({
-  activeAgencyIdResult: "agency-1" as string | null,
+  firstAgencyForBootstrapResult: "agency-1" as string | null,
   isAgencyAdminResult: true as boolean,
 }));
 
@@ -133,7 +133,7 @@ vi.mock("@/lib/auth/policy", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/policy")>("@/lib/auth/policy");
   return {
     ...actual,
-    activeAgencyId: vi.fn(async () => policyOverrides.activeAgencyIdResult),
+    firstAgencyForBootstrap: vi.fn(async () => policyOverrides.firstAgencyForBootstrapResult),
     isAgencyAdmin: vi.fn(async () => policyOverrides.isAgencyAdminResult),
   };
 });
@@ -158,7 +158,7 @@ beforeEach(() => {
   dbMock.select.mockClear();
   dbMock.insert.mockClear();
   dbMock.update.mockClear();
-  policyOverrides.activeAgencyIdResult = agencyId;
+  policyOverrides.firstAgencyForBootstrapResult = agencyId;
   policyOverrides.isAgencyAdminResult = true;
   envMock.AI_FEATURE_ENABLED = true;
   envMock.MINIMAX_API_KEY = "sk-test";
@@ -172,7 +172,7 @@ afterEach(() => {
 
 describe("getAiFeatureSettings", () => {
   it("returns null when no active agency is configured", async () => {
-    policyOverrides.activeAgencyIdResult = null;
+    policyOverrides.firstAgencyForBootstrapResult = null;
     const result = await getAiFeatureSettings();
     expect(result).toBeNull();
     expect(dbMock.select).not.toHaveBeenCalled();
@@ -201,7 +201,7 @@ describe("getAiFeatureSettings", () => {
 
 describe("getMonthlyUsage", () => {
   it("returns zeroed totals when no active agency is configured", async () => {
-    policyOverrides.activeAgencyIdResult = null;
+    policyOverrides.firstAgencyForBootstrapResult = null;
     const result = await getMonthlyUsage();
     expect(result).toEqual({ total: 0, succeeded: 0, failed: 0, byCapability: [] });
   });
@@ -257,7 +257,7 @@ describe("updateAiFeatureSettings", () => {
   });
 
   it("throws when the active agency is not configured", async () => {
-    policyOverrides.activeAgencyIdResult = null;
+    policyOverrides.firstAgencyForBootstrapResult = null;
     await expect(updateAiFeatureSettings(actor, validInput)).rejects.toThrow(
       /Agency not configured/,
     );
@@ -352,7 +352,7 @@ describe("testAiConnection", () => {
   });
 
   it("throws when the active agency is not configured", async () => {
-    policyOverrides.activeAgencyIdResult = null;
+    policyOverrides.firstAgencyForBootstrapResult = null;
     await expect(testAiConnection(actor)).rejects.toThrow(/Agency not configured/);
   });
 

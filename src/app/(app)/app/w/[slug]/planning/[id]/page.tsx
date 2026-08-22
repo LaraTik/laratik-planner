@@ -6,7 +6,7 @@ import { getContentItem, UPDATEABLE_STATUSES } from "@/lib/content/service";
 import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
 import { listPublicationsForItem } from "@/lib/publishing/service";
 import { listCommentsForItem } from "@/lib/discussions/service";
-import { activeAgencyId, hasWorkspaceRole } from "@/lib/auth/policy";
+import { firstAgencyForBootstrap, hasWorkspaceRole } from "@/lib/auth/policy";
 import { statusBadgeVariant, humanStatus, humanFormat } from "@/lib/content/status";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -77,7 +77,7 @@ export default async function ContentDetailPage({
   // passing one across the server→client boundary throws "An error
   // occurred in the Server Components render" (minified to React
   // error #441) in production builds.
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   const aiLive = isAiEnabled();
   const [feature] = agencyId
     ? await db

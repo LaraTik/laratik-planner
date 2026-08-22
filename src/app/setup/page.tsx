@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId } from "@/lib/auth/policy";
+import { firstAgencyForBootstrap } from "@/lib/auth/policy";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
@@ -23,7 +23,7 @@ export default async function SetupPage() {
 
   // If an agency already exists, this user is not the first admin
   // (we don't reveal whether THEY are the admin — they should check /app)
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (agencyId) {
     redirect("/app");
   }

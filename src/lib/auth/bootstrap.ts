@@ -2,6 +2,7 @@ import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { agencies, agencyMemberships, bootstrapLocks, users } from "@/lib/db/schema";
+import { firstAgencyForBootstrap } from "@/lib/auth/policy";
 import { serverEnv } from "@/lib/validation/env";
 
 /**
@@ -49,15 +50,15 @@ export async function bootstrapFirstAdmin(input: {
     }
 
     // Check if an agency already exists (shouldn't, but be safe)
-    const [existingAgency] = await tx
-      .select({ id: agencies.id })
-      .from(agencies)
-      .where(eq(agencies.singletonKey, true))
-      .limit(1);
-
+    // After M1.7 the agency table is multi-row; the bootstrap path
+    // uses `firstAgencyForBootstrap` to pick the most-recently-created
+    // agency when one is already present. In the legacy single-agency
+    // deployment this is exactly the agency that the bootstrap admin
+    // was going to own, so the user-facing behavior is unchanged.
+    const existingAgencyId = await firstAgencyForBootstrap();
     let agencyId: string;
-    if (existingAgency) {
-      agencyId = existingAgency.id;
+    if (existingAgencyId) {
+      agencyId = existingAgencyId;
     } else {
       const [agency] = await tx
         .insert(agencies)

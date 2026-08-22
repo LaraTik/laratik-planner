@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, isAgencyAdmin, PermissionDeniedError } from "@/lib/auth/policy";
+import { firstAgencyForBootstrap, isAgencyAdmin, PermissionDeniedError } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import {
   agencies,
@@ -43,7 +43,7 @@ async function createWorkspaceAction(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not signed in");
 
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) throw new Error("Agency not configured");
 
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
@@ -108,7 +108,7 @@ async function createWorkspaceAction(formData: FormData) {
 export default async function NewWorkspacePage() {
   const session = await auth();
   if (!session?.user?.id) return null;
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   const isAdmin = agencyId ? await isAgencyAdmin({ id: session.user.id }, agencyId) : false;
 
   if (!isAdmin) {

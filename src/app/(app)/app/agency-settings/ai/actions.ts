@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId, isAgencyAdmin } from "@/lib/auth/policy";
+import { firstAgencyForBootstrap, isAgencyAdmin } from "@/lib/auth/policy";
 import { serverEnv } from "@/lib/validation/env";
 import {
   AI_CAPABILITIES,
@@ -21,7 +21,7 @@ import {
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not signed in");
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   if (!agencyId) throw new Error("Agency not configured");
   if (!(await isAgencyAdmin({ id: session.user.id }, agencyId))) {
     throw new Error("Only agency admins can change AI settings");

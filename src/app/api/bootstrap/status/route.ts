@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
-import { activeAgencyId } from "@/lib/auth/policy";
+import { firstAgencyForBootstrap } from "@/lib/auth/policy";
 
 /**
  * GET /api/bootstrap/status
@@ -14,7 +14,7 @@ import { activeAgencyId } from "@/lib/auth/policy";
  */
 export async function GET() {
   const session = await auth();
-  const agencyId = await activeAgencyId();
+  const agencyId = await firstAgencyForBootstrap();
   return NextResponse.json({
     configured: !!agencyId,
     agencyId: agencyId ?? null,
