@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes, createHash } from "node:crypto";
-import { and, eq, like } from "drizzle-orm";
+import { and, eq, like, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { users, verificationTokens } from "@/lib/db/schema";
@@ -123,7 +123,21 @@ export async function consumePasswordResetToken(
 
   const newHash = await hashPassword(newPassword);
   await db.transaction(async (tx) => {
-    await tx.update(users).set({ passwordHash: newHash }).where(eq(users.id, userId));
+    // Stamp `emailVerified` if the user hasn't been verified before.
+    // The reset token was emailed to them; successfully consuming it
+    // proves email control, which is exactly what `emailVerified`
+    // means. Without this stamp, a user who only ever signs in via
+    // email+password (e.g. via the forgot-password flow) would fail
+    // the `invitationIdentityMatches` check on /accept-invitation and
+    // never be able to accept an invitation. COALESCE preserves any
+    // pre-existing verification timestamp.
+    await tx
+      .update(users)
+      .set({
+        passwordHash: newHash,
+        emailVerified: sql`COALESCE(${users.emailVerified}, NOW())`,
+      })
+      .where(eq(users.id, userId));
     await tx
       .delete(verificationTokens)
       .where(

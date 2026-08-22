@@ -263,7 +263,7 @@ describe("consumePasswordResetToken", () => {
     expect(await consumePasswordResetToken("a".repeat(32), "hunter22")).toBeNull();
   });
 
-  it("updates the password and deletes the token in one transaction", async () => {
+  it("updates the password and stamps emailVerified, deletes the token in one transaction", async () => {
     dbMock.state.selectResults = [
       [{ identifier: "password-reset:u-1", token: "hash", expires: new Date(Date.now() + 60_000) }],
     ];
@@ -274,7 +274,17 @@ describe("consumePasswordResetToken", () => {
     expect(dbMock.state.transactionCalls).toBe(1);
     const tx = dbMock.state.transactionPayloads[0]!;
     expect(tx.sets).toHaveLength(1);
-    expect((tx.sets[0] as Record<string, string>)["passwordHash"]).toMatch(/^\$2[aby]\$/);
+    const set = tx.sets[0] as Record<string, unknown>;
+    expect(set["passwordHash"]).toMatch(/^\$2[aby]\$/);
+    // The set also stamps `emailVerified` via SQL COALESCE — the
+    // successful token consumption proves email control, which is
+    // required for invitation acceptance. We assert the key is
+    // present (the value is a drizzle SQL object whose textual form
+    // is asserted by integration tests against a real DB; here we
+    // only need to know the stamp was wired in, not accidentally
+    // dropped by a refactor).
+    expect(set["emailVerified"]).toBeDefined();
+    expect(set["emailVerified"]).not.toBeNull();
     expect(tx.deletes).toHaveLength(1);
   });
 });
