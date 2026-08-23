@@ -16,7 +16,7 @@
  * an `it` here for it in the same PR.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 // serverEnv is read by proxy.ts at module-evaluation time; give it a
 // baseline so importing the module doesn't throw.
