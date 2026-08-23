@@ -12,7 +12,6 @@ import {
   workspaceMembershipRoles,
   workspaces,
 } from "@/lib/db/schema";
-import { firstAgencyForBootstrap } from "@/lib/auth/policy";
 import { sendEmail } from "@/lib/email";
 import { clientEnv, serverEnv } from "@/lib/validation/env";
 import { invitationIdentityMatches, normalizeEmailAddress } from "@/lib/auth/invitation-identity";
@@ -44,9 +43,9 @@ function generateToken(): { raw: string; hash: string } {
  * the same (agency, email) so the link in the email is the one that works.
  */
 export async function createInvitation(
-  input: InviteInput & { invitedBy: string },
+  input: InviteInput & { invitedBy: string; agencyId: string },
 ): Promise<{ id: string; acceptUrl: string; expiresAt: Date }> {
-  const agencyId = await firstAgencyForBootstrap();
+  const agencyId = input.agencyId;
   if (!agencyId) throw new Error("Agency not configured");
   const normalizedEmail = normalizeEmailAddress(input.email);
 
@@ -109,6 +108,7 @@ export async function createInvitation(
       targetId: row.id,
       outcome: "success",
       metadata: {
+        agencyId,
         workspaceGrantCount: input.workspaceRoles.length,
         grantsAgencyAdmin: input.grantsAgencyAdmin,
       },
@@ -282,9 +282,7 @@ async function workspaceIdsForInvitationInTx(
 /**
  * List active invitations for the agency.
  */
-export async function listInvitations() {
-  const agencyId = await firstAgencyForBootstrap();
-  if (!agencyId) return [];
+export async function listInvitations(agencyId: string) {
   return db
     .select()
     .from(invitations)
@@ -296,11 +294,17 @@ export async function listInvitations() {
  * Resend an invitation — generate a new token + reset expiry, invalidate
  * the old one. Same email.
  */
-export async function resendInvitation(invitationId: string, invitedBy: string): Promise<string> {
+export async function resendInvitation(input: {
+  invitationId: string;
+  agencyId: string;
+  invitedBy: string;
+}): Promise<string> {
   const [inv] = await db
     .select()
     .from(invitations)
-    .where(eq(invitations.id, invitationId))
+    .where(
+      and(eq(invitations.id, input.invitationId), eq(invitations.agencyId, input.agencyId)),
+    )
     .limit(1);
   if (!inv) throw new Error("Invitation not found");
   if (inv.status !== "pending") throw new Error(`Cannot resend a ${inv.status} invitation`);
@@ -311,7 +315,7 @@ export async function resendInvitation(invitationId: string, invitedBy: string):
   await db
     .update(invitations)
     .set({ tokenHash: hash, expiresAt, lastSentAt: new Date(), updatedAt: new Date() })
-    .where(eq(invitations.id, inv.id));
+    .where(and(eq(invitations.id, inv.id), eq(invitations.agencyId, input.agencyId)));
 
   const acceptUrl = `${APP_URL}/accept-invitation?token=${raw}`;
   await sendEmail({
@@ -323,18 +327,20 @@ Accept the invitation: ${acceptUrl}
 
 This link expires on ${expiresAt.toISOString().slice(0, 10)}.`,
   });
-  void invitedBy;
+  void input.invitedBy;
   return acceptUrl;
 }
 
 /**
  * Revoke a pending invitation.
  */
-export async function revokeInvitation(invitationId: string) {
+export async function revokeInvitation(input: { invitationId: string; agencyId: string }) {
   await db
     .update(invitations)
     .set({ status: "revoked", revokedAt: new Date(), updatedAt: new Date() })
-    .where(eq(invitations.id, invitationId));
+    .where(
+      and(eq(invitations.id, input.invitationId), eq(invitations.agencyId, input.agencyId)),
+    );
 }
 
 /**
@@ -389,10 +395,24 @@ export async function deactivateUser(input: {
           eq(agencyMemberships.userId, input.targetUserId),
         ),
       );
-    await tx
-      .update(workspaceMemberships)
-      .set({ status: "deactivated", deactivatedAt: new Date() })
-      .where(eq(workspaceMemberships.userId, input.targetUserId));
+    const agencyWorkspaces = await tx
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(eq(workspaces.agencyId, input.agencyId));
+    if (agencyWorkspaces.length > 0) {
+      await tx
+        .update(workspaceMemberships)
+        .set({ status: "deactivated", deactivatedAt: new Date() })
+        .where(
+          and(
+            eq(workspaceMemberships.userId, input.targetUserId),
+            inArray(
+              workspaceMemberships.workspaceId,
+              agencyWorkspaces.map((workspace) => workspace.id),
+            ),
+          ),
+        );
+    }
     await tx.insert(securityAuditEvents).values({
       actorId: input.actorUserId,
       action: "member_deactivate",
@@ -450,9 +470,7 @@ export async function reactivateUser(input: {
 /**
  * All members of the agency (used by User Management UI).
  */
-export async function listAgencyMembers() {
-  const agencyId = await firstAgencyForBootstrap();
-  if (!agencyId) return [];
+export async function listAgencyMembers(agencyId: string) {
   return db
     .select({
       userId: users.id,

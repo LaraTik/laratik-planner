@@ -102,18 +102,19 @@ describe("structural: activeAgencyId() removed from non-bootstrap callsites", ()
     expect(resolverCalls).toBeGreaterThanOrEqual(4);
   });
 
-  it("auth/invitations.ts (service layer) uses the M1.6/M1.7 replacement", () => {
+  it("auth/invitations.ts requires explicit agency scope and never uses bootstrap selection", () => {
     const src = readSrc("lib/auth/invitations.ts");
     expect(src).not.toMatch(/activeAgencyId\s*\(\s*\)/);
-    // After M1.7, the invitation service runs before any
-    // authenticated actor exists for the bootstrap flow, so it
-    // uses `firstAgencyForBootstrap()` (3 callers) instead of
-    // `resolveActiveAgencyContext`. Either helper represents a
-    // post-M1.6 replacement; we just want to assert the legacy
-    // `activeAgencyId()` is gone.
-    const firstAgencyCalls = (src.match(/firstAgencyForBootstrap\s*\(/g) ?? []).length;
-    const resolverCalls = (src.match(/resolveActiveAgencyContext\s*\(/g) ?? []).length;
-    expect(firstAgencyCalls + resolverCalls).toBeGreaterThanOrEqual(3);
+    expect(src).not.toMatch(/firstAgencyForBootstrap/);
+    expect(src).toMatch(/listInvitations\(agencyId: string\)/);
+    expect(src).toMatch(/listAgencyMembers\(agencyId: string\)/);
+  });
+
+  it("planning actions resolve workspace through the active agency context", () => {
+    const src = readSrc("app/(app)/app/w/[slug]/planning/actions.ts");
+    expect(src).toMatch(/resolveActiveAgencyContext/);
+    expect(src).toMatch(/getAccessibleWorkspace/);
+    expect(src).not.toMatch(/\.where\(eq\(workspaces\.slug, workspaceSlug\)\)/);
   });
 
   it("auth/invitations.ts and feature-settings.ts no longer import activeAgencyId", () => {
@@ -355,22 +356,6 @@ describe("replace-active-agency-id: workspaces/context service", () => {
     dbMock.state.limitResults = [[]];
     const { getAccessibleWorkspace } = await import("@/lib/workspaces/context");
     expect(await getAccessibleWorkspace({ id: "user-1" }, "acme")).toBeNull();
-  });
-});
-
-describe("replace-active-agency-id: invitations service", () => {
-  it("listInvitations returns [] when the actor has no resolvable agency", async () => {
-    sessionStore.current = { user: { id: "user-1" } };
-    dbMock.state.limitResults = [[]];
-    const { listInvitations } = await import("@/lib/auth/invitations");
-    expect(await listInvitations()).toEqual([]);
-  });
-
-  it("listAgencyMembers returns [] when the actor has no resolvable agency", async () => {
-    sessionStore.current = { user: { id: "user-1" } };
-    dbMock.state.limitResults = [[]];
-    const { listAgencyMembers } = await import("@/lib/auth/invitations");
-    expect(await listAgencyMembers()).toEqual([]);
   });
 });
 

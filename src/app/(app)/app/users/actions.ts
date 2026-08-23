@@ -121,6 +121,7 @@ export async function sendInviteAction(
   let result: Awaited<ReturnType<typeof createInvitation>>;
   try {
     result = await createInvitation({
+      agencyId,
       email: parsed.data.email,
       ...(parsed.data.inviteeName ? { inviteeName: parsed.data.inviteeName } : {}),
       grantsAgencyAdmin: parsed.data.grantsAgencyAdmin,
@@ -170,7 +171,7 @@ export async function resendInviteAction(invitationId: string): Promise<Invitati
     return { error: formatRateLimitRetry(rateLimit.retryAfterSeconds ?? rule.windowSeconds) };
   }
   try {
-    await resendInvitation(invitationId, session.user.id);
+    await resendInvitation({ invitationId, agencyId, invitedBy: session.user.id });
   } catch (e) {
     // resendInvitation throws plain `Error`s for two known business
     // outcomes: the invitation no longer exists, or it's no longer
@@ -199,7 +200,7 @@ export async function revokeInviteAction(invitationId: string): Promise<Invitati
     return { error: "Only agency administrators can revoke invitations." };
   }
   try {
-    await revokeInvitation(invitationId);
+    await revokeInvitation({ invitationId, agencyId });
   } catch (e) {
     console.error("[revokeInviteAction] failed", e);
     return {

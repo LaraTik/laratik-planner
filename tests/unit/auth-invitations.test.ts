@@ -167,15 +167,6 @@ const dbMock = vi.hoisted(() => {
 
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 
-const policyMock = vi.hoisted(() => ({
-  firstAgencyForBootstrap: vi.fn(async () => "agency-1" as string | null),
-}));
-
-vi.mock("@/lib/auth/policy", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/auth/policy")>("@/lib/auth/policy");
-  return { ...actual, firstAgencyForBootstrap: policyMock.firstAgencyForBootstrap };
-});
-
 const memberSafetyMock = vi.hoisted(() => ({
   assertCanDeactivateAgencyMember: vi.fn(),
 }));
@@ -220,8 +211,6 @@ beforeEach(() => {
   dbMock.state.deleteCalls = [];
   dbMock.state.transactionCalls = 0;
   dbMock.state.executeCalls = [];
-  policyMock.firstAgencyForBootstrap.mockReset();
-  policyMock.firstAgencyForBootstrap.mockResolvedValue("agency-1");
   memberSafetyMock.assertCanDeactivateAgencyMember.mockReset();
   emailMock.sendEmail.mockReset();
   emailMock.sendEmail.mockResolvedValue({ id: "msg-1" });
@@ -230,10 +219,10 @@ beforeEach(() => {
 });
 
 describe("createInvitation", () => {
-  it("throws when no agency is configured", async () => {
-    policyMock.firstAgencyForBootstrap.mockResolvedValue(null);
+  it("throws when no agency is provided", async () => {
     await expect(
       createInvitation({
+        agencyId: "",
         email: "x@example.com",
         grantsAgencyAdmin: false,
         workspaceRoles: [],
@@ -246,6 +235,7 @@ describe("createInvitation", () => {
     dbMock.state.insertReturningIds.push({ id: "inv-1" });
 
     const result = await createInvitation({
+      agencyId: "agency-2",
       email: "  Alice@Example.COM ",
       grantsAgencyAdmin: false,
       workspaceRoles: [],
@@ -265,6 +255,7 @@ describe("createInvitation", () => {
       /^[a-f0-9]{64}$/,
     );
     expect((inviteInsert?.values as Record<string, unknown>)["invitedBy"]).toBe(actorId);
+    expect((inviteInsert?.values as Record<string, unknown>)["agencyId"]).toBe("agency-2");
 
     // The email was sent with the raw accept URL (from the returned acceptUrl, which includes the raw token).
     expect(emailMock.sendEmail).toHaveBeenCalledTimes(1);
@@ -281,6 +272,7 @@ describe("createInvitation", () => {
 
     await expect(
       createInvitation({
+        agencyId: "agency-1",
         email: "x@example.com",
         grantsAgencyAdmin: false,
         workspaceRoles: [{ workspaceId, role: "designer" }],
@@ -401,14 +393,13 @@ describe("acceptInvitation", () => {
 });
 
 describe("listInvitations", () => {
-  it("returns [] when no agency is configured", async () => {
-    policyMock.firstAgencyForBootstrap.mockResolvedValue(null);
-    expect(await listInvitations()).toEqual([]);
+  it("returns [] when the selected agency has no invitations", async () => {
+    expect(await listInvitations("agency-1")).toEqual([]);
   });
 
   it("returns the queued rows for the current agency", async () => {
     dbMock.state.selectResults.push([{ id: "inv-1", email: "x@example.com", status: "pending" }]);
-    const rows = await listInvitations();
+    const rows = await listInvitations("agency-1");
     expect(rows).toHaveLength(1);
   });
 });
@@ -416,18 +407,26 @@ describe("listInvitations", () => {
 describe("resendInvitation", () => {
   it("throws when the invitation is not found", async () => {
     dbMock.state.selectResults.push([]);
-    await expect(resendInvitation("inv-1", actorId)).rejects.toThrow(/not found/i);
+    await expect(
+      resendInvitation({ invitationId: "inv-1", agencyId: "agency-1", invitedBy: actorId }),
+    ).rejects.toThrow(/not found/i);
   });
 
   it("throws when the invitation is not pending", async () => {
     dbMock.state.selectResults.push([{ id: "inv-1", email: "x", status: "accepted" }]);
-    await expect(resendInvitation("inv-1", actorId)).rejects.toThrow(/cannot resend/i);
+    await expect(
+      resendInvitation({ invitationId: "inv-1", agencyId: "agency-1", invitedBy: actorId }),
+    ).rejects.toThrow(/cannot resend/i);
   });
 
   it("updates the token, resets expiry, and emails the new link", async () => {
     dbMock.state.selectResults.push([{ id: "inv-1", email: "x@example.com", status: "pending" }]);
 
-    const acceptUrl = await resendInvitation("inv-1", actorId);
+    const acceptUrl = await resendInvitation({
+      invitationId: "inv-1",
+      agencyId: "agency-1",
+      invitedBy: actorId,
+    });
     expect(acceptUrl).toMatch(/accept-invitation/);
     expect(emailMock.sendEmail).toHaveBeenCalledTimes(1);
     const updateCall = dbMock.state.updateCalls.find(
@@ -439,7 +438,7 @@ describe("resendInvitation", () => {
 
 describe("revokeInvitation", () => {
   it("updates the invitation to status=revoked", async () => {
-    await revokeInvitation("inv-1");
+    await revokeInvitation({ invitationId: "inv-1", agencyId: "agency-1" });
     const call = dbMock.state.updateCalls.find(
       (c) => (c.set as Record<string, unknown>)["status"] === "revoked",
     );
@@ -458,6 +457,7 @@ describe("deactivateUser", () => {
   it("calls assertCanDeactivateAgencyMember and updates rows on success", async () => {
     dbMock.state.selectResults.push([{ isAgencyAdmin: false }]); // target
     dbMock.state.selectResults.push([{ count: 1 }]); // admin count
+    dbMock.state.selectResults.push([{ id: "ws-1" }]); // agency workspaces
 
     await deactivateUser({
       actorUserId: "actor-1",
@@ -491,14 +491,13 @@ describe("reactivateUser", () => {
 });
 
 describe("listAgencyMembers", () => {
-  it("returns [] when no agency is configured", async () => {
-    policyMock.firstAgencyForBootstrap.mockResolvedValue(null);
-    expect(await listAgencyMembers()).toEqual([]);
+  it("returns [] when the selected agency has no members", async () => {
+    expect(await listAgencyMembers("agency-1")).toEqual([]);
   });
 
   it("returns the queued rows", async () => {
     dbMock.state.selectResults.push([{ userId: "u-1", email: "u@example.com" }]);
-    const rows = await listAgencyMembers();
+    const rows = await listAgencyMembers("agency-1");
     expect(rows).toHaveLength(1);
   });
 });

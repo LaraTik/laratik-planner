@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Sidebar } from "@/components/app-shell/sidebar";
 
 // next/navigation's usePathname + useRouter are client hooks. We stub
@@ -9,9 +10,10 @@ import { Sidebar } from "@/components/app-shell/sidebar";
 // embedded WorkspaceSwitcher uses it for the popover's selection.
 const usePathnameMock = vi.fn<() => string>(() => "/app");
 const pushMock = vi.fn<(href: string) => void>(() => {});
+const refreshMock = vi.fn<() => void>(() => {});
 vi.mock("next/navigation", () => ({
   usePathname: () => usePathnameMock(),
-  useRouter: () => ({ push: pushMock }),
+  useRouter: () => ({ push: pushMock, refresh: refreshMock }),
 }));
 // next/link is fine in jsdom; nothing extra to stub.
 vi.mock("next/link", () => ({
@@ -156,6 +158,10 @@ describe("Sidebar (agency switcher wiring — M1.5)", () => {
   beforeEach(() => {
     usePathnameMock.mockReset();
     usePathnameMock.mockReturnValue("/app");
+    pushMock.mockReset();
+    refreshMock.mockReset();
+    switchActiveAgencyMock.mockReset();
+    switchActiveAgencyMock.mockResolvedValue(true);
   });
 
   it("renders the agency switcher trigger with the active agency name", () => {
@@ -179,5 +185,30 @@ describe("Sidebar (agency switcher wiring — M1.5)", () => {
     render(<Sidebar {...baseProps} agencySwitcher={{ active: null, options: [] }} />);
     const trigger = screen.getByRole("button", { name: "No agencies" });
     expect(trigger).toBeDisabled();
+  });
+
+  it("lands on the neutral app page after switching agencies", async () => {
+    const user = userEvent.setup();
+    render(
+      <Sidebar
+        {...baseProps}
+        agencySwitcher={{
+          active: baseProps.agencySwitcher.active,
+          options: [
+            baseProps.agencySwitcher.active,
+            { id: "agency-2", name: "Second Agency", slug: "second", isAdmin: false },
+          ],
+        }}
+      />,
+    );
+
+    await user.click(screen.getByTestId("sidebar-agency-switcher-trigger"));
+    await user.click(screen.getByRole("option", { name: /Second Agency/ }));
+
+    await waitFor(() => {
+      expect(switchActiveAgencyMock).toHaveBeenCalledWith("agency-2");
+      expect(pushMock).toHaveBeenCalledWith("/app");
+      expect(refreshMock).toHaveBeenCalled();
+    });
   });
 });

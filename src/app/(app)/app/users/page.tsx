@@ -55,8 +55,8 @@ export default async function UsersPage() {
   }
 
   const [members, pending, allWorkspaces] = await Promise.all([
-    listAgencyMembers(),
-    listInvitations(),
+    listAgencyMembers(agencyId),
+    listInvitations(agencyId),
     db
       .select({ id: workspaces.id, name: workspaces.name })
       .from(workspaces)
