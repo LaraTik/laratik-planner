@@ -14,7 +14,14 @@ if (!/(test|ci)/i.test(databaseUrl)) {
   process.exit(1);
 }
 
-const env: NodeJS.ProcessEnv = { ...process.env, DATABASE_URL: databaseUrl, NODE_ENV: "test" };
+const env: NodeJS.ProcessEnv = {
+  ...process.env,
+  DATABASE_URL: databaseUrl,
+  NODE_ENV: "test",
+  AUTH_SECRET: process.env.AUTH_SECRET ?? "integration-test-only-auth-secret-32-bytes",
+  AGENCY_COOKIE_SECRET:
+    process.env.AGENCY_COOKIE_SECRET ?? "integration-test-only-agency-cookie-secret-32-bytes",
+};
 const requestedTests = process.argv.slice(2).filter((arg) => arg !== "--");
 for (const [command, args] of [
   ["pnpm", ["db:migrate"]],

@@ -343,24 +343,20 @@ async function drillBackupRestore(): Promise<void> {
     // would be pg_restore. We stick with plain for transparency.
     if (!existsSync(DRILL_TMP_DIR)) mkdirSync(DRILL_TMP_DIR, { recursive: true });
     dumpFile = resolve(DRILL_TMP_DIR, `planner_test_backup_${Date.now()}.sql`);
+    const parsedTarget = new URL(TEST_DB_URL);
+    const pgEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      PGHOST: parsedTarget.hostname,
+      PGPORT: parsedTarget.port || "5432",
+      PGDATABASE: dbName,
+      ...(parsedTarget.username ? { PGUSER: decodeURIComponent(parsedTarget.username) } : {}),
+      ...(parsedTarget.password ? { PGPASSWORD: decodeURIComponent(parsedTarget.password) } : {}),
+    };
 
     const dump = runShell(
       "pg_dump",
-      [
-        "--no-owner",
-        "--no-privileges",
-        "--clean",
-        "--if-exists",
-        "-h",
-        "127.0.0.1",
-        "-U",
-        "planner",
-        "-d",
-        dbName,
-        "-f",
-        dumpFile,
-      ],
-      { env: { ...process.env, PGPASSWORD: "planner_dev_only" } },
+      ["--no-owner", "--no-privileges", "--clean", "--if-exists", "-f", dumpFile],
+      { env: pgEnv },
     );
     if (dump.status !== 0) {
       record(
@@ -375,11 +371,7 @@ async function drillBackupRestore(): Promise<void> {
     await dropAndRecreateDb(dbName);
     detail.push(`drop+recreate ${dbName}`);
 
-    const restore = runShell(
-      "psql",
-      ["-h", "127.0.0.1", "-U", "planner", "-d", dbName, "-v", "ON_ERROR_STOP=1", "-f", dumpFile],
-      { env: { ...process.env, PGPASSWORD: "planner_dev_only" } },
-    );
+    const restore = runShell("psql", ["-v", "ON_ERROR_STOP=1", "-f", dumpFile], { env: pgEnv });
     if (restore.status !== 0) {
       const stderr = shellStderr(restore).slice(-400);
       record("3. backup + restore", false, `psql restore failed: ${stderr}`);
