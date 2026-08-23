@@ -95,7 +95,9 @@ export async function getLimitForResource(
   agencyId: string,
   resource: string,
 ): Promise<number | null> {
-  const planKey = (RESOURCE_TO_PLAN_KEY as Record<string, string | null>)[resource] ?? null;
+  const planKey = resource.startsWith("daily_ai_requests:")
+    ? "daily_ai_requests_per_user"
+    : ((RESOURCE_TO_PLAN_KEY as Record<string, string | null>)[resource] ?? null);
   if (planKey === null) {
     // The resource is not in the M2.1 plan-default shape.
     // Per-user resources (daily_ai_requests:<user_id>) are

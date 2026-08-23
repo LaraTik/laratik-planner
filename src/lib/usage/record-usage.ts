@@ -11,6 +11,7 @@ import {
   type KnownResource,
   type UsageLevel,
 } from "./types";
+import { currentCounterValue } from "./period";
 
 /**
  * M2.3 — `recordUsage(agencyId, resource, delta)`.
@@ -85,7 +86,10 @@ export async function recordUsage(
     //    same (agency_id, resource_key) row — M2.4's quota
     //    enforcement layer relies on this same pattern.
     const [existing] = await tx
-      .select({ value: agencyUsageCounters.currentValue })
+      .select({
+        value: agencyUsageCounters.currentValue,
+        lastRecordedAt: agencyUsageCounters.lastRecordedAt,
+      })
       .from(agencyUsageCounters)
       .where(
         and(
@@ -95,7 +99,9 @@ export async function recordUsage(
       )
       .for("update");
 
-    const currentValue = existing?.value ?? 0;
+    const currentValue = existing
+      ? currentCounterValue(resource, Number(existing.value), existing.lastRecordedAt)
+      : 0;
     const nextValue = currentValue + delta;
     if (nextValue < 0) {
       throw new InvalidUsageDeltaError(resource, currentValue, delta);

@@ -17,6 +17,7 @@
 export { recordUsage } from "./record-usage";
 export { getUsage } from "./get-usage";
 export { computeLevel, severityOf, THRESHOLD_LEVELS, InvalidUsageDeltaError } from "./threshold";
+export { currentCounterValue, usagePeriodKey } from "./period";
 export {
   KNOWN_RESOURCES,
   RESOURCE_TO_PLAN_KEY,

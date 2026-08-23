@@ -5,6 +5,7 @@ import { agencyUsageCounters, agencyUsageThresholdEvents } from "@/lib/db/schema
 import { getLimitForResource } from "@/lib/usage/get-limit-for-resource";
 import { computeLevel, severityOf, THRESHOLD_LEVELS } from "@/lib/usage/threshold";
 import { LimitExceededError } from "./types";
+import { currentCounterValue } from "@/lib/usage/period";
 
 export type CapacityAllocation = { resource: string; increase: number };
 
@@ -52,7 +53,10 @@ export async function reserveCapacity(
   for (const [resource, increase] of entries) {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${agencyId} || '|' || ${resource}))`);
     const [row] = await tx
-      .select({ current: agencyUsageCounters.currentValue })
+      .select({
+        current: agencyUsageCounters.currentValue,
+        lastRecordedAt: agencyUsageCounters.lastRecordedAt,
+      })
       .from(agencyUsageCounters)
       .where(
         and(
@@ -62,7 +66,9 @@ export async function reserveCapacity(
       )
       .for("update")
       .limit(1);
-    const current = Number(row?.current ?? 0);
+    const current = row
+      ? currentCounterValue(resource, Number(row.current), row.lastRecordedAt)
+      : 0;
     const limit = await getLimitForResource(tx, agencyId, resource);
     assertWithinLimit(resource, current, limit, increase);
     pending.push({ resource, next: current + increase, limit });

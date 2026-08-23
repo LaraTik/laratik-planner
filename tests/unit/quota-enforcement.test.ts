@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assertWithinLimit, LimitExceededError } from "@/lib/entitlements";
+import { currentCounterValue } from "@/lib/usage";
 
 describe("M2 transactional quota contract", () => {
   it("allows an allocation at the exact limit", () => {
@@ -25,5 +26,13 @@ describe("M2 transactional quota contract", () => {
         userMessage: "Your plan allows 3 social profiles on Instagram. Archive one or request a limit change.",
       });
     }
+  });
+
+  it("resets monthly and per-user daily AI counters at their period boundary", () => {
+    const previousMonth = new Date("2026-07-31T23:59:00Z");
+    const now = new Date("2026-08-01T00:01:00Z");
+    expect(currentCounterValue("ai_requests_month", 99, previousMonth, now)).toBe(0);
+    expect(currentCounterValue("daily_ai_requests:user-1", 20, previousMonth, now)).toBe(0);
+    expect(currentCounterValue("workspaces", 4, previousMonth, now)).toBe(4);
   });
 });

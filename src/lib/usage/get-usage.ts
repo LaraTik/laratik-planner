@@ -4,6 +4,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { agencyUsageCounters } from "@/lib/db/schema";
 import { getLimitForResource } from "./get-limit-for-resource";
 import { computeLevel } from "./threshold";
+import { currentCounterValue } from "./period";
 import {
   KNOWN_RESOURCES,
   UsageSnapshotSchema,
@@ -65,7 +66,10 @@ export async function getUsage(db: NodePgDatabase, agencyId: string): Promise<Us
     .where(eq(agencyUsageCounters.agencyId, agencyId));
   const counterByResource = new Map<string, number>();
   for (const r of counterRows) {
-    counterByResource.set(r.resourceKey, Number(r.currentValue));
+    counterByResource.set(
+      r.resourceKey,
+      currentCounterValue(r.resourceKey, Number(r.currentValue), r.lastRecordedAt),
+    );
   }
 
   // 2) Read the effective limit for each known resource.

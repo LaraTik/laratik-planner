@@ -211,6 +211,31 @@ describe("draftCaption", () => {
     expect(userMsg.content).toContain("Brief: Tease the launch");
   });
 
+  it("honors the entitlement token ceiling and reports provider usage", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        content: [{ type: "text", text: "Caption draft" }],
+        usage: { input_tokens: 19, output_tokens: 7 },
+      }),
+    });
+    const onUsage = vi.fn();
+    const ai = await loadAi();
+    await ai.draftCaption({
+      title: "Launch",
+      brief: "Announce it",
+      format: "reel",
+      maxTokens: 123,
+      onUsage,
+    });
+    const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body.max_tokens).toBe(123);
+    expect(onUsage).toHaveBeenCalledWith(
+      expect.objectContaining({ inputTokens: 19, outputTokens: 7 }),
+    );
+  });
+
   it("substitutes '(none)' for an empty brief and omits platform/audience when missing", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,

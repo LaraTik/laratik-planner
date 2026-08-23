@@ -91,11 +91,13 @@ export async function draftCaption(input: {
   format: string;
   platform?: string;
   audience?: string;
+  onUsage?: (result: ChatResult) => void;
+  maxTokens?: number;
 }): Promise<string | null> {
   if (!isAiEnabled()) return null;
   const result = await chat({
     temperature: 0.8,
-    maxTokens: 600,
+    maxTokens: input.maxTokens ?? 600,
     messages: [
       {
         role: "system",
@@ -116,6 +118,7 @@ export async function draftCaption(input: {
       },
     ],
   });
+  if (result) input.onUsage?.(result);
   return result?.content ?? null;
 }
 
@@ -130,11 +133,13 @@ export async function improveBrief(input: {
   brief: string;
   format: string;
   audience?: string;
+  onUsage?: (result: ChatResult) => void;
+  maxTokens?: number;
 }): Promise<string | null> {
   if (!isAiEnabled()) return null;
   const result = await chat({
     temperature: 0.6,
-    maxTokens: 600,
+    maxTokens: input.maxTokens ?? 600,
     messages: [
       {
         role: "system",
@@ -157,6 +162,7 @@ export async function improveBrief(input: {
       },
     ],
   });
+  if (result) input.onUsage?.(result);
   return result?.content ?? null;
 }
 
@@ -171,11 +177,13 @@ export async function checkCompleteness(input: {
   brief: string;
   format: string;
   audience?: string;
+  onUsage?: (result: ChatResult) => void;
+  maxTokens?: number;
 }): Promise<string | null> {
   if (!isAiEnabled()) return null;
   const result = await chat({
     temperature: 0.3,
-    maxTokens: 500,
+    maxTokens: input.maxTokens ?? 500,
     messages: [
       {
         role: "system",
@@ -198,5 +206,6 @@ export async function checkCompleteness(input: {
       },
     ],
   });
+  if (result) input.onUsage?.(result);
   return result?.content ?? null;
 }
