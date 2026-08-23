@@ -368,7 +368,7 @@ which is the historical plan file.
 
 ## 2026-08-23 — Multi-agency SaaS Milestone 2
 
-Milestone 2 is `Tested`, not independently `Verified`. The implementation is on `feat/m2-multi-agency`; exact scope is in `docs/m2-multi-agency/PLAN.md`.
+Milestone 2 is `Verified`. Implementation merged at `7232176`; the post-merge CI production-smoke correction is `6482294` and the post-fix CI run `32655353785` is green end-to-end (format, lint, typecheck, 1320 unit tests, 87 integration tests, coverage, audit, application build, Docker image build, production-container smoke). Scope is in `docs/m2-multi-agency/PLAN.md`.
 
 - `pnpm verify` — **pass**: format, lint, strict typecheck, **115 files / 1320 unit tests**, and the complete Next.js 16.3.1 webpack production build. The first pre-coverage-fix run was 113 files / 1315 tests; `1a75dc3` added four auth cases, and the post-merge CI production-smoke environment contract added the final regression case.
 - `TEST_DATABASE_URL=postgresql://…/planner_test pnpm test:integration` — **12 files, 87/87 pass** on disposable Postgres.
@@ -379,6 +379,6 @@ Milestone 2 is `Tested`, not independently `Verified`. The implementation is on 
 - `pnpm audit --prod` — **pass: no known vulnerabilities**.
 - Required-test scan for `.skip` and `.fixme` under `tests/` — **pass: zero matches**.
 
-The first post-merge CI run (`32652422989`) passed formatting, lint, typecheck, migrations, 1320 unit tests, 87 integration tests, coverage, audit, application build, and Docker image build, then failed closed at production-container startup because the smoke command did not forward the newly required `AGENCY_COOKIE_SECRET`. The smoke workflow now supplies a CI-only value after checkout and forwards it into the container; `tests/unit/ci-smoke-env.test.ts` locks that contract. No production secret or default was added.
+The first post-merge CI run (`32652422989`) passed formatting, lint, typecheck, migrations, 1320 unit tests, 87 integration tests, coverage, audit, application build, and Docker image build, then failed closed at production-container startup because the smoke command did not forward the newly required `AGENCY_COOKIE_SECRET`. The smoke workflow now supplies a CI-only value after checkout and forwards it into the container; `tests/unit/ci-smoke-env.test.ts` locks that contract. No production secret or default was added. The post-fix CI run `32655353785` re-executed the same gate set and turned the production-container smoke step green, completing the verification.
 
 Commit `0f5b5bc` is the migration-ledger regression fix; it ensures the drill exercises the same `drizzle.__drizzle_migrations` contract used by production deployment. Commit `1a75dc3` closes the auth coverage and self-contained browser-runner gates. Post-merge CI/deploy results are appended after integration.
