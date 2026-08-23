@@ -343,9 +343,7 @@ export async function resendInvitation(input: {
   const [inv] = await db
     .select()
     .from(invitations)
-    .where(
-      and(eq(invitations.id, input.invitationId), eq(invitations.agencyId, input.agencyId)),
-    )
+    .where(and(eq(invitations.id, input.invitationId), eq(invitations.agencyId, input.agencyId)))
     .limit(1);
   if (!inv) throw new Error("Invitation not found");
   if (inv.status !== "pending") throw new Error(`Cannot resend a ${inv.status} invitation`);
@@ -380,18 +378,14 @@ export async function revokeInvitation(input: { invitationId: string; agencyId: 
     const [invitation] = await tx
       .select({ status: invitations.status, email: invitations.email })
       .from(invitations)
-      .where(
-        and(eq(invitations.id, input.invitationId), eq(invitations.agencyId, input.agencyId)),
-      )
+      .where(and(eq(invitations.id, input.invitationId), eq(invitations.agencyId, input.agencyId)))
       .for("update")
       .limit(1);
     if (!invitation || invitation.status !== "pending") return;
     await tx
       .update(invitations)
       .set({ status: "revoked", revokedAt: new Date(), updatedAt: new Date() })
-      .where(
-        and(eq(invitations.id, input.invitationId), eq(invitations.agencyId, input.agencyId)),
-      );
+      .where(and(eq(invitations.id, input.invitationId), eq(invitations.agencyId, input.agencyId)));
     const [activeMember] = await tx
       .select({ userId: users.id })
       .from(users)

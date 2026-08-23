@@ -132,7 +132,11 @@ const columns: DataTableColumnDef<PlatformAgencyRow>[] = [
   {
     key: "plan",
     header: "Plan / status",
-    cell: (r) => <span className="text-body text-fg-primary">{r.planName} · {r.lifecycle}</span>,
+    cell: (r) => (
+      <span className="text-body text-fg-primary">
+        {r.planName} · {r.lifecycle}
+      </span>
+    ),
   },
   {
     key: "created",

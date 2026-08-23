@@ -45,13 +45,18 @@ export async function reserveCapacity(
 ): Promise<void> {
   const coalesced = new Map<string, number>();
   for (const allocation of allocations) {
-    coalesced.set(allocation.resource, (coalesced.get(allocation.resource) ?? 0) + allocation.increase);
+    coalesced.set(
+      allocation.resource,
+      (coalesced.get(allocation.resource) ?? 0) + allocation.increase,
+    );
   }
   const entries = [...coalesced.entries()].sort(([a], [b]) => a.localeCompare(b));
   const pending: Array<{ resource: string; next: number; limit: number | null }> = [];
 
   for (const [resource, increase] of entries) {
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${agencyId} || '|' || ${resource}))`);
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${agencyId} || '|' || ${resource}))`,
+    );
     const [row] = await tx
       .select({
         current: agencyUsageCounters.currentValue,
@@ -129,7 +134,9 @@ export async function releaseCapacity(
   resources: readonly string[],
 ): Promise<void> {
   for (const resource of [...new Set(resources)].sort()) {
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${agencyId} || '|' || ${resource}))`);
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${agencyId} || '|' || ${resource}))`,
+    );
     await tx
       .update(agencyUsageCounters)
       .set({

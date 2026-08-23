@@ -4,7 +4,11 @@ const authMock = vi.hoisted(() => vi.fn());
 const resolveContextMock = vi.hoisted(() => vi.fn());
 const getInternalMock = vi.hoisted(() => vi.fn());
 const getClientMock = vi.hoisted(() => vi.fn());
-const notFoundMock = vi.hoisted(() => vi.fn(() => { throw new Error("NEXT_NOT_FOUND"); }));
+const notFoundMock = vi.hoisted(() =>
+  vi.fn(() => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
+);
 
 vi.mock("@/lib/auth/config", () => ({ auth: authMock }));
 vi.mock("@/lib/auth/agency-context", () => ({
@@ -16,9 +20,7 @@ vi.mock("@/lib/workspaces/context", () => ({
 }));
 vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
 
-const { default: WorkspaceLayout } = await import(
-  "@/app/(app)/app/w/[slug]/layout"
-);
+const { default: WorkspaceLayout } = await import("@/app/(app)/app/w/[slug]/layout");
 
 describe("workspace layout agency context", () => {
   beforeEach(() => {
@@ -43,10 +45,6 @@ describe("workspace layout agency context", () => {
       params: Promise.resolve({ slug: "shared-slug" }),
     });
 
-    expect(getInternalMock).toHaveBeenCalledWith(
-      { id: "user-1" },
-      "shared-slug",
-      "agency-b",
-    );
+    expect(getInternalMock).toHaveBeenCalledWith({ id: "user-1" }, "shared-slug", "agency-b");
   });
 });

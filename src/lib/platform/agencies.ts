@@ -183,7 +183,10 @@ export async function changeAgencyLifecycle(
         : input.action === "archive"
           ? { archivedAt: now, suspendedAt: now }
           : { suspendedAt: null, archivedAt: null };
-    await tx.update(agencies).set({ ...update, updatedAt: now }).where(eq(agencies.id, input.agencyId));
+    await tx
+      .update(agencies)
+      .set({ ...update, updatedAt: now })
+      .where(eq(agencies.id, input.agencyId));
     await tx.insert(platformAuditEvents).values({
       actorUserId: actor.id,
       action: `agency.${input.action}`,

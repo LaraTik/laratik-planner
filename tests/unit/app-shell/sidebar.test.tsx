@@ -98,9 +98,7 @@ describe("Sidebar (workspace-aware)", () => {
     expect(screen.queryByRole("link", { name: /Platform overview/i })).toBeNull();
 
     usePathnameMock.mockReturnValue("/app");
-    rerender(
-      <Sidebar {...baseProps} user={{ name: "Lara", isAdmin: false }} isPlatformAdmin />,
-    );
+    rerender(<Sidebar {...baseProps} user={{ name: "Lara", isAdmin: false }} isPlatformAdmin />);
     expect(screen.getByRole("link", { name: /Platform overview/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^Agencies$/i })).toBeInTheDocument();
   });

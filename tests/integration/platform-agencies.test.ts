@@ -100,7 +100,9 @@ describe("M2.5/M2.7 — platform agency lifecycle", () => {
         reason: "rollback proof",
       }),
     ).rejects.toThrow("Plan template not found");
-    expect(await db.select().from(agencies).where(eq(agencies.slug, "broken-agency"))).toHaveLength(0);
+    expect(await db.select().from(agencies).where(eq(agencies.slug, "broken-agency"))).toHaveLength(
+      0,
+    );
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
@@ -113,9 +115,21 @@ describe("M2.5/M2.7 — platform agency lifecycle", () => {
     if (!agency) throw new Error("agency fixture failed");
     await db.insert(agencyEntitlements).values({ agencyId: agency.id, planTemplateId: planId });
 
-    await changeAgencyLifecycle(actor, { agencyId: agency.id, action: "suspend", reason: "payment review" });
-    await changeAgencyLifecycle(actor, { agencyId: agency.id, action: "archive", reason: "contract ended" });
-    await changeAgencyLifecycle(actor, { agencyId: agency.id, action: "restore", reason: "contract renewed" });
+    await changeAgencyLifecycle(actor, {
+      agencyId: agency.id,
+      action: "suspend",
+      reason: "payment review",
+    });
+    await changeAgencyLifecycle(actor, {
+      agencyId: agency.id,
+      action: "archive",
+      reason: "contract ended",
+    });
+    await changeAgencyLifecycle(actor, {
+      agencyId: agency.id,
+      action: "restore",
+      reason: "contract renewed",
+    });
 
     const [restored] = await db.select().from(agencies).where(eq(agencies.id, agency.id));
     expect(restored?.suspendedAt).toBeNull();
@@ -159,6 +173,8 @@ describe("M2.5/M2.7 — platform agency lifecycle", () => {
       .from(agencyMemberships)
       .where(eq(agencyMemberships.agencyId, result.id));
     expect(membership).toMatchObject({ userId: owner.id, status: "active", isAgencyAdmin: true });
-    expect(await db.select().from(invitations).where(eq(invitations.agencyId, result.id))).toHaveLength(0);
+    expect(
+      await db.select().from(invitations).where(eq(invitations.agencyId, result.id)),
+    ).toHaveLength(0);
   });
 });

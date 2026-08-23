@@ -2,7 +2,13 @@ import Link from "next/link";
 import { count, desc, eq, sql } from "drizzle-orm";
 import { Building2, Search } from "lucide-react";
 import { db } from "@/lib/db";
-import { agencyEntitlements, agencyMemberships, agencies, platformPlanTemplates, workspaces } from "@/lib/db/schema";
+import {
+  agencyEntitlements,
+  agencyMemberships,
+  agencies,
+  platformPlanTemplates,
+  workspaces,
+} from "@/lib/db/schema";
 import { PageHeader } from "@/components/workspace/page-header";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
@@ -55,8 +61,19 @@ async function loadAgencies(): Promise<PlatformAgencyRow[]> {
     .leftJoin(agencyMemberships, eq(agencyMemberships.agencyId, agencies.id))
     .leftJoin(workspaces, eq(workspaces.agencyId, agencies.id))
     .leftJoin(agencyEntitlements, eq(agencyEntitlements.agencyId, agencies.id))
-    .leftJoin(platformPlanTemplates, eq(platformPlanTemplates.id, agencyEntitlements.planTemplateId))
-    .groupBy(agencies.id, agencies.name, agencies.slug, agencies.createdAt, agencies.suspendedAt, agencies.archivedAt, platformPlanTemplates.name)
+    .leftJoin(
+      platformPlanTemplates,
+      eq(platformPlanTemplates.id, agencyEntitlements.planTemplateId),
+    )
+    .groupBy(
+      agencies.id,
+      agencies.name,
+      agencies.slug,
+      agencies.createdAt,
+      agencies.suspendedAt,
+      agencies.archivedAt,
+      platformPlanTemplates.name,
+    )
     .orderBy(desc(agencies.createdAt));
 
   // Coalesce the SQL bigint-ish counts to JS numbers. The casts are

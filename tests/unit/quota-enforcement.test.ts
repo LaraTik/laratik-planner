@@ -23,7 +23,8 @@ describe("M2 transactional quota contract", () => {
         currentUsage: 3,
         limit: 3,
         requestedIncrease: 1,
-        userMessage: "Your plan allows 3 social profiles on Instagram. Archive one or request a limit change.",
+        userMessage:
+          "Your plan allows 3 social profiles on Instagram. Archive one or request a limit change.",
       });
     }
   });

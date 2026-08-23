@@ -62,9 +62,7 @@ function overridesFromForm(formData: FormData) {
     );
     return OverrideShapeSchema.parse({
       ...numeric,
-      ...(Object.keys(byPlatform).length > 0
-        ? { social_profiles_by_platform: byPlatform }
-        : {}),
+      ...(Object.keys(byPlatform).length > 0 ? { social_profiles_by_platform: byPlatform } : {}),
       enabled_capabilities: formData
         .getAll("override_enabled_capabilities")
         .filter((value): value is string => typeof value === "string"),
@@ -107,7 +105,7 @@ export async function createAgencyAction(
     return {
       error:
         error instanceof z.ZodError
-          ? error.issues[0]?.message ?? "Check the agency details."
+          ? (error.issues[0]?.message ?? "Check the agency details.")
           : error instanceof Error
             ? error.message
             : "The agency could not be created.",

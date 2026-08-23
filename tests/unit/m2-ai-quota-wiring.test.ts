@@ -8,7 +8,9 @@ const route = readFileSync(resolve(__dirname, "../../src/app/api/ai/generate/rou
 describe("M2 AI entitlement and usage wiring", () => {
   it("resets monthly and per-user daily counters at UTC period boundaries", () => {
     expect(usagePeriodKey("ai_requests_month", new Date("2026-08-23T12:00:00Z"))).toBe("2026-08");
-    expect(usagePeriodKey("daily_ai_requests:user-1", new Date("2026-08-23T12:00:00Z"))).toBe("2026-08-23");
+    expect(usagePeriodKey("daily_ai_requests:user-1", new Date("2026-08-23T12:00:00Z"))).toBe(
+      "2026-08-23",
+    );
     expect(
       currentCounterValue(
         "ai_requests_month",
