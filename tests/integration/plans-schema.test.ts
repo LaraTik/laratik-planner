@@ -23,11 +23,9 @@ import { expectPgConstraint } from "./_db-error";
  * These tests exercise the migration-emitted schema (the trigger
  * function, the NOT NULL / CHECK constraints, the unique dedupe
  * index). They require a database that has had ALL migrations
- * applied — the `beforeAll` re-runs `migrate` to make sure, but the
- * pre-condition for `0008` is that the `agency` table is non-empty.
- * The integration-test runner seeds a test agency via this test
- * file's `beforeAll` (or assumes one already exists from a prior
- * run).
+ * applied — the `beforeAll` re-runs `migrate` to make sure. Migration
+ * `0008` supports an empty database, so this suite exercises the same
+ * from-zero path used by production recovery.
  *
  * Schema-level invariants (column nullability, Drizzle type shape)
  * are asserted in `tests/unit/plans-schema.test.ts`.
@@ -146,10 +144,7 @@ async function seedTestAgency(): Promise<{ agencyId: string; userId: string }> {
 describe("M2.1 — plans / entitlements / threshold / audit (DB invariants)", () => {
   beforeAll(async () => {
     // Idempotent: if the DB is already migrated, this is a no-op.
-    // The first run on a fresh DB will fail at migration 0008 unless
-    // the DB is pre-seeded with an agency. The integration-test
-    // pipeline is expected to pre-seed (or pre-migrate) before
-    // calling this file.
+    // Idempotent on an already migrated database and valid from zero.
     await migrate(db, { migrationsFolder: "./src/lib/db/migrations" });
   });
 
