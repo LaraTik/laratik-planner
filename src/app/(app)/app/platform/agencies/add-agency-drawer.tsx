@@ -49,9 +49,13 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
     Object.fromEntries(
       keys.filter((key) => values[key]?.trim()).map((key) => [key, Number(values[key])]),
     );
+  const numericOverrides = overrideNumbers(["workspaces", "users", "total_social_profiles"]);
+  const platformOverrides = overrideNumbers(platforms);
   const overrides = {
-    ...overrideNumbers(["workspaces", "users", "total_social_profiles"]),
-    social_profiles_by_platform: overrideNumbers(platforms),
+    ...numericOverrides,
+    ...(Object.keys(platformOverrides).length > 0
+      ? { social_profiles_by_platform: platformOverrides }
+      : {}),
   };
 
   return (
