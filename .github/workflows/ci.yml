@@ -155,6 +155,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
       AUTH_SECRET: ci_secret_only_not_for_production_xxxxxxxxxxxxxxxx
+      AGENCY_COOKIE_SECRET: ci_agency_cookie_secret_not_for_production_xxxxxxxxx
       AUTH_URL: http://localhost:3000
       AUTH_TRUST_HOST: "true"
       SMTP_HOST: localhost
@@ -216,6 +217,7 @@ jobs:
             --name laratik-planner-smoke \
             -e NODE_ENV=production \
             -e AUTH_SECRET=$AUTH_SECRET \
+            -e AGENCY_COOKIE_SECRET=$AGENCY_COOKIE_SECRET \
             -e DATABASE_URL=$DATABASE_URL \
             -e AUTH_URL=http://127.0.0.1:3000 \
             -e SMTP_HOST=localhost \
