@@ -320,3 +320,13 @@ There is no global `activeAgencyId()` for production code paths. The
 bootstrap path is the documented exception. Tenant isolation is
 tested at the service layer (M1.9 unit) and end-to-end (M1.9 Playwright
 E2E).
+
+## 8. Plans, entitlements, and usage
+
+`platform_plan_template` stores reusable default policy. `agency_entitlement` binds exactly one plan to an agency and may hold a complete replacement override object. `agency_entitlement_change` is append-only and records before/after snapshots, actor, reason, and timestamp for every change.
+
+`agency_usage_counter` stores current consumption independently from policy, keyed by `(agency_id, resource_key)`. Resources include workspaces, active users or pending invitations, total social profiles, each supported network, storage bytes, monthly AI requests/input/output tokens, and dynamic per-user daily AI requests. `agency_usage_threshold_event` records 80/90/100 percent crossings with a cycle key.
+
+Capacity is reserved using a per-agency/per-resource advisory transaction lock. Multi-resource reservations validate every resource before writing any counter, which makes total plus per-network profile limits and bulk operations atomic. Releasing an archived/deactivated resource decrements the corresponding counter without going below zero.
+
+`platform_audit_event` is the append-only operator trail for agency creation, lifecycle, and entitlement changes. Agency lifecycle uses typed `suspended_at` and `archived_at` columns; archive remains soft and restore clears both values.

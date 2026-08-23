@@ -131,3 +131,19 @@ The drill is idempotent: re-running it on a database that already has
 the migrations applied + the 3 drill-tmp files recorded as applied
 still produces 4/4 PASS. The `__drill_migrations` table tracks
 applied drill files so they aren't re-attempted.
+
+## 2026-08-23 M2 ledger-safe rerun
+
+Commit `0f5b5bc` corrects an evidence weakness discovered during the independent implementation review: the original drill applied official migration SQL through its private `__drill_migrations` runner. A restored database therefore had application tables but no `drizzle.__drizzle_migrations` rows, so the production migrator tried to replay migration `0000`.
+
+The corrected drill delegates all official migrations to `pnpm db:migrate` and reserves the custom runner for synthetic add/drop/failure files. On disposable Postgres 16 at `127.0.0.1:55432/planner_test`:
+
+```text
+1. from-zero              PASS  47 public application tables; Drizzle ledger 12/12
+2. in-place upgrade       PASS  marker add/drop cycle; private drill ledger isolated
+3. backup + restore       PASS  48 public tables restored; Drizzle ledger 12 before / 12 after
+4. failed-migration abort PASS  48 tables before / after; missing=0; added=0
+total: 1.7s
+```
+
+An immediate `DATABASE_URL=… pnpm db:migrate` after restore also passes and leaves the official ledger at 12 rows. The drill remains destructive only to a URL containing `test` or `ci`, and the restored database is now proven compatible with the actual deployment migrator.

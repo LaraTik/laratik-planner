@@ -251,3 +251,11 @@ request uses the resolver chain. The bootstrap path is the documented
 exception, not a general-purpose escape hatch — see
 `src/lib/auth/bootstrap.ts` for the implementation and the `@deprecated`
 note on the legacy global helper it wraps.
+
+## 8. Agency lifecycle gate
+
+The resolver joins `agency_membership` to `agency` and accepts only active memberships whose agency has both `suspended_at IS NULL` and `archived_at IS NULL`. This check applies to explicit requests, signed cookies, fallback selection, and the agency switcher. A stale cookie cannot bypass a lifecycle change.
+
+A signed-in user whose only membership belongs to an unavailable agency is sent to `/agency-unavailable`. A platform administrator may have no agency membership at all and still reach `/app/platform/*`; that exception grants platform-console access only and does not create tenant authority.
+
+Suspend, archive, restore, plan change, and agency creation are service-layer operations gated by `requirePlatformAdmin`. Each successful platform mutation writes an append-only `platform_audit_event` with actor, target, before/after state, reason, and timestamp.

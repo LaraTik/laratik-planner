@@ -365,3 +365,18 @@ quotations (e.g. `TEST_EVIDENCE.md` line 143: "UAT verdict bumped from
 (2026-08-21)"). The only `R3-F` references are in
 `docs/superpowers/plans/2026-08-21-stitch-production-completion.md`,
 which is the historical plan file.
+
+## 2026-08-23 — Multi-agency SaaS Milestone 2
+
+Milestone 2 is `Tested`, not independently `Verified`. The implementation is on `feat/m2-multi-agency`; exact scope is in `docs/m2-multi-agency/PLAN.md`.
+
+- `pnpm verify` — **pass**: format, lint, strict typecheck, **114 files / 1319 unit tests**, and the complete Next.js 16.3.1 webpack production build. The first pre-coverage-fix run was 113 files / 1315 tests; `1a75dc3` added the final four auth cases.
+- `TEST_DATABASE_URL=postgresql://…/planner_test pnpm test:integration` — **12 files, 87/87 pass** on disposable Postgres.
+- `TEST_DATABASE_URL=postgresql://…/planner_test pnpm test:e2e:isolated -- agency-switcher.spec.ts tenant-isolation.spec.ts workspace-tenant-isolation.spec.ts --project=chromium` — **10/10 pass**: 7 switcher, 2 tenant-isolation, 1 duplicate-slug fixture journey. The isolated runner supplies deterministic test-only auth/cookie secrets only after its disposable-DB URL guard passes.
+- `TEST_DATABASE_URL=postgresql://…/planner_test pnpm migration-drill` — **4/4 pass** through migration `0011`; from-zero 47 application tables; real Drizzle ledger 12/12 before and after restore; post-restore `pnpm db:migrate` succeeds as a no-op.
+- `pnpm test:coverage` — **pass** across all configured floors; auth is **96.83 statements / 90.64 branches / 100 functions / 96.83 lines**. No threshold was lowered.
+- `pnpm build` — **pass** using the supported Next.js 16 webpack production builder. Default Turbopack attempted an internal loader-worker socket that this managed environment forbids; this is recorded by `4409f7e`, not hidden as a skipped build.
+- `pnpm audit --prod` — **pass: no known vulnerabilities**.
+- Required-test scan for `.skip` and `.fixme` under `tests/` — **pass: zero matches**.
+
+Commit `0f5b5bc` is the migration-ledger regression fix; it ensures the drill exercises the same `drizzle.__drizzle_migrations` contract used by production deployment. Commit `1a75dc3` closes the auth coverage and self-contained browser-runner gates. Post-merge CI/deploy results are appended after integration.

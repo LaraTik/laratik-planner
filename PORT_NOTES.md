@@ -5,22 +5,23 @@
 
 ## Decision summary
 
-| Section            | Master prompt says                      | We use                                                    | Reason                                                                                               |
-| ------------------ | --------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| §4 (runtime)       | Node.js 24 LTS                          | Node.js 20 LTS                                            | Long-term stable, all deps support it, Next.js 16 fully tested on 20                                 |
-| §4 (auth)          | Supabase Auth                           | NextAuth v5 (Auth.js) + Drizzle adapter                   | User data lives in our own Postgres; no per-MAU pricing                                              |
-| §4 (DB)            | Supabase Postgres                       | Self-hosted Postgres 16 sidecar                           | Full data sovereignty; matches `laratik-social-platform` pattern; Drizzle's first-class dialect      |
-| §4 (Storage)       | Supabase Storage                        | Local volume `app-data` (v1) → MinIO (Goal 13)            | Defer the S3-compatible layer until uploads are needed                                               |
-| §4 (AI)            | `vercel-minimax-ai-provider`            | `ai` SDK + raw HTTP to MiniMax (OpenAI-compat)            | Portable, no Vercel-specific provider                                                                |
-| §4 (Email)         | Resend                                  | Nodemailer → Mailcow SMTP                                 | No new vendor; `mail.laratik.com` already running                                                    |
-| §4 (Tests)         | pgTAP for SQL                           | Drizzle + a Postgres test container                       | pgTAP is Postgres-supabase-specific; Drizzle tests cover the same surface area with portable tooling |
-| §4 (Deploy)        | Vercel                                  | Self-hosted on `laratik-vps` via GHCR + Traefik           | Matches vps-ops pattern; one ops surface; cheaper at scale                                           |
-| §4 (Observability) | Sentry                                  | Sentry (kept)                                             | No change, Goal 13                                                                                   |
-| §6 (Setup)         | `pnpm create next-app studioflow`       | `pnpm create next-app@latest laratik-planner`             | Repo name; otherwise identical                                                                       |
-| §7 (Env)           | Supabase URL + anon + service-role keys | DB URL + Auth secret + Google OAuth + SMTP                | Dropped Supabase, added SMTP and Google                                                              |
-| §8 (Schema)        | Tables reference `auth.users(id)`       | Tables reference `users(id)` (our own)                    | No Supabase Auth                                                                                     |
-| §9 (RLS)           | Postgres RLS policies                   | Drizzle policies + app-level scoping (Goals 1+ will port) | Same defense-in-depth goal; portable; no Supabase helpers needed                                     |
-| §11 (Cron)         | Vercel cron                             | VPS `cron.d` + Route Handler `/api/cron/*`                | Standard for self-hosted                                                                             |
+| Section            | Master prompt says                      | We use                                                    | Reason                                                                                                |
+| ------------------ | --------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| §4 (runtime)       | Node.js 24 LTS                          | Node.js 20 LTS                                            | Long-term stable, all deps support it, Next.js 16 fully tested on 20                                  |
+| §4 (auth)          | Supabase Auth                           | NextAuth v5 (Auth.js) + Drizzle adapter                   | User data lives in our own Postgres; no per-MAU pricing                                               |
+| §4 (DB)            | Supabase Postgres                       | Self-hosted Postgres 16 sidecar                           | Full data sovereignty; matches `laratik-social-platform` pattern; Drizzle's first-class dialect       |
+| §4 (Storage)       | Supabase Storage                        | Local volume `app-data` (v1) → MinIO (Goal 13)            | Defer the S3-compatible layer until uploads are needed                                                |
+| §4 (AI)            | `vercel-minimax-ai-provider`            | `ai` SDK + raw HTTP to MiniMax (OpenAI-compat)            | Portable, no Vercel-specific provider                                                                 |
+| §4 (Email)         | Resend                                  | Nodemailer → Mailcow SMTP                                 | No new vendor; `mail.laratik.com` already running                                                     |
+| §4 (Tests)         | pgTAP for SQL                           | Drizzle + a Postgres test container                       | pgTAP is Postgres-supabase-specific; Drizzle tests cover the same surface area with portable tooling  |
+| §4 (Deploy)        | Vercel                                  | Self-hosted on `laratik-vps` via GHCR + Traefik           | Matches vps-ops pattern; one ops surface; cheaper at scale                                            |
+| §4 (Observability) | Sentry                                  | Sentry (kept)                                             | No change, Goal 13                                                                                    |
+| §6 (Setup)         | `pnpm create next-app studioflow`       | `pnpm create next-app@latest laratik-planner`             | Repo name; otherwise identical                                                                        |
+| §7 (Env)           | Supabase URL + anon + service-role keys | DB URL + Auth secret + Google OAuth + SMTP                | Dropped Supabase, added SMTP and Google                                                               |
+| §8 (Schema)        | Tables reference `auth.users(id)`       | Tables reference `users(id)` (our own)                    | No Supabase Auth                                                                                      |
+| §9 (RLS)           | Postgres RLS policies                   | Drizzle policies + app-level scoping (Goals 1+ will port) | Same defense-in-depth goal; portable; no Supabase helpers needed                                      |
+| §11 (Cron)         | Vercel cron                             | VPS `cron.d` + Route Handler `/api/cron/*`                | Standard for self-hosted                                                                              |
+| Product tenancy    | Original prompt assumes one agency      | Multi-agency SaaS with a separate platform-admin console  | The owner requested agency provisioning, lifecycle controls, per-agency plans, and enforceable limits |
 
 ## Goal-by-goal port map
 
@@ -61,6 +62,16 @@
 3. **Deploy is portable** — the app is a Docker image; whether you run it on Vercel, Fly, Render, or our VPS is irrelevant to the code.
 4. **AI is portable** — MiniMax exposes an OpenAI-compat API at `api.minimax.io/v1` (and an Anthropic-compat API at `api.minimax.io/anthropic`); the `ai` SDK handles both.
 5. **No proprietary Supabase features are used** — RLS, Auth, and Storage are all standard Postgres + Node.js patterns.
+
+## Multi-agency SaaS extension
+
+The original StudioFlow prompt models one agency. Milestones M1–M2 extend it to many agencies in one deployment. Tenant content remains keyed by `agency_id`; platform authority lives in `platform_administrator` and grants no implicit tenant-content access. Plans and per-agency overrides are stored separately from live usage counters. Advisory transaction locks serialize capacity allocation, so concurrent creates cannot oversell a limit.
+
+Security impact: every tenant lookup resolves an active agency and re-checks active membership plus agency lifecycle. Suspended and archived agencies are excluded centrally. Platform mutations require a non-revoked platform-administrator grant and write append-only audit evidence.
+
+Data impact: migrations are additive. Existing agencies receive an Enterprise-compatible entitlement and reconciled counters; no production identifier or tenant row is replaced. Lowering limits never deletes existing data. `null` limits mean unlimited, while future creates are rejected only when a finite cap would be exceeded.
+
+Operational approval: no Stripe or automated billing is introduced. Plan changes, overrides, suspension, archive, and restore remain explicit operator actions with a required reason.
 
 ## When to add this file's decisions to ADRs
 
