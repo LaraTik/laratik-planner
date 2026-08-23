@@ -21,14 +21,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  # Nightly SMTP cert-expiry check (independent of push activity). Uses
-  # the same `check-smtp-cert` script the deploy-gate job runs, so the
-  # contract is identical. Schedule is UTC; 06:00 UTC = 08:00 CET / 07:00
-  # GMT in Europe, which catches European business hours. See the
-  # `check-smtp-cert` job and `scripts/vps/check-smtp-cert.sh` for the
-  # thresholds (warn 30d, critical 14d).
-  schedule:
-    - cron: "0 6 * * *"
+  # Schedule removed 2026-08-23: was a daily 06:00 UTC CI run that also
+  # auto-deployed via the deploy.yml workflow_run chain. The SMTP cert
+  # check is still exercised on every push to main; if the cert approaches
+  # expiry while no one is pushing, `scripts/vps/check-smtp-cert.sh`
+  # should be re-enabled on a host-level cron if a daily safety net is
+  # required again.
 
 # Cancel in-flight runs of the same branch / PR
 concurrency:
