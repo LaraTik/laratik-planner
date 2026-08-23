@@ -1,9 +1,9 @@
 import "server-only";
 import { eq, and, inArray } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { agencyUsageCounters, agencyUsageThresholdEvents } from "@/lib/db/schema";
+import { agencyUsageCounters } from "@/lib/db/schema";
 import { getLimitForResource } from "./get-limit-for-resource";
-import { computeLevel, severityOf } from "./threshold";
+import { computeLevel } from "./threshold";
 import {
   KNOWN_RESOURCES,
   UsageSnapshotSchema,
@@ -68,26 +68,7 @@ export async function getUsage(db: NodePgDatabase, agencyId: string): Promise<Us
     counterByResource.set(r.resourceKey, Number(r.currentValue));
   }
 
-  // 2) Read the full threshold-event set for the agency.
-  const eventRows = await db
-    .select()
-    .from(agencyUsageThresholdEvents)
-    .where(eq(agencyUsageThresholdEvents.agencyId, agencyId));
-  // Group by resource, keep the most recent percent per
-  // level. The M2.1 unique index guarantees one row per
-  // (resource, level), so the Map is small.
-  const eventByResource = new Map<string, { level: UsageLevel; percent: number }[]>();
-  for (const e of eventRows) {
-    const level = e.level as UsageLevel;
-    if (level !== "warning" && level !== "urgent" && level !== "over_limit") {
-      continue;
-    }
-    const list = eventByResource.get(e.resource) ?? [];
-    list.push({ level, percent: Number(e.percent) });
-    eventByResource.set(e.resource, list);
-  }
-
-  // 3) Read the effective limit for each known resource.
+  // 2) Read the effective limit for each known resource.
   //    One round-trip per resource (the M2.4 refactor will
   //    batch this into a single join via M2.2's merge
   //    function). The current N-query cost is acceptable
@@ -109,9 +90,8 @@ export async function getUsage(db: NodePgDatabase, agencyId: string): Promise<Us
   for (const resource of KNOWN_RESOURCES) {
     const value = counterByResource.get(resource) ?? 0;
     const limit = limitByResource.get(resource) ?? null;
-    const events = eventByResource.get(resource) ?? [];
-    const level = deriveLevel(value, limit, events);
-    const percent = derivePercent(value, limit, events, level);
+    const level = computeLevel(value, limit);
+    const percent = limit === null || limit === 0 ? null : (value / limit) * 100;
 
     counters[resource] = value;
     thresholds[resource] = { level, percent, limit };
@@ -124,74 +104,6 @@ export async function getUsage(db: NodePgDatabase, agencyId: string): Promise<Us
   // migration) is not numeric; the schema's `record(string,
   // number().int().nonnegative())` would reject NaN.
   return UsageSnapshotSchema.parse({ counters, thresholds, limits });
-}
-
-/**
- * Resolve the level for a resource. The contract:
- *   1. If any recorded event is at `over_limit`, the level
- *      is `over_limit`.
- *   2. Else if any recorded event is at `urgent`, the level
- *      is `urgent`.
- *   3. Else if any recorded event is at `warning`, the level
- *      is `warning`.
- *   4. Else the level is the value derived from
- *      `computeLevel(value, limit)`.
- *
- * This rule preserves the "you have been warned" history:
- * the platform console shows the most-severe level the
- * agency has crossed, not the current derived level. The
- * support tooling can still answer "is the agency over
- * limit right now?" by looking at the counter value, but
- * the snapshot's `level` is the historical ceiling.
- */
-function deriveLevel(
-  value: number,
-  limit: number | null,
-  events: { level: UsageLevel; percent: number }[],
-): UsageLevel {
-  let highest: UsageLevel = computeLevel(value, limit);
-  for (const e of events) {
-    if (severityOf(e.level) > severityOf(highest)) {
-      highest = e.level;
-    }
-  }
-  return highest;
-}
-
-/**
- * Resolve the percent for a resource. The contract:
- *   - If the level is derived from a recorded event, the
- *     percent is the percent from the most-severe event.
- *   - If the level is the current derived level (no
- *     recorded event), the percent is `value / limit * 100`
- *     for a finite limit, or `null` for an unlimited
- *     resource.
- */
-function derivePercent(
-  value: number,
-  limit: number | null,
-  events: { level: UsageLevel; percent: number }[],
-  level: UsageLevel,
-): number | null {
-  // The percent from the most-severe recorded event.
-  let recordedPercent: number | null = null;
-  for (const e of events) {
-    if (e.level === level) {
-      if (recordedPercent === null || e.percent > recordedPercent) {
-        recordedPercent = e.percent;
-      }
-    }
-  }
-  if (recordedPercent !== null) {
-    return recordedPercent;
-  }
-  // Derived from the current value/limit. `null` for
-  // unlimited resources (no meaningful percent) and for the
-  // 0-limit edge case (a finite value against a 0-byte
-  // limit is `over_limit` by the level rule, but the
-  // percent has no defined numeric meaning).
-  if (limit === null || limit === 0) return null;
-  return (value / limit) * 100;
 }
 
 export { KNOWN_RESOURCES, type KnownResource, type UsageLevel, type UsageSnapshot };

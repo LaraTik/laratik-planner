@@ -55,12 +55,8 @@ import { loadEntitlementForUpdate, mergeEntitlement } from "./get-effective-enti
  * event row so the caller can render the success state without
  * re-reading.
  *
- * Lifecycle note (M2.7 forward-compat): the agency table does not
- * yet have dedicated `suspended_at` / `archived_at` columns. The
- * service reads lifecycle state from `agency.settings.lifecycle`
- * (a JSONB shape defined in `types.ts`). M2.7's Suspend / Restore
- * / Archive actions will use the same JSONB shape; the column
- * swap is a follow-up.
+ * Lifecycle state is stored in typed agency columns and checked
+ * inside the same transaction as the entitlement mutation.
  *
  * Limit-exceeded note (M2.3 / M2.4 forward-compat): the usage
  * counters table (M2.3) does not yet exist. The service accepts
@@ -365,31 +361,20 @@ export async function changeAgencyPlan(
 // ─── Helpers ────────────────────────────────────────────────────────
 
 /**
- * Read the agency's lifecycle state from the JSONB `settings`
- * column. The M2.7 platform console will move this to dedicated
- * `suspended_at` / `archived_at` columns; the read shape stays
- * the same.
- *
- * Returns `{ suspendedAt: null, archivedAt: null }` when the
- * settings blob is missing the lifecycle key, or when the agency
- * has no settings row.
+ * Read the agency's typed lifecycle columns.
  */
 async function readAgencyLifecycle(
   tx: Pick<typeof db, "select">,
   agencyId: string,
 ): Promise<{ suspendedAt: string | null; archivedAt: string | null }> {
   const [row] = await tx
-    .select({ settings: agencies.settings })
+    .select({ suspendedAt: agencies.suspendedAt, archivedAt: agencies.archivedAt })
     .from(agencies)
     .where(eq(agencies.id, agencyId))
     .limit(1);
-  if (!row) return { suspendedAt: null, archivedAt: null };
-  const settings = row.settings as
-    { lifecycle?: { suspendedAt?: string | null; archivedAt?: string | null } } | null | undefined;
-  const lifecycle = settings?.lifecycle;
   return {
-    suspendedAt: lifecycle?.suspendedAt ?? null,
-    archivedAt: lifecycle?.archivedAt ?? null,
+    suspendedAt: row?.suspendedAt?.toISOString() ?? null,
+    archivedAt: row?.archivedAt?.toISOString() ?? null,
   };
 }
 

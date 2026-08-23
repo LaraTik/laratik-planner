@@ -124,13 +124,19 @@ function resolvePerPlatform(
   overrides: OverrideShape,
   defaults: OverrideShape | null | undefined,
 ): Record<PlatformKey, number | null> {
-  const perPlatform = pickLimit(
-    overrides.social_profiles_per_platform,
-    defaults?.social_profiles_per_platform,
-  );
   const result = {} as Record<PlatformKey, number | null>;
   for (const key of ALL_PLATFORM_KEYS) {
-    result[key] = perPlatform;
+    const agencySpecific = overrides.social_profiles_by_platform?.[key];
+    const planSpecific = defaults?.social_profiles_by_platform?.[key];
+    if (agencySpecific !== undefined) {
+      result[key] = agencySpecific;
+    } else if (overrides.social_profiles_per_platform !== undefined) {
+      result[key] = overrides.social_profiles_per_platform;
+    } else if (planSpecific !== undefined) {
+      result[key] = planSpecific;
+    } else {
+      result[key] = defaults?.social_profiles_per_platform ?? null;
+    }
   }
   return result;
 }

@@ -44,6 +44,7 @@ import { z } from "zod";
 export const KNOWN_RESOURCES = [
   "workspaces",
   "users",
+  "social_profiles",
   "social_profiles:instagram",
   "social_profiles:facebook",
   "social_profiles:tiktok",
@@ -51,6 +52,8 @@ export const KNOWN_RESOURCES = [
   "social_profiles:youtube",
   "social_profiles:pinterest",
   "social_profiles:x",
+  "social_profiles:threads",
+  "social_profiles:snapchat",
   "social_profiles:other",
   "storage_bytes",
   "ai_requests_month",
@@ -185,6 +188,7 @@ export class InvalidUsageDeltaError extends Error {
 export const RESOURCE_TO_PLAN_KEY: Readonly<Record<KnownResource, string | null>> = {
   workspaces: "workspaces",
   users: "users",
+  social_profiles: "total_social_profiles",
   "social_profiles:instagram": "social_profiles_per_platform",
   "social_profiles:facebook": "social_profiles_per_platform",
   "social_profiles:tiktok": "social_profiles_per_platform",
@@ -192,6 +196,8 @@ export const RESOURCE_TO_PLAN_KEY: Readonly<Record<KnownResource, string | null>
   "social_profiles:youtube": "social_profiles_per_platform",
   "social_profiles:pinterest": "social_profiles_per_platform",
   "social_profiles:x": "social_profiles_per_platform",
+  "social_profiles:threads": "social_profiles_per_platform",
+  "social_profiles:snapchat": "social_profiles_per_platform",
   "social_profiles:other": "social_profiles_per_platform",
   storage_bytes: "storage_bytes",
   ai_requests_month: "monthly_ai_requests",

@@ -49,6 +49,8 @@ describe("M2.2 — findRemovedLimits (unit)", () => {
       youtube: 1,
       pinterest: 1,
       x: 1,
+      threads: 1,
+      snapchat: 1,
       other: 1,
     },
     maxStorageBytes: 1000,
@@ -99,6 +101,8 @@ describe("M2.2 — findRemovedLimits (unit)", () => {
         youtube: null,
         pinterest: null,
         x: null,
+        threads: null,
+        snapchat: null,
         other: null,
       },
     };

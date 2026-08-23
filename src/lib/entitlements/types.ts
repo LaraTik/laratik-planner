@@ -37,7 +37,16 @@ import { z } from "zod";
  * anything the enum allows but the screen does not list.
  */
 export type PlatformKey =
-  "instagram" | "facebook" | "tiktok" | "linkedin" | "youtube" | "pinterest" | "x" | "other";
+  | "instagram"
+  | "facebook"
+  | "tiktok"
+  | "linkedin"
+  | "youtube"
+  | "pinterest"
+  | "x"
+  | "threads"
+  | "snapchat"
+  | "other";
 
 /**
  * The 6 AI capabilities defined in master prompt §15. The platform
@@ -96,6 +105,8 @@ export const ALL_PLATFORM_KEYS: ReadonlyArray<PlatformKey> = [
   "youtube",
   "pinterest",
   "x",
+  "threads",
+  "snapchat",
   "other",
 ] as const;
 
@@ -273,11 +284,27 @@ export class LimitExceededError extends Error {
  * `null` alongside the optional `undefined` to match the JSONB
  * storage model (Postgres JSONB distinguishes `null` from missing).
  */
+const PerPlatformLimitsSchema = z
+  .object({
+    instagram: z.number().int().nonnegative().nullable().optional(),
+    facebook: z.number().int().nonnegative().nullable().optional(),
+    tiktok: z.number().int().nonnegative().nullable().optional(),
+    linkedin: z.number().int().nonnegative().nullable().optional(),
+    youtube: z.number().int().nonnegative().nullable().optional(),
+    pinterest: z.number().int().nonnegative().nullable().optional(),
+    x: z.number().int().nonnegative().nullable().optional(),
+    threads: z.number().int().nonnegative().nullable().optional(),
+    snapchat: z.number().int().nonnegative().nullable().optional(),
+    other: z.number().int().nonnegative().nullable().optional(),
+  })
+  .strict();
+
 export const OverrideShapeSchema = z.object({
   workspaces: z.number().int().nonnegative().nullable().optional(),
   users: z.number().int().nonnegative().nullable().optional(),
   total_social_profiles: z.number().int().nonnegative().nullable().optional(),
   social_profiles_per_platform: z.number().int().nonnegative().nullable().optional(),
+  social_profiles_by_platform: PerPlatformLimitsSchema.optional(),
   storage_bytes: z.number().int().nonnegative().nullable().optional(),
   monthly_ai_requests: z.number().int().nonnegative().nullable().optional(),
   monthly_ai_input_tokens: z.number().int().nonnegative().nullable().optional(),

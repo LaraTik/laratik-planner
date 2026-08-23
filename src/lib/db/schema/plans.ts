@@ -285,6 +285,9 @@ export const agencyUsageThresholdEvents = pgTable(
       .notNull()
       .references(() => agencies.id, { onDelete: "cascade" }),
     resource: text("resource").notNull(),
+    cycleKey: text("cycle_key")
+      .notNull()
+      .default(sql`CURRENT_DATE::text`),
     percent: numeric("percent", { precision: 7, scale: 2 }).notNull(),
     level: agencyUsageThresholdLevelEnum("level").notNull(),
     observedAt: timestamp("observed_at", { withTimezone: true, mode: "date" })
@@ -295,7 +298,12 @@ export const agencyUsageThresholdEvents = pgTable(
     // Dedupe: the (agency, resource, level) triple is unique. A second
     // emission at the same level is rejected so the alert channel
     // does not flood.
-    uniqueIndex("agency_usage_threshold_event_dedupe_idx").on(t.agencyId, t.resource, t.level),
+    uniqueIndex("agency_usage_threshold_event_dedupe_idx").on(
+      t.agencyId,
+      t.resource,
+      t.level,
+      t.cycleKey,
+    ),
     // "Latest observation per resource" — the platform console
     // shows the most recent event for each resource.
     index("agency_usage_threshold_event_agency_resource_idx").on(

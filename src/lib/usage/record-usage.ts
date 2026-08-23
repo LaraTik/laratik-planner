@@ -1,5 +1,5 @@
 import "server-only";
-import { sql, eq, and, gte, lt, inArray } from "drizzle-orm";
+import { sql, eq, and, inArray } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { agencyUsageCounters, agencyUsageThresholdEvents } from "@/lib/db/schema";
 import { getLimitForResource } from "./get-limit-for-resource";
@@ -154,7 +154,8 @@ export async function recordUsage(
     //    (clock skew, etc.) the INSERT … ON CONFLICT DO
     //    NOTHING makes the call idempotent.
     if (newLevel !== "healthy") {
-      const highestExisting = await getHighestRecordedLevel(tx, agencyId, resource);
+      const cycleKey = new Date().toISOString().slice(0, 10);
+      const highestExisting = await getHighestRecordedLevel(tx, agencyId, resource, cycleKey);
       // The set of levels to emit is the set of levels
       // strictly more severe than `highestExisting` and at
       // most as severe as `newLevel`. The levels between
@@ -171,8 +172,6 @@ export async function recordUsage(
         // global; the per-day check makes the "no
         // duplicate within a day" semantic explicit in the
         // application code.
-        const todayAlready = await eventExistsToday(tx, agencyId, resource, level);
-        if (todayAlready) continue;
         const percent = limit === null || limit === 0 ? null : (nextValue / limit) * 100;
         await tx
           .insert(agencyUsageThresholdEvents)
@@ -180,6 +179,7 @@ export async function recordUsage(
             agencyId,
             resource,
             level,
+            cycleKey,
             percent: percent == null ? "0" : percent.toFixed(2),
           })
           .onConflictDoNothing({
@@ -187,6 +187,7 @@ export async function recordUsage(
               agencyUsageThresholdEvents.agencyId,
               agencyUsageThresholdEvents.resource,
               agencyUsageThresholdEvents.level,
+              agencyUsageThresholdEvents.cycleKey,
             ],
           });
       }
@@ -213,6 +214,7 @@ async function getHighestRecordedLevel(
   db: NodePgDatabase,
   agencyId: string,
   resource: string,
+  cycleKey: string,
 ): Promise<UsageLevel> {
   const rows = await db
     .select({ level: agencyUsageThresholdEvents.level })
@@ -221,6 +223,7 @@ async function getHighestRecordedLevel(
       and(
         eq(agencyUsageThresholdEvents.agencyId, agencyId),
         eq(agencyUsageThresholdEvents.resource, resource),
+        eq(agencyUsageThresholdEvents.cycleKey, cycleKey),
       ),
     );
   if (rows.length === 0) return "healthy";
@@ -233,47 +236,6 @@ async function getHighestRecordedLevel(
     }
   }
   return highest;
-}
-
-/**
- * Check whether a threshold event for
- * `(agency_id, resource, level)` already exists in the
- * current calendar day. Used to implement the M2 spec's
- * per-day dedupe: a second crossing of the same level on
- * the same day does not create a second event row.
- *
- * The window is "today UTC": from `startOfDay(now)` to
- * `startOfDay(now) + 1 day`. UTC is the canonical DB
- * time zone; per-day events from a local-time standpoint
- * can straddle the UTC boundary, but the threshold
- * events table stores `observed_at` as `timestamp with
- * time zone` so the application can apply its own
- * timezone policy later. For M2.3, UTC is the safest
- * default and avoids the local-tz ambiguity for
- * multi-region agencies.
- */
-async function eventExistsToday(
-  db: NodePgDatabase,
-  agencyId: string,
-  resource: string,
-  level: "warning" | "urgent" | "over_limit",
-): Promise<boolean> {
-  const dayStart = sql`date_trunc('day', now() at time zone 'UTC')`;
-  const dayEnd = sql`(${dayStart} + interval '1 day')`;
-  const rows = await db
-    .select({ id: agencyUsageThresholdEvents.id })
-    .from(agencyUsageThresholdEvents)
-    .where(
-      and(
-        eq(agencyUsageThresholdEvents.agencyId, agencyId),
-        eq(agencyUsageThresholdEvents.resource, resource),
-        eq(agencyUsageThresholdEvents.level, level),
-        gte(agencyUsageThresholdEvents.observedAt, dayStart),
-        lt(agencyUsageThresholdEvents.observedAt, dayEnd),
-      ),
-    )
-    .limit(1);
-  return rows.length > 0;
 }
 
 // Re-export the resource catalog and type so a caller

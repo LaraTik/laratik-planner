@@ -120,6 +120,29 @@ export async function getLimitForResource(
     return null;
   }
 
+  const platform = resource.startsWith("social_profiles:")
+    ? resource.slice("social_profiles:".length)
+    : null;
+  if (platform) {
+    const overrideObject = z.record(z.string(), z.unknown()).parse(row.overrides ?? {});
+    const defaultObject = z.record(z.string(), z.unknown()).parse(row.defaultLimits ?? {});
+    const overrideMap = z
+      .record(z.string(), LimitOverrideValueSchema)
+      .safeParse(overrideObject["social_profiles_by_platform"]);
+    if (overrideMap.success && Object.prototype.hasOwnProperty.call(overrideMap.data, platform)) {
+      return overrideMap.data[platform] ?? null;
+    }
+    if (Object.prototype.hasOwnProperty.call(overrideObject, "social_profiles_per_platform")) {
+      return LimitOverrideValueSchema.parse(overrideObject["social_profiles_per_platform"]);
+    }
+    const defaultMap = z
+      .record(z.string(), LimitOverrideValueSchema)
+      .safeParse(defaultObject["social_profiles_by_platform"]);
+    if (defaultMap.success && Object.prototype.hasOwnProperty.call(defaultMap.data, platform)) {
+      return defaultMap.data[platform] ?? null;
+    }
+  }
+
   // Per-agency override wins. The override is a JSONB
   // object; a key with a finite `number` value is the
   // effective limit, a key with `null` is "unlimited",
