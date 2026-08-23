@@ -37,7 +37,12 @@ export async function proxy(req: NextRequest) {
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/auth/") ||
+    // Bypass the entire /api/health tree (live + ready + bare alias). The
+    // Docker HEALTHCHECK and Traefik loadbalancer probe both hit
+    // /api/health/{live,ready}, and they must not be redirected to
+    // /signin by the auth check.
     pathname === "/api/health" ||
+    pathname.startsWith("/api/health/") ||
     pathname === "/api/bootstrap/status" ||
     // Dev/test-only helpers — guarded server-side by NODE_ENV !== "production".
     // The dev/* endpoints refuse to run in production builds, so allowing
