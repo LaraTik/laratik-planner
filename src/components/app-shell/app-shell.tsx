@@ -32,6 +32,7 @@ export function AppShell({
   canCreateWorkspace,
   notifications,
   unreadCount,
+  isPlatformAdmin,
   children,
 }: {
   user: {
@@ -54,6 +55,7 @@ export function AppShell({
     createdAt: string;
   }[];
   unreadCount: number;
+  isPlatformAdmin: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -79,6 +81,7 @@ export function AppShell({
           workspaceSwitcherOptions={workspaces}
           agencySwitcher={agencySwitcher}
           canCreateWorkspace={canCreateWorkspace}
+          isPlatformAdmin={isPlatformAdmin}
         />
       </aside>
 

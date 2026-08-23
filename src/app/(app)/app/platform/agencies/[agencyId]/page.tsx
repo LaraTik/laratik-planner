@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { count, desc, eq, sql } from "drizzle-orm";
-import { ArrowLeft, Building2, CalendarClock, Sparkles, Users2, Workflow } from "lucide-react";
+import { ArrowLeft, Building2, Sparkles, Users2, Workflow } from "lucide-react";
 import { db } from "@/lib/db";
 import { agencyMemberships, agencies, aiUsageEvents, workspaces } from "@/lib/db/schema";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -10,18 +10,14 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import { PlanAiSections } from "./plan-ai-sections";
 
 /**
- * Platform · Agency detail (Milestone 1.8) — Stitch screen
+ * Platform · Agency detail — Stitch screen
  * `f8ea956a96644f0f9e39b5d9e368e457`.
  *
- * M1 only ships the **Overview tab** for the per-agency surface.
- * The plan / AI / security tabs are M2/M3 deliverables (per the
- * M1.8 spec: "Do NOT add the full plan/AI/security tabs to agency
- * detail — those are M2/M3"). The page renders the agency identity
- * strip (name, slug, bootstrap-completed date), per-agency KPI tiles
- * (members, workspaces, AI calls), a workspaces-in-this-agency list,
- * and a "View plan" placeholder link to the M2 plan tab.
+ * The page combines the M1 overview with M2 plan, usage, AI, and
+ * lifecycle controls. All mutations remain platform-admin gated.
  */
 export const metadata = { title: "Platform · Agency" };
 
@@ -129,21 +125,12 @@ export default async function PlatformAgencyDetailPage({
           </>
         }
         action={
-          // M2 placeholder — clicking this in M1 navigates to the same
-          // page (no anchor yet). The visible text signals where the
-          // plan tab will live.
           <Link
             href={`/app/platform/agencies/${detail.id}#plan`}
             className="border-border bg-surface text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring text-button inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 font-semibold focus:outline-none focus-visible:ring-2"
             data-testid="platform-agency-view-plan"
           >
             View plan
-            <span
-              className="bg-warning-subtle text-warning text-label rounded-[var(--radius-control)] px-1.5 py-0.5 font-semibold"
-              title="Plan tab is an M2 deliverable"
-            >
-              M2
-            </span>
           </Link>
         }
       />
@@ -178,8 +165,7 @@ export default async function PlatformAgencyDetailPage({
           <div>
             <CardTitle>Workspaces in this agency</CardTitle>
             <CardDescription>
-              The 10 most recently updated workspaces. M1 shows read-only counts; M2 will add
-              per-workspace management actions.
+              The 10 most recently updated workspaces in this tenant.
             </CardDescription>
           </div>
           <span
@@ -207,17 +193,7 @@ export default async function PlatformAgencyDetailPage({
         )}
       </Card>
 
-      <Card padding="lg" variant="subtle" className="space-y-2">
-        <div className="flex items-center gap-2">
-          <CalendarClock className="text-fg-muted h-4 w-4" aria-hidden="true" />
-          <CardTitle>M1 surface scope</CardTitle>
-        </div>
-        <CardDescription>
-          M1 only ships the overview tab for the per-agency view. The <strong>Plan</strong>,{" "}
-          <strong>AI</strong>, and <strong>Security</strong> tabs are tracked in M2 and M3 and are
-          intentionally not rendered here yet.
-        </CardDescription>
-      </Card>
+      <PlanAiSections agencyId={detail.id} />
     </>
   );
 }

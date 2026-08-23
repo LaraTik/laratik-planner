@@ -47,7 +47,6 @@ let changeAgencyPlan: typeof import("@/lib/entitlements/change-agency-plan").cha
 let getEffectiveEntitlement: typeof import("@/lib/entitlements/get-effective-entitlement").getEffectiveEntitlement;
 let AgencyNotFoundError: typeof import("@/lib/entitlements/types").AgencyNotFoundError;
 let AgencyNotActiveError: typeof import("@/lib/entitlements/types").AgencyNotActiveError;
-let LimitExceededError: typeof import("@/lib/entitlements/types").LimitExceededError;
 
 beforeAll(async () => {
   await migrate(db, { migrationsFolder: "./src/lib/db/migrations" });
@@ -56,7 +55,6 @@ beforeAll(async () => {
   const types = await import("@/lib/entitlements/types");
   AgencyNotFoundError = types.AgencyNotFoundError;
   AgencyNotActiveError = types.AgencyNotActiveError;
-  LimitExceededError = types.LimitExceededError;
   getEffectiveEntitlement = (await import("@/lib/entitlements/get-effective-entitlement"))
     .getEffectiveEntitlement;
 });
@@ -284,7 +282,7 @@ describe("M2.2 — changeAgencyPlan service (integration)", () => {
       expect(entitlement?.overrides).toBeNull();
     });
 
-    it("merges new overrides with existing ones (preserves keys not in the new payload)", async () => {
+    it("replaces old overrides so a new plan can inherit its own defaults", async () => {
       const { agencyId, userId, growthId } = await seedFixtures();
       // First change: set workspaces override.
       await changeAgencyPlan({
@@ -294,7 +292,8 @@ describe("M2.2 — changeAgencyPlan service (integration)", () => {
         reason: "first change",
         actorUserId: userId,
       });
-      // Second change: only update users; workspaces should survive.
+      // Second change: only update users; the old workspace override
+      // must not leak into the replacement configuration.
       const result = await changeAgencyPlan({
         agencyId,
         planTemplateId: growthId,
@@ -303,7 +302,7 @@ describe("M2.2 — changeAgencyPlan service (integration)", () => {
         actorUserId: userId,
       });
       const overrides = result.entitlement.overrides as { workspaces?: number; users?: number };
-      expect(overrides?.workspaces).toBe(7);
+      expect(overrides?.workspaces).toBeUndefined();
       expect(overrides?.users).toBe(25);
     });
   });
@@ -312,12 +311,9 @@ describe("M2.2 — changeAgencyPlan service (integration)", () => {
   describe("lifecycle rejection (suspended / archived)", () => {
     it("rejects with AgencyNotActiveError when the agency is suspended", async () => {
       const { agencyId, userId, growthId } = await seedFixtures();
-      // Simulate a suspended agency by writing the lifecycle state
-      // into the agency's settings JSONB. M2.7's suspend action
-      // does exactly this until the dedicated column lands.
       await db
         .update(agencies)
-        .set({ settings: { lifecycle: { suspendedAt: "2026-08-22T00:00:00Z", archivedAt: null } } })
+        .set({ suspendedAt: new Date("2026-08-22T00:00:00Z") })
         .where(eq(agencies.id, agencyId));
 
       const calls = await changeAgencyPlan({
@@ -361,7 +357,7 @@ describe("M2.2 — changeAgencyPlan service (integration)", () => {
       const { agencyId, userId, growthId } = await seedFixtures();
       await db
         .update(agencies)
-        .set({ settings: { lifecycle: { suspendedAt: null, archivedAt: "2026-08-22T00:00:00Z" } } })
+        .set({ archivedAt: new Date("2026-08-22T00:00:00Z") })
         .where(eq(agencies.id, agencyId));
 
       const caught = await changeAgencyPlan({
@@ -389,9 +385,8 @@ describe("M2.2 — changeAgencyPlan service (integration)", () => {
       await db
         .update(agencies)
         .set({
-          settings: {
-            lifecycle: { suspendedAt: "2026-08-22T00:00:00Z", archivedAt: "2026-08-22T00:00:00Z" },
-          },
+          suspendedAt: new Date("2026-08-22T00:00:00Z"),
+          archivedAt: new Date("2026-08-22T00:00:00Z"),
         })
         .where(eq(agencies.id, agencyId));
 
@@ -542,128 +537,35 @@ describe("M2.2 — changeAgencyPlan service (integration)", () => {
     });
   });
 
-  // ─── Limit-exceeded rejection (M2.2 placeholder) ─────────────────
-  describe("LimitExceededError on complete removal with active usage", () => {
-    it("throws LimitExceededError when a numeric limit is removed while usage > 0", async () => {
-      // Agency is on Starter; the Starter plan has maxWorkspaces = 1.
-      // Switching to Growth (maxWorkspaces = 5) is NOT a removal —
-      // we need a removal to trigger the error. The Custom plan
-      // has defaultLimits = null, so every numeric limit is null
-      // (the "Custom" sentinel). Switching to Custom removes every
-      // Starter limit. With current usage of 1 workspace, the
-      // service should refuse.
-      const { agencyId, userId, customId } = await seedFixtures();
-
-      const caught = await changeAgencyPlan({
-        agencyId,
-        planTemplateId: customId,
-        overrides: {},
-        reason: "downgrade to custom",
-        actorUserId: userId,
-        currentUsage: { workspaces: 1 },
-      }).then(
-        () => null,
-        (error: unknown) => error,
-      );
-      expect(caught).toBeInstanceOf(LimitExceededError);
-      const err = caught as InstanceType<typeof LimitExceededError>;
-      expect(err.details.resource).toBe("workspaces");
-      expect(err.details.currentUsage).toBe(1);
-    });
-
-    it("does NOT throw LimitExceededError when the caller omits currentUsage (placeholder behavior)", async () => {
-      // Per the M2.2 spec: when currentUsage is not provided, the
-      // service has no usage data and the check is skipped. The
-      // change succeeds; M2.4 reads threshold events for the
-      // "over-limit" case.
-      const { agencyId, userId, customId } = await seedFixtures();
-
-      const result = await changeAgencyPlan({
-        agencyId,
-        planTemplateId: customId,
-        overrides: {},
-        reason: "downgrade to custom",
-        actorUserId: userId,
-      });
-      expect(result.entitlement.planTemplateId).toBe(customId);
-    });
-
-    it("does NOT throw LimitExceededError when current usage is 0 (the limit is being relaxed, not used)", async () => {
-      const { agencyId, userId, customId } = await seedFixtures();
-
-      // No usage on any resource. The Custom plan is a sentinel
-      // (every limit → null) so the limits are being removed, but
-      // since usage is 0, the service allows the change.
-      const result = await changeAgencyPlan({
-        agencyId,
-        planTemplateId: customId,
-        overrides: {},
-        reason: "downgrade to custom",
-        actorUserId: userId,
-        currentUsage: {
-          workspaces: 0,
-          users: 0,
-          total_social_profiles: 0,
-        },
-      });
-      expect(result.entitlement.planTemplateId).toBe(customId);
-    });
-
-    it("does NOT throw LimitExceededError when the new plan keeps the limit (no removal)", async () => {
-      // Growth's default maxWorkspaces = 5; Starter's default = 1.
-      // This is a tightening, not a removal — even with usage > 0
-      // on the new limit, the service should NOT throw (the
-      // "lowered below current usage" case is M2.3's threshold-event
-      // responsibility, not an error).
+  // ─── Safe limit changes ──────────────────────────────────────────
+  describe("limit changes preserve tenant data", () => {
+    it("allows a finite limit to be lowered below current usage and records the reason", async () => {
       const { agencyId, userId, growthId } = await seedFixtures();
-
       const result = await changeAgencyPlan({
         agencyId,
         planTemplateId: growthId,
-        overrides: {},
-        reason: "upgrade to growth",
+        overrides: { workspaces: 1 },
+        reason: "contract reduced to one workspace",
         actorUserId: userId,
-        currentUsage: { workspaces: 4 }, // > new default of 5? no, but lower than Starter's 1? no. 4 < 5, so still within Growth.
+        currentUsage: { workspaces: 4 },
       });
-      expect(result.entitlement.planTemplateId).toBe(growthId);
+
+      expect(result.entitlement.overrides).toMatchObject({ workspaces: 1 });
+      expect(result.change.reason).toBe("contract reduced to one workspace");
+      expect(result.audit.after).toMatchObject({ reason: "contract reduced to one workspace" });
     });
 
-    it("rolls back the entire transaction when LimitExceededError is thrown (no entitlement UPDATE, no change row, no audit row)", async () => {
-      const { agencyId, userId, customId, starterId } = await seedFixtures();
-
-      const caught = await changeAgencyPlan({
+    it("treats null limits as unlimited rather than rejecting active usage", async () => {
+      const { agencyId, userId, customId } = await seedFixtures();
+      const result = await changeAgencyPlan({
         agencyId,
         planTemplateId: customId,
         overrides: {},
-        reason: "should be rolled back",
+        reason: "move to custom unlimited plan",
         actorUserId: userId,
-        currentUsage: { users: 3 }, // Starter has maxUsers = 3; Custom has null; current usage = 3 → must throw
-      }).then(
-        () => null,
-        (error: unknown) => error,
-      );
-      expect(caught).toBeInstanceOf(LimitExceededError);
-
-      // The entitlement row is unchanged.
-      const ent = await db
-        .select()
-        .from(agencyEntitlements)
-        .where(eq(agencyEntitlements.agencyId, agencyId));
-      expect(ent[0]?.planTemplateId).toBe(starterId);
-
-      // No change row was inserted.
-      const changeRows = await db
-        .select()
-        .from(agencyEntitlementChanges)
-        .where(eq(agencyEntitlementChanges.agencyId, agencyId));
-      expect(changeRows).toHaveLength(0);
-
-      // No audit row was inserted.
-      const auditRows = await db
-        .select()
-        .from(platformAuditEvents)
-        .where(sql`${platformAuditEvents.target} ->> 'id' = ${agencyId}`);
-      expect(auditRows).toHaveLength(0);
+        currentUsage: { workspaces: 4, users: 3 },
+      });
+      expect(result.entitlement.planTemplateId).toBe(customId);
     });
   });
 

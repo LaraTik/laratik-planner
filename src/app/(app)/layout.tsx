@@ -6,6 +6,10 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { countUnreadNotifications, listNotificationsForUser } from "@/lib/notifications/service";
 import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
+import { isPlatformAdmin as checkPlatformAdmin } from "@/lib/auth/platform-admin";
+import { db } from "@/lib/db";
+import { agencies, agencyMemberships } from "@/lib/db/schema";
+import { and, eq, isNotNull, or } from "drizzle-orm";
 
 /**
  * Authenticated app shell — wraps every page under (app)/*.
@@ -32,11 +36,34 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
-  if (!agencyId) {
+  const platformAdmin = await checkPlatformAdmin(actor);
+  if (!agencyId && !platformAdmin) {
+    const [inactiveMembership] = await db
+      .select({ id: agencies.id })
+      .from(agencyMemberships)
+      .innerJoin(agencies, eq(agencies.id, agencyMemberships.agencyId))
+      .where(
+        and(
+          eq(agencyMemberships.userId, actor.id),
+          eq(agencyMemberships.status, "active"),
+          or(isNotNull(agencies.suspendedAt), isNotNull(agencies.archivedAt)),
+        ),
+      )
+      .limit(1);
+    if (inactiveMembership) redirect("/agency-unavailable");
     redirect("/setup");
   }
 
-  const isAdmin = await isAgencyAdmin(actor, agencyId);
+  if (agencyId && !platformAdmin) {
+    const [agency] = await db
+      .select({ suspendedAt: agencies.suspendedAt, archivedAt: agencies.archivedAt })
+      .from(agencies)
+      .where(eq(agencies.id, agencyId))
+      .limit(1);
+    if (agency?.suspendedAt || agency?.archivedAt) redirect("/agency-unavailable");
+  }
+
+  const isAdmin = agencyId ? await isAgencyAdmin(actor, agencyId) : false;
   const [notifications, unreadCount, switcher, agencyOptions] = await Promise.all([
     listNotificationsForUser(actor, { limit: 10 }),
     countUnreadNotifications(actor),
@@ -73,6 +100,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         createdAt: n.createdAt.toISOString(),
       }))}
       unreadCount={unreadCount}
+      isPlatformAdmin={platformAdmin}
     >
       {children}
     </AppShell>

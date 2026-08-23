@@ -16,6 +16,7 @@ import {
   Package,
   Plus,
   Settings,
+  Gauge,
   Share2,
   Shield,
   Users,
@@ -60,12 +61,14 @@ export function Sidebar({
   workspaceSwitcherOptions,
   agencySwitcher,
   canCreateWorkspace,
+  isPlatformAdmin = false,
 }: {
   user: { name: string; isAdmin: boolean };
   workspaces: { id: string; slug: string; name: string }[];
   workspaceSwitcherOptions: { id: string; name: string; slug: string }[];
   agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   canCreateWorkspace: boolean;
+  isPlatformAdmin?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -241,12 +244,39 @@ export function Sidebar({
                     General
                   </SidebarSubLink>
                   <SidebarSubLink
+                    href="/app/agency-settings/plan"
+                    active={isActivePath("/app/agency-settings/plan", pathname)}
+                  >
+                    <Gauge className="h-3.5 w-3.5" aria-hidden="true" /> Plan and usage
+                  </SidebarSubLink>
+                  <SidebarSubLink
                     href="/app/agency-settings/ai"
                     active={isActivePath("/app/agency-settings/ai", pathname)}
                   >
                     <Bot className="h-3.5 w-3.5" aria-hidden="true" /> AI configuration
                   </SidebarSubLink>
                 </SidebarGroup>
+              </>
+            ) : null}
+            {isPlatformAdmin ? (
+              <>
+                <div className="text-label text-fg-muted px-2 pt-6 pb-2 font-semibold tracking-wide uppercase">
+                  Platform
+                </div>
+                <SidebarLink
+                  href="/app/platform/overview"
+                  icon={<LayoutDashboard className="h-4 w-4" />}
+                  active={isActivePath("/app/platform/overview", pathname)}
+                >
+                  Platform overview
+                </SidebarLink>
+                <SidebarLink
+                  href="/app/platform/agencies"
+                  icon={<Shield className="h-4 w-4" />}
+                  active={isActivePath("/app/platform/agencies", pathname)}
+                >
+                  Agencies
+                </SidebarLink>
               </>
             ) : null}
           </>

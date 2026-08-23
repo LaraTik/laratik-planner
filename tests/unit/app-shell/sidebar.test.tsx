@@ -89,6 +89,22 @@ describe("Sidebar (workspace-aware)", () => {
     expect(screen.getByRole("link", { name: /Agency Settings/i })).toBeInTheDocument();
   });
 
+  it("shows plan usage to agency admins and platform console only to platform admins", () => {
+    usePathnameMock.mockReturnValue("/app/agency-settings/plan");
+    const { rerender } = render(
+      <Sidebar {...baseProps} user={{ name: "Lara", isAdmin: true }} isPlatformAdmin={false} />,
+    );
+    expect(screen.getByRole("link", { name: /Plan and usage/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Platform overview/i })).toBeNull();
+
+    usePathnameMock.mockReturnValue("/app");
+    rerender(
+      <Sidebar {...baseProps} user={{ name: "Lara", isAdmin: false }} isPlatformAdmin />,
+    );
+    expect(screen.getByRole("link", { name: /Platform overview/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Agencies$/i })).toBeInTheDocument();
+  });
+
   it("renders the workspace nav when the user is inside /app/w/[slug]/*", () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
     render(<Sidebar {...baseProps} />);

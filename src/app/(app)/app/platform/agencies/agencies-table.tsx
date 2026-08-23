@@ -18,6 +18,8 @@ export type PlatformAgencyRow = {
   createdAt: Date;
   memberCount: number;
   workspaceCount: number;
+  planName: string;
+  lifecycle: "active" | "suspended" | "archived";
 };
 
 /**
@@ -126,6 +128,11 @@ const columns: DataTableColumnDef<PlatformAgencyRow>[] = [
         {r.workspaceCount} {r.workspaceCount === 1 ? "workspace" : "workspaces"}
       </span>
     ),
+  },
+  {
+    key: "plan",
+    header: "Plan / status",
+    cell: (r) => <span className="text-body text-fg-primary">{r.planName} · {r.lifecycle}</span>,
   },
   {
     key: "created",

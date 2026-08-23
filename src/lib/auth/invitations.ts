@@ -65,7 +65,20 @@ export async function createInvitation(
       )
       .for("update")
       .limit(1);
-    if (!existingPending) {
+    const [existingActiveMember] = await tx
+      .select({ userId: users.id })
+      .from(users)
+      .innerJoin(
+        agencyMemberships,
+        and(
+          eq(agencyMemberships.userId, users.id),
+          eq(agencyMemberships.agencyId, agencyId),
+          eq(agencyMemberships.status, "active"),
+        ),
+      )
+      .where(eq(users.email, normalizedEmail))
+      .limit(1);
+    if (!existingPending && !existingActiveMember) {
       await reserveCapacity(tx, agencyId, [{ resource: "users", increase: 1 }]);
     }
     const requestedWorkspaceIds = [
@@ -211,7 +224,18 @@ export async function acceptInvitation(input: {
         .update(invitations)
         .set({ status: "expired", updatedAt: new Date() })
         .where(eq(invitations.id, inv.id));
-      await releaseCapacity(tx, inv.agencyId, ["users"]);
+      const [activeMember] = await tx
+        .select({ userId: agencyMemberships.userId })
+        .from(agencyMemberships)
+        .where(
+          and(
+            eq(agencyMemberships.agencyId, inv.agencyId),
+            eq(agencyMemberships.userId, input.userId),
+            eq(agencyMemberships.status, "active"),
+          ),
+        )
+        .limit(1);
+      if (!activeMember) await releaseCapacity(tx, inv.agencyId, ["users"]);
       return { status: "expired", workspaceIds: [] };
     }
 
@@ -354,7 +378,7 @@ This link expires on ${expiresAt.toISOString().slice(0, 10)}.`,
 export async function revokeInvitation(input: { invitationId: string; agencyId: string }) {
   await db.transaction(async (tx) => {
     const [invitation] = await tx
-      .select({ status: invitations.status })
+      .select({ status: invitations.status, email: invitations.email })
       .from(invitations)
       .where(
         and(eq(invitations.id, input.invitationId), eq(invitations.agencyId, input.agencyId)),
@@ -368,7 +392,20 @@ export async function revokeInvitation(input: { invitationId: string; agencyId: 
       .where(
         and(eq(invitations.id, input.invitationId), eq(invitations.agencyId, input.agencyId)),
       );
-    await releaseCapacity(tx, input.agencyId, ["users"]);
+    const [activeMember] = await tx
+      .select({ userId: users.id })
+      .from(users)
+      .innerJoin(
+        agencyMemberships,
+        and(
+          eq(agencyMemberships.userId, users.id),
+          eq(agencyMemberships.agencyId, input.agencyId),
+          eq(agencyMemberships.status, "active"),
+        ),
+      )
+      .where(eq(users.email, invitation.email))
+      .limit(1);
+    if (!activeMember) await releaseCapacity(tx, input.agencyId, ["users"]);
   });
 }
 

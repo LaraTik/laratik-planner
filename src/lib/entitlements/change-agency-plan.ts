@@ -12,14 +12,13 @@ import {
 import {
   AgencyNotActiveError,
   AgencyNotFoundError,
-  LimitExceededError,
   OverrideShapeSchema,
   type AgencyEntitlementRow,
   type EffectiveEntitlement,
   type OverrideShape,
   type PlatformPlanTemplateRow,
 } from "./types";
-import { loadEntitlementForUpdate, mergeEntitlement } from "./get-effective-entitlement";
+import { loadEntitlementForUpdate } from "./get-effective-entitlement";
 
 /**
  * M2.2 — changeAgencyPlan service.
@@ -34,11 +33,9 @@ import { loadEntitlementForUpdate, mergeEntitlement } from "./get-effective-enti
  *   3. Verify the new plan template exists (the FK on the
  *      entitlement column would catch this anyway, but a clean
  *      error message is friendlier than a generic FK violation).
- *   4. Compute the merged override set and the "after" entitlement
- *      row. If the new plan would completely remove a numeric
- *      limit (non-null → null) and the caller has supplied usage
- *      data showing > 0 on that resource, throw
- *      `LimitExceededError`. The transaction rolls back.
+ *   4. Compute the replacement override set and the "after"
+ *      entitlement row. A lower limit never deletes or hides
+ *      existing tenant data; quota checks block only new growth.
  *   5. UPDATE the entitlement row to the new plan + merged
  *      overrides. The `effective_since` column is reset to NOW().
  *   6. INSERT a `agency_entitlement_change` row with full
@@ -58,13 +55,10 @@ import { loadEntitlementForUpdate, mergeEntitlement } from "./get-effective-enti
  * Lifecycle state is stored in typed agency columns and checked
  * inside the same transaction as the entitlement mutation.
  *
- * Limit-exceeded note (M2.3 / M2.4 forward-compat): the usage
- * counters table (M2.3) does not yet exist. The service accepts
- * an optional `currentUsage` parameter so the quota-enforcement
- * layer (M2.4) can wire real usage in without changing this
- * signature. When `currentUsage` is omitted, the
- * `LimitExceededError` branch is skipped — the placeholder
- * behavior per the M2.2 task spec.
+ * `currentUsage` remains accepted for compatibility with the first
+ * M2.2 draft. It is deliberately not used to reject a plan change:
+ * null means unlimited, and lowering a finite limit below current
+ * usage creates an over-limit state while preserving existing data.
  */
 
 /**
@@ -206,59 +200,19 @@ export async function changeAgencyPlan(
       defaultLimits: (currentPlanTemplate.defaultLimits as OverrideShape | null) ?? null,
     };
 
-    // 4. Compute the merged override set (new wins, existing
-    //    keys not in the new payload are preserved). An empty
-    //    `overrides: {}` collapses to `null` so the row is the
-    //    canonical "use plan defaults" state.
+    // 4. Treat the submitted overrides as a full replacement.
+    //    Carrying old overrides into a different plan would make
+    //    the selected plan's defaults unexpectedly ineffective.
     const nextOverrides = mergeOverrides(existing.overrides, parsed.overrides);
 
-    // 5. Build the "after" entitlement row and compute the before/
-    //    after merged entitlements. The merge function is the
-    //    single source of truth for limit resolution; we use it
-    //    here so the snapshot is consistent with what the
-    //    read-side will see after the transaction commits. The
-    //    "before" merge uses the CURRENT plan template; the
-    //    "after" uses the NEW plan template.
-    const beforeMerged = mergeEntitlement({
-      entitlement: existing,
-      planTemplate: currentPlanTemplateRow,
-    });
+    // 5. Build the post-change entitlement row.
     const afterRow: AgencyEntitlementRow = {
       ...existing,
       planTemplateId: newPlanTemplateRow.id,
       overrides: nextOverrides,
     };
-    const afterMerged: EffectiveEntitlement = mergeEntitlement({
-      entitlement: afterRow,
-      planTemplate: newPlanTemplateRow,
-    });
 
-    // 6. Detect "complete removal" of any numeric limit and throw
-    //    `LimitExceededError` if the agency is currently using
-    //    that resource. This is the M2.2 placeholder; the
-    //    quota-enforcement layer (M2.4) reads threshold events
-    //    for the "lowered below current usage" case (which is
-    //    NOT an error — the agency keeps working, M2.3 emits
-    //    a `over_limit` event).
-    const removedLimits = findRemovedLimits(beforeMerged, afterMerged);
-    if (parsed.currentUsage && removedLimits.length > 0) {
-      for (const resource of removedLimits) {
-        const currentUsageForResource = parsed.currentUsage[resource] ?? 0;
-        if (currentUsageForResource > 0) {
-          throw new LimitExceededError({
-            resource,
-            currentUsage: currentUsageForResource,
-            limit: 0,
-            requestedIncrease: 0,
-            userMessage:
-              `Cannot remove the "${resource}" limit: the agency is currently ` +
-              `using ${currentUsageForResource}. Reduce usage to 0 first.`,
-          });
-        }
-      }
-    }
-
-    // 7. Compute the before / after snapshots for the change +
+    // 6. Compute the before / after snapshots for the change +
     //    audit rows. The snapshot is the raw entitlement row +
     //    plan template — not the merged shape — because the
     //    change row is meant to be replayable: the audit reader
@@ -327,7 +281,7 @@ export async function changeAgencyPlan(
         action: "entitlement.change",
         target: { type: "agency", id: parsed.agencyId },
         before,
-        after,
+        after: { ...after, reason: parsed.reason },
       })
       .returning();
     if (!audit) {
@@ -379,11 +333,8 @@ async function readAgencyLifecycle(
 }
 
 /**
- * Merge the new override payload with the existing override set.
- * The merge rule:
+ * Resolve the submitted override payload.
  *
- *   - new payload key set  → that value wins
- *   - existing key not in new payload → preserved
  *   - new payload is `{}` → result is `null` (the canonical
  *     "use plan defaults" state)
  *   - new payload is missing entirely → result is the existing
@@ -394,9 +345,8 @@ function mergeOverrides(
   next: OverrideShape | undefined,
 ): OverrideShape | null {
   if (!next) return existing;
-  // Empty payload collapses to null so the row stays canonical.
   if (Object.keys(next).length === 0) return null;
-  return { ...(existing ?? {}), ...next };
+  return next;
 }
 
 /**
