@@ -35,28 +35,19 @@ import { getAccessibleWorkspace, getClientWorkspace } from "@/lib/workspaces/con
 export default async function WorkspaceLayout({
   children,
   params,
-  searchParams,
 }: {
   children: React.ReactNode;
   params: Promise<{ slug: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
   const session = await auth();
   const actor = session?.user?.id ? { id: session.user.id } : null;
   if (!actor) notFound();
 
-  // Step 1 — resolve the active agency. The `?agency=<id>` query
-  // param is the explicit override; the resolver also reads the
-  // signed cookie and applies the single-agency fallback.
-  const rawRequested = (await searchParams)?.agency;
-  const requestedAgencyId = Array.isArray(rawRequested) ? rawRequested[0] : rawRequested;
-  // exactOptionalPropertyTypes: pass null (not undefined) so the
-  // shape matches `ResolveActiveAgencyContextInput`.
-  const ctx = await resolveActiveAgencyContext({
-    actor,
-    requestedAgencyId: requestedAgencyId ?? null,
-  });
+  // Layouts do not receive `searchParams` in Next.js 16. Agency switching
+  // writes the signed HttpOnly agency cookie before refreshing the route,
+  // so the server-validated cookie is the canonical context here.
+  const ctx = await resolveActiveAgencyContext({ actor });
   if (!ctx) notFound();
 
   // Step 2 — resolve the workspace within the resolved agency.
@@ -65,8 +56,10 @@ export default async function WorkspaceLayout({
   // explicit-param contract from M1.4); a non-member gets `null`
   // here, which we render as 404. The `ctx` we already computed
   // is the membership gate — the helper re-validates it.
-  const internalWorkspace = await getAccessibleWorkspace(actor, slug);
-  const clientWorkspace = internalWorkspace ? null : await getClientWorkspace(actor, slug);
+  const internalWorkspace = await getAccessibleWorkspace(actor, slug, ctx.agencyId);
+  const clientWorkspace = internalWorkspace
+    ? null
+    : await getClientWorkspace(actor, slug, ctx.agencyId);
 
   // Render children only if the user has access (internal or
   // client). Returning the children (not a redirect) keeps the

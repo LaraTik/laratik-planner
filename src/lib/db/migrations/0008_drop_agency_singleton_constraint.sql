@@ -19,22 +19,13 @@
 --      and carries no semantics — a pure back-compat read shim.
 --
 -- Backfill safety:
---   The migration aborts loudly when the pre-conditions for safely
---   dropping the constraint are not met:
+--   An empty `agency` table is a valid from-zero installation state.
+--   Multi-agency creation is protected by authenticated platform-admin
+--   commands, not by retaining the obsolete singleton constraint during
+--   bootstrap. Existing installations and empty installations therefore
+--   follow the same additive migration path.
 --
---     a) `agency` must contain at least one row. An empty agency
---        table is the initial-bootstrap state; in that state the
---        production deployment has not yet been "claimed" by an
---        admin, and the singleton constraint is still the only thing
---        stopping a deployment accident from creating two parallel
---        agencies before bootstrap runs. The "first agency wins"
---        guarantee is enforced elsewhere (bootstrap's advisory lock
---        + active-admin check + per-actor singleton resolver in
---        `src/lib/auth/agency-context.ts::resolveActiveAgencyContext`).
---        Drop the singleton constraint only after the existing
---        agency is in place.
---
---     b) The DB user must not still have a NOT NULL constraint on
+--   The DB user must not still have a NOT NULL constraint on
 --        `singleton_key` that contradicts the DROP NOT NULL. This is
 --        a defensive check — if some other migration put the column
 --        back into a contradictory shape, the migration fails here
@@ -63,17 +54,8 @@
 
 DO $$
 DECLARE
-  agency_count integer;
   not_null_violated boolean;
 BEGIN
-  SELECT count(*) INTO agency_count FROM agency;
-  IF agency_count < 1 THEN
-    RAISE EXCEPTION
-      'migration 0008 aborted: agency table is empty (% rows in agency). The single-agency invariant is still in force during initial bootstrap; do not run this migration before the first agency has been created.',
-      agency_count
-      USING ERRCODE = 'check_violation';
-  END IF;
-
   -- Defensive: confirm the column is in the shape we expect to be
   -- migrating away from. If some other migration already relaxed
   -- `singleton_key` (which would itself be a bug — the column's

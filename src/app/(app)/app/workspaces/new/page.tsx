@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
 import { PageHeader } from "@/components/workspace/page-header";
 import { revalidatePath } from "next/cache";
+import { reserveCapacity } from "@/lib/entitlements";
 
 /**
  * Create a new workspace.
@@ -65,6 +66,7 @@ async function createWorkspaceAction(formData: FormData) {
   }
 
   const result = await db.transaction(async (tx) => {
+    await reserveCapacity(tx, agencyId, [{ resource: "workspaces", increase: 1 }]);
     // Ensure the current user is agency member + admin
     const [agency] = await tx
       .select({ id: agencies.id })

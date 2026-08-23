@@ -129,6 +129,10 @@ export async function devSeed(
   request: APIRequestContext,
   options: {
     email?: string;
+    name?: string;
+    agencyName?: string;
+    agencySlug?: string;
+    workspaceName?: string;
     workspaceSlug?: string;
     agencyAdmin?: boolean;
     workspaceRoles?: Exclude<FixtureRole, "agency_admin">[];
@@ -145,6 +149,10 @@ export async function devSeed(
     const res = await request.post("/api/dev/seed", {
       data: {
         email: options.email ?? DEFAULT_EMAIL,
+        ...(options.name ? { name: options.name } : {}),
+        ...(options.agencyName ? { agencyName: options.agencyName } : {}),
+        ...(options.agencySlug ? { agencySlug: options.agencySlug } : {}),
+        ...(options.workspaceName ? { workspaceName: options.workspaceName } : {}),
         workspaceSlug: options.workspaceSlug ?? "acme",
         ...(options.agencyAdmin !== undefined ? { agencyAdmin: options.agencyAdmin } : {}),
         ...(options.workspaceRoles ? { workspaceRoles: options.workspaceRoles } : {}),
@@ -169,7 +177,14 @@ export async function devSeed(
  */
 export async function bootstrapTestSession(
   page: Page,
-  options: { email?: string; workspaceSlug?: string } = {},
+  options: {
+    email?: string;
+    name?: string;
+    agencyName?: string;
+    agencySlug?: string;
+    workspaceName?: string;
+    workspaceSlug?: string;
+  } = {},
 ): Promise<SeedResult> {
   const result = await devSeed(page.request, options);
   await devSignIn(page.request, options.email ? { email: options.email } : {});

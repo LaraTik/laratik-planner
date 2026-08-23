@@ -127,3 +127,15 @@ There are no down-migrations. Rollback is the documented procedure:
 5. Record the rollback in `docs/operations/runbook.md` (incident timeline + operator + date).
 
 The rollback drill (5/5 acceptance criterion) is intentionally deferred — it requires a forward-fix migration as the rollback action, and the first real rollback in production will exercise the procedure.
+
+## M2 migrations 0009–0011 — entitlements, usage, and lifecycle
+
+Captured 2026-08-23 on disposable Postgres 16.
+
+- `0009_plans_entitlements_audit.sql` adds reusable plan templates, per-agency entitlements and immutable change history, threshold events, and platform audit events.
+- `0010_usage_counters.sql` adds independently lockable usage counters and cycle keys.
+- `0011_agency_lifecycle_backfill.sql` adds soft lifecycle fields and backfills every existing agency with an Enterprise-compatible entitlement plus reconciled counters.
+
+All changes are additive. Existing tenant identifiers and content rows are preserved. An older application image can ignore the new tables and lifecycle columns; normal rollback therefore pins the previous application image while leaving the schema in place. A destructive schema rollback requires the verified pre-deploy backup and explicit approval because it removes entitlement and audit history.
+
+The 2026-08-23 drill uses the real Drizzle migrator for official migrations. From-zero produces 47 public application tables and a 12/12 `drizzle.__drizzle_migrations` ledger. The in-place helper adds its private 48th public tracking table only for synthetic drill migrations. Backup/restore preserves both data and all 12 official ledger rows, and an immediate post-restore `pnpm db:migrate` succeeds without replaying migration `0000`. This supersedes the earlier drill mechanic that applied official SQL with only a custom ledger.

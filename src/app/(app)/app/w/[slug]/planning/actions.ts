@@ -3,9 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
-import { db } from "@/lib/db";
-import { workspaces } from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import {
   QuickCreateSchema,
   UpdateContentSchema,
@@ -30,18 +29,15 @@ import {
   resolveComment,
   ResolveCommentSchema,
 } from "@/lib/discussions/service";
-import { hasWorkspaceRole } from "@/lib/auth/policy";
-
 async function requireWorkspaceContext(workspaceSlug: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not signed in");
-  const [ws] = await db
-    .select()
-    .from(workspaces)
-    .where(eq(workspaces.slug, workspaceSlug))
-    .limit(1);
-  if (!ws) throw new Error("Workspace not found");
-  return { actor: { id: session.user.id }, workspace: ws };
+  const actor = { id: session.user.id };
+  const agencyContext = await resolveActiveAgencyContext({ actor });
+  if (!agencyContext) throw new Error("Agency not configured");
+  const workspace = await getAccessibleWorkspace(actor, workspaceSlug, agencyContext.agencyId);
+  if (!workspace) throw new Error("Workspace not found");
+  return { actor, workspace };
 }
 
 export async function quickCreateAction(workspaceSlug: string, _prev: unknown, formData: FormData) {
@@ -256,7 +252,3 @@ export async function resolveCommentAction(input: {
   await resolveComment(actor, parsed.data);
   revalidatePath(`/app/w/${input.workspaceSlug}/planning/`);
 }
-
-// silence
-void and;
-void hasWorkspaceRole;

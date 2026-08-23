@@ -83,6 +83,8 @@ export const agencies = pgTable(
       withTimezone: true,
       mode: "date",
     }),
+    suspendedAt: timestamp("suspended_at", { withTimezone: true, mode: "date" }),
+    archivedAt: timestamp("archived_at", { withTimezone: true, mode: "date" }),
     settings: jsonb("settings"),
     ...timestamps,
   },

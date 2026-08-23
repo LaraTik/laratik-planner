@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Check, ChevronsUpDown, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -21,11 +21,10 @@ export type AgencyRow = { id: string; name: string; slug: string; isAdmin: boole
  *      fresh signed HttpOnly cookie via the M1.2 helper. The
  *      membership re-check inside the helper is the authorization
  *      gate (a non-member caller cannot switch).
- *   2. Navigates to the current page with `?agency=<id>` appended.
- *      The `?agency=` query param is the highest-priority input to
- *      `resolveActiveAgencyContext` (M1.3) — it wins over the
- *      cookie, so the new agency takes effect on the very next
- *      render of the /app/w/[slug] layout (M1.4 wiring).
+ *   2. Navigates to the app home. Keeping the current workspace URL
+ *      could carry a slug that belongs only to the previous agency;
+ *      the neutral landing page lets the refreshed shell load the
+ *      newly selected agency and its own workspace list safely.
  *
  * Visual pattern: mirrors `WorkspaceSwitcher` (Radix Popover +
  * keyboard-friendly listbox with `aria-activedescendant`). The
@@ -47,7 +46,6 @@ export function AgencySwitcher({
   const [pending, setPending] = React.useState(false);
   const listRef = React.useRef<HTMLUListElement | null>(null);
   const router = useRouter();
-  const pathname = usePathname();
 
   // When the popover opens, jump activeIndex to the current agency
   // (so arrow-key navigation starts at the highlighted row, not
@@ -84,14 +82,8 @@ export function AgencySwitcher({
         // important guarantee.
         return;
       }
-      // Preserve the current path; the route layer (M1.4) treats
-      // `?agency=<id>` as the explicit-request input and resolves
-      // to the selected agency. Refreshing the same path is
-      // intentional — the resolver picks up the new agency on
-      // next render.
-      const params = new URLSearchParams();
-      params.set("agency", a.id);
-      router.push(`${pathname}?${params.toString()}`);
+      router.push("/app");
+      router.refresh();
     } finally {
       setPending(false);
     }

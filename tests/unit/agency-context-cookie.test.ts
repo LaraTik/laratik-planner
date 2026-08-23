@@ -52,6 +52,7 @@ function makeDrizzleMock(state: DrizzleState) {
   const select = vi.fn(() => {
     const chain: Record<string, unknown> = {};
     chain.from = vi.fn(() => chain);
+    chain.innerJoin = vi.fn(() => chain);
     chain.where = vi.fn(() => chain);
     chain.limit = vi.fn(() => {
       const next = state.limitResults.shift() ?? [];
@@ -138,6 +139,22 @@ describe("encodeAgencyContext + decodeAgencyContext", () => {
     expect(decoded).toEqual({ agencyId: AGENCY_ID });
   });
 
+  it("uses the documented default lifetime when maxAgeSeconds is omitted", () => {
+    const before = Math.floor(Date.now() / 1000);
+    const encoded = cookie.encodeAgencyContext({
+      agencyId: AGENCY_ID,
+      userId: actor.id,
+    });
+    const expiresAt = Number(encoded.split(".")[1]);
+
+    expect(expiresAt).toBeGreaterThanOrEqual(
+      before + cookie.AGENCY_CONTEXT_DEFAULT_MAX_AGE_SECONDS,
+    );
+    expect(expiresAt).toBeLessThanOrEqual(
+      Math.floor(Date.now() / 1000) + cookie.AGENCY_CONTEXT_DEFAULT_MAX_AGE_SECONDS,
+    );
+  });
+
   it("2) returns null when the signature has been tampered with", async () => {
     const encoded = cookie.encodeAgencyContext({
       agencyId: AGENCY_ID,
@@ -168,9 +185,12 @@ describe("encodeAgencyContext + decodeAgencyContext", () => {
     // intentionally want to compute fresh so the test does not lean
     // on a private helper.
     const { createHmac } = await import("node:crypto");
-    const payload = `${AGENCY_ID}.${pastExpiry}`;
-    const sig = createHmac("sha256", TEST_AGENCY_COOKIE_SECRET).update(payload).digest("base64url");
-    const expired = `${payload}.${sig}`;
+    const cookiePayload = `${AGENCY_ID}.${pastExpiry}`;
+    const signedPayload = `${cookiePayload}.${actor.id}`;
+    const sig = createHmac("sha256", TEST_AGENCY_COOKIE_SECRET)
+      .update(signedPayload)
+      .digest("base64url");
+    const expired = `${cookiePayload}.${sig}`;
 
     const decoded = await cookie.decodeAgencyContext(expired, actor);
     expect(decoded).toBeNull();
@@ -209,6 +229,7 @@ describe("encodeAgencyContext + decodeAgencyContext", () => {
     expect(await cookie.decodeAgencyContext("garbage", actor)).toBeNull();
     expect(await cookie.decodeAgencyContext("only.two", actor)).toBeNull();
     expect(await cookie.decodeAgencyContext("agency.expires.signature.extra", actor)).toBeNull();
+    expect(await cookie.decodeAgencyContext(`${"g".repeat(36)}.123.signature`, actor)).toBeNull();
     // Non-numeric expiry
     expect(await cookie.decodeAgencyContext(`${AGENCY_ID}.notanumber.somesig`, actor)).toBeNull();
   });

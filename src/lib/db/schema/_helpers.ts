@@ -50,6 +50,17 @@ export const jsonb = (name: string) =>
     .default(sql`'{}'::jsonb`);
 
 /**
+ * JSONB without a NOT NULL or default. Used for columns where NULL has
+ * a semantic meaning — e.g. `platform_plan_template.default_limits`
+ * is NULL for the "Custom" sentinel, and `agency_entitlement.overrides`
+ * is NULL when the agency uses the plan defaults verbatim. Both
+ * `before` / `after` on the append-only audit tables also use this
+ * because a "view" action has no before/after.
+ */
+export const jsonbNullable = (name: string) =>
+  drizzleJsonb(name).$type<Record<string, unknown> | null>();
+
+/**
  * `now()` in UTC, as a `date` (Drizzle's preferred type for time fields).
  * Use this for default timestamps instead of relying on the column default
  * so the value is set at the JS layer too (helps with optimistic

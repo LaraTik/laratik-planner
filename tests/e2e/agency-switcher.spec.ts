@@ -1,40 +1,24 @@
 import { test, expect } from "@playwright/test";
-import { bootstrapTestSession } from "./_helpers";
+import { bootstrapTestSession, devSeed, devSignIn } from "./_helpers";
 
 /**
  * Agency switcher (M1.5) — end-to-end coverage of the sidebar
  * popover that lists every agency the signed-in user belongs to
  * and lets them pick one.
  *
- * Current state of the test infra:
- *  - The dev seed creates a single agency (the singleton from M1.1).
- *    The schema enforces `singletonKey = true` and a unique index
- *    on `singletonKey`, so a second agency row CANNOT be created
- *    in the test database until M2 lifts that invariant.
- *  - With one agency available, the switcher renders the active
- *    agency in the trigger and lists it in the popover. Selecting
- *    it is a no-op (the action is guarded by `if (a.id === active?.id)`).
+ * The dev seed is idempotent by agency slug and issues a signed active-agency
+ * cookie for the seeded member. This spec covers both the original
+ * single-agency interaction and the multi-agency behavior:
  *
- * What this spec covers TODAY (single-agency world):
  *  1. The agency switcher trigger is visible in the sidebar.
  *  2. The trigger shows the seeded agency's name.
  *  3. Clicking the trigger opens a popover with a listbox that
  *     includes the seeded agency.
  *  4. The trigger exposes a stable test id (sidebar-agency-switcher-trigger).
- *
- * What this spec will cover once the singleton constraint is lifted
- * (M2 or later — the dev/seed helper would grow an `extraAgencies`
- * parameter to seed a second agency for the actor):
  *  5. The listbox contains one row per agency the actor belongs to.
  *  6. Selecting a different row sets the `laratik_active_agency`
  *     cookie via the server action.
- *  7. The page URL gains `?agency=<id>` after the switch.
- *  8. The new agency is the active one on the next render of
- *     /app/w/[slug] (M1.4 resolver chain).
- *
- * Those are gated by `.fixme` blocks with a comment so the file
- * still type-checks, the test list is stable, and the dependency is
- * discoverable from the test name alone.
+ *  7. The refreshed app shell names the newly active agency.
  */
 
 test.describe("Agency switcher (sidebar) — M1.5", () => {
@@ -95,25 +79,68 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
     await expect(page.getByRole("listbox", { name: "Agencies" })).not.toBeVisible();
   });
 
-  // The two-agency scenarios are gated on lifting the singleton
-  // constraint in the agency schema (M1.1 invariant: every row has
-  // `singletonKey = true` and a unique index makes a second row
-  // impossible to insert). When M2 / the dev seed helper grows a
-  // multi-agency seed option, drop the `.fixme` and uncomment the
-  // tests below.
-  test.fixme("user with two agencies sees both rows in the popover (gated on M2 multi-agency seed)", async () => {
-    // Implementation note (for the M2 owner): seed two agencies
-    // and the actor as a member of both, then assert the listbox
-    // has 2 options and the active one is marked aria-selected.
-    expect(true).toBe(true);
+  test("user with two agencies sees both rows in the popover", async ({ page }) => {
+    const email = "agency-switcher-multi@laratik.local";
+    await devSeed(page.request, {
+      email,
+      agencyName: "Switcher Agency One",
+      agencySlug: "switcher-agency-one",
+      workspaceName: "Switcher Workspace One",
+      workspaceSlug: "switcher-workspace-one",
+    });
+    await devSeed(page.request, {
+      email,
+      agencyName: "Switcher Agency Two",
+      agencySlug: "switcher-agency-two",
+      workspaceName: "Switcher Workspace Two",
+      workspaceSlug: "switcher-workspace-two",
+    });
+    await devSignIn(page.request, { email });
+
+    await page.goto("/app");
+    await page.getByTestId("sidebar-agency-switcher-trigger").click();
+
+    const listbox = page.getByRole("listbox", { name: "Agencies" });
+    await expect(listbox.getByRole("option", { name: /Switcher Agency One/ })).toBeVisible();
+    await expect(listbox.getByRole("option", { name: /Switcher Agency Two/ })).toBeVisible();
   });
 
-  test.fixme("selecting the second agency sets the cookie and navigates with ?agency=<id> (gated on M2 multi-agency seed)", async () => {
-    // Implementation note: after seeding two agencies, click the
-    // non-active option in the listbox, then assert:
-    //   - the URL gained `?agency=<second-id>`
-    //   - the `laratik_active_agency` cookie was written
-    //   - the next render of /app/w/<slug> resolves to the new agency
-    expect(true).toBe(true);
+  test("selecting another agency updates the signed cookie and active shell", async ({ page }) => {
+    const email = "agency-switcher-select@laratik.local";
+    const first = await devSeed(page.request, {
+      email,
+      agencyName: "Selectable Agency One",
+      agencySlug: "selectable-agency-one",
+      workspaceName: "Selectable Workspace One",
+      workspaceSlug: "selectable-workspace-one",
+    });
+    await devSeed(page.request, {
+      email,
+      agencyName: "Selectable Agency Two",
+      agencySlug: "selectable-agency-two",
+      workspaceName: "Selectable Workspace Two",
+      workspaceSlug: "selectable-workspace-two",
+    });
+    await devSignIn(page.request, { email });
+    await page.goto("/app");
+
+    const trigger = page.getByTestId("sidebar-agency-switcher-trigger");
+    await expect(trigger).toHaveAttribute("aria-label", /Active agency: Selectable Agency Two/);
+    const before = await page.context().cookies();
+    const priorValue = before.find((cookie) => cookie.name === "laratik_active_agency")?.value;
+
+    await trigger.click();
+    await page
+      .getByRole("listbox", { name: "Agencies" })
+      .getByRole("option", { name: /Selectable Agency One/ })
+      .click();
+
+    await expect(page).toHaveURL(/\/app$/);
+    await expect(trigger).toHaveAttribute("aria-label", /Active agency: Selectable Agency One/);
+    const after = await page.context().cookies();
+    const activeCookie = after.find((cookie) => cookie.name === "laratik_active_agency");
+    expect(activeCookie?.value).toBeTruthy();
+    expect(activeCookie?.value).not.toBe(priorValue);
+    expect(activeCookie?.value.startsWith(`${first.agencyId}.`)).toBe(true);
   });
 });

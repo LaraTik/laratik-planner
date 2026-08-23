@@ -13,14 +13,13 @@
  * failure.
  *
  * Drills:
- *   1. from-zero         — drop + recreate DB, apply all 3 migrations,
- *                          assert ≥25 tables + rate_limit_event +
- *                          security_audit_event present
- *   2. in-place upgrade  — add a 4th migration file in scripts/.drill-tmp/,
+ *   1. from-zero         — drop + recreate DB, run the real Drizzle
+ *                          migrator, and assert its ledger + schema
+ *   2. in-place upgrade  — add a drill migration in scripts/.drill-tmp/,
  *                          apply via custom runner, assert column added;
  *                          then a 5th (drop) migration, assert column gone
  *   3. backup + restore  — pg_dump, drop+recreate, psql restore, assert
- *                          rate_limit_event present
+ *                          application tables and Drizzle ledger survive
  *   4. failed-migration  — broken 5th migration, assert runner throws and
  *                          that all original tables are still present
  *                          (no partial apply)
@@ -181,6 +180,38 @@ function shellStderr(r: SpawnSyncReturns<Buffer>): string {
   return typeof b === "string" ? b : (b?.toString("utf8") ?? "");
 }
 
+function shellStdout(r: SpawnSyncReturns<Buffer>): string {
+  const b = r.stdout;
+  return typeof b === "string" ? b : (b?.toString("utf8") ?? "");
+}
+
+async function countDrizzleMigrations(client: Client): Promise<number> {
+  const result = await client.query<{ count: string }>(
+    "SELECT count(*)::text AS count FROM drizzle.__drizzle_migrations",
+  );
+  return Number(result.rows[0]?.count ?? "0");
+}
+
+function runOfficialMigrations(): void {
+  const migration = runShell("pnpm", ["db:migrate"], {
+    env: {
+      DATABASE_URL: TEST_DB_URL,
+      NODE_ENV: "test",
+      AUTH_SECRET: process.env.AUTH_SECRET ?? "migration-drill-only-auth-secret-32-bytes",
+      AGENCY_COOKIE_SECRET:
+        process.env.AGENCY_COOKIE_SECRET ?? "migration-drill-only-agency-cookie-secret-32-bytes",
+    },
+    timeoutMs: 120_000,
+  });
+  if (migration.status !== 0) {
+    throw new Error(
+      `real Drizzle migrator failed (exit ${migration.status}): ${(
+        shellStderr(migration) || shellStdout(migration)
+      ).slice(-500)}`,
+    );
+  }
+}
+
 // ─── Custom migration runner ────────────────────────────────────────────────
 /**
  * Apply SQL files in lexicographic order, tracked in a tiny
@@ -265,16 +296,20 @@ async function drillFromZero(): Promise<void> {
   try {
     await dropAndRecreateDb(dbName);
     detail.push(`drop+recreate ${dbName}`);
+    runOfficialMigrations();
+    detail.push("real Drizzle migrator completed");
     await withClient(TEST_DB_URL, async (c) => {
-      const { applied, skipped } = await applyMigrations(c, MIGRATIONS_DIR);
-      detail.push(`applied: [${applied.join(", ")}]`);
-      if (skipped.length) detail.push(`skipped: [${skipped.join(", ")}]`);
       const count = await countTables(c);
       const tables = await listTables(c);
+      const ledgerCount = await countDrizzleMigrations(c);
+      const expectedLedgerCount = readdirSync(MIGRATIONS_DIR).filter((name) =>
+        name.endsWith(".sql"),
+      ).length;
       const required = ["rate_limit_event", "security_audit_event"];
       const missing = required.filter((t) => !tables.includes(t));
-      const ok = count >= 25 && missing.length === 0;
+      const ok = count >= 25 && missing.length === 0 && ledgerCount === expectedLedgerCount;
       detail.push(`tables=${count} (≥25 ${count >= 25 ? "✓" : "✗"})`);
+      detail.push(`Drizzle ledger=${ledgerCount}/${expectedLedgerCount}`);
       if (missing.length) detail.push(`missing: ${missing.join(", ")}`);
       else detail.push(`contains: ${required.join(", ")}`);
       record("1. from-zero", ok, `${detail.join("; ")} (${fmtMs(Date.now() - start)})`);
@@ -305,23 +340,13 @@ async function drillInPlace(): Promise<void> {
       detail.push(`before: column=${before ? "EXISTS" : "absent"}`);
 
       // Pass 1: apply up to and including 0003 (add column)
-      const r1 = await applyMigrations(
-        c,
-        MIGRATIONS_DIR,
-        [DRILL_TMP_DIR],
-        "0003_drill_add_marker.sql",
-      );
+      const r1 = await applyMigrations(c, DRILL_TMP_DIR, [], "0003_drill_add_marker.sql");
       detail.push(`add applied: [${r1.applied.join(", ")}]`);
       const afterAdd = await tableHasColumn(c, "workspace", "drill_marker");
       detail.push(`after-add: column=${afterAdd ? "EXISTS" : "absent"}`);
 
       // Pass 2: apply up to and including 0004 (drop column)
-      const r2 = await applyMigrations(
-        c,
-        MIGRATIONS_DIR,
-        [DRILL_TMP_DIR],
-        "0004_drill_drop_marker.sql",
-      );
+      const r2 = await applyMigrations(c, DRILL_TMP_DIR, [], "0004_drill_drop_marker.sql");
       detail.push(`drop applied: [${r2.applied.join(", ")}]`);
       const afterDrop = await tableHasColumn(c, "workspace", "drill_marker");
       detail.push(`after-drop: column=${afterDrop ? "EXISTS" : "absent"}`);
@@ -343,24 +368,22 @@ async function drillBackupRestore(): Promise<void> {
     // would be pg_restore. We stick with plain for transparency.
     if (!existsSync(DRILL_TMP_DIR)) mkdirSync(DRILL_TMP_DIR, { recursive: true });
     dumpFile = resolve(DRILL_TMP_DIR, `planner_test_backup_${Date.now()}.sql`);
+    const parsedTarget = new URL(TEST_DB_URL);
+    const pgEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      PGHOST: parsedTarget.hostname,
+      PGPORT: parsedTarget.port || "5432",
+      PGDATABASE: dbName,
+      ...(parsedTarget.username ? { PGUSER: decodeURIComponent(parsedTarget.username) } : {}),
+      ...(parsedTarget.password ? { PGPASSWORD: decodeURIComponent(parsedTarget.password) } : {}),
+    };
+    const ledgerBefore = await withClient(TEST_DB_URL, countDrizzleMigrations);
+    detail.push(`Drizzle ledger before=${ledgerBefore}`);
 
     const dump = runShell(
       "pg_dump",
-      [
-        "--no-owner",
-        "--no-privileges",
-        "--clean",
-        "--if-exists",
-        "-h",
-        "127.0.0.1",
-        "-U",
-        "planner",
-        "-d",
-        dbName,
-        "-f",
-        dumpFile,
-      ],
-      { env: { ...process.env, PGPASSWORD: "planner_dev_only" } },
+      ["--no-owner", "--no-privileges", "--clean", "--if-exists", "-f", dumpFile],
+      { env: pgEnv },
     );
     if (dump.status !== 0) {
       record(
@@ -375,11 +398,7 @@ async function drillBackupRestore(): Promise<void> {
     await dropAndRecreateDb(dbName);
     detail.push(`drop+recreate ${dbName}`);
 
-    const restore = runShell(
-      "psql",
-      ["-h", "127.0.0.1", "-U", "planner", "-d", dbName, "-v", "ON_ERROR_STOP=1", "-f", dumpFile],
-      { env: { ...process.env, PGPASSWORD: "planner_dev_only" } },
-    );
+    const restore = runShell("psql", ["-v", "ON_ERROR_STOP=1", "-f", dumpFile], { env: pgEnv });
     if (restore.status !== 0) {
       const stderr = shellStderr(restore).slice(-400);
       record("3. backup + restore", false, `psql restore failed: ${stderr}`);
@@ -391,9 +410,12 @@ async function drillBackupRestore(): Promise<void> {
       const tables = await listTables(c);
       const has = tables.includes("rate_limit_event");
       const count = tables.length;
+      const ledgerAfter = await countDrizzleMigrations(c);
       detail.push(`tables=${count}`);
       detail.push(`rate_limit_event=${has ? "present" : "MISSING"}`);
-      record("3. backup + restore", has, `${detail.join("; ")} (${fmtMs(Date.now() - start)})`);
+      detail.push(`Drizzle ledger after=${ledgerAfter}`);
+      const ok = has && ledgerBefore > 0 && ledgerAfter === ledgerBefore;
+      record("3. backup + restore", ok, `${detail.join("; ")} (${fmtMs(Date.now() - start)})`);
     });
   } catch (err) {
     record("3. backup + restore", false, `${detail.join("; ")} | ERROR: ${(err as Error).message}`);
@@ -413,7 +435,7 @@ async function drillFailedMigration(): Promise<void> {
   const start = Date.now();
   const detail: string[] = [];
   try {
-    // Snapshot original tables first (from migrations 0000, 0001, 0002)
+    // Snapshot original tables first (from all official migrations).
     const originalTables = await withClient(TEST_DB_URL, listTables);
     detail.push(`snapshot: ${originalTables.length} tables`);
 
@@ -429,7 +451,7 @@ async function drillFailedMigration(): Promise<void> {
     let caught: unknown = null;
     await withClient(TEST_DB_URL, async (c) => {
       try {
-        await applyMigrations(c, MIGRATIONS_DIR, [DRILL_TMP_DIR]);
+        await applyMigrations(c, DRILL_TMP_DIR);
       } catch (err) {
         caught = err;
       }

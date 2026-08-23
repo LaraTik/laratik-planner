@@ -80,6 +80,7 @@ function makeDrizzleMock(state: DrizzleState) {
   const select = vi.fn(() => {
     const chain: Record<string, unknown> = {};
     chain.from = vi.fn(() => chain);
+    chain.innerJoin = vi.fn(() => chain);
     chain.where = vi.fn(() => chain);
     chain.orderBy = vi.fn(() => {
       chain.limit = vi.fn(() => {

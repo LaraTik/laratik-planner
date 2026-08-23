@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
@@ -219,11 +219,14 @@ export async function decodeAgencyContext(
     const [row] = await db
       .select({ x: sql<number>`1` })
       .from(agencyMemberships)
+      .innerJoin(agencies, eq(agencies.id, agencyMemberships.agencyId))
       .where(
         and(
           eq(agencyMemberships.agencyId, agencyId),
           eq(agencyMemberships.userId, actor.id),
           eq(agencyMemberships.status, "active"),
+          isNull(agencies.suspendedAt),
+          isNull(agencies.archivedAt),
         ),
       )
       .limit(1);
@@ -491,7 +494,14 @@ export async function listActorAgencies(actor: Actor): Promise<ActorAgency[]> {
     })
     .from(agencyMemberships)
     .innerJoin(agencies, eq(agencies.id, agencyMemberships.agencyId))
-    .where(and(eq(agencyMemberships.userId, actor.id), eq(agencyMemberships.status, "active")))
+    .where(
+      and(
+        eq(agencyMemberships.userId, actor.id),
+        eq(agencyMemberships.status, "active"),
+        isNull(agencies.suspendedAt),
+        isNull(agencies.archivedAt),
+      ),
+    )
     .orderBy(asc(agencyMemberships.createdAt))
     .limit(50);
   // Project to the documented shape at the function boundary so
@@ -532,7 +542,15 @@ async function findSingleActiveAgency(actor: Actor): Promise<string | null> {
     const rows = await db
       .select({ agencyId: agencyMemberships.agencyId })
       .from(agencyMemberships)
-      .where(and(eq(agencyMemberships.userId, actor.id), eq(agencyMemberships.status, "active")))
+      .innerJoin(agencies, eq(agencies.id, agencyMemberships.agencyId))
+      .where(
+        and(
+          eq(agencyMemberships.userId, actor.id),
+          eq(agencyMemberships.status, "active"),
+          isNull(agencies.suspendedAt),
+          isNull(agencies.archivedAt),
+        ),
+      )
       .orderBy(asc(agencyMemberships.createdAt))
       .limit(2);
     if (rows.length !== 1) return null;
@@ -550,11 +568,14 @@ async function isActiveMember(actor: Actor, agencyId: string): Promise<boolean> 
     const [row] = await db
       .select({ x: sql<number>`1` })
       .from(agencyMemberships)
+      .innerJoin(agencies, eq(agencies.id, agencyMemberships.agencyId))
       .where(
         and(
           eq(agencyMemberships.agencyId, agencyId),
           eq(agencyMemberships.userId, actor.id),
           eq(agencyMemberships.status, "active"),
+          isNull(agencies.suspendedAt),
+          isNull(agencies.archivedAt),
         ),
       )
       .limit(1);

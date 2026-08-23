@@ -1,12 +1,19 @@
 import Link from "next/link";
 import { count, desc, eq, sql } from "drizzle-orm";
-import { Building2, Plus, Search } from "lucide-react";
+import { Building2, Search } from "lucide-react";
 import { db } from "@/lib/db";
-import { agencyMemberships, agencies, workspaces } from "@/lib/db/schema";
+import {
+  agencyEntitlements,
+  agencyMemberships,
+  agencies,
+  platformPlanTemplates,
+  workspaces,
+} from "@/lib/db/schema";
 import { PageHeader } from "@/components/workspace/page-header";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { AgenciesTable, type PlatformAgencyRow } from "./agencies-table";
+import { AddAgencyDrawer } from "./add-agency-drawer";
 
 /**
  * Platform agencies list (Milestone 1.8) — Stitch screen `973d8624f25441de8abecd6e16e5e403`.
@@ -24,9 +31,7 @@ import { AgenciesTable, type PlatformAgencyRow } from "./agencies-table";
  * server-side search when the row count grows. The data payload is
  * small enough to ship in full on every request.
  *
- * The "+ Add agency" CTA is rendered but disabled with a tooltip
- * in M1 — the full 4-step Add Agency drawer is an M2 deliverable
- * (per the M1.8 spec: "Do NOT add the 4-step Add Agency drawer — M2").
+ * M2 adds the transactional four-step agency provisioning drawer.
  */
 export const metadata = { title: "Platform · Agencies" };
 
@@ -46,13 +51,29 @@ async function loadAgencies(): Promise<PlatformAgencyRow[]> {
       name: agencies.name,
       slug: agencies.slug,
       createdAt: agencies.createdAt,
-      memberCount: sql<number>`count(distinct ${agencyMemberships.userId})`,
-      workspaceCount: sql<number>`count(distinct ${workspaces.id})`,
+      memberCount: sql<number>`count(distinct case when ${agencyMemberships.status} = 'active' then ${agencyMemberships.userId} end)`,
+      workspaceCount: sql<number>`count(distinct case when ${workspaces.archivedAt} is null then ${workspaces.id} end)`,
+      planName: platformPlanTemplates.name,
+      suspendedAt: agencies.suspendedAt,
+      archivedAt: agencies.archivedAt,
     })
     .from(agencies)
     .leftJoin(agencyMemberships, eq(agencyMemberships.agencyId, agencies.id))
     .leftJoin(workspaces, eq(workspaces.agencyId, agencies.id))
-    .groupBy(agencies.id, agencies.name, agencies.slug, agencies.createdAt)
+    .leftJoin(agencyEntitlements, eq(agencyEntitlements.agencyId, agencies.id))
+    .leftJoin(
+      platformPlanTemplates,
+      eq(platformPlanTemplates.id, agencyEntitlements.planTemplateId),
+    )
+    .groupBy(
+      agencies.id,
+      agencies.name,
+      agencies.slug,
+      agencies.createdAt,
+      agencies.suspendedAt,
+      agencies.archivedAt,
+      platformPlanTemplates.name,
+    )
     .orderBy(desc(agencies.createdAt));
 
   // Coalesce the SQL bigint-ish counts to JS numbers. The casts are
@@ -65,6 +86,8 @@ async function loadAgencies(): Promise<PlatformAgencyRow[]> {
     createdAt: r.createdAt,
     memberCount: Number(r.memberCount ?? 0),
     workspaceCount: Number(r.workspaceCount ?? 0),
+    planName: r.planName ?? "Unassigned",
+    lifecycle: r.archivedAt ? "archived" : r.suspendedAt ? "suspended" : "active",
   }));
 }
 
@@ -74,26 +97,25 @@ async function loadTotalAgencyCount(): Promise<number> {
 }
 
 export default async function PlatformAgenciesPage() {
-  const [rows, total] = await Promise.all([loadAgencies(), loadTotalAgencyCount()]);
+  const [rows, total, plans] = await Promise.all([
+    loadAgencies(),
+    loadTotalAgencyCount(),
+    db
+      .select({
+        id: platformPlanTemplates.id,
+        name: platformPlanTemplates.name,
+        description: platformPlanTemplates.description,
+      })
+      .from(platformPlanTemplates)
+      .where(sql`${platformPlanTemplates.archivedAt} is null`),
+  ]);
   return (
     <>
       <PageHeader
         eyebrow="Platform"
         title="Agencies"
         description="Every agency on the platform. Use search to narrow by name or slug."
-        action={
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            title="Add Agency is an M2 deliverable. The 4-step drawer is not yet implemented."
-            className="bg-primary text-primary-foreground text-button inline-flex cursor-not-allowed items-center gap-2 rounded-[var(--radius-control)] px-3 py-2 font-semibold opacity-50"
-            data-testid="platform-agencies-add"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Add agency
-          </button>
-        }
+        action={<AddAgencyDrawer plans={plans} />}
       />
 
       {rows.length === 0 ? (
@@ -139,7 +161,7 @@ export default async function PlatformAgenciesPage() {
         >
           detail page
         </Link>{" "}
-        for the per-agency view (overview tab only in M1).
+        for plan, usage, AI, and lifecycle controls.
       </p>
     </>
   );

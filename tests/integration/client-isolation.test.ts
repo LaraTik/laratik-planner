@@ -13,6 +13,7 @@ describe("client workspace isolation", () => {
   let updateWorkspaceSettings: typeof import("@/lib/workspaces/settings-service").updateWorkspaceSettings;
 
   let workspaceId: string;
+  let agencyId: string;
   let contentItemId: string;
   let internalUserId: string;
   let clientUserId: string;
@@ -58,6 +59,7 @@ describe("client workspace isolation", () => {
       })
       .returning();
     if (!agency || !internalUser || !clientUser) throw new Error("Failed to seed users");
+    agencyId = agency.id;
     internalUserId = internalUser.id;
     clientUserId = clientUser.id;
 
@@ -110,7 +112,9 @@ describe("client workspace isolation", () => {
 
   it("allows an internal role into internal workspace and content queries", async () => {
     const actor = { id: internalUserId };
-    await expect(getAccessibleWorkspace(actor, "acme")).resolves.toMatchObject({ id: workspaceId });
+    await expect(getAccessibleWorkspace(actor, "acme", agencyId)).resolves.toMatchObject({
+      id: workspaceId,
+    });
     await expect(listWorkspaceContent(actor, workspaceId)).resolves.toHaveLength(1);
     await expect(getContentItem(actor, contentItemId)).resolves.toMatchObject({
       id: contentItemId,
@@ -120,8 +124,10 @@ describe("client workspace isolation", () => {
 
   it("allows a client-only role only through the client workspace boundary", async () => {
     const actor = { id: clientUserId };
-    await expect(getClientWorkspace(actor, "acme")).resolves.toMatchObject({ id: workspaceId });
-    await expect(getAccessibleWorkspace(actor, "acme")).resolves.toBeNull();
+    await expect(getClientWorkspace(actor, "acme", agencyId)).resolves.toMatchObject({
+      id: workspaceId,
+    });
+    await expect(getAccessibleWorkspace(actor, "acme", agencyId)).resolves.toBeNull();
     await expect(listWorkspaceContent(actor, workspaceId)).rejects.toThrow(/permission denied/i);
     await expect(getContentItem(actor, contentItemId)).rejects.toThrow(/permission denied/i);
   });
