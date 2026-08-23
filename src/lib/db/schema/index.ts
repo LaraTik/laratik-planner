@@ -19,3 +19,4 @@ export * from "./audit";
 export * from "./ai";
 export * from "./brand-kit";
 export * from "./plans";
+export * from "./usage";
