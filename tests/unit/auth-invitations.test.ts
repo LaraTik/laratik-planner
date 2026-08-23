@@ -189,6 +189,12 @@ const rateLimitMock = vi.hoisted(() => ({
 
 vi.mock("@/lib/security/rate-limit", () => rateLimitMock);
 
+const quotaMock = vi.hoisted(() => ({
+  reserveCapacity: vi.fn(async () => undefined),
+  releaseCapacity: vi.fn(async () => undefined),
+}));
+vi.mock("@/lib/entitlements", () => quotaMock);
+
 const {
   createInvitation,
   acceptInvitation,
@@ -216,6 +222,8 @@ beforeEach(() => {
   emailMock.sendEmail.mockResolvedValue({ id: "msg-1" });
   rateLimitMock.enforceRateLimit.mockReset();
   rateLimitMock.enforceRateLimit.mockResolvedValue({ allowed: true, remaining: 9 });
+  quotaMock.reserveCapacity.mockClear();
+  quotaMock.releaseCapacity.mockClear();
 });
 
 describe("createInvitation", () => {
@@ -267,6 +275,7 @@ describe("createInvitation", () => {
   });
 
   it("rejects when a requested workspace id is not owned by the agency", async () => {
+    dbMock.state.selectResults.push([]); // no existing pending invitation
     // The workspace check returns fewer rows than requested → throw
     dbMock.state.selectResults.push([]);
 
@@ -438,6 +447,7 @@ describe("resendInvitation", () => {
 
 describe("revokeInvitation", () => {
   it("updates the invitation to status=revoked", async () => {
+    dbMock.state.selectResults.push([{ status: "pending" }]);
     await revokeInvitation({ invitationId: "inv-1", agencyId: "agency-1" });
     const call = dbMock.state.updateCalls.find(
       (c) => (c.set as Record<string, unknown>)["status"] === "revoked",
@@ -475,6 +485,7 @@ describe("deactivateUser", () => {
 
 describe("reactivateUser", () => {
   it("reactivates the agency membership and inserts an audit event", async () => {
+    dbMock.state.selectResults.push([{ status: "deactivated" }]);
     dbMock.state.selectResults.push([{ id: "ws-1" }]);
 
     await reactivateUser({ userId: "user-1", agencyId: "agency-1", actorUserId: "actor-1" });

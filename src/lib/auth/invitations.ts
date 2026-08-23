@@ -18,6 +18,7 @@ import { invitationIdentityMatches, normalizeEmailAddress } from "@/lib/auth/inv
 import { assertCanDeactivateAgencyMember } from "@/lib/auth/member-safety";
 import type { InvitationCommand } from "@/lib/auth/invitation-command";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { releaseCapacity, reserveCapacity } from "@/lib/entitlements";
 
 /**
  * Invitation service — per master prompt §13:
@@ -52,6 +53,21 @@ export async function createInvitation(
   const { raw, hash } = generateToken();
   const expiresAt = new Date(Date.now() + EXPIRY_DAYS * 24 * 60 * 60 * 1000);
   const created = await db.transaction(async (tx) => {
+    const [existingPending] = await tx
+      .select({ id: invitations.id })
+      .from(invitations)
+      .where(
+        and(
+          eq(invitations.agencyId, agencyId),
+          eq(invitations.email, normalizedEmail),
+          eq(invitations.status, "pending"),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!existingPending) {
+      await reserveCapacity(tx, agencyId, [{ resource: "users", increase: 1 }]);
+    }
     const requestedWorkspaceIds = [
       ...new Set(input.workspaceRoles.map((role) => role.workspaceId)),
     ];
@@ -195,6 +211,7 @@ export async function acceptInvitation(input: {
         .update(invitations)
         .set({ status: "expired", updatedAt: new Date() })
         .where(eq(invitations.id, inv.id));
+      await releaseCapacity(tx, inv.agencyId, ["users"]);
       return { status: "expired", workspaceIds: [] };
     }
 
@@ -335,12 +352,24 @@ This link expires on ${expiresAt.toISOString().slice(0, 10)}.`,
  * Revoke a pending invitation.
  */
 export async function revokeInvitation(input: { invitationId: string; agencyId: string }) {
-  await db
-    .update(invitations)
-    .set({ status: "revoked", revokedAt: new Date(), updatedAt: new Date() })
-    .where(
-      and(eq(invitations.id, input.invitationId), eq(invitations.agencyId, input.agencyId)),
-    );
+  await db.transaction(async (tx) => {
+    const [invitation] = await tx
+      .select({ status: invitations.status })
+      .from(invitations)
+      .where(
+        and(eq(invitations.id, input.invitationId), eq(invitations.agencyId, input.agencyId)),
+      )
+      .for("update")
+      .limit(1);
+    if (!invitation || invitation.status !== "pending") return;
+    await tx
+      .update(invitations)
+      .set({ status: "revoked", revokedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(eq(invitations.id, input.invitationId), eq(invitations.agencyId, input.agencyId)),
+      );
+    await releaseCapacity(tx, input.agencyId, ["users"]);
+  });
 }
 
 /**
@@ -420,6 +449,7 @@ export async function deactivateUser(input: {
       targetId: input.targetUserId,
       outcome: "success",
     });
+    await releaseCapacity(tx, input.agencyId, ["users"]);
   });
 }
 
@@ -431,39 +461,56 @@ export async function reactivateUser(input: {
   agencyId: string;
   actorUserId: string;
 }) {
-  const workspaceRows = await db
-    .select({ id: workspaces.id })
-    .from(workspaces)
-    .where(eq(workspaces.agencyId, input.agencyId));
-  await db
-    .update(agencyMemberships)
-    .set({ status: "active", deactivatedAt: null, updatedAt: new Date() })
-    .where(
-      and(
-        eq(agencyMemberships.agencyId, input.agencyId),
-        eq(agencyMemberships.userId, input.userId),
-      ),
-    );
-  if (workspaceRows.length > 0) {
-    await db
-      .update(workspaceMemberships)
-      .set({ status: "active", deactivatedAt: null })
+  await db.transaction(async (tx) => {
+    const [member] = await tx
+      .select({ status: agencyMemberships.status })
+      .from(agencyMemberships)
       .where(
         and(
-          eq(workspaceMemberships.userId, input.userId),
-          inArray(
-            workspaceMemberships.workspaceId,
-            workspaceRows.map((row) => row.id),
-          ),
+          eq(agencyMemberships.agencyId, input.agencyId),
+          eq(agencyMemberships.userId, input.userId),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!member) throw new Error("Agency member not found");
+    if (member.status !== "active") {
+      await reserveCapacity(tx, input.agencyId, [{ resource: "users", increase: 1 }]);
+    }
+    const workspaceRows = await tx
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(eq(workspaces.agencyId, input.agencyId));
+    await tx
+      .update(agencyMemberships)
+      .set({ status: "active", deactivatedAt: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(agencyMemberships.agencyId, input.agencyId),
+          eq(agencyMemberships.userId, input.userId),
         ),
       );
-  }
-  await db.insert(securityAuditEvents).values({
-    actorId: input.actorUserId,
-    action: "member_reactivate",
-    targetType: "user",
-    targetId: input.userId,
-    outcome: "success",
+    if (workspaceRows.length > 0) {
+      await tx
+        .update(workspaceMemberships)
+        .set({ status: "active", deactivatedAt: null })
+        .where(
+          and(
+            eq(workspaceMemberships.userId, input.userId),
+            inArray(
+              workspaceMemberships.workspaceId,
+              workspaceRows.map((row) => row.id),
+            ),
+          ),
+        );
+    }
+    await tx.insert(securityAuditEvents).values({
+      actorId: input.actorUserId,
+      action: "member_reactivate",
+      targetType: "user",
+      targetId: input.userId,
+      outcome: "success",
+    });
   });
 }
 
