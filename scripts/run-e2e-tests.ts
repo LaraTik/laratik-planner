@@ -18,6 +18,8 @@ const testArgs = requestedTests.some((arg) => arg.startsWith("--workers"))
   : [...requestedTests, "--workers=1"];
 const port = process.env.PORT ?? "3011";
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
+const testOnlyAuthSecret = "laratik-e2e-auth-secret-not-for-production-2026";
+const testOnlyAgencyCookieSecret = "laratik-e2e-agency-cookie-secret-not-for-production-2026";
 const env: NodeJS.ProcessEnv = {
   ...process.env,
   DATABASE_URL: databaseUrl,
@@ -26,6 +28,13 @@ const env: NodeJS.ProcessEnv = {
   AUTH_URL: baseUrl,
   NEXTAUTH_URL: baseUrl,
   AUTH_TRUST_HOST: "true",
+  // The runner has already refused any database URL that does not
+  // contain test/ci. Supplying deterministic test-only secrets here
+  // makes the isolated command reproducible without relying on a
+  // developer's untracked .env file; production never executes this
+  // script or inherits these values.
+  AUTH_SECRET: process.env.AUTH_SECRET ?? testOnlyAuthSecret,
+  AGENCY_COOKIE_SECRET: process.env.AGENCY_COOKIE_SECRET ?? testOnlyAgencyCookieSecret,
 };
 
 for (const [command, args] of [
