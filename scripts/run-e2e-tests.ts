@@ -17,11 +17,15 @@ const testArgs = requestedTests.some((arg) => arg.startsWith("--workers"))
   ? requestedTests
   : [...requestedTests, "--workers=1"];
 const port = process.env.PORT ?? "3011";
+const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
 const env: NodeJS.ProcessEnv = {
   ...process.env,
   DATABASE_URL: databaseUrl,
   PORT: port,
-  PLAYWRIGHT_BASE_URL: process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`,
+  PLAYWRIGHT_BASE_URL: baseUrl,
+  AUTH_URL: baseUrl,
+  NEXTAUTH_URL: baseUrl,
+  AUTH_TRUST_HOST: "true",
 };
 
 for (const [command, args] of [

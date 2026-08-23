@@ -14,7 +14,11 @@ import {
   workspaces,
 } from "@/lib/db/schema";
 import { and, eq, sql } from "drizzle-orm";
-import { firstAgencyForBootstrap } from "@/lib/auth/policy";
+import {
+  AGENCY_CONTEXT_COOKIE_NAME,
+  AGENCY_CONTEXT_DEFAULT_MAX_AGE_SECONDS,
+  encodeAgencyContext,
+} from "@/lib/auth/agency-context";
 import { serverEnv } from "@/lib/validation/env";
 
 /**
@@ -178,16 +182,19 @@ async function seedInternal(f: {
     userId = created!.id;
   }
 
-  // ─── Agency (legacy: pick the most-recent one, or create) ───────────────
-  // After M1.7 the agency table is multi-row. The dev seed is the
-  // bootstrap path for local development; we reuse any existing
-  // agency (the one the dev already created) instead of always
-  // inserting a new one. This keeps the helper idempotent and avoids
-  // piling up duplicate "Test Agency" rows in the dev DB.
+  // ─── Agency (idempotent by slug) ───────────────────────────────────────
+  // Multi-agency browser tests need two isolated tenants to coexist.
+  // The slug is the deterministic fixture identity, so repeat calls
+  // reuse the same agency while a different slug creates a different
+  // tenant. Never fall back to an unrelated "first" agency here.
   let agencyId: string;
-  const existingAgencyId = await firstAgencyForBootstrap();
-  if (existingAgencyId) {
-    agencyId = existingAgencyId;
+  const [existingAgency] = await db
+    .select({ id: agencies.id })
+    .from(agencies)
+    .where(eq(agencies.slug, f.agencySlug))
+    .limit(1);
+  if (existingAgency) {
+    agencyId = existingAgency.id;
   } else {
     const [created] = await db
       .insert(agencies)
@@ -386,7 +393,7 @@ async function seedInternal(f: {
     }
   }
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     ok: true,
     userId,
     agencyId,
@@ -397,6 +404,16 @@ async function seedInternal(f: {
     platformAdmin: f.platformAdmin,
     fixtures: f,
   });
+  response.cookies.set({
+    name: AGENCY_CONTEXT_COOKIE_NAME,
+    value: encodeAgencyContext({ agencyId, userId }),
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    path: "/",
+    maxAge: AGENCY_CONTEXT_DEFAULT_MAX_AGE_SECONDS,
+  });
+  return response;
 }
 
 export async function GET() {
