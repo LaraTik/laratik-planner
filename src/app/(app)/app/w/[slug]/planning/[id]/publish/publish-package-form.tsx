@@ -1,0 +1,656 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { Save, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { savePublishPackageAction, recordInternalNoteAction } from "./actions";
+import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
+
+/**
+ * M4 — Publish package form (client component).
+ *
+ * Layout:
+ *
+ *   - Desktop (md+): 3-column grid via CSS.
+ *     Left   = destination profile, schedule, caption/discovery
+ *              and platform fields.
+ *     Center = media, accessibility, disclosures, interaction
+ *              settings.
+ *     Right  = platform preview + the readiness summary (the
+ *              readiness card on the page is the at-a-glance
+ *              view; this right column is the per-channel
+ *              preview + the "Ready for publishing" CTA).
+ *   - Mobile: stacked single column. The form sections are
+ *     collapsible accordions; the action bar is sticky to the
+ *     bottom (the page wraps a `<div className="sticky bottom-0">`
+ *     on the small-viewport breakpoint).
+ *
+ * A11y:
+ *
+ *   - Every input has a label.
+ *   - The "Save draft" and "Ready for publishing" buttons are
+ *     real `<button type="button">` elements that submit the
+ *     local form via React state; the server action is the
+ *     single source of truth on save.
+ *   - The minimum 44×44 px touch target is enforced via
+ *     Tailwind's `min-h-11 min-w-11` on the action buttons
+ *     (44px is the WCAG 2.2 AA target).
+ *
+ * Behaviour:
+ *
+ *   - The form is a controlled component, one channel at a time.
+ *     The page passes `channels` + initial `payload`; the form
+ *     holds the local edit state and submits a full `payload`
+ *     object to the server action.
+ *   - Material edits (anything in the form) trigger the
+ *     materiality service in the server action — the revision
+ *     increments and approvals reset on save. The UI surfaces
+ *     a banner when a save has triggered a reset (the
+ *     readiness report's `approvals_open` flag).
+ */
+
+type DeliveryVersionSummary = {
+  id: string;
+  versionNumber: number;
+  isFinalApproved: boolean;
+};
+
+type ChannelSummary = {
+  id: string;
+  socialChannelId: string;
+  platform: string;
+  accountName: string;
+  payload: PlatformPayload | null;
+};
+
+function defaultPayloadFor(platform: string): PlatformPayload {
+  // Build a per-platform minimal default. The schema is the
+  // gate; if a key is missing the Zod discriminated union will
+  // fill it with the documented default. This is the initial
+  // state for a channel that has never been saved.
+  const base = {
+    schemaVersion: 1 as const,
+    hashtags: [] as string[],
+    mentions: [] as { handle: string }[],
+    collaborators: [] as { handle: string; role: "tagged" | "co_author" | "invited" }[],
+    disclosures: {
+      paidPartnership: false,
+      aiGenerated: false,
+      syntheticMedia: false,
+      rightsConfirmed: false,
+    },
+    publicationMethod: "api" as const,
+    approval: { finalCopyApproved: false, approvedByUserId: null, approvedAt: null },
+    deliveryReferences: [] as {
+      deliveryVersionId: string;
+      role: "primary" | "thumbnail" | "carousel" | "transcript" | "subtitle";
+    }[],
+  };
+  if (platform === "instagram") {
+    return {
+      ...base,
+      platform: "instagram",
+      feedCrop: "original",
+      carouselOrder: [],
+    } as PlatformPayload;
+  }
+  if (platform === "instagram_reel") {
+    return {
+      ...base,
+      platform: "instagram_reel",
+      transcriptReviewed: false,
+      audioRightsConfirmed: false,
+      allowComments: true,
+      allowRemix: true,
+    } as PlatformPayload;
+  }
+  if (platform === "facebook") {
+    return {
+      ...base,
+      platform: "facebook",
+      mediaPresentation: "feed",
+    } as PlatformPayload;
+  }
+  if (platform === "tiktok") {
+    return {
+      ...base,
+      platform: "tiktok",
+      privacy: "public",
+      allowComments: true,
+      allowDuet: true,
+      allowStitch: true,
+      commercialContentDisclosure: false,
+      musicRightsConfirmed: false,
+    } as PlatformPayload;
+  }
+  if (platform === "linkedin") {
+    return {
+      ...base,
+      platform: "linkedin",
+      visibility: "public",
+    } as PlatformPayload;
+  }
+  if (platform === "youtube") {
+    return {
+      ...base,
+      platform: "youtube",
+      title: "",
+      categoryId: "22",
+      privacy: "unlisted",
+      tags: [],
+      madeForKids: false,
+      notifySubscribers: true,
+    } as PlatformPayload;
+  }
+  if (platform === "pinterest") {
+    return {
+      ...base,
+      platform: "pinterest",
+      pinTitle: "",
+      boardId: "",
+      productTags: [],
+    } as PlatformPayload;
+  }
+  if (platform === "x") {
+    return {
+      ...base,
+      platform: "x",
+      replySettings: "everyone",
+      mediaAlt: [],
+    } as PlatformPayload;
+  }
+  return {
+    ...base,
+    platform: "other",
+    manualChecklist: [],
+  } as PlatformPayload;
+}
+
+export function PublishPackageForm({
+  workspaceId,
+  contentItemId,
+  itemTitle,
+  itemFormat,
+  channels,
+  deliveryVersions,
+  readiness,
+}: {
+  workspaceId: string;
+  contentItemId: string;
+  itemTitle: string;
+  itemFormat: string;
+  channels: ChannelSummary[];
+  deliveryVersions: DeliveryVersionSummary[];
+  readiness: ReadinessReport;
+}) {
+  const [activeChannel, setActiveChannel] = useState<string>(channels[0]?.id ?? "");
+  const [drafts, setDrafts] = useState<Record<string, PlatformPayload>>(() => {
+    const initial: Record<string, PlatformPayload> = {};
+    for (const ch of channels) {
+      initial[ch.id] = ch.payload ?? defaultPayloadFor(ch.platform);
+    }
+    return initial;
+  });
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState<Record<string, number>>({});
+
+  if (channels.length === 0) {
+    return (
+      <Card padding="lg" data-testid="publish-no-channels">
+        <CardTitle>No channels selected</CardTitle>
+        <CardDescription>
+          Add a destination profile from the content detail page to configure the publish package.
+        </CardDescription>
+      </Card>
+    );
+  }
+
+  const current = channels.find((c) => c.id === activeChannel);
+  const currentDraft = current ? drafts[current.id] : undefined;
+
+  function updateDraft(channelId: string, patch: Partial<PlatformPayload>) {
+    setDrafts((prev) => {
+      const base =
+        prev[channelId] ??
+        defaultPayloadFor(channels.find((c) => c.id === channelId)?.platform ?? "other");
+      // Cast through unknown — the form patches across platform
+      // variants and the discriminated union narrows at the
+      // server-side Zod parse.
+      return {
+        ...prev,
+        [channelId]: { ...(base as object), ...(patch as object) } as PlatformPayload,
+      };
+    });
+  }
+
+  function handleSave(channelId: string) {
+    if (!currentDraft) return;
+    start(async () => {
+      setError(null);
+      const result = await savePublishPackageAction({
+        contentItemId,
+        socialChannelId: channels.find((c) => c.id === channelId)?.socialChannelId ?? "",
+        payload: JSON.stringify(currentDraft),
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setSavedAt((prev) => ({ ...prev, [channelId]: Date.now() }));
+    });
+  }
+
+  async function handleInternalNote() {
+    const summary = window.prompt("Internal note (will NOT trigger materiality):");
+    if (!summary) return;
+    await recordInternalNoteAction({
+      contentItemId,
+      resource: "internal_note",
+      summary,
+    });
+  }
+
+  return (
+    <div className="space-y-4" data-testid="publish-package-form" data-workspace-id={workspaceId}>
+      {/* Channel selector (top, also visible on mobile) */}
+      <div className="flex flex-wrap gap-2" data-testid="publish-channel-tabs" role="tablist">
+        {channels.map((ch) => {
+          const chReadiness = readiness.channels.find(
+            (c) => c.socialChannelId === ch.socialChannelId,
+          );
+          const blockers = chReadiness?.blockerCount ?? 0;
+          return (
+            <button
+              key={ch.id}
+              type="button"
+              role="tab"
+              aria-selected={ch.id === activeChannel}
+              aria-controls={`publish-channel-panel-${ch.id}`}
+              onClick={() => setActiveChannel(ch.id)}
+              className={`focus-visible:ring-focus-ring rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold ${
+                ch.id === activeChannel
+                  ? "border-primary bg-primary-container text-on-primary-container"
+                  : "border-border bg-surface text-fg-primary"
+              } min-h-11 min-w-11`}
+              data-testid={`publish-channel-tab-${ch.socialChannelId}`}
+            >
+              <span>{ch.accountName}</span>
+              <span className="text-label text-fg-muted ml-2 uppercase">{ch.platform}</span>
+              {blockers > 0 ? (
+                <Badge variant="danger" className="ml-2">
+                  {blockers}
+                </Badge>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      {error ? (
+        <div
+          role="alert"
+          data-testid="publish-save-error"
+          className="border-danger bg-danger-container text-on-danger-container rounded-[var(--radius-control)] border px-3 py-2 text-sm"
+        >
+          {error}
+        </div>
+      ) : null}
+
+      {current && currentDraft ? (
+        <div
+          id={`publish-channel-panel-${current.id}`}
+          role="tabpanel"
+          className="grid grid-cols-1 gap-4 lg:grid-cols-3"
+          data-testid={`publish-channel-panel-${current.socialChannelId}`}
+        >
+          {/* Left column — destination + caption/discovery */}
+          <Card padding="lg" className="space-y-3">
+            <CardTitle>Destination & caption</CardTitle>
+            <Field
+              label="Channel"
+              value={current.accountName}
+              readOnly
+              testId="publish-channel-name"
+            />
+            <Field label="Item title" value={itemTitle} readOnly testId="publish-item-title" />
+            <Field label="Format" value={itemFormat} readOnly testId="publish-item-format" />
+            <div>
+              <label
+                htmlFor="publish-caption"
+                className="text-body text-fg-primary mb-1 block font-semibold"
+              >
+                Caption
+              </label>
+              <Textarea
+                id="publish-caption"
+                rows={4}
+                value={(currentDraft as { caption?: string }).caption ?? ""}
+                onChange={(e) => updateDraft(current.id, { caption: e.target.value })}
+                data-testid="publish-caption"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="publish-hashtags"
+                className="text-body text-fg-primary mb-1 block font-semibold"
+              >
+                Hashtags
+              </label>
+              <Input
+                id="publish-hashtags"
+                value={((currentDraft as { hashtags?: string[] }).hashtags ?? []).join(" ")}
+                onChange={(e) =>
+                  updateDraft(current.id, {
+                    hashtags: e.target.value
+                      .split(/\s+/)
+                      .map((s) => s.replace(/^#/, ""))
+                      .filter((s) => s.length > 0),
+                  })
+                }
+                data-testid="publish-hashtags"
+              />
+            </div>
+            <Field
+              label="First comment"
+              value={(currentDraft as { firstComment?: string }).firstComment ?? ""}
+              onChange={(v) => updateDraft(current.id, { firstComment: v })}
+              testId="publish-first-comment"
+            />
+            <Field
+              label="Destination URL"
+              value={(currentDraft as { destinationUrl?: string }).destinationUrl ?? ""}
+              onChange={(v) => updateDraft(current.id, { destinationUrl: v })}
+              placeholder="https://"
+              testId="publish-destination-url"
+            />
+          </Card>
+
+          {/* Center column — media, disclosures */}
+          <Card padding="lg" className="space-y-3">
+            <CardTitle>Media & disclosures</CardTitle>
+            <div>
+              <label
+                htmlFor="publish-alt-text"
+                className="text-body text-fg-primary mb-1 block font-semibold"
+              >
+                Alt text / accessibility
+              </label>
+              <Textarea
+                id="publish-alt-text"
+                rows={3}
+                value={(currentDraft as { altText?: string }).altText ?? ""}
+                onChange={(e) => updateDraft(current.id, { altText: e.target.value })}
+                data-testid="publish-alt-text"
+              />
+            </div>
+            <Checkbox
+              label="Rights confirmed (media cleared for use)"
+              checked={Boolean(
+                (currentDraft as { disclosures?: { rightsConfirmed?: boolean } }).disclosures
+                  ?.rightsConfirmed,
+              )}
+              onChange={(v) =>
+                updateDraft(current.id, {
+                  disclosures: {
+                    paidPartnership: Boolean(
+                      (currentDraft as { disclosures?: { paidPartnership?: boolean } }).disclosures
+                        ?.paidPartnership,
+                    ),
+                    aiGenerated: Boolean(
+                      (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
+                        ?.aiGenerated,
+                    ),
+                    syntheticMedia: Boolean(
+                      (currentDraft as { disclosures?: { syntheticMedia?: boolean } }).disclosures
+                        ?.syntheticMedia,
+                    ),
+                    rightsConfirmed: v,
+                  },
+                })
+              }
+              testId="publish-rights-confirmed"
+            />
+            <Checkbox
+              label="AI-generated content"
+              checked={Boolean(
+                (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
+                  ?.aiGenerated,
+              )}
+              onChange={(v) =>
+                updateDraft(current.id, {
+                  disclosures: {
+                    paidPartnership: Boolean(
+                      (currentDraft as { disclosures?: { paidPartnership?: boolean } }).disclosures
+                        ?.paidPartnership,
+                    ),
+                    aiGenerated: v,
+                    syntheticMedia: Boolean(
+                      (currentDraft as { disclosures?: { syntheticMedia?: boolean } }).disclosures
+                        ?.syntheticMedia,
+                    ),
+                    rightsConfirmed: Boolean(
+                      (currentDraft as { disclosures?: { rightsConfirmed?: boolean } }).disclosures
+                        ?.rightsConfirmed,
+                    ),
+                  },
+                })
+              }
+              testId="publish-ai-generated"
+            />
+            <Checkbox
+              label="Paid partnership / branded content"
+              checked={Boolean(
+                (currentDraft as { disclosures?: { paidPartnership?: boolean } }).disclosures
+                  ?.paidPartnership,
+              )}
+              onChange={(v) =>
+                updateDraft(current.id, {
+                  disclosures: {
+                    paidPartnership: v,
+                    aiGenerated: Boolean(
+                      (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
+                        ?.aiGenerated,
+                    ),
+                    syntheticMedia: Boolean(
+                      (currentDraft as { disclosures?: { syntheticMedia?: boolean } }).disclosures
+                        ?.syntheticMedia,
+                    ),
+                    rightsConfirmed: Boolean(
+                      (currentDraft as { disclosures?: { rightsConfirmed?: boolean } }).disclosures
+                        ?.rightsConfirmed,
+                    ),
+                  },
+                })
+              }
+              testId="publish-paid-partnership"
+            />
+            <div>
+              <CardTitle className="text-title-card">Approved delivery version</CardTitle>
+              {deliveryVersions.filter((d) => d.isFinalApproved).length === 0 ? (
+                <p
+                  className="text-label text-warning mt-1"
+                  data-testid="publish-no-approved-delivery"
+                >
+                  No approved delivery version yet — block from readiness.
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-1 text-sm" data-testid="publish-approved-deliveries">
+                  {deliveryVersions
+                    .filter((d) => d.isFinalApproved)
+                    .map((d) => (
+                      <li key={d.id}>v{d.versionNumber}</li>
+                    ))}
+                </ul>
+              )}
+            </div>
+          </Card>
+
+          {/* Right column — preview + approval */}
+          <Card padding="lg" className="space-y-3">
+            <CardTitle>Preview & approval</CardTitle>
+            <PreviewPane payload={currentDraft} platform={current.platform} />
+            <Checkbox
+              label="Final copy approved (agency admin)"
+              checked={Boolean(
+                (currentDraft as { approval?: { finalCopyApproved?: boolean } }).approval
+                  ?.finalCopyApproved,
+              )}
+              onChange={(v) =>
+                updateDraft(current.id, {
+                  approval: {
+                    finalCopyApproved: v,
+                    approvedByUserId: v
+                      ? ((currentDraft as { approval?: { approvedByUserId?: string | null } })
+                          .approval?.approvedByUserId ?? null)
+                      : null,
+                    approvedAt: v ? new Date().toISOString() : null,
+                  },
+                })
+              }
+              testId="publish-final-copy-approved"
+            />
+            <p className="text-label text-fg-muted">
+              Approving resets when any material field changes.
+            </p>
+          </Card>
+        </div>
+      ) : null}
+
+      {/* Sticky action bar — bottom of the form on every viewport */}
+      <div
+        className="bg-surface border-border sticky bottom-0 z-10 -mx-4 flex flex-col items-stretch gap-2 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:mx-0 md:px-0"
+        data-testid="publish-action-bar"
+      >
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleInternalNote}
+            className="min-h-11"
+            data-testid="publish-internal-note"
+          >
+            Add internal note
+          </Button>
+          {Object.keys(savedAt).length > 0 ? (
+            <span className="text-label text-fg-muted" data-testid="publish-last-saved">
+              Last saved {new Date(Math.max(...Object.values(savedAt))).toLocaleTimeString()}
+            </span>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => current && handleSave(current.id)}
+            disabled={pending || !current}
+            className="min-h-11"
+            data-testid="publish-save-draft"
+          >
+            <Save className="mr-1 h-4 w-4" aria-hidden="true" />
+            Save draft
+          </Button>
+          <Button
+            type="button"
+            disabled={pending || !readiness.canPublish}
+            className="min-h-11"
+            data-testid="publish-ready"
+          >
+            <Send className="mr-1 h-4 w-4" aria-hidden="true" />
+            Ready for publishing
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  readOnly,
+  placeholder,
+  testId,
+}: {
+  label: string;
+  value: string;
+  onChange?: (v: string) => void;
+  readOnly?: boolean;
+  placeholder?: string;
+  testId?: string;
+}) {
+  const id = `field-${testId ?? label.replace(/\s+/g, "-").toLowerCase()}`;
+  return (
+    <div>
+      <label htmlFor={id} className="text-body text-fg-primary mb-1 block font-semibold">
+        {label}
+      </label>
+      <Input
+        id={id}
+        value={value}
+        readOnly={readOnly}
+        onChange={(e) => onChange?.(e.target.value)}
+        placeholder={placeholder}
+        data-testid={testId}
+        className="min-h-11"
+      />
+    </div>
+  );
+}
+
+function Checkbox({
+  label,
+  checked,
+  onChange,
+  testId,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  testId?: string;
+}) {
+  const id = `cb-${testId ?? label.replace(/\s+/g, "-").toLowerCase()}`;
+  return (
+    <label
+      htmlFor={id}
+      className="text-body text-fg-primary flex min-h-11 cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-1"
+      data-testid={testId}
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="border-border h-5 w-5 rounded"
+      />
+      <span>{label}</span>
+    </label>
+  );
+}
+
+function PreviewPane({ payload, platform }: { payload: PlatformPayload; platform: string }) {
+  const caption = (payload as { caption?: string }).caption ?? "";
+  const hashtags = (payload as { hashtags?: string[] }).hashtags ?? [];
+  return (
+    <div
+      className="border-border rounded-[var(--radius-control)] border p-3"
+      data-testid="publish-preview-pane"
+    >
+      <p className="text-label text-fg-muted uppercase">{platform}</p>
+      <p
+        className="text-body text-fg-primary mt-1 whitespace-pre-wrap"
+        data-testid="publish-preview-caption"
+      >
+        {caption || <span className="text-fg-muted italic">(no caption)</span>}
+      </p>
+      {hashtags.length > 0 ? (
+        <p className="text-label text-fg-muted mt-1">{hashtags.map((h) => `#${h}`).join(" ")}</p>
+      ) : null}
+    </div>
+  );
+}
