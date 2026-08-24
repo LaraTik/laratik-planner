@@ -65,3 +65,4 @@ docker-compose.override.yml
 # Traefik labels — generated only, not source of truth
 acme.json
 *.bak
+node_modules/
