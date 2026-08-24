@@ -8,7 +8,9 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { serverEnv } from "@/lib/validation/env";
 import { PageHeader } from "@/components/workspace/page-header";
 import { AiSettingsForm } from "./ai-settings-form";
+import { ManagedSecretForm } from "./managed-secret-form";
 import { getAiFeatureSettings, getMonthlyUsage } from "@/lib/ai/feature-settings";
+import { getManagedSecretStatus } from "@/lib/ai/provider-secret";
 
 export const metadata = { title: "AI configuration" };
 
@@ -19,6 +21,7 @@ export const metadata = { title: "AI configuration" };
  *   - Toggle the master switch
  *   - Pick a model from the server allowlist
  *   - Toggle each of the 6 capabilities
+ *   - Set / replace / remove a managed API key
  *   - Test the connection
  *   - See the last test result + 30-day usage
  *
@@ -51,9 +54,14 @@ export default async function AgencyAiSettingsPage() {
     );
   }
 
-  const [feature, usage] = await Promise.all([getAiFeatureSettings(), getMonthlyUsage(30)]);
+  const [feature, usage, secretStatus] = await Promise.all([
+    getAiFeatureSettings(),
+    getMonthlyUsage(30),
+    getManagedSecretStatus(agencyId),
+  ]);
   const envEnabled = serverEnv.AI_FEATURE_ENABLED && !!serverEnv.MINIMAX_API_KEY;
   const envModel = serverEnv.MINIMAX_MODEL || "MiniMax-M3";
+  const envHasKey = !!serverEnv.MINIMAX_API_KEY;
 
   return (
     <div className="space-y-6" data-testid="agency-ai-settings">
@@ -77,12 +85,19 @@ export default async function AgencyAiSettingsPage() {
         }
       />
 
+      <ManagedSecretForm
+        keySource={secretStatus.keySource}
+        lastFour={secretStatus.keySource === "missing" ? null : secretStatus.lastFour}
+        enabled={secretStatus.keySource === "missing" ? true : secretStatus.enabled}
+        envHasKey={envHasKey}
+        envEnabled={envEnabled}
+      />
+
       <div className="border-border bg-surface-subtle text-body text-fg-secondary flex flex-wrap items-start gap-2 rounded-[var(--radius-control)] border p-3">
         <KeyRound className="text-fg-muted mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <p>
-          The full API key lives in the deployment environment. The UI only stores a 4-character
-          masked suffix when the key is later switched to a managed secret. We never display the
-          full key and never accept it through a normal client read.
+          The full API key is never displayed after the initial paste. The UI only stores a
+          4-character masked suffix. Rotation is done by replacing the managed secret below.
         </p>
       </div>
 
@@ -101,7 +116,7 @@ export default async function AgencyAiSettingsPage() {
         initialCapabilities={[...(feature?.enabledCapabilities ?? [])]}
         envEnabled={envEnabled}
         envModel={envModel}
-        envHasKey={!!serverEnv.MINIMAX_API_KEY}
+        envHasKey={envHasKey}
         lastTestAt={
           feature?.lastConnectionTestAt ? feature.lastConnectionTestAt.toISOString() : null
         }
