@@ -97,20 +97,20 @@ integration branch.
 
 ## Security and audit requirements
 
-| Requirement | Status |
-|---|---|
-| Central materiality service for material edits | ✅ `recordMaterialityEvent` is the single funnel; every platform-payload write goes through it. |
-| Increment appropriate revision on material edit | ✅ `content_items.revision` is `revision + 1` (atomic). |
-| Reset affected approval decisions | ✅ `approval_request.status` is set to `cancelled` with `invalidation_reason` and `invalidated_at`. |
-| Record an immutable event | ✅ `activity_event` row written inside the same transaction as the revision bump. |
-| Notify affected reviewers | ✅ In-app notification per reviewer with deep link to `/app/w/<slug>/planning/<id>/publish`. |
-| Administrative changes do NOT reset approvals | ✅ `recordNonMaterialityEvent` writes a metadata-only audit row; no revision, no reset, no notification. |
-| Never treat hashtags as globally mandatory | ✅ Hashtags are not in the required-field table for any platform. |
-| Block "Ready for publishing" while blockers remain | ✅ `canPublish` is `blockers === 0 && channels.length > 0`. The CTA is disabled. |
-| Revalidate on the server during every readiness transition | ✅ `evaluateReadiness` is called server-side on every page render. |
-| Integrate with AI `completeness_check` (advisory only) | ✅ `foldAiSuggestions` is the integration seam; suggestions are always `severity: "recommendation"`. |
-| IDOR defence on support grant IDs | ✅ Cross-workspace channel access rejected with `FORBIDDEN` (or `NOT_FOUND` for the channel row). |
-| Quick Create unchanged (4 fields) | ✅ Out of scope; `quick-create` was not touched in M4. |
+| Requirement                                                | Status                                                                                                   |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Central materiality service for material edits             | ✅ `recordMaterialityEvent` is the single funnel; every platform-payload write goes through it.          |
+| Increment appropriate revision on material edit            | ✅ `content_items.revision` is `revision + 1` (atomic).                                                  |
+| Reset affected approval decisions                          | ✅ `approval_request.status` is set to `cancelled` with `invalidation_reason` and `invalidated_at`.      |
+| Record an immutable event                                  | ✅ `activity_event` row written inside the same transaction as the revision bump.                        |
+| Notify affected reviewers                                  | ✅ In-app notification per reviewer with deep link to `/app/w/<slug>/planning/<id>/publish`.             |
+| Administrative changes do NOT reset approvals              | ✅ `recordNonMaterialityEvent` writes a metadata-only audit row; no revision, no reset, no notification. |
+| Never treat hashtags as globally mandatory                 | ✅ Hashtags are not in the required-field table for any platform.                                        |
+| Block "Ready for publishing" while blockers remain         | ✅ `canPublish` is `blockers === 0 && channels.length > 0`. The CTA is disabled.                         |
+| Revalidate on the server during every readiness transition | ✅ `evaluateReadiness` is called server-side on every page render.                                       |
+| Integrate with AI `completeness_check` (advisory only)     | ✅ `foldAiSuggestions` is the integration seam; suggestions are always `severity: "recommendation"`.     |
+| IDOR defence on support grant IDs                          | ✅ Cross-workspace channel access rejected with `FORBIDDEN` (or `NOT_FOUND` for the channel row).        |
+| Quick Create unchanged (4 fields)                          | ✅ Out of scope; `quick-create` was not touched in M4.                                                   |
 
 ## Migration, compatibility, and rollback
 
@@ -126,18 +126,18 @@ integration branch.
 
 ## Definition of done — evidence pointers
 
-| Requirement | Evidence |
-|---|---|
-| 1,382 unit tests + 103 integration tests green | `pnpm test:unit` 1,382/1,382, `TEST_DATABASE_URL=… pnpm test:integration` 103/103. |
-| `pnpm verify` clean | `pnpm format:check && pnpm lint --max-warnings=0 && pnpm typecheck && pnpm test:unit && pnpm build`. |
-| Discriminated union covers all 9 platforms | `tests/unit/payload-schemas.test.ts` 19 cases. |
-| Material edits reset approvals + increment revision | `tests/integration/publishing-m4.test.ts` "saving a payload increments content_items.revision". |
-| Administrative changes do NOT reset approvals | `tests/integration/publishing-m4.test.ts` "internal note does NOT increment revision". |
-| IDOR defence | `tests/integration/publishing-m4.test.ts` "cross-workspace channel access is rejected (IDOR defence)". |
-| Hashtags not globally mandatory | The required-field table (`REQUIRED_FIELDS`) has no `hashtags` entry for any platform. |
-| New route on the right URL | `/app/w/[slug]/planning/[id]/publish` is a real `page.tsx`; `pnpm build` shows it. |
-| Link from the existing publishing section | `publishing-section.tsx` adds a "Configure publish package" link. |
-| No M1 / M2 / M3 regression | `pnpm test:integration` 103/103 (covers all prior suites). |
+| Requirement                                         | Evidence                                                                                               |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 1,382 unit tests + 103 integration tests green      | `pnpm test:unit` 1,382/1,382, `TEST_DATABASE_URL=… pnpm test:integration` 103/103.                     |
+| `pnpm verify` clean                                 | `pnpm format:check && pnpm lint --max-warnings=0 && pnpm typecheck && pnpm test:unit && pnpm build`.   |
+| Discriminated union covers all 9 platforms          | `tests/unit/payload-schemas.test.ts` 19 cases.                                                         |
+| Material edits reset approvals + increment revision | `tests/integration/publishing-m4.test.ts` "saving a payload increments content_items.revision".        |
+| Administrative changes do NOT reset approvals       | `tests/integration/publishing-m4.test.ts` "internal note does NOT increment revision".                 |
+| IDOR defence                                        | `tests/integration/publishing-m4.test.ts` "cross-workspace channel access is rejected (IDOR defence)". |
+| Hashtags not globally mandatory                     | The required-field table (`REQUIRED_FIELDS`) has no `hashtags` entry for any platform.                 |
+| New route on the right URL                          | `/app/w/[slug]/planning/[id]/publish` is a real `page.tsx`; `pnpm build` shows it.                     |
+| Link from the existing publishing section           | `publishing-section.tsx` adds a "Configure publish package" link.                                      |
+| No M1 / M2 / M3 regression                          | `pnpm test:integration` 103/103 (covers all prior suites).                                             |
 
 ## Out of scope (deferred)
 
