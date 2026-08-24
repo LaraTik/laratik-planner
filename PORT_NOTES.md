@@ -73,6 +73,13 @@ Data impact: migrations are additive. Existing agencies receive an Enterprise-co
 
 Operational approval: no Stripe or automated billing is introduced. Plan changes, overrides, suspension, archive, and restore remain explicit operator actions with a required reason.
 
+## Auth surface deviations (2026-08-24 re-validation)
+
+| Master prompt | Prompt says | We use | Why | ADR |
+| ------------- | ----------- | ------ | --- | --- |
+| §13 lines 1396-1397 | `/setup` form collects password + password confirmation | `/setup` collects `agencyName + agencySlug + token` only; user is signed in first via Google or magic link, then sets a password later via `/app/account` or the forgot-password flow | Bootstrap relies on the NextAuth session for `auth()`. Adding password fields to the form would require a parallel "create the user" path, expanding the bootstrap surface from a single atomic transaction to a multi-step wizard. Self-registration is out of scope by design. | [ADR-0003](docs/decisions/0003-setup-form-scope.md) |
+| §22 lines 337-339 | Auth routes live under `src/app/(auth)/login`, `(auth)/forgot-password`, `(auth)/reset-password` | Auth routes live at flat paths: `/signin`, `/signin/forgot-password`, `/signin/set-password`, `/signin/verify`, `/setup`, `/accept-invitation` | Next.js route groups are a nicety, not a functional requirement. The flat paths are shorter, more discoverable in the URL bar, and the proxy/middleware already differentiates auth-required from public paths by prefix match. The `(auth)` group would add a folder with no behavioral change. | _decision filed here, no separate ADR_ |
+
 ## When to add this file's decisions to ADRs
 
 If a deviation becomes stable (e.g. we keep Mailcow long-term, or we add a second VPS), promote the relevant section to `docs/decisions/000N-*.md` and link it from `AGENTS.md`. For now, this single file is enough.
