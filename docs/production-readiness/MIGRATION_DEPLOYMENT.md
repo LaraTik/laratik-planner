@@ -17,6 +17,60 @@
 | Encrypted offsite backup + rotation | **Blocked on OPS-001** (owner-supplied)      |
 | VPS deploy to `laratik-vps`         | **Blocked on OPS-001** (VPS_SSH_* secrets)   |
 
+## 2026-08-24 incident — skipped migration 0012
+
+Production error reference `1145607673` resolved to
+`relation "support_access_grant" does not exist` during the first authenticated
+render for a platform administrator. The authentication flow itself succeeded;
+the `(app)` layout queried active support grants for its persistent banner and
+hit the missing relation.
+
+### Root cause
+
+`0012_support_access_grants` was authored on a parallel branch. Its Drizzle
+journal timestamp (`1787544999872`) was lower than the timestamps of migrations
+`0007–0011`, which were already present in the production ledger when M3 merged.
+Drizzle compares candidate timestamps to the latest applied ledger row, so it
+skipped 0012 and continued applying newer migrations. The former readiness
+probe checked only that `drizzle.__drizzle_migrations` existed and therefore
+reported a false-positive `schema: ready`.
+
+### Forward repair and compatibility
+
+Migration `0017_repair_support_access_grants.sql` uses guarded additive DDL to
+restore `support_access_request`, `support_access_grant`,
+`support_access_audit`, and `ai_daily_budget_usage`, their indexes, and the
+append-only audit trigger. It then records the original 0012 hash/timestamp in
+the Drizzle ledger. On a fresh database, 0012 already created the same objects
+and ledger row, so 0017 is idempotent.
+
+No existing tenant identifier or row is changed. The previous application
+image ignores these additive tables, so application rollback leaves them in
+place. Destructive rollback requires the verified pre-deploy backup because
+support-access audit rows are production evidence. No separate product or
+security approval is required for the additive forward fix; dropping or
+restoring schema remains approval-gated.
+
+### Prevention and evidence
+
+- `/api/health/ready` now compares every applied ledger timestamp with the
+  bundled migration journal and returns 503 for any missing or extra row.
+- `tests/unit/migration-journal-order.test.ts` allows only the documented 0012
+  inversion, requires the 0017 repair, and enforces strict monotonicity after
+  it.
+- `tests/unit/health-endpoints.test.ts` proves a present-but-incomplete ledger
+  returns 503.
+- `.dockerignore` excludes nested `.DS_Store` files; the CI smoke contract test
+  prevents local macOS metadata from entering the Drizzle migration context.
+- `pnpm migration-drill` now deletes the four M3 tables plus the 0012/0017
+  ledger rows while retaining later migrations, reruns the real Drizzle
+  migrator, and proves all tables plus exactly one 0012 ledger row return.
+
+Local result on disposable Postgres 16 (2026-08-24): 5/5 drills PASS; from-zero
+ledger 18/18; skipped-migration repair restored all four tables and the 0012
+ledger row; backup/restore preserved 18/18 ledger rows; failed migration left
+the schema unchanged.
+
 ## Baseline findings (pre-M3a) — all resolved
 
 The pre-M3a baseline listed four release blockers. Each is now closed:

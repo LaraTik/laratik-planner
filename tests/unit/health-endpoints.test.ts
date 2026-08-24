@@ -17,6 +17,7 @@
  * and "down" branches without a real Postgres.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import migrationJournal from "@/lib/db/migrations/meta/_journal.json";
 
 // Mock the DB module so /api/health/ready can be tested without a
 // real database. We control the return values per test.
@@ -57,10 +58,16 @@ describe("GET /api/health/ready", () => {
 
   it("returns 200 when db is up and schema is ready", async () => {
     // First call: checkDatabase (select 1) — success
-    // Second call: checkSchema (to_regclass) — returns a row
-    mockExecute
-      .mockResolvedValueOnce({ rows: [{ "?column?": 1 }] })
-      .mockResolvedValueOnce({ rows: [{ migration_table: "drizzle.__drizzle_migrations" }] });
+    // Second call: checkSchema — ledger exists and every migration is recorded.
+    const appliedMigrationTimestamps = migrationJournal.entries.map((entry) => String(entry.when));
+    mockExecute.mockResolvedValueOnce({ rows: [{ "?column?": 1 }] }).mockResolvedValueOnce({
+      rows: [
+        {
+          migration_table: "drizzle.__drizzle_migrations",
+          applied_migration_timestamps: appliedMigrationTimestamps,
+        },
+      ],
+    });
 
     const { GET } = await import("@/app/api/health/ready/route");
     const res = await GET();
@@ -96,6 +103,28 @@ describe("GET /api/health/ready", () => {
     expect(body.db).toBe("up");
     expect(body.schema).toBe("missing");
   });
+
+  it("returns 503 when the ledger exists but one migration was skipped", async () => {
+    const appliedMigrationTimestamps = migrationJournal.entries
+      .filter((entry) => entry.tag !== "0012_support_access_grants")
+      .map((entry) => String(entry.when));
+    mockExecute.mockResolvedValueOnce({ rows: [{ "?column?": 1 }] }).mockResolvedValueOnce({
+      rows: [
+        {
+          migration_table: "drizzle.__drizzle_migrations",
+          applied_migration_timestamps: appliedMigrationTimestamps,
+        },
+      ],
+    });
+
+    const { GET } = await import("@/app/api/health/ready/route");
+    const res = await GET();
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.db).toBe("up");
+    expect(body.schema).toBe("missing");
+  });
 });
 
 describe("GET /api/health (backwards-compat alias)", () => {
@@ -104,9 +133,15 @@ describe("GET /api/health (backwards-compat alias)", () => {
   });
 
   it("re-exports the ready handler (returns 200 when both checks pass)", async () => {
-    mockExecute
-      .mockResolvedValueOnce({ rows: [{ "?column?": 1 }] })
-      .mockResolvedValueOnce({ rows: [{ migration_table: "drizzle.__drizzle_migrations" }] });
+    const appliedMigrationTimestamps = migrationJournal.entries.map((entry) => String(entry.when));
+    mockExecute.mockResolvedValueOnce({ rows: [{ "?column?": 1 }] }).mockResolvedValueOnce({
+      rows: [
+        {
+          migration_table: "drizzle.__drizzle_migrations",
+          applied_migration_timestamps: appliedMigrationTimestamps,
+        },
+      ],
+    });
 
     const { GET } = await import("@/app/api/health/route");
     const res = await GET();

@@ -1,11 +1,29 @@
 # Migration Drill — Results
 
-> 4 of 5 acceptance criteria exercised by `pnpm migration-drill`.
-> The rollback drill (the trickiest of the five) is intentionally
-> deferred and runs separately.
+> The latest `pnpm migration-drill` exercises five operational migration
+> checks. The destructive downgrade/rollback drill remains intentionally
+> separate because the project uses forward-only corrective migrations.
 >
-> Captured: 2026-08-19 on a local Postgres 16 (`127.0.0.1:5432`).
-> Branch: `feat/migration-drill` (base `ba2d4fa`).
+> Latest capture: 2026-08-24 on local Postgres 16
+> (`127.0.0.1:5432`, database `planner_test`).
+
+## 2026-08-24 skipped-0012 recovery result
+
+The drill now reproduces production incident reference `1145607673`: it
+removes the four M3 tables and the 0012/0017 ledger rows while retaining the
+later applied migrations, then invokes the real Drizzle migrator.
+
+```text
+1. from-zero                PASS  56 public tables; Drizzle ledger 18/18
+2. skipped migration repair PASS  all four M3 tables restored; 0012 ledger rows=1
+3. in-place upgrade         PASS  marker add/drop cycle
+4. backup + restore         PASS  57 tables restored; Drizzle ledger 18 before / 18 after
+5. failed-migration abort   PASS  57 tables before / after; missing=0; added=0
+total: 2.5s
+```
+
+This is the regression proof for the forward repair migration. The historical
+2026-08-19 baseline remains below for provenance.
 
 ## How to reproduce
 
@@ -21,7 +39,7 @@ The hardcoded default target is `planner_test` (per the master spec).
 The script prints a results table to stdout and exits non-zero on any
 failure (including an unreachable database).
 
-## Result table
+## Historical 2026-08-19 result table
 
 ```
 [drill] target: postgresql://planner:***@127.0.0.1:5432/planner_test (db=planner_test)

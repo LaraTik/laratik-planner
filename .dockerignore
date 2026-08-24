@@ -60,7 +60,7 @@ scripts/
 worktrees/
 
 # editor / OS
-.DS_Store
+**/.DS_Store
 .idea/
 .vscode/
 

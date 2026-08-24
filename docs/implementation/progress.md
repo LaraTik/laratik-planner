@@ -11,6 +11,38 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-08-24 — Production login render incident repair
+
+Status: **Tested locally; production deployment evidence pending CI/deploy completion.**
+
+Reference `1145607673` mapped to a production Postgres error: relation
+`support_access_grant` did not exist. Login and session creation were
+successful; the authenticated app layout failed when the platform-admin
+support-session banner queried the missing table.
+
+The root cause was migration ordering across parallel branches. Journal entry
+`0012_support_access_grants` carried a timestamp older than already-deployed
+entries `0007–0011`, so Drizzle skipped it during an incremental migration and
+continued with later entries. The repair is forward-only:
+
+- `0017_repair_support_access_grants.sql` idempotently restores the four M3
+  tables, indexes, append-only audit trigger, comments, and the original 0012
+  ledger row.
+- Readiness now requires the database ledger timestamps to exactly match the
+  bundled migration journal; a partial schema cannot pass the deploy gate.
+- A journal-order unit guard documents the single historical inversion and
+  requires the repair plus strictly monotonic timestamps afterward.
+- The Docker context now excludes nested `.DS_Store` files so local macOS
+  metadata cannot be parsed as Drizzle migration JSON during image builds.
+- The migration drill now reproduces the production ledger/table gap before
+  proving the real migrator repairs it.
+
+Evidence on disposable Postgres 16: focused unit tests 9/9 PASS;
+`pnpm migration-drill` 5/5 PASS with 18/18 ledger rows after repair. Existing
+tenant data is unaffected because the migration is additive. Application
+rollback can retain the tables; destructive schema rollback requires the
+verified pre-deploy backup.
+
 ## 2026-08-24 — Social profile analytics (M4) merged
 
 Status: **Tested**. Independently Verified is not yet claimed; M4 rows stop at `Tested` pending independent review.

@@ -1,7 +1,7 @@
 /**
- * Migration drill — exercises 4 of 5 acceptance criteria for the
- * production migration pipeline. Skips the rollback drill (the
- * trickiest) — that runs separately.
+ * Migration drill — exercises the production migration pipeline,
+ * including recovery from the historical out-of-order 0012 journal
+ * entry. The destructive schema rollback drill remains separate.
  *
  * Usage:  pnpm migration-drill            (defaults to planner_test)
  *         TEST_DATABASE_URL=... pnpm migration-drill
@@ -15,12 +15,15 @@
  * Drills:
  *   1. from-zero         — drop + recreate DB, run the real Drizzle
  *                          migrator, and assert its ledger + schema
- *   2. in-place upgrade  — add a drill migration in scripts/.drill-tmp/,
+ *   2. skipped repair    — reproduce production's skipped 0012 ledger
+ *                          state, rerun the real migrator, and assert
+ *                          all M3 tables + ledger rows are restored
+ *   3. in-place upgrade  — add a drill migration in scripts/.drill-tmp/,
  *                          apply via custom runner, assert column added;
  *                          then a 5th (drop) migration, assert column gone
- *   3. backup + restore  — pg_dump, drop+recreate, psql restore, assert
+ *   4. backup + restore  — pg_dump, drop+recreate, psql restore, assert
  *                          application tables and Drizzle ledger survive
- *   4. failed-migration  — broken 5th migration, assert runner throws and
+ *   5. failed-migration  — broken 5th migration, assert runner throws and
  *                          that all original tables are still present
  *                          (no partial apply)
  *
@@ -319,6 +322,60 @@ async function drillFromZero(): Promise<void> {
   }
 }
 
+async function drillSkippedMigrationRepair(): Promise<void> {
+  const start = Date.now();
+  const detail: string[] = [];
+  const skippedTimestamp = 1787544999872;
+  const repairTimestamp = 1788500000000;
+  const required = [
+    "support_access_request",
+    "support_access_grant",
+    "support_access_audit",
+    "ai_daily_budget_usage",
+  ];
+
+  try {
+    await withClient(TEST_DB_URL, async (c) => {
+      await c.query('DROP TABLE IF EXISTS "support_access_audit" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "support_access_grant" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "support_access_request" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "ai_daily_budget_usage" CASCADE');
+      await c.query(
+        "DELETE FROM drizzle.__drizzle_migrations WHERE created_at = ANY($1::bigint[])",
+        [[skippedTimestamp, repairTimestamp]],
+      );
+    });
+    detail.push("reproduced missing 0012 tables + ledger row");
+
+    runOfficialMigrations();
+    detail.push("real Drizzle migrator completed");
+
+    await withClient(TEST_DB_URL, async (c) => {
+      const tables = await listTables(c);
+      const missing = required.filter((table) => !tables.includes(table));
+      const ledgerResult = await c.query<{ count: string }>(
+        "SELECT count(*)::text AS count FROM drizzle.__drizzle_migrations WHERE created_at = $1",
+        [skippedTimestamp],
+      );
+      const repairedLedgerRows = Number(ledgerResult.rows[0]?.count ?? "0");
+      const ok = missing.length === 0 && repairedLedgerRows === 1;
+      detail.push(missing.length ? `missing: ${missing.join(", ")}` : "all M3 tables restored");
+      detail.push(`0012 ledger rows=${repairedLedgerRows}`);
+      record(
+        "2. skipped migration repair",
+        ok,
+        `${detail.join("; ")} (${fmtMs(Date.now() - start)})`,
+      );
+    });
+  } catch (err) {
+    record(
+      "2. skipped migration repair",
+      false,
+      `${detail.join("; ")} | ERROR: ${(err as Error).message}`,
+    );
+  }
+}
+
 async function drillInPlace(): Promise<void> {
   const start = Date.now();
   const detail: string[] = [];
@@ -352,10 +409,10 @@ async function drillInPlace(): Promise<void> {
       detail.push(`after-drop: column=${afterDrop ? "EXISTS" : "absent"}`);
 
       const ok = before === false && afterAdd === true && afterDrop === false;
-      record("2. in-place upgrade", ok, `${detail.join("; ")} (${fmtMs(Date.now() - start)})`);
+      record("3. in-place upgrade", ok, `${detail.join("; ")} (${fmtMs(Date.now() - start)})`);
     });
   } catch (err) {
-    record("2. in-place upgrade", false, `${detail.join("; ")} | ERROR: ${(err as Error).message}`);
+    record("3. in-place upgrade", false, `${detail.join("; ")} | ERROR: ${(err as Error).message}`);
   }
 }
 
@@ -387,7 +444,7 @@ async function drillBackupRestore(): Promise<void> {
     );
     if (dump.status !== 0) {
       record(
-        "3. backup + restore",
+        "4. backup + restore",
         false,
         `pg_dump failed (exit ${dump.status}): ${shellStderr(dump).slice(0, 300)}`,
       );
@@ -411,7 +468,7 @@ async function drillBackupRestore(): Promise<void> {
     const restore = runShell("psql", ["-v", "ON_ERROR_STOP=1", "-f", dumpFile], { env: pgEnv });
     if (restore.status !== 0) {
       const stderr = shellStderr(restore).slice(-400);
-      record("3. backup + restore", false, `psql restore failed: ${stderr}`);
+      record("4. backup + restore", false, `psql restore failed: ${stderr}`);
       return;
     }
     detail.push(`psql restore OK`);
@@ -425,10 +482,10 @@ async function drillBackupRestore(): Promise<void> {
       detail.push(`rate_limit_event=${has ? "present" : "MISSING"}`);
       detail.push(`Drizzle ledger after=${ledgerAfter}`);
       const ok = has && ledgerBefore > 0 && ledgerAfter === ledgerBefore;
-      record("3. backup + restore", ok, `${detail.join("; ")} (${fmtMs(Date.now() - start)})`);
+      record("4. backup + restore", ok, `${detail.join("; ")} (${fmtMs(Date.now() - start)})`);
     });
   } catch (err) {
-    record("3. backup + restore", false, `${detail.join("; ")} | ERROR: ${(err as Error).message}`);
+    record("4. backup + restore", false, `${detail.join("; ")} | ERROR: ${(err as Error).message}`);
   } finally {
     // Best-effort cleanup of dump file when all drills pass
     if (dumpFile && existsSync(dumpFile) && results.every((r) => r.result === "PASS")) {
@@ -469,7 +526,7 @@ async function drillFailedMigration(): Promise<void> {
 
     if (!(caught instanceof Error)) {
       record(
-        "4. failed-migration abort",
+        "5. failed-migration abort",
         false,
         `${detail.join("; ")} | ERROR: expected throw, got none`,
       );
@@ -488,7 +545,7 @@ async function drillFailedMigration(): Promise<void> {
     if (missing.length) detail.push(`MISSING: ${missing.join(", ")}`);
     if (added.length) detail.push(`UNEXPECTED ADDED: ${added.join(", ")}`);
     const ok = missing.length === 0 && added.length === 0;
-    record("4. failed-migration abort", ok, `${detail.join("; ")} (${fmtMs(Date.now() - start)})`);
+    record("5. failed-migration abort", ok, `${detail.join("; ")} (${fmtMs(Date.now() - start)})`);
 
     // Mark the broken migration as "applied" so subsequent runs of the
     // drill script don't try to re-apply it (which would also fail, but
@@ -502,7 +559,7 @@ async function drillFailedMigration(): Promise<void> {
     });
   } catch (err) {
     record(
-      "4. failed-migration abort",
+      "5. failed-migration abort",
       false,
       `${detail.join("; ")} | ERROR: ${(err as Error).message}`,
     );
@@ -523,6 +580,7 @@ async function main(): Promise<void> {
   // Run the drills in order. Each is independent in spirit but the
   // failed-migration drill asserts state from the earlier drills.
   await drillFromZero();
+  await drillSkippedMigrationRepair();
   await drillInPlace();
   await drillBackupRestore();
   await drillFailedMigration();

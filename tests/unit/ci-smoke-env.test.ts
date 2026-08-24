@@ -3,6 +3,12 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("CI production-image smoke environment", () => {
+  it("excludes nested macOS metadata from the Drizzle migration context", () => {
+    const dockerIgnore = readFileSync(resolve(process.cwd(), ".dockerignore"), "utf8");
+
+    expect(dockerIgnore).toMatch(/^\*\*\/\.DS_Store$/m);
+  });
+
   it("provides the required agency-cookie secret to the production container", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/ci.yml"), "utf8");
     const buildSmokeStart = workflow.indexOf("  build-smoke:");

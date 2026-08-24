@@ -3,14 +3,15 @@ import { serverEnv } from "@/lib/validation/env";
 import { db } from "@/lib/db";
 import { sql } from "drizzle-orm";
 import { createBuildInfo } from "@/lib/build-info";
+import migrationJournal from "@/lib/db/migrations/meta/_journal.json";
 
 /**
  * GET /api/health/ready
  *
  * Readiness probe. Returns 200 only if the process is up AND the database
- * is reachable AND the migration journal table exists (i.e. the schema
- * has been applied to this database). Returns 503 otherwise with a JSON
- * body explaining which check failed.
+ * is reachable AND every migration in the bundled journal is recorded
+ * in the database ledger. Returns 503 otherwise with a JSON body
+ * explaining which check failed.
  *
  * Used by:
  *   - Traefik upstream probe (loadbalancer.server.url points here in
@@ -49,10 +50,33 @@ async function checkSchema(): Promise<"ready" | "missing" | "disabled"> {
   if (!serverEnv.DATABASE_URL) return "disabled";
   try {
     const result = await db.execute(
-      sql`SELECT to_regclass('drizzle.__drizzle_migrations')::text AS migration_table`,
+      sql`
+        SELECT
+          to_regclass('drizzle.__drizzle_migrations')::text AS migration_table,
+          COALESCE(
+            array_agg(created_at::text ORDER BY created_at),
+            ARRAY[]::text[]
+          ) AS applied_migration_timestamps
+        FROM drizzle.__drizzle_migrations
+      `,
     );
-    const rows = (result as unknown as { rows?: Array<{ migration_table: string | null }> }).rows;
-    return rows?.[0]?.migration_table ? "ready" : "missing";
+    const rows = (
+      result as unknown as {
+        rows?: Array<{
+          migration_table: string | null;
+          applied_migration_timestamps: string[];
+        }>;
+      }
+    ).rows;
+    const row = rows?.[0];
+    if (!row?.migration_table) return "missing";
+
+    const expected = migrationJournal.entries.map((entry) => String(entry.when)).sort();
+    const applied = [...row.applied_migration_timestamps].sort();
+    const complete =
+      applied.length === expected.length &&
+      applied.every((timestamp, index) => timestamp === expected[index]);
+    return complete ? "ready" : "missing";
   } catch {
     return "missing";
   }
