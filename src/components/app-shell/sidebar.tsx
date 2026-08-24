@@ -19,6 +19,7 @@ import {
   Gauge,
   Share2,
   Shield,
+  ShieldCheck,
   Users,
   Lock,
 } from "lucide-react";
@@ -284,6 +285,13 @@ export function Sidebar({
                   active={isActivePath("/app/platform/security", pathname)}
                 >
                   Security & support
+                </SidebarLink>
+                <SidebarLink
+                  href="/app/platform/admins"
+                  icon={<ShieldCheck className="h-4 w-4" />}
+                  active={isActivePath("/app/platform/admins", pathname)}
+                >
+                  Platform admins
                 </SidebarLink>
               </>
             ) : null}
