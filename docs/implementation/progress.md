@@ -13,9 +13,11 @@ Only an independent reviewer may mark a tracker item `Verified`. Implementation 
 
 ## 2026-08-24 — Social profile analytics — Meta first, TikTok second (M4)
 
-Status: **Planned**. Implemented / Tested / independently Verified are not yet claimed.
+Status: **Tested**. Independently Verified is not yet claimed (M4 rows stop at `Tested` pending independent review).
 
-M4 adds read-only provider connections and daily analytics for the channels the agency already tracks. Manual publishing is unchanged. Meta (Facebook Pages + linked Instagram professional accounts, via Facebook Login for Business) is the first provider; TikTok (via Login Kit + Display API v2) lands on the same provider-neutral foundation after Meta's seven-day production observation window. The architectural decision and full task-by-task spec live in [`../decisions/0004-social-profile-analytics.md`](../decisions/0004-social-profile-analytics.md) and [`../superpowers/plans/2026-08-24-meta-tiktok-social-analytics.md`](../superpowers/plans/2026-08-24-meta-tiktok-social-analytics.md). All M4 rows will stop at `Tested` pending independent review.
+M4 adds read-only provider connections and daily analytics for the channels the agency already tracks. Manual publishing is unchanged. Meta (Facebook Pages + linked Instagram professional accounts, via Facebook Login for Business) is the first provider; TikTok (via Login Kit + Display API v2) lands on the same provider-neutral foundation after Meta's seven-day production observation window. The architectural decision and full task-by-task spec live in [`../decisions/0004-social-profile-analytics.md`](../decisions/0004-social-profile-analytics.md) and [`../superpowers/plans/2026-08-24-meta-tiktok-social-analytics.md`](../superpowers/plans/2026-08-24-meta-tiktok-social-analytics.md).
+
+Twelve atomic commits landed on `feat/auto-20260824-3613c271` between the M3 merge and the snapshot end-of-day: ADR-0004, migration 0013 (3 new tables, 10 additive columns on `social_channel`), AES-256-GCM crypto + env validation, provider-neutral types + safe HTTP + repository, Meta and TikTok adapters, OAuth start + callback routes, account picker + finalize action, connection-status badge, social growth dashboard, bounded daily sync worker + `/api/cron/social-metrics` route, VPS script, runbook + UAT evidence contracts. Test counts: 1536 unit tests pass, 135 integration tests pass. `SOCIAL_SYNC_ENABLED=false` is the default; the rollout is staged (see `docs/operations/runbook.md` § Social analytics). All M4 rows stop at `Tested` pending independent review.
 
 ## 2026-08-21 — Stitch production completion (Tasks 1–10)
 
