@@ -92,6 +92,13 @@
       "when": 1787544999872,
       "tag": "0012_support_access_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788100000000,
+      "tag": "0013_ai_provider_secret",
+      "breakpoints": true
     }
   ]
 }

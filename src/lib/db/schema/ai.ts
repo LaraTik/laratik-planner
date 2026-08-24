@@ -1,10 +1,32 @@
 import { sql } from "drizzle-orm";
-import { boolean, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  customType,
+  index,
+  integer,
+  pgTable,
+  smallint,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { idColumn, jsonb, timestamps } from "./_helpers";
 import { users } from "./identity";
 import { agencies } from "./identity";
 import { workspaces } from "./workspaces";
 import { contentItems } from "./content";
+
+/**
+ * Custom `bytea` type — the column is treated as a Buffer on read
+ * and a Buffer-or-acceptable-input on write. Drizzle's built-in
+ * `customType` is the documented way to express a Postgres-only
+ * type that has no first-class Drizzle binding.
+ */
+const bytea = customType<{ data: Buffer; default: false }>({
+  dataType() {
+    return "bytea";
+  },
+});
 
 /**
  * STUDIOFLOW_MASTER_PROMPT.md §8 — AI feature settings + usage events.
@@ -72,3 +94,38 @@ export const aiUsageEvents = pgTable(
     index("ai_usage_user_idx").on(t.userId, sql`${t.createdAt} DESC`),
   ],
 );
+
+/**
+ * STUDIOFLOW_MASTER_PROMPT.md §15 — per-agency encrypted provider secret.
+ *
+ * One row per agency. The plaintext key is never stored; the
+ * `ciphertext` column is `bytea` (AES-256-GCM with a fresh 12-byte
+ * IV per write, 16-byte auth tag at the end). The `key_version`
+ * column records which `AI_SECRET_ENCRYPTION_KEY` slot was used
+ * (today always 1; a future migration can rotate). `last_four` is
+ * mirrored to `ai_feature_setting.masked_key_suffix` so the UI's
+ * "ends in …abcd" badge never needs a decrypt.
+ *
+ * FK cascade: deleting an agency removes its secret. There is no
+ * soft-delete path here.
+ *
+ * CHECK constraints at the DB level back the application-level
+ * "last_four is exactly 4 chars" and "key_version is a small
+ * positive integer" invariants. The application is the primary
+ * enforcer; the CHECK is the last line of defence.
+ */
+export const aiProviderSecret = pgTable("ai_provider_secret", {
+  agencyId: uuid("agency_id")
+    .primaryKey()
+    .references(() => agencies.id, { onDelete: "cascade" }),
+  ciphertext: bytea("ciphertext").notNull(),
+  keyVersion: smallint("key_version").notNull().default(1),
+  lastFour: text("last_four").notNull(),
+  rotatedByUserId: uuid("rotated_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .default(sql`now()`),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .default(sql`now()`),
+});
