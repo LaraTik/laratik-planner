@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { humanize } from "@/lib/content/status";
+import { ReasonDialog } from "@/components/forms/reason-dialog";
 
 /**
  * ApprovalTimeline — the "Approval requests" list under the workflow
@@ -93,17 +94,19 @@ export function ApprovalTimeline({
                 >
                   Approve
                 </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
+                <ReasonDialog
+                  trigger={
+                    <Button size="sm" variant="secondary" disabled={disabled}>
+                      Request changes
+                    </Button>
+                  }
+                  title="Request changes"
+                  description="Explain what needs to change so the assignee can act without guesswork."
+                  label="Feedback"
+                  confirmLabel="Send request"
                   disabled={disabled}
-                  onClick={() => {
-                    const feedback = window.prompt("What needs to change?");
-                    if (feedback) void onRequestChanges(a.id, feedback);
-                  }}
-                >
-                  Request changes
-                </Button>
+                  onConfirm={(feedback) => onRequestChanges(a.id, feedback)}
+                />
               </div>
             ) : null}
           </div>

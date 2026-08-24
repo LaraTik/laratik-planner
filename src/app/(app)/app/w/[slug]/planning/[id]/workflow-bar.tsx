@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { transitionAction, decideApprovalAction, claimAction } from "../actions"
 import { humanize } from "@/lib/content/status";
 import { CheckCircle, XCircle, ArrowRight, Ban, Play } from "lucide-react";
 import { ApprovalTimeline } from "@/components/workspace/approval-timeline";
+import { ReasonDialog } from "@/components/forms/reason-dialog";
 
 type Role =
   | "isManager"
@@ -66,19 +67,30 @@ export function WorkflowBar({
   }[];
 }) {
   const [pending, start] = useTransition();
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const executeTransition = async (
+    action: Parameters<typeof transitionAction>[0]["action"],
+    reason?: string,
+  ) => {
+    setActionError(null);
+    try {
+      await transitionAction({
+        workspaceSlug,
+        contentItemId,
+        action,
+        ...(reason ? { reason } : {}),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "The workflow action failed.";
+      setActionError(message);
+      throw new Error(message);
+    }
+  };
 
   const run = (action: Parameters<typeof transitionAction>[0]["action"], reason?: string) => {
     start(async () => {
-      try {
-        await transitionAction({
-          workspaceSlug,
-          contentItemId,
-          action,
-          ...(reason ? { reason } : {}),
-        });
-      } catch (e) {
-        alert((e as Error).message);
-      }
+      await executeTransition(action, reason).catch(() => undefined);
     });
   };
 
@@ -122,6 +134,12 @@ export function WorkflowBar({
         </p>
       ) : null}
 
+      {actionError ? (
+        <p role="alert" className="text-body text-danger mb-3">
+          {actionError}
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
         {status === "draft" && can(["isManager", "isPlanner"]) ? (
           <Button size="sm" onClick={() => run("submit_content_review")}>
@@ -133,16 +151,18 @@ export function WorkflowBar({
             <Button size="sm" onClick={() => run("approve_content")}>
               <CheckCircle className="h-3.5 w-3.5" aria-hidden="true" /> Approve
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                const reason = window.prompt("What needs to change?");
-                if (reason) run("request_content_changes", reason);
-              }}
-            >
-              <XCircle className="h-3.5 w-3.5" aria-hidden="true" /> Request changes
-            </Button>
+            <ReasonDialog
+              trigger={
+                <Button size="sm" variant="secondary" disabled={pending}>
+                  <XCircle className="h-3.5 w-3.5" aria-hidden="true" /> Request changes
+                </Button>
+              }
+              title="Request content changes"
+              description="Describe the revision needed before this content can move forward."
+              confirmLabel="Request changes"
+              disabled={pending}
+              onConfirm={(reason) => executeTransition("request_content_changes", reason)}
+            />
           </>
         ) : null}
         {status === "changes_requested" && can(["isManager", "isPlanner"]) ? (
@@ -155,10 +175,11 @@ export function WorkflowBar({
             size="sm"
             onClick={() =>
               start(async () => {
+                setActionError(null);
                 try {
                   await claimAction({ workspaceSlug, contentItemId });
                 } catch (e) {
-                  alert((e as Error).message);
+                  setActionError((e as Error).message);
                 }
               })
             }
@@ -184,16 +205,19 @@ export function WorkflowBar({
           "creative_review",
           "ready_to_publish",
         ].includes(status) && roles.isManager ? (
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => {
-              const reason = window.prompt("Reason for cancellation?");
-              if (reason) run("cancel", reason);
-            }}
-          >
-            <Ban className="h-3.5 w-3.5" aria-hidden="true" /> Cancel
-          </Button>
+          <ReasonDialog
+            trigger={
+              <Button size="sm" variant="destructive" disabled={pending}>
+                <Ban className="h-3.5 w-3.5" aria-hidden="true" /> Cancel
+              </Button>
+            }
+            title="Cancel content item"
+            description="This removes the item from the active workflow. Record why it is being cancelled."
+            confirmLabel="Cancel item"
+            destructive
+            disabled={pending}
+            onConfirm={(reason) => executeTransition("cancel", reason)}
+          />
         ) : null}
         {[
           "draft",
@@ -203,16 +227,18 @@ export function WorkflowBar({
           "creative_review",
           "ready_to_publish",
         ].includes(status) && roles.isManager ? (
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => {
-              const reason = window.prompt("Reason for blocking?");
-              if (reason) run("block", reason);
-            }}
-          >
-            Block
-          </Button>
+          <ReasonDialog
+            trigger={
+              <Button size="sm" variant="secondary" disabled={pending}>
+                Block
+              </Button>
+            }
+            title="Block content item"
+            description="Explain what is preventing progress so the team can resolve it."
+            confirmLabel="Block item"
+            disabled={pending}
+            onConfirm={(reason) => executeTransition("block", reason)}
+          />
         ) : null}
       </div>
 
@@ -227,6 +253,7 @@ export function WorkflowBar({
           disabled={pending}
           onApprove={(approvalRequestId) =>
             start(async () => {
+              setActionError(null);
               try {
                 await decideApprovalAction({
                   workspaceSlug,
@@ -234,24 +261,26 @@ export function WorkflowBar({
                   decision: "approved",
                 });
               } catch (e) {
-                alert((e as Error).message);
+                setActionError((e as Error).message);
               }
             })
           }
-          onRequestChanges={(approvalRequestId, feedback) =>
-            start(async () => {
-              try {
-                await decideApprovalAction({
-                  workspaceSlug,
-                  approvalRequestId,
-                  decision: "changes_requested",
-                  feedback,
-                });
-              } catch (e) {
-                alert((e as Error).message);
-              }
-            })
-          }
+          onRequestChanges={async (approvalRequestId, feedback) => {
+            setActionError(null);
+            try {
+              await decideApprovalAction({
+                workspaceSlug,
+                approvalRequestId,
+                decision: "changes_requested",
+                feedback,
+              });
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : "The approval action failed.";
+              setActionError(message);
+              throw new Error(message);
+            }
+          }}
         />
       ) : null}
     </Card>

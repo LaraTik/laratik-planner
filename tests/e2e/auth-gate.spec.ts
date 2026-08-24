@@ -100,17 +100,43 @@ test.describe("auth gate: callbackUrl edge cases", () => {
   test("a non-member hitting a workspace URL gets the no-access page, not a server error", async ({
     page,
   }) => {
-    const { devSignIn } = await import("./_helpers");
-    // Sign in as the test user (admin of the seeded agency). The seed
-    // also creates "acme" with a full membership. The proxy allows the
-    // request through, then the page-level guard renders the no-access
-    // copy if the user lacks the role.
-    await devSignIn(page.request);
-    // Note: a real "no membership" scenario needs a non-member seed; we
-    // at least assert the page returns < 500 and the chrome renders.
-    const res = await page.goto("/app/w/acme", { waitUntil: "domcontentloaded" });
+    const { devSeed, devSignIn } = await import("./_helpers");
+    const agency = {
+      agencyName: "Auth Gate Agency",
+      agencySlug: "auth-gate-agency",
+    };
+    // Create the protected workspace for one agency member, then give a
+    // second member access only to another workspace in the same agency.
+    // This exercises the page-level anti-IDOR guard instead of relying on
+    // whichever fixture a previous test happened to leave behind.
+    await devSeed(page.request, {
+      ...agency,
+      email: "auth-gate-owner@laratik.local",
+      workspaceName: "Protected workspace",
+      workspaceSlug: "auth-gate-protected",
+      agencyAdmin: false,
+      workspaceRoles: ["viewer"],
+    });
+    const outsiderEmail = "auth-gate-outsider@laratik.local";
+    await devSeed(page.request, {
+      ...agency,
+      email: outsiderEmail,
+      workspaceName: "Outsider workspace",
+      workspaceSlug: "auth-gate-outsider",
+      agencyAdmin: false,
+      workspaceRoles: ["viewer"],
+    });
+    await devSignIn(page.request, { email: outsiderEmail, role: "user" });
+
+    const res = await page.goto("/app/w/auth-gate-protected", {
+      waitUntil: "domcontentloaded",
+    });
+    // Workspace lookup deliberately masks inaccessible tenants as not found.
+    // App Router may stream that boundary with a 200 status, so the rendered
+    // surface—not the transport status—is the stable security contract.
     expect(res?.status()).toBeLessThan(500);
-    // The workspace name "Acme" must render in the header
-    await expect(page.getByRole("heading", { name: "Acme" })).toBeVisible();
+    await expect(page).not.toHaveURL(/\/setup/);
+    await expect(page.getByRole("heading", { name: /Page not found/i })).toBeVisible();
+    await expect(page.getByTestId("workspace-overview")).toHaveCount(0);
   });
 });

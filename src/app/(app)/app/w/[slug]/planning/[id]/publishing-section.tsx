@@ -41,6 +41,7 @@ export function PublishingSection({
 }) {
   const [openChannel, setOpenChannel] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [formError, setFormError] = useState<string | null>(null);
   const canRecord = isPublisher || isManager;
 
   if (channels.length === 0) return null;
@@ -113,6 +114,7 @@ export function PublishingSection({
                     const note = (fd.get("note") as string) || undefined;
                     const failureReason = (fd.get("failureReason") as string) || undefined;
                     start(async () => {
+                      setFormError(null);
                       try {
                         await recordPublicationAction({
                           workspaceSlug,
@@ -124,40 +126,79 @@ export function PublishingSection({
                         });
                         setOpenChannel(null);
                       } catch (e) {
-                        alert((e as Error).message);
+                        setFormError((e as Error).message);
                       }
                     });
                   }}
                   className="border-border bg-surface-subtle mt-3 space-y-2 rounded-[var(--radius-control)] border p-3"
                 >
                   <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-                    <select
-                      name="status"
-                      className="border-border bg-surface text-body rounded-[var(--radius-control)] border px-2 py-1"
-                      defaultValue="published"
-                    >
-                      <option value="published">Published</option>
-                      <option value="skipped">Skipped</option>
-                      <option value="failed">Failed</option>
-                    </select>
-                    <Input
-                      type="url"
-                      name="publishedUrl"
-                      placeholder="https://… (if published)"
-                      className="md:col-span-3"
-                    />
+                    <div>
+                      <label
+                        htmlFor={`publication-status-${ch.id}`}
+                        className="text-label mb-1 block font-medium"
+                      >
+                        Outcome
+                      </label>
+                      <select
+                        id={`publication-status-${ch.id}`}
+                        name="status"
+                        className="border-border bg-surface text-body min-h-11 w-full rounded-[var(--radius-control)] border px-2 py-1"
+                        defaultValue="published"
+                      >
+                        <option value="published">Published</option>
+                        <option value="skipped">Skipped</option>
+                        <option value="failed">Failed</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-3">
+                      <label
+                        htmlFor={`published-url-${ch.id}`}
+                        className="text-label mb-1 block font-medium"
+                      >
+                        Published URL
+                      </label>
+                      <Input
+                        id={`published-url-${ch.id}`}
+                        type="url"
+                        name="publishedUrl"
+                        placeholder="https://…"
+                      />
+                    </div>
                   </div>
-                  <Input type="text" name="note" placeholder="Note (required if skipped)" />
-                  <Input
-                    type="text"
-                    name="failureReason"
-                    placeholder="Failure reason (required if failed)"
-                  />
+                  <div>
+                    <label
+                      htmlFor={`publication-note-${ch.id}`}
+                      className="text-label mb-1 block font-medium"
+                    >
+                      Skip note
+                    </label>
+                    <Input id={`publication-note-${ch.id}`} type="text" name="note" />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor={`publication-failure-${ch.id}`}
+                      className="text-label mb-1 block font-medium"
+                    >
+                      Failure reason
+                    </label>
+                    <Input id={`publication-failure-${ch.id}`} type="text" name="failureReason" />
+                  </div>
+                  {formError ? (
+                    <p role="alert" className="text-body text-danger">
+                      {formError}
+                    </p>
+                  ) : null}
                   <div className="flex gap-2">
                     <Button type="submit" size="sm" disabled={pending}>
                       {pending ? "Saving…" : "Save"}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setOpenChannel(null)}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setOpenChannel(null)}
+                    >
                       Cancel
                     </Button>
                   </div>

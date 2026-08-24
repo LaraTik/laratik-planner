@@ -32,6 +32,7 @@ export function AppShell({
   user,
   buildInfo,
   workspaces,
+  workspaceAccess,
   agencySwitcher,
   canCreateWorkspace,
   notifications,
@@ -49,6 +50,7 @@ export function AppShell({
   };
   buildInfo: BuildInfo;
   workspaces: { id: string; slug: string; name: string }[];
+  workspaceAccess: Record<string, "internal" | "client" | "none">;
   agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   canCreateWorkspace: boolean;
   notifications: {
@@ -94,6 +96,7 @@ export function AppShell({
         <Sidebar
           user={user}
           workspaces={workspaces}
+          workspaceAccess={workspaceAccess}
           workspaceSwitcherOptions={workspaces}
           agencySwitcher={agencySwitcher}
           canCreateWorkspace={canCreateWorkspace}
@@ -145,7 +148,12 @@ export function AppShell({
       </main>
 
       {/* Mobile bottom nav (hidden on tablet+) */}
-      <MobileNav canCreate={user.isAdmin} />
+      <MobileNav
+        canCreate={user.isAdmin}
+        clientWorkspaceSlugs={workspaces
+          .filter((workspace) => workspaceAccess[workspace.id] === "client")
+          .map((workspace) => workspace.slug)}
+      />
     </div>
   );
 }
