@@ -11,6 +11,23 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-08-24 — Social profile analytics (M4) merged
+
+Status: **Tested**. Independently Verified is not yet claimed; M4 rows stop at `Tested` pending independent review.
+
+`feat/auto-20260824-3613c271` merged into `main` as `0f6d552`. Thirteen atomic commits on the feature branch plus the merge bring:
+
+- **Schema** — `0015_social_profile_analytics` (renumbered from `0013` to avoid colliding with main's `0013_ai_provider_secret`): three new tables (`social_connection`, `social_oauth_state`, `social_profile_daily_metric`) and ten additive columns on `social_channel`. All migrations are forward-only.
+- **Crypto** — `src/lib/social/crypto.ts` with versioned AES-256-GCM envelopes, `laratik-planner:social-credentials:v1` AAD, key-version 1, fail-closed key-length validation.
+- **Provider layer** — `src/lib/social/types.ts`, `http.ts`, `repository.ts`, `providers/meta.ts`, `providers/tiktok.ts`, `sync.ts`. The provider-adapter contract is shared; the cron worker is the only path that talks to Meta/TikTok.
+- **OAuth** — `/api/social/{meta,tiktok}/{connect,callback}/route.ts` with one-time CSRF state, provider-scope minimization, and token-free error redirects.
+- **UI** — connection-status badge, account picker with focus-within ring + keyboard handlers, focus-managed revoke confirmation dialog, social growth dashboard at `/app/w/[slug]/analytics/social` with hand-rolled dependency-free accessible SVG chart, exact-value table, 7/30/90 window selector. Sidebar entry added under "Social Channels" → "Social Analytics".
+- **Cron** — `/api/cron/social-metrics` authenticated with `CRON_SECRET` (timing-safe), 20-profile batch, 5-minute lease via `FOR UPDATE SKIP LOCKED`, 24h OAuth state + 25-month metric retention. `scripts/vps/social-metrics-sync.sh` and the `*/15 * * * *` entry in `install-cron.sh` are added.
+- **Docs** — ADR-0004, runbook § Social analytics (rollout, key rotation, retention, revoke), `EXTERNAL_SERVICES_UAT.md` Meta + TikTok evidence contracts.
+- **Tests** — 60 new unit tests (crypto, http, analytics, sync scheduling, Meta provider, TikTok provider, picker), 29 new integration tests (M4 tables, repository, OAuth state consumption, claim/refresh/save invariants), 2 new E2E files, axe-core a11y coverage for the new analytics route.
+
+`SOCIAL_SYNC_ENABLED=false` is the default. `SOCIAL_TIKTOK_ENABLED=false` until Meta's seven-day production observation window passes. The shared `READY FOR INDEPENDENT REVIEW` verdict is unchanged; the `READY` flip still requires owner action (Sentry, manual a11y, visual baselines, Stitch MCP capture of the two new screens, independent reviewer).
+
 ## 2026-08-24 — Navigation-first UI/UX refinement
 
 Commit `7536d4d` completes a screen-by-screen navigation and responsive-layout
