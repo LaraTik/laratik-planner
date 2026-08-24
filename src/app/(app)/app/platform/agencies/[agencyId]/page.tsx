@@ -11,6 +11,7 @@ import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { PlanAiSections } from "./plan-ai-sections";
+import { SupportAccessSection } from "./support-section";
 
 /**
  * Platform · Agency detail — Stitch screen
@@ -194,6 +195,8 @@ export default async function PlatformAgencyDetailPage({
       </Card>
 
       <PlanAiSections agencyId={detail.id} />
+
+      <SupportAccessSection agencyId={detail.id} />
     </>
   );
 }

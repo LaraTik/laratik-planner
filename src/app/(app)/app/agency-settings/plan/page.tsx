@@ -11,6 +11,7 @@ import { isAgencyAdmin } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import { agencyEntitlements, platformPlanTemplates } from "@/lib/db/schema";
 import { getUsage } from "@/lib/usage";
+import { SupportAccessRequestsCard } from "./support-requests-card";
 
 export const metadata = { title: "Plan and usage" };
 export const dynamic = "force-dynamic";
@@ -106,6 +107,8 @@ export default async function AgencyPlanPage() {
           cumulative.
         </CardDescription>
       </Card>
+
+      <SupportAccessRequestsCard agencyId={context.agencyId} />
     </div>
   );
 }

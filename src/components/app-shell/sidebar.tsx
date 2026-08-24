@@ -20,6 +20,7 @@ import {
   Share2,
   Shield,
   Users,
+  Lock,
 } from "lucide-react";
 import { isActivePath } from "@/lib/utils";
 import { WorkspaceSwitcher } from "./workspace-switcher";
@@ -276,6 +277,13 @@ export function Sidebar({
                   active={isActivePath("/app/platform/agencies", pathname)}
                 >
                   Agencies
+                </SidebarLink>
+                <SidebarLink
+                  href="/app/platform/security"
+                  icon={<Lock className="h-4 w-4" />}
+                  active={isActivePath("/app/platform/security", pathname)}
+                >
+                  Security & support
                 </SidebarLink>
               </>
             ) : null}
