@@ -6,6 +6,7 @@
 # Mirrors the laratik-social-platform / mavis-trader pattern in vps-ops.
 # Note: pinned to pnpm 10.x because pnpm 11 uses node:sqlite (Node 22+).
 # ─────────────────────────────────────────────────────────────────────────────
+ARG APP_VERSION=dev
 
 # ─── Stage 1: deps ──────────────────────────────────────────────────────────
 FROM node:20-alpine AS deps
@@ -18,9 +19,11 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 
 # ─── Stage 2: builder ───────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
+ARG APP_VERSION
 RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV APP_VERSION=$APP_VERSION
 # Drizzle Kit reads DATABASE_URL at generate time but never connects (it
 # only inspects the local schema), so a placeholder URL is sufficient.
 # The real URL is supplied at container runtime via docker-compose.
@@ -38,12 +41,12 @@ CMD ["pnpm", "db:migrate"]
 
 # ─── Stage 3: runner ────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
+ARG APP_VERSION
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-ARG APP_VERSION=dev
 ENV APP_VERSION=$APP_VERSION
 
 RUN addgroup -g 1001 -S nodejs && adduser -S -u 1001 -G nodejs nextjs

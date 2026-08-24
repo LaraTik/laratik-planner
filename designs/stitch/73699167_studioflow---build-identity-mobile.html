@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>StudioFlow - Account</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "canvas": "#F7F7F5",
+                        "success-subtle": "#ECFDF3",
+                        "background": "#f9f9ff",
+                        "tertiary": "#004c77",
+                        "outline-variant": "#c7c4d8",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "info-subtle": "#F0F9FF",
+                        "tertiary-fixed": "#cde5ff",
+                        "surface-container-high": "#dfe8fe",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#283141",
+                        "outline": "#777587",
+                        "success": "#15803D",
+                        "surface-container": "#e7eeff",
+                        "surface-container-highest": "#dae3f8",
+                        "surface": "#FFFFFF",
+                        "on-primary-fixed": "#0f0069",
+                        "on-surface": "#131c2b",
+                        "focus-ring": "#6366F1",
+                        "on-tertiary-fixed": "#001d32",
+                        "warning-subtle": "#FFF7E6",
+                        "surface-bright": "#f9f9ff",
+                        "tertiary-container": "#00659c",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "inverse-primary": "#c3c0ff",
+                        "on-primary-container": "#dad7ff",
+                        "on-secondary-container": "#5a6278",
+                        "warning": "#B45309",
+                        "error-container": "#ffdad6",
+                        "on-primary": "#ffffff",
+                        "surface-subtle": "#F1F3F5",
+                        "on-tertiary-container": "#bfdfff",
+                        "danger": "#B91C1C",
+                        "error": "#ba1a1a",
+                        "secondary": "#555e74",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "primary": "#3525cd",
+                        "on-background": "#131c2b",
+                        "on-secondary": "#ffffff",
+                        "surface-dim": "#d1daef",
+                        "surface-variant": "#dae3f8",
+                        "on-secondary-fixed": "#121b2e",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-container": "#4f46e5",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "secondary-container": "#d7dff9",
+                        "border": "#DDE1E6",
+                        "surface-container-low": "#f0f3ff",
+                        "on-error-container": "#93000a",
+                        "secondary-fixed": "#d9e2fc",
+                        "primary-subtle": "#EEF2FF",
+                        "primary-fixed": "#e2dfff",
+                        "text-muted": "#7B8495",
+                        "primary-hover": "#4338CA",
+                        "surface-tint": "#4d44e3",
+                        "on-surface-variant": "#464555",
+                        "inverse-on-surface": "#ecf0ff",
+                        "danger-subtle": "#FEF2F2"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "base": "4px",
+                        "card-padding": "16px",
+                        "sidebar-collapsed": "72px",
+                        "topbar-height": "64px",
+                        "screen-padding": "24px",
+                        "sidebar-expanded": "248px"
+                    },
+                    "fontFamily": {
+                        "card-title": ["Inter"],
+                        "button": ["Inter"],
+                        "label": ["Inter"],
+                        "body": ["Inter"],
+                        "table-dense": ["Inter"],
+                        "section-title": ["Inter"],
+                        "page-title": ["Inter"]
+                    },
+                    "fontSize": {
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "card-title-mobile": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "button-mobile": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "label-mobile": ["10px", { "lineHeight": "14px", "fontWeight": "500" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+                        "body-mobile": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "table-dense-mobile": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "section-title-mobile": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "page-title-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+        .bottom-sheet-anim {
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .overlay-anim {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-canvas text-on-surface font-body w-[390px] mx-auto min-h-screen relative overflow-hidden">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-[390px] h-[56px] bg-surface flex items-center justify-between px-gutter z-30 border-b border-border shadow-sm">
+<h1 class="font-page-title-mobile text-page-title-mobile font-bold text-primary">StudioFlow</h1>
+<button class="w-8 h-8 rounded-full overflow-hidden border border-border focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A close up portrait of a professional woman with dark hair in a well lit studio setting with a neutral white background. Corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeHVoEVLZ4z1eAqT30HR2EMA6K562Vgpwcej8zdvH5r9WRk_Mu0PkMzq_mRN6xs2d4BDheF5DJY0ud9h3y6lHkIMCEUK0cMLCFcvkw1liOUctmN-sFDdv4riE8p5PMe9bMLV3kBa6FXT2O4zhjvB-5Uj2Zo4RMhFQE9vZ_uq0fv9ywTER-_SgtK05cqo31K3gKpAxpIPlzmEJwBjVQpf4XM_d-Xn2SfmEP1tVwPRupCW3NiQvXouDy_8sc0Rtdwoe2C0BDDzm6SwA"/>
+</button>
+</header>
+<!-- Main Content -->
+<main class="pt-[72px] pb-[96px] px-gutter h-screen overflow-y-auto flex flex-col justify-end">
+<div class="space-y-6">
+<!-- Application Information Card -->
+<div class="bg-surface rounded-lg border border-border p-card-padding shadow-sm">
+<h2 class="font-card-title-mobile text-card-title-mobile text-on-surface mb-1">Application information</h2>
+<p class="font-body-mobile text-body-mobile text-text-muted mb-4">Use these details when reporting a problem.</p>
+<div class="space-y-3 mb-6">
+<div>
+<span class="font-label-mobile text-label-mobile text-secondary block mb-1">Build</span>
+<div class="bg-surface-subtle border border-border rounded p-2 overflow-x-auto">
+<code class="text-[11px] text-on-surface font-mono break-all">a1b2c3d4e5f678901234567890abcdef12345678</code>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="font-label-mobile text-label-mobile text-secondary">Environment</span>
+<span class="inline-flex items-center gap-1 bg-surface-subtle text-on-surface-variant px-2 py-1 rounded text-[11px] font-medium border border-border">
+<span class="material-symbols-outlined text-[14px]">cloud</span>
+                            Production
+                        </span>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex items-center gap-2 text-success font-label-mobile text-label-mobile bg-success-subtle px-3 py-2 rounded-DEFAULT border border-success/20">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+                        Build information copied
+                    </div>
+<button class="w-full h-[44px] flex items-center justify-center gap-2 border border-border bg-surface text-on-surface rounded-DEFAULT font-button-mobile text-button-mobile hover:bg-surface-subtle transition-colors">
+<span class="material-symbols-outlined text-[18px]">content_copy</span>
+                        Copy build information
+                    </button>
+</div>
+</div>
+<!-- Sign Out Button -->
+<button class="w-full h-[44px] flex items-center justify-center gap-2 border border-danger text-danger bg-surface rounded-DEFAULT font-button-mobile text-button-mobile hover:bg-danger-subtle transition-colors">
+<span class="material-symbols-outlined text-[18px]">logout</span>
+                Sign out
+            </button>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<!-- Suppressed since Account settings sheet is open overlaying it -->
+<!-- Account Bottom Sheet Overlay -->
+<div class="fixed inset-0 bg-inverse-surface/40 z-40 overlay-anim w-[390px] mx-auto"></div>
+<!-- Account Bottom Sheet -->
+<div class="fixed bottom-0 w-[390px] bg-surface rounded-t-xl z-50 bottom-sheet-anim shadow-[0_-4px_24px_rgba(0,0,0,0.08)] flex flex-col mx-auto max-h-[707px]">
+<!-- Drag Handle -->
+<div class="w-full flex justify-center pt-3 pb-2">
+<div class="w-10 h-1 bg-border rounded-full"></div>
+</div>
+<!-- Header -->
+<div class="px-gutter pb-4 border-b border-border flex items-center gap-4">
+<div class="w-12 h-12 rounded-full overflow-hidden border border-border shrink-0">
+<img alt="Sarah Jenkins" class="w-full h-full object-cover" data-alt="A close up portrait of a professional woman with dark hair in a well lit studio setting with a neutral white background. Corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzpr6nTEBmimdTLPo596J0mJb2Vvp_Eof7jKe_47tc0UmR4eWbIdiEBO51HCV0lAOWU--lvyAFR69MPU30q-HMiRlWHAQDaVCnlLntxZFUrej-Rk2cRpXA1Sjcd4NCNRBZBOqMEQaEQE5uWHZM5WO0wDp40EbQpTSH8WAmD3BY_wthkpBDjTJV8xFz5rQUyTIQMG0bmwafpvEg1dZIsaK5x2UKMmJ9aowgZDz81OBD4k5Z19WQP9bgZbJoQ4wlyMA34bn7qN7Zsio"/>
+</div>
+<div>
+<h3 class="font-section-title-mobile text-section-title-mobile text-on-surface">Sarah Jenkins</h3>
+<p class="font-body-mobile text-body-mobile text-text-muted">sarah.jenkins@studioflow.com</p>
+</div>
+</div>
+<!-- Menu Items -->
+<div class="flex-1 overflow-y-auto py-2">
+<button class="w-full flex items-center gap-3 px-gutter py-3 h-[48px] hover:bg-surface-subtle transition-colors text-left focus:outline-none focus:bg-surface-subtle">
+<span class="material-symbols-outlined text-secondary text-[20px]">manage_accounts</span>
+<span class="font-body-mobile text-body-mobile text-on-surface flex-1">Account</span>
+<span class="material-symbols-outlined text-text-muted text-[20px]">chevron_right</span>
+</button>
+<button class="w-full flex items-center gap-3 px-gutter py-3 h-[48px] hover:bg-surface-subtle transition-colors text-left focus:outline-none focus:bg-surface-subtle">
+<span class="material-symbols-outlined text-secondary text-[20px]">settings</span>
+<span class="font-body-mobile text-body-mobile text-on-surface flex-1">Preferences</span>
+<span class="material-symbols-outlined text-text-muted text-[20px]">chevron_right</span>
+</button>
+<button class="w-full flex items-center gap-3 px-gutter py-3 h-[48px] hover:bg-surface-subtle transition-colors text-left focus:outline-none focus:bg-surface-subtle">
+<span class="material-symbols-outlined text-secondary text-[20px]">help</span>
+<span class="font-body-mobile text-body-mobile text-on-surface flex-1">Help &amp; Support</span>
+<span class="material-symbols-outlined text-text-muted text-[20px]">chevron_right</span>
+</button>
+<div class="h-px bg-border my-2 mx-gutter"></div>
+<!-- Build Info Row -->
+<button class="w-full flex items-center gap-3 px-gutter py-3 min-h-[44px] hover:bg-surface-subtle transition-colors text-left focus:outline-none focus:bg-surface-subtle">
+<span class="material-symbols-outlined text-secondary text-[20px]">commit</span>
+<div class="flex-1 flex flex-col">
+<span class="font-body-mobile text-body-mobile text-on-surface">Build a1b2c3d</span>
+<span class="font-label-mobile text-label-mobile text-text-muted">Production</span>
+</div>
+<span class="material-symbols-outlined text-text-muted text-[20px]">content_copy</span>
+</button>
+<div class="h-px bg-border my-2 mx-gutter"></div>
+<button class="w-full flex items-center gap-3 px-gutter py-3 h-[48px] hover:bg-danger-subtle transition-colors text-left focus:outline-none focus:bg-danger-subtle">
+<span class="material-symbols-outlined text-danger text-[20px]">logout</span>
+<span class="font-body-mobile text-body-mobile text-danger flex-1">Sign out</span>
+</button>
+</div>
+</div>
+</body></html>

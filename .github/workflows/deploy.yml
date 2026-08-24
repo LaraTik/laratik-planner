@@ -67,6 +67,8 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+            APP_VERSION=${{ github.event.workflow_run.head_sha || github.sha }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -78,6 +80,8 @@ jobs:
           context: .
           target: migrator
           push: true
+          build-args: |
+            APP_VERSION=${{ github.event.workflow_run.head_sha || github.sha }}
           tags: |
             ghcr.io/laratik/laratik-planner-migrator:${{ github.event.workflow_run.head_sha }}
             ghcr.io/laratik/laratik-planner-migrator:latest

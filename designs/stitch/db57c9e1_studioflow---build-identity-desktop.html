@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>StudioFlow - Account</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-subtle": "#F1F3F5",
+                        "on-surface": "#131c2b",
+                        "focus-ring": "#6366F1",
+                        "surface": "#FFFFFF",
+                        "surface-tint": "#4d44e3",
+                        "secondary-fixed": "#d9e2fc",
+                        "on-primary-fixed": "#0f0069",
+                        "warning": "#B45309",
+                        "warning-subtle": "#FFF7E6",
+                        "surface-bright": "#f9f9ff",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-low": "#f0f3ff",
+                        "info-subtle": "#F0F9FF",
+                        "background": "#f9f9ff",
+                        "on-primary-container": "#dad7ff",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed-variant": "#3e475b",
+                        "secondary-fixed-dim": "#bdc6e0",
+                        "secondary-container": "#d7dff9",
+                        "success": "#15803D",
+                        "primary-container": "#4f46e5",
+                        "outline": "#777587",
+                        "on-tertiary-container": "#bfdfff",
+                        "tertiary-fixed": "#cde5ff",
+                        "canvas": "#F7F7F5",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "tertiary-container": "#00659c",
+                        "surface-variant": "#dae3f8",
+                        "success-subtle": "#ECFDF3",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed": "#001d32",
+                        "on-background": "#131c2b",
+                        "surface-container-high": "#dfe8fe",
+                        "error-container": "#ffdad6",
+                        "primary-subtle": "#EEF2FF",
+                        "on-secondary-fixed": "#121b2e",
+                        "inverse-primary": "#c3c0ff",
+                        "tertiary": "#004c77",
+                        "on-error": "#ffffff",
+                        "text-muted": "#7B8495",
+                        "border": "#DDE1E6",
+                        "outline-variant": "#c7c4d8",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#283141",
+                        "primary-fixed": "#e2dfff",
+                        "primary": "#3525cd",
+                        "secondary": "#555e74",
+                        "on-secondary-container": "#5a6278",
+                        "surface-container": "#e7eeff",
+                        "primary-hover": "#4338CA",
+                        "on-surface-variant": "#464555",
+                        "inverse-on-surface": "#ecf0ff",
+                        "danger": "#B91C1C",
+                        "surface-dim": "#d1daef",
+                        "danger-subtle": "#FEF2F2",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-highest": "#dae3f8",
+                        "on-primary-fixed-variant": "#3323cc"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "topbar-height": "64px",
+                        "screen-padding": "24px",
+                        "base": "4px",
+                        "sidebar-expanded": "248px",
+                        "sidebar-collapsed": "72px",
+                        "card-padding": "16px"
+                    },
+                    "fontFamily": {
+                        "label": ["Inter"],
+                        "table-dense": ["Inter"],
+                        "body": ["Inter"],
+                        "card-title": ["Inter"],
+                        "button": ["Inter"],
+                        "page-title": ["Inter"],
+                        "section-title": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+                        "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-canvas text-on-surface font-body antialiased flex h-screen overflow-hidden">
+<!-- Side NavBar -->
+<nav class="fixed left-0 top-0 h-full w-[248px] bg-canvas border-r border-border flex flex-col py-4 px-3 gap-1 z-30">
+<!-- Header -->
+<div class="flex items-center gap-3 px-3 pb-6 mb-2">
+<div class="w-8 h-8 rounded bg-surface-subtle border border-border flex items-center justify-center shrink-0">
+<img alt="Agency Logo" class="w-5 h-5 object-contain" data-alt="A minimalist, geometric logo mark consisting of intersecting light and dark gray squares, representing an abstract workspace or studio concept on a solid white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCntZLm5SKLEatp2s9pA4MRabt7BObnvBUOpded-tpGGChd4DUaKNqFB5R2Tzy00EwtIPs20Pta2Zz7VSO55HncENm99sgsOgFPqiHiO9My18nYZbUDIT5-tuSPonSvGRkh6Tavb-fqOwi2YBzIeHwBG5fde0eD4dQxo8NWex45Za55qORa4fHDU-CRG7z9oZ_wjRCV1H8kvyJEVy6O22H73ROMUfzgRGzXaAQnXwsKSymLX3YkbkUuhXCZ6s-IMLc-TyX9bd8bYbo"/>
+</div>
+<div class="flex flex-col">
+<span class="font-section-title text-section-title text-on-surface">Workspace</span>
+<span class="font-label text-label text-text-muted">Creative Production</span>
+</div>
+</div>
+<!-- Main Navigation -->
+<div class="flex-1 flex flex-col gap-1 overflow-y-auto">
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-fixed-variant hover:bg-surface-variant transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-text-muted group-hover:text-on-surface transition-colors" data-icon="dashboard">dashboard</span>
+<span class="font-label text-label">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-fixed-variant hover:bg-surface-variant transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-text-muted group-hover:text-on-surface transition-colors" data-icon="event_note">event_note</span>
+<span class="font-label text-label">Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-fixed-variant hover:bg-surface-variant transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-text-muted group-hover:text-on-surface transition-colors" data-icon="calendar_today">calendar_today</span>
+<span class="font-label text-label">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-fixed-variant hover:bg-surface-variant transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-text-muted group-hover:text-on-surface transition-colors" data-icon="rate_review">rate_review</span>
+<span class="font-label text-label">Reviews</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-fixed-variant hover:bg-surface-variant transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-text-muted group-hover:text-on-surface transition-colors" data-icon="share">share</span>
+<span class="font-label text-label">Social Channels</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-fixed-variant hover:bg-surface-variant transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-text-muted group-hover:text-on-surface transition-colors" data-icon="auto_awesome">auto_awesome</span>
+<span class="font-label text-label">Brand Kit</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-fixed-variant hover:bg-surface-variant transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-text-muted group-hover:text-on-surface transition-colors" data-icon="group">group</span>
+<span class="font-label text-label">Team</span>
+</a>
+</div>
+<!-- Footer Navigation -->
+<div class="mt-auto pt-4 flex flex-col gap-1 border-t border-border">
+<a class="flex items-center gap-3 px-3 py-2 bg-secondary-container text-on-secondary-container font-semibold rounded-lg group" href="#">
+<span class="material-symbols-outlined" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-label text-label">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-secondary-fixed-variant hover:bg-surface-variant transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-text-muted group-hover:text-on-surface transition-colors" data-icon="contact_support">contact_support</span>
+<span class="font-label text-label">Support</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="ml-[248px] flex-1 flex flex-col h-screen relative">
+<!-- Top NavBar -->
+<header class="fixed top-0 w-[calc(100%-248px)] h-[64px] bg-surface border-b border-border flex justify-between items-center px-gutter z-40">
+<div class="font-page-title text-page-title font-bold text-on-surface flex items-center">
+                Agency Workspace
+            </div>
+<div class="flex items-center gap-2">
+<button class="w-10 h-10 rounded-full hover:bg-surface-subtle transition-colors flex items-center justify-center cursor-pointer active:opacity-80 text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="w-10 h-10 rounded-full hover:bg-surface-subtle transition-colors flex items-center justify-center cursor-pointer active:opacity-80 text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<!-- Profile Avatar Dropdown Trigger -->
+<div class="relative ml-2">
+<button class="w-10 h-10 rounded-full overflow-hidden border border-border cursor-pointer active:opacity-80 focus:ring-2 focus:ring-focus-ring focus:outline-none">
+<img alt="User profile avatar" class="w-full h-full object-cover" data-alt="A professional headshot of a smiling young woman with dark hair pulled back, wearing a neat navy blue blazer over a crisp white shirt, softly lit in a modern office environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9ZOACRuFglQtREanZW8zwrfjLtw39rGv8Jy3f316AMbVgR1L-O_s9vxGSVOhrrBTqDFHXfQuGdzxr7GVCdzCy7ZeUG86gvPrGztisOctaJuN7WEp-y4mLqxiBmJ67CVr5fyu79SkbcTbe57EESYOtNMI72XoVdXe5mprotF5o_8vo40nCqJKXJ8D3Dd0F_w4YyoFBjapG77J81w2bK8xxLH8F6pwyNtKqSZvxokEOOPeDq4upidw40EcdVZ6yLKi_wkff2KZ5PkM"/>
+</button>
+<!-- Account Dropdown (Open State) -->
+<div class="absolute right-0 top-12 w-72 bg-surface border border-border rounded-lg shadow-lg py-2 flex flex-col z-50">
+<div class="px-4 py-3 border-b border-surface-subtle flex flex-col">
+<span class="font-card-title text-card-title text-on-surface">Sarah Jenkins</span>
+<span class="font-body text-body text-text-muted">sarah.jenkins@studioflow.com</span>
+</div>
+<div class="py-1 flex flex-col">
+<a class="px-4 py-2 bg-surface-subtle text-on-surface font-semibold flex items-center font-body text-body" href="#">
+                                Account
+                            </a>
+<a class="px-4 py-2 hover:bg-surface-subtle text-on-surface-variant transition-colors flex items-center font-body text-body" href="#">
+                                Agency Settings
+                            </a>
+</div>
+<!-- Build Info Row -->
+<div class="h-11 px-4 border-t border-surface-subtle bg-canvas flex items-center justify-between group hover:bg-surface-subtle transition-colors cursor-pointer">
+<div class="flex items-center gap-2 overflow-hidden">
+<span class="material-symbols-outlined text-[16px] text-text-muted" data-icon="commit">commit</span>
+<div class="flex flex-col justify-center">
+<div class="flex items-baseline gap-2">
+<span class="font-label text-label text-text-muted">Build</span>
+<span class="font-mono text-[11px] text-on-surface">a1b2c3d</span>
+</div>
+<span class="text-[10px] leading-tight text-text-muted">Production</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-[16px] text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" data-icon="content_copy">content_copy</span>
+</div>
+<div class="py-1 border-t border-surface-subtle">
+<button class="w-full text-left px-4 py-2 hover:bg-danger-subtle text-danger transition-colors flex items-center font-body text-body">
+                                Sign out
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<main class="flex-1 overflow-y-auto mt-[64px] p-screen-padding bg-canvas">
+<div class="max-w-3xl mx-auto flex flex-col gap-8 pb-12">
+<header>
+<h1 class="font-page-title text-page-title text-on-surface">Account</h1>
+<p class="font-body text-body text-text-muted mt-1">Manage your personal information and application settings.</p>
+</header>
+<!-- Profile Card -->
+<section class="bg-surface border border-border rounded-lg overflow-hidden flex flex-col">
+<div class="px-6 py-5 border-b border-border bg-surface flex justify-between items-center">
+<h2 class="font-card-title text-card-title text-on-surface">Profile</h2>
+<button class="text-primary hover:text-primary-hover font-button text-button transition-colors">Edit</button>
+</div>
+<div class="p-6 flex items-start gap-6">
+<div class="w-16 h-16 rounded-full overflow-hidden border border-border shrink-0 bg-surface-subtle">
+<img alt="Sarah Jenkins" class="w-full h-full object-cover" data-alt="A professional headshot of a smiling young woman with dark hair pulled back, wearing a neat navy blue blazer over a crisp white shirt, softly lit in a modern office environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtRFs4h71O1lGxV5At4IISVl88bvozxjHqnGbpCCOwqLrl4jyUAJlbYOKEEiVhASCsPG_F1VYFheVkEFjydVB-V4re-CXS5fSCoY98QJ6XFbFDjJqyf84WOU-u2gngdDwhglMvY_0N3KAZKX7UZ5-r5etW648uEcY2KxHpM9Qn0wYqX60-cRNF55PCZrZVE-KtzANXWYCk2Vpy1Mjtz_1rnS_erSe8rSzpxeLw6MkAhRwTpfgNDlmDPStZT1oCuBDAoEqzh4793s8"/>
+</div>
+<div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+<div class="flex flex-col gap-1">
+<span class="font-label text-label text-text-muted">Full Name</span>
+<span class="font-body text-body text-on-surface">Sarah Jenkins</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-label text-label text-text-muted">Email Address</span>
+<span class="font-body text-body text-on-surface">sarah.jenkins@studioflow.com</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Password Card -->
+<section class="bg-surface border border-border rounded-lg overflow-hidden flex flex-col">
+<div class="px-6 py-5 border-b border-border bg-surface">
+<h2 class="font-card-title text-card-title text-on-surface">Security</h2>
+</div>
+<div class="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div class="flex flex-col gap-1">
+<span class="font-body text-body text-on-surface font-medium">Password</span>
+<span class="font-body text-body text-text-muted">Last changed 3 months ago</span>
+</div>
+<button class="h-10 px-4 border border-border rounded-lg font-button text-button text-on-surface hover:bg-surface-subtle transition-colors flex items-center justify-center shrink-0">
+                            Change password
+                        </button>
+</div>
+</section>
+<!-- Agency Card -->
+<section class="bg-surface border border-border rounded-lg overflow-hidden flex flex-col">
+<div class="px-6 py-5 border-b border-border bg-surface">
+<h2 class="font-card-title text-card-title text-on-surface">Agency Context</h2>
+</div>
+<div class="p-6 flex flex-col gap-1">
+<span class="font-label text-label text-text-muted">Current Workspace</span>
+<div class="flex items-center gap-3 mt-1">
+<div class="w-8 h-8 rounded bg-surface-subtle border border-border flex items-center justify-center shrink-0">
+<img alt="Workspace Logo" class="w-5 h-5 object-contain" data-alt="A minimalist, geometric logo mark consisting of intersecting light and dark gray squares, representing an abstract workspace or studio concept on a solid white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHBfkVgb4sGxr7fLPzl6wC3KKWJHuMAcv0gVYRd3DU_5wosWad4reWlcBcgUyJ1motyQp5wFdpeBnAkfTKh_dmR0qA5fMneHcGnFL9eUbdD2cmQCPPhHinO4_vkMpRZWj8yuwzCg_jcFBwDj7wjatwu7XuJfZhBYYUqPg3jpEBlV2QBeFPu2wmWNBHjDBPqHKt9N3nd4DvHZQNmLOIB1R0JMU-DZVO8fESI43InH7ua1t-PKxuKJpou26Yx7KI2oBhmbrCLrs_aII"/>
+</div>
+<span class="font-body text-body text-on-surface font-medium">Creative Production</span>
+</div>
+</div>
+</section>
+<!-- Build Info Card -->
+<section class="bg-surface border border-border rounded-lg overflow-hidden flex flex-col">
+<div class="px-6 py-5 border-b border-border bg-surface">
+<h2 class="font-card-title text-card-title text-on-surface">Application information</h2>
+<p class="font-body text-body text-text-muted mt-1">Use these details when reporting a problem.</p>
+</div>
+<div class="p-6 flex flex-col gap-6">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="md:col-span-1 flex items-start pt-1">
+<span class="font-label text-label text-text-muted">Build</span>
+</div>
+<div class="md:col-span-3">
+<p class="font-mono text-body text-on-surface break-all bg-surface-subtle p-3 rounded border border-border selection:bg-primary-container selection:text-white">
+                                    a1b2c3d4e5f678901234567890abcdef12345678
+                                </p>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="md:col-span-1 flex items-center">
+<span class="font-label text-label text-text-muted">Environment</span>
+</div>
+<div class="md:col-span-3 flex items-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-subtle text-on-surface-variant border border-border">
+                                    Production
+                                </span>
+</div>
+</div>
+<div class="flex items-center gap-4 mt-2">
+<button class="h-[44px] px-4 border border-border rounded-lg font-button text-button text-on-surface hover:bg-surface-subtle transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]" data-icon="content_copy">content_copy</span>
+                                Copy build information
+                            </button>
+<div class="flex items-center gap-1.5 text-success">
+<span class="material-symbols-outlined text-[18px]" data-icon="check_circle">check_circle</span>
+<span class="font-body text-body font-medium">Build information copied</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Sign Out -->
+<div class="pt-4 border-t border-border flex justify-start">
+<button class="h-10 px-4 text-danger hover:bg-danger-subtle rounded-lg font-button text-button transition-colors flex items-center justify-center">
+                        Sign out
+                    </button>
+</div>
+</div>
+</main>
+</div>
+</body></html>

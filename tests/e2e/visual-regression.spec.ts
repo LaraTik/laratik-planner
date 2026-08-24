@@ -381,6 +381,11 @@ test.describe("visual regression (exact reference)", () => {
         await page.goto(resolved);
         await page.waitForLoadState("domcontentloaded");
         await waitForStableDom(page, entry.route!, CAPTURE_MODE_TIMEOUT_MS);
+        if (entry.state === "account-menu") {
+          const mobile = viewport.width < 768;
+          await page.getByTestId(mobile ? "user-menu-trigger-mobile" : "user-menu-trigger").click();
+          await expect(page.getByTestId(mobile ? "user-menu-mobile" : "user-menu")).toBeVisible();
+        }
         await applyMask(page);
       } catch (error) {
         if (!isCaptureMode) throw error;

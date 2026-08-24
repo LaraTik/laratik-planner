@@ -15,11 +15,12 @@ Exposed to the browser. **Never** put a secret here.
 
 ### Runtime
 
-| Name       | Required | Default       | Purpose                                    |
-| ---------- | -------- | ------------- | ------------------------------------------ |
-| `NODE_ENV` | no       | `development` | Set to `production` on VPS                 |
-| `PORT`     | no       | `3000`        | Container port (matches Dockerfile EXPOSE) |
-| `HOSTNAME` | no       | `0.0.0.0`     | Bind address (set in Dockerfile)           |
+| Name          | Required | Default       | Purpose                                                                |
+| ------------- | -------- | ------------- | ---------------------------------------------------------------------- |
+| `NODE_ENV`    | no       | `development` | Set to `production` on VPS                                             |
+| `APP_VERSION` | injected | `dev`         | Exact Git SHA baked into CI-built images; never set manually in `.env` |
+| `PORT`        | no       | `3000`        | Container port (matches Dockerfile EXPOSE)                             |
+| `HOSTNAME`    | no       | `0.0.0.0`     | Bind address (set in Dockerfile)                                       |
 
 ### Database
 

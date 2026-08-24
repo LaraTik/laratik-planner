@@ -6,14 +6,14 @@ Status values: `Missing`, `Partial`, `Implemented`, `Tested`, `Verified`. Only i
 
 ## 2026-08-21 update — Stitch contract locked (Task 1 of 13)
 
-The canonical 49-screen Stitch contract is now frozen in
+The canonical 51-screen Stitch contract is now frozen in
 `tests/e2e/stitch-cases.ts` and asserted by
 `tests/unit/stitch-cases.test.ts`. The full inventory lives in
 [`STITCH_CAPTURE_INVENTORY.md`](./STITCH_CAPTURE_INVENTORY.md). The
 math that the matrix has to satisfy going forward:
 
-- **49 captured Stitch references** on disk (PNG + HTML per capture,
-  98 files + `DESIGN.md`). Every capture maps to a route or to a
+- **51 captured Stitch references** on disk (PNG + HTML per capture,
+  102 files + `DESIGN.md`). Every capture maps to a route or to a
   shared-state evidence group (`operational-states`,
   `notification-drawer`).
 - **27 current matrix rows** including `/signin/forgot-password`
@@ -32,11 +32,11 @@ math that the matrix has to satisfy going forward:
   themselves only ship at the three viewport sizes that Google
   Stitch emits (desktop 1440×900, mobile 390×844, tablet
   768×1024); the harness is the bridge between the two.
-- **39 active reference-state comparisons** (27 canonical + 11
-  responsive + 1 supporting) at their captured viewport. These are
-  the exact-reference screenshots the dedicated `visual-chromium`
-  Playwright project **must capture** (status: PENDING — no
-  baselines are committed yet).
+- **41 active reference-state comparisons** (27 canonical + 11
+  responsive + 3 supporting) at their captured viewport. The 39
+  route-backed cases are exact-reference screenshots; the two
+  shared-state evidence groups remain capture-review evidence. Status:
+  PENDING — no baselines are committed yet.
 - **10 historical/superseded captures with successors** (3
   historical + 7 superseded) — kept for traceability, never
   implemented against. Each one names its successor `screenId` in
@@ -87,7 +87,7 @@ batch (`c46fc21`–`96a256a`).
 
 ## 2026-08-20 update (superseded by 2026-08-21 entries above and below)
 
-The M0–M4 visual refactor (`docs/visual-parity/PLAN.md`) delivered a **Stitch-aligned PageHeader** (eyebrow / title / description / `workspace.timezone` pill), a **`PlanningViewToggle`** (List/Board/Calendar) where it makes sense, per-card or per-row **status colour-code**, and `data-testid` hooks for visual regression on every workspace-scoped page. The visual-regression harness that this update commissioned was later extended by the 2026-08-21 entries: 39 active exact-reference snapshots + 138 responsive baselines (23 unique routes × 6 viewports), with the deploy gate now depending on the critical visual tests.
+The M0–M4 visual refactor (`docs/visual-parity/PLAN.md`) delivered a **Stitch-aligned PageHeader** (eyebrow / title / description / `workspace.timezone` pill), a **`PlanningViewToggle`** (List/Board/Calendar) where it makes sense, per-card or per-row **status colour-code**, and `data-testid` hooks for visual regression on every workspace-scoped page. The visual-regression harness that this update commissioned was later extended by the 2026-08-24 Build Identity references: 39 route-backed exact-reference snapshots + 138 responsive baselines (23 unique routes × 6 viewports), with the deploy gate now depending on the critical visual tests.
 
 ## 2026-08-19 update
 
@@ -139,7 +139,7 @@ The `Missing` and `Partial` statuses from the prior revision were pre-M3b and ar
 `Tested` is reserved for rows whose "Required proof" is **captured in the repository** (visual baseline, behavioral log, signed manual checklist). The current state:
 
 - **Behavioral evidence** (axe-core per route, role-by-route matrix, E2E happy paths) — captured in `tests/e2e/`. Re-runs on `main` are green per `docs/production-readiness/TEST_EVIDENCE.md`.
-- **Visual baselines (QA-004)** — **PENDING**. The harness is wired (175 visual tests in the `visual-chromium` Playwright project, `test.skip` removed) but **no baselines are committed**. The 39 exact-reference + 138 responsive baselines must be re-captured on the CI runner (Linux, portable filenames) via `TEST_DATABASE_URL=... pnpm test:visual:update` and then reviewed against the 49-case `STITCH_CASES` manifest. A 2026-08-22 commit (`f406fbc`) untracked 122 darwin-path snapshot files that were accidentally committed and were not portable to the Ubuntu CI runner. Deploy now gates on the critical visual tests via `.github/workflows/ci.yml` + `.github/workflows/deploy.yml` (Task 7 commit `3d40183`) — the gate will fail the first deploy until baselines are committed.
+- **Visual baselines (QA-004)** — **PENDING**. The harness is wired (177 visual tests in the `visual-chromium` Playwright project, `test.skip` removed) but **no baselines are committed**. The 39 route-backed exact-reference + 138 responsive baselines must be re-captured on the CI runner (Linux, portable filenames) via `TEST_DATABASE_URL=... pnpm test:visual:update` and then reviewed against the 51-case `STITCH_CASES` manifest. A 2026-08-22 commit (`f406fbc`) untracked 122 darwin-path snapshot files that were accidentally committed and were not portable to the Ubuntu CI runner. Deploy now gates on the critical visual tests via `.github/workflows/ci.yml` + `.github/workflows/deploy.yml` (Task 7 commit `3d40183`) — the gate will fail the first deploy until baselines are committed.
 - **Manual a11y checklist (QA-005)** — automated a11y sweep found a real `meta-refresh` WCAG 2.2.2 violation on authenticated routes (`issues.md` P1 entry #3); manual screen-reader / zoom / reduced-motion sign-off is pending the fix and an owner action.
 
 The matrix ladder is therefore: every row `Implemented` (today) → `Tested` after the visual baselines are captured on CI AND QA-005 is signed off → `Verified` after independent review of the captured baselines.

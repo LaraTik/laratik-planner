@@ -11,6 +11,8 @@ import { listActiveGrantsForActor } from "@/lib/support";
 import { db } from "@/lib/db";
 import { agencies, agencyMemberships } from "@/lib/db/schema";
 import { and, eq, isNotNull, or } from "drizzle-orm";
+import { createBuildInfo } from "@/lib/build-info";
+import { serverEnv } from "@/lib/validation/env";
 
 /**
  * Authenticated app shell — wraps every page under (app)/*.
@@ -104,9 +106,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // — for M1.5 the singleton is the only agency and therefore the
   // only valid active row.
   const activeAgency = agencyOptions.find((a) => a.id === agencyId) ?? null;
+  const buildInfo = createBuildInfo({
+    version: serverEnv.APP_VERSION,
+    environment: serverEnv.NODE_ENV,
+  });
 
   return (
     <AppShell
+      buildInfo={buildInfo}
       user={{
         id: session.user.id,
         name: session.user.name ?? session.user.email ?? "User",

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { serverEnv } from "@/lib/validation/env";
 import { db } from "@/lib/db";
 import { sql } from "drizzle-orm";
+import { createBuildInfo } from "@/lib/build-info";
 
 /**
  * GET /api/health/ready
@@ -61,11 +62,15 @@ export async function GET() {
   const dbStatus = await checkDatabase();
   const schemaStatus = await checkSchema();
   const ok = dbStatus === "up" && schemaStatus === "ready";
+  const buildInfo = createBuildInfo({
+    version: serverEnv.APP_VERSION,
+    environment: serverEnv.NODE_ENV,
+  });
 
   return NextResponse.json(
     {
       ok,
-      version: process.env.APP_VERSION ?? process.env.npm_package_version ?? "unknown",
+      version: buildInfo.fullSha ?? buildInfo.displayLabel,
       env: serverEnv.NODE_ENV,
       db: dbStatus,
       schema: schemaStatus,

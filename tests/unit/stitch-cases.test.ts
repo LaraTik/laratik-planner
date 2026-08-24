@@ -13,7 +13,7 @@ import {
 } from "../../tests/e2e/stitch-cases";
 
 /**
- * Lock the canonical 49-screen Stitch contract: 39 active targets and 10
+ * Lock the canonical 51-screen Stitch contract: 41 active targets and 10
  * historical/superseded captures with successors. Every entry must point
  * to a real PNG and HTML artifact on disk, declare either a route or a
  * shared-state evidence group, and be tagged with a classification that
@@ -26,9 +26,9 @@ const count = (predicate: (entry: StitchCase) => boolean): number =>
   STITCH_CASES.filter(predicate).length;
 
 describe("canonical Stitch capture manifest", () => {
-  it("maps all 49 unique captured screens", () => {
-    expect(STITCH_CASES).toHaveLength(49);
-    expect(new Set(STITCH_CASES.map((entry) => entry.screenId)).size).toBe(49);
+  it("maps all 51 unique captured screens", () => {
+    expect(STITCH_CASES).toHaveLength(51);
+    expect(new Set(STITCH_CASES.map((entry) => entry.screenId)).size).toBe(51);
   });
 
   it("points to committed PNG and HTML artifacts", () => {
@@ -51,22 +51,22 @@ describe("canonical Stitch capture manifest", () => {
     }
   });
 
-  it("matches the 27/11/1/3/7 classification split", () => {
+  it("matches the 27/11/3/3/7 classification split", () => {
     expect(count((e) => e.classification === "canonical")).toBe(27);
     expect(count((e) => e.classification === "responsive")).toBe(11);
-    expect(count((e) => e.classification === "supporting")).toBe(1);
+    expect(count((e) => e.classification === "supporting")).toBe(3);
     expect(count((e) => e.classification === "historical")).toBe(3);
     expect(count((e) => e.classification === "superseded")).toBe(7);
   });
 
-  it("marks 39 active targets and 10 historical/superseded exclusions", () => {
+  it("marks 41 active targets and 10 historical/superseded exclusions", () => {
     const active = (e: StitchCase) =>
       e.classification === "canonical" ||
       e.classification === "responsive" ||
       e.classification === "supporting";
     const excluded = (e: StitchCase) =>
       e.classification === "historical" || e.classification === "superseded";
-    expect(count(active)).toBe(39);
+    expect(count(active)).toBe(41);
     expect(count(excluded)).toBe(10);
     expect(count(active) + count(excluded)).toBe(STITCH_CASES.length);
   });
@@ -94,14 +94,14 @@ describe("canonical Stitch capture manifest", () => {
 });
 
 describe("visual regression harness contract (Task 7)", () => {
-  it("enforces the 39 active / 10 historical+superseded split for implementation targets", () => {
+  it("enforces the 41 active / 10 historical+superseded split for implementation targets", () => {
     const active = (e: StitchCase) =>
       e.classification === "canonical" ||
       e.classification === "responsive" ||
       e.classification === "supporting";
     const excluded = (e: StitchCase) =>
       e.classification === "historical" || e.classification === "superseded";
-    expect(STITCH_CASES.filter(active)).toHaveLength(39);
+    expect(STITCH_CASES.filter(active)).toHaveLength(41);
     expect(STITCH_CASES.filter(excluded)).toHaveLength(10);
   });
 
@@ -183,7 +183,7 @@ describe("portable visual-baseline naming (Task 8)", () => {
   const desktop = { name: "desktop", width: 1280, height: 800 } as const;
 
   it("screenshotNameFor returns a relative POSIX path under reference/", () => {
-    // STITCH_CASES is the 49-entry manifest; [0] is the canonical
+    // STITCH_CASES is the 51-entry manifest; [0] is the canonical
     // workspaces surface (01aa8faf). The `!` asserts the array is
     // non-empty (covered by the manifest test above).
     const entry = STITCH_CASES[0]!;
@@ -266,7 +266,7 @@ describe("portable visual-baseline naming (Task 8)", () => {
         names.add(name);
       }
     }
-    // 49 cases × 6 viewports = 294 distinct names under `reference/`.
+    // 51 cases × 6 viewports = 306 distinct names under `reference/`.
     expect(names.size).toBe(STITCH_CASES.length * REGRESSION_VIEWPORTS.length);
   });
 

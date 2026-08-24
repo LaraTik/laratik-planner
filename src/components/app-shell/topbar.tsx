@@ -1,5 +1,6 @@
 import { NotificationsBell } from "./notifications-bell";
 import { UserMenu } from "./user-menu";
+import type { BuildInfo } from "@/lib/build-info";
 
 /**
  * Topbar — search + notifications + user menu. The workspace switcher
@@ -8,10 +9,12 @@ import { UserMenu } from "./user-menu";
  */
 export function Topbar({
   user,
+  buildInfo,
   notifications,
   unreadCount,
 }: {
   user: { id: string; name: string; email: string; image: string | null; isAdmin: boolean };
+  buildInfo: BuildInfo;
   notifications: {
     id: string;
     kind: string;
@@ -44,7 +47,7 @@ export function Topbar({
           initialUnread={unreadCount}
           badgeTestId="unread-badge"
         />
-        <UserMenu user={user} />
+        <UserMenu user={user} buildInfo={buildInfo} />
       </div>
     </div>
   );

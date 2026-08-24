@@ -15,8 +15,6 @@ services:
       - "3100:3000"
     restart: unless-stopped
     env_file: .env
-    environment:
-      APP_VERSION: ${IMAGE_TAG:-latest}
     depends_on:
       postgres:
         condition: service_healthy

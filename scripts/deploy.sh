@@ -17,6 +17,9 @@ export IMAGE_TAG
 APP_IMAGE="ghcr.io/laratik/laratik-planner:${IMAGE_TAG}"
 MIGRATOR_IMAGE="ghcr.io/laratik/laratik-planner-migrator:${IMAGE_TAG}"
 export APP_IMAGE MIGRATOR_IMAGE
+if [[ "$IMAGE_TAG" =~ ^[0-9a-fA-F]{40}$ ]]; then
+  export EXPECTED_APP_VERSION="$(printf '%s' "$IMAGE_TAG" | tr '[:upper:]' '[:lower:]')"
+fi
 # Capture the previous app image for rollback. Normalize to a fully-qualified
 # ghcr.io/... name; if the prior container was built under a different naming
 # scheme (e.g. a stale `laratik-planner:latest` from before M3a), skip the
@@ -75,6 +78,7 @@ if ! HEALTH_URL=http://127.0.0.1:3100/api/health ./scripts/vps/health-check.sh; 
   if [ -n "$PREVIOUS_IMAGE" ]; then
     echo "→ Rolling application image back to ${PREVIOUS_IMAGE}"
     export APP_IMAGE="$PREVIOUS_IMAGE"
+    unset EXPECTED_APP_VERSION
     docker compose up -d --no-deps app
     HEALTH_URL=http://127.0.0.1:3100/api/health ./scripts/vps/health-check.sh || true
   else

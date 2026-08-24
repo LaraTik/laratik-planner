@@ -10,6 +10,7 @@ set -euo pipefail
 URL="${HEALTH_URL:-http://localhost:3000/api/health}"
 MAX_ATTEMPTS="${HEALTH_CHECK_MAX_ATTEMPTS:-30}"
 SLEEP_SECONDS="${HEALTH_CHECK_SLEEP_SECONDS:-2}"
+EXPECTED_APP_VERSION="${EXPECTED_APP_VERSION:-}"
 
 for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
   response="$(curl -fsS -m 5 -w "\n%{http_code}" "$URL" || true)"
@@ -19,8 +20,12 @@ for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
   if [ "$code" = "200" ]; then
     ok="$(echo "$body" | sed -n 's/.*"ok":\s*\([a-z]*\).*/\1/p')"
     if [ "$ok" = "true" ]; then
-      echo "✅ Health OK (attempt ${attempt}/${MAX_ATTEMPTS}): $body"
-      exit 0
+      version="$(echo "$body" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
+      if [ -z "$EXPECTED_APP_VERSION" ] || [ "$version" = "$EXPECTED_APP_VERSION" ]; then
+        echo "✅ Health OK (attempt ${attempt}/${MAX_ATTEMPTS}): $body"
+        exit 0
+      fi
+      echo "→ Health is ready but build is ${version:-missing}; waiting for ${EXPECTED_APP_VERSION}…"
     fi
   fi
 

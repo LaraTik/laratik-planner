@@ -40,10 +40,10 @@ release verdict across the tracker + this directory is
 
 Definitions (used consistently across every doc above):
 
-- **49 captured Stitch references** under `designs/stitch/` (PNG + HTML each, 98 files + `DESIGN.md`).
+- **51 captured Stitch references** under `designs/stitch/` (PNG + HTML each, 102 files + `DESIGN.md`).
 - **27 canonical route/surface rows** including `/signin/forgot-password`.
 - **23 unique routes** deduped from the 27 canonical cases (the responsive matrix iterates over these).
-- **39 active exact-reference comparisons** (27 canonical + 11 responsive + 1 supporting) at the Stitch capture viewport.
+- **41 active references** (27 canonical + 11 responsive + 3 supporting) at the Stitch capture viewport; 39 are route-backed exact-reference comparisons and two are shared-state evidence groups.
 - **10 historical/superseded exclusions** (3 historical + 7 superseded) with successors.
 - **138 responsive baselines** (23 unique routes × 6 viewports: 360, 390, 768, 1024, 1280, 1440).
 

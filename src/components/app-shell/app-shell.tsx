@@ -5,7 +5,9 @@ import { MobileNav } from "./mobile-nav";
 import { NotificationsBell } from "./notifications-bell";
 import { RouteScrollReset } from "./route-scroll-reset";
 import { SupportSessionBanner } from "./support-session-banner";
+import { UserMenu } from "./user-menu";
 import type { AgencyRow } from "./agency-switcher";
+import type { BuildInfo } from "@/lib/build-info";
 
 /**
  * App shell — sidebar (left, persistent on desktop) + topbar (right
@@ -28,6 +30,7 @@ import type { AgencyRow } from "./agency-switcher";
  */
 export function AppShell({
   user,
+  buildInfo,
   workspaces,
   agencySwitcher,
   canCreateWorkspace,
@@ -44,6 +47,7 @@ export function AppShell({
     image: string | null;
     isAdmin: boolean;
   };
+  buildInfo: BuildInfo;
   workspaces: { id: string; slug: string; name: string }[];
   agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   canCreateWorkspace: boolean;
@@ -99,7 +103,12 @@ export function AppShell({
 
       {/* Topbar (desktop + tablet) — search + notifications + user menu */}
       <header className="bg-surface border-border sticky top-0 z-20 ml-0 hidden h-16 border-b md:ml-[248px] md:block">
-        <Topbar user={user} notifications={notifications} unreadCount={unreadCount} />
+        <Topbar
+          user={user}
+          buildInfo={buildInfo}
+          notifications={notifications}
+          unreadCount={unreadCount}
+        />
       </header>
 
       {/* Mobile topbar (md:hidden) — workspace identity + notifications + avatar */}
@@ -119,12 +128,7 @@ export function AppShell({
             initialUnread={unreadCount}
             badgeTestId="unread-badge-mobile"
           />
-          <span
-            className="border-border bg-surface text-fg-primary text-label flex h-9 w-9 items-center justify-center rounded-full border font-semibold"
-            aria-label={`Signed in as ${user.name}`}
-          >
-            {user.name.charAt(0).toUpperCase()}
-          </span>
+          <UserMenu user={user} buildInfo={buildInfo} variant="mobile" />
         </div>
       </header>
 

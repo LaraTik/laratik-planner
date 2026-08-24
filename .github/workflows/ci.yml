@@ -208,7 +208,7 @@ jobs:
         timeout-minutes: 20
 
       - name: Build Docker image
-        run: docker build -t laratik-planner:ci-${{ github.sha }} .
+        run: docker build --build-arg APP_VERSION=${GITHUB_SHA} -t laratik-planner:ci-${{ github.sha }} .
         timeout-minutes: 20
 
       - name: Smoke e2e (liveness)

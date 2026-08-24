@@ -11,20 +11,19 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { ProfileForm } from "./profile-form";
 import { PasswordForm } from "./password-form";
 import { SignOutForm } from "./sign-out-form";
+import { ApplicationInfoCard } from "@/components/build-info/application-info-card";
+import { createBuildInfo } from "@/lib/build-info";
+import { serverEnv } from "@/lib/validation/env";
 
 /**
  * Account page — own profile, password, agency membership, sign out.
  *
- * Three cards in this order:
+ * Five cards in this order:
  *  1. Profile (editable) — display name, name, avatar URL, locale.
  *  2. Password (editable, adaptive) — set or change password.
- *  3. Sign out (destructive) — one-click sign out via shared action.
- *
- * A separate read-only Agency card sits below for cross-tenant
- * context (which agency you belong to, which workspaces you're a
- * member of, whether you're an agency admin). The Agency card is
- * informational only — workspace-level actions live under the
- * workspace sidebar.
+ *  3. Agency (read-only) — cross-tenant membership context.
+ *  4. Application information (read-only) — build SHA + environment.
+ *  5. Sign out (destructive) — one-click sign out via shared action.
  */
 export const metadata = { title: "Account" };
 export const dynamic = "force-dynamic";
@@ -78,6 +77,10 @@ export default async function AccountPage() {
     redirect("/signin?error=AccessDenied");
   }
   const agency = agencyRows[0];
+  const buildInfo = createBuildInfo({
+    version: serverEnv.APP_VERSION,
+    environment: serverEnv.NODE_ENV,
+  });
 
   return (
     <div className="mx-auto max-w-2xl space-y-6" data-testid="account-page">
@@ -148,6 +151,8 @@ export default async function AccountPage() {
           </p>
         )}
       </Card>
+
+      <ApplicationInfoCard buildInfo={buildInfo} />
 
       <Card
         aria-labelledby="signout-heading"

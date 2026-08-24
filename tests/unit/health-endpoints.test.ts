@@ -29,6 +29,7 @@ vi.mock("@/lib/db", () => ({
 // validation. We give it the bare minimum so serverEnv is hydrated.
 vi.mock("@/lib/validation/env", () => ({
   serverEnv: {
+    APP_VERSION: "a1b2c3d4e5f678901234567890abcdef12345678",
     DATABASE_URL: "postgresql://x:y@localhost:5432/test",
     NODE_ENV: "test",
   },
@@ -68,6 +69,7 @@ describe("GET /api/health/ready", () => {
     expect(body.ok).toBe(true);
     expect(body.db).toBe("up");
     expect(body.schema).toBe("ready");
+    expect(body.version).toBe("a1b2c3d4e5f678901234567890abcdef12345678");
   });
 
   it("returns 503 when db is down", async () => {

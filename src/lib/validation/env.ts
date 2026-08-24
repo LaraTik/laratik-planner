@@ -62,6 +62,9 @@ export const clientEnv = _clientParsed.data;
 // ─── Server schema (everything else) ───────────────────────────────────────
 const serverSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  // Immutable Git commit SHA injected by the Docker build. This is
+  // operational metadata, not a secret or an operator-managed setting.
+  APP_VERSION: stringOrEmpty,
 
   // Database
   DATABASE_URL: optionalInDev(z.string().url()),

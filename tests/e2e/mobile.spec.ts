@@ -50,17 +50,18 @@ test.describe("Mobile layout (master prompt §3 — <768px)", () => {
     }
   });
 
-  test("mobile topbar shows initials, desktop topbar shows the full user menu", async ({
-    page,
-  }) => {
+  test("account menu exposes build identity on mobile and desktop", async ({ page }) => {
     await bootstrapTestSession(page);
 
-    // Mobile — initials in the mobile topbar (h-9 w-9 = 36px avatar)
+    // Mobile — the avatar is a 44px trigger for a focus-trapped sheet.
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto("/app");
-    // The mobile topbar's avatar has aria-label="Signed in as ..."
-    const mobileAvatar = page.getByLabel(/Signed in as/i);
-    await expect(mobileAvatar).toBeVisible();
+    const mobileMenu = page.getByTestId("user-menu-trigger-mobile");
+    await expect(mobileMenu).toBeVisible();
+    expect((await mobileMenu.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await mobileMenu.click();
+    await expect(page.getByTestId("user-menu-mobile")).toBeVisible();
+    await expect(page.getByTestId("copy-build-info-sheet-action")).toBeVisible();
 
     // Desktop — the user menu is a button in the topbar (data-testid
     // "user-menu-trigger") with an aria-label that includes the user
@@ -69,5 +70,20 @@ test.describe("Mobile layout (master prompt §3 — <768px)", () => {
     await page.goto("/app");
     const userMenu = page.getByTestId("user-menu-trigger");
     await expect(userMenu).toBeVisible();
+    await userMenu.click();
+    await expect(page.getByTestId("copy-build-info-menuitem")).toBeVisible();
+  });
+
+  test("account page shows build details without horizontal overflow", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto("/app/account");
+
+    await expect(page.getByTestId("application-info-card")).toBeVisible();
+    await expect(page.getByTestId("application-build-sha")).toBeVisible();
+    await expect(page.getByTestId("copy-build-info-button")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      375,
+    );
   });
 });

@@ -1,5 +1,5 @@
 /**
- * Canonical 49-screen Stitch capture contract.
+ * Canonical 51-screen Stitch capture contract.
  *
  * The on-disk artifacts under `designs/stitch/` are the source of truth
  * for visual parity. Every case here binds a Stitch `screenId` (the
@@ -17,7 +17,7 @@
  * - `superseded` → older revision; do not implement against it
  *                  (always carries a successor).
  *
- * The 39 active entries (canonical + responsive + supporting) are the
+ * The 41 active entries (canonical + responsive + supporting) are the
  * production-readiness targets. The 10 historical/superseded entries
  * are kept so reviewers can trace the lineage of each canonical
  * surface back to its first capture.
@@ -26,7 +26,15 @@
 export type StitchViewport = "desktop" | "mobile" | "tablet";
 
 export type StitchState =
-  "default" | "empty" | "final" | "failed" | "approved" | "discussion" | "decision" | "drawer";
+  | "default"
+  | "empty"
+  | "final"
+  | "failed"
+  | "approved"
+  | "discussion"
+  | "decision"
+  | "drawer"
+  | "account-menu";
 
 export type StitchClassification =
   "canonical" | "responsive" | "supporting" | "historical" | "superseded";
@@ -185,6 +193,12 @@ export const STITCH_CASES: StitchCase[] = [
     state: "decision",
     classification: "responsive",
   }),
+  defineCase("73699167", "studioflow---build-identity-mobile", {
+    route: "/app/account",
+    viewport: VIEWPORTS.mobile,
+    state: "account-menu",
+    classification: "supporting",
+  }),
   defineCase("7493876f", "northstar-coffee---planning-library", {
     route: "/app/w/acme/library",
     viewport: VIEWPORTS.desktop,
@@ -327,6 +341,12 @@ export const STITCH_CASES: StitchCase[] = [
     viewport: VIEWPORTS.tablet,
     state: "final",
     classification: "responsive",
+  }),
+  defineCase("db57c9e1", "studioflow---build-identity-desktop", {
+    route: "/app/account",
+    viewport: VIEWPORTS.desktop,
+    state: "account-menu",
+    classification: "supporting",
   }),
   defineCase("e350b62a", "studioflow---agency-ai-settings-final", {
     route: "/app/agency-settings",
@@ -517,6 +537,7 @@ import {
  */
 export const SETUP_FUNCTIONS: Record<StitchState, SetupState> = {
   default: async () => {},
+  "account-menu": async () => {},
   empty: setupEmptyState,
   final: setupFinalState,
   failed: setupFailedState,
