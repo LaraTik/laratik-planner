@@ -22,12 +22,21 @@ describe("AddAgencyDrawer", () => {
     expect(screen.getByRole("region", { name: "Organization details" })).toBeInTheDocument();
     expect(screen.getByText(/Step 1 of 4/)).toBeInTheDocument();
 
+    // The Continue button is gated on the required fields of
+    // the current step (M3.4 polish). Fill them so the test
+    // can advance.
+    await user.type(screen.getByLabelText("Agency name"), "Acme Social");
+    await user.type(screen.getByLabelText("Slug"), "acme");
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByRole("region", { name: "First administrator" })).toBeInTheDocument();
 
+    await user.type(screen.getByLabelText("Administrator name"), "Acme Admin");
+    await user.type(screen.getByLabelText("Administrator email"), "admin@acme.example");
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByRole("region", { name: "Plan and limits" })).toBeInTheDocument();
 
+    // The plan select has a default value, so Continue is
+    // enabled by step 3.
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByRole("region", { name: "Review agency" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create agency" })).toBeInTheDocument();
@@ -45,8 +54,15 @@ describe("AddAgencyDrawer", () => {
       container.ownerDocument.querySelector<HTMLInputElement>('input[name="overrides"]');
     expect(overrideInput).toHaveValue("{}");
 
+    // Step 1: fill required fields.
+    await user.type(screen.getByLabelText("Agency name"), "Acme Social");
+    await user.type(screen.getByLabelText("Slug"), "acme");
     await user.click(screen.getByRole("button", { name: "Continue" }));
+    // Step 2: fill required fields.
+    await user.type(screen.getByLabelText("Administrator name"), "Acme Admin");
+    await user.type(screen.getByLabelText("Administrator email"), "admin@acme.example");
     await user.click(screen.getByRole("button", { name: "Continue" }));
+    // Step 3: add an override on Instagram.
     await user.type(screen.getByLabelText("Instagram"), "3");
     expect(overrideInput).toHaveValue(
       JSON.stringify({ social_profiles_by_platform: { instagram: 3 } }),
