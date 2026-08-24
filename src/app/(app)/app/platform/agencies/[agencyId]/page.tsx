@@ -168,6 +168,38 @@ export default async function PlatformAgencyDetailPage({
         />
       </div>
 
+      {/* Anchor nav (M3.4 — agency detail polish). Each link
+          jumps to the corresponding section id; the existing
+          PlanAiSections already exposes id="plan", id="usage",
+          and id="ai" anchors, and the form below exposes
+          id="identity". This is the lightweight version of the
+          plan's tab refactor: the page stays a single scroll,
+          but the user can deep-link to any section via the
+          URL hash, and the nav strip keeps the affordance
+          discoverable. */}
+      <nav
+        aria-label="Agency detail sections"
+        className="border-border bg-surface-subtle flex flex-wrap items-center gap-1 rounded-[var(--radius-control)] border p-1"
+        data-testid="platform-agency-section-nav"
+      >
+        {[
+          { href: "identity", label: "Identity" },
+          { href: "workspaces", label: "Workspaces" },
+          { href: "plan", label: "Plan and usage" },
+          { href: "ai", label: "AI" },
+          { href: "security", label: "Security" },
+        ].map((s) => (
+          <a
+            key={s.href}
+            href={`#${s.href}`}
+            className="text-body text-fg-secondary hover:bg-surface focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2"
+            data-testid={`platform-agency-section-nav-${s.href}`}
+          >
+            {s.label}
+          </a>
+        ))}
+      </nav>
+
       <div data-testid="platform-agency-identity-section" id="identity">
         <PlatformEditAgencyForm
           agencyId={detail.id}
@@ -178,7 +210,7 @@ export default async function PlatformAgencyDetailPage({
         />
       </div>
 
-      <Card padding="lg" className="space-y-4">
+      <Card id="workspaces" padding="lg" className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Workspaces in this agency</CardTitle>
@@ -213,7 +245,9 @@ export default async function PlatformAgencyDetailPage({
 
       <PlanAiSections agencyId={detail.id} />
 
-      <SupportAccessSection agencyId={detail.id} />
+      <div id="security">
+        <SupportAccessSection agencyId={detail.id} />
+      </div>
     </>
   );
 }
