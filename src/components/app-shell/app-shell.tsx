@@ -4,6 +4,7 @@ import { Topbar } from "./topbar";
 import { MobileNav } from "./mobile-nav";
 import { NotificationsBell } from "./notifications-bell";
 import { RouteScrollReset } from "./route-scroll-reset";
+import { SupportSessionBanner } from "./support-session-banner";
 import type { AgencyRow } from "./agency-switcher";
 
 /**
@@ -33,6 +34,7 @@ export function AppShell({
   notifications,
   unreadCount,
   isPlatformAdmin,
+  supportGrants = [],
   children,
 }: {
   user: {
@@ -56,6 +58,16 @@ export function AppShell({
   }[];
   unreadCount: number;
   isPlatformAdmin: boolean;
+  supportGrants?: Array<{
+    id: string;
+    targetAgencyId: string;
+    scopeWorkspaceId: string | null;
+    scopeMetadataOnly: boolean;
+    downloadsAllowed: boolean;
+    activatedAt: string;
+    expiresAt: string;
+    remainingMinutes: number;
+  }>;
   children: React.ReactNode;
 }) {
   return (
@@ -122,7 +134,10 @@ export function AppShell({
         tabIndex={-1}
         className="pb-16 focus:outline-none md:ml-[248px] md:pt-16 md:pb-0"
       >
-        <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8 md:py-8">{children}</div>
+        <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8 md:py-8">
+          <SupportSessionBanner grants={supportGrants} />
+          {children}
+        </div>
       </main>
 
       {/* Mobile bottom nav (hidden on tablet+) */}

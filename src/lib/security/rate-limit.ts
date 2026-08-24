@@ -10,7 +10,9 @@ export type RateLimitScope =
   | "invitation_accept"
   | "invitation_resend"
   | "ai_generation"
-  | "magic_link_request";
+  | "magic_link_request"
+  | "support_access_request"
+  | "support_access_decision";
 
 const RULES: Record<RateLimitScope, { limit: number; windowSeconds: number }> = {
   bootstrap: { limit: 5, windowSeconds: 15 * 60 },
@@ -23,6 +25,11 @@ const RULES: Record<RateLimitScope, { limit: number; windowSeconds: number }> = 
   // email) and IP-rotation spam (limit per IP). Defense against the
   // "request a sign-in link for arbitrary laratik.com addresses" vector.
   magic_link_request: { limit: 5, windowSeconds: 60 * 60 },
+  // M3 — platform admins can file a support access request up to
+  // 10 times per hour; the agency admin can decide up to 30 times
+  // per hour. Both are tunable in production if abuse appears.
+  support_access_request: { limit: 10, windowSeconds: 60 * 60 },
+  support_access_decision: { limit: 30, windowSeconds: 60 * 60 },
 };
 
 export function rateLimitRuleFor(scope: RateLimitScope) {

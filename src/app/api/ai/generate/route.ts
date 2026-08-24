@@ -19,8 +19,9 @@ import { publicProviderError } from "@/lib/security/public-error";
 import { randomUUID } from "node:crypto";
 import { serverEnv } from "@/lib/validation/env";
 import { logError } from "@/lib/observability/logger";
-import { getEffectiveEntitlement, LimitExceededError, reserveCapacity } from "@/lib/entitlements";
+import { getEffectiveEntitlement, LimitExceededError } from "@/lib/entitlements";
 import { recordUsage } from "@/lib/usage";
+import { enforceAiBudget, reconcileAiBudget } from "@/lib/ai/governance";
 
 /**
  * POST /api/ai/generate
@@ -160,16 +161,25 @@ export async function POST(req: NextRequest) {
       1,
       Math.min(600, entitlement.maxOutputTokensPerRequest ?? 600),
     );
+    const usageRequestId = requestId ?? randomUUID();
+    // M3.3 — server-authoritative AI budget enforcement. The
+    // per-user daily counter is upserted inside the same
+    // transaction as the monthly reservation, so concurrent
+    // requests from the same user cannot exceed the cap. The
+    // upsert and the monthly reservation are atomic; a
+    // LimitExceededError rolls both back.
     await db.transaction(async (tx) => {
-      await reserveCapacity(tx, agencyId, [
-        { resource: "ai_requests_month", increase: 1 },
-        { resource: `daily_ai_requests:${session.user.id}`, increase: 1 },
-        { resource: "ai_input_tokens_month", increase: estimatedInput },
-        { resource: "ai_output_tokens_month", increase: outputReservation },
-      ]);
+      await enforceAiBudget({
+        tx,
+        agencyId,
+        userId: session.user.id,
+        capability: parsed.data.capability,
+        estimatedInputTokens: estimatedInput,
+        estimatedOutputTokens: outputReservation,
+        requestId: usageRequestId,
+      });
     });
     reservedTokens = { input: estimatedInput, output: outputReservation };
-    const usageRequestId = requestId ?? randomUUID();
     let providerUsage: ChatResult | null = null;
     const baseInput = {
       title: item.title,
@@ -200,21 +210,19 @@ export async function POST(req: NextRequest) {
     }
     const actualInput = (providerUsage as ChatResult | null)?.inputTokens ?? estimatedInput;
     const actualOutput = (providerUsage as ChatResult | null)?.outputTokens ?? outputReservation;
-    const positiveAdjustments = [
-      { resource: "ai_input_tokens_month", increase: actualInput - estimatedInput },
-      { resource: "ai_output_tokens_month", increase: actualOutput - outputReservation },
-    ].filter((entry) => entry.increase > 0);
-    if (positiveAdjustments.length > 0) {
-      await db.transaction(async (tx) => {
-        await reserveCapacity(tx, agencyId, positiveAdjustments);
-      });
-    }
-    if (actualInput < estimatedInput) {
-      await recordUsage(db, agencyId, "ai_input_tokens_month", actualInput - estimatedInput);
-    }
-    if (actualOutput < outputReservation) {
-      await recordUsage(db, agencyId, "ai_output_tokens_month", actualOutput - outputReservation);
-    }
+    // M3.3 — reconcile the per-request reservation against the
+    // provider's actual token usage. Idempotent and atomic; the
+    // daily counter is left alone (it counts requests, not
+    // tokens). The monthly input + output counters are trued up
+    // in a single transaction.
+    await reconcileAiBudget({
+      agencyId,
+      userId: session.user.id,
+      estimatedInputTokens: estimatedInput,
+      estimatedOutputTokens: outputReservation,
+      actualInputTokens: actualInput,
+      actualOutputTokens: actualOutput,
+    });
     reservedTokens = { input: actualInput, output: actualOutput };
     await db.insert(aiUsageEvents).values({
       agencyId,
