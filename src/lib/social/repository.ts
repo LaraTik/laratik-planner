@@ -14,7 +14,7 @@ import {
 } from "./crypto";
 import { serverEnv } from "@/lib/validation/env";
 import { LimitExceededError, reserveCapacity } from "@/lib/entitlements";
-import type { ConnectedProfile, ProfileSnapshot, SocialPlatform } from "./types";
+import type { ConnectedProfile, ProfileSnapshot } from "./types";
 
 type SocialChannel = typeof socialChannels.$inferSelect;
 type SocialConnection = typeof socialConnections.$inferSelect;
@@ -60,9 +60,7 @@ const LEASE_MS = 5 * 60 * 1000;
 
 function getEncryptionKey(): string {
   if (!serverEnv.SOCIAL_TOKEN_ENCRYPTION_KEY) {
-    throw new Error(
-      "SOCIAL_TOKEN_ENCRYPTION_KEY is required to read or write social credentials",
-    );
+    throw new Error("SOCIAL_TOKEN_ENCRYPTION_KEY is required to read or write social credentials");
   }
   return serverEnv.SOCIAL_TOKEN_ENCRYPTION_KEY;
 }
@@ -122,7 +120,9 @@ export async function findConnection(
   const [row] = await db
     .select()
     .from(socialConnections)
-    .where(and(eq(socialConnections.id, connectionId), eq(socialConnections.workspaceId, workspaceId)))
+    .where(
+      and(eq(socialConnections.id, connectionId), eq(socialConnections.workspaceId, workspaceId)),
+    )
     .limit(1);
   return row ?? null;
 }
@@ -242,10 +242,7 @@ export async function cleanupOauthStates(db: Db, olderThan: Date): Promise<numbe
   const result = await db
     .delete(socialOauthStates)
     .where(
-      or(
-        isNotNull(socialOauthStates.consumedAt),
-        lte(socialOauthStates.expiresAt, olderThan),
-      ),
+      or(isNotNull(socialOauthStates.consumedAt), lte(socialOauthStates.expiresAt, olderThan)),
     );
   return result.rowCount ?? 0;
 }
@@ -270,10 +267,7 @@ export type LinkProfileResult = {
   created: boolean;
 };
 
-export async function linkProfile(
-  db: Db,
-  input: LinkProfileInput,
-): Promise<LinkProfileResult> {
+export async function linkProfile(db: Db, input: LinkProfileInput): Promise<LinkProfileResult> {
   return db.transaction(async (tx) => {
     if (input.existingChannelId) {
       const [channel] = await tx
@@ -282,7 +276,10 @@ export async function linkProfile(
         .where(
           and(
             eq(socialChannels.id, input.existingChannelId),
-            eq(socialChannels.workspaceId, input.profile.providerAccountId ? sql`workspace_id` : sql`workspace_id`),
+            eq(
+              socialChannels.workspaceId,
+              input.profile.providerAccountId ? sql`workspace_id` : sql`workspace_id`,
+            ),
           ),
         )
         .for("update")
@@ -327,11 +324,12 @@ export async function linkProfile(
         // a connectionId. The caller is expected to pass the
         // workspaceId via the connection row; we resolve it here.
         workspaceId: sql`(SELECT workspace_id FROM social_connection WHERE id = ${input.connectionId})`,
-        platform: input.profile.platform === "instagram"
-          ? "instagram"
-          : input.profile.platform === "facebook"
-            ? "facebook"
-            : "tiktok",
+        platform:
+          input.profile.platform === "instagram"
+            ? "instagram"
+            : input.profile.platform === "facebook"
+              ? "facebook"
+              : "tiktok",
         accountName: input.profile.accountName,
         handle: input.profile.handle,
         url: input.profile.profileUrl,
@@ -383,10 +381,7 @@ export async function claimDueProfiles(
         and(
           eq(socialChannels.connectionStatus, "connected"),
           isNull(socialChannels.archivedAt),
-          or(
-            isNull(socialChannels.nextSyncAt),
-            lte(socialChannels.nextSyncAt, now),
-          ),
+          or(isNull(socialChannels.nextSyncAt), lte(socialChannels.nextSyncAt, now)),
           or(
             isNull(socialChannels.syncLeaseUntil),
             lte(socialChannels.syncLeaseUntil, sql`now() - interval '1 second'`),
@@ -403,9 +398,7 @@ export async function claimDueProfiles(
     await tx
       .update(socialChannels)
       .set({ syncLeaseUntil: leaseUntil, updatedAt: now })
-      .where(
-        sql`${socialChannels.id} IN ${ids}`,
-      );
+      .where(sql`${socialChannels.id} IN ${ids}`);
     return rows.map((r) => ({ channel: r.channel, connection: r.connection }));
   });
 }
@@ -463,11 +456,7 @@ export async function saveSnapshot(
   return row;
 }
 
-export async function markSyncSuccess(
-  db: Db,
-  channelId: string,
-  nextSyncAt: Date,
-): Promise<void> {
+export async function markSyncSuccess(db: Db, channelId: string, nextSyncAt: Date): Promise<void> {
   await db
     .update(socialChannels)
     .set({
@@ -497,7 +486,9 @@ export async function markSyncFailure(
       nextSyncAt,
       lastSyncErrorCode: code,
       lastSyncErrorAt: new Date(),
-      ...(bumpFailureCount ? { syncFailureCount: sql`${socialChannels.syncFailureCount} + 1` } : {}),
+      ...(bumpFailureCount
+        ? { syncFailureCount: sql`${socialChannels.syncFailureCount} + 1` }
+        : {}),
       updatedAt: new Date(),
     })
     .where(eq(socialChannels.id, channelId));
@@ -540,9 +531,7 @@ export async function disconnectProfile(
       syncFailureCount: 0,
       updatedAt: new Date(),
     })
-    .where(
-      and(eq(socialChannels.id, channelId), eq(socialChannels.workspaceId, workspaceId)),
-    );
+    .where(and(eq(socialChannels.id, channelId), eq(socialChannels.workspaceId, workspaceId)));
 }
 
 /**
@@ -561,10 +550,7 @@ export async function revokeConnectionAndDetach(
       .update(socialConnections)
       .set({ status: "revoked", revokedAt: new Date(), updatedAt: new Date() })
       .where(
-        and(
-          eq(socialConnections.id, connectionId),
-          eq(socialConnections.workspaceId, workspaceId),
-        ),
+        and(eq(socialConnections.id, connectionId), eq(socialConnections.workspaceId, workspaceId)),
       );
     await tx
       .update(socialChannels)
@@ -592,7 +578,9 @@ export async function revokeConnectionAndDetach(
 export async function cleanupOldMetrics(db: Db, olderThan: Date): Promise<number> {
   const result = await db
     .delete(socialProfileDailyMetrics)
-    .where(lte(socialProfileDailyMetrics.metricDate, sql`${olderThan.toISOString().slice(0, 10)}::date`));
+    .where(
+      lte(socialProfileDailyMetrics.metricDate, sql`${olderThan.toISOString().slice(0, 10)}::date`),
+    );
   return result.rowCount ?? 0;
 }
 
@@ -605,9 +593,7 @@ export async function findChannelsByWorkspace(
   return db
     .select()
     .from(socialChannels)
-    .where(
-      and(eq(socialChannels.workspaceId, workspaceId), isNull(socialChannels.archivedAt)),
-    )
+    .where(and(eq(socialChannels.workspaceId, workspaceId), isNull(socialChannels.archivedAt)))
     .orderBy(asc(socialChannels.accountName));
 }
 

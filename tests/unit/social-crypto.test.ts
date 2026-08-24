@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  sealCredentials,
-  openCredentials,
-  type SocialCredentials,
-} from "@/lib/social/crypto";
+import { sealCredentials, openCredentials, type SocialCredentials } from "@/lib/social/crypto";
 
 /**
  * M4 — provider credential envelope.
@@ -44,7 +40,7 @@ describe("sealCredentials / openCredentials", () => {
   it("preserves extra fields on the payload", () => {
     const payload: SocialCredentials = {
       accessToken: "a",
-      profileAccessTokens: { "p1": "tok1" },
+      profileAccessTokens: { p1: "tok1" },
     };
     const sealed = sealCredentials(payload, validKey);
     expect(openCredentials(sealed, validKey)).toEqual(payload);
@@ -79,9 +75,7 @@ describe("sealCredentials / openCredentials", () => {
 
   it("rejects a key that is not exactly 32 bytes when decoded", () => {
     const shortKey = Buffer.alloc(16, 1).toString("base64");
-    expect(() => sealCredentials({ accessToken: "a" }, shortKey)).toThrow(
-      /32 bytes/,
-    );
+    expect(() => sealCredentials({ accessToken: "a" }, shortKey)).toThrow(/32 bytes/);
     const sealed = sealCredentials({ accessToken: "a" }, validKey);
     expect(() => openCredentials(sealed, shortKey)).toThrow(/32 bytes/);
   });
@@ -89,9 +83,7 @@ describe("sealCredentials / openCredentials", () => {
   it("fails closed with a different key of the same length", () => {
     const otherKey = Buffer.alloc(32, 9).toString("base64");
     const sealed = sealCredentials({ accessToken: "access" }, validKey);
-    expect(() => openCredentials(sealed, otherKey)).toThrow(
-      "Unable to decrypt social credentials",
-    );
+    expect(() => openCredentials(sealed, otherKey)).toThrow("Unable to decrypt social credentials");
   });
 
   it("uses a fresh IV for every seal", () => {

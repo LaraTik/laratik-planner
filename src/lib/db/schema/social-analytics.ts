@@ -57,7 +57,10 @@ export const socialConnections = pgTable(
     credentialsIv: text("credentials_iv").notNull(),
     credentialsTag: text("credentials_tag").notNull(),
     credentialsKeyVersion: integer("credentials_key_version").notNull().default(1),
-    accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true, mode: "date" }),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
     refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
       withTimezone: true,
       mode: "date",
@@ -74,10 +77,7 @@ export const socialConnections = pgTable(
     ...timestamps,
   },
   (t) => [
-    check(
-      "social_connection_provider_valid",
-      sql`${t.provider} IN ('meta', 'tiktok')`,
-    ),
+    check("social_connection_provider_valid", sql`${t.provider} IN ('meta', 'tiktok')`),
     check(
       "social_connection_status_valid",
       sql`${t.status} IN ('pending_selection', 'active', 'needs_reauth', 'error', 'revoked')`,

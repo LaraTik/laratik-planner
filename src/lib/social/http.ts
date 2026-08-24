@@ -25,7 +25,6 @@ const MAX_BODY_BYTES = 1024 * 1024; // 1 MiB
 const REQUEST_TIMEOUT_MS = 10_000;
 const MAX_ATTEMPTS = 3; // initial + 2 retries
 const MAX_JITTER_MS = 4_000;
-const RETRYABLE_STATUS = new Set([429, 502, 503, 504]);
 
 export class SocialProviderError extends Error {
   constructor(
@@ -45,7 +44,7 @@ export class SocialProviderError extends Error {
 }
 
 export type ProviderRequestInit = {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "DELETE";
   headers?: Record<string, string>;
   body?: string;
 };

@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  SocialProviderError,
-  isSocialProviderError,
-  providerRequest,
-} from "@/lib/social/http";
+import { SocialProviderError, isSocialProviderError, providerRequest } from "@/lib/social/http";
 
 /**
  * M4 — provider HTTP client.
@@ -39,7 +35,9 @@ function jsonResponse(status: number, body: unknown, headers: Record<string, str
 describe("providerRequest", () => {
   it("returns the body and a request id on success", async () => {
     globalThis.fetch = (() =>
-      Promise.resolve(jsonResponse(200, { ok: true }, { "x-request-id": "abc-123" }))) as typeof fetch;
+      Promise.resolve(
+        jsonResponse(200, { ok: true }, { "x-request-id": "abc-123" }),
+      )) as typeof fetch;
     const { status, body, requestId } = await providerRequest("https://example.com/x");
     expect(status).toBe(200);
     expect(body).toBe(JSON.stringify({ ok: true }));

@@ -57,8 +57,8 @@ if (!TEST_DB_URL) throw new Error("TEST_DATABASE_URL is required for integration
 const pool = new Pool({ connectionString: TEST_DB_URL });
 const db = drizzle(pool);
 
-let agencyId: string;
 let workspaceId: string;
+let _agencyId: string;
 let userId: string;
 
 async function seed() {
@@ -79,7 +79,7 @@ async function seed() {
       createdBy: user!.id,
     })
     .returning();
-  agencyId = agency!.id;
+  _agencyId = agency!.id;
   workspaceId = ws!.id;
   userId = user!.id;
 }
@@ -177,7 +177,6 @@ describe("M4 — repository", () => {
         new Date(Date.now() + 3600_000),
         null,
       );
-      const opened = openConnectionCredentials(conn);
       // Re-read from DB to get the updated row
       const fresh = await db
         .select()
@@ -241,14 +240,8 @@ describe("M4 — repository", () => {
       const a = await seedConnectedChannel(connId, "a");
       const b = await seedConnectedChannel(connId, "b");
       const c = await seedConnectedChannel(connId, "c");
-      const [first, second] = await Promise.all([
-        claimDueProfiles(db, 2),
-        claimDueProfiles(db, 2),
-      ]);
-      const ids = new Set([
-        ...first.map((x) => x.channel.id),
-        ...second.map((x) => x.channel.id),
-      ]);
+      const [first, second] = await Promise.all([claimDueProfiles(db, 2), claimDueProfiles(db, 2)]);
+      const ids = new Set([...first.map((x) => x.channel.id), ...second.map((x) => x.channel.id)]);
       // Across two concurrent claimers, the union of claimed rows
       // is a subset of the seeded rows with no duplicates.
       expect(ids.size).toBe(first.length + second.length);
@@ -352,9 +345,10 @@ describe("M4 — repository", () => {
       const a = await seedConnectedChannel(connId, "a");
       const b = await seedConnectedChannel(connId, "b");
       await revokeConnectionAndDetach(db, workspaceId, connId);
-      const fresh = await db.select().from(socialChannels).where(
-        sql`id IN (${a.id}, ${b.id})`,
-      );
+      const fresh = await db
+        .select()
+        .from(socialChannels)
+        .where(sql`id IN (${a.id}, ${b.id})`);
       for (const row of fresh) {
         expect(row.connectionStatus).toBe("disconnected");
         expect(row.socialConnectionId).toBeNull();
@@ -378,7 +372,11 @@ describe("M4 — repository", () => {
       expect(claimed).toHaveLength(1);
       const next = new Date(Date.now() + 86400_000);
       await markSyncSuccess(db, ch.id, next);
-      const fresh = await db.select().from(socialChannels).where(sql`id = ${ch.id}`).limit(1);
+      const fresh = await db
+        .select()
+        .from(socialChannels)
+        .where(sql`id = ${ch.id}`)
+        .limit(1);
       expect(fresh[0]!.syncLeaseUntil).toBeNull();
       expect(fresh[0]!.lastSyncedAt).not.toBeNull();
       expect(fresh[0]!.nextSyncAt!.getTime()).toBe(next.getTime());

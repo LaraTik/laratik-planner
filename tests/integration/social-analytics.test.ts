@@ -148,9 +148,12 @@ describe("M4 — social profile analytics schema", () => {
   });
 
   describe("behavioural invariants", () => {
-    let agencyId: string;
     let workspaceId: string;
     let userId: string;
+    // Captured in the beforeEach for future tests that need it; currently
+    // unused at the type level but useful to keep around for symmetry with
+    // the workspaceId / userId captures.
+    let _agencyId: string;
 
     beforeEach(async () => {
       const [agency] = await db.insert(agencies).values({ name: "Acme", slug: "acme" }).returning();
@@ -167,7 +170,7 @@ describe("M4 — social profile analytics schema", () => {
           createdBy: user!.id,
         })
         .returning();
-      agencyId = agency!.id;
+      _agencyId = agency!.id;
       workspaceId = ws!.id;
       userId = user!.id;
     });
@@ -205,14 +208,12 @@ describe("M4 — social profile analytics schema", () => {
 
     it("rejects an unknown social_channel.connection_status", async () => {
       await expectPgConstraint(
-        db
-          .insert(socialChannels)
-          .values({
-            workspaceId,
-            platform: "instagram",
-            accountName: "Test",
-            connectionStatus: "yolo",
-          }),
+        db.insert(socialChannels).values({
+          workspaceId,
+          platform: "instagram",
+          accountName: "Test",
+          connectionStatus: "yolo",
+        }),
         "social_channel_connection_status_valid",
       );
     });

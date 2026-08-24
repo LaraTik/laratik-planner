@@ -182,16 +182,16 @@ ssh laratik-vps 'cd /opt/laratik-planner && docker compose up -d app'
 
 ## Rotation
 
-| What                              | Where                          | How                                                                                                                                                                                                                                                                                                  |
-| --------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AUTH_SECRET`                     | `.env` on VPS                  | `openssl rand -base64 32`, update, `docker compose up -d --no-deps app`. Active sessions are invalidated.                                                                                                                                                                                            |
-| `GOOGLE_CLIENT_SECRET`            | Google Cloud Console + `.env`  | Same as above.                                                                                                                                                                                                                                                                                       |
-| `SMTP_PASSWORD`                   | Mailcow admin                  | Same as above.                                                                                                                                                                                                                                                                                       |
-| `SOCIAL_TOKEN_ENCRYPTION_KEY`     | `.env` on VPS                  | Decrypt every `social_connection` row with the old key, re-encrypt with the new key, then swap. See the **Social credential key rotation** section below for the exact script.                                                                                                                       |
-| `META_APP_SECRET`                 | Meta App Dashboard + `.env`    | Same pattern as `GOOGLE_CLIENT_SECRET`; the secret applies to long-lived token exchange. After rotation, the cron route will re-issue long-lived tokens for every active connection on the next refresh cycle.                                                                                   |
-| `TIKTOK_CLIENT_SECRET`            | TikTok Developer Portal + `.env` | Same as above. TikTok's 365-day refresh token is bound to the app secret at the time of grant issuance; a secret rotation invalidates existing refresh tokens, so all workspaces must reconnect.                                                                                                     |
-| Image                             | GHCR                           | Automatic on `main` push. Old tags pruned via `docker image prune` (see disk hygiene below).                                                                                                                                                                                                         |
-| LE cert                           | Traefik (vps-ops)              | Auto-renewed by Traefik; check with `ssh laratik-vps 'sudo bash /root/gitops/scripts/ops/check-certs.sh 30'`.                                                                                                                                                                                         |
+| What                          | Where                            | How                                                                                                                                                                                                            |
+| ----------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTH_SECRET`                 | `.env` on VPS                    | `openssl rand -base64 32`, update, `docker compose up -d --no-deps app`. Active sessions are invalidated.                                                                                                      |
+| `GOOGLE_CLIENT_SECRET`        | Google Cloud Console + `.env`    | Same as above.                                                                                                                                                                                                 |
+| `SMTP_PASSWORD`               | Mailcow admin                    | Same as above.                                                                                                                                                                                                 |
+| `SOCIAL_TOKEN_ENCRYPTION_KEY` | `.env` on VPS                    | Decrypt every `social_connection` row with the old key, re-encrypt with the new key, then swap. See the **Social credential key rotation** section below for the exact script.                                 |
+| `META_APP_SECRET`             | Meta App Dashboard + `.env`      | Same pattern as `GOOGLE_CLIENT_SECRET`; the secret applies to long-lived token exchange. After rotation, the cron route will re-issue long-lived tokens for every active connection on the next refresh cycle. |
+| `TIKTOK_CLIENT_SECRET`        | TikTok Developer Portal + `.env` | Same as above. TikTok's 365-day refresh token is bound to the app secret at the time of grant issuance; a secret rotation invalidates existing refresh tokens, so all workspaces must reconnect.               |
+| Image                         | GHCR                             | Automatic on `main` push. Old tags pruned via `docker image prune` (see disk hygiene below).                                                                                                                   |
+| LE cert                       | Traefik (vps-ops)                | Auto-renewed by Traefik; check with `ssh laratik-vps 'sudo bash /root/gitops/scripts/ops/check-certs.sh 30'`.                                                                                                  |
 
 ## Disk hygiene
 
@@ -406,17 +406,17 @@ Read-only, provider-neutral social profile analytics for Meta and TikTok. This s
 
 ### Environment variables (server-only)
 
-| Name                          | Default | Purpose                                                                                                                       |
-| ----------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Name                          | Default | Purpose                                                                                                                                                |
+| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `SOCIAL_TOKEN_ENCRYPTION_KEY` | empty   | Base64-encoded 32-byte key for the AES-256-GCM credential envelope. Generate with `openssl rand -base64 32`. Required when `SOCIAL_SYNC_ENABLED=true`. |
-| `META_APP_ID`                 | empty   | Facebook App ID. Required for Meta connection to succeed.                                                                     |
-| `META_APP_SECRET`             | empty   | Facebook App secret.                                                                                                          |
-| `META_LOGIN_CONFIG_ID`        | empty   | Facebook Login for Business configuration ID.                                                                                 |
-| `META_GRAPH_API_VERSION`      | `v25.0` | Pinned Graph API version. Bumping it requires re-applying the migration and re-running App Review.                            |
-| `TIKTOK_CLIENT_KEY`           | empty   | TikTok app key.                                                                                                               |
-| `TIKTOK_CLIENT_SECRET`        | empty   | TikTok app secret.                                                                                                            |
-| `SOCIAL_SYNC_ENABLED`         | `false` | Master switch for the cron worker. When `false`, `/api/cron/social-metrics` is a no-op.                                       |
-| `SOCIAL_TIKTOK_ENABLED`       | `false` | Per-provider gate. When `false`, the TikTok provider and callback routes return 404 / disabled.                                |
+| `META_APP_ID`                 | empty   | Facebook App ID. Required for Meta connection to succeed.                                                                                              |
+| `META_APP_SECRET`             | empty   | Facebook App secret.                                                                                                                                   |
+| `META_LOGIN_CONFIG_ID`        | empty   | Facebook Login for Business configuration ID.                                                                                                          |
+| `META_GRAPH_API_VERSION`      | `v25.0` | Pinned Graph API version. Bumping it requires re-applying the migration and re-running App Review.                                                     |
+| `TIKTOK_CLIENT_KEY`           | empty   | TikTok app key.                                                                                                                                        |
+| `TIKTOK_CLIENT_SECRET`        | empty   | TikTok app secret.                                                                                                                                     |
+| `SOCIAL_SYNC_ENABLED`         | `false` | Master switch for the cron worker. When `false`, `/api/cron/social-metrics` is a no-op.                                                                |
+| `SOCIAL_TIKTOK_ENABLED`       | `false` | Per-provider gate. When `false`, the TikTok provider and callback routes return 404 / disabled.                                                        |
 
 None of these may be exposed as `NEXT_PUBLIC_*`. The application refuses to boot in production when `SOCIAL_SYNC_ENABLED=true` but the encryption key is missing or not exactly 32 bytes when decoded.
 
@@ -424,13 +424,13 @@ None of these may be exposed as `NEXT_PUBLIC_*`. The application refuses to boot
 
 The M4 release ships in five rollout states, each a real production configuration. Do not skip states. The transition between states is a one-line env change followed by a `docker compose up -d --no-deps app`; no migration is needed between states because every state uses the same schema.
 
-| State | `SOCIAL_SYNC_ENABLED` | `SOCIAL_TIKTOK_ENABLED` | What is reachable                                                                                       |
-| ----- | --------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| 0     | `false`               | `false`                 | Code is deployed, cron is a no-op. Picker hidden.                                                       |
-| 1     | `false`               | `false`                 | Same as 0; Meta App Review is submitted in parallel.                                                    |
-| 2     | `true`                | `false`                 | Cron runs every 15 min; only the internal LaraTik workspace has connected profiles.                     |
+| State | `SOCIAL_SYNC_ENABLED` | `SOCIAL_TIKTOK_ENABLED` | What is reachable                                                                                          |
+| ----- | --------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 0     | `false`               | `false`                 | Code is deployed, cron is a no-op. Picker hidden.                                                          |
+| 1     | `false`               | `false`                 | Same as 0; Meta App Review is submitted in parallel.                                                       |
+| 2     | `true`                | `false`                 | Cron runs every 15 min; only the internal LaraTik workspace has connected profiles.                        |
 | 3     | `true`                | `false`                 | Meta is enabled for all workspaces. Seven consecutive clean daily snapshots are observed before this flip. |
-| 4     | `true`                | `true`                  | TikTok is enabled after the TikTok provider approval + focused UAT pass.                                |
+| 4     | `true`                | `true`                  | TikTok is enabled after the TikTok provider approval + focused UAT pass.                                   |
 
 ### Cron verification
 
