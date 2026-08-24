@@ -11,9 +11,11 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
-## 2026-08-23 — Multi-agency SaaS Milestone 2
+## 2026-08-24 — Social profile analytics — Meta first, TikTok second (M4)
 
-Milestone 2 adds plan templates, agency entitlements, transactional quotas, usage and threshold tracking, agency lifecycle controls, AI ceilings, the platform agency console, the four-step Add Agency flow, and the agency-admin Plan & Usage screen. The scoped plan and reproducible evidence are in [`../m2-multi-agency/PLAN.md`](../m2-multi-agency/PLAN.md); the implementation handoff prompt is [`../m2-multi-agency/MINIMAX_IMPLEMENTATION_PROMPT.md`](../m2-multi-agency/MINIMAX_IMPLEMENTATION_PROMPT.md). All M2 rows stop at `Tested` pending independent review.
+Status: **Planned**. Implemented / Tested / independently Verified are not yet claimed.
+
+M4 adds read-only provider connections and daily analytics for the channels the agency already tracks. Manual publishing is unchanged. Meta (Facebook Pages + linked Instagram professional accounts, via Facebook Login for Business) is the first provider; TikTok (via Login Kit + Display API v2) lands on the same provider-neutral foundation after Meta's seven-day production observation window. The architectural decision and full task-by-task spec live in [`../decisions/0004-social-profile-analytics.md`](../decisions/0004-social-profile-analytics.md) and [`../superpowers/plans/2026-08-24-meta-tiktok-social-analytics.md`](../superpowers/plans/2026-08-24-meta-tiktok-social-analytics.md). All M4 rows will stop at `Tested` pending independent review.
 
 ## 2026-08-21 — Stitch production completion (Tasks 1–10)
 

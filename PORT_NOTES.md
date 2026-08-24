@@ -73,6 +73,14 @@ Data impact: migrations are additive. Existing agencies receive an Enterprise-co
 
 Operational approval: no Stripe or automated billing is introduced. Plan changes, overrides, suspension, archive, and restore remain explicit operator actions with a required reason.
 
+## M4 — Social profile analytics (2026-08-24)
+
+StudioFlow v1 (and M1–M3 of this port) treat `social_channel` as an informational profile only. M4 adds read-only provider connections and daily analytics for the channels the agency already tracks, with no change to manual publishing semantics. The connection lifecycle is fully non-destructive: disconnecting a profile clears the provider link but keeps its metrics, publications, and row ID. Publishing remains manual.
+
+Out of scope for M4: direct/scheduled publishing, ads/spend, demographics, comments, messages, personal Facebook profiles, Instagram consumer accounts, hourly metrics, raw provider payload retention, and any provider other than Meta and TikTok. No `NEXT_PUBLIC_*` env var is added for providers.
+
+The architecture decision and provider boundary are recorded in [ADR-0004](docs/decisions/0004-social-profile-analytics.md).
+
 ## Auth surface deviations (2026-08-24 re-validation)
 
 | Master prompt       | Prompt says                                                                                      | We use                                                                                                                                                                                | Why                                                                                                                                                                                                                                                                                              | ADR                                                 |
