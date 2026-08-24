@@ -1,7 +1,118 @@
 import { expect, test } from "@playwright/test";
 import { bootstrapRoleSession, type FixtureRole } from "./_helpers";
 
-test.describe("role-separated workspace access", () => {
+/**
+ * The 8-role authorization matrix.
+ *
+ * The original role-authorization spec only covered 4 of the 7 workspace
+ * roles. This file is the full matrix — for every workspace role, a
+ * positive ("I can see my own surface") and one or more negatives
+ * ("I cannot see a surface reserved for a different role"). Agency admin
+ * is intentionally excluded: by policy an agency admin always has full
+ * workspace access (the admin shortcut in hasWorkspaceRole), so a
+ * positive/negative matrix for that role would be all positive and add
+ * no signal.
+ *
+ * Surface rules (from `src/lib/auth/policy.ts`):
+ *   - INTERNAL_WORKSPACE_ROLES = workspace_manager, content_planner,
+ *     designer, internal_reviewer, publisher, viewer (canAccessInternalWorkspace)
+ *   - client_reviewer is the only role that satisfies canAccessClientWorkspace
+ *   - canManageContent (Quick Create) is workspace_manager + content_planner
+ *   - canReview at the content / creative_internal gate is internal_reviewer
+ *   - canReview at the creative_client gate is client_reviewer
+ *
+ * Note on positive assertions: the page header renders the workspace
+ * name in an `<p>` eyebrow (not a heading), and the h1 is the page
+ * section title (e.g. "Overview", "Reviews queue"). We use page-level
+ * `data-testid`s as the stable contract.
+ *
+ * Pairs with:
+ *   - tests/unit/auth-policy.test.ts (policy helpers in isolation)
+ *   - PRODUCTION_READINESS_TRACKER.md SEC-003 (role-by-route matrix)
+ */
+
+type RoleCase = {
+  role: Exclude<FixtureRole, "agency_admin">;
+  can: { route: string; testid: string }[];
+  cannot: { route: string; marker: RegExp | string }[];
+};
+
+const ROLE_MATRIX: RoleCase[] = [
+  {
+    role: "workspace_manager",
+    can: [{ route: "/app/w/acme", testid: "workspace-overview" }],
+    cannot: [
+      // workspace_manager is not an internal_reviewer; the reviews
+      // queue renders an empty state to non-reviewers, so a clean
+      // negative is the absence of the testid.
+      { route: "/app/w/acme/reviews", marker: "reviews-kpi-row" },
+      // workspace_manager is not a creator; /planning/new shows the
+      // "Creation access required" page (no workspace-planning-new testid).
+      { route: "/app/w/acme/planning/new", marker: "workspace-planning-new" },
+    ],
+  },
+  {
+    role: "content_planner",
+    can: [
+      { route: "/app/w/acme/planning", testid: "workspace-planning" },
+      { route: "/app/w/acme/planning/new", testid: "workspace-planning-new" },
+    ],
+    cannot: [
+      // A non-reviewer cannot see the reviews queue.
+      { route: "/app/w/acme/reviews", marker: "reviews-kpi-row" },
+    ],
+  },
+  {
+    role: "designer",
+    can: [{ route: "/app/w/acme", testid: "workspace-overview" }],
+    cannot: [
+      // A designer has no reviewer role → no reviews queue.
+      { route: "/app/w/acme/reviews", marker: "reviews-kpi-row" },
+      // A designer has no creator role → no /planning/new.
+      { route: "/app/w/acme/planning/new", marker: "workspace-planning-new" },
+    ],
+  },
+  {
+    role: "internal_reviewer",
+    can: [{ route: "/app/w/acme/reviews", testid: "reviews-kpi-row" }],
+    cannot: [
+      // Reviewer has no creator role; /planning/new shows the denied page.
+      { route: "/app/w/acme/planning/new", marker: "workspace-planning-new" },
+    ],
+  },
+  {
+    role: "client_reviewer",
+    can: [{ route: "/app/w/acme/client", testid: "workspace-client-review" }],
+    cannot: [
+      // Client reviewer has no internal workspace role; planning is gated.
+      { route: "/app/w/acme/planning", marker: /Page not found/i },
+      // Client reviewer has no internal role; reviews queue is internal.
+      { route: "/app/w/acme/reviews", marker: "reviews-kpi-row" },
+    ],
+  },
+  {
+    role: "publisher",
+    can: [{ route: "/app/w/acme", testid: "workspace-overview" }],
+    cannot: [
+      // Publisher has no creator role → no /planning/new.
+      { route: "/app/w/acme/planning/new", marker: "workspace-planning-new" },
+      // Publisher has no reviewer role → no reviews queue.
+      { route: "/app/w/acme/reviews", marker: "reviews-kpi-row" },
+    ],
+  },
+  {
+    role: "viewer",
+    can: [{ route: "/app/w/acme", testid: "workspace-overview" }],
+    cannot: [
+      // Viewer has no creator role → no /planning/new.
+      { route: "/app/w/acme/planning/new", marker: "workspace-planning-new" },
+      // Viewer has no reviewer role → no reviews queue.
+      { route: "/app/w/acme/reviews", marker: "reviews-kpi-row" },
+    ],
+  },
+];
+
+test.describe("role-separated workspace access (existing)", () => {
   test("content planner can create while viewer cannot", async ({ page }) => {
     await bootstrapRoleSession(page, "content_planner");
     await page.goto("/app/w/acme/planning");
@@ -32,112 +143,12 @@ test.describe("role-separated workspace access", () => {
     test(`${role} has workspace access without agency-admin privileges`, async ({ page }) => {
       await bootstrapRoleSession(page, role);
       await page.goto("/app/w/acme");
-      await expect(page.getByRole("heading", { name: "Acme" })).toBeVisible();
+      // Workspace overview page testid is the stable contract.
+      await expect(page.getByTestId("workspace-overview")).toBeVisible();
       await expect(page.getByText("No access")).toHaveCount(0);
     });
   }
 });
-
-/**
- * The 8-role matrix (7 workspace roles + agency_admin). The matrix
- * below asserts, for every workspace role, a positive "I can see my
- * own surface" and a negative "I cannot see a surface reserved for a
- * different role". This is the e2e complement to
- * `tests/unit/auth-policy.test.ts` (which exercises the policy
- * helpers in isolation) and the role-by-route matrix promised in
- * `PRODUCTION_READINESS_TRACKER.md` SEC-003.
- *
- *   workspace_manager — can see workspace settings; cannot review
- *   content_planner   — can see Quick Create; cannot review
- *   designer          — can see design queue; cannot review
- *   internal_reviewer — can see reviews; cannot create
- *   client_reviewer   — can see client surface; cannot plan
- *   publisher         — can see workspace; cannot create
- *   viewer            — can see workspace; cannot create; cannot review
- *
- * Agency admin is excluded: by policy an agency admin always has
- * full workspace access (the admin shortcut in hasWorkspaceRole),
- * so a positive/negative matrix for that role would all be positive.
- */
-type RoleCase = {
-  role: Exclude<FixtureRole, "agency_admin">;
-  can: { route: string; heading?: RegExp; testid?: string }[];
-  cannot: {
-    route: string;
-    assertion: "notFound" | "missingHeading" | "missingTestId";
-    marker: RegExp | string;
-  }[];
-};
-
-const ROLE_MATRIX: RoleCase[] = [
-  {
-    role: "workspace_manager",
-    can: [{ route: "/app/w/acme", heading: /^Acme$/ }],
-    cannot: [{ route: "/app/w/acme/reviews", assertion: "notFound", marker: /Page not found/i }],
-  },
-  {
-    role: "content_planner",
-    can: [
-      { route: "/app/w/acme/planning", testid: "workspace-planning" },
-      { route: "/app/w/acme/planning/new" },
-    ],
-    cannot: [
-      // A non-creator without `internal_reviewer` cannot see the reviews
-      // queue (it renders an empty state behind a policy gate).
-      { route: "/app/w/acme/reviews", assertion: "missingTestId", marker: "reviews-kpi-row" },
-    ],
-  },
-  {
-    role: "designer",
-    can: [{ route: "/app/w/acme", heading: /^Acme$/ }],
-    cannot: [
-      // A designer has no reviewer role → no reviews queue.
-      { route: "/app/w/acme/reviews", assertion: "missingTestId", marker: "reviews-kpi-row" },
-      // A designer has no creator role → no Quick Create.
-      { route: "/app/w/acme/planning/new", assertion: "missingHeading", marker: /Quick Create/i },
-    ],
-  },
-  {
-    role: "internal_reviewer",
-    can: [{ route: "/app/w/acme/reviews", testid: "reviews-kpi-row" }],
-    cannot: [
-      // Reviewer cannot create; Quick Create is hidden.
-      { route: "/app/w/acme/planning", assertion: "missingHeading", marker: /Quick Create/i },
-    ],
-  },
-  {
-    role: "client_reviewer",
-    can: [{ route: "/app/w/acme/client", heading: /Client review/i }],
-    cannot: [
-      // Client reviewer has no internal workspace role; planning is gated.
-      { route: "/app/w/acme/planning", assertion: "notFound", marker: /Page not found/i },
-      // Client reviewer has no internal role; reviews queue is internal.
-      { route: "/app/w/acme/reviews", assertion: "missingTestId", marker: "reviews-kpi-row" },
-    ],
-  },
-  {
-    role: "publisher",
-    can: [{ route: "/app/w/acme", heading: /^Acme$/ }],
-    cannot: [
-      // Publisher has no creator role → no Quick Create.
-      { route: "/app/w/acme/planning", assertion: "missingHeading", marker: /Quick Create/i },
-      // Publisher has no reviewer role → no reviews queue.
-      { route: "/app/w/acme/reviews", assertion: "missingTestId", marker: "reviews-kpi-row" },
-    ],
-  },
-  {
-    role: "viewer",
-    can: [{ route: "/app/w/acme", heading: /^Acme$/ }],
-    cannot: [
-      // Viewer has no creator role → no Quick Create.
-      { route: "/app/w/acme/planning", assertion: "missingHeading", marker: /Quick Create/i },
-      // Viewer has no reviewer role → no reviews queue.
-      { route: "/app/w/acme/reviews", assertion: "missingTestId", marker: "reviews-kpi-row" },
-      // Viewer has no creator role → /planning/new shows the denied page.
-      { route: "/app/w/acme/planning/new", assertion: "missingHeading", marker: /Quick Create/i },
-    ],
-  },
-];
 
 for (const { role, can, cannot } of ROLE_MATRIX) {
   test.describe(`${role} role matrix`, () => {
@@ -148,24 +159,19 @@ for (const { role, can, cannot } of ROLE_MATRIX) {
     for (const allow of can) {
       test(`can see ${allow.route}`, async ({ page }) => {
         await page.goto(allow.route);
-        if (allow.heading) {
-          await expect(page.getByRole("heading", { name: allow.heading })).toBeVisible();
-        } else if (allow.testid) {
-          await expect(page.getByTestId(allow.testid)).toBeVisible();
-        }
+        await expect(page.getByTestId(allow.testid)).toBeVisible();
       });
     }
 
     for (const deny of cannot) {
-      test(`is denied from ${deny.route} (${deny.assertion})`, async ({ page }) => {
+      test(`is denied from ${deny.route}`, async ({ page }) => {
         await page.goto(deny.route);
-        if (deny.assertion === "notFound") {
-          await expect(page.getByRole("heading", { name: deny.marker as RegExp })).toBeVisible();
-        } else if (deny.assertion === "missingHeading") {
-          await expect(page.getByRole("heading", { name: deny.marker as RegExp })).toHaveCount(0);
+        if (typeof deny.marker === "string") {
+          // testid marker — assert the gated surface is NOT rendered.
+          await expect(page.getByTestId(deny.marker)).toHaveCount(0);
         } else {
-          // missingTestId
-          await expect(page.getByTestId(deny.marker as string)).toHaveCount(0);
+          // heading marker — assert the page is the not-found page.
+          await expect(page.getByRole("heading", { name: deny.marker })).toBeVisible();
         }
       });
     }
