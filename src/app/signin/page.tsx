@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { signIn } from "@/lib/auth/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,18 @@ import { authError } from "./auth-error-codes";
 import { serverEnv } from "@/lib/validation/env";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { headers } from "next/headers";
+
+/**
+ * Zod schema for the sign-in email input. We reject obvious non-emails
+ * at the server boundary so a malformed value doesn't waste a rate-limit
+ * slot or trigger an upstream Credentials provider error that the user
+ * would see as a generic "email or password wrong" — the failure mode is
+ * the same either way, but the server log is cleaner and the early
+ * redirect saves a DB roundtrip in `findUserByEmailAndPassword`.
+ */
+const SignInEmailSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+});
 
 /**
  * Sign-in page (Goal 2).
@@ -112,13 +125,15 @@ export default async function SignInPage({
           <form
             action={async (formData) => {
               "use server";
-              const email = String(formData.get("email") ?? "").trim();
+              const rawEmail = String(formData.get("email") ?? "");
               const password = String(formData.get("password") ?? "");
-              if (!email || !password) {
+              const parsed = SignInEmailSchema.safeParse({ email: rawEmail });
+              if (!parsed.success || !password) {
                 redirect(
                   `/signin?error=CredentialsSignin&callbackUrl=${encodeURIComponent(callbackUrl)}`,
                 );
               }
+              const email = parsed.data.email;
               // Rate-limit per (email, source IP) to throttle password
               // guessing. Same composite as magic-link so an attacker
               // can't rotate between the two to bypass the limit.
@@ -161,7 +176,7 @@ export default async function SignInPage({
                 </label>
                 <Link
                   href="/signin/forgot-password"
-                  className="text-label text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+                  className="text-body text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
                 >
                   Forgot password?
                 </Link>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
@@ -9,6 +10,16 @@ import { sendEmail } from "@/lib/email";
 import { clientEnv, serverEnv } from "@/lib/validation/env";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { headers } from "next/headers";
+
+/**
+ * Zod schema for the forgot-password email input. Rejecting obvious
+ * non-emails at the server boundary prevents a malformed value from
+ * being normalized to "" and slipping past the rate-limit + token
+ * issuance branches (which already early-return on empty input).
+ */
+const ForgotEmailSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Enter a valid email address."),
+});
 
 /**
  * Forgot-password page. The user enters their email; if a user with
@@ -20,12 +31,14 @@ export const metadata = { title: "Reset your password" };
 
 async function requestResetAction(formData: FormData) {
   "use server";
-  const email = String(formData.get("email") ?? "")
-    .trim()
-    .toLowerCase();
-  if (!email) {
+  const rawEmail = String(formData.get("email") ?? "");
+  const parsed = ForgotEmailSchema.safeParse({ email: rawEmail });
+  // Anti-enumeration: respond identically on validation failure,
+  // missing user, and success. The user only sees `?sent=1`.
+  if (!parsed.success) {
     redirect("/signin/forgot-password?sent=1");
   }
+  const email = parsed.data.email;
 
   // Throttle per (email, source IP) — same composite as the
   // sign-in rate limit so an attacker can't rotate IPs to spam
@@ -86,7 +99,10 @@ export default async function ForgotPasswordPage({
         {sent ? (
           <div
             role="status"
-            className="border-success/20 bg-success-subtle text-success flex items-start gap-3 rounded-[var(--radius-control)] border p-3"
+            aria-live="polite"
+            tabIndex={-1}
+            data-testid="forgot-password-sent"
+            className="border-success/20 bg-success-subtle text-success focus-visible:ring-focus-ring flex items-start gap-3 rounded-[var(--radius-control)] border p-3 focus:outline-none focus-visible:ring-2"
           >
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <div className="flex flex-col">
