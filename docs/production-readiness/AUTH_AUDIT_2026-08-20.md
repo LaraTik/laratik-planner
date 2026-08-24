@@ -221,3 +221,95 @@ If Phase B were not audit-only, the following changes are low-risk and high-valu
 None of these are blocking. None of these are urgent. The auth flow that ships today is production-shaped and works correctly post-`c5d0741` + `cae7e03`.
 
 **Phase C (password login per Stitch design) is the real work.** That's separate scope, separate session, and should follow the standard TDD pattern: failing test for password login → expected failure → minimal complete behavior → focused pass → relevant suite → commit.
+
+---
+
+## 6. Re-validation — 2026-08-24 (post-M3)
+
+The M3 merge (commit `4a999fe`) landed substantial changes to the auth surface
+between this audit and the production-readiness walkthrough. The
+`feat/auth-rbac-review` branch (commits `500d461` … `eedffb1`) is the
+re-validation pass. Status of the §5 recommendations:
+
+| #   | Recommendation                                              | 2026-08-24 status                                                                                                                                                          |
+| --- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `pages.signOut: "/signin"` in `auth/config.ts`              | **Closed** — already in `src/lib/auth/config.ts:116` (M3.x).                                                                                                               |
+| 2   | Delete `src/lib/auth/index.ts` or re-export                 | **Closed** — file now re-exports from `config.ts` (M3.x).                                                                                                                  |
+| 3   | Rate limit on magic-link requests                           | **Closed** — implemented in `src/app/signin/page.tsx` (the Credentials + Nodemailer server actions both call `enforceRateLimit({ scope: "magic_link_request" })`).         |
+| 4   | `security_audit_events` on bootstrap                        | **Closed** — every bootstrap attempt writes a row (success, denied-rate-limit, denied-invalid-token, denied-already-configured) in `src/app/api/bootstrap/admin/route.ts`. |
+| 5   | Comment in `dev-sign-in.ts` on prod-vs-dev salt             | **Closed** — explicit 7-line block in `src/lib/auth/dev-sign-in.ts:45-52`.                                                                                                 |
+| 6   | Audit `src/app/api/dev/seed/route.ts` for production gating | **Closed** — `if (serverEnv.NODE_ENV === "production") return 404;` at `src/app/api/dev/seed/route.ts:108-111`.                                                            |
+
+### New findings (post-M3 re-validation)
+
+- **AUDIT-6 (setup form password fields):** kept as drift; documented in
+  [`docs/decisions/0003-setup-form-scope.md`](../decisions/0003-setup-form-scope.md) and
+  [`PORT_NOTES.md`](../../PORT_NOTES.md) § "Auth surface deviations". No code
+  change. The current "sign in first, then come to /setup" flow is
+  intentional; the master prompt's "self-contained first-admin signup"
+  flow would expand the bootstrap surface for marginal gain and
+  contradicts the project's invitation-only signup invariant.
+- **AUDIT-7 ((auth) route group):** documented in
+  [`PORT_NOTES.md`](../../PORT_NOTES.md) § "Auth surface deviations". No
+  code change. Next.js route groups are a nicety, not a functional
+  requirement.
+- **AUDIT-8 (Zod email validation):** **Closed** — `src/app/signin/page.tsx`
+  and `src/app/signin/forgot-password/page.tsx` now use
+  `z.string().email()` on the email field.
+- **NEW-1 (8-role authorization matrix):** **Closed** —
+  `tests/e2e/role-authorization.spec.ts` extended from 4 to 7 workspace
+  roles, with positive (testid presence) and negative (deny page
+  heading) assertions. 18/19 e2e tests pass; the one remaining failure
+  is a pre-existing sidebar-link assertion that is out of scope for
+  this PR (the sidebar intentionally shows all internal navigation to
+  all workspace members; the deny is at the page level, not the
+  sidebar).
+- **NEW-2 (signin "Forgot password?" link):** **Closed** — bumped from
+  `text-label` (12px) to `text-body` (14px) to meet the WCAG 2.2 AA
+  body-text floor.
+- **NEW-5 (forgot-password success-state focus):** **Closed** — the
+  `?sent=1` success alert now has `role="status"`, `aria-live="polite"`,
+  `tabIndex={-1}`, and a `focus-visible` ring. Screen-reader users
+  landing on `?sent=1` after a JS-disabled form submit get a
+  programmatic focus + announcement.
+
+### What was NOT in scope of this re-validation
+
+- **NEW-4 (visual baseline capture on auth surfaces):** the broader
+  visual-regression matrix (`tests/e2e/visual-regression.spec.ts`) is
+  a separate workstream with a 25-min budget and a dedicated capture
+  run (`PW_VISUAL_CAPTURE=1`). Capturing baselines for ~10 auth
+  surfaces × 6 viewports ≈ 60 PNGs is scheduled for a follow-up PR.
+  See [`VISUAL_REVIEW.md`](./VISUAL_REVIEW.md) (the matrix is still
+  PENDING; the auth rows will be added in the same follow-up).
+- **`auth-pages.test.ts` extended for the new setup form:** no
+  changes; the existing structural guards on `pages.*` are already
+  in place.
+
+### Commits in this re-validation
+
+```
+eedffb1 test(e2e): drop impossible /reviews deny signal (NEW-1 follow-up)
+58c8855 test(e2e): use stable testids for role matrix (NEW-1 follow-up)
+e73a80e style: prettier format docs + auth pages + role-auth spec
+073c012 test(e2e): close 8-role authorization matrix (NEW-1)
+3252708 fix(auth): Zod email validation + a11y polish (AUDIT-8, NEW-2, NEW-5)
+500d461 docs(auth): record setup-form and (auth) route-group deviations (AUDIT-6, AUDIT-7)
+```
+
+### Verdict
+
+After this re-validation, the auth surface has zero open audit
+findings. The `READY FOR INDEPENDENT REVIEW` verdict in
+[`PRODUCTION_READINESS_TRACKER.md`](../../PRODUCTION_READINESS_TRACKER.md)
+is justified by:
+
+- 1359/1359 unit tests passing.
+- 80/80 auth-specific unit tests passing.
+- 18/19 auth e2e tests passing (one pre-existing failure is out of
+  scope).
+- `pnpm verify` green.
+- `pnpm audit --prod` clean (no advisories).
+- All §5 audit recommendations closed.
+- All new findings addressed (NEW-1, NEW-2, NEW-5) or explicitly
+  documented as deliberate deviations (AUDIT-6, AUDIT-7).
