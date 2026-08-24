@@ -1,4 +1,3 @@
-import "server-only";
 import {
   createCipheriv,
   createDecipheriv,
@@ -13,6 +12,12 @@ import { serverEnv } from "@/lib/validation/env";
 import { deriveDevKey } from "@/lib/security/dev-key";
 import { openCredentialsWithDek, sealCredentialsWithDek } from "./crypto";
 import { socialChannels } from "@/lib/db/schema/channels";
+
+// NOTE: this module does NOT import `server-only` because it is
+// also consumed by `scripts/rotate-social-kek.ts`, which runs
+// outside the Next.js runtime. The module is still server-only
+// in practice: the `db` and `socialChannels` / `socialConnections`
+// imports would fail to bundle in a client context.
 
 /**
  * M4.5 — per-agency social DEK + lazy platform KEK.
