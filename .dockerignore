@@ -1,0 +1,88 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# laratik-planner .dockerignore
+# Excludes the repo's non-build assets from the Docker build context.
+# Without this, `docker build .` ships .git/, node_modules/, tests/, docs/,
+# .env, and every *.md in the repo as build context — a cold-cache build
+# can balloon to hundreds of MB before the first COPY even runs, and an
+# accidental local .env in a worktree would be in the context the daemon
+# sees (the gitignore does not protect build context).
+#
+# KEEP (required at build time):
+#   package.json, pnpm-lock.yaml, pnpm-workspace.yaml, .npmrc
+#   public/      (static assets copied into the Next.js standalone output)
+#   src/         (the application code)
+#   next.config.ts, drizzle.config.ts
+#   instrumentation.ts, instrumentation-client.ts
+#   sentry.server.config.ts, sentry.edge.config.ts
+# ─────────────────────────────────────────────────────────────────────────────
+
+# dependencies
+node_modules/
+.pnpm-store/
+
+# testing artifacts
+coverage/
+playwright-report/
+test-results/
+tests/
+tests/**
+
+# next.js
+.next/
+.next-dev/
+out/
+
+# build outputs
+build/
+dist/
+
+# source / generated TS artifacts
+*.tsbuildinfo
+
+# repo-local generated + scratch
+tmp/
+designs/
+
+# docs (operators read these from the repo, not from the image)
+docs/
+*.md
+!instrumentation*.md
+
+# ops scripts (run on the VPS, never in the image)
+scripts/
+.github/
+
+# version control
+.git/
+.gitignore
+.gitattributes
+.worktrees/
+worktrees/
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# env files — never ship .env, .env.local, .env.* into build context
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+.env.example
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# pnpm / npm
+.pnpm-store/
+
+# local CI scratch + other transient dirs
+.next-cache/
+.turbo/
+.vercel/
