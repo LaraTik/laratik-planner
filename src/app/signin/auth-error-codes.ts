@@ -12,11 +12,16 @@
  *     working without a rename; and
  *   - any code that @auth/core starts surfacing after a beta upgrade
  *     is already mapped to a useful message.
+ *
+ * The `{ref}` placeholder is replaced at render time with the support
+ * reference id that the form action mints on unexpected errors. Codes
+ * other than `Unknown` do not need the placeholder; the renderer leaves
+ * the `ref` segment off when the code is one NextAuth itself produces.
  */
 const MESSAGES: Record<string, string> = {
   // ── Generic / auth-flow ──────────────────────────────────────────────
   Configuration:
-    "Sign-in is not configured correctly. Please contact support if this keeps happening.",
+    "Sign-in is not configured correctly on the server. Please contact support if this keeps happening.",
   AccessDenied: "Access to this account was denied. Ask an admin to grant you access.",
   Verification: "The sign-in link is invalid or has expired. Request a new one.",
   Callback: "Sign-in callback failed. Please try again.",
@@ -44,6 +49,21 @@ const MESSAGES: Record<string, string> = {
 
   // ── Credentials ─────────────────────────────────────────────────────
   CredentialsSignin: "That email or password is wrong. Try again or use Forgot password.",
+
+  // ── Our own codes (emitted by the form action in signin/page.tsx) ──
+  // Anti-enumeration: the empty / malformed email path is reported the
+  // same as wrong credentials so a probe can't tell the two apart.
+  InvalidEmail: "That email or password is wrong. Try again or use Forgot password.",
+  // Per (email, IP) throttle tripped. Surfaces the actual reason instead
+  // of masking it as "wrong credentials".
+  RateLimited: "Too many sign-in attempts. Please wait a few minutes and try again.",
+  // Anything that escapes the signIn() catch — DB outage, AUTH_SECRET
+  // misconfigured, internal NextAuth assertion, etc. The renderer
+  // appends a `?ref=<id>` segment so the user can quote it to support;
+  // the same id is on the Sentry tag and the server log line.
+  Unknown:
+    "Something went wrong on our end while signing you in. Please try again. " +
+    "If it keeps happening, share the reference below with support.",
 
   // ── Default fallback ───────────────────────────────────────────────
   Default: "Sign-in failed. Please try again.",

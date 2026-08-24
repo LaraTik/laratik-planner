@@ -18,8 +18,41 @@ describe("authError", () => {
     // (tracked), the user will see this copy. The string MUST match
     // the one we cite in src/lib/auth/config.ts:91-95.
     expect(authError("Configuration")).toBe(
-      "Sign-in is not configured correctly. Please contact support if this keeps happening.",
+      "Sign-in is not configured correctly on the server. Please contact support if this keeps happening.",
     );
+  });
+
+  it("maps the new InvalidEmail (anti-enumeration) code to the wrong-credentials copy", () => {
+    // The form action in src/app/signin/page.tsx redirects to
+    // ?error=InvalidEmail when the email fails Zod validation OR the
+    // password is empty. The user MUST see the same copy as
+    // CredentialsSignin — otherwise an unauthenticated probe can
+    // distinguish "user typed nothing" from "user typed the wrong
+    // password" by reading the rendered error string.
+    expect(authError("InvalidEmail")).toBe(authError("CredentialsSignin"));
+  });
+
+  it("maps the new RateLimited code to a throttle-specific message", () => {
+    // Distinct copy so the user knows the issue is a throttle, not
+    // wrong credentials. The throttle is per (email, source IP) at
+    // 5/hour (see src/lib/security/rate-limit.ts). The string must
+    // NOT match CredentialsSignin — the two failure modes are very
+    // different operationally and the user needs to know to wait.
+    const msg = authError("RateLimited");
+    expect(msg).not.toBe(authError("CredentialsSignin"));
+    expect(msg).toMatch(/too many|wait/i);
+  });
+
+  it("maps the new Unknown code to a reference-id-aware message", () => {
+    // The form action emits `?error=Unknown&ref=<id>` on any error
+    // that escapes the typed NextAuth catch — DB outage, AUTH_SECRET
+    // misconfig, internal assertion, etc. The user-facing copy must
+    // (a) tell them to share the reference and (b) NOT include the
+    // support ref in the string itself (the page renders it as a
+    // separate <span data-testid="signin-error-ref">).
+    const msg = authError("Unknown");
+    expect(msg.toLowerCase()).toContain("reference");
+    expect(msg).not.toMatch(/\$\{ref\}|\{ref\}/);
   });
 
   it("maps the modern EmailSignInError to the magic-link failure message", () => {

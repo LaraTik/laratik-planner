@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
+import * as Sentry from "@sentry/nextjs";
 import { signIn } from "@/lib/auth/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +12,60 @@ import { authError } from "./auth-error-codes";
 import { serverEnv } from "@/lib/validation/env";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { headers } from "next/headers";
+
+/**
+ * Mint a short, log-friendly support reference we can include in the
+ * `?ref=` query param. The user quotes this to support; the server-side
+ * `logger.error({ ref, ... }, "...")` in the form-action catches prints
+ * the same id, so a single string links a user report to a log line.
+ *
+ * The Next.js error digest (shown by `src/app/error.tsx`) is a separate
+ * number issued by the framework; we keep our `ref` independent so
+ * support can correlate either side without ambiguity.
+ */
+function newSupportRef(): string {
+  return randomBytes(6).toString("hex"); // 12 hex chars, URL-safe
+}
+
+/**
+ * Redirect to /signin with a user-readable error code. When the cause is
+ * unexpected (anything that isn't a CredentialsSignin / RateLimited /
+ * Configuration), we mint a support reference, log + Sentry-capture the
+ * original error, and append `?ref=<id>` so the user can quote it to
+ * support. The authError() map already covers the `Unknown` code with a
+ * copy that tells the user to include the reference.
+ *
+ * Failing closed: if Sentry is not configured (no DSN), we still log to
+ * stderr so the support ref is recoverable from the application log even
+ * without a Sentry org.
+ */
+function signInErrorRedirect(input: {
+  code: string;
+  callbackUrl: string;
+  cause?: unknown;
+  context?: Record<string, unknown>;
+}): never {
+  const ref = newSupportRef();
+  if (input.cause !== undefined) {
+    console.error(
+      `[auth.signin] ref=${ref} code=${input.code} context=${JSON.stringify(input.context ?? {})}`,
+      input.cause,
+    );
+    Sentry.captureException(input.cause, {
+      tags: { "auth.signin.code": input.code, "auth.signin.ref": ref },
+      // exactOptionalPropertyTypes is enabled in this project; we
+      // cannot pass `extra: undefined`. Only attach when there is
+      // something to attach.
+      ...(input.context ? { extra: input.context } : {}),
+    });
+  }
+  const params = new URLSearchParams({
+    error: input.code,
+    callbackUrl: input.callbackUrl,
+    ref,
+  });
+  redirect(`/signin?${params.toString()}`);
+}
 
 /**
  * Zod schema for the sign-in email input. We reject obvious non-emails
@@ -52,7 +108,45 @@ export const metadata = { title: "Sign in" };
 type SearchParams = {
   callbackUrl?: string;
   error?: string;
+  /**
+   * Support reference id emitted by the form action on an unexpected
+   * error. Rendered in the user-facing copy so the user can quote it
+   * to support. The server-side log line + Sentry tag carry the same
+   * id, so a single string ties a user report to a log entry.
+   */
+  ref?: string;
 };
+
+/**
+ * True when `err` is Next.js's internal redirect signal. We must re-throw
+ * it so the framework can perform the 30x — swallowing it would leave
+ * the user on a half-rendered sign-in page with no redirect.
+ *
+ * Next.js exports this as `isRedirectError` from `next/dist/client/components/redirect`
+ * but the export is unstable; we pattern-match the message instead. The
+ * digest format hasn't changed since 14.x and is documented in the
+ * Next.js source (see packages/next/src/client/components/redirect.ts).
+ */
+function isRedirectError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  // Next.js uses two helpers — redirect() and notFound() — both of
+  // which throw with this exact message in the App Router. We only
+  // care about the redirect case; notFound() would be a 404, not a
+  // sign-in error, so we conservatively treat both as "let the
+  // framework handle it".
+  return (
+    err.message === "NEXT_REDIRECT" ||
+    err.message === "NEXT_NOT_FOUND" ||
+    // Next.js 16 also exposes a `digest` on these throw values.
+    typeof (err as { digest?: unknown }).digest === "string"
+  );
+}
+
+/** Email-domain helper for the Sentry tag (never log the full email). */
+function emailDomain(email: string): string {
+  const at = email.lastIndexOf("@");
+  return at >= 0 ? email.slice(at + 1).toLowerCase() : "(none)";
+}
 
 export default async function SignInPage({
   searchParams,
@@ -63,6 +157,14 @@ export default async function SignInPage({
   const callbackUrl =
     sp.callbackUrl?.startsWith("/") && !sp.callbackUrl.startsWith("//") ? sp.callbackUrl : "/app";
   const errorCode = sp.error;
+  /**
+   * Support reference id emitted by the form action on an unexpected
+   * failure. We surface it to the user as a small "Reference: …" line
+   * under the error copy so they can quote it to support; the same id
+   * is on the server log line and the Sentry tag, so a single string
+   * ties a user report to a log entry.
+   */
+  const supportRef = sp.ref;
   const googleEnabled = !!(serverEnv.GOOGLE_CLIENT_ID && serverEnv.GOOGLE_CLIENT_SECRET);
   const emailEnabled = !!(
     serverEnv.SMTP_HOST &&
@@ -99,6 +201,14 @@ export default async function SignInPage({
               <div className="flex flex-col">
                 <span className="text-label font-semibold">Sign-in failed</span>
                 <span className="text-body">{authError(errorCode)}</span>
+                {supportRef ? (
+                  <span
+                    data-testid="signin-error-ref"
+                    className="text-label text-fg-muted mt-1 font-mono"
+                  >
+                    Reference: {supportRef}
+                  </span>
+                ) : null}
               </div>
             </div>
           ) : null}
@@ -128,9 +238,15 @@ export default async function SignInPage({
               const rawEmail = String(formData.get("email") ?? "");
               const password = String(formData.get("password") ?? "");
               const parsed = SignInEmailSchema.safeParse({ email: rawEmail });
+              // Distinguish "user typed a malformed email / empty password"
+              // (anti-enumeration: same response as wrong credentials) from
+              // the rate-limit and from the credentials check itself. The
+              // three failure modes look the same to the user but are very
+              // different operationally — the support ref is the only thing
+              // that lets us disambiguate when the user pastes the URL.
               if (!parsed.success || !password) {
                 redirect(
-                  `/signin?error=CredentialsSignin&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+                  `/signin?error=InvalidEmail&callbackUrl=${encodeURIComponent(callbackUrl)}`,
                 );
               }
               const email = parsed.data.email;
@@ -147,14 +263,36 @@ export default async function SignInPage({
               });
               if (!limit.allowed) {
                 redirect(
-                  `/signin?error=CredentialsSignin&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+                  `/signin?error=RateLimited&callbackUrl=${encodeURIComponent(callbackUrl)}`,
                 );
               }
-              await signIn("credentials", {
-                email,
-                password,
-                redirectTo: callbackUrl,
-              });
+              // signIn() throws NEXT_REDIRECT on success and a typed
+              // AuthError (CredentialsSignin etc.) on the well-known
+              // failure paths; NextAuth's own catch maps those to a
+              // `?error=…` redirect. Anything else — DB outage, bad
+              // AUTH_SECRET, an internal NextAuth assertion — escapes
+              // the helper and would otherwise reach the page-level
+              // error.tsx with the generic "Something went wrong"
+              // message. We catch + tag + redirect here so the user
+              // sees a specific copy and support gets a Sentry event
+              // tagged with the failure code.
+              try {
+                await signIn("credentials", {
+                  email,
+                  password,
+                  redirectTo: callbackUrl,
+                });
+              } catch (err) {
+                // Re-throw the framework-level redirect signal so
+                // Next.js can complete the 30x (signIn succeeded).
+                if (isRedirectError(err)) throw err;
+                signInErrorRedirect({
+                  code: "Unknown",
+                  callbackUrl,
+                  cause: err,
+                  context: { provider: "credentials", emailDomain: emailDomain(email) },
+                });
+              }
             }}
             className="flex flex-col gap-5"
           >
@@ -220,7 +358,17 @@ export default async function SignInPage({
               <form
                 action={async () => {
                   "use server";
-                  await signIn("google", { redirectTo: callbackUrl });
+                  try {
+                    await signIn("google", { redirectTo: callbackUrl });
+                  } catch (err) {
+                    if (isRedirectError(err)) throw err;
+                    signInErrorRedirect({
+                      code: "OAuthSignin",
+                      callbackUrl,
+                      cause: err,
+                      context: { provider: "google" },
+                    });
+                  }
                 }}
               >
                 <Button type="submit" variant="secondary" className="w-full" size="lg">
@@ -234,22 +382,38 @@ export default async function SignInPage({
               <form
                 action={async (formData) => {
                   "use server";
-                  const email = String(formData.get("email") ?? "").trim();
-                  if (!email) return;
+                  const rawEmail = String(formData.get("email") ?? "");
+                  const parsed = SignInEmailSchema.safeParse({ email: rawEmail });
+                  if (!parsed.success) {
+                    redirect(
+                      `/signin?error=InvalidEmail&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+                    );
+                  }
+                  const email = parsed.data.email;
                   const h = await headers();
                   const requestId = h.get("x-request-id");
                   const subject = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? email;
                   const limit = await enforceRateLimit({
                     scope: "magic_link_request",
-                    subject: `${email}::${subject}`,
+                    subject: `magic::${email}::${subject}`,
                     ...(requestId ? { requestId } : {}),
                   });
                   if (!limit.allowed) {
                     redirect(
-                      `/signin?error=EmailSignin&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+                      `/signin?error=RateLimited&callbackUrl=${encodeURIComponent(callbackUrl)}`,
                     );
                   }
-                  await signIn("nodemailer", { email, redirectTo: callbackUrl });
+                  try {
+                    await signIn("nodemailer", { email, redirectTo: callbackUrl });
+                  } catch (err) {
+                    if (isRedirectError(err)) throw err;
+                    signInErrorRedirect({
+                      code: "EmailSignin",
+                      callbackUrl,
+                      cause: err,
+                      context: { provider: "nodemailer", emailDomain: emailDomain(email) },
+                    });
+                  }
                 }}
                 className="space-y-2"
               >

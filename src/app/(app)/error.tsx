@@ -10,7 +10,9 @@ import { AlertTriangle } from "lucide-react";
 /**
  * Error boundary for the authenticated app shell.
  * Keep the chrome visible (sidebar/topbar) so the user has a way out
- * even if a single page errors.
+ * even if a single page errors. "Back to sign in" is offered as a
+ * last-resort escape in case the bug is in /app itself — the
+ * user can sign out (clears the session cookie) and start over.
  */
 export default function AppError({
   error,
@@ -28,21 +30,25 @@ export default function AppError({
       <EmptyState
         icon={<AlertTriangle className="h-10 w-10" aria-hidden="true" />}
         title="We hit an error rendering this page"
-        description="Try again, or head back to My Work. The error has been logged."
+        description="Try again, or head back to My Work. The error has been logged — share the reference below with support if it keeps happening."
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <Button onClick={reset} variant="default">
               Try again
             </Button>
             <Button asChild variant="secondary">
               <Link href="/app">Back to My Work</Link>
             </Button>
+            <Button asChild variant="ghost">
+              <Link href="/api/auth/signout">Sign out</Link>
+            </Button>
           </div>
         }
       />
       {error.digest ? (
-        <p className="text-label text-fg-muted mt-4 text-center">
-          Reference: <code className="bg-surface-subtle rounded px-1.5 py-0.5">{error.digest}</code>
+        <p data-testid="app-error-digest" className="text-label text-fg-muted mt-4 text-center">
+          Reference:{" "}
+          <code className="bg-surface-subtle rounded px-1.5 py-0.5 font-mono">{error.digest}</code>
         </p>
       ) : null}
     </div>

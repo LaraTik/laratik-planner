@@ -11,9 +11,14 @@ import { AlertTriangle } from "lucide-react";
  * Top-level error boundary (Next.js 13+ App Router).
  *
  * The framework calls this when a server component throws. We surface
- * a "Try again" button (resets the error boundary) plus a link back
- * to the dashboard. The full error is logged server-side by Next.js
- * already; we don't expose the message to the user.
+ * a "Try again" button (resets the error boundary) plus escape hatches
+ * to /signin (always reachable, even when /app is the broken page) and
+ * /app (the user's normal destination). The full error is logged
+ * server-side by Next.js already; we don't expose the message to the
+ * user. The reference id is the Next.js error digest — distinct from
+ * the support ref the form action in /signin mints, so a user might
+ * quote either. Including both is overkill; we render the digest here
+ * and the form-action ref on /signin.
  */
 export default function GlobalError({
   error,
@@ -31,21 +36,25 @@ export default function GlobalError({
       <EmptyState
         icon={<AlertTriangle className="h-10 w-10" aria-hidden="true" />}
         title="Something went wrong"
-        description="We hit an unexpected error rendering this page. Please try again — if the problem keeps happening, drop us a note."
+        description="We hit an unexpected error rendering this page. Please try again — if the problem keeps happening, share the reference below with support."
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <Button onClick={reset} variant="default">
               Try again
             </Button>
             <Button asChild variant="secondary">
-              <Link href="/app">Back to My Work</Link>
+              <Link href="/signin">Back to sign in</Link>
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href="/app">Go to My Work</Link>
             </Button>
           </div>
         }
       />
       {error.digest ? (
-        <p className="text-label text-fg-muted mt-4 text-center">
-          Reference: <code className="bg-surface-subtle rounded px-1.5 py-0.5">{error.digest}</code>
+        <p data-testid="error-digest" className="text-label text-fg-muted mt-4 text-center">
+          Reference:{" "}
+          <code className="bg-surface-subtle rounded px-1.5 py-0.5 font-mono">{error.digest}</code>
         </p>
       ) : null}
     </div>
