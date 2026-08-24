@@ -1,5 +1,6 @@
 import "server-only";
 import { serverEnv } from "@/lib/validation/env";
+import { loadManagedAiSecret, hasManagedAiSecret } from "./provider-secret";
 
 // Re-export the M3.3 governance surface so callers can import
 // from a single entry point. The governance module is the
@@ -24,7 +25,10 @@ export type { AiBudgetReservation } from "./governance";
  * Prefer an environment-managed key and display 'Configured by environment.'"
  *
  * This module:
- *  - Refuses to do anything if AI_FEATURE_ENABLED=false OR the key is missing
+ *  - Resolves the active API key per agency (M3.4): a managed
+ *    secret from the database takes priority; the env key is the
+ *    fallback. `getActiveApiKey(agencyId)` is the single source
+ *    of truth for which key a request uses.
  *  - Uses the OpenAI-compat API at MINIMAX_BASE_URL (defaults to Anthropic-compat)
  *  - Logs every call to ai_usage_events for billing/audit
  *  - Never auto-publishes, never changes status — only drafts text the user
@@ -42,6 +46,16 @@ export interface ChatOptions {
   messages: ChatMessage[];
   maxTokens?: number;
   temperature?: number;
+  /**
+   * The API key to use. The route layer is expected to pass the
+   * resolved key (managed secret or env). When omitted and
+   * `isAiEnabled()` is false, the function returns `null` (the
+   * AI feature is unavailable). The optional typing preserves
+   * the pre-M3.4 call site behaviour for tests that exercise the
+   * "AI disabled" path.
+   */
+  apiKey?: string | undefined;
+  baseUrl?: string | undefined;
 }
 
 export interface ChatResult {
@@ -51,16 +65,38 @@ export interface ChatResult {
   model: string;
 }
 
-export async function chat(opts: ChatOptions): Promise<ChatResult | null> {
-  if (!isAiEnabled()) return null;
-  if (!serverEnv.MINIMAX_API_KEY) return null;
+/**
+ * Resolve the API key the AI client should use for a given
+ * agency. Priority:
+ *   1. The agency's managed secret (decrypted from the DB).
+ *   2. The environment key (`serverEnv.MINIMAX_API_KEY`).
+ *   3. `null` when neither is available — the route layer maps
+ *      to 503 with the message "Set a managed secret at
+ *      /app/agency-settings/ai or set MINIMAX_API_KEY in the
+ *      environment."
+ *
+ * The function is async (the managed-secret path is a DB read +
+ * decrypt) but the env-key path is sync. The return type is
+ * `Promise<string | null>`.
+ */
+export async function getActiveApiKey(agencyId: string): Promise<string | null> {
+  if (await hasManagedAiSecret(agencyId)) {
+    const secret = await loadManagedAiSecret(agencyId);
+    if (secret?.apiKey) return secret.apiKey;
+  }
+  return serverEnv.MINIMAX_API_KEY || null;
+}
 
-  const url = `${serverEnv.MINIMAX_BASE_URL.replace(/\/$/, "")}/v1/messages`;
+export async function chat(opts: ChatOptions): Promise<ChatResult | null> {
+  if (!isAiEnabled() && !opts.apiKey) return null;
+  if (!opts.apiKey) return null;
+
+  const url = `${(opts.baseUrl ?? serverEnv.MINIMAX_BASE_URL).replace(/\/$/, "")}/v1/messages`;
   const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": serverEnv.MINIMAX_API_KEY,
+      "x-api-key": opts.apiKey,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
@@ -104,15 +140,17 @@ export async function draftCaption(input: {
   title: string;
   brief: string;
   format: string;
-  platform?: string;
-  audience?: string;
+  platform?: string | undefined;
+  audience?: string | undefined;
+  apiKey?: string | undefined;
   onUsage?: (result: ChatResult) => void;
-  maxTokens?: number;
+  maxTokens?: number | undefined;
 }): Promise<string | null> {
-  if (!isAiEnabled()) return null;
+  if (!isAiEnabled() && !input.apiKey) return null;
   const result = await chat({
     temperature: 0.8,
     maxTokens: input.maxTokens ?? 600,
+    apiKey: input.apiKey,
     messages: [
       {
         role: "system",
@@ -147,14 +185,16 @@ export async function improveBrief(input: {
   title: string;
   brief: string;
   format: string;
-  audience?: string;
+  audience?: string | undefined;
+  apiKey?: string | undefined;
   onUsage?: (result: ChatResult) => void;
-  maxTokens?: number;
+  maxTokens?: number | undefined;
 }): Promise<string | null> {
-  if (!isAiEnabled()) return null;
+  if (!isAiEnabled() && !input.apiKey) return null;
   const result = await chat({
     temperature: 0.6,
     maxTokens: input.maxTokens ?? 600,
+    apiKey: input.apiKey,
     messages: [
       {
         role: "system",
@@ -191,14 +231,16 @@ export async function checkCompleteness(input: {
   title: string;
   brief: string;
   format: string;
-  audience?: string;
+  audience?: string | undefined;
+  apiKey?: string | undefined;
   onUsage?: (result: ChatResult) => void;
-  maxTokens?: number;
+  maxTokens?: number | undefined;
 }): Promise<string | null> {
-  if (!isAiEnabled()) return null;
+  if (!isAiEnabled() && !input.apiKey) return null;
   const result = await chat({
     temperature: 0.3,
     maxTokens: input.maxTokens ?? 500,
+    apiKey: input.apiKey,
     messages: [
       {
         role: "system",
