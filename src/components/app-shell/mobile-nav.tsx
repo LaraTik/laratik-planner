@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, ClipboardList, Home, LayoutDashboard, Plus } from "lucide-react";
+import {
+  Briefcase,
+  CalendarDays,
+  ClipboardList,
+  Home,
+  LayoutDashboard,
+  MessageSquare,
+  Plus,
+} from "lucide-react";
 import { cn, isActivePath } from "@/lib/utils";
 
 /**
@@ -18,11 +26,18 @@ import { cn, isActivePath } from "@/lib/utils";
  * lives in the sidebar; on mobile (< 768px) the sidebar is hidden,
  * so the bottom nav is the primary navigation surface.
  */
-export function MobileNav({ canCreate }: { canCreate: boolean }) {
+export function MobileNav({
+  canCreate,
+  clientWorkspaceSlugs = [],
+}: {
+  canCreate: boolean;
+  clientWorkspaceSlugs?: string[];
+}) {
   const pathname = usePathname();
   const slugMatch = pathname.match(/^\/app\/w\/([^/]+)/);
   const inWorkspace = !!slugMatch;
   const wsBase = slugMatch ? `/app/w/${slugMatch[1]}` : "";
+  const clientOnly = !!slugMatch && clientWorkspaceSlugs.includes(slugMatch[1] ?? "");
 
   return (
     <nav
@@ -45,7 +60,44 @@ export function MobileNav({ canCreate }: { canCreate: boolean }) {
             <span>My Work</span>
           </Link>
         </li>
-        {inWorkspace ? (
+        {inWorkspace && clientOnly ? (
+          <>
+            <li>
+              <Link
+                href={`${wsBase}/client`}
+                aria-current={
+                  isActivePath(`${wsBase}/client`, pathname, { exact: true }) ? "page" : undefined
+                }
+                className={cn(
+                  "text-label focus-visible:ring-focus-ring flex min-h-[var(--control-touch)] flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-2 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                  isActivePath(`${wsBase}/client`, pathname, { exact: true })
+                    ? "bg-primary-subtle text-primary"
+                    : "text-fg-secondary hover:bg-surface-subtle",
+                )}
+              >
+                <MessageSquare className="h-5 w-5" aria-hidden="true" />
+                <span>Reviews</span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                href={`${wsBase}/client/calendar`}
+                aria-current={
+                  isActivePath(`${wsBase}/client/calendar`, pathname) ? "page" : undefined
+                }
+                className={cn(
+                  "text-label focus-visible:ring-focus-ring flex min-h-[var(--control-touch)] flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-2 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                  isActivePath(`${wsBase}/client/calendar`, pathname)
+                    ? "bg-primary-subtle text-primary"
+                    : "text-fg-secondary hover:bg-surface-subtle",
+                )}
+              >
+                <CalendarDays className="h-5 w-5" aria-hidden="true" />
+                <span>Calendar</span>
+              </Link>
+            </li>
+          </>
+        ) : inWorkspace ? (
           <>
             <li>
               <Link

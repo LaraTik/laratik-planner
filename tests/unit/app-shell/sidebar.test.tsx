@@ -134,6 +134,22 @@ describe("Sidebar (workspace-aware)", () => {
     expect(brandRow!.textContent).toContain("Autumn Blend");
   });
 
+  it("shows client reviewers only the client review navigation", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/client");
+    render(<Sidebar {...baseProps} workspaceAccess={{ "ws-1": "client", "ws-2": "internal" }} />);
+    expect(screen.getByRole("link", { name: "Client review" })).toHaveAttribute(
+      "href",
+      "/app/w/northstar/client",
+    );
+    expect(screen.getByRole("link", { name: "Calendar" })).toHaveAttribute(
+      "href",
+      "/app/w/northstar/client/calendar",
+    );
+    expect(screen.queryByRole("link", { name: "Planning" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Brand Kit" })).toBeNull();
+    expect(screen.queryByTestId("sidebar-create-content")).toBeNull();
+  });
+
   it("does not show the workspace name in the brand block in global mode", () => {
     usePathnameMock.mockReturnValue("/app");
     render(<Sidebar {...baseProps} />);

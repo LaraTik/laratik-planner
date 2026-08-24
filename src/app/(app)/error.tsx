@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
@@ -19,7 +20,7 @@ export default function AppError({
   reset: () => void;
 }) {
   React.useEffect(() => {
-    console.error("[app/error.tsx]", error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (

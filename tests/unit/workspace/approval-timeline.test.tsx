@@ -213,8 +213,6 @@ describe("ApprovalTimeline", () => {
   it("Request changes button calls onRequestChanges with the request id and the feedback the user typed", async () => {
     const user = userEvent.setup();
     const onRequestChanges = vi.fn(async () => "request_changes");
-    // Stub window.prompt so the user-typed feedback is deterministic.
-    const promptSpy = vi.spyOn(window, "prompt").mockReturnValue("Branding is off");
     renderTimeline({
       approvals: [{ ...baseRequest, status: "pending" }],
       roles: { isManager: false, isInternalReviewer: true, isClientReviewer: false },
@@ -222,15 +220,14 @@ describe("ApprovalTimeline", () => {
     });
     const request = screen.getByRole("button", { name: /request changes/i });
     await user.click(request);
-    expect(promptSpy).toHaveBeenCalled();
+    await user.type(screen.getByRole("textbox", { name: /feedback/i }), "Branding is off");
+    await user.click(screen.getByRole("button", { name: /send request/i }));
     expect(onRequestChanges).toHaveBeenCalledWith(baseRequest.id, "Branding is off");
-    promptSpy.mockRestore();
   });
 
-  it("Request changes: if the user cancels the prompt, onRequestChanges is NOT called", async () => {
+  it("Request changes: closing the dialog does not submit feedback", async () => {
     const user = userEvent.setup();
     const onRequestChanges = vi.fn(async () => "request_changes");
-    const promptSpy = vi.spyOn(window, "prompt").mockReturnValue(null);
     renderTimeline({
       approvals: [{ ...baseRequest, status: "pending" }],
       roles: { isManager: false, isInternalReviewer: true, isClientReviewer: false },
@@ -238,9 +235,9 @@ describe("ApprovalTimeline", () => {
     });
     const request = screen.getByRole("button", { name: /request changes/i });
     await user.click(request);
-    expect(promptSpy).toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
     expect(onRequestChanges).not.toHaveBeenCalled();
-    promptSpy.mockRestore();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("Approved-state rows render inside a flex container (so the workflow bar can line them up)", () => {

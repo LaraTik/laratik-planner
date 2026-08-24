@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth/config";
 import { acceptInvitation } from "@/lib/auth/invitations";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -74,7 +75,7 @@ export default async function AcceptInvitationPage({
       </p>
       <div className="mt-6 flex gap-3">
         <Button asChild>
-          <a href="/app">Go to My Work</a>
+          <Link href="/app">Go to My Work</Link>
         </Button>
       </div>
     </main>

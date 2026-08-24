@@ -19,6 +19,7 @@ import {
   archiveBrandPublishingRule,
   createBrandLinkedResource,
   createBrandPublishingRule,
+  archiveBrandVoiceRule,
   restoreBrandAsset,
   restoreBrandVoiceRule,
   restoreBrandPublishingRule,
@@ -228,12 +229,7 @@ export async function archiveVoiceRuleAction(slug: string, ruleId: string): Prom
   if (!workspace) return;
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
     return;
-  // `brand_voice_rules` has no `archivedAt` column (see channels.ts:73)
-  // — we hard-delete. Soft-archive support requires a migration in
-  // round 3.
-  await db
-    .delete(brandVoiceRules)
-    .where(and(eq(brandVoiceRules.id, ruleId), eq(brandVoiceRules.workspaceId, workspace.id)));
+  await archiveBrandVoiceRule({ id: session.user.id }, workspace.id, ruleId);
   revalidatePath(`/app/w/${slug}/brand-kit`);
 }
 

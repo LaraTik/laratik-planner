@@ -5,6 +5,7 @@ import { Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/forms/form-field";
 import { submitDeliveryAction } from "../actions";
 import { humanize } from "@/lib/content/status";
@@ -60,6 +61,7 @@ export function DeliverySection({
 }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
+  const [formError, setFormError] = useState<string | null>(null);
   const canSubmit =
     (isDesigner || isManager) &&
     (contentStatus === "in_design" ||
@@ -104,15 +106,16 @@ export function DeliverySection({
             <form
               action={(fd) => {
                 start(async () => {
+                  setFormError(null);
                   try {
                     const res = await submitDeliveryAction(workspaceSlug, contentItemId, null, fd);
                     if (res && "error" in res && res.error) {
-                      alert(res.error);
+                      setFormError(res.error);
                     } else {
                       setOpen(false);
                     }
                   } catch (e) {
-                    alert((e as Error).message);
+                    setFormError((e as Error).message);
                   }
                 });
               }}
@@ -120,6 +123,7 @@ export function DeliverySection({
             >
               <FormField id="description" label="Description" required>
                 <Input
+                  id="description"
                   type="text"
                   name="description"
                   required
@@ -129,12 +133,12 @@ export function DeliverySection({
                 />
               </FormField>
               <FormField id="designerNote" label="Designer note (optional)">
-                <textarea
+                <Textarea
+                  id="designerNote"
                   name="designerNote"
                   rows={3}
                   maxLength={2000}
                   placeholder="Anything the reviewer should know."
-                  className="border-border bg-surface text-fg-primary text-body w-full rounded-[var(--radius-control)] border px-3 py-2"
                 />
               </FormField>
 
@@ -147,36 +151,61 @@ export function DeliverySection({
                     key={i}
                     className="border-border bg-surface-subtle grid grid-cols-12 gap-2 rounded-[var(--radius-control)] border p-2"
                   >
-                    <select
-                      name="linkProvider"
-                      className="border-border bg-surface text-body col-span-3 rounded-[var(--radius-control)] border px-2 py-1"
-                      defaultValue="google_drive"
-                    >
-                      {PROVIDERS.map((p) => (
-                        <option key={p} value={p}>
-                          {humanize(p)}
-                        </option>
-                      ))}
-                    </select>
-                    <Input
-                      type="text"
-                      name="linkLabel"
-                      placeholder="Label"
-                      maxLength={120}
-                      className="col-span-3"
-                    />
-                    <Input
-                      type="url"
-                      name="linkUrl"
-                      placeholder="https://…"
-                      className="col-span-5"
-                    />
-                    <label className="text-label text-fg-primary col-span-1 flex items-center gap-1">
+                    <div className="col-span-12 sm:col-span-3">
+                      <label
+                        htmlFor={`link-provider-${i}`}
+                        className="text-label mb-1 block font-medium"
+                      >
+                        Provider {i + 1}
+                      </label>
+                      <select
+                        id={`link-provider-${i}`}
+                        name="linkProvider"
+                        className="border-border bg-surface text-body min-h-11 w-full rounded-[var(--radius-control)] border px-2 py-1"
+                        defaultValue="google_drive"
+                      >
+                        {PROVIDERS.map((p) => (
+                          <option key={p} value={p}>
+                            {humanize(p)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-span-12 sm:col-span-3">
+                      <label
+                        htmlFor={`link-label-${i}`}
+                        className="text-label mb-1 block font-medium"
+                      >
+                        Link label
+                      </label>
+                      <Input id={`link-label-${i}`} type="text" name="linkLabel" maxLength={120} />
+                    </div>
+                    <div className="col-span-12 sm:col-span-5">
+                      <label
+                        htmlFor={`link-url-${i}`}
+                        className="text-label mb-1 block font-medium"
+                      >
+                        HTTPS URL
+                      </label>
+                      <Input
+                        id={`link-url-${i}`}
+                        type="url"
+                        name="linkUrl"
+                        placeholder="https://…"
+                      />
+                    </div>
+                    <label className="text-label text-fg-primary col-span-12 flex min-h-11 items-center gap-2 sm:col-span-1 sm:mt-5">
                       <input type="checkbox" name="linkPreview" className="h-4 w-4" /> Preview
                     </label>
                   </div>
                 ))}
               </fieldset>
+
+              {formError ? (
+                <p role="alert" className="text-body text-danger">
+                  {formError}
+                </p>
+              ) : null}
 
               <Button type="submit" disabled={pending}>
                 {pending ? "Submitting…" : "Submit for creative review"}

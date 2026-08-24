@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Wrench } from "lucide-react";
 import { serverEnv } from "@/lib/validation/env";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
@@ -50,8 +51,9 @@ export default async function DevSignInPage({
       data-testid="dev-signin-page"
     >
       <header className="flex flex-col items-center gap-2 text-center">
-        <p className="border-warning/20 bg-warning-subtle text-warning text-label rounded-full border px-3 py-1">
-          🛠 Dev mode — not available in production
+        <p className="border-warning/20 bg-warning-subtle text-warning text-label inline-flex items-center gap-1.5 rounded-full border px-3 py-1">
+          <Wrench className="h-3.5 w-3.5" aria-hidden="true" />
+          Dev mode — not available in production
         </p>
         <h1 className="text-title-page text-fg-primary font-semibold tracking-tight">
           One-click sign-in

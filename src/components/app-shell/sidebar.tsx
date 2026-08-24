@@ -60,6 +60,7 @@ import { SidebarGroup, SidebarLink, SidebarSubLink } from "./sidebar-group";
 export function Sidebar({
   user,
   workspaces,
+  workspaceAccess = {},
   workspaceSwitcherOptions,
   agencySwitcher,
   canCreateWorkspace,
@@ -67,6 +68,7 @@ export function Sidebar({
 }: {
   user: { name: string; isAdmin: boolean };
   workspaces: { id: string; slug: string; name: string }[];
+  workspaceAccess?: Record<string, "internal" | "client" | "none">;
   workspaceSwitcherOptions: { id: string; name: string; slug: string }[];
   agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   canCreateWorkspace: boolean;
@@ -82,6 +84,7 @@ export function Sidebar({
     : null;
   const inWorkspace = currentWorkspace !== null;
   const wsBase = currentWorkspace ? `/app/w/${currentWorkspace.slug}` : "";
+  const clientOnly = currentWorkspace ? workspaceAccess[currentWorkspace.id] === "client" : false;
 
   return (
     <nav className="flex h-full flex-col" aria-label="Primary">
@@ -115,100 +118,121 @@ export function Sidebar({
 
         {inWorkspace && currentWorkspace ? (
           <div className="space-y-1 pt-1">
-            <SidebarLink
-              href={wsBase}
-              icon={<LayoutDashboard className="h-4 w-4" />}
-              active={isActivePath(wsBase, pathname, { exact: true })}
-            >
-              Overview
-            </SidebarLink>
-            <SidebarLink
-              href={`${wsBase}/planning`}
-              icon={<ClipboardList className="h-4 w-4" />}
-              active={isActivePath(`${wsBase}/planning`, pathname)}
-            >
-              Planning
-            </SidebarLink>
-            <SidebarLink
-              href={`${wsBase}/calendar`}
-              icon={<CalendarDays className="h-4 w-4" />}
-              active={isActivePath(`${wsBase}/calendar`, pathname)}
-            >
-              Calendar
-            </SidebarLink>
-            <SidebarLink
-              href={`${wsBase}/reviews`}
-              icon={<MessageSquare className="h-4 w-4" />}
-              active={isActivePath(`${wsBase}/reviews`, pathname)}
-            >
-              Reviews
-            </SidebarLink>
-            <SidebarLink
-              href={`${wsBase}/channels`}
-              icon={<Share2 className="h-4 w-4" />}
-              active={isActivePath(`${wsBase}/channels`, pathname)}
-            >
-              Social Channels
-            </SidebarLink>
-            <SidebarLink
-              href={`${wsBase}/brand-kit`}
-              icon={<Package className="h-4 w-4" />}
-              active={isActivePath(`${wsBase}/brand-kit`, pathname)}
-            >
-              Brand Kit
-            </SidebarLink>
-            <SidebarLink
-              href={`${wsBase}/team`}
-              icon={<Users className="h-4 w-4" />}
-              active={isActivePath(`${wsBase}/team`, pathname)}
-            >
-              Team
-            </SidebarLink>
+            {clientOnly ? (
+              <>
+                <SidebarLink
+                  href={`${wsBase}/client`}
+                  icon={<MessageSquare className="h-4 w-4" />}
+                  active={isActivePath(`${wsBase}/client`, pathname, { exact: true })}
+                >
+                  Client review
+                </SidebarLink>
+                <SidebarLink
+                  href={`${wsBase}/client/calendar`}
+                  icon={<CalendarDays className="h-4 w-4" />}
+                  active={isActivePath(`${wsBase}/client/calendar`, pathname)}
+                >
+                  Calendar
+                </SidebarLink>
+              </>
+            ) : (
+              <>
+                <SidebarLink
+                  href={wsBase}
+                  icon={<LayoutDashboard className="h-4 w-4" />}
+                  active={isActivePath(wsBase, pathname, { exact: true })}
+                >
+                  Overview
+                </SidebarLink>
+                <SidebarLink
+                  href={`${wsBase}/planning`}
+                  icon={<ClipboardList className="h-4 w-4" />}
+                  active={isActivePath(`${wsBase}/planning`, pathname)}
+                >
+                  Planning
+                </SidebarLink>
+                <SidebarLink
+                  href={`${wsBase}/calendar`}
+                  icon={<CalendarDays className="h-4 w-4" />}
+                  active={isActivePath(`${wsBase}/calendar`, pathname)}
+                >
+                  Calendar
+                </SidebarLink>
+                <SidebarLink
+                  href={`${wsBase}/reviews`}
+                  icon={<MessageSquare className="h-4 w-4" />}
+                  active={isActivePath(`${wsBase}/reviews`, pathname)}
+                >
+                  Reviews
+                </SidebarLink>
+                <SidebarLink
+                  href={`${wsBase}/channels`}
+                  icon={<Share2 className="h-4 w-4" />}
+                  active={isActivePath(`${wsBase}/channels`, pathname)}
+                >
+                  Social Channels
+                </SidebarLink>
+                <SidebarLink
+                  href={`${wsBase}/brand-kit`}
+                  icon={<Package className="h-4 w-4" />}
+                  active={isActivePath(`${wsBase}/brand-kit`, pathname)}
+                >
+                  Brand Kit
+                </SidebarLink>
+                <SidebarLink
+                  href={`${wsBase}/team`}
+                  icon={<Users className="h-4 w-4" />}
+                  active={isActivePath(`${wsBase}/team`, pathname)}
+                >
+                  Team
+                </SidebarLink>
 
-            <div className="pt-2" />
+                <div className="pt-2" />
 
-            <SidebarGroup
-              href={`${wsBase}/settings`}
-              icon={<Settings className="h-4 w-4" />}
-              label="Settings"
-              pathname={pathname}
-              defaultOpen={isActivePath(`${wsBase}/settings`, pathname)}
-              parentTestId="sidebar-settings"
-            >
-              <SidebarSubLink
-                href={`${wsBase}/settings#lifecycle`}
-                active={
-                  pathname === `${wsBase}/settings` &&
-                  !!pathname.match(/#lifecycle$|^\/app\/w\/[^/]+\/settings$/)
-                }
-              >
-                Lifecycle
-              </SidebarSubLink>
-              <SidebarSubLink
-                href={`${wsBase}/settings#lead-times`}
-                active={pathname.includes("/settings") && pathname.endsWith("#lead-times")}
-              >
-                Lead times
-              </SidebarSubLink>
-              <SidebarSubLink
-                href={`${wsBase}/settings#defaults`}
-                active={pathname.includes("/settings") && pathname.endsWith("#defaults")}
-              >
-                Assignment defaults
-              </SidebarSubLink>
-              <SidebarSubLink
-                href={`${wsBase}/settings#approvals`}
-                active={pathname.includes("/settings") && pathname.endsWith("#approvals")}
-              >
-                Approval mode
-              </SidebarSubLink>
-              <SidebarSubLink
-                href={`${wsBase}/ai-settings`}
-                active={isActivePath(`${wsBase}/ai-settings`, pathname)}
-              >
-                <Bot className="h-3.5 w-3.5" aria-hidden="true" /> AI assistance
-              </SidebarSubLink>
-            </SidebarGroup>
+                <SidebarGroup
+                  href={`${wsBase}/settings`}
+                  icon={<Settings className="h-4 w-4" />}
+                  label="Settings"
+                  pathname={pathname}
+                  defaultOpen={isActivePath(`${wsBase}/settings`, pathname)}
+                  parentTestId="sidebar-settings"
+                >
+                  <SidebarSubLink
+                    href={`${wsBase}/settings#lifecycle`}
+                    active={
+                      pathname === `${wsBase}/settings` &&
+                      !!pathname.match(/#lifecycle$|^\/app\/w\/[^/]+\/settings$/)
+                    }
+                  >
+                    Lifecycle
+                  </SidebarSubLink>
+                  <SidebarSubLink
+                    href={`${wsBase}/settings#lead-times`}
+                    active={pathname.includes("/settings") && pathname.endsWith("#lead-times")}
+                  >
+                    Lead times
+                  </SidebarSubLink>
+                  <SidebarSubLink
+                    href={`${wsBase}/settings#defaults`}
+                    active={pathname.includes("/settings") && pathname.endsWith("#defaults")}
+                  >
+                    Assignment defaults
+                  </SidebarSubLink>
+                  <SidebarSubLink
+                    href={`${wsBase}/settings#approvals`}
+                    active={pathname.includes("/settings") && pathname.endsWith("#approvals")}
+                  >
+                    Approval mode
+                  </SidebarSubLink>
+                  <SidebarSubLink
+                    href={`${wsBase}/ai-settings`}
+                    active={isActivePath(`${wsBase}/ai-settings`, pathname)}
+                  >
+                    <Bot className="h-3.5 w-3.5" aria-hidden="true" /> AI assistance
+                  </SidebarSubLink>
+                </SidebarGroup>
+              </>
+            )}
           </div>
         ) : (
           <>
@@ -301,7 +325,7 @@ export function Sidebar({
 
       {/* Bottom section: actions + meta + switcher */}
       <div className="border-border mt-auto space-y-1 border-t p-4 pt-4">
-        {inWorkspace && currentWorkspace ? (
+        {inWorkspace && currentWorkspace && !clientOnly ? (
           <Link
             href={`${wsBase}/planning/new`}
             className="bg-primary-container text-on-primary-container hover:bg-primary-hover text-button flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] px-3 py-2 font-semibold transition-colors"

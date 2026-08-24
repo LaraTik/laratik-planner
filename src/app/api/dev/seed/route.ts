@@ -2,11 +2,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import {
   agencies,
+  agencyEntitlements,
   agencyMemberships,
   bootstrapLocks,
   contentItemChannels,
   contentItems,
   platformAdministrators,
+  platformPlanTemplates,
   socialChannels,
   users,
   workspaceMembershipRoles,
@@ -205,6 +207,28 @@ async function seedInternal(f: {
       })
       .returning({ id: agencies.id });
     agencyId = created!.id;
+  }
+
+  // Production agency creation always assigns a plan. The dev fixture
+  // mirrors that invariant so platform-admin detail routes exercise the
+  // real entitlement surface instead of failing on an impossible row shape.
+  const [defaultPlan] = await db
+    .select({ id: platformPlanTemplates.id })
+    .from(platformPlanTemplates)
+    .where(eq(platformPlanTemplates.slug, "growth"))
+    .limit(1);
+  const [fallbackPlan] = defaultPlan
+    ? [defaultPlan]
+    : await db.select({ id: platformPlanTemplates.id }).from(platformPlanTemplates).limit(1);
+  const plan = defaultPlan ?? fallbackPlan;
+  if (plan) {
+    await db
+      .insert(agencyEntitlements)
+      .values({ agencyId, planTemplateId: plan.id })
+      .onConflictDoUpdate({
+        target: agencyEntitlements.agencyId,
+        set: { planTemplateId: plan.id },
+      });
   }
 
   // ─── Agency membership (admin) ──────────────────────────────────────────

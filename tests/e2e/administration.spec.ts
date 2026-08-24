@@ -37,23 +37,33 @@ test.describe("Brand Kit administration journey", () => {
     await expect(page.getByTestId("publishing-rule-form")).toBeVisible();
 
     // ── Publishing rule ────────────────────────────────────────────────
+    const managerRuleTitle = `Describe meaningful visuals ${Date.now()}`;
     await page.getByLabel("Rule type").selectOption("alt_text");
-    await page.getByLabel("Title").fill("Describe meaningful visuals");
-    await page.getByLabel("Rule").fill("Use concise alt text for informative images.");
+    await page.getByLabel("Title").fill(managerRuleTitle);
+    await page
+      .getByTestId("publishing-rule-form")
+      .getByRole("textbox", { name: "Rule" })
+      .fill("Use concise alt text for informative images.");
     await page.getByRole("button", { name: "Create rule" }).click();
 
     // The new rule appears in the Publishing Rules list. The form
     // resets on success, so we look for the rendered title text.
-    await expect(page.getByText("Describe meaningful visuals")).toBeVisible();
+    await expect(
+      page.locator("[data-testid^='brand-publishing-rule-']", {
+        hasText: managerRuleTitle,
+      }),
+    ).toBeVisible();
 
     // ── Linked resource ────────────────────────────────────────────────
-    await page.getByLabel("Provider").selectOption("figma");
-    await page.getByLabel("Name").fill("Master design library");
-    await page.getByLabel("URL").fill("https://figma.com/file/example");
-    await page.getByRole("button", { name: "Link resource" }).click();
+    const resourceName = `Master design library ${Date.now()}`;
+    const linkedResourceForm = page.getByTestId("linked-resource-form");
+    await linkedResourceForm.getByLabel("Provider").selectOption("figma");
+    await linkedResourceForm.getByLabel("Name").fill(resourceName);
+    await linkedResourceForm.getByLabel("URL").fill("https://figma.com/file/example");
+    await linkedResourceForm.getByRole("button", { name: "Link resource" }).click();
 
     // The new resource renders as a link to the upstream URL.
-    await expect(page.getByRole("link", { name: "Master design library" })).toBeVisible();
+    await expect(page.getByRole("link", { name: resourceName })).toBeVisible();
   });
 
   test("content planner can create and archive Brand Kit records", async ({ page }) => {
@@ -66,7 +76,10 @@ test.describe("Brand Kit administration journey", () => {
     const uniqueTitle = `Hashtag discipline ${Date.now()}`;
     await page.getByLabel("Rule type").selectOption("hashtag");
     await page.getByLabel("Title").fill(uniqueTitle);
-    await page.getByLabel("Rule").fill("Use 3-5 branded hashtags per post.");
+    await page
+      .getByTestId("publishing-rule-form")
+      .getByRole("textbox", { name: "Rule" })
+      .fill("Use 3-5 branded hashtags per post.");
     await page.getByRole("button", { name: "Create rule" }).click();
 
     // Confirm the rule appears.
@@ -86,7 +99,6 @@ test.describe("Brand Kit administration journey", () => {
     // After archive the row disappears (listBrandPublishingRules
     // filters by archived_at IS NULL).
     await expect(newRule).toHaveCount(0);
-    await expect(page.getByText(uniqueTitle)).toHaveCount(0);
   });
 
   test("viewer can see approved Brand Kit content but no mutation controls", async ({ page }) => {
@@ -96,9 +108,15 @@ test.describe("Brand Kit administration journey", () => {
     const publicTitle = `Public guidance ${Date.now()}`;
     await page.getByLabel("Rule type").selectOption("general");
     await page.getByLabel("Title").fill(publicTitle);
-    await page.getByLabel("Rule").fill("Always proofread before publishing.");
+    await page
+      .getByTestId("publishing-rule-form")
+      .getByRole("textbox", { name: "Rule" })
+      .fill("Always proofread before publishing.");
     await page.getByRole("button", { name: "Create rule" }).click();
-    await expect(page.getByText(publicTitle)).toBeVisible();
+    const publicRule = page.locator("[data-testid^='brand-publishing-rule-']", {
+      hasText: publicTitle,
+    });
+    await expect(publicRule).toBeVisible();
 
     // Now switch to the viewer and confirm they see the rule but not
     // the create / archive controls.
@@ -107,7 +125,7 @@ test.describe("Brand Kit administration journey", () => {
 
     // The page renders (viewer is in INTERNAL_WORKSPACE_ROLES) and the
     // rule text is visible.
-    await expect(page.getByText(publicTitle)).toBeVisible();
+    await expect(publicRule).toBeVisible();
 
     // No mutation controls. canManage is gated on workspace_manager, so
     // viewer sees the bento grid but not the forms or archive buttons.
@@ -126,16 +144,8 @@ test.describe("Brand Kit administration journey", () => {
     // The brand-kit page calls getAccessibleWorkspace which uses
     // canAccessInternalWorkspace. client_reviewer is not in
     // INTERNAL_WORKSPACE_ROLES, so the page returns 404.
-    const response = await page.goto("/app/w/brand-admin/brand-kit");
-    // Either the navigation produced a 404 status or the page
-    // surfaced the app's "Page not found" view. Both are valid denials.
-    const isNotFound =
-      response?.status() === 404 ||
-      (await page
-        .getByRole("heading", { name: /Page not found/i })
-        .isVisible()
-        .catch(() => false));
-    expect(isNotFound).toBe(true);
+    await page.goto("/app/w/brand-admin/brand-kit");
+    await expect(page.getByRole("heading", { name: /Page not found/i })).toBeVisible();
 
     // No internal Brand Kit markers should be present.
     await expect(page.getByTestId("brand-kit-bento")).toHaveCount(0);
@@ -151,9 +161,14 @@ test.describe("Brand Kit administration journey", () => {
     const ephemeralTitle = `Ephemeral rule ${Date.now()}`;
     await page.getByLabel("Rule type").selectOption("compliance");
     await page.getByLabel("Title").fill(ephemeralTitle);
-    await page.getByLabel("Rule").fill("Disclose paid partnerships.");
+    await page
+      .getByTestId("publishing-rule-form")
+      .getByRole("textbox", { name: "Rule" })
+      .fill("Disclose paid partnerships.");
     await page.getByRole("button", { name: "Create rule" }).click();
-    await expect(page.getByText(ephemeralTitle)).toBeVisible();
+    await expect(
+      page.locator("[data-testid^='brand-publishing-rule-']", { hasText: ephemeralTitle }),
+    ).toBeVisible();
 
     // Archive it.
     const row = page.locator("[data-testid^='brand-publishing-rule-']", {
@@ -183,9 +198,14 @@ test.describe("Brand Kit administration journey", () => {
     const crossTitle = `Cross-workspace rule ${Date.now()}`;
     await page.getByLabel("Rule type").selectOption("channel");
     await page.getByLabel("Title").fill(crossTitle);
-    await page.getByLabel("Rule").fill("Channel-specific formatting guidance.");
+    await page
+      .getByTestId("publishing-rule-form")
+      .getByRole("textbox", { name: "Rule" })
+      .fill("Channel-specific formatting guidance.");
     await page.getByRole("button", { name: "Create rule" }).click();
-    await expect(page.getByText(crossTitle)).toBeVisible();
+    await expect(
+      page.locator("[data-testid^='brand-publishing-rule-']", { hasText: crossTitle }),
+    ).toBeVisible();
 
     // Capture the rule id from the rendered data-testid.
     const ruleRow = page.locator("[data-testid^='brand-publishing-rule-']", {
@@ -244,7 +264,6 @@ test.describe("Brand Kit administration journey", () => {
     // ── Re-fetch workspace A's brand kit and confirm the rule is still
     // present (the cross-workspace archive was a no-op, not a delete).
     await page.goto("/app/w/brand-admin/brand-kit");
-    await expect(page.getByText(crossTitle)).toBeVisible();
     // The original test id still resolves to the same row.
     await expect(page.getByTestId(`brand-publishing-rule-${ruleId}`)).toBeVisible();
 

@@ -81,9 +81,9 @@ export default async function SignInPage({
         <p className="border-border bg-surface text-label text-fg-muted rounded-full border px-3 py-1">
           laratik-planner
         </p>
-        <h1 className="text-title-page text-primary font-bold tracking-tight">StudioFlow</h1>
+        <h1 className="text-title-page text-primary font-bold tracking-tight">Sign in</h1>
         <p className="text-body text-fg-secondary max-w-sm">
-          Plan, approve, and publish with clarity.
+          StudioFlow · Plan, approve, and publish with clarity.
         </p>
       </header>
 
@@ -271,7 +271,7 @@ export default async function SignInPage({
 
       <footer className="flex flex-col items-center gap-3">
         <p className="text-label text-secondary text-center">
-          Need access? Contact your agency administrator.
+          Invitation-only access. Contact your agency administrator for an invitation.
         </p>
         <p className="text-label text-fg-muted text-center">
           © {new Date().getFullYear()} laratik-planner Agency Platform

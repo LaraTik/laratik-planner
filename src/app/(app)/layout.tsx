@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
-import { isAgencyAdmin } from "@/lib/auth/policy";
+import {
+  canAccessClientWorkspace,
+  canAccessInternalWorkspace,
+  isAgencyAdmin,
+} from "@/lib/auth/policy";
 import { listActorAgencies, resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { AppShell } from "@/components/app-shell/app-shell";
@@ -73,6 +77,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     listSwitcherWorkspaces(actor),
     listActorAgencies(actor),
   ]);
+  const workspaceAccess = Object.fromEntries(
+    await Promise.all(
+      switcher.options.map(async (workspace) => {
+        if (await canAccessInternalWorkspace(actor, workspace.id)) {
+          return [workspace.id, "internal"] as const;
+        }
+        if (await canAccessClientWorkspace(actor, workspace.id)) {
+          return [workspace.id, "client"] as const;
+        }
+        return [workspace.id, "none"] as const;
+      }),
+    ),
+  );
 
   // M3.5 — fetch the calling platform admin's active support
   // access grants so the persistent banner can show. Only
@@ -123,6 +140,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         isPlatformAdmin: platformAdmin,
       }}
       workspaces={switcher.options}
+      workspaceAccess={workspaceAccess}
       agencySwitcher={{ active: activeAgency, options: agencyOptions }}
       canCreateWorkspace={switcher.isAdmin}
       notifications={notifications.map((n) => ({

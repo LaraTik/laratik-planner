@@ -76,6 +76,7 @@ const policyMock = vi.hoisted(() => ({
 // service mutators route through the mocked `@/lib/db` and
 // `@/lib/auth/policy` modules above.
 const serviceMock = vi.hoisted(() => ({
+  archiveBrandVoiceRule: vi.fn(),
   createBrandPublishingRule: vi.fn(),
   archiveBrandPublishingRule: vi.fn(),
   createBrandLinkedResource: vi.fn(),
@@ -93,6 +94,7 @@ vi.mock("@/lib/brand/service", async () => {
   const actual = await vi.importActual<typeof import("@/lib/brand/service")>("@/lib/brand/service");
   return {
     ...actual,
+    archiveBrandVoiceRule: serviceMock.archiveBrandVoiceRule,
     createBrandPublishingRule: serviceMock.createBrandPublishingRule,
     archiveBrandPublishingRule: serviceMock.archiveBrandPublishingRule,
     createBrandLinkedResource: serviceMock.createBrandLinkedResource,
@@ -133,6 +135,8 @@ beforeEach(() => {
   workspaceMock.getAccessibleWorkspace.mockReset();
   policyMock.hasWorkspaceRole.mockReset();
   serviceMock.createBrandPublishingRule.mockReset();
+  serviceMock.archiveBrandVoiceRule.mockReset();
+  serviceMock.archiveBrandVoiceRule.mockResolvedValue(undefined);
   serviceMock.createBrandPublishingRule.mockResolvedValue(undefined);
   serviceMock.archiveBrandPublishingRule.mockReset();
   serviceMock.archiveBrandPublishingRule.mockResolvedValue(undefined);
@@ -281,14 +285,18 @@ describe("createVoiceRuleAction", () => {
 });
 
 describe("archiveVoiceRuleAction", () => {
-  it("deletes the row when the caller is a workspace_manager (no archivedAt column)", async () => {
+  it("soft-archives through the service when the caller is a workspace_manager", async () => {
     const { revalidatePath } = await import("next/cache");
     authMock.auth.mockResolvedValue(session);
     workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
     policyMock.hasWorkspaceRole.mockResolvedValue(true);
     await archiveVoiceRuleAction(slug, "rule-1");
-    expect(dbMock.state.deleteCalls).toHaveLength(1);
-    expect(dbMock.state.updateCalls).toHaveLength(0);
+    expect(serviceMock.archiveBrandVoiceRule).toHaveBeenCalledWith(
+      { id: session.user.id },
+      workspace.id,
+      "rule-1",
+    );
+    expect(dbMock.state.deleteCalls).toHaveLength(0);
     expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 });

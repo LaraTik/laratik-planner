@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
@@ -22,10 +23,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   React.useEffect(() => {
-    // Keep the console output for devs in dev; in prod, this is the
-    // canonical place to ship the error to Sentry once the wrapper is
-    // wired (Goal 13).
-    console.error("[app/error.tsx]", error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (

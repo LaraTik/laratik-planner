@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { Settings, ShieldCheck, User as UserIcon } from "lucide-react";
 import type { BuildInfo } from "@/lib/build-info";
@@ -36,15 +37,21 @@ type UserMenuUser = {
   isPlatformAdmin?: boolean;
 };
 
-function AvatarTrigger({ user, compact = false }: { user: UserMenuUser; compact?: boolean }) {
+const AvatarTrigger = React.forwardRef<
+  HTMLButtonElement,
+  { user: UserMenuUser; compact?: boolean } & React.ComponentPropsWithoutRef<"button">
+>(function AvatarTrigger({ user, compact = false, className, ...buttonProps }, ref) {
   return (
     <button
+      {...buttonProps}
+      ref={ref}
       type="button"
       aria-label={`Account menu for ${user.name}`}
       data-testid={compact ? "user-menu-trigger-mobile" : "user-menu-trigger"}
       className={cn(
         "border-border bg-surface text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-11 cursor-pointer items-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2",
         compact ? "min-w-11 justify-center p-1" : "gap-2 px-1 py-1",
+        className,
       )}
     >
       {user.image ? (
@@ -65,7 +72,7 @@ function AvatarTrigger({ user, compact = false }: { user: UserMenuUser; compact?
       )}
     </button>
   );
-}
+});
 
 /**
  * Responsive account menu. Desktop uses the Radix dropdown for menu keyboard
