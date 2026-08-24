@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { bootstrapTestSession } from "./_helpers";
 
 /**
@@ -33,6 +34,17 @@ test.describe("Mobile layout (master prompt §3 — <768px)", () => {
     await expect(aside).toBeVisible();
   });
 
+  test("tablet uses a compact icon rail instead of the desktop-width sidebar", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto("/app/w/acme/planning");
+
+    const aside = page.getByTestId("app-sidebar");
+    await expect(aside).toBeVisible();
+    expect((await aside.boundingBox())?.width).toBe(72);
+    await expect(page.getByRole("link", { name: "Planning" }).first()).toBeVisible();
+  });
+
   test("bottom-nav tiles are at least 44px tall (touch target)", async ({ page }) => {
     await bootstrapTestSession(page);
     await page.setViewportSize({ width: 375, height: 667 });
@@ -48,6 +60,54 @@ test.describe("Mobile layout (master prompt §3 — <768px)", () => {
       expect(box, `link #${i} should have a bounding box`).not.toBeNull();
       expect(box!.height, `link #${i} should be ≥44px tall`).toBeGreaterThanOrEqual(44);
     }
+  });
+
+  test("workspace More sheet exposes secondary routes and the correct create action", async ({
+    page,
+  }) => {
+    await bootstrapTestSession(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/app/w/acme/planning");
+
+    await expect(page.getByTestId("mobile-primary-create")).toHaveAttribute(
+      "href",
+      "/app/w/acme/planning/new",
+    );
+    await page.getByTestId("mobile-navigation-more").click();
+    await expect(page.getByRole("dialog", { name: "Navigate" })).toBeVisible();
+    for (const label of ["Board", "Calendar", "Design queue", "Library", "Brand kit", "Settings"]) {
+      await expect(page.getByRole("link", { name: label })).toBeVisible();
+    }
+    const a11y = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+      .analyze();
+    expect(
+      a11y.violations.filter(
+        (violation) => violation.impact === "critical" || violation.impact === "serious",
+      ),
+    ).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      390,
+    );
+  });
+
+  test("mobile calendar uses an agenda without horizontal page overflow", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/app/w/acme/calendar");
+
+    await expect(page.getByRole("region", { name: "Calendar agenda" })).toBeVisible();
+    const a11y = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+      .analyze();
+    expect(
+      a11y.violations.filter(
+        (violation) => violation.impact === "critical" || violation.impact === "serious",
+      ),
+    ).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      390,
+    );
   });
 
   test("account menu exposes build identity on mobile and desktop", async ({ page }) => {

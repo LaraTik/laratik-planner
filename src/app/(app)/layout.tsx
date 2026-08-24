@@ -13,8 +13,13 @@ import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
 import { isPlatformAdmin as checkPlatformAdmin } from "@/lib/auth/platform-admin";
 import { listActiveGrantsForActor } from "@/lib/support";
 import { db } from "@/lib/db";
-import { agencies, agencyMemberships } from "@/lib/db/schema";
-import { and, eq, isNotNull, or } from "drizzle-orm";
+import {
+  agencies,
+  agencyMemberships,
+  workspaceMembershipRoles,
+  workspaceMemberships,
+} from "@/lib/db/schema";
+import { and, eq, inArray, isNotNull, or } from "drizzle-orm";
 import { createBuildInfo } from "@/lib/build-info";
 import { serverEnv } from "@/lib/validation/env";
 
@@ -90,6 +95,32 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }),
     ),
   );
+  const workspaceIds = switcher.options.map((workspace) => workspace.id);
+  const contentCreatorRows =
+    !isAdmin && workspaceIds.length > 0
+      ? await db
+          .select({ workspaceId: workspaceMemberships.workspaceId })
+          .from(workspaceMemberships)
+          .innerJoin(
+            workspaceMembershipRoles,
+            eq(workspaceMembershipRoles.workspaceMembershipId, workspaceMemberships.id),
+          )
+          .where(
+            and(
+              eq(workspaceMemberships.userId, actor.id),
+              eq(workspaceMemberships.status, "active"),
+              inArray(workspaceMemberships.workspaceId, workspaceIds),
+              inArray(workspaceMembershipRoles.role, ["workspace_manager", "content_planner"]),
+            ),
+          )
+      : [];
+  const creatorWorkspaceIds = new Set(contentCreatorRows.map((row) => row.workspaceId));
+  const workspaceCanCreateContent = Object.fromEntries(
+    switcher.options.map((workspace) => [
+      workspace.id,
+      isAdmin || creatorWorkspaceIds.has(workspace.id),
+    ]),
+  );
 
   // M3.5 — fetch the calling platform admin's active support
   // access grants so the persistent banner can show. Only
@@ -141,6 +172,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }}
       workspaces={switcher.options}
       workspaceAccess={workspaceAccess}
+      workspaceCanCreateContent={workspaceCanCreateContent}
       agencySwitcher={{ active: activeAgency, options: agencyOptions }}
       canCreateWorkspace={switcher.isAdmin}
       notifications={notifications.map((n) => ({

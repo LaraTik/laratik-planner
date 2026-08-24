@@ -54,6 +54,13 @@ stack of `<Card>` sections; each section is a labelled form with
 the submit button right-aligned in a footer. No Bento grid, no
 top tabs.
 
+**2026-08-24 navigation override:** the compact settings overview
+strip was removed because it repeated the Settings group in the
+persistent sidebar. Desktop section links remain in that group and
+are hash-aware; mobile enters the single settings document from the
+More sheet and scrolls naturally. Section targets use `scroll-mt-20`
+so the sticky utility bar never covers their headings.
+
 ## 3. Accessibility checklist
 
 Use this list as a smoke test before opening a PR that touches a

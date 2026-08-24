@@ -8,13 +8,13 @@ import { cn } from "@/lib/utils";
  */
 function formatSegmentColor(index: number): string {
   const palette = [
-    "bg-primary-container",
+    "bg-primary",
     "bg-tertiary-container",
     "bg-surface-variant",
     "bg-secondary-container",
     "bg-info-subtle",
   ];
-  return palette[index % palette.length] ?? "bg-primary-container";
+  return palette[index % palette.length] ?? "bg-primary";
 }
 
 export interface PlanCoverageCardProps {

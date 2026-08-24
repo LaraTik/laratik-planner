@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Settings, ShieldCheck, User as UserIcon } from "lucide-react";
+import { HelpCircle, Settings, ShieldCheck, User as UserIcon } from "lucide-react";
 import type { BuildInfo } from "@/lib/build-info";
 import { SignOutForm } from "@/app/(app)/app/account/sign-out-form";
 import {
@@ -188,6 +188,11 @@ export function UserMenu({
             </Link>
           </DropdownMenuItem>
         ) : null}
+        <DropdownMenuItem asChild className="min-h-11 cursor-pointer">
+          <Link href="https://github.com/LaraTik/laratik-planner">
+            <HelpCircle className="text-fg-secondary h-4 w-4" aria-hidden="true" /> Help
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <CopyBuildInfoMenuItem buildInfo={buildInfo} />
         <DropdownMenuSeparator />

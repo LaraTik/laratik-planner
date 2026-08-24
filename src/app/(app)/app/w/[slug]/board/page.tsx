@@ -4,7 +4,6 @@ import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { listWorkspaceContent } from "@/lib/content/service";
 import { PageHeader } from "@/components/workspace/page-header";
-import { PlanningViewToggle } from "@/components/workspace/planning-view-toggle";
 import { WorkflowBoard, type WorkflowBoardColumn } from "@/components/board/workflow-board";
 
 const COLUMNS: readonly WorkflowBoardColumn[] = [
@@ -38,7 +37,6 @@ export default async function WorkflowBoardPage({ params }: { params: Promise<{ 
             </span>
           </>
         }
-        action={<PlanningViewToggle workspaceSlug={slug} />}
       />
       <WorkflowBoard items={items} columns={COLUMNS} workspaceSlug={slug} />
     </div>

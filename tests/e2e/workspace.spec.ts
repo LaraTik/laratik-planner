@@ -101,7 +101,9 @@ test.describe("Workspace switcher keyboard (sidebar)", () => {
     // not the topbar. The desktop sidebar is hidden < 768px so we
     // assert the trigger is visible at the default Playwright viewport.
     const trigger = page.locator('[data-testid="sidebar-workspace-switcher-trigger"]');
+    await expect(trigger).toBeVisible();
     await trigger.focus();
+    await expect(trigger).toBeFocused();
     await page.keyboard.press("Enter");
     const listbox = page.getByRole("listbox", { name: "Workspaces" });
     // Keyboard Enter on a focused <button> must open the listbox — assert it

@@ -10,7 +10,6 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { Card } from "@/components/ui/card";
 import { KpiTile } from "@/components/workspace/kpi-tile";
 import { PageHeader } from "@/components/workspace/page-header";
-import { PlanningViewToggle } from "@/components/workspace/planning-view-toggle";
 import { ReviewRow, type ReviewRowItem } from "@/components/workspace/review-row";
 
 export default async function ReviewsQueuePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -64,7 +63,6 @@ export default async function ReviewsQueuePage({ params }: { params: Promise<{ s
             </span>
           </>
         }
-        action={<PlanningViewToggle workspaceSlug={slug} />}
       />
 
       <section aria-label="Reviews KPIs" className="grid grid-cols-2 gap-3 sm:grid-cols-3">

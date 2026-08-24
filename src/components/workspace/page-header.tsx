@@ -49,10 +49,14 @@ export function PageHeader({
         >
           {title}
         </h1>
-        {description ? <p className="text-body text-fg-secondary mt-1">{description}</p> : null}
+        {description ? (
+          <p className="text-body text-fg-secondary mt-1 max-w-3xl text-pretty">{description}</p>
+        ) : null}
       </div>
       {action ? (
-        <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0">{action}</div>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-shrink-0 sm:justify-end">
+          {action}
+        </div>
       ) : null}
     </header>
   );

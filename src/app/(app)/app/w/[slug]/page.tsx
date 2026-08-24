@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { contentItems, workspaceSettings } from "@/lib/db/schema";
 import { and, desc, eq, gte, isNull, lt } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, ListChecks, Plus } from "lucide-react";
+import { Clock, ListChecks, Plus } from "lucide-react";
 import { calculateOverviewMetrics } from "@/lib/dashboard/kpis";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -22,7 +22,7 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
  *
  * Layout (top to bottom):
  *  1. Page header — workspace name + "Overview" + month label +
- *     timezone, with View calendar / Batch add ideas / Create content
+ *     timezone, with Batch add ideas / Create content
  *     action buttons on the right.
  *  2. Health & Coverage row — Plan Coverage (left) and Delivery Health
  *     (right).
@@ -138,12 +138,6 @@ export default async function WorkspaceOverviewPage({
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" asChild>
-              <Link href={`/app/w/${slug}/calendar`}>
-                <Calendar className="h-4 w-4" aria-hidden="true" />
-                View calendar
-              </Link>
-            </Button>
             <Button variant="outline" asChild>
               <Link href={`/app/w/${slug}/planning/batch`}>
                 <ListChecks className="h-4 w-4" aria-hidden="true" />

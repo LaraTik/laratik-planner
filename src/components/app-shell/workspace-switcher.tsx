@@ -27,11 +27,13 @@ export function WorkspaceSwitcher({
   active,
   options,
   canCreate,
+  compact = false,
   testId,
 }: {
   active: Workspace | null;
   options: Workspace[];
   canCreate: boolean;
+  compact?: boolean;
   testId?: string;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -100,7 +102,7 @@ export function WorkspaceSwitcher({
     return (
       <Link
         href="/app/workspaces/new"
-        className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2"
+        className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
         Create your first workspace
@@ -117,13 +119,19 @@ export function WorkspaceSwitcher({
           aria-expanded={open}
           aria-label={`Active workspace: ${active.name}. Click to switch.`}
           data-testid={testId}
-          className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-surface-subtle inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2"
+          className={cn(
+            "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-surface-subtle inline-flex min-h-11 min-w-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2",
+            compact ? "justify-center xl:justify-start" : "justify-start",
+          )}
         >
           <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
             {active.name.charAt(0).toUpperCase()}
           </span>
-          <span className="hidden sm:inline">{active.name}</span>
-          <ChevronsUpDown className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />
+          <span className={compact ? "hidden xl:inline" : "inline"}>{active.name}</span>
+          <ChevronsUpDown
+            className={cn("text-fg-muted h-3.5 w-3.5", compact && "hidden xl:block")}
+            aria-hidden="true"
+          />
         </button>
       </PopoverTrigger>
       <PopoverContent
