@@ -5,7 +5,6 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { listWorkspaceContent } from "@/lib/content/service";
 import { PageHeader } from "@/components/workspace/page-header";
 import { MonthNav } from "@/components/workspace/month-nav";
-import { PlanningViewToggle } from "@/components/workspace/planning-view-toggle";
 import { CalendarEventCard } from "@/components/workspace/calendar-event-card";
 import { cn } from "@/lib/utils";
 
@@ -63,14 +62,44 @@ export default async function EditorialCalendarPage({
           </>
         }
         action={
-          <div className="flex flex-wrap items-center gap-2">
-            <PlanningViewToggle workspaceSlug={slug} />
-            <MonthNav month={reference} buildHref={(offset) => `?month=${monthParam(offset)}`} />
-          </div>
+          <MonthNav month={reference} buildHref={(offset) => `?month=${monthParam(offset)}`} />
         }
       />
 
-      <div className="border-border bg-surface overflow-x-auto rounded-[var(--radius-card)] border">
+      <section className="space-y-2 md:hidden" aria-label="Calendar agenda">
+        {items.length === 0 ? (
+          <div className="border-border bg-surface text-body text-fg-secondary rounded-[var(--radius-card)] border p-4">
+            Nothing is scheduled for this month.
+          </div>
+        ) : (
+          items.map((item) => (
+            <div
+              key={item.id}
+              className="border-border bg-surface grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3 rounded-[var(--radius-card)] border p-3"
+            >
+              <time
+                dateTime={item.plannedPublishAt.toISOString()}
+                className="text-label text-fg-secondary font-semibold"
+              >
+                {item.plannedPublishAt.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </time>
+              <CalendarEventCard
+                id={item.id}
+                href={`/app/w/${slug}/planning/${item.id}`}
+                title={item.title}
+                status={item.status}
+                format={item.format}
+              />
+            </div>
+          ))
+        )}
+      </section>
+
+      <div className="border-border bg-surface hidden overflow-x-auto rounded-[var(--radius-card)] border md:block">
         <div className="grid min-w-[760px] grid-cols-7">
           {WEEKDAYS.map((day) => (
             <div

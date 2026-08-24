@@ -165,6 +165,15 @@ vi.mock("@/lib/auth/policy", async () => {
   };
 });
 
+// M3.4 — feature-settings now reads the managed-secret service
+// to decide which key to use. The mock forces "no managed secret
+// configured" so the existing tests exercise the env-key path
+// (which is the original behavior).
+vi.mock("@/lib/ai/provider-secret", () => ({
+  hasManagedAiSecret: vi.fn(async () => false),
+  loadManagedAiSecret: vi.fn(async () => null),
+}));
+
 const { PermissionDeniedError } = await import("@/lib/auth/policy");
 const {
   getAiFeatureSettings,
@@ -383,9 +392,9 @@ describe("testAiConnection", () => {
     await expect(testAiConnection(actor)).rejects.toThrow(/Agency not configured/);
   });
 
-  it("records a failure and returns {ok:false, latencyMs:null} when AI is disabled", async () => {
+  it("records a failure and returns {ok:false, latencyMs:null} when AI is disabled AND the env key is missing", async () => {
     envMock.AI_FEATURE_ENABLED = false;
-    envMock.MINIMAX_API_KEY = "sk-test";
+    envMock.MINIMAX_API_KEY = "";
     // recordConnectionTest: initial select (no row) → insert path
     dbMock.state.selectResults.push([]);
     const result = await testAiConnection(actor);

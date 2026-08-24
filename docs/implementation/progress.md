@@ -11,13 +11,22 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
-## 2026-08-24 — Social profile analytics — Meta first, TikTok second (M4)
+## 2026-08-24 — Navigation-first UI/UX refinement
 
-Status: **Tested**. Independently Verified is not yet claimed (M4 rows stop at `Tested` pending independent review).
+Commit `7536d4d` completes a screen-by-screen navigation and responsive-layout
+pass. The application now has one route hierarchy across an expanded desktop
+sidebar, 72px tablet rail, and context-aware mobile bottom navigation with an
+accessible More sheet. Redundant Planning and Settings navigation was removed,
+missing destinations were restored, creation became permission-aware, and the
+mobile calendar now uses an agenda layout. The design record is
+[`../design/UI_UX_REFINEMENT_2026-08-24.md`](../design/UI_UX_REFINEMENT_2026-08-24.md);
+exact automated results are in
+[`../production-readiness/TEST_EVIDENCE.md`](../production-readiness/TEST_EVIDENCE.md).
+The release verdict remains `READY FOR INDEPENDENT REVIEW`.
 
-M4 adds read-only provider connections and daily analytics for the channels the agency already tracks. Manual publishing is unchanged. Meta (Facebook Pages + linked Instagram professional accounts, via Facebook Login for Business) is the first provider; TikTok (via Login Kit + Display API v2) lands on the same provider-neutral foundation after Meta's seven-day production observation window. The architectural decision and full task-by-task spec live in [`../decisions/0004-social-profile-analytics.md`](../decisions/0004-social-profile-analytics.md) and [`../superpowers/plans/2026-08-24-meta-tiktok-social-analytics.md`](../superpowers/plans/2026-08-24-meta-tiktok-social-analytics.md).
+## 2026-08-23 — Multi-agency SaaS Milestone 2
 
-Twelve atomic commits landed on `feat/auto-20260824-3613c271` between the M3 merge and the snapshot end-of-day: ADR-0004, migration 0013 (3 new tables, 10 additive columns on `social_channel`), AES-256-GCM crypto + env validation, provider-neutral types + safe HTTP + repository, Meta and TikTok adapters, OAuth start + callback routes, account picker + finalize action, connection-status badge, social growth dashboard, bounded daily sync worker + `/api/cron/social-metrics` route, VPS script, runbook + UAT evidence contracts. Test counts: 1536 unit tests pass, 135 integration tests pass. `SOCIAL_SYNC_ENABLED=false` is the default; the rollout is staged (see `docs/operations/runbook.md` § Social analytics). All M4 rows stop at `Tested` pending independent review.
+Milestone 2 adds plan templates, agency entitlements, transactional quotas, usage and threshold tracking, agency lifecycle controls, AI ceilings, the platform agency console, the four-step Add Agency flow, and the agency-admin Plan & Usage screen. The scoped plan and reproducible evidence are in [`../m2-multi-agency/PLAN.md`](../m2-multi-agency/PLAN.md); the implementation handoff prompt is [`../m2-multi-agency/MINIMAX_IMPLEMENTATION_PROMPT.md`](../m2-multi-agency/MINIMAX_IMPLEMENTATION_PROMPT.md). All M2 rows stop at `Tested` pending independent review.
 
 ## 2026-08-21 — Stitch production completion (Tasks 1–10)
 

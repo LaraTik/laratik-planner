@@ -20,17 +20,16 @@ import { SettingsForm } from "./settings-form";
 /**
  * Workspace settings overview.
  *
- * The section navigation now lives in the main sidebar as a nested
+ * Section navigation lives in the main sidebar as a nested
  * group (Settings → Lifecycle / Lead times / Assignment defaults /
  * Approval mode / AI assistance). This page is the settings LANDING
  * (defaults to the Lifecycle section). Each sub-section is reachable
  * via the sidebar; deep links (`#lead-times`, `#defaults`, `#approvals`)
  * scroll to the right fieldset on first render.
  *
- * The left-rail section nav that previously sat inside the page has
- * been removed — it duplicated the sidebar and made the layout feel
- * nested twice. The PageHeader description still names the 8 sections
- * the Stitch design plans for, so the roadmap is visible.
+ * Page-local navigation is intentionally absent: repeating the same
+ * destinations in an overview strip consumed space without adding a
+ * second useful wayfinding model.
  */
 export default async function WorkspaceSettingsPage({
   params,
@@ -97,39 +96,6 @@ export default async function WorkspaceSettingsPage({
           </>
         }
       />
-
-      {/* Roadmap of the full settings surface (matches Stitch 2f6acd26
-          8-section layout). The sidebar is the primary nav; this strip
-          documents the eventual surface and links to the AI section
-          which lives on its own route. */}
-      <nav
-        aria-label="Settings sections (overview)"
-        className="border-border bg-surface-subtle flex flex-wrap gap-2 rounded-[var(--radius-control)] border p-2"
-        data-testid="settings-overview-strip"
-      >
-        {[
-          { id: "lifecycle", label: "Lifecycle" },
-          { id: "lead-times", label: "Lead times" },
-          { id: "defaults", label: "Assignment defaults" },
-          { id: "approvals", label: "Approval mode" },
-        ].map((s) => (
-          <a
-            key={s.id}
-            href={`#${s.id}`}
-            data-testid={`settings-strip-${s.id}`}
-            className="text-label text-fg-secondary hover:bg-surface focus-visible:ring-focus-ring hover:text-fg-primary rounded-[var(--radius-control)] px-2.5 py-1 font-semibold focus:outline-none focus-visible:ring-2"
-          >
-            {s.label}
-          </a>
-        ))}
-        <a
-          href={`/app/w/${slug}/ai-settings`}
-          data-testid="settings-strip-ai"
-          className="text-label text-primary hover:bg-surface focus-visible:ring-focus-ring ml-auto rounded-[var(--radius-control)] px-2.5 py-1 font-semibold focus:outline-none focus-visible:ring-2"
-        >
-          AI assistance →
-        </a>
-      </nav>
 
       <div className="space-y-4">
         {canManage ? (

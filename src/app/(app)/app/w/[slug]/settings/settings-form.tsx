@@ -53,7 +53,7 @@ export function SettingsForm({
   const [state, formAction] = useActionState<SettingsActionState, FormData>(action, {});
   return (
     <form action={formAction} className="space-y-6" data-testid="workspace-settings-form">
-      <div className="grid gap-4 md:grid-cols-2" id="lifecycle">
+      <div className="grid scroll-mt-20 gap-4 md:grid-cols-2" id="lifecycle">
         <div className="space-y-1.5">
           <Label htmlFor="settings-timezone">
             Timezone
@@ -85,7 +85,7 @@ export function SettingsForm({
           />
         </div>
       </div>
-      <fieldset id="lead-times">
+      <fieldset id="lead-times" className="border-border scroll-mt-20 border-t pt-6">
         <legend className="text-title-card text-fg-primary font-semibold">Lead times (days)</legend>
         <p className="text-label text-fg-muted mt-1">
           Buffer between each workflow stage. Larger buffers give the team more review time.
@@ -117,25 +117,7 @@ export function SettingsForm({
           />
         </div>
       </fieldset>
-      <fieldset id="approvals">
-        <legend className="text-title-card text-fg-primary font-semibold">Approval mode</legend>
-        <p className="text-label text-fg-muted mt-1">
-          Choose how many approval steps a piece of content needs before publish.
-        </p>
-        <div className="mt-3 max-w-md space-y-1.5">
-          <Label htmlFor="settings-approval-mode">Mode</Label>
-          <select
-            id="settings-approval-mode"
-            name="approvalMode"
-            defaultValue={values.approvalMode}
-            className={controlClass}
-          >
-            <option value="simple">Internal approval only</option>
-            <option value="internal_then_client">Internal, then client</option>
-          </select>
-        </div>
-      </fieldset>
-      <fieldset id="defaults">
+      <fieldset id="defaults" className="border-border scroll-mt-20 border-t pt-6">
         <legend className="text-title-card text-fg-primary font-semibold">
           Default assignments
         </legend>
@@ -171,6 +153,24 @@ export function SettingsForm({
             value={values.defaultClientReviewerId}
             options={clientReviewers}
           />
+        </div>
+      </fieldset>
+      <fieldset id="approvals" className="border-border scroll-mt-20 border-t pt-6">
+        <legend className="text-title-card text-fg-primary font-semibold">Approval mode</legend>
+        <p className="text-label text-fg-muted mt-1">
+          Choose how many approval steps a piece of content needs before publish.
+        </p>
+        <div className="mt-3 max-w-md space-y-1.5">
+          <Label htmlFor="settings-approval-mode">Mode</Label>
+          <select
+            id="settings-approval-mode"
+            name="approvalMode"
+            defaultValue={values.approvalMode}
+            className={controlClass}
+          >
+            <option value="simple">Internal approval only</option>
+            <option value="internal_then_client">Internal, then client</option>
+          </select>
         </div>
       </fieldset>
       {state.error ? (

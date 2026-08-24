@@ -61,7 +61,7 @@ export function RecentItemsCard({
             createHref ? (
               <Link
                 href={createHref}
-                className="bg-primary text-on-primary text-button inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold"
+                className="bg-primary text-button inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold text-white"
               >
                 <CalendarPlus className="h-4 w-4" aria-hidden="true" />
                 New content

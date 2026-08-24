@@ -31,13 +31,16 @@ describe("agency-settings page structure", () => {
     expect(source).toMatch(/export default async function AgencySettingsPage/);
   });
 
-  it("renders the agency identity card with data-testid hooks", () => {
+  it("renders the agency settings surface with the editable identity form", () => {
     expect(source).toMatch(/data-testid="agency-settings"/);
-    expect(source).toMatch(/data-testid="agency-settings-identity"/);
-    expect(source).toMatch(/testId="agency-name"/);
-    expect(source).toMatch(/testId="agency-slug"/);
-    expect(source).toMatch(/testId="agency-workspace-count"/);
-    expect(source).toMatch(/testId="agency-member-count"/);
+    expect(source).toMatch(/data-testid="agency-settings-footprint"/);
+    expect(source).toMatch(/data-testid="agency-settings-services"/);
+    // M3.4 — the identity card is now an EditAgencyForm component.
+    expect(source).toMatch(/EditAgencyForm/);
+    // The footprint row is a link to /app/users (M3.4 polish).
+    expect(source).toMatch(/agency-settings-members-link/);
+    // The plan card links to /app/agency-settings/plan.
+    expect(source).toMatch(/agency-settings-plan-link/);
   });
 
   it("renders the managed services card with per-service testids", () => {
@@ -50,7 +53,6 @@ describe("agency-settings page structure", () => {
 
   it("renders a forbidden fallback with a back link for non-admin actors", () => {
     expect(source).toMatch(/data-testid="agency-settings-forbidden"/);
-    expect(source).toMatch(/data-testid="agency-settings-back"/);
   });
 
   it("uses Lucide icons (no emoji)", () => {

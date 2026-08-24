@@ -12,6 +12,13 @@ import {
   testAiConnection,
   updateAiFeatureSettings,
 } from "@/lib/ai/feature-settings";
+import {
+  setManagedAiSecret,
+  clearManagedAiSecret,
+  ManagedSecretError,
+  SetManagedAiSecretSchema,
+  ClearManagedAiSecretSchema,
+} from "@/lib/ai/provider-secret";
 
 /**
  * Server actions for the agency-level AI configuration page.
@@ -37,6 +44,12 @@ async function requireAdmin() {
 export type AiSettingsActionState = {
   error?: string;
   saved?: string;
+};
+
+export type ManagedSecretActionState = {
+  ok?: boolean;
+  error?: string;
+  lastFour?: string;
 };
 
 export async function saveAiSettingsAction(
@@ -80,5 +93,50 @@ export async function testAiConnectionAction(): Promise<AiSettingsActionState> {
     return { error: reason };
   } catch (e) {
     return { error: (e as Error).message };
+  }
+}
+
+export async function setManagedAiSecretAction(
+  _prev: ManagedSecretActionState,
+  formData: FormData,
+): Promise<ManagedSecretActionState> {
+  try {
+    const { actor, agencyId } = await requireAdmin();
+    const parsed = SetManagedAiSecretSchema.safeParse({
+      apiKey: formData.get("apiKey"),
+    });
+    if (!parsed.success) {
+      return {
+        error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      };
+    }
+    const result = await setManagedAiSecret(actor, agencyId, parsed.data);
+    return { ok: true, lastFour: result.lastFour };
+  } catch (e) {
+    if (e instanceof ManagedSecretError) {
+      return { error: e.message };
+    }
+    return { error: e instanceof Error ? e.message : "Could not save the API key." };
+  }
+}
+
+export async function clearManagedAiSecretAction(
+  _prev: ManagedSecretActionState,
+  formData: FormData,
+): Promise<ManagedSecretActionState> {
+  try {
+    const { actor, agencyId } = await requireAdmin();
+    const parsed = ClearManagedAiSecretSchema.safeParse({
+      reason: formData.get("reason"),
+    });
+    if (!parsed.success) {
+      return {
+        error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      };
+    }
+    await clearManagedAiSecret(actor, agencyId, parsed.data);
+    return { ok: true };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Could not remove the API key." };
   }
 }

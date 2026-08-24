@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronsUpDown, Shield } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { switchActiveAgency } from "@/lib/auth/agency-actions";
@@ -36,10 +37,14 @@ export function AgencySwitcher({
   active,
   options,
   testId,
+  isPlatformAdmin = false,
+  compact = false,
 }: {
   active: AgencyRow | null;
   options: AgencyRow[];
   testId?: string;
+  isPlatformAdmin?: boolean;
+  compact?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -119,12 +124,12 @@ export function AgencySwitcher({
         type="button"
         disabled
         aria-label="No agencies"
-        className="text-body text-fg-muted inline-flex cursor-not-allowed items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold"
+        className="text-body text-fg-muted inline-flex min-h-11 min-w-11 cursor-not-allowed items-center justify-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold xl:justify-start"
       >
         <span className="bg-surface-subtle text-fg-muted flex h-6 w-6 items-center justify-center rounded font-bold">
           —
         </span>
-        <span className="hidden sm:inline">No agency</span>
+        <span className={compact ? "hidden xl:inline" : "inline"}>No agency</span>
       </button>
     );
   }
@@ -141,12 +146,15 @@ export function AgencySwitcher({
           aria-label={`Active agency: ${display.name}. Click to switch.`}
           data-testid={testId}
           disabled={pending}
-          className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-surface-subtle inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2 disabled:opacity-50"
+          className={cn(
+            "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-surface-subtle inline-flex min-h-11 min-w-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2 disabled:opacity-50",
+            compact ? "justify-center xl:justify-start" : "justify-start",
+          )}
         >
-          <span className="bg-primary-container text-on-primary-container flex h-6 w-6 items-center justify-center rounded font-bold">
+          <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
             {display.name.charAt(0).toUpperCase()}
           </span>
-          <span className="hidden sm:inline">{display.name}</span>
+          <span className={compact ? "hidden xl:inline" : "inline"}>{display.name}</span>
           {display.isAdmin ? (
             <Shield
               className="text-primary h-3.5 w-3.5"
@@ -154,7 +162,10 @@ export function AgencySwitcher({
               data-testid={testId ? `${testId}-admin-badge` : undefined}
             />
           ) : null}
-          <ChevronsUpDown className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />
+          <ChevronsUpDown
+            className={cn("text-fg-muted h-3.5 w-3.5", compact && "hidden xl:block")}
+            aria-hidden="true"
+          />
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -200,7 +211,7 @@ export function AgencySwitcher({
                     )}
                     onClick={() => void choose(a)}
                   >
-                    <span className="bg-primary-container text-on-primary-container flex h-6 w-6 shrink-0 items-center justify-center rounded font-bold">
+                    <span className="bg-primary-subtle text-primary flex h-6 w-6 shrink-0 items-center justify-center rounded font-bold">
                       {a.name.charAt(0).toUpperCase()}
                     </span>
                     <span className="min-w-0 flex-1 truncate font-semibold">{a.name}</span>
@@ -218,6 +229,18 @@ export function AgencySwitcher({
               })
             )}
           </ul>
+          {isPlatformAdmin ? (
+            <div className="border-border border-t p-1.5">
+              <Link
+                href="/app/platform/agencies"
+                className="text-body text-fg-primary hover:bg-surface-subtle flex items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 font-semibold"
+                data-testid="agency-switcher-create"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Create new agency
+              </Link>
+            </div>
+          ) : null}
         </div>
       </PopoverContent>
     </Popover>

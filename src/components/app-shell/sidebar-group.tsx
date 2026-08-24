@@ -24,6 +24,7 @@ export function SidebarGroup({
   pathname,
   children,
   defaultOpen,
+  active,
   parentTestId,
 }: {
   href: string;
@@ -32,9 +33,10 @@ export function SidebarGroup({
   pathname: string;
   children: React.ReactNode;
   defaultOpen: boolean;
+  active?: boolean;
   parentTestId?: string;
 }) {
-  const parentActive = isActivePath(href, pathname);
+  const parentActive = active ?? isActivePath(href, pathname);
   // Open when on a child route or when the user explicitly opened it.
   const [forcedOpen, setForcedOpen] = React.useState<boolean | null>(null);
   const open = forcedOpen ?? (defaultOpen || parentActive);
@@ -51,7 +53,9 @@ export function SidebarGroup({
         <Link
           href={href}
           aria-current={parentActive ? "page" : undefined}
-          className="text-body focus-visible:ring-focus-ring flex flex-1 items-center gap-3 rounded-[var(--radius-control)] pr-1 pl-3 focus:outline-none focus-visible:ring-2"
+          aria-label={label}
+          title={label}
+          className="text-body focus-visible:ring-focus-ring flex min-h-11 flex-1 items-center justify-center gap-3 rounded-[var(--radius-control)] px-3 focus:outline-none focus-visible:ring-2 xl:justify-start"
           data-testid={parentTestId}
         >
           <span
@@ -60,14 +64,14 @@ export function SidebarGroup({
           >
             {icon}
           </span>
-          {label}
+          <span className="hidden xl:inline">{label}</span>
         </Link>
         <button
           type="button"
           onClick={() => setForcedOpen((v) => (v === null ? !open : !v))}
           aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
           aria-expanded={open}
-          className="text-fg-secondary hover:text-fg-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] p-1.5 focus:outline-none focus-visible:ring-2"
+          className="text-fg-secondary hover:text-fg-primary focus-visible:ring-focus-ring hidden min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2 xl:flex"
         >
           <ChevronDown
             className={cn("h-4 w-4 transition-transform", open ? "rotate-0" : "-rotate-90")}
@@ -80,7 +84,7 @@ export function SidebarGroup({
         // preserved for the nested `<li>` children. Previously this
         // element had `role="group"`, which axe's `listitem` rule
         // rejected because list-items require a list-role parent.
-        <ul className="ml-4 space-y-0.5 border-l border-[var(--color-border)] pl-3">
+        <ul className="ml-4 hidden space-y-0.5 border-l border-[var(--color-border)] pl-3 xl:block">
           {React.Children.toArray(children).filter(Boolean)}
         </ul>
       ) : null}
@@ -137,12 +141,15 @@ export function SidebarLink({
   active: boolean;
   testId?: string;
 }) {
+  const accessibleLabel = typeof children === "string" ? children : undefined;
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
+      aria-label={accessibleLabel}
+      title={accessibleLabel}
       className={cn(
-        "text-body focus-visible:ring-focus-ring flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+        "text-body focus-visible:ring-focus-ring flex min-h-11 items-center justify-center gap-3 rounded-[var(--radius-control)] px-3 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none xl:justify-start",
         active ? "bg-primary-subtle text-primary" : "text-fg-primary hover:bg-surface-subtle",
       )}
       data-testid={testId}
@@ -150,7 +157,7 @@ export function SidebarLink({
       <span className={cn(active ? "text-primary" : "text-fg-secondary")} aria-hidden="true">
         {icon}
       </span>
-      {children}
+      <span className="hidden min-w-0 truncate xl:inline">{children}</span>
     </Link>
   );
 }

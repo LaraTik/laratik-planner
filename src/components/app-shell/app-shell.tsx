@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { MobileNav } from "./mobile-nav";
@@ -6,6 +5,7 @@ import { NotificationsBell } from "./notifications-bell";
 import { RouteScrollReset } from "./route-scroll-reset";
 import { SupportSessionBanner } from "./support-session-banner";
 import { UserMenu } from "./user-menu";
+import { MobileContextHeader } from "./mobile-context-header";
 import type { AgencyRow } from "./agency-switcher";
 import type { BuildInfo } from "@/lib/build-info";
 
@@ -33,6 +33,7 @@ export function AppShell({
   buildInfo,
   workspaces,
   workspaceAccess,
+  workspaceCanCreateContent,
   agencySwitcher,
   canCreateWorkspace,
   notifications,
@@ -47,10 +48,12 @@ export function AppShell({
     email: string;
     image: string | null;
     isAdmin: boolean;
+    isPlatformAdmin?: boolean;
   };
   buildInfo: BuildInfo;
   workspaces: { id: string; slug: string; name: string }[];
   workspaceAccess: Record<string, "internal" | "client" | "none">;
+  workspaceCanCreateContent: Record<string, boolean>;
   agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   canCreateWorkspace: boolean;
   notifications: {
@@ -83,20 +86,21 @@ export function AppShell({
           until focused, then snaps to the top. */}
       <a
         href="#main-content"
-        className="bg-primary text-label text-on-primary focus-visible:ring-focus-ring pointer-events-none absolute top-2 left-2 z-50 inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3 py-1.5 font-semibold opacity-0 focus:pointer-events-auto focus:opacity-100 focus:outline-none focus-visible:ring-2"
+        className="bg-primary text-label focus-visible:ring-focus-ring pointer-events-none absolute top-2 left-2 z-50 inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3 py-1.5 font-semibold text-white opacity-0 focus:pointer-events-auto focus:opacity-100 focus:outline-none focus-visible:ring-2"
       >
         Skip to main content
       </a>
 
-      {/* Desktop sidebar (hidden below 768px) — 248px per Stitch */}
+      {/* Tablet icon rail (72px) expands to the full 248px sidebar at xl. */}
       <aside
-        className="bg-surface border-border fixed inset-y-0 left-0 z-30 hidden w-[248px] border-r md:flex md:flex-col"
+        className="group/sidebar bg-surface border-border fixed inset-y-0 left-0 z-30 hidden w-[72px] border-r md:flex md:flex-col xl:w-[248px]"
         data-testid="app-sidebar"
       >
         <Sidebar
           user={user}
           workspaces={workspaces}
           workspaceAccess={workspaceAccess}
+          workspaceCanCreateContent={workspaceCanCreateContent}
           workspaceSwitcherOptions={workspaces}
           agencySwitcher={agencySwitcher}
           canCreateWorkspace={canCreateWorkspace}
@@ -105,7 +109,7 @@ export function AppShell({
       </aside>
 
       {/* Topbar (desktop + tablet) — search + notifications + user menu */}
-      <header className="bg-surface border-border sticky top-0 z-20 ml-0 hidden h-16 border-b md:ml-[248px] md:block">
+      <header className="bg-surface border-border sticky top-0 z-20 ml-0 hidden h-14 border-b md:ml-[72px] md:block xl:ml-[248px]">
         <Topbar
           user={user}
           buildInfo={buildInfo}
@@ -115,23 +119,19 @@ export function AppShell({
       </header>
 
       {/* Mobile topbar (md:hidden) — workspace identity + notifications + avatar */}
-      <header className="bg-surface border-border sticky top-0 z-20 flex h-14 items-center justify-between border-b px-4 md:hidden">
-        <Link
-          href="/app"
-          className="focus-visible:ring-focus-ring flex items-center gap-2 rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2"
-        >
-          <div className="bg-primary-container text-on-primary-container flex h-7 w-7 items-center justify-center rounded-[var(--radius-control)] font-bold">
-            S
-          </div>
-          <span className="text-body text-fg-primary font-semibold">StudioFlow</span>
-        </Link>
+      <header className="bg-surface border-border sticky top-0 z-20 flex h-14 items-center justify-between gap-2 border-b px-3 md:hidden">
+        <MobileContextHeader workspaces={workspaces} />
         <div className="flex items-center gap-1">
           <NotificationsBell
             initial={notifications}
             initialUnread={unreadCount}
             badgeTestId="unread-badge-mobile"
           />
-          <UserMenu user={user} buildInfo={buildInfo} variant="mobile" />
+          <UserMenu
+            user={{ ...user, isPlatformAdmin: isPlatformAdmin || user.isPlatformAdmin || false }}
+            buildInfo={buildInfo}
+            variant="mobile"
+          />
         </div>
       </header>
 
@@ -139,9 +139,9 @@ export function AppShell({
       <main
         id="main-content"
         tabIndex={-1}
-        className="pb-16 focus:outline-none md:ml-[248px] md:pt-16 md:pb-0"
+        className="pb-[calc(5.25rem+env(safe-area-inset-bottom))] focus:outline-none md:ml-[72px] md:pb-0 xl:ml-[248px]"
       >
-        <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8 md:py-8">
+        <div className="mx-auto w-full max-w-7xl px-4 py-5 md:px-6 md:py-6 xl:px-8 xl:py-8">
           <SupportSessionBanner grants={supportGrants} />
           {children}
         </div>
@@ -149,10 +149,13 @@ export function AppShell({
 
       {/* Mobile bottom nav (hidden on tablet+) */}
       <MobileNav
-        canCreate={user.isAdmin}
-        clientWorkspaceSlugs={workspaces
-          .filter((workspace) => workspaceAccess[workspace.id] === "client")
-          .map((workspace) => workspace.slug)}
+        user={{ isAdmin: user.isAdmin }}
+        workspaces={workspaces}
+        workspaceAccess={workspaceAccess}
+        workspaceCanCreateContent={workspaceCanCreateContent}
+        agencySwitcher={agencySwitcher}
+        canCreateWorkspace={canCreateWorkspace}
+        isPlatformAdmin={isPlatformAdmin}
       />
     </div>
   );

@@ -335,7 +335,7 @@ export function PublishPackageForm({
               onClick={() => setActiveChannel(ch.id)}
               className={`focus-visible:ring-focus-ring rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold ${
                 ch.id === activeChannel
-                  ? "border-primary bg-primary-container text-on-primary-container"
+                  ? "border-primary bg-primary-subtle text-primary"
                   : "border-border bg-surface text-fg-primary"
               } min-h-11 min-w-11`}
               data-testid={`publish-channel-tab-${ch.socialChannelId}`}

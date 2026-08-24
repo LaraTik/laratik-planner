@@ -10,16 +10,19 @@ import {
   Briefcase,
   CalendarDays,
   ClipboardList,
-  HelpCircle,
   Home,
+  Kanban,
   LayoutDashboard,
+  Library,
   MessageSquare,
   Package,
+  Palette,
   Plus,
   Settings,
   Gauge,
   Share2,
   Shield,
+  ShieldCheck,
   Users,
   Lock,
 } from "lucide-react";
@@ -42,25 +45,26 @@ import { SidebarGroup, SidebarLink, SidebarSubLink } from "./sidebar-group";
  *      - Create content (primary button, bottom of nav)
  *      - Settings (expandable group): Lifecycle, Lead times,
  *        Assignment defaults, Approval mode, AI assistance
- *      - Help, Workspace Switcher (bottom)
+ *      - Context-aware create action and switchers (bottom)
  *
  *  - On a global page (/app, /app/workspaces, /app/users, ...):
  *      - Brand: logo only
  *      - My Work, Workspaces
  *      - (admin only) User Management, Agency Settings
  *        (with nested: General, AI configuration)
- *      - Help, Workspace Switcher (bottom)
+ *      - Workspace and agency switchers (bottom)
  *
  * The active path uses `isActivePath` from `src/lib/utils.ts` so the
  * active-state predicate stays consistent across the shell.
  *
- * Width: 248px expanded on desktop (per Stitch), 64px icon-rail on
+ * Width: 248px expanded on desktop (per Stitch), 72px icon-rail on
  * tablet, hidden < 768px (MobileNav takes over).
  */
 export function Sidebar({
   user,
   workspaces,
   workspaceAccess = {},
+  workspaceCanCreateContent = {},
   workspaceSwitcherOptions,
   agencySwitcher,
   canCreateWorkspace,
@@ -69,6 +73,7 @@ export function Sidebar({
   user: { name: string; isAdmin: boolean };
   workspaces: { id: string; slug: string; name: string }[];
   workspaceAccess?: Record<string, "internal" | "client" | "none">;
+  workspaceCanCreateContent?: Record<string, boolean>;
   workspaceSwitcherOptions: { id: string; name: string; slug: string }[];
   agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   canCreateWorkspace: boolean;
@@ -85,29 +90,38 @@ export function Sidebar({
   const inWorkspace = currentWorkspace !== null;
   const wsBase = currentWorkspace ? `/app/w/${currentWorkspace.slug}` : "";
   const clientOnly = currentWorkspace ? workspaceAccess[currentWorkspace.id] === "client" : false;
+  const canCreateContent = currentWorkspace
+    ? workspaceCanCreateContent[currentWorkspace.id] === true
+    : false;
+  const planningActive = Boolean(
+    currentWorkspace &&
+    (isActivePath(`${wsBase}/planning`, pathname) ||
+      isActivePath(`${wsBase}/board`, pathname) ||
+      isActivePath(`${wsBase}/calendar`, pathname)),
+  );
+  const hash = React.useSyncExternalStore(subscribeToHash, readHash, () => "");
 
   return (
     <nav className="flex h-full flex-col" aria-label="Primary">
       {/* Brand */}
-      <div className="flex h-16 items-center gap-3 px-6">
+      <div className="flex h-14 items-center justify-center px-2 xl:justify-start xl:px-6">
         <Link
           href="/app"
           className="focus-visible:ring-focus-ring flex items-center gap-3 rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2"
+          aria-label="StudioFlow home"
+          title="StudioFlow"
         >
-          <div className="bg-primary-container text-on-primary-container flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] font-bold">
+          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] font-bold text-white">
             S
           </div>
-          <div className="min-w-0">
+          <div className="hidden min-w-0 xl:block">
             <p className="text-section-title text-fg-primary truncate font-semibold">StudioFlow</p>
-            {currentWorkspace ? (
-              <p className="text-on-surface-variant text-xs">{currentWorkspace.name}</p>
-            ) : null}
           </div>
         </Link>
       </div>
 
       {/* Top section: My Work + (workspace tabs OR global items) */}
-      <div className="flex-1 space-y-1 overflow-y-auto px-4">
+      <div className="flex-1 space-y-1 overflow-y-auto px-2 xl:px-4">
         <SidebarLink
           href="/app"
           icon={<Home className="h-4 w-4" />}
@@ -144,20 +158,34 @@ export function Sidebar({
                 >
                   Overview
                 </SidebarLink>
-                <SidebarLink
+                <SidebarGroup
                   href={`${wsBase}/planning`}
                   icon={<ClipboardList className="h-4 w-4" />}
-                  active={isActivePath(`${wsBase}/planning`, pathname)}
+                  label="Planning"
+                  pathname={pathname}
+                  defaultOpen={planningActive}
+                  active={planningActive}
+                  parentTestId="sidebar-planning"
                 >
-                  Planning
-                </SidebarLink>
-                <SidebarLink
-                  href={`${wsBase}/calendar`}
-                  icon={<CalendarDays className="h-4 w-4" />}
-                  active={isActivePath(`${wsBase}/calendar`, pathname)}
-                >
-                  Calendar
-                </SidebarLink>
+                  <SidebarSubLink
+                    href={`${wsBase}/planning`}
+                    active={isActivePath(`${wsBase}/planning`, pathname)}
+                  >
+                    List
+                  </SidebarSubLink>
+                  <SidebarSubLink
+                    href={`${wsBase}/board`}
+                    active={isActivePath(`${wsBase}/board`, pathname)}
+                  >
+                    <Kanban className="h-3.5 w-3.5" aria-hidden="true" /> Board
+                  </SidebarSubLink>
+                  <SidebarSubLink
+                    href={`${wsBase}/calendar`}
+                    active={isActivePath(`${wsBase}/calendar`, pathname)}
+                  >
+                    <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" /> Calendar
+                  </SidebarSubLink>
+                </SidebarGroup>
                 <SidebarLink
                   href={`${wsBase}/reviews`}
                   icon={<MessageSquare className="h-4 w-4" />}
@@ -165,6 +193,25 @@ export function Sidebar({
                 >
                   Reviews
                 </SidebarLink>
+                <SidebarLink
+                  href={`${wsBase}/design-queue`}
+                  icon={<Palette className="h-4 w-4" />}
+                  active={isActivePath(`${wsBase}/design-queue`, pathname)}
+                >
+                  Design queue
+                </SidebarLink>
+                <SidebarLink
+                  href={`${wsBase}/library`}
+                  icon={<Library className="h-4 w-4" />}
+                  active={isActivePath(`${wsBase}/library`, pathname)}
+                >
+                  Library
+                </SidebarLink>
+
+                <div className="text-label text-fg-muted hidden px-2 pt-4 pb-1 font-semibold tracking-wide uppercase xl:block">
+                  Workspace
+                </div>
+
                 <SidebarLink
                   href={`${wsBase}/channels`}
                   icon={<Share2 className="h-4 w-4" />}
@@ -194,8 +241,6 @@ export function Sidebar({
                   Team
                 </SidebarLink>
 
-                <div className="pt-2" />
-
                 <SidebarGroup
                   href={`${wsBase}/settings`}
                   icon={<Settings className="h-4 w-4" />}
@@ -207,27 +252,26 @@ export function Sidebar({
                   <SidebarSubLink
                     href={`${wsBase}/settings#lifecycle`}
                     active={
-                      pathname === `${wsBase}/settings` &&
-                      !!pathname.match(/#lifecycle$|^\/app\/w\/[^/]+\/settings$/)
+                      pathname === `${wsBase}/settings` && (hash === "" || hash === "#lifecycle")
                     }
                   >
                     Lifecycle
                   </SidebarSubLink>
                   <SidebarSubLink
                     href={`${wsBase}/settings#lead-times`}
-                    active={pathname.includes("/settings") && pathname.endsWith("#lead-times")}
+                    active={pathname === `${wsBase}/settings` && hash === "#lead-times"}
                   >
                     Lead times
                   </SidebarSubLink>
                   <SidebarSubLink
                     href={`${wsBase}/settings#defaults`}
-                    active={pathname.includes("/settings") && pathname.endsWith("#defaults")}
+                    active={pathname === `${wsBase}/settings` && hash === "#defaults"}
                   >
                     Assignment defaults
                   </SidebarSubLink>
                   <SidebarSubLink
                     href={`${wsBase}/settings#approvals`}
-                    active={pathname.includes("/settings") && pathname.endsWith("#approvals")}
+                    active={pathname === `${wsBase}/settings` && hash === "#approvals"}
                   >
                     Approval mode
                   </SidebarSubLink>
@@ -252,7 +296,7 @@ export function Sidebar({
             </SidebarLink>
             {user.isAdmin ? (
               <>
-                <div className="text-label text-fg-muted px-2 pt-6 pb-2 font-semibold tracking-wide uppercase">
+                <div className="text-label text-fg-muted hidden px-2 pt-6 pb-2 font-semibold tracking-wide uppercase xl:block">
                   Admin
                 </div>
                 <SidebarLink
@@ -293,7 +337,7 @@ export function Sidebar({
             ) : null}
             {isPlatformAdmin ? (
               <>
-                <div className="text-label text-fg-muted px-2 pt-6 pb-2 font-semibold tracking-wide uppercase">
+                <div className="text-label text-fg-muted hidden px-2 pt-6 pb-2 font-semibold tracking-wide uppercase xl:block">
                   Platform
                 </div>
                 <SidebarLink
@@ -317,6 +361,13 @@ export function Sidebar({
                 >
                   Security & support
                 </SidebarLink>
+                <SidebarLink
+                  href="/app/platform/admins"
+                  icon={<ShieldCheck className="h-4 w-4" />}
+                  active={isActivePath("/app/platform/admins", pathname)}
+                >
+                  Platform admins
+                </SidebarLink>
               </>
             ) : null}
           </>
@@ -324,46 +375,56 @@ export function Sidebar({
       </div>
 
       {/* Bottom section: actions + meta + switcher */}
-      <div className="border-border mt-auto space-y-1 border-t p-4 pt-4">
-        {inWorkspace && currentWorkspace && !clientOnly ? (
+      <div className="border-border mt-auto space-y-1 border-t p-2 xl:p-4">
+        {inWorkspace && currentWorkspace && !clientOnly && canCreateContent ? (
           <Link
             href={`${wsBase}/planning/new`}
-            className="bg-primary-container text-on-primary-container hover:bg-primary-hover text-button flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] px-3 py-2 font-semibold transition-colors"
+            className="bg-primary hover:bg-primary-hover text-button flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] px-3 py-2 font-semibold text-white transition-colors"
+            aria-label="Create content"
+            title="Create content"
             data-testid="sidebar-create-content"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
-            Create content
+            <span className="hidden xl:inline">Create content</span>
           </Link>
         ) : null}
-
-        <SidebarLink
-          href="https://github.com/LaraTik/laratik-planner"
-          icon={<HelpCircle className="h-4 w-4" />}
-          active={false}
-        >
-          Help
-        </SidebarLink>
 
         {/* Agency switcher lives above the workspace switcher (per
             M1.5 + Stitch design). The active agency scopes the
             workspace list the user can pick from, so the agency
             switcher is the outermost switcher. */}
-        <div className="pt-2">
-          <AgencySwitcher
-            active={agencySwitcher.active}
-            options={agencySwitcher.options}
-            testId="sidebar-agency-switcher-trigger"
-          />
-        </div>
+        {agencySwitcher.options.length > 1 || isPlatformAdmin ? (
+          <div className="pt-1">
+            <AgencySwitcher
+              active={agencySwitcher.active}
+              options={agencySwitcher.options}
+              isPlatformAdmin={isPlatformAdmin}
+              compact
+              testId="sidebar-agency-switcher-trigger"
+            />
+          </div>
+        ) : null}
 
         {/* Workspace switcher lives in the sidebar bottom (per Stitch). */}
         <div className="pt-1">
-          <WorkspaceSwitcher
-            active={currentWorkspace ?? workspaceSwitcherOptions[0] ?? null}
-            options={workspaceSwitcherOptions}
-            canCreate={canCreateWorkspace}
-            testId="sidebar-workspace-switcher-trigger"
-          />
+          {workspaceSwitcherOptions.length === 0 ? (
+            <Link
+              href="/app/workspaces/new"
+              className="text-body text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex items-center gap-2 rounded-[var(--radius-control)] border border-dashed px-3 py-2 font-semibold focus:outline-none focus-visible:ring-2"
+              data-testid="sidebar-workspace-empty"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Create your first workspace
+            </Link>
+          ) : (
+            <WorkspaceSwitcher
+              active={currentWorkspace ?? workspaceSwitcherOptions[0] ?? null}
+              options={workspaceSwitcherOptions}
+              canCreate={canCreateWorkspace}
+              compact
+              testId="sidebar-workspace-switcher-trigger"
+            />
+          )}
         </div>
       </div>
     </nav>
@@ -375,3 +436,12 @@ export function Sidebar({
 // as a fallback by the WorkspaceSwitcher's chevron when no other icon
 // is supplied. Importing it keeps the design-system intent discoverable.
 void ArrowLeftRight;
+
+function subscribeToHash(onStoreChange: () => void) {
+  window.addEventListener("hashchange", onStoreChange);
+  return () => window.removeEventListener("hashchange", onStoreChange);
+}
+
+function readHash() {
+  return window.location.hash;
+}

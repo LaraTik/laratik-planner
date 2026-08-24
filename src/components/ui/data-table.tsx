@@ -66,41 +66,47 @@ export function DataTable<T>({
   "data-testid": dataTestId,
 }: DataTableProps<T>) {
   return (
-    <table className={cn("w-full border-collapse text-left", className)} data-testid={dataTestId}>
-      <thead>
-        <tr className="bg-surface-subtle border-border border-b">
-          {columns.map((c) => (
-            <th
-              key={c.key}
-              className={cn(
-                "text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase",
-                c.hideOn ? HIDE_CLASS[c.hideOn] : null,
-                c.headerClassName,
-              )}
-            >
-              {c.header}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody className="divide-border text-table-dense divide-y">
-        {rows.map((row) => (
-          <tr
-            key={getRowKey(row)}
-            data-testid={getRowTestId?.(row)}
-            className="hover:bg-surface-subtle transition-colors"
-          >
+    <div className="overflow-x-auto" data-testid={`${dataTestId ?? "data-table"}-wrapper`}>
+      <table className={cn("w-full border-collapse text-left", className)} data-testid={dataTestId}>
+        <thead>
+          <tr className="bg-surface-subtle border-border border-b">
             {columns.map((c) => (
-              <td
+              <th
                 key={c.key}
-                className={cn("px-4 py-3", c.hideOn ? HIDE_CLASS[c.hideOn] : null, c.cellClassName)}
+                className={cn(
+                  "text-label text-fg-secondary px-4 py-3 font-semibold tracking-wide uppercase",
+                  c.hideOn ? HIDE_CLASS[c.hideOn] : null,
+                  c.headerClassName,
+                )}
               >
-                {c.cell(row)}
-              </td>
+                {c.header}
+              </th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody className="divide-border text-table-dense divide-y">
+          {rows.map((row) => (
+            <tr
+              key={getRowKey(row)}
+              data-testid={getRowTestId?.(row)}
+              className="hover:bg-surface-subtle transition-colors"
+            >
+              {columns.map((c) => (
+                <td
+                  key={c.key}
+                  className={cn(
+                    "px-4 py-3",
+                    c.hideOn ? HIDE_CLASS[c.hideOn] : null,
+                    c.cellClassName,
+                  )}
+                >
+                  {c.cell(row)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

@@ -13,6 +13,7 @@ import { requirePolicy } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { serverEnv } from "@/lib/validation/env";
+import { hasManagedAiSecret, loadManagedAiSecret } from "@/lib/ai/provider-secret";
 
 /**
  * STUDIOFLOW_MASTER_PROMPT.md §15 — AI feature settings service.
@@ -194,17 +195,30 @@ export async function testAiConnection(
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) throw new Error("Agency not configured");
   await requirePolicy(isAgencyAdmin(actor, agencyId), "test_ai_connection");
-  if (!serverEnv.AI_FEATURE_ENABLED || !serverEnv.MINIMAX_API_KEY) {
+
+  // M3.4 — resolve the active API key (managed secret takes
+  // priority over the env key). The test reflects which key the
+  // /api/ai/generate route will use.
+  const useManaged = await hasManagedAiSecret(agencyId);
+  const managed = useManaged ? await loadManagedAiSecret(agencyId) : null;
+  const apiKey = managed?.apiKey ?? serverEnv.MINIMAX_API_KEY;
+
+  if (!serverEnv.AI_FEATURE_ENABLED && !apiKey) {
     await recordConnectionTest(agencyId, actor.id, false);
     return { ok: false, latencyMs: null };
   }
+  if (!apiKey) {
+    await recordConnectionTest(agencyId, actor.id, false);
+    return { ok: false, latencyMs: null };
+  }
+
   const start = Date.now();
   try {
     const res = await fetch(`${serverEnv.MINIMAX_BASE_URL.replace(/\/$/, "")}/v1/messages`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": serverEnv.MINIMAX_API_KEY,
+        "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({

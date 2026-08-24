@@ -10,6 +10,7 @@ import { and, eq } from "drizzle-orm";
 import {
   checkCompleteness,
   draftCaption,
+  getActiveApiKey,
   improveBrief,
   isAiEnabled,
   type ChatResult,
@@ -22,6 +23,7 @@ import { logError } from "@/lib/observability/logger";
 import { getEffectiveEntitlement, LimitExceededError } from "@/lib/entitlements";
 import { recordUsage } from "@/lib/usage";
 import { enforceAiBudget, reconcileAiBudget } from "@/lib/ai/governance";
+import { hasAnyManagedSecretConfigured } from "@/lib/ai/provider-secret";
 
 /**
  * POST /api/ai/generate
@@ -61,9 +63,16 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  if (!isAiEnabled()) {
+  // M3.4 — key resolution is per-agency. We resolve it after the
+  // agency context is known so a managed secret in the DB takes
+  // priority over the env key. The 503 here is the "neither
+  // configured" path; the 200 paths exercise the resolved key.
+  if (!isAiEnabled() && !(await hasAnyManagedSecretConfigured())) {
     return NextResponse.json(
-      { error: "AI features are disabled. Set AI_FEATURE_ENABLED=true and MINIMAX_API_KEY." },
+      {
+        error:
+          "AI features are disabled. Set a managed secret at /app/agency-settings/ai or set AI_FEATURE_ENABLED=true and MINIMAX_API_KEY in the environment.",
+      },
       { status: 503 },
     );
   }
@@ -162,6 +171,19 @@ export async function POST(req: NextRequest) {
       Math.min(600, entitlement.maxOutputTokensPerRequest ?? 600),
     );
     const usageRequestId = requestId ?? randomUUID();
+    // M3.4 — resolve the active API key for this agency. A
+    // managed secret in the DB takes priority; the env key is
+    // the fallback. The 503 above covers the "neither" case.
+    const apiKey = await getActiveApiKey(agencyId);
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          error:
+            "No AI API key configured for this agency. Set a managed secret at /app/agency-settings/ai or set MINIMAX_API_KEY in the environment.",
+        },
+        { status: 503 },
+      );
+    }
     // M3.3 — server-authoritative AI budget enforcement. The
     // per-user daily counter is upserted inside the same
     // transaction as the monthly reservation, so concurrent
@@ -187,6 +209,7 @@ export async function POST(req: NextRequest) {
       format: item.format,
       audience: ws.name,
       maxTokens: outputReservation,
+      apiKey,
       onUsage: (usage: ChatResult) => {
         providerUsage = usage;
       },

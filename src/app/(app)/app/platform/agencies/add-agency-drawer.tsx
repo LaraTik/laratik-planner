@@ -72,6 +72,49 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
             Step {step} of 4 · Organization, administrator, plan, review
           </DialogDescription>
         </DialogHeader>
+        {/* Stepper — visual progress indicator. Each step is a
+            button so the user can jump back without losing the
+            fields they already filled. The current step is
+            aria-current and visually distinct. */}
+        <nav
+          aria-label="Add agency steps"
+          className="border-border bg-surface-subtle flex items-center gap-1 border-b px-6 py-3"
+          data-testid="add-agency-stepper"
+        >
+          {[
+            { num: 1, label: "Organization" },
+            { num: 2, label: "Administrator" },
+            { num: 3, label: "Plan" },
+            { num: 4, label: "Review" },
+          ].map((s) => {
+            const isCurrent = step === s.num;
+            const isComplete = step > s.num;
+            return (
+              <button
+                key={s.num}
+                type="button"
+                onClick={() => {
+                  // Forward navigation is gated by the
+                  // required-field check in onContinue; backward
+                  // navigation is always allowed.
+                  if (s.num < step) setStep(s.num);
+                }}
+                aria-current={isCurrent ? "step" : undefined}
+                aria-label={`Go to step ${s.num}: ${s.label}`}
+                className={`text-label rounded-[var(--radius-control)] px-2.5 py-1 font-semibold transition-colors ${
+                  isCurrent
+                    ? "bg-primary text-primary-foreground"
+                    : isComplete
+                      ? "text-primary hover:bg-surface"
+                      : "text-fg-muted"
+                }`}
+                data-testid={`add-agency-step-${s.num}`}
+              >
+                <span aria-hidden="true">{s.num}.</span> {s.label}
+              </button>
+            );
+          })}
+        </nav>
         <form action={action} className="flex min-h-0 flex-1 flex-col">
           {(
             [
@@ -257,7 +300,16 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
               Back
             </Button>
             {step < 4 ? (
-              <Button type="button" onClick={() => setStep((value) => Math.min(4, value + 1))}>
+              <Button
+                type="button"
+                onClick={() => setStep((value) => Math.min(4, value + 1))}
+                disabled={
+                  (step === 1 && (!values.name || !values.slug)) ||
+                  (step === 2 && (!values.adminName || !values.adminEmail)) ||
+                  (step === 3 && !values.planTemplateId)
+                }
+                data-testid="add-agency-continue"
+              >
                 Continue
               </Button>
             ) : (

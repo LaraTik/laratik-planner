@@ -150,7 +150,7 @@ const columns: DataTableColumnDef<PlatformAgencyRow>[] = [
     cellClassName: "text-right",
     cell: (r) => (
       <Link
-        href={`/app/platform/agencies/${r.id}`}
+        href={`/app/platform/agencies/${r.id}#identity`}
         className="text-primary focus-visible:ring-focus-ring text-body inline-block rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
       >
         Open

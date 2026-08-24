@@ -57,7 +57,7 @@ permissions:
 jobs:
   release:
     name: Tag + GitHub release
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -65,6 +65,7 @@ jobs:
         id: resolve
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
           # Forward workflow_dispatch input + event values as plain
           # env vars; the script reads them via $VAR instead of
           # `${{ inputs.* }}` to avoid template-injection into the
@@ -80,13 +81,13 @@ jobs:
             if [[ -n "${DEPLOY_RUN_INPUT}" ]]; then
               RUN_ID="${DEPLOY_RUN_INPUT}"
             else
-              RUN_ID="$(gh api 'repos/:owner/:repo/actions/runs?workflow_id=deploy.yml&status=success&per_page=1' \
+              RUN_ID="$(gh api "repos/${REPOSITORY}/actions/runs?workflow_id=deploy.yml&status=success&per_page=1" \
                 --jq '.workflow_runs[0].id')"
             fi
           else
             RUN_ID="${WORKFLOW_RUN_ID}"
           fi
-          SHA="$(gh api "repos/:owner/:repo/actions/runs/${RUN_ID}" \
+          SHA="$(gh api "repos/${REPOSITORY}/actions/runs/${RUN_ID}" \
             --jq '.head_sha')"
           echo "run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
           echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
@@ -96,6 +97,7 @@ jobs:
       - name: Create tag + release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
           # Forward the step outputs as env vars to avoid
           # `${{ steps.*.outputs.* }}` template-injection into the
           # shell (zizmor `template-injection`).
@@ -108,29 +110,45 @@ jobs:
           SHORT_SHA="${SHA:0:9}"
           TAG="releases/v${RUN_ID}-${SHORT_SHA}"
 
-          # Use git directly so the tag is created from a known ref
-          # (not from a fresh clone's default branch). The
-          # actions/checkout below already fetches with the right
-          # refspec.
-          git config user.name "mavis-bot"
-          git config user.email "mavis@LaraTik.local"
-          git tag -f "$TAG" "$SHA"
-          git push origin "$TAG"
+          # Create an immutable tag through the API. Refuse to move an
+          # existing tag to a different SHA; a repeated dispatch for the
+          # same deploy remains safe and idempotent.
+          if EXISTING_SHA="$(gh api "repos/${REPOSITORY}/git/ref/tags/${TAG}" \
+            --jq '.object.sha' 2>/dev/null)"; then
+            :
+          else
+            # `gh api` writes a structured error body to stdout on 404;
+            # reset the captured value so a missing ref follows the create path.
+            EXISTING_SHA=""
+          fi
+          if [[ -z "${EXISTING_SHA}" ]]; then
+            gh api --method POST "repos/${REPOSITORY}/git/refs" \
+              -f ref="refs/tags/${TAG}" \
+              -f sha="${SHA}" >/dev/null
+          elif [[ "${EXISTING_SHA}" != "${SHA}" ]]; then
+            echo "Refusing to move existing tag ${TAG} from ${EXISTING_SHA} to ${SHA}" >&2
+            exit 1
+          fi
 
           # Create or update the release. The deploy URL is in the
           # body for direct audit; the run page is the canonical
           # source of truth.
           DEPLOY_RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${RUN_ID}"
-          gh release create "$TAG" \
-            --target "$SHA" \
-            --title "Production deploy ${TAG}" \
-            --notes "Deployed \`${SHA}\` to \`planner.laratik.com\` on $(date -u +%Y-%m-%dT%H:%M:%SZ).
+          if gh release view "$TAG" --repo "$REPOSITORY" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists; leaving it unchanged."
+          else
+            gh release create "$TAG" \
+              --repo "$REPOSITORY" \
+              --target "$SHA" \
+              --title "Production deploy ${TAG}" \
+              --notes "Deployed \`${SHA}\` to \`planner.laratik.com\` on $(date -u +%Y-%m-%dT%H:%M:%SZ).
 
-          - Deploy run: ${DEPLOY_RUN_URL}
-          - Source image: \`ghcr.io/laratik/laratik-planner:${SHA}\`
-          - Source migrator: \`ghcr.io/laratik/laratik-planner-migrator:${SHA}\`
+            - Deploy run: ${DEPLOY_RUN_URL}
+            - Source image: \`ghcr.io/laratik/laratik-planner:${SHA}\`
+            - Source migrator: \`ghcr.io/laratik/laratik-planner-migrator:${SHA}\`
 
-          Verify production is on this SHA: \`curl -fsS https://planner.laratik.com/api/health | jq .version\`
-          " \
-            --draft=false
+            Verify production is on this SHA: \`curl -fsS https://planner.laratik.com/api/health | jq .version\`
+            " \
+              --draft=false
+          fi
         timeout-minutes: 3

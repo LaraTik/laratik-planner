@@ -13,7 +13,6 @@ import { ListCard, ListItem } from "@/components/workspace/list-item";
 import { MonthNav } from "@/components/workspace/month-nav";
 import { PlanningFilters } from "@/components/workspace/planning-filters";
 import { PlanningKpiBar } from "@/components/workspace/planning-kpi-bar";
-import { PlanningViewToggle } from "@/components/workspace/planning-view-toggle";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import {
   type KpiContentFormat,
@@ -120,7 +119,6 @@ export default async function PlanningPage({
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <PlanningViewToggle workspaceSlug={slug} />
             {canCreate ? (
               <>
                 <Button variant="outline" asChild>

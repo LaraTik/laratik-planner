@@ -98,6 +98,7 @@ describe("chat", () => {
       ],
       maxTokens: 200,
       temperature: 0.4,
+      apiKey: "sk-1234",
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -131,7 +132,10 @@ describe("chat", () => {
       }),
     });
     const ai = await loadAi();
-    const result = await ai.chat({ messages: [{ role: "user", content: "go" }] });
+    const result = await ai.chat({
+      messages: [{ role: "user", content: "go" }],
+      apiKey: "sk-1234",
+    });
     expect(result).toEqual({
       content: "Part one. Part two.",
       inputTokens: 11,
@@ -147,9 +151,9 @@ describe("chat", () => {
       text: async () => "upstream broke",
     });
     const ai = await loadAi();
-    await expect(ai.chat({ messages: [{ role: "user", content: "go" }] })).rejects.toThrow(
-      /MiniMax API error: 500/,
-    );
+    await expect(
+      ai.chat({ messages: [{ role: "user", content: "go" }], apiKey: "sk-1234" }),
+    ).rejects.toThrow(/MiniMax API error: 500/);
   });
 
   it("defaults maxTokens to 1024 and temperature to 0.7 when not given", async () => {
@@ -159,7 +163,10 @@ describe("chat", () => {
       json: async () => ({ content: [], usage: {} }),
     });
     const ai = await loadAi();
-    await ai.chat({ messages: [{ role: "user", content: "go" }] });
+    await ai.chat({
+      messages: [{ role: "user", content: "go" }],
+      apiKey: "sk-1234",
+    });
     const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
     expect(body.max_tokens).toBe(1024);
     expect(body.temperature).toBe(0.7);
@@ -198,6 +205,7 @@ describe("draftCaption", () => {
       format: "reel",
       platform: "instagram",
       audience: "Gen Z creators",
+      apiKey: "sk-1234",
     });
     expect(result).toBe("Caption draft");
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -228,6 +236,7 @@ describe("draftCaption", () => {
       format: "reel",
       maxTokens: 123,
       onUsage,
+      apiKey: "sk-1234",
     });
     const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
     expect(body.max_tokens).toBe(123);
@@ -243,7 +252,7 @@ describe("draftCaption", () => {
       json: async () => ({ content: [{ type: "text", text: "x" }] }),
     });
     const ai = await loadAi();
-    await ai.draftCaption({ title: "x", brief: "", format: "static_post" });
+    await ai.draftCaption({ title: "x", brief: "", format: "static_post", apiKey: "sk-1234" });
     const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
     const userMsg = body.messages[0];
     expect(userMsg.content).toContain("Brief: (none)");
@@ -283,6 +292,7 @@ describe("improveBrief", () => {
       brief: "Tease the launch",
       format: "reel",
       audience: "Gen Z creators",
+      apiKey: "sk-1234",
     });
     expect(result).toMatch(/Hook:[\s\S]*Main message:[\s\S]*CTA:/);
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -302,7 +312,12 @@ describe("improveBrief", () => {
       json: async () => ({ content: [{ type: "text", text: "x" }] }),
     });
     const ai = await loadAi();
-    await ai.improveBrief({ title: "x", brief: "", format: "static_post" });
+    await ai.improveBrief({
+      title: "x",
+      brief: "",
+      format: "static_post",
+      apiKey: "sk-1234",
+    });
     const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
     const userMsg = body.messages[0];
     expect(userMsg.content).toContain("Brief: (empty)");
@@ -341,6 +356,7 @@ describe("checkCompleteness", () => {
       brief: "Tease the launch",
       format: "reel",
       audience: "Gen Z creators",
+      apiKey: "sk-1234",
     });
     expect(result).toMatch(/Score: 80[\s\S]*Missing:/);
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -360,7 +376,12 @@ describe("checkCompleteness", () => {
       json: async () => ({ content: [{ type: "text", text: "x" }] }),
     });
     const ai = await loadAi();
-    await ai.checkCompleteness({ title: "x", brief: "", format: "static_post" });
+    await ai.checkCompleteness({
+      title: "x",
+      brief: "",
+      format: "static_post",
+      apiKey: "sk-1234",
+    });
     const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
     const userMsg = body.messages[0];
     expect(userMsg.content).toContain("Brief: (empty)");

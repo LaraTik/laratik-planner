@@ -105,6 +105,16 @@ const serverSchema = z.object({
     .optional()
     .transform((v) => v === "true" || v === "1"),
 
+  // AI provider secret encryption (M3.4 — AI in-DB secret).
+  // Server-only AES-256-GCM key. The env var is optional at module
+  // load — the secrets module throws `MissingEncryptionKeyError`
+  // at runtime if a managed-secret operation is attempted without
+  // it. This keeps the boot path alive on deployments that have
+  // not yet enabled the AI feature. A future rotation can carry
+  // multiple keys in the shape `k1:<base64> | k2:<base64>` (see
+  // secrets.ts). Length is validated at runtime in secrets.ts.
+  AI_SECRET_ENCRYPTION_KEY: stringOrEmpty,
+
   // Sentry (Goal 13)
   SENTRY_DSN: stringOrEmpty,
   SENTRY_AUTH_TOKEN: stringOrEmpty,
