@@ -21,3 +21,6 @@ export * from "./brand-kit";
 export * from "./plans";
 export * from "./usage";
 export * from "./support";
+// M4 — social profile analytics. Imported last so its dependencies
+// (channels, identity, workspaces) are already initialised when it runs.
+export * from "./social-analytics";
