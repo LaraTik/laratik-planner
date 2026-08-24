@@ -35,7 +35,12 @@
     "db:studio": "drizzle-kit studio",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit && pnpm build",
     "test:integration": "tsx scripts/run-integration-tests.ts",
-    "migration-drill": "tsx scripts/migration-drill.ts"
+    "migration-drill": "tsx scripts/migration-drill.ts",
+    "codegraph:init": "codegraph init",
+    "codegraph:index": "codegraph index",
+    "codegraph:sync": "codegraph sync",
+    "codegraph:status": "codegraph status",
+    "codegraph:query": "codegraph query"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",

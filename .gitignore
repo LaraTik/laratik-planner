@@ -65,3 +65,8 @@ docker-compose.override.yml
 # Traefik labels — generated only, not source of truth
 acme.json
 *.bak
+
+# CodeGraph (https://github.com/colbymchenry/codegraph) — local SQLite
+# knowledge graph for AI agents. Filenames embed absolute paths and the host
+# OS, so the index is not portable. Rebuild with `pnpm codegraph:init`.
+.codegraph/
