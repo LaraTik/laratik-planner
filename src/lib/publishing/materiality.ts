@@ -187,14 +187,18 @@ export async function recordMaterialityEvent(
     //    existing kind ("update") and stash the resource in
     //    the metadata JSONB. The migration that adds the new
     //    enum value is the M4.3 schema migration.
+    //
+    //    beforeData and afterData are NOT NULL in the existing
+    //    migration (defaults to `{}`); we coerce null to an
+    //    empty JSON object so the column accepts the row.
     await tx.insert(activityEvents).values({
       workspaceId: item.workspaceId,
       actorId: input.actor.id,
       kind: "update", // M4.3 migration adds 'material_edit' to the enum
       contentItemId: input.contentItemId,
       summary: `Material edit on '${input.resource}' (revision ${newRevision}).`,
-      beforeData: (input.beforeValue ?? null) as never,
-      afterData: (input.afterValue ?? null) as never,
+      beforeData: (input.beforeValue === null ? {} : input.beforeValue) as never,
+      afterData: (input.afterValue === null ? {} : input.afterValue) as never,
       metadata: {
         resource: input.resource,
         reasonCode: input.reasonCode,
