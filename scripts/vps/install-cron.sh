@@ -16,6 +16,9 @@
 #   1. Daily 03:30 UTC — Postgres pg_dump backup (see scripts/vps/backup.sh)
 #   2. Daily 07:30 UTC — SMTP cert-expiry probe (see scripts/vps/check-smtp-cert.sh)
 #      Exits 0/1 = silent; exit 2/3 = mail root (cron emails any non-zero exit).
+#   3. Every 15 minutes — Social metrics sync (see scripts/vps/social-metrics-sync.sh)
+#      Calls /api/cron/social-metrics. Returns the standard cron shape
+#      { claimed, succeeded, failed, needsReauth, retention } on stdout.
 #
 # Why a single cron file: cron on Debian/Ubuntu reads /etc/cron.d/* owned by
 # root. Putting both entries in one file makes the deploy chain surface-able
@@ -34,8 +37,10 @@ CRON_FILE="${CRON_FILE:-/etc/cron.d/laratik-planner}"
 PROJECT_DIR="${PROJECT_DIR:-/opt/laratik-planner}"
 BACKUP_SCHEDULE="30 3 * * *"
 CERT_SCHEDULE="30 7 * * *"
+SOCIAL_SCHEDULE="*/15 * * * *"
 BACKUP_CMD="${PROJECT_DIR}/scripts/vps/backup.sh"
 CERT_CMD="${PROJECT_DIR}/scripts/vps/check-smtp-cert.sh"
+SOCIAL_CMD="${PROJECT_DIR}/scripts/vps/social-metrics-sync.sh"
 
 DRY_RUN=0
 UNINSTALL=0
@@ -79,15 +84,16 @@ fi
 # not — that matches the runbook's "30/14/7 days before expiry" alert tiers.
 CRON_BODY="# laratik-planner crons — installed by scripts/vps/install-cron.sh
 # Do not edit by hand; re-run the installer to make changes idempotently.
-# Backup: 03:30 UTC daily. Cert probe: 07:30 UTC daily.
+# Backup: 03:30 UTC daily. Cert probe: 07:30 UTC daily. Social sync: every 15m.
 ${BACKUP_SCHEDULE} root ${BACKUP_CMD} >> /var/log/laratik-planner-backup.log 2>&1
 ${CERT_SCHEDULE} root ${CERT_CMD} >/dev/null
+${SOCIAL_SCHEDULE} root ${SOCIAL_CMD} >/var/log/laratik-planner-social-sync.log 2>&1
 "
 
 # Verify the target scripts exist (and are executable) before installing the
 # cron. A cron that points at a missing script fails silently — the runbook
 # already calls this out as the failure mode install-cron.sh prevents.
-for cmd in "$BACKUP_CMD" "$CERT_CMD"; do
+for cmd in "$BACKUP_CMD" "$CERT_CMD" "$SOCIAL_CMD"; do
   if [[ ! -x "$cmd" ]]; then
     echo "✗ install-cron: $cmd is missing or not executable." >&2
     echo "  Run: chmod +x $cmd" >&2

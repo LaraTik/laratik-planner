@@ -1,18 +1,21 @@
 import { redirect, notFound } from "next/navigation";
 import { and, desc, eq, isNull } from "drizzle-orm";
-import { Clock, ExternalLink, MoreHorizontal, Radio } from "lucide-react";
+import { Clock, ExternalLink, MoreHorizontal, PlugZap, Radio } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { socialChannels } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import { serverEnv } from "@/lib/validation/env";
+import { ConnectionStatusBadge } from "./connection-status-badge";
+import { ConnectionActions } from "./connection-actions";
 import { AddChannelButton } from "./add-channel-button";
 import { ChannelForm } from "./channel-form";
 import { ChannelRowActions } from "./channel-edit-drawer";
@@ -23,11 +26,16 @@ type ChannelRow = typeof socialChannels.$inferSelect;
  * Column definitions for the channels table. Hoisted out of the page
  * so the JSX stays focused on data + layout. Row actions render
  * through the `ChannelRowActions` client component (kebab menu +
- * edit drawer + archive confirm).
+ * edit drawer + archive confirm) for manual channels, and through
+ * the `ConnectionActions` client component for connected channels.
  */
 function channelsColumns(props: {
   slug: string;
   canManage: boolean;
+  affectedByConnection: Record<
+    string,
+    Array<{ id: string; accountName: string; platform: "instagram" | "facebook" | "tiktok" }>
+  >;
 }): DataTableColumnDef<ChannelRow>[] {
   return [
     {
@@ -75,18 +83,15 @@ function channelsColumns(props: {
     {
       key: "state",
       header: "State",
-      cell: (row) =>
-        row.isActive ? (
-          <Badge variant="success">
-            <span className="bg-success h-1.5 w-1.5 rounded-full" aria-hidden="true" />
-            Active
-          </Badge>
-        ) : (
-          <Badge variant="outline">
-            <span className="bg-fg-secondary h-1.5 w-1.5 rounded-full" aria-hidden="true" />
-            Inactive
-          </Badge>
-        ),
+      cell: (row) => (
+        <ConnectionStatusBadge
+          status={
+            (row.connectionStatus ?? "manual") as
+              "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected"
+          }
+          lastSyncedAt={row.lastSyncedAt}
+        />
+      ),
     },
     {
       key: "owner",
@@ -105,14 +110,31 @@ function channelsColumns(props: {
       header: "",
       headerClassName: "w-12",
       cellClassName: "text-right",
-      cell: (row) =>
-        props.canManage ? (
-          <ChannelRowActions slug={props.slug} channel={row} />
-        ) : (
-          <span aria-hidden="true" className="inline-flex h-10 w-10 items-center justify-center">
-            <MoreHorizontal className="text-fg-muted h-4 w-4" />
-          </span>
-        ),
+      cell: (row) => {
+        if (!props.canManage) {
+          return (
+            <span aria-hidden="true" className="inline-flex h-10 w-10 items-center justify-center">
+              <MoreHorizontal className="text-fg-muted h-4 w-4" />
+            </span>
+          );
+        }
+        if (!row.socialConnectionId) {
+          return <ChannelRowActions slug={props.slug} channel={row} />;
+        }
+        const affected = props.affectedByConnection[row.socialConnectionId] ?? [];
+        return (
+          <ConnectionActions
+            slug={props.slug}
+            channel={{
+              id: row.id,
+              accountName: row.accountName,
+              platform: (row.platform as "instagram" | "facebook" | "tiktok") ?? "instagram",
+              socialConnectionId: row.socialConnectionId,
+            }}
+            affectedChannels={affected}
+          />
+        );
+      },
     },
   ];
 }
@@ -143,6 +165,25 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
     .from(socialChannels)
     .where(and(eq(socialChannels.workspaceId, workspace.id), isNull(socialChannels.archivedAt)))
     .orderBy(desc(socialChannels.isActive), desc(socialChannels.updatedAt));
+  // Build the affected-channels map: for every connection that has
+  // more than one attached channel, list those channels. The revoke
+  // dialog uses this list to show the operator exactly what will be
+  // disconnected.
+  const affectedByConnection: Record<
+    string,
+    Array<{ id: string; accountName: string; platform: "instagram" | "facebook" | "tiktok" }>
+  > = {};
+  for (const row of rows) {
+    if (!row.socialConnectionId) continue;
+    if (affectedByConnection[row.socialConnectionId]) continue;
+    affectedByConnection[row.socialConnectionId] = rows
+      .filter((r) => r.socialConnectionId === row.socialConnectionId)
+      .map((r) => ({
+        id: r.id,
+        accountName: r.accountName,
+        platform: (r.platform as "instagram" | "facebook" | "tiktok") ?? "instagram",
+      }));
+  }
   return (
     <div className="space-y-6">
       <PageHeader
@@ -161,6 +202,26 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
         action={canManage ? <AddChannelButton formId="channel-add-card" /> : null}
       />
 
+      {canManage && serverEnv.META_APP_ID ? (
+        <Card padding="md" data-testid="connect-meta-card">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-body text-fg-primary font-semibold">Connect a Meta account</h3>
+              <p className="text-label text-fg-muted mt-1">
+                Authorize Facebook Pages and any linked Instagram professional accounts. Read-only —
+                no publishing, no ads.
+              </p>
+            </div>
+            <form action="/api/social/meta/connect" method="POST">
+              <input type="hidden" name="slug" value={slug} />
+              <Button type="submit" variant="secondary" data-testid="connect-meta-button">
+                <PlugZap className="h-4 w-4" aria-hidden={true} /> Connect Meta
+              </Button>
+            </form>
+          </div>
+        </Card>
+      ) : null}
+
       {canManage ? <ChannelForm slug={slug} /> : null}
 
       {rows.length ? (
@@ -174,6 +235,7 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
               columns={channelsColumns({
                 slug,
                 canManage,
+                affectedByConnection: affectedByConnection,
               })}
             />
           </div>

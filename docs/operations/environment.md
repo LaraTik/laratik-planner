@@ -98,3 +98,19 @@ The mailbox must exist in Mailcow before the first deploy (`https://mail.laratik
 `src/lib/validation/env.ts` runs at module load. In production, **all required server vars must be present**, or the process crashes with a structured error. In development, only the schema is validated (vars can be missing for partial dev).
 
 This is deliberate: catching a missing `AUTH_SECRET` at boot is far better than discovering it at the first sign-in.
+
+## M4 — social profile analytics
+
+| Name                          | Required (prod) | Default | Purpose                                                                                                                                  |
+| ----------------------------- | --------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `SOCIAL_TOKEN_ENCRYPTION_KEY` | conditional     | empty   | Base64-encoded 32-byte key for the AES-256-GCM credential envelope. Required when `SOCIAL_SYNC_ENABLED=true`. `openssl rand -base64 32`. |
+| `META_APP_ID`                 | conditional     | empty   | Facebook App ID. Required for Meta connection to succeed.                                                                                |
+| `META_APP_SECRET`             | conditional     | empty   | Facebook App secret. Required for Meta connection.                                                                                       |
+| `META_LOGIN_CONFIG_ID`        | conditional     | empty   | Facebook Login for Business configuration ID.                                                                                            |
+| `META_GRAPH_API_VERSION`      | no              | `v25.0` | Pinned Graph API version. Changing it requires re-applying the migration and re-running the App Review.                                  |
+| `TIKTOK_CLIENT_KEY`           | conditional     | empty   | TikTok app key. Required for TikTok connection.                                                                                          |
+| `TIKTOK_CLIENT_SECRET`        | conditional     | empty   | TikTok app secret. Required for TikTok connection.                                                                                       |
+| `SOCIAL_SYNC_ENABLED`         | no              | `false` | Master switch for the cron worker. When `false`, `/api/cron/social-metrics` is a no-op.                                                  |
+| `SOCIAL_TIKTOK_ENABLED`       | no              | `false` | Per-provider gate. When `false`, the TikTok provider and callback routes return 404 / disabled.                                          |
+
+None of these may be exposed as `NEXT_PUBLIC_*`. The application refuses to boot in production when `SOCIAL_SYNC_ENABLED=true` but the encryption key is missing or not exactly 32 bytes when decoded.

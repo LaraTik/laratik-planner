@@ -125,6 +125,30 @@ const serverSchema = z.object({
   CRON_SECRET: stringOrEmpty,
   BOOTSTRAP_SETUP_TOKEN: stringOrEmpty,
 
+  // M4 — social profile analytics. The encryption key is required
+  // when SOCIAL_SYNC_ENABLED is true; the provider credentials are
+  // optional in dev so the rest of the app can boot without a Meta
+  // app configured. None of these may be exposed as NEXT_PUBLIC_*.
+  // Generate the key with: openssl rand -base64 32
+  SOCIAL_TOKEN_ENCRYPTION_KEY: stringOrEmpty,
+  META_APP_ID: stringOrEmpty,
+  META_APP_SECRET: stringOrEmpty,
+  META_LOGIN_CONFIG_ID: stringOrEmpty,
+  META_GRAPH_API_VERSION: z.string().default("v25.0"),
+  TIKTOK_CLIENT_KEY: stringOrEmpty,
+  TIKTOK_CLIENT_SECRET: stringOrEmpty,
+  SOCIAL_SYNC_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === "true" || v === "1"),
+  // Per-provider gate. When false, the TikTok provider and callback
+  // routes return 404 / disabled. Default false until the seven-day
+  // Meta observation window passes.
+  SOCIAL_TIKTOK_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === "true" || v === "1"),
+
   // Agency context cookie (Milestone 1.2) — server-only HMAC secret.
   // 32+ bytes (≥ 32 ASCII chars). The agency-context helper fails closed
   // if this is missing in production. Generate with:
@@ -163,6 +187,24 @@ if (!skipValidation) {
   if (providerIssues.length > 0) {
     console.error("[env] Invalid provider configuration:", providerIssues);
     throw new Error("Invalid provider configuration");
+  }
+
+  // M4 — when social sync is enabled, the encryption key is required
+  // and must decode to exactly 32 bytes. The provider credentials
+  // remain optional so a deployment can ship with the key set and the
+  // cron route disabled (the recommended starting state).
+  if (serverEnv.SOCIAL_SYNC_ENABLED) {
+    if (!serverEnv.SOCIAL_TOKEN_ENCRYPTION_KEY) {
+      throw new Error(
+        "SOCIAL_TOKEN_ENCRYPTION_KEY is required when SOCIAL_SYNC_ENABLED=true (generate with: openssl rand -base64 32)",
+      );
+    }
+    const decoded = Buffer.from(serverEnv.SOCIAL_TOKEN_ENCRYPTION_KEY, "base64");
+    if (decoded.length !== 32) {
+      throw new Error(
+        `SOCIAL_TOKEN_ENCRYPTION_KEY must decode to 32 bytes (got ${decoded.length})`,
+      );
+    }
   }
 }
 

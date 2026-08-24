@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { archivedAt, idColumn, jsonb, timestamps } from "./_helpers";
 import { socialPlatformEnum } from "./enums";
 import { users } from "./identity";
@@ -11,6 +20,13 @@ import { workspaces } from "./workspaces";
  *
  * URLs must use https except approved local test values.
  * Channels are informational in v1 (no metrics collection).
+ *
+ * M4 (M4 — social profile analytics) extends `social_channel` with
+ * provider linkage and sync bookkeeping. Every new column is nullable
+ * so the additive migration `0013_social_profile_analytics` is
+ * backward-compatible. Existing manual channels pass the new
+ * `connection_status` check constraint because the column default is
+ * `'manual'`, which is in the allowed set. See ADR-0004.
  */
 
 // ─── social_channels ──────────────────────────────────────────────────────
@@ -28,6 +44,20 @@ export const socialChannels = pgTable(
     accountType: text("account_type"),
     isActive: boolean("is_active").notNull().default(true),
     notes: text("notes"),
+    // M4 — provider linkage. `social_connection_id` is declared in the
+    // SQL migration as a real FK; Drizzle's `references()` here is
+    // structural metadata for joins. The actual FK is added by
+    // `ALTER TABLE ... ADD CONSTRAINT` in the migration.
+    socialConnectionId: uuid("social_connection_id"),
+    externalAccountId: text("external_account_id"),
+    avatarUrl: text("avatar_url"),
+    connectionStatus: text("connection_status").notNull().default("manual"),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true, mode: "date" }),
+    nextSyncAt: timestamp("next_sync_at", { withTimezone: true, mode: "date" }),
+    syncLeaseUntil: timestamp("sync_lease_until", { withTimezone: true, mode: "date" }),
+    syncFailureCount: integer("sync_failure_count").notNull().default(0),
+    lastSyncErrorCode: text("last_sync_error_code"),
+    lastSyncErrorAt: timestamp("last_sync_error_at", { withTimezone: true, mode: "date" }),
     archivedAt: archivedAt(),
     archivedBy: uuid("archived_by").references(() => users.id, { onDelete: "set null" }),
     ...timestamps,
@@ -38,8 +68,24 @@ export const socialChannels = pgTable(
       .on(t.workspaceId)
       .where(sql`archived_at IS NULL`),
     check("social_channel_url_https", sql`${t.url} IS NULL OR ${t.url} ~* '^https?://'`),
+    check(
+      "social_channel_connection_status_valid",
+      sql`${t.connectionStatus} IN ('manual', 'connected', 'needs_reauth', 'sync_error', 'disconnected')`,
+    ),
+    // Drizzle does not support partial unique indexes directly; the
+    // partial-unique index on
+    // `(workspace_id, platform, external_account_id) WHERE external_account_id IS NOT NULL AND archived_at IS NULL`
+    // is declared in the SQL migration. The application also enforces
+    // uniqueness at the repository layer.
   ],
 );
+
+// `socialConnectionId` is a plain UUID here; the FK to
+// `social_connection(id)` is created by the SQL migration. We could
+// re-export `socialConnections` from `social-analytics.ts` for join
+// ergonomics, but a circular import between `channels.ts` and
+// `social-analytics.ts` (which references `socialChannels.id`) makes
+// that fragile. The application joins by the UUID column directly.
 
 // ─── brand_assets ──────────────────────────────────────────────────────────
 export const brandAssets = pgTable(
