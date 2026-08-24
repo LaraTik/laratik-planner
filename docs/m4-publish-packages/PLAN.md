@@ -1,7 +1,7 @@
 # Milestone 4 — Publish-ready Post and Reel packages
 
-> **Status:** implementation complete on `feat/m4-publish-packages` (2026-08-24). All 1,382 unit tests + 103 integration tests green; `pnpm verify` clean.
-> **Integration branch:** `feat/m4-publish-packages` (in the worktree `../laratik-planner-m4`).
+> **Status:** implementation refined on `main` (2026-08-24). All 1,469 unit tests + 106 integration tests green; `pnpm verify` clean.
+> **Integration branch:** merged to `main`; this document now reflects the post-merge security and UX refinement.
 > **Implementation commits:** schema/services + UI + tests, all atomic.
 
 ## Scope (per the master prompt, §4 Milestone 4)
@@ -45,7 +45,8 @@ integration branch.
 
 - `src/lib/publishing/platform-payload-service.ts` —
   `savePlatformPayload`, `readPlatformPayload`,
-  `readAllChannelPayloads`, `clearChannelPayload`. Every write
+  `readAllChannelPayloads`, `clearChannelPayload`, and
+  `setFinalCopyApproval`. Every write
   goes through the materiality service (M4.3). The service
   re-validates workspace membership and re-reads the
   content-item + channel join to enforce IDOR.
@@ -67,6 +68,10 @@ integration branch.
   suggestions (advisory only). The output `ReadinessReport`
   is the source of truth for the publish UI's "Ready for
   publishing" CTA.
+- `confirmPublishReadiness` re-runs that evaluation on the server,
+  checks the current workflow status and revision, and records an
+  immutable confirmation event. A client-side enabled button is
+  never treated as proof of readiness.
 - `foldAiSuggestions` pure helper tested in
   `tests/unit/readiness-fold.test.ts`.
 
@@ -79,6 +84,9 @@ integration branch.
   action bar with 44px touch targets, channel selector tabs
   with per-channel blocker count, server action
   `savePublishPackageAction` and `recordInternalNoteAction`.
+- Final-copy approval is agency-admin owned and server stamped.
+  Draft saves strip any browser-supplied approval metadata and
+  material edits revoke the prior approval.
 - `src/components/ui/textarea.tsx` — new shadcn-style
   multi-line input (matched to `Input`).
 - "Configure publish package" link added to the existing
@@ -87,30 +95,35 @@ integration branch.
 
 ### M4.6 — Integration tests
 
-- `tests/integration/publishing-m4.test.ts` — 5 cases against
+- `tests/integration/publishing-m4.test.ts` — 8 cases against
   a real Postgres database:
   1. Save → read roundtrip preserves the discriminated union.
   2. Saving a payload increments `content_items.revision`.
   3. Readiness blocks when the final-copy approval is missing.
   4. An internal note does NOT increment revision.
   5. Cross-workspace channel access is rejected (IDOR defence).
+  6. Browser-supplied final-copy approval is stripped.
+  7. Agency-admin approval is stamped with the server actor/time.
+  8. Material changes reset approval and non-admin approval is denied.
+- `tests/e2e/publish-package.spec.ts` — admin save/reload/approve
+  and planner cannot self-approve journeys.
 
 ## Security and audit requirements
 
-| Requirement                                                | Status                                                                                                   |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Central materiality service for material edits             | ✅ `recordMaterialityEvent` is the single funnel; every platform-payload write goes through it.          |
-| Increment appropriate revision on material edit            | ✅ `content_items.revision` is `revision + 1` (atomic).                                                  |
-| Reset affected approval decisions                          | ✅ `approval_request.status` is set to `cancelled` with `invalidation_reason` and `invalidated_at`.      |
-| Record an immutable event                                  | ✅ `activity_event` row written inside the same transaction as the revision bump.                        |
-| Notify affected reviewers                                  | ✅ In-app notification per reviewer with deep link to `/app/w/<slug>/planning/<id>/publish`.             |
-| Administrative changes do NOT reset approvals              | ✅ `recordNonMaterialityEvent` writes a metadata-only audit row; no revision, no reset, no notification. |
-| Never treat hashtags as globally mandatory                 | ✅ Hashtags are not in the required-field table for any platform.                                        |
-| Block "Ready for publishing" while blockers remain         | ✅ `canPublish` is `blockers === 0 && channels.length > 0`. The CTA is disabled.                         |
-| Revalidate on the server during every readiness transition | ✅ `evaluateReadiness` is called server-side on every page render.                                       |
-| Integrate with AI `completeness_check` (advisory only)     | ✅ `foldAiSuggestions` is the integration seam; suggestions are always `severity: "recommendation"`.     |
-| IDOR defence on support grant IDs                          | ✅ Cross-workspace channel access rejected with `FORBIDDEN` (or `NOT_FOUND` for the channel row).        |
-| Quick Create unchanged (4 fields)                          | ✅ Out of scope; `quick-create` was not touched in M4.                                                   |
+| Requirement                                                | Status                                                                                                    |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Central materiality service for material edits             | ✅ `recordMaterialityEvent` is the single funnel; every platform-payload write goes through it.           |
+| Increment appropriate revision on material edit            | ✅ `content_items.revision` is `revision + 1` (atomic).                                                   |
+| Reset affected approval decisions                          | ✅ `approval_request.status` is set to `cancelled` with `invalidation_reason` and `invalidated_at`.       |
+| Record an immutable event                                  | ✅ `activity_event` row written inside the same transaction as the revision bump.                         |
+| Notify affected reviewers                                  | ✅ In-app notification per reviewer with deep link to `/app/w/<slug>/planning/<id>/publish`.              |
+| Administrative changes do NOT reset approvals              | ✅ `recordNonMaterialityEvent` writes a metadata-only audit row; no revision, no reset, no notification.  |
+| Never treat hashtags as globally mandatory                 | ✅ Hashtags are not in the required-field table for any platform.                                         |
+| Block "Ready for publishing" while blockers remain         | ✅ `canPublish` is `blockers === 0 && channels.length > 0`; the server command rejects blockers.          |
+| Revalidate on the server during every readiness transition | ✅ `confirmPublishReadiness` re-evaluates blockers, status, role and revision before recording readiness. |
+| Integrate with AI `completeness_check` (advisory only)     | ✅ `foldAiSuggestions` is the integration seam; suggestions are always `severity: "recommendation"`.      |
+| IDOR defence on support grant IDs                          | ✅ Cross-workspace channel access rejected with `FORBIDDEN` (or `NOT_FOUND` for the channel row).         |
+| Quick Create unchanged (4 fields)                          | ✅ Out of scope; `quick-create` was not touched in M4.                                                    |
 
 ## Migration, compatibility, and rollback
 
@@ -128,7 +141,7 @@ integration branch.
 
 | Requirement                                         | Evidence                                                                                               |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| 1,382 unit tests + 103 integration tests green      | `pnpm test:unit` 1,382/1,382, `TEST_DATABASE_URL=… pnpm test:integration` 103/103.                     |
+| 1,469 unit tests + 106 integration tests green      | `pnpm test:unit` 1,469/1,469, `TEST_DATABASE_URL=… pnpm test:integration` 106/106.                     |
 | `pnpm verify` clean                                 | `pnpm format:check && pnpm lint --max-warnings=0 && pnpm typecheck && pnpm test:unit && pnpm build`.   |
 | Discriminated union covers all 9 platforms          | `tests/unit/payload-schemas.test.ts` 19 cases.                                                         |
 | Material edits reset approvals + increment revision | `tests/integration/publishing-m4.test.ts` "saving a payload increments content_items.revision".        |
@@ -137,7 +150,7 @@ integration branch.
 | Hashtags not globally mandatory                     | The required-field table (`REQUIRED_FIELDS`) has no `hashtags` entry for any platform.                 |
 | New route on the right URL                          | `/app/w/[slug]/planning/[id]/publish` is a real `page.tsx`; `pnpm build` shows it.                     |
 | Link from the existing publishing section           | `publishing-section.tsx` adds a "Configure publish package" link.                                      |
-| No M1 / M2 / M3 regression                          | `pnpm test:integration` 103/103 (covers all prior suites).                                             |
+| No M1 / M2 / M3 regression                          | `pnpm test:integration` 106/106 (covers all prior suites).                                             |
 
 ## Out of scope (deferred)
 
@@ -145,10 +158,8 @@ integration branch.
   (`foldAiSuggestions`) but the actual call to the AI
   capability from the publish UI is a follow-up. The
   readiness service is the integration point.
-- The "Manual channel" (publishing note) checklist UI is
-  in the form but the checklist items are not yet wired to
-  the platform-payload service; the schema accepts them
-  (see `OtherPayloadSchema.manualChecklist`).
-- A11y / visual-regression baselines for the new publish
-  route are deferred to the production-readiness capture
-  pass.
+- Platform API delivery remains manual; M4 builds and approves the
+  package but does not connect provider OAuth or publish remotely.
+- The publish route now passes the Chromium axe sweep. Linux visual
+  baseline capture/reviewer approval remains part of the independent
+  release-candidate workflow and is intentionally not generated on macOS.

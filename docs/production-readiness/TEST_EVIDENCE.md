@@ -404,3 +404,33 @@ accept a healthy container whose reported version differs from the requested
 Status: implementation is merged to `main`; production rollout and the new
 browser checks remain pending the independently owned publishing/AI coverage
 repair. This row must not be promoted to `Verified` without independent review.
+
+## 2026-08-24 — Full milestone refinement verification
+
+This pass audited the published milestone claims against live application,
+database, authorization, accessibility and browser behavior. Status remains
+`READY FOR INDEPENDENT REVIEW`; no row was promoted to `Verified`.
+
+| Gate                                        | Result                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                               | Pass: format, lint, strict typecheck, 1,469 unit tests and Next.js production build.                                                                                                                                                                                                                                                                                                                       |
+| `pnpm test:coverage`                        | Pass without lowering thresholds; `src/lib/publishing` is 98.93% statements / 92.68% branches / 100% functions / 98.93% lines.                                                                                                                                                                                                                                                                             |
+| `TEST_DATABASE_URL=… pnpm test:integration` | 15 files / 106 tests pass on disposable Postgres.                                                                                                                                                                                                                                                                                                                                                          |
+| `TEST_DATABASE_URL=… pnpm migration-drill`  | 4/4 pass: from-zero, in-place, backup/restore and failed-migration abort; ledger 13/13 after restore.                                                                                                                                                                                                                                                                                                      |
+| `pnpm audit --prod`                         | Pass: no known vulnerabilities.                                                                                                                                                                                                                                                                                                                                                                            |
+| Chromium E2E aggregate                      | First pass 153/154; after the selector fix, second pass 152/154. The corrected workspace case passed in aggregate. The two second-pass failures were a long-lived dev-server health timeout and shared publish-fixture contamination; after adding an explicit health timeout, unique publish fixture and deterministic channel order, health passed 2/2 and publish package passed 2/2 in focused reruns. |
+| Chromium axe sweep                          | 23 authenticated routes and 3 public routes have no critical WCAG 2.2 AA violations; redirect/focus contract passes.                                                                                                                                                                                                                                                                                       |
+
+Material corrections: final-copy approval is agency-admin-only and server
+stamped; draft saves cannot forge approval; material edits revoke approval;
+publish readiness is a server command with role/blocker/status/revision checks;
+platform payloads read back by social-channel id; workspace scoping and slug
+revalidation are correct; brand voice archive is soft-delete; prompt/alert
+flows are accessible dialogs with inline feedback; client reviewers see only
+their client surfaces; mobile/desktop account triggers correctly forward Radix
+events; global errors are captured by Sentry; the migration drill tolerates the
+newer `pg_dump` session setting without masking SQL failures.
+
+Still reviewer/owner gated: Linux visual-baseline capture and review, manual
+keyboard/screen-reader/200% zoom sign-off, the separated-account 30-step UAT,
+and external OAuth/SMTP/MiniMax/Sentry/offsite-backup checks.
