@@ -110,6 +110,8 @@ jobs:
           # `envs:`) instead of being expanded inline into the script,
           # so a hostile head_sha value cannot be evaluated as code.
           DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          GHCR_USER: ${{ secrets.GHCR_USER }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
