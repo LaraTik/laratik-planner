@@ -21,6 +21,8 @@ export * from "./brand-kit";
 export * from "./plans";
 export * from "./usage";
 export * from "./support";
-// M4 — social profile analytics. Imported last so its dependencies
-// (channels, identity, workspaces) are already initialised when it runs.
+// M4 — social profile analytics. Imported after identity / workspaces
+// because `social-analytics.ts` references both at the schema layer.
+// M4.5 — agency social DEK. Imported after identity (agencies, users).
 export * from "./social-analytics";
+export * from "./social-dek";
