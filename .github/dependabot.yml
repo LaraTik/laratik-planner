@@ -1,0 +1,80 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Dependabot — weekly dependency + GitHub Actions update PRs.
+#
+# `pnpm audit --prod` is a release gate in `.github/workflows/ci.yml`
+# (the `Dependency audit` step in `unit-quality`) and catches known
+# vulnerabilities at the time of a push. Dependabot is the second
+# line of defense: weekly PRs keep deps and actions current so the
+# release gate is the second check, not the first.
+#
+# Why weekly, not daily: the project is single-environment (v1) and
+# a daily cadence creates PR noise. The `pnpm audit` gate catches
+# new vulnerabilities within one push; Dependabot is for routine
+# bumps.
+#
+# Why grouped: a single Dependabot PR per ecosystem is much easier
+# to review than one PR per dep. Grouping is the GH-recommended
+# pattern as of 2024.
+# ─────────────────────────────────────────────────────────────────────────────
+version: 2
+
+updates:
+  # ── npm dependencies ───────────────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      # Mondays at 06:00 UTC — before the typical LaraTik weekly
+      # review window. Dependabot opens a PR; CI runs the release
+      # gate; reviewer merges if green.
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    # Group minor + patch bumps into one PR per ecosystem to keep
+    # the review surface tractable. Major-version bumps are kept
+    # individual because they tend to have migration notes.
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    # Bound the open-PR count so a long weekend of inactivity does
+    # not produce a backlog of 30+ PRs.
+    open-pull-requests-limit: 5
+    # Conventional commit prefix; lines up with AGENTS.md conventions.
+    commit-message:
+      prefix: "deps"
+    # Auto-assign + auto-label so the right owner notices.
+    labels:
+      - "deps"
+      - "automated"
+    # Reviewers are taken from CODEOWNERS for `**`. If a new dep
+    # touches a domain the maintainers want a closer eye on, extend
+    # CODEOWNERS with a narrower rule.
+    assignees: []
+
+  # ── GitHub Actions ─────────────────────────────────────────────────────────
+  # Floating action tags (`@v4`, `@v3`) are flagged by zizmor's
+  # `unpinned-uses` rule. Dependabot rewrites floating tags to
+  # commit SHAs as upstream tags move; once we re-enable the
+  # unpinned-uses finding in zizmor.yml, this is the loop that
+  # keeps it green.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    groups:
+      actions-bumps:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "ci"
+      - "automated"

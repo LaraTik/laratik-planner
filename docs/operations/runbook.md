@@ -396,3 +396,35 @@ Add the following entry to the VPS-side root crontab so you receive an email ale
 ```
 
 `cron` on the VPS already delivers root's mail to a reachable address (see the existing `monitoring` block in vps-ops `gitops`). The exit-code-as-severity pattern is the simplest reliable alerting without an external dependency.
+
+## Repository protection (GitHub Settings)
+
+The deploy chain is gated in two places: the `ci.yml` workflow (which is code) and the GitHub repository's protection rules (which are configured in the GH UI, not in code). This section is the canonical reference so a new maintainer can reproduce the production posture from a fresh checkout + the runbook.
+
+| Surface                  | Setting                                                               | Where                                      |
+| ------------------------ | --------------------------------------------------------------------- | ------------------------------------------ |
+| `main` branch            | Require CI green (`.github/workflows/ci.yml`) before merge            | Branch protection rules                    |
+| `main` branch            | Require 1 review from `@LaraTik/laratik-planner-maintainers`          | Branch protection rules                    |
+| `main` branch            | Require linear history (no merge commits)                             | Branch protection rules                    |
+| `main` branch            | No force-push                                                         | Branch protection rules                    |
+| `main` branch            | No branch deletion                                                    | Branch protection rules                    |
+| `main` branch            | Require CODEOWNERS review on touched paths (via `.github/CODEOWNERS`) | Branch protection rules                    |
+| `production` environment | Require 1 approval from `@LaraTik/laratik-planner-maintainers`        | Environments → production                  |
+| `production` environment | No wait timer (deploys are time-bounded; the CI gate is the wait)     | Environments → production                  |
+| `production` environment | Restrict to `main` branch only                                        | Environments → production                  |
+| Repository secrets       | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PAT`, `GHCR_USER`        | Settings → Secrets and variables → Actions |
+| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)         | Calendar reminder                          |
+| Workflow file            | Top-level `permissions: contents: read` (default deny)                | All 3 workflows                            |
+| `deploy.yml` job         | `permissions: contents: read, packages: read`                         | `deploy.yml` deploy job                    |
+| `lint-meta` job          | Required for deploy (errors fail the gate)                            | `ci.yml` lint-meta job                     |
+
+These rules are set in the GH web UI; the in-repo artifacts (`CODEOWNERS`, `dependabot.yml`, `zizmor.yml`, top-level `permissions:` blocks) only enforce what they can. The branch-protection + environment-protection + secret-rotation rules must be configured manually on a fresh repo.
+
+### Code-side enforcement already in place
+
+- **Default-deny `permissions:` blocks** at the top of every workflow (`contents: read`). Each job opts in to the scopes it needs.
+- **`persist-credentials: false`** on every `actions/checkout@v4` — keeps the GITHUB_TOKEN out of `.git/config` so a subsequent `git fetch` can't exfiltrate it.
+- **Env-var forwarding of secrets** in `deploy.yml` (no inline `${{ secrets.* }}` expansion into the SSH `script: |`). The `DEPLOY_SHA` is also forwarded via `env:` for the same reason.
+- **`actionlint` + `zizmor` + `hadolint` + `shellcheck`** linters in the `lint-meta` job. Configured via `zizmor.yml` (accepted findings documented inline) and a `hadolint` warning threshold.
+- **Dependabot** for npm + GitHub Actions. Weekly cadence, grouped minor/patch bumps.
+- **CODEOWNERS** for review routing. The maintainer team gets auto-requested on every PR via the `*` rule; narrower rules request specific owners for the deploy chain, auth, and DB migrations.

@@ -46,7 +46,7 @@ ENV HOSTNAME=0.0.0.0
 ARG APP_VERSION=dev
 ENV APP_VERSION=$APP_VERSION
 
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+RUN addgroup -g 1001 -S nodejs && adduser -S -u 1001 -G nodejs nextjs
 
 # Brand-kit local-volume storage (see `src/lib/storage/`). Create
 # the uploads dir at image build time and chown it to the runtime
@@ -54,14 +54,14 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 # (`laratik-planner-app-uploads` in `docker-compose.yml`) is then
 # mounted over this empty dir, so the chown propagates to the
 # mounted volume on first start.
-RUN mkdir -p /data/uploads && chown -R nextjs:nodejs /data/uploads
+RUN mkdir -p /data/uploads && chown -R 1001:1001 /data/uploads
 
 # Static assets + standalone server
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=1001:1001 /app/.next/standalone ./
+COPY --from=builder --chown=1001:1001 /app/.next/static ./.next/static
 
-USER nextjs
+USER 1001
 EXPOSE 3000
 
 # Health check — Docker liveness only. Use the liveness probe so a
@@ -70,7 +70,9 @@ EXPOSE 3000
 # Readiness (DB + schema check) lives at /api/health/ready, which
 # Traefik and the deploy gate probe separately. See
 # docs/testing/strategy.md (Release gates) for the full contract.
+# Exec form (DL3025): `wget --spider` already returns non-zero on any
+# 4xx/5xx/network failure, so the trailing `|| exit 1` is unneeded.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD wget -q --spider http://127.0.0.1:3000/api/health/live || exit 1
+    CMD ["wget", "-q", "--spider", "http://127.0.0.1:3000/api/health/live"]
 
 CMD ["node", "server.js"]

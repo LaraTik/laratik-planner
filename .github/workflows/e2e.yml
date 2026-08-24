@@ -26,11 +26,21 @@ name: E2E
 on:
   workflow_dispatch:
 
+# Default deny: every job must opt-in to the GitHub token scopes it
+# needs. E2E needs read+write for artifact upload; the per-job
+# `permissions:` block grants that. See runbook (Repository protection).
+permissions:
+  contents: read
+
 jobs:
   e2e:
     name: Playwright E2E
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+      checks: read
 
     services:
       postgres:
@@ -61,6 +71,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
         with:
           version: 10.10.0

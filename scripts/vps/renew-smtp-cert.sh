@@ -92,7 +92,6 @@ fi
 log "Attempting renewal via Mailcow bundled acme.sh…"
 if docker exec "$MAILCOW_CONTAINER" which acme.sh >/dev/null 2>&1; then
   run_or_print docker exec "$MAILCOW_CONTAINER" acme.sh --renew -d "$DOMAIN" --force
-  ACME_OK=1
 else
   log "  Mailcow bundled acme.sh not present; trying acme-companion…"
   ACME_CONTAINER="$(docker ps --format '{{.Names}}' \
@@ -108,11 +107,9 @@ else
   # Most acme-companion images expose `/app/force_renew` as a helper.
   if docker exec "$ACME_CONTAINER" test -x /app/force_renew 2>/dev/null; then
     run_or_print docker exec "$ACME_CONTAINER" /app/force_renew
-    ACME_OK=1
   elif docker exec "$ACME_CONTAINER" which certbot >/dev/null 2>&1; then
     # Fallback: invoke certbot directly inside the container.
     run_or_print docker exec "$ACME_CONTAINER" certbot renew --force-renewal --cert-name "$DOMAIN"
-    ACME_OK=1
   else
     log "ERROR: $ACME_CONTAINER has neither /app/force_renew nor certbot."
     log "Inspect it: docker exec -it $ACME_CONTAINER sh"

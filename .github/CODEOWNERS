@@ -1,0 +1,32 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CODEOWNERS — review routing for laratik-planner.
+#
+# The first matching rule wins. Order is broad-first → narrowest-last
+# because GitHub evaluates top-to-bottom.
+#
+# `@LaraTik/laratik-planner-maintainers` is the catch-all team. The
+# narrower rules below auto-request review from a specific person
+# when a PR touches that area; the maintainer team gets auto-requested
+# on every PR via the `*` rule.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Default: every PR gets a maintainer review request.
+*                                       @LaraTik/laratik-planner-maintainers
+
+# Deploy chain + repo protection: critical-blast-radius surfaces.
+/.github/workflows/                    @LaraTik/laratik-planner-maintainers
+/.github/CODEOWNERS                    @LaraTik/laratik-planner-maintainers
+/.github/dependabot.yml                @LaraTik/laratik-planner-maintainers
+/zizmor.yml                             @LaraTik/laratik-planner-maintainers
+/Dockerfile                             @LaraTik/laratik-planner-maintainers
+/docker-compose.yml                     @LaraTik/laratik-planner-maintainers
+/docker-compose.dev.yml                 @LaraTik/laratik-planner-maintainers
+/scripts/                               @LaraTik/laratik-planner-maintainers
+
+# Auth + identity: only the security/identity owner should approve
+# changes to the auth boundary.
+/src/lib/auth/                          @LaraTik/laratik-planner-maintainers
+/src/proxy.ts                           @LaraTik/laratik-planner-maintainers
+
+# Database migrations + schema: Drizzle is the only migration path;
+/src/lib/db/                            @LaraTik/laratik-planner-maintainers

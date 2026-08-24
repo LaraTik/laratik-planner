@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# zizmor.yml — accepted findings for the laratik-planner workflow set.
+#
+# zizmor is a static analyzer for GitHub Actions workflows. It is run
+# from the `lint-meta` job in `.github/workflows/ci.yml` (added in
+# commit `chore(ci): workflow + Dockerfile + shell linters; dependabot;
+# CODEOWNERS; runbook protection section`).
+#
+# This file documents the **accepted** findings — the audit id, the
+# audit's name, the reason we are NOT fixing it now, and the trigger
+# condition (which workflows / which lines). Each accepted finding
+# must have a real reason; do not add findings here to silence the
+# linter.
+#
+# Future work: as we incrementally pin actions to SHA, the
+# `unpinned-uses` rule will become empty. Update the triggers list
+# (or remove the rule) accordingly. Dependabot keeps the pinned SHAs
+# current.
+# ─────────────────────────────────────────────────────────────────────────────
+rules:
+  # ── unpinned-uses ───────────────────────────────────────────────────────────
+  # zizmor requires every `uses:` reference to be pinned to a full 40-char
+  # commit SHA. Pinning is the GH-recommended pattern (defense against
+  # a compromised action tag) and we agree with the principle. The 22+
+  # `uses:` lines across the 3 workflows are still on floating tags
+  # (`@v4`, `@v3`, `@v1`). Pinning them all in a single commit is large
+  # blast-radius work that we'd rather do as its own PR with a Dependabot
+  # config keeping the SHAs current (see `.github/dependabot.yml`).
+  #
+  # Accepted: this is a tracked, scheduled refactor — not a missed fix.
+  unpinned-uses:
+    ignore:
+      # All 3 workflows. Once SHA pinning lands, narrow this to the
+      # remaining unfixed cases (or delete the rule entry).
+      - ci.yml
+      - deploy.yml
+      - e2e.yml
+
+  # ── dangerous-triggers ─────────────────────────────────────────────────────
+  # zizmor flags `workflow_run` as a fundamentally insecure trigger because
+  # the `workflow_run` event is fired by GitHub itself, not by user-supplied
+  # input, and the linked workflow's repo can be changed via the GitHub UI.
+  # We use `workflow_run` deliberately in `deploy.yml` to gate the deploy
+  # on a green `CI` run (the deploy chain does not run on a partial CI).
+  # This is the documented design — see PRODUCTION_READINESS_TRACKER.md
+  # DEP-001 evidence.
+  #
+  # Accepted: design choice, not a missed fix. Removing the `workflow_run`
+  # gate would let a partial CI run ship to production.
+  dangerous-triggers:
+    ignore:
+      - deploy.yml

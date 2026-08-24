@@ -33,6 +33,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Default deny: every job must opt-in to the GitHub token scopes it
+# needs. This is a defense-in-depth check — see
+# docs/operations/runbook.md (Repository protection) for the full contract.
+permissions:
+  contents: read
+
 jobs:
   unit-quality:
     name: Lint, typecheck, unit, integration, coverage, audit
@@ -69,6 +75,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Defense in depth: the default GITHUB_TOKEN is left in the
+          # .git/config after checkout unless we explicitly opt out.
+          # `persist-credentials: false` keeps the token out of any
+          # subsequent `git` command (e.g. an indirect LFS fetch).
+          persist-credentials: false
         timeout-minutes: 5
 
       - name: Setup pnpm
@@ -166,6 +178,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Defense in depth: the default GITHUB_TOKEN is left in the
+          # .git/config after checkout unless we explicitly opt out.
+          # `persist-credentials: false` keeps the token out of any
+          # subsequent `git` command (e.g. an indirect LFS fetch).
+          persist-credentials: false
         timeout-minutes: 5
 
       - name: Setup pnpm
@@ -280,6 +298,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Defense in depth: the default GITHUB_TOKEN is left in the
+          # .git/config after checkout unless we explicitly opt out.
+          # `persist-credentials: false` keeps the token out of any
+          # subsequent `git` command (e.g. an indirect LFS fetch).
+          persist-credentials: false
         timeout-minutes: 5
 
       - name: Install openssl (preinstalled on ubuntu-latest, but be explicit)
@@ -316,3 +340,76 @@ jobs:
           cat /tmp/cert.json 2>/dev/null >> $GITHUB_STEP_SUMMARY \
             || echo '{"note":"cert.json not produced (probe step skipped)"}' >> $GITHUB_STEP_SUMMARY
         timeout-minutes: 1
+
+  lint-meta:
+    # Static-analysis linters for the deploy chain itself. Runs in
+    # parallel with the heavier unit-quality + build-smoke jobs. Every
+    # finding that escapes into `main` is a deploy-time surprise (or a
+    # compromised-action class attack); these linters are the cheap
+    # guard rail.
+    #
+    # Coverage:
+    #   - actionlint  — syntax / structural checks on the 3 workflows
+    #   - zizmor      — security audit of the workflows (template
+    #                   injection, unpinned actions, dangerous triggers,
+    #                   etc.). Configured via `zizmor.yml` at repo root.
+    #   - hadolint    — Dockerfile best practices (exec CMD, numeric
+    #                   USER, no apt pinning anti-patterns, etc.)
+    #   - shellcheck  — shell scripts in scripts/vps/ and scripts/deploy.sh
+    #
+    # All four must pass for the deploy gate to fire. None of them need
+    # the project source — they run on the workflow + Dockerfile +
+    # script files only, so the job is fast (<60s typical).
+    name: Workflow, Dockerfile, shell linters
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+        timeout-minutes: 5
+
+      - name: actionlint
+        # Fast structural + syntax check on all 3 workflows. Surfaces
+        # shellcheck-level findings inside the workflow's `run: |` blocks
+        # (actionlint runs shellcheck internally) and undeclared inputs.
+        uses: reviewdog/action-actionlint@v1
+        with:
+          level: error
+        timeout-minutes: 3
+
+      - name: zizmor
+        # Security audit of the workflows. Uses the project-level
+        # `zizmor.yml` config (which documents the accepted findings:
+        # unpinned-uses and dangerous-triggers on deploy.yml). The
+        # action runs `--persona=regular` (errors only) and
+        # `--min-severity=high` so accepted warnings don't fail the
+        # gate. New errors fail the deploy.
+        uses: woodruffw/zizmor-action@v1
+        with:
+          version: v1.29.0
+          args: --persona=regular --min-severity=high
+        timeout-minutes: 5
+
+      - name: hadolint
+        # Dockerfile best-practices. The image is built from node:20-alpine
+        # so the hadolint Debian image sees nothing to lint beyond what
+        # the Dockerfile itself contains.
+        uses: hadolint/hadolint-action@v3
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+        timeout-minutes: 3
+
+      - name: shellcheck (scripts/vps/*.sh + scripts/deploy.sh)
+        # shellcheck is preinstalled on the GHA runner; use the system
+        # binary rather than a third-party action to keep this step
+        # reproducible. -S warning surfaces real bugs (ACME_OK=1
+        # unused-var was one in renew-smtp-cert.sh) without noise.
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck
+          shellcheck -S warning scripts/vps/*.sh scripts/deploy.sh
+        timeout-minutes: 3
