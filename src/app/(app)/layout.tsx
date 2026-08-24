@@ -7,6 +7,7 @@ import { AppShell } from "@/components/app-shell/app-shell";
 import { countUnreadNotifications, listNotificationsForUser } from "@/lib/notifications/service";
 import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
 import { isPlatformAdmin as checkPlatformAdmin } from "@/lib/auth/platform-admin";
+import { listActiveGrantsForActor } from "@/lib/support";
 import { db } from "@/lib/db";
 import { agencies, agencyMemberships } from "@/lib/db/schema";
 import { and, eq, isNotNull, or } from "drizzle-orm";
@@ -71,6 +72,32 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     listActorAgencies(actor),
   ]);
 
+  // M3.5 — fetch the calling platform admin's active support
+  // access grants so the persistent banner can show. Only
+  // fetched when the actor is a platform admin (the banner is
+  // never shown to non-platform-admins; the support-access
+  // surface is platform-only). The `remainingMinutes` is
+  // pre-computed server-side so the banner component does not
+  // call Date.now() during render (React 19 purity rule).
+  const supportGrantsRaw = platformAdmin ? await listActiveGrantsForActor(actor) : [];
+  // `new Date()` is the React-purity-safe form of the
+  // request-time clock; the resulting object's `getTime()` is
+  // what the banner calculation reads.
+  const requestClock = new Date();
+  const supportGrants = supportGrantsRaw.map((g) => ({
+    id: g.id,
+    targetAgencyId: g.targetAgencyId,
+    scopeWorkspaceId: g.scopeWorkspaceId,
+    scopeMetadataOnly: g.scopeMetadataOnly,
+    downloadsAllowed: g.downloadsAllowed,
+    activatedAt: g.activatedAt.toISOString(),
+    expiresAt: g.expiresAt.toISOString(),
+    remainingMinutes: Math.max(
+      0,
+      Math.floor((g.expiresAt.getTime() - requestClock.getTime()) / 60000),
+    ),
+  }));
+
   // The "active" agency for the sidebar switcher is the singleton
   // (M1.2 / M1.6 invariant). When M1.6 lands and the resolver
   // becomes the canonical source, this becomes the resolver result
@@ -101,6 +128,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }))}
       unreadCount={unreadCount}
       isPlatformAdmin={platformAdmin}
+      supportGrants={supportGrants}
     >
       {children}
     </AppShell>
