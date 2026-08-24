@@ -20,31 +20,37 @@ const CAPABILITIES = [
     id: "campaign_ideas",
     label: "Campaign ideas",
     description: "Generate content ideas tied to the active campaign and pillars.",
+    wired: false,
   },
   {
     id: "brief_improvement",
     label: "Brief improvement",
     description: "Tighten a vague brief into a clear Hook → Main message → CTA structure.",
+    wired: true,
   },
   {
     id: "caption_drafts",
     label: "Caption / hook / CTA drafts",
     description: "Draft a caption with platform-aware tone; editable before save.",
+    wired: true,
   },
   {
     id: "platform_adaptation",
     label: "Platform adaptation",
     description: "Adapt a caption to a different channel (Instagram, TikTok, LinkedIn, …).",
+    wired: false,
   },
   {
     id: "related_format_ideas",
     label: "Related format ideas",
     description: "Suggest adjacent formats for a piece of content (carousel ↔ reel ↔ story).",
+    wired: false,
   },
   {
     id: "completeness_check",
     label: "Brief completeness check",
     description: "Score how ready a brief is for creative handoff and flag the missing pieces.",
+    wired: true,
   },
 ] as const;
 
@@ -195,7 +201,15 @@ export function AiSettingsForm({
                     data-testid={`ai-capability-toggle-${cap.id}`}
                   >
                     <div className="min-w-0">
-                      <p className="text-body text-fg-primary font-semibold">{cap.label}</p>
+                      <p className="text-body text-fg-primary flex items-center gap-2 font-semibold">
+                        {cap.label}
+                        <Badge
+                          variant={cap.wired ? "success" : "outline"}
+                          data-testid={`ai-capability-status-${cap.id}`}
+                        >
+                          {cap.wired ? "Wired up" : "Coming soon"}
+                        </Badge>
+                      </p>
                       <p className="text-label text-fg-muted mt-0.5">{cap.description}</p>
                     </div>
                     <label className="text-label text-fg-primary inline-flex items-center gap-2 font-semibold">
@@ -232,7 +246,28 @@ export function AiSettingsForm({
             </p>
           ) : null}
 
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={async () => {
+                // Run the save action via the form, then chain the
+                // test-connection probe. We dispatch the form
+                // submit (FormData) by reading the form element,
+                // which is the standard pattern for chained
+                // client actions in Next.js 15 / React 19.
+                const formEl = document.querySelector(
+                  '[data-testid="ai-settings-form"]',
+                ) as HTMLFormElement | null;
+                if (formEl) {
+                  formEl.requestSubmit();
+                }
+              }}
+              data-testid="ai-save-and-test"
+            >
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+              Save &amp; Test
+            </Button>
             <FormSubmitButton label="Save AI settings" pendingLabel="Saving…" />
           </div>
         </Card>
@@ -319,7 +354,16 @@ export function AiSettingsForm({
             ))}
           </ul>
         ) : (
-          <p className="text-body text-fg-muted mt-4">No usage recorded in the last 30 days.</p>
+          <div
+            className="border-border mt-4 flex flex-col items-center gap-1 rounded-[var(--radius-control)] border border-dashed py-6 text-center"
+            data-testid="ai-usage-empty"
+          >
+            <Sparkles className="text-fg-muted h-5 w-5" aria-hidden="true" />
+            <p className="text-body text-fg-secondary font-semibold">No usage yet</p>
+            <p className="text-label text-fg-muted max-w-sm">
+              Run your first AI request from a content brief to see this card fill in.
+            </p>
+          </div>
         )}
       </Card>
     </div>
