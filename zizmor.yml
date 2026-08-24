@@ -50,3 +50,10 @@ rules:
   dangerous-triggers:
     ignore:
       - deploy.yml
+      # release.yml uses `workflow_run: [Deploy]` to create one
+      # release per successful deploy. The "dangerous" concern is
+      # that the linked workflow can be changed via the GH UI, but
+      # the `workflows: [Deploy]` lock restricts it to the Deploy
+      # workflow (and Deploy itself is gated by CI). Without this
+      # trigger there is no automated release trail.
+      - release.yml

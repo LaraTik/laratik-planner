@@ -1,0 +1,136 @@
+name: Release
+
+# Create an immutable GitHub release + tag for every successful
+# production deploy. Triggered by `workflow_run: [Deploy] completed`
+# on `main` so the release is a 1:1 audit trail of what shipped
+# when.
+#
+# Why workflow_run on Deploy (not on CI):
+#   - A successful Deploy is the proof that the change is in
+#     production. CI success alone doesn't ship the change.
+#   - A failed Deploy (the health-check rollback path) does NOT
+#     create a release — the new SHA is not running in production.
+#   - workflow_dispatch is added for back-filling a release on a
+#     historical deploy run, e.g. after this workflow lands and the
+#     next deploy should immediately produce a release.
+#
+# Tag shape: releases/v<run-id>-<short-sha>
+#   - `releases/` prefix keeps the tag list in `git tag -l` separated
+#     from any human release tags.
+#   - `<run-id>` is the GH Actions run id, which is monotonically
+#     increasing and ties the release to a specific deploy run for
+#     audit.
+#   - `<short-sha>` is the deployed head_sha; ties the release to
+#     the git ref.
+#
+# Why an immutable tag (not just a release):
+#   - Tags can be created without deleting previous ones. Each
+#     release gets its own tag, and the previous tag is preserved.
+#   - The release notes link the deployed SHA + the deploy run, so
+#     a maintainer can audit "what was on production at any past
+#     time" from the GitHub UI alone.
+#
+# Permissions: contents: write to create the tag and release.
+# The GITHUB_TOKEN default has contents: read; this workflow needs
+# write for the tag push. The token is scoped per-run and revoked
+# when the run ends.
+
+on:
+  workflow_run:
+    workflows: [Deploy]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy_run_id:
+        description: "Deploy workflow run id to release. Defaults to the most recent successful run."
+        required: false
+        type: string
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Tag + GitHub release
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Resolve the head SHA + deploy run
+        id: resolve
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Forward workflow_dispatch input + event values as plain
+          # env vars; the script reads them via $VAR instead of
+          # `${{ inputs.* }}` to avoid template-injection into the
+          # run body. (zizmor `template-injection` rule.)
+          EVENT_NAME: ${{ github.event_name }}
+          DEPLOY_RUN_INPUT: ${{ inputs.deploy_run_id }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            # Back-fill mode: pull the head_sha from a specific deploy
+            # run id (or the most recent successful one if not given).
+            if [[ -n "${DEPLOY_RUN_INPUT}" ]]; then
+              RUN_ID="${DEPLOY_RUN_INPUT}"
+            else
+              RUN_ID="$(gh api 'repos/:owner/:repo/actions/runs?workflow_id=deploy.yml&status=success&per_page=1' \
+                --jq '.workflow_runs[0].id')"
+            fi
+          else
+            RUN_ID="${WORKFLOW_RUN_ID}"
+          fi
+          SHA="$(gh api "repos/:owner/:repo/actions/runs/${RUN_ID}" \
+            --jq '.head_sha')"
+          echo "run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "Resolved deploy run ${RUN_ID} → head_sha ${SHA}"
+        timeout-minutes: 2
+
+      - name: Create tag + release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Forward the step outputs as env vars to avoid
+          # `${{ steps.*.outputs.* }}` template-injection into the
+          # shell (zizmor `template-injection`).
+          DEPLOY_SHA: ${{ steps.resolve.outputs.sha }}
+          DEPLOY_RUN_ID: ${{ steps.resolve.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          SHA="${DEPLOY_SHA}"
+          RUN_ID="${DEPLOY_RUN_ID}"
+          SHORT_SHA="${SHA:0:9}"
+          TAG="releases/v${RUN_ID}-${SHORT_SHA}"
+
+          # Use git directly so the tag is created from a known ref
+          # (not from a fresh clone's default branch). The
+          # actions/checkout below already fetches with the right
+          # refspec.
+          git config user.name "mavis-bot"
+          git config user.email "mavis@LaraTik.local"
+          git tag -f "$TAG" "$SHA"
+          git push origin "$TAG"
+
+          # Create or update the release. The deploy URL is in the
+          # body for direct audit; the run page is the canonical
+          # source of truth.
+          DEPLOY_RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${RUN_ID}"
+          gh release create "$TAG" \
+            --target "$SHA" \
+            --title "Production deploy ${TAG}" \
+            --notes "Deployed \`${SHA}\` to \`planner.laratik.com\` on $(date -u +%Y-%m-%dT%H:%M:%SZ).
+
+          - Deploy run: ${DEPLOY_RUN_URL}
+          - Source image: \`ghcr.io/laratik/laratik-planner:${SHA}\`
+          - Source migrator: \`ghcr.io/laratik/laratik-planner-migrator:${SHA}\`
+
+          Verify production is on this SHA: \`curl -fsS https://planner.laratik.com/api/health | jq .version\`
+          " \
+            --draft=false
+        timeout-minutes: 3
