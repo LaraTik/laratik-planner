@@ -62,7 +62,17 @@
    curl -sS http://localhost:3100/api/health | jq   # until DNS is set up; or https://planner.laratik.com/api/health
    ```
    Expected: `{"ok":true,"db":"up","env":"production",...}`
-10. Install the backup cron (see below).
+10. Install the backup + cert-check crons:
+
+    ```bash
+    sudo ./scripts/vps/install-cron.sh
+    ```
+
+    Idempotent: re-running is a no-op. Installs both the daily `pg_dump` backup
+    and the daily `mail.laratik.com:465` cert-expiry probe into
+    `/etc/cron.d/laratik-planner`. See the Backup and SMTP-certificate-management
+    sections below for what each entry does.
+
 11. Set up Google OAuth: in Google Cloud Console, add `https://planner.laratik.com/api/auth/callback/google` as an authorized redirect URI, then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env` and `docker compose up -d app`.
 12. Set up Mailcow mailbox `no-reply@planner.laratik.com` (Mailcow admin → Mailboxes → Add), then set `SMTP_PASSWORD` in `.env` and `docker compose up -d app`.
 13. **GHCR credential for the deploy workflow**: the `ghcr.io/laratik/laratik-planner{-migrator}` images are private. The VPS-side `scripts/deploy.sh` does `echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin` before pulling, but the credential comes from the GitHub repo secrets, not from the VPS filesystem. Set them once:

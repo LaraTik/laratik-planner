@@ -97,8 +97,10 @@ laratik-planner/
 ├── docker-compose.yml              # prod: app + postgres (Traefik labels)
 ├── docker-compose.dev.yml          # local: postgres only (app runs native)
 ├── .github/workflows/
-│   ├── ci.yml                      # lint, typecheck, test, build, smoke e2e
-│   └── deploy.yml                  # main push → build + push GHCR → ssh deploy
+│   ├── ci.yml                      # deploy-gate: unit/integration/coverage/audit/build/smoke/smtp-cert
+│   ├── e2e.yml                     # workflow_dispatch: 5-browser + visual-chromium (release-candidate only)
+│   └── deploy.yml                  # workflow_run: CI success → build+push GHCR → ssh deploy
+#                                    # Release-gate contract: docs/testing/strategy.md (Release gates)
 ├── src/
 │   ├── app/                        # App Router
 │   │   ├── layout.tsx              # Inter + StudioFlow tokens
@@ -215,15 +217,17 @@ Per StudioFlow §15:
 | 11  | Optional MiniMax assistance                                 | ✅     | Gated by `AI_FEATURE_ENABLED`; capability entry points on content detail (`b4e210b`)                                                 |
 | 12  | Responsive completion, accessibility, visual fidelity, perf | ✅     | 23 unique routes × 6 viewports = 138 responsive baselines (`a9fa300`, `3d40183`)                                                     |
 | 13  | Security hardening, observability, CI, staging, recovery    | ✅     | Sentry + restic offsite + visual-test deploy gate                                                                                    |
-| 14  | UAT, production deployment, final proof                     | ⏳     | Verdict: `READY FOR INDEPENDENT REVIEW` (2026-08-21)                                                                                 |
+| 14  | UAT, production deployment, final proof                     | ⏳     | Verdict: `READY FOR INDEPENDENT REVIEW` (2026-08-24, post-M3 merge `4a999fe`)                                                        |
 
 See `docs/implementation/progress.md` for the live per-task checklist.
 
-**Release verdict (2026-08-21):** `READY FOR INDEPENDENT REVIEW` (shared across
+**Release verdict (2026-08-24):** `READY FOR INDEPENDENT REVIEW` (shared across
 `PRODUCTION_READINESS_TRACKER.md` and `docs/production-readiness/UAT_RELEASE.md`).
 The independent reviewer (Task 13) flips the verdict to `READY` after the
 30-step §23 journey and the owner checks in
 `docs/production-readiness/EXTERNAL_SERVICES_UAT.md` are signed.
+
+> Workflow contract — see `docs/testing/strategy.md` (Release gates). `ci.yml` is the **deploy-gate** (format, lint, typecheck, unit, integration, coverage, audit, build, Docker smoke, SMTP-cert probe). `e2e.yml` is **release-candidate-only** under `workflow_dispatch` (5-browser + visual-chromium). `deploy.yml` fires on `workflow_run: CI success` and only deploys the exact `head_sha` (no `:latest`-only deploys).
 
 ## Conventions
 
