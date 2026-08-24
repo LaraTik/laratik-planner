@@ -232,6 +232,188 @@ describe("M4.6 — publish package lifecycle (integration)", () => {
     expect((after?.revision ?? -1) > (before?.revision ?? 0)).toBe(true);
   });
 
+  it("keeps final-copy approval server-owned and resets it after a material edit", async () => {
+    const { workspaceId, contentItemId, managerId } = await seedWorkspaceAndContentItem();
+    const { channelId } = await seedSocialChannel(workspaceId);
+    await attachChannel(contentItemId, channelId);
+    const actor = { id: managerId };
+    const payload = {
+      schemaVersion: 1 as const,
+      platform: "instagram" as const,
+      feedCrop: "1:1" as const,
+      caption: "Approved copy",
+      altText: "A campaign image",
+      hashtags: [],
+      mentions: [],
+      collaborators: [],
+      carouselOrder: [],
+      disclosures: {
+        paidPartnership: false,
+        aiGenerated: false,
+        syntheticMedia: false,
+        rightsConfirmed: true,
+      },
+      publicationMethod: "api" as const,
+      approval: {
+        finalCopyApproved: true,
+        approvedByUserId: managerId,
+        approvedAt: new Date().toISOString(),
+      },
+      deliveryReferences: [],
+      selectedDestinationProfile: { socialChannelId: channelId },
+    };
+
+    await publishing.savePlatformPayload(actor, workspaceId, {
+      contentItemId,
+      socialChannelId: channelId,
+      payload,
+    });
+    let saved = await publishing.readPlatformPayload({
+      actor,
+      workspaceId,
+      contentItemId,
+      socialChannelId: channelId,
+    });
+    expect(saved?.approval).toEqual({
+      finalCopyApproved: false,
+      approvedByUserId: null,
+      approvedAt: null,
+    });
+
+    saved = await publishing.setFinalCopyApproval(actor, workspaceId, {
+      contentItemId,
+      socialChannelId: channelId,
+      approved: true,
+    });
+    expect(saved.approval.finalCopyApproved).toBe(true);
+    expect(saved.approval.approvedByUserId).toBe(managerId);
+    expect(saved.approval.approvedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+
+    await publishing.savePlatformPayload(actor, workspaceId, {
+      contentItemId,
+      socialChannelId: channelId,
+      payload: { ...saved, caption: "Materially revised copy" },
+    });
+    const revised = await publishing.readPlatformPayload({
+      actor,
+      workspaceId,
+      contentItemId,
+      socialChannelId: channelId,
+    });
+    expect(revised?.approval.finalCopyApproved).toBe(false);
+  });
+
+  it("rejects final-copy approval from a non-admin workspace planner", async () => {
+    const { workspaceId, contentItemId } = await seedWorkspaceAndContentItem();
+    const { channelId } = await seedSocialChannel(workspaceId);
+    await attachChannel(contentItemId, channelId);
+    const [workspace] = await db
+      .select({ agencyId: schema.workspaces.agencyId })
+      .from(schema.workspaces)
+      .where(sql`${schema.workspaces.id} = ${workspaceId}`)
+      .limit(1);
+    if (!workspace) throw new Error("workspace lookup failed");
+    const [planner] = await db
+      .insert(schema.users)
+      .values({
+        email: `planner-${Date.now()}@example.com`,
+        displayName: "Planner",
+        name: "Planner",
+      })
+      .returning();
+    if (!planner) throw new Error("planner seed failed");
+    await db.insert(schema.agencyMemberships).values({
+      userId: planner.id,
+      agencyId: workspace.agencyId,
+      isAgencyAdmin: false,
+      status: "active",
+    });
+    const [membership] = await db
+      .insert(schema.workspaceMemberships)
+      .values({ userId: planner.id, workspaceId, status: "active" })
+      .returning();
+    if (!membership) throw new Error("membership seed failed");
+    await db.insert(schema.workspaceMembershipRoles).values({
+      workspaceMembershipId: membership.id,
+      role: "content_planner",
+    });
+
+    await expect(
+      publishing.setFinalCopyApproval({ id: planner.id }, workspaceId, {
+        contentItemId,
+        socialChannelId: channelId,
+        approved: true,
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("confirms readiness only after a complete, approved package reaches publish status", async () => {
+    const { workspaceId, contentItemId, managerId } = await seedWorkspaceAndContentItem();
+    const { channelId } = await seedSocialChannel(workspaceId);
+    await attachChannel(contentItemId, channelId);
+    const [delivery] = await db
+      .insert(schema.deliveryVersions)
+      .values({
+        contentItemId,
+        versionNumber: 1,
+        description: "Final creative",
+        submittedBy: managerId,
+        isFinalApproved: true,
+      })
+      .returning();
+    if (!delivery) throw new Error("delivery seed failed");
+    await db
+      .update(schema.contentItems)
+      .set({ status: "ready_to_publish", approvedDeliveryVersionId: delivery.id })
+      .where(sql`${schema.contentItems.id} = ${contentItemId}`);
+
+    const actor = { id: managerId };
+    await publishing.savePlatformPayload(actor, workspaceId, {
+      contentItemId,
+      socialChannelId: channelId,
+      payload: {
+        schemaVersion: 1,
+        platform: "instagram",
+        feedCrop: "1:1",
+        caption: "Ready to publish",
+        altText: "A complete campaign image",
+        hashtags: [],
+        mentions: [],
+        collaborators: [],
+        carouselOrder: [],
+        disclosures: {
+          paidPartnership: false,
+          aiGenerated: false,
+          syntheticMedia: false,
+          rightsConfirmed: true,
+        },
+        publicationMethod: "api",
+        approval: { finalCopyApproved: false, approvedByUserId: null, approvedAt: null },
+        deliveryReferences: [{ deliveryVersionId: delivery.id, role: "primary" }],
+        selectedDestinationProfile: { socialChannelId: channelId },
+      },
+    });
+    await publishing.setFinalCopyApproval(actor, workspaceId, {
+      contentItemId,
+      socialChannelId: channelId,
+      approved: true,
+    });
+
+    const report = await publishing.confirmPublishReadiness(actor, {
+      workspaceId,
+      contentItemId,
+    });
+    expect(report.canPublish).toBe(true);
+    expect(report.blockers).toBe(0);
+
+    const events = await db.execute(sql`
+      SELECT summary FROM activity_event
+      WHERE content_item_id = ${contentItemId}
+        AND summary = 'Publish package confirmed ready'
+    `);
+    expect(events.rows).toHaveLength(1);
+  });
+
   it("readiness blocks when final-copy approval is missing", async () => {
     const { workspaceId, contentItemId, managerId } = await seedWorkspaceAndContentItem();
     const { channelId } = await seedSocialChannel(workspaceId);

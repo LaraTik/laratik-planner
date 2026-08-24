@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import {
   approvalRequests,
+  activityEvents,
   contentItemChannels,
   contentItems,
   deliveryVersions,
@@ -119,6 +120,12 @@ export interface ReadinessInput {
    */
   aiSuggestions?: Array<{ path: string; message: string; code?: string }>;
 }
+
+export const ConfirmPublishReadinessInputSchema = z.object({
+  workspaceId: z.string().uuid(),
+  contentItemId: z.string().uuid(),
+});
+export type ConfirmPublishReadinessInput = z.infer<typeof ConfirmPublishReadinessInputSchema>;
 
 // ─── Required-field registry ────────────────────────────────────────────
 
@@ -610,6 +617,73 @@ export async function evaluateReadiness(input: ReadinessInput): Promise<Readines
     issues: allIssues,
     channels: perChannel,
   };
+}
+
+/**
+ * Server-authoritative acknowledgement behind the “Ready for publishing”
+ * action. Creative approval owns the workflow status transition; this
+ * command re-evaluates the package and records an immutable confirmation
+ * only when the current revision has no blockers.
+ */
+export async function confirmPublishReadiness(
+  actor: Actor,
+  input: ConfirmPublishReadinessInput,
+): Promise<ReadinessReport> {
+  const parsed = ConfirmPublishReadinessInputSchema.parse(input);
+  const allowed = await hasWorkspaceRole(actor, parsed.workspaceId, [
+    "workspace_manager",
+    "content_planner",
+    "publisher",
+  ]);
+  if (!allowed) {
+    throw new ReadinessError("FORBIDDEN", "You cannot confirm publishing readiness.");
+  }
+
+  const report = await evaluateReadiness({ actor, ...parsed });
+  if (!report.canPublish || report.blockers > 0) {
+    throw new ReadinessError(
+      "INVALID",
+      `Resolve ${report.blockers} publishing blocker${report.blockers === 1 ? "" : "s"} first.`,
+      { report },
+    );
+  }
+
+  const [item] = await db
+    .select({ status: contentItems.status, revision: contentItems.revision })
+    .from(contentItems)
+    .where(
+      and(
+        eq(contentItems.id, parsed.contentItemId),
+        eq(contentItems.workspaceId, parsed.workspaceId),
+      ),
+    )
+    .limit(1);
+  if (!item) throw new ReadinessError("NOT_FOUND", "Content item not found.");
+  if (!["ready_to_publish", "partially_published"].includes(item.status)) {
+    throw new ReadinessError(
+      "INVALID",
+      `Content must complete creative approval before publishing (currently ${item.status}).`,
+    );
+  }
+  if (item.revision !== report.revision) {
+    throw new ReadinessError("INVALID", "The package changed. Review readiness and try again.");
+  }
+
+  await db.insert(activityEvents).values({
+    workspaceId: parsed.workspaceId,
+    contentItemId: parsed.contentItemId,
+    actorId: actor.id,
+    kind: "status_transition",
+    summary: "Publish package confirmed ready",
+    afterData: { status: item.status, revision: report.revision },
+    metadata: {
+      resource: "publish_readiness",
+      blockers: report.blockers,
+      recommendations: report.recommendations,
+      material: false,
+    },
+  });
+  return report;
 }
 
 /**

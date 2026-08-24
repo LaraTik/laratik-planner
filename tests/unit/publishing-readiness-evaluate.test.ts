@@ -55,7 +55,13 @@ function makeDrizzleMock(state: DrizzleState) {
   }
   const select = vi.fn(() => makeChain());
   const update = vi.fn();
-  return { select, insert: vi.fn(), update, state };
+  const insertChain = {
+    values: vi.fn((values: unknown) => {
+      state.insertCalls.push({ values });
+      return Promise.resolve();
+    }),
+  };
+  return { select, insert: vi.fn(() => insertChain), update, state };
 }
 
 const dbState: DrizzleState = vi.hoisted(() => ({
@@ -77,10 +83,10 @@ vi.mock("@/lib/auth/policy", async () => {
   return { ...actual, hasWorkspaceRole: policyMock.hasWorkspaceRole };
 });
 
-const { evaluateReadiness } = await import("@/lib/publishing/readiness");
+const { confirmPublishReadiness, evaluateReadiness } = await import("@/lib/publishing/readiness");
 
 const actor = { id: "99999999-9999-9999-9999-999999999999" };
-const workspaceId = "ws-1";
+const workspaceId = "88888888-8888-4888-8888-888888888888";
 const contentItemId = "11111111-1111-1111-1111-111111111111";
 const instagramChannelId = "22222222-2222-2222-2222-222222222222";
 const youtubeChannelId = "33333333-3333-3333-3333-333333333333";
@@ -120,6 +126,30 @@ function channelRow(overrides: Record<string, unknown> = {}) {
     platformPayload: null,
     platform: "instagram",
     ...overrides,
+  };
+}
+
+function readyInstagramPayload() {
+  return {
+    schemaVersion: 1 as const,
+    platform: "instagram" as const,
+    feedCrop: "1:1" as const,
+    carouselOrder: [],
+    altText: "A planner's desk",
+    caption: "Caption present",
+    disclosures: {
+      paidPartnership: false,
+      aiGenerated: false,
+      syntheticMedia: false,
+      rightsConfirmed: true,
+    },
+    publicationMethod: "api" as const,
+    approval: { finalCopyApproved: true },
+    hashtags: [],
+    mentions: [],
+    collaborators: [],
+    deliveryReferences: [],
+    selectedDestinationProfile: { socialChannelId: instagramChannelId },
   };
 }
 
@@ -429,5 +459,59 @@ describe("evaluateReadiness", () => {
       expect(channel.blockerCount).toBeGreaterThanOrEqual(2);
     }
     expect(report.canPublish).toBe(false);
+  });
+});
+
+describe("confirmPublishReadiness", () => {
+  function queueReadyEvaluation(confirmRow: Record<string, unknown>) {
+    dbState.selectResults.push([contentItemRow()]);
+    dbState.selectResults.push([channelRow({ platformPayload: readyInstagramPayload() })]);
+    dbState.selectResults.push([]);
+    dbState.selectResults.push([{ id: deliveryVersionId }]);
+    dbState.selectResults.push([confirmRow]);
+  }
+
+  it("rejects actors without a publishing role", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    await expect(
+      confirmPublishReadiness(actor, { workspaceId, contentItemId }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("revalidates and rejects packages that still have blockers", async () => {
+    dbState.selectResults.push([contentItemRow()]);
+    dbState.selectResults.push([channelRow({ platformPayload: null })]);
+    dbState.selectResults.push([]);
+    dbState.selectResults.push([{ id: deliveryVersionId }]);
+    await expect(
+      confirmPublishReadiness(actor, { workspaceId, contentItemId }),
+    ).rejects.toMatchObject({ code: "INVALID" });
+  });
+
+  it("requires the creative workflow to have reached publish status", async () => {
+    queueReadyEvaluation({ status: "draft", revision: 0 });
+    await expect(
+      confirmPublishReadiness(actor, { workspaceId, contentItemId }),
+    ).rejects.toMatchObject({ code: "INVALID" });
+  });
+
+  it("rejects a package that changed after readiness evaluation", async () => {
+    queueReadyEvaluation({ status: "ready_to_publish", revision: 1 });
+    await expect(
+      confirmPublishReadiness(actor, { workspaceId, contentItemId }),
+    ).rejects.toMatchObject({ code: "INVALID" });
+  });
+
+  it("records an immutable confirmation for a ready revision", async () => {
+    queueReadyEvaluation({ status: "ready_to_publish", revision: 0 });
+    const report = await confirmPublishReadiness(actor, { workspaceId, contentItemId });
+    expect(report.canPublish).toBe(true);
+    expect(dbState.insertCalls).toHaveLength(1);
+    expect(dbState.insertCalls[0]?.values).toEqual(
+      expect.objectContaining({
+        summary: "Publish package confirmed ready",
+        actorId: actor.id,
+      }),
+    );
   });
 });

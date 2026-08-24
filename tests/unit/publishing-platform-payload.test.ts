@@ -76,7 +76,22 @@ function makeDrizzleMock(state: DrizzleState) {
   });
   const update = vi.fn(() => updateChain);
 
-  return { select, insert: vi.fn(), update, state };
+  const insertChain: Record<string, unknown> = {};
+  insertChain.values = vi.fn((values: unknown) => {
+    state.insertCalls.push({ values });
+    return Promise.resolve();
+  });
+  const mock: Record<string, unknown> = {
+    select,
+    insert: vi.fn(() => insertChain),
+    update,
+    execute: vi.fn(async () => undefined),
+  };
+  mock.transaction = vi.fn(async (callback: (tx: Record<string, unknown>) => unknown) =>
+    callback(mock),
+  );
+
+  return { ...mock, state };
 }
 
 const dbState: DrizzleState = vi.hoisted(() => ({
@@ -91,11 +106,16 @@ vi.mock("@/lib/db", () => ({ db: dbMock }));
 
 const policyMock = vi.hoisted(() => ({
   hasWorkspaceRole: vi.fn(async () => true as boolean),
+  isAgencyAdmin: vi.fn(async () => true as boolean),
 }));
 
 vi.mock("@/lib/auth/policy", async () => {
   const actual = await vi.importActual<typeof import("@/lib/auth/policy")>("@/lib/auth/policy");
-  return { ...actual, hasWorkspaceRole: policyMock.hasWorkspaceRole };
+  return {
+    ...actual,
+    hasWorkspaceRole: policyMock.hasWorkspaceRole,
+    isAgencyAdmin: policyMock.isAgencyAdmin,
+  };
 });
 
 // Typed as a generic `(...args: unknown[]) => Promise<unknown>` so
@@ -126,6 +146,7 @@ vi.mock("@/lib/publishing/materiality", async (importOriginal) => {
 
 const {
   savePlatformPayload,
+  setFinalCopyApproval,
   readPlatformPayload,
   readAllChannelPayloads,
   clearChannelPayload,
@@ -145,6 +166,8 @@ function resetState() {
   dbState.lastSelectRowCount = 0;
   policyMock.hasWorkspaceRole.mockReset();
   policyMock.hasWorkspaceRole.mockResolvedValue(true);
+  policyMock.isAgencyAdmin.mockReset();
+  policyMock.isAgencyAdmin.mockResolvedValue(true);
   materialityMock.recordMaterialityEvent.mockReset();
   materialityMock.recordMaterialityEvent.mockResolvedValue({
     revision: 1,
@@ -256,7 +279,24 @@ describe("savePlatformPayload", () => {
     // The upsert was called with the parsed payload.
     const upsert = dbState.updateCalls[0];
     expect(upsert).toBeDefined();
-    expect((upsert?.set as Record<string, unknown>).platformPayload).toEqual(payload);
+    const draftFields: Record<string, unknown> = { ...payload };
+    delete draftFields.approval;
+    delete draftFields.captions;
+    expect((upsert?.set as Record<string, unknown>).platformPayload).toEqual(
+      expect.objectContaining({
+        ...draftFields,
+        approval: {
+          finalCopyApproved: false,
+          approvedByUserId: null,
+          approvedAt: null,
+        },
+      }),
+    );
+    expect(result.approval).toEqual({
+      finalCopyApproved: false,
+      approvedByUserId: null,
+      approvedAt: null,
+    });
     // The materiality service was invoked with the platform_payload
     // resource + the platform_payload.save reason code.
     expect(materialityMock.recordMaterialityEvent).toHaveBeenCalledTimes(1);
@@ -290,6 +330,79 @@ describe("savePlatformPayload", () => {
         } as unknown as Parameters<typeof savePlatformPayload>[2]["payload"],
       }),
     ).rejects.toThrow();
+  });
+});
+
+describe("setFinalCopyApproval", () => {
+  it("requires an existing workspace", async () => {
+    dbState.selectResults.push([]);
+    await expect(
+      setFinalCopyApproval(actor, workspaceId, {
+        contentItemId,
+        socialChannelId,
+        approved: true,
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("rejects a non-admin actor before touching the channel", async () => {
+    dbState.selectResults.push([{ agencyId: "agency-1" }]);
+    policyMock.isAgencyAdmin.mockResolvedValue(false);
+    await expect(
+      setFinalCopyApproval(actor, workspaceId, {
+        contentItemId,
+        socialChannelId,
+        approved: true,
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("requires a saved package before approval", async () => {
+    dbState.selectResults.push([{ agencyId: "agency-1" }]);
+    dbState.selectResults.push([{ id: "channel-link" }]);
+    dbState.selectResults.push([{ platformPayload: null }]);
+    await expect(
+      setFinalCopyApproval(actor, workspaceId, {
+        contentItemId,
+        socialChannelId,
+        approved: true,
+      }),
+    ).rejects.toMatchObject({ code: "INVALID" });
+  });
+
+  it("stamps actor and timestamp and records an audit event", async () => {
+    dbState.selectResults.push([{ agencyId: "agency-1" }]);
+    dbState.selectResults.push([{ id: "channel-link" }]);
+    dbState.selectResults.push([{ platformPayload: makePayload({ approval: undefined }) }]);
+    const result = await setFinalCopyApproval(actor, workspaceId, {
+      contentItemId,
+      socialChannelId,
+      approved: true,
+    });
+    expect(result.approval.finalCopyApproved).toBe(true);
+    expect(result.approval.approvedByUserId).toBe(actor.id);
+    expect(result.approval.approvedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(dbState.updateCalls).toHaveLength(1);
+    expect(dbState.insertCalls).toHaveLength(1);
+    expect(dbState.insertCalls[0]?.values).toEqual(
+      expect.objectContaining({ summary: "Final copy approved", actorId: actor.id }),
+    );
+  });
+
+  it("revokes approval by clearing server-owned metadata", async () => {
+    dbState.selectResults.push([{ agencyId: "agency-1" }]);
+    dbState.selectResults.push([{ id: "channel-link" }]);
+    dbState.selectResults.push([{ platformPayload: makePayload() }]);
+    const result = await setFinalCopyApproval(actor, workspaceId, {
+      contentItemId,
+      socialChannelId,
+      approved: false,
+    });
+    expect(result.approval).toEqual({
+      finalCopyApproved: false,
+      approvedByUserId: null,
+      approvedAt: null,
+    });
   });
 });
 
