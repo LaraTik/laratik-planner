@@ -92,7 +92,11 @@ export default async function SetupPage() {
       </form>
 
       <p className="text-label text-fg-muted text-center">
-        Signed in as <span className="text-fg-primary font-semibold">{session.user.email}</span>.{" "}
+        Signed in as{" "}
+        <span className="text-fg-primary font-semibold" data-testid="setup-signed-in-email">
+          {session.user.email}
+        </span>
+        .{" "}
         <Link
           href="/api/auth/signout"
           className="text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"

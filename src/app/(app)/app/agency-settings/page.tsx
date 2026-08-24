@@ -151,6 +151,11 @@ export default async function AgencySettingsPage() {
             <Service
               label="Sentry"
               enabled={!!serverEnv.SENTRY_DSN}
+              // Half-configured: SENTRY_DSN is set but SENTRY_AUTH_TOKEN
+              // is not. Sentry still works for error reporting; the
+              // token is only needed for sourcemap uploads. Show a
+              // warning so the operator knows what's missing.
+              variant={serverEnv.SENTRY_DSN && !serverEnv.SENTRY_AUTH_TOKEN ? "warning" : undefined}
               testId="agency-service-sentry"
             />
           </div>
@@ -211,16 +216,29 @@ function Service({
   enabled,
   testId,
   href,
+  variant,
 }: {
   label: string;
   enabled: boolean;
   testId?: string;
   href?: string;
+  // Override the default variant (success for enabled, outline
+  // for disabled). The Sentry row uses this to surface a
+  // "Partially configured" warning when DSN is set but the
+  // auth token is not.
+  variant?: "success" | "outline" | "warning" | undefined;
 }) {
+  const resolvedVariant: "success" | "outline" | "warning" =
+    variant ?? (enabled ? "success" : "outline");
+  const labelText = !enabled
+    ? "Disabled"
+    : resolvedVariant === "warning"
+      ? "Partially configured"
+      : "Configured";
   const inner = (
     <>
       <span className="text-body text-fg-primary">{label}</span>
-      <Badge variant={enabled ? "success" : "outline"}>{enabled ? "Configured" : "Disabled"}</Badge>
+      <Badge variant={resolvedVariant}>{labelText}</Badge>
     </>
   );
   if (href) {

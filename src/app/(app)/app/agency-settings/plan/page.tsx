@@ -54,7 +54,18 @@ export default async function AgencyPlanPage() {
         description={`Read-only limits for the ${entitlement.planName} plan. Existing work remains available if a limit is reduced.`}
         action={
           <Link
-            href="mailto:support@laratik.com?subject=Planner%20limit%20change"
+            href={
+              "mailto:support@laratik.com" +
+              "?subject=" +
+              encodeURIComponent("Planner limit change request") +
+              "&body=" +
+              encodeURIComponent(
+                "Hello,\n\nI'd like to request a limit change for my agency.\n\n" +
+                  "Agency name:\nWorkspace: " +
+                  (typeof window !== "undefined" ? window.location.pathname : "") +
+                  "\n\nCurrent limits / usage: see /app/agency-settings/plan\n\nReason:\n",
+              )
+            }
             className="bg-primary text-primary-foreground text-button rounded-[var(--radius-control)] px-3 py-2 font-semibold"
           >
             Request limit change
