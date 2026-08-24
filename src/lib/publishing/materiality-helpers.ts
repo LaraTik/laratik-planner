@@ -35,12 +35,15 @@ export {
 } from "./payload-schemas";
 export {
   SavePlatformPayloadInputSchema,
+  FinalCopyApprovalInputSchema,
   savePlatformPayload,
+  setFinalCopyApproval,
   readPlatformPayload,
   readAllChannelPayloads,
   clearChannelPayload,
   PlatformPayloadError,
   type SavePlatformPayloadInput,
+  type FinalCopyApprovalInput,
 } from "./platform-payload-service";
 export {
   MATERIAL_RESOURCES,
@@ -63,6 +66,8 @@ export {
   ChannelReadinessSchema,
   ReadinessIssueSeveritySchema,
   evaluateReadiness,
+  ConfirmPublishReadinessInputSchema,
+  confirmPublishReadiness,
   foldAiSuggestions,
   ReadinessError,
   type ReadinessReport,
@@ -70,4 +75,5 @@ export {
   type ChannelReadiness,
   type ReadinessIssueSeverity,
   type ReadinessInput,
+  type ConfirmPublishReadinessInput,
 } from "./readiness";

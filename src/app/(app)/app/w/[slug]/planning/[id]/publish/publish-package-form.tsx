@@ -7,7 +7,13 @@ import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { savePublishPackageAction, recordInternalNoteAction } from "./actions";
+import { ReasonDialog } from "@/components/forms/reason-dialog";
+import {
+  confirmPublishReadinessAction,
+  recordInternalNoteAction,
+  savePublishPackageAction,
+  setFinalCopyApprovalAction,
+} from "./actions";
 import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
 
 /**
@@ -172,20 +178,28 @@ function defaultPayloadFor(platform: string): PlatformPayload {
 
 export function PublishPackageForm({
   workspaceId,
+  workspaceSlug,
   contentItemId,
   itemTitle,
   itemFormat,
   channels,
   deliveryVersions,
   readiness,
+  canEdit,
+  canApproveFinalCopy,
+  canConfirmReadiness,
 }: {
   workspaceId: string;
+  workspaceSlug: string;
   contentItemId: string;
   itemTitle: string;
   itemFormat: string;
   channels: ChannelSummary[];
   deliveryVersions: DeliveryVersionSummary[];
   readiness: ReadinessReport;
+  canEdit: boolean;
+  canApproveFinalCopy: boolean;
+  canConfirmReadiness: boolean;
 }) {
   const [activeChannel, setActiveChannel] = useState<string>(channels[0]?.id ?? "");
   const [drafts, setDrafts] = useState<Record<string, PlatformPayload>>(() => {
@@ -197,6 +211,7 @@ export function PublishPackageForm({
   });
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Record<string, number>>({});
 
   if (channels.length === 0) {
@@ -223,7 +238,15 @@ export function PublishPackageForm({
       // server-side Zod parse.
       return {
         ...prev,
-        [channelId]: { ...(base as object), ...(patch as object) } as PlatformPayload,
+        [channelId]: {
+          ...(base as object),
+          ...(patch as object),
+          approval: {
+            finalCopyApproved: false,
+            approvedByUserId: null,
+            approvedAt: null,
+          },
+        } as PlatformPayload,
       };
     });
   }
@@ -232,7 +255,9 @@ export function PublishPackageForm({
     if (!currentDraft) return;
     start(async () => {
       setError(null);
+      setStatusMessage(null);
       const result = await savePublishPackageAction({
+        workspaceSlug,
         contentItemId,
         socialChannelId: channels.find((c) => c.id === channelId)?.socialChannelId ?? "",
         payload: JSON.stringify(currentDraft),
@@ -241,17 +266,53 @@ export function PublishPackageForm({
         setError(result.error);
         return;
       }
+      setDrafts((previous) => ({ ...previous, [channelId]: result.payload }));
       setSavedAt((prev) => ({ ...prev, [channelId]: Date.now() }));
+      setStatusMessage("Draft saved. Material approvals were reset for this revision.");
     });
   }
 
-  async function handleInternalNote() {
-    const summary = window.prompt("Internal note (will NOT trigger materiality):");
-    if (!summary) return;
-    await recordInternalNoteAction({
+  async function handleInternalNote(summary: string) {
+    const result = await recordInternalNoteAction({
+      workspaceSlug,
       contentItemId,
       resource: "internal_note",
       summary,
+    });
+    if (!result.ok) throw new Error(result.error);
+    setStatusMessage("Internal note added without resetting approvals.");
+  }
+
+  function handleFinalCopyApproval(approved: boolean) {
+    if (!current) return;
+    start(async () => {
+      setError(null);
+      setStatusMessage(null);
+      const result = await setFinalCopyApprovalAction({
+        workspaceSlug,
+        contentItemId,
+        socialChannelId: current.socialChannelId,
+        approved,
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setDrafts((previous) => ({ ...previous, [current.id]: result.payload }));
+      setStatusMessage(approved ? "Final copy approved." : "Final-copy approval revoked.");
+    });
+  }
+
+  function handleConfirmReadiness() {
+    start(async () => {
+      setError(null);
+      setStatusMessage(null);
+      const result = await confirmPublishReadinessAction({ workspaceSlug, contentItemId });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setStatusMessage(`Publish package confirmed ready at revision ${result.report.revision}.`);
     });
   }
 
@@ -298,6 +359,14 @@ export function PublishPackageForm({
           className="border-danger bg-danger-container text-on-danger-container rounded-[var(--radius-control)] border px-3 py-2 text-sm"
         >
           {error}
+        </div>
+      ) : null}
+      {statusMessage ? (
+        <div
+          role="status"
+          className="border-success bg-success-container text-on-success-container rounded-[var(--radius-control)] border px-3 py-2 text-sm"
+        >
+          {statusMessage}
         </div>
       ) : null}
 
@@ -494,26 +563,37 @@ export function PublishPackageForm({
           <Card padding="lg" className="space-y-3">
             <CardTitle>Preview & approval</CardTitle>
             <PreviewPane payload={currentDraft} platform={current.platform} />
-            <Checkbox
-              label="Final copy approved (agency admin)"
-              checked={Boolean(
-                (currentDraft as { approval?: { finalCopyApproved?: boolean } }).approval
-                  ?.finalCopyApproved,
+            <div className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3">
+              <p className="text-body text-fg-primary font-semibold">
+                {currentDraft.approval.finalCopyApproved
+                  ? "Final copy approved"
+                  : "Final copy awaiting approval"}
+              </p>
+              {currentDraft.approval.approvedAt ? (
+                <p className="text-label text-fg-muted mt-1">
+                  Approved {new Date(currentDraft.approval.approvedAt).toLocaleString()}
+                </p>
+              ) : null}
+              {canApproveFinalCopy ? (
+                <Button
+                  type="button"
+                  variant={currentDraft.approval.finalCopyApproved ? "secondary" : "default"}
+                  size="sm"
+                  className="mt-3"
+                  disabled={pending}
+                  onClick={() => handleFinalCopyApproval(!currentDraft.approval.finalCopyApproved)}
+                  data-testid="publish-final-copy-approved"
+                >
+                  {currentDraft.approval.finalCopyApproved
+                    ? "Revoke approval"
+                    : "Approve final copy"}
+                </Button>
+              ) : (
+                <p className="text-label text-fg-muted mt-2">
+                  An agency administrator must approve the saved package.
+                </p>
               )}
-              onChange={(v) =>
-                updateDraft(current.id, {
-                  approval: {
-                    finalCopyApproved: v,
-                    approvedByUserId: v
-                      ? ((currentDraft as { approval?: { approvedByUserId?: string | null } })
-                          .approval?.approvedByUserId ?? null)
-                      : null,
-                    approvedAt: v ? new Date().toISOString() : null,
-                  },
-                })
-              }
-              testId="publish-final-copy-approved"
-            />
+            </div>
             <p className="text-label text-fg-muted">
               Approving resets when any material field changes.
             </p>
@@ -527,15 +607,23 @@ export function PublishPackageForm({
         data-testid="publish-action-bar"
       >
         <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={handleInternalNote}
-            className="min-h-11"
-            data-testid="publish-internal-note"
-          >
-            Add internal note
-          </Button>
+          <ReasonDialog
+            trigger={
+              <Button
+                type="button"
+                variant="ghost"
+                className="min-h-11"
+                data-testid="publish-internal-note"
+              >
+                Add internal note
+              </Button>
+            }
+            title="Add internal note"
+            description="Internal notes are administrative and do not reset approvals or revisions."
+            label="Note"
+            confirmLabel="Add note"
+            onConfirm={handleInternalNote}
+          />
           {Object.keys(savedAt).length > 0 ? (
             <span className="text-label text-fg-muted" data-testid="publish-last-saved">
               Last saved {new Date(Math.max(...Object.values(savedAt))).toLocaleTimeString()}
@@ -547,7 +635,7 @@ export function PublishPackageForm({
             type="button"
             variant="outline"
             onClick={() => current && handleSave(current.id)}
-            disabled={pending || !current}
+            disabled={pending || !current || !canEdit}
             className="min-h-11"
             data-testid="publish-save-draft"
           >
@@ -556,7 +644,8 @@ export function PublishPackageForm({
           </Button>
           <Button
             type="button"
-            disabled={pending || !readiness.canPublish}
+            onClick={handleConfirmReadiness}
+            disabled={pending || !readiness.canPublish || !canConfirmReadiness}
             className="min-h-11"
             data-testid="publish-ready"
           >

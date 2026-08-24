@@ -27,7 +27,9 @@ export {
   PLATFORM_KEYS,
   // Platform payload service (M4.2)
   SavePlatformPayloadInputSchema,
+  FinalCopyApprovalInputSchema,
   savePlatformPayload,
+  setFinalCopyApproval,
   readPlatformPayload,
   readAllChannelPayloads,
   clearChannelPayload,
@@ -47,6 +49,8 @@ export {
   ChannelReadinessSchema,
   ReadinessIssueSeveritySchema,
   evaluateReadiness,
+  ConfirmPublishReadinessInputSchema,
+  confirmPublishReadiness,
   foldAiSuggestions,
   ReadinessError,
 } from "./materiality-helpers";
@@ -69,6 +73,7 @@ export type {
   ApprovalState,
   PublicationMethod,
   SavePlatformPayloadInput,
+  FinalCopyApprovalInput,
   MaterialResource,
   MaterialityReasonCode,
   RecordMaterialityEventInput,
@@ -78,4 +83,5 @@ export type {
   ChannelReadiness,
   ReadinessIssueSeverity,
   ReadinessInput,
+  ConfirmPublishReadinessInput,
 } from "./materiality-helpers";

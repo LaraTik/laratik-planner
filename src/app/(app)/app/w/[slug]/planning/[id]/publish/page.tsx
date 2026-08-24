@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
+import { hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { getContentItem } from "@/lib/content/service";
 import { listDeliveryVersionsForItem } from "@/lib/deliveries/service";
@@ -66,15 +67,20 @@ export default async function PublishPackagePage({
   if (!ws) notFound();
   const item = await getContentItem(actor, id);
   if (!item) notFound();
+  if (item.workspaceId !== ws.id) notFound();
 
-  const [deliveryVersions, channelPayloads] = await Promise.all([
-    listDeliveryVersionsForItem(actor, id),
-    readAllChannelPayloads({
-      actor,
-      workspaceId: ws.id,
-      contentItemId: id,
-    }),
-  ]);
+  const [deliveryVersions, channelPayloads, canEdit, canConfirmReadiness, canApproveFinalCopy] =
+    await Promise.all([
+      listDeliveryVersionsForItem(actor, id),
+      readAllChannelPayloads({
+        actor,
+        workspaceId: ws.id,
+        contentItemId: id,
+      }),
+      hasWorkspaceRole(actor, ws.id, ["workspace_manager", "content_planner"]),
+      hasWorkspaceRole(actor, ws.id, ["workspace_manager", "content_planner", "publisher"]),
+      isAgencyAdmin(actor, ws.agencyId),
+    ]);
 
   const readiness: ReadinessReport = await evaluateReadiness({
     actor,
@@ -165,6 +171,7 @@ export default async function PublishPackagePage({
 
       <PublishPackageForm
         workspaceId={ws.id}
+        workspaceSlug={slug}
         contentItemId={id}
         itemTitle={item.title}
         itemFormat={item.format}
@@ -173,7 +180,7 @@ export default async function PublishPackagePage({
           socialChannelId: c.socialChannelId,
           platform: c.platform,
           accountName: c.accountName,
-          payload: channelPayloads[c.id] ?? null,
+          payload: channelPayloads[c.socialChannelId] ?? null,
         }))}
         deliveryVersions={deliveryVersions.map((d) => ({
           id: d.id,
@@ -181,6 +188,9 @@ export default async function PublishPackagePage({
           isFinalApproved: d.isFinalApproved,
         }))}
         readiness={readiness}
+        canEdit={canEdit}
+        canApproveFinalCopy={canApproveFinalCopy}
+        canConfirmReadiness={canConfirmReadiness}
       />
     </div>
   );

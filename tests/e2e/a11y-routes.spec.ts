@@ -106,6 +106,13 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await expectClean("/app/w/acme/planning/[id]", page);
   });
 
+  test("@a11y /app/w/[slug]/planning/[id]/publish has no critical violations", async ({ page }) => {
+    const seeded = await bootstrapTestSession(page);
+    await page.goto(`/app/w/${seeded.workspaceSlug}/planning/${seeded.contentItemId}/publish`);
+    await expect(page.getByTestId("publish-package-root")).toBeVisible();
+    await expectClean("/app/w/[slug]/planning/[id]/publish", page);
+  });
+
   // ─── Extended Stitch canonical coverage ──────────────────────────────────
   //
   // The 18 routes below close the coverage gap on the canonical

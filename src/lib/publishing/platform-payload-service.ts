@@ -2,8 +2,8 @@ import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { contentItemChannels, contentItems } from "@/lib/db/schema";
-import { hasWorkspaceRole, type Actor } from "@/lib/auth/policy";
+import { activityEvents, contentItemChannels, contentItems, workspaces } from "@/lib/db/schema";
+import { hasWorkspaceRole, isAgencyAdmin, type Actor } from "@/lib/auth/policy";
 import { PlatformPayloadSchema, type PlatformPayload } from "./payload-schemas";
 import { recordMaterialityEvent, MATERIAL_RESOURCE_PLATFORM_PAYLOAD } from "./materiality";
 
@@ -38,6 +38,13 @@ export const SavePlatformPayloadInputSchema = z.object({
   payload: PlatformPayloadSchema,
 });
 export type SavePlatformPayloadInput = z.infer<typeof SavePlatformPayloadInputSchema>;
+
+export const FinalCopyApprovalInputSchema = z.object({
+  contentItemId: z.string().uuid(),
+  socialChannelId: z.string().uuid(),
+  approved: z.boolean(),
+});
+export type FinalCopyApprovalInput = z.infer<typeof FinalCopyApprovalInputSchema>;
 
 export class PlatformPayloadError extends Error {
   public readonly code: "INVALID" | "NOT_FOUND" | "FORBIDDEN" | "CROSS_CHANNEL";
@@ -119,7 +126,17 @@ export async function savePlatformPayload(
 
   // The schema is the source of truth. The discriminated union
   // narrows the payload type at the call site.
-  const payload = PlatformPayloadSchema.parse(input.payload);
+  // Approval metadata is server-owned. A material draft save always
+  // invalidates the previous approval and must never trust values sent
+  // by the browser.
+  const payload = PlatformPayloadSchema.parse({
+    ...input.payload,
+    approval: {
+      finalCopyApproved: false,
+      approvedByUserId: null,
+      approvedAt: null,
+    },
+  });
 
   await db
     .update(contentItemChannels)
@@ -143,6 +160,106 @@ export async function savePlatformPayload(
   });
 
   return payload;
+}
+
+/**
+ * Approve or revoke the final copy without turning that administrative
+ * decision into another material edit. Only an active agency admin may
+ * perform this mutation; actor and timestamp are always stamped here.
+ */
+export async function setFinalCopyApproval(
+  actor: Actor,
+  workspaceId: string,
+  input: FinalCopyApprovalInput,
+): Promise<PlatformPayload> {
+  const parsed = FinalCopyApprovalInputSchema.parse(input);
+  const [workspace] = await db
+    .select({ agencyId: workspaces.agencyId })
+    .from(workspaces)
+    .where(eq(workspaces.id, workspaceId))
+    .limit(1);
+  if (!workspace) {
+    throw new PlatformPayloadError("NOT_FOUND", "Workspace not found.", { workspaceId });
+  }
+  if (!(await isAgencyAdmin(actor, workspace.agencyId))) {
+    throw new PlatformPayloadError(
+      "FORBIDDEN",
+      "Only an agency administrator can approve final copy.",
+      { workspaceId },
+    );
+  }
+
+  await ensureContentItemChannelInWorkspace(
+    parsed.contentItemId,
+    parsed.socialChannelId,
+    workspaceId,
+  );
+
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`SELECT id FROM content_item_channel
+          WHERE content_item_id = ${parsed.contentItemId}
+            AND social_channel_id = ${parsed.socialChannelId}
+          FOR UPDATE`,
+    );
+    const [row] = await tx
+      .select({ platformPayload: contentItemChannels.platformPayload })
+      .from(contentItemChannels)
+      .where(
+        and(
+          eq(contentItemChannels.contentItemId, parsed.contentItemId),
+          eq(contentItemChannels.socialChannelId, parsed.socialChannelId),
+        ),
+      )
+      .limit(1);
+    if (!row?.platformPayload) {
+      throw new PlatformPayloadError(
+        "INVALID",
+        "Save the publish package before approving final copy.",
+      );
+    }
+
+    const existing = PlatformPayloadSchema.safeParse(row.platformPayload);
+    if (!existing.success) {
+      throw new PlatformPayloadError(
+        "INVALID",
+        "The saved publish package is invalid. Save it again before approving.",
+      );
+    }
+    const payload = PlatformPayloadSchema.parse({
+      ...existing.data,
+      approval: {
+        finalCopyApproved: parsed.approved,
+        approvedByUserId: parsed.approved ? actor.id : null,
+        approvedAt: parsed.approved ? new Date().toISOString() : null,
+      },
+    });
+
+    await tx
+      .update(contentItemChannels)
+      .set({ platformPayload: payload, updatedAt: new Date() })
+      .where(
+        and(
+          eq(contentItemChannels.contentItemId, parsed.contentItemId),
+          eq(contentItemChannels.socialChannelId, parsed.socialChannelId),
+        ),
+      );
+    await tx.insert(activityEvents).values({
+      workspaceId,
+      contentItemId: parsed.contentItemId,
+      actorId: actor.id,
+      kind: "update",
+      summary: parsed.approved ? "Final copy approved" : "Final-copy approval revoked",
+      beforeData: existing.data.approval,
+      afterData: payload.approval,
+      metadata: {
+        resource: "publish_final_copy_approval",
+        socialChannelId: parsed.socialChannelId,
+        material: false,
+      },
+    });
+    return payload;
+  });
 }
 
 /**

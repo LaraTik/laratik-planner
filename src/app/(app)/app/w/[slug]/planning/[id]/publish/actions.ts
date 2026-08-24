@@ -4,12 +4,15 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
-import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import {
+  confirmPublishReadiness,
+  PlatformPayloadSchema,
   savePlatformPayload,
+  setFinalCopyApproval,
   recordNonMaterialityEvent,
   PlatformPayloadError,
+  ReadinessError,
 } from "@/lib/publishing";
 
 /**
@@ -22,6 +25,7 @@ import {
  */
 
 const SavePayloadFormSchema = z.object({
+  workspaceSlug: z.string().min(1).max(64),
   contentItemId: z.string().uuid(),
   socialChannelId: z.string().uuid(),
   payload: z.string(), // JSON-stringified PlatformPayload
@@ -32,49 +36,25 @@ export async function savePublishPackageAction(input: z.input<typeof SavePayload
   if (!session?.user?.id) return { ok: false as const, error: "Not signed in" };
   const actor = await currentActor();
   if (!actor) return { ok: false as const, error: "Not signed in" };
-  const parsed = SavePayloadFormSchema.parse(input);
-  const payload = JSON.parse(parsed.payload);
-  // Workspace resolution via the standard helper. We accept
-  // the social channel id and look up the workspace through
-  // the content item; the service layer re-validates.
-  const ws = await getAccessibleWorkspace(actor, "");
-  void ws; // service-layer check is authoritative
+  const parsed = SavePayloadFormSchema.safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: "Check the publish package fields." };
   try {
-    // The service re-fetches the workspace from the content
-    // item join; the workspaceId passed here is best-effort
-    // and the service's `ensureContentItemChannelInWorkspace`
-    // is the real gate.
-    const { db } = await import("@/lib/db");
-    const { contentItems, socialChannels } = await import("@/lib/db/schema");
-    const { eq } = await import("drizzle-orm");
-    const [item] = await db
-      .select({ workspaceId: contentItems.workspaceId })
-      .from(contentItems)
-      .where(eq(contentItems.id, parsed.contentItemId))
-      .limit(1);
-    const [chan] = await db
-      .select({ workspaceId: socialChannels.workspaceId })
-      .from(socialChannels)
-      .where(eq(socialChannels.id, parsed.socialChannelId))
-      .limit(1);
-    if (!item || !chan) return { ok: false as const, error: "Channel link not found" };
-    if (item.workspaceId !== chan.workspaceId) {
-      return {
-        ok: false as const,
-        error: "Channel does not belong to the content item's workspace",
-      };
+    const workspace = await getAccessibleWorkspace(actor, parsed.data.workspaceSlug);
+    if (!workspace) return { ok: false as const, error: "Workspace not found." };
+    const candidate: unknown = JSON.parse(parsed.data.payload);
+    const payload = PlatformPayloadSchema.safeParse(candidate);
+    if (!payload.success) {
+      return { ok: false as const, error: "Check the platform-specific publish fields." };
     }
-    const allowed = await hasWorkspaceRole(actor, item.workspaceId, [
-      "workspace_manager",
-      "content_planner",
-    ]);
-    if (!allowed) return { ok: false as const, error: "Forbidden" };
-    const result = await savePlatformPayload(actor, item.workspaceId, {
-      contentItemId: parsed.contentItemId,
-      socialChannelId: parsed.socialChannelId,
-      payload,
+    const result = await savePlatformPayload(actor, workspace.id, {
+      contentItemId: parsed.data.contentItemId,
+      socialChannelId: parsed.data.socialChannelId,
+      payload: payload.data,
     });
-    revalidatePath(`/app/w/${chan.workspaceId}/planning/${parsed.contentItemId}/publish`);
+    revalidatePath(
+      `/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}/publish`,
+    );
+    revalidatePath(`/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}`);
     return { ok: true as const, payload: result };
   } catch (e) {
     if (e instanceof PlatformPayloadError) {
@@ -85,6 +65,7 @@ export async function savePublishPackageAction(input: z.input<typeof SavePayload
 }
 
 const NonMaterialNoteSchema = z.object({
+  workspaceSlug: z.string().min(1).max(64),
   contentItemId: z.string().uuid(),
   resource: z.string().min(1).max(80),
   summary: z.string().min(1).max(200),
@@ -101,16 +82,79 @@ export async function recordInternalNoteAction(input: z.input<typeof NonMaterial
   if (!session?.user?.id) return { ok: false as const, error: "Not signed in" };
   const actor = await currentActor();
   if (!actor) return { ok: false as const, error: "Not signed in" };
-  const parsed = NonMaterialNoteSchema.parse(input);
+  const parsed = NonMaterialNoteSchema.safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: "Enter a valid internal note." };
   try {
+    const workspace = await getAccessibleWorkspace(actor, parsed.data.workspaceSlug);
+    if (!workspace) return { ok: false as const, error: "Workspace not found." };
     await recordNonMaterialityEvent({
       actor,
-      contentItemId: parsed.contentItemId,
-      resource: parsed.resource,
-      summary: parsed.summary,
+      contentItemId: parsed.data.contentItemId,
+      resource: parsed.data.resource,
+      summary: parsed.data.summary,
     });
+    revalidatePath(
+      `/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}/publish`,
+    );
     return { ok: true as const };
   } catch {
     return { ok: false as const, error: "Failed to record note" };
+  }
+}
+
+const ApprovalFormSchema = z.object({
+  workspaceSlug: z.string().min(1).max(64),
+  contentItemId: z.string().uuid(),
+  socialChannelId: z.string().uuid(),
+  approved: z.boolean(),
+});
+
+export async function setFinalCopyApprovalAction(input: z.input<typeof ApprovalFormSchema>) {
+  const actor = await currentActor();
+  if (!actor) return { ok: false as const, error: "Not signed in" };
+  const parsed = ApprovalFormSchema.safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: "Invalid approval request." };
+  try {
+    const workspace = await getAccessibleWorkspace(actor, parsed.data.workspaceSlug);
+    if (!workspace) return { ok: false as const, error: "Workspace not found." };
+    const payload = await setFinalCopyApproval(actor, workspace.id, parsed.data);
+    revalidatePath(
+      `/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}/publish`,
+    );
+    return { ok: true as const, payload };
+  } catch (error) {
+    if (error instanceof PlatformPayloadError) {
+      return { ok: false as const, error: error.message, code: error.code };
+    }
+    return { ok: false as const, error: "Failed to update final-copy approval." };
+  }
+}
+
+const ReadinessFormSchema = z.object({
+  workspaceSlug: z.string().min(1).max(64),
+  contentItemId: z.string().uuid(),
+});
+
+export async function confirmPublishReadinessAction(input: z.input<typeof ReadinessFormSchema>) {
+  const actor = await currentActor();
+  if (!actor) return { ok: false as const, error: "Not signed in" };
+  const parsed = ReadinessFormSchema.safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: "Invalid readiness request." };
+  try {
+    const workspace = await getAccessibleWorkspace(actor, parsed.data.workspaceSlug);
+    if (!workspace) return { ok: false as const, error: "Workspace not found." };
+    const report = await confirmPublishReadiness(actor, {
+      workspaceId: workspace.id,
+      contentItemId: parsed.data.contentItemId,
+    });
+    revalidatePath(
+      `/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}/publish`,
+    );
+    return { ok: true as const, report };
+  } catch (error) {
+    if (error instanceof ReadinessError) {
+      return { ok: false as const, error: error.message, code: error.code };
+    }
+    return { ok: false as const, error: "Failed to confirm publishing readiness." };
   }
 }

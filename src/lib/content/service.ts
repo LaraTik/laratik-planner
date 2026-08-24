@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   activityEvents,
@@ -356,7 +356,8 @@ export async function getContentItem(actor: Actor, contentItemId: string) {
       })
       .from(contentItemChannels)
       .innerJoin(socialChannels, eq(socialChannels.id, contentItemChannels.socialChannelId))
-      .where(eq(contentItemChannels.contentItemId, contentItemId)),
+      .where(eq(contentItemChannels.contentItemId, contentItemId))
+      .orderBy(asc(socialChannels.platform), asc(socialChannels.accountName)),
     db
       .select({
         id: contentAssignments.id,
