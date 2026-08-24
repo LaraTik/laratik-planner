@@ -99,18 +99,22 @@ The mailbox must exist in Mailcow before the first deploy (`https://mail.laratik
 
 This is deliberate: catching a missing `AUTH_SECRET` at boot is far better than discovering it at the first sign-in.
 
-## M4 — social profile analytics
+## M4.5 — social profile analytics
 
-| Name                          | Required (prod) | Default | Purpose                                                                                                                                  |
-| ----------------------------- | --------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `SOCIAL_TOKEN_ENCRYPTION_KEY` | conditional     | empty   | Base64-encoded 32-byte key for the AES-256-GCM credential envelope. Required when `SOCIAL_SYNC_ENABLED=true`. `openssl rand -base64 32`. |
-| `META_APP_ID`                 | conditional     | empty   | Facebook App ID. Required for Meta connection to succeed.                                                                                |
-| `META_APP_SECRET`             | conditional     | empty   | Facebook App secret. Required for Meta connection.                                                                                       |
-| `META_LOGIN_CONFIG_ID`        | conditional     | empty   | Facebook Login for Business configuration ID.                                                                                            |
-| `META_GRAPH_API_VERSION`      | no              | `v25.0` | Pinned Graph API version. Changing it requires re-applying the migration and re-running the App Review.                                  |
-| `TIKTOK_CLIENT_KEY`           | conditional     | empty   | TikTok app key. Required for TikTok connection.                                                                                          |
-| `TIKTOK_CLIENT_SECRET`        | conditional     | empty   | TikTok app secret. Required for TikTok connection.                                                                                       |
-| `SOCIAL_SYNC_ENABLED`         | no              | `false` | Master switch for the cron worker. When `false`, `/api/cron/social-metrics` is a no-op.                                                  |
-| `SOCIAL_TIKTOK_ENABLED`       | no              | `false` | Per-provider gate. When `false`, the TikTok provider and callback routes return 404 / disabled.                                          |
+| Name                          | Required (prod) | Default | Purpose                                                                                                                                                                                                          |
+| ----------------------------- | --------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SOCIAL_TOKEN_ENCRYPTION_KEY` | conditional     | empty   | Base64-encoded 32-byte **platform KEK** that wraps each agency's DEK. **Optional at boot.** Required when any agency enables social OR when `SOCIAL_SYNC_ENABLED=true`. Generate with `openssl rand -base64 32`. |
+| `META_APP_ID`                 | conditional     | empty   | Facebook App ID. Required for Meta connection to succeed.                                                                                                                                                        |
+| `META_APP_SECRET`             | conditional     | empty   | Facebook App secret. Required for Meta connection.                                                                                                                                                               |
+| `META_LOGIN_CONFIG_ID`        | conditional     | empty   | Facebook Login for Business configuration ID.                                                                                                                                                                    |
+| `META_GRAPH_API_VERSION`      | no              | `v25.0` | Pinned Graph API version. Changing it requires re-applying the migration and re-running the App Review.                                                                                                          |
+| `TIKTOK_CLIENT_KEY`           | conditional     | empty   | TikTok app key. Required for TikTok connection.                                                                                                                                                                  |
+| `TIKTOK_CLIENT_SECRET`        | conditional     | empty   | TikTok app secret. Required for TikTok connection.                                                                                                                                                               |
+| `SOCIAL_SYNC_ENABLED`         | no              | `false` | Master switch for the cron worker. When `false`, `/api/cron/social-metrics` is a no-op.                                                                                                                          |
+| `SOCIAL_TIKTOK_ENABLED`       | no              | `false` | Per-provider gate. When `false`, the TikTok provider and callback routes return 404 / disabled.                                                                                                                  |
 
-None of these may be exposed as `NEXT_PUBLIC_*`. The application refuses to boot in production when `SOCIAL_SYNC_ENABLED=true` but the encryption key is missing or not exactly 32 bytes when decoded.
+**None of these may be exposed as `NEXT_PUBLIC_*`.**
+
+**Multi-tenant key model (M4.5).** Each agency has its own 32-byte **Data Encryption Key (DEK)** stored in `agency_social_dek`, wrapped by the platform KEK. The plaintext DEK is generated on first enable, shown to the agency admin exactly once, and never persisted. Rotating the platform KEK re-wraps every agency's DEK but does NOT touch per-connection envelopes. See `docs/operations/runbook.md` §"Platform KEK rotation" for the exact procedure.
+
+**Boot behaviour.** The application boots fine without `SOCIAL_TOKEN_ENCRYPTION_KEY`. The first time an agency tries to enable social, the API returns `503 platform_kek_missing` with a message naming the env var. The sync worker returns `kekStatus: "kek_missing"` and no-ops (a 24h backoff is set on each claimed profile with `last_sync_error_code = "platform_kek_missing"`, but `needs_reauth` is NOT set — this is a platform issue, not an agency issue).

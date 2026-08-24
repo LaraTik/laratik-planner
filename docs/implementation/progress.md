@@ -28,6 +28,25 @@ Status: **Tested**. Independently Verified is not yet claimed; M4 rows stop at `
 
 `SOCIAL_SYNC_ENABLED=false` is the default. `SOCIAL_TIKTOK_ENABLED=false` until Meta's seven-day production observation window passes. The shared `READY FOR INDEPENDENT REVIEW` verdict is unchanged; the `READY` flip still requires owner action (Sentry, manual a11y, visual baselines, Stitch MCP capture of the two new screens, independent reviewer).
 
+## 2026-08-24 — Per-agency social DEK + lazy platform KEK (M4.5) merged
+
+Status: **Tested**. Independently Verified is not yet claimed; M4.5 rows stop at `Tested` pending independent review.
+
+Seven atomic commits on `main` (`42f3bac` … `5e5a763`) plus the merge bring:
+
+- **Schema** — migration `0016_per_agency_social_dek.sql` adds the `agency_social_dek` table (1:1 with agency): the agency DEK wrapped by the platform KEK using AES-256-GCM with AAD `laratik-planner:social-dek:v1`. CHECK constraints pin the byte-length framing; an index on `dek_key_version` supports the KEK-rotation script.
+- **Crypto refactor** — `src/lib/social/crypto.ts` is now DEK-in-hand (`sealCredentialsWithDek` / `openCredentialsWithDek`). The env-key `sealCredentials` / `openCredentials` are removed. The `laratik-planner:social-credentials:v1` AAD is unchanged.
+- **Service layer** — `src/lib/social/key-management.ts` exposes `getKekOrThrow` (lazy), `wrapDek` / `unwrapDek` (pure crypto), `enableAgencyDek` / `disableAgencyDek` / `rotateAgencyDek` (transactional), `createDekCache` / `getDekForAgency` / `getDekForWorkspace` (per-request DEK cache), and `rewrapAllDeksForKekRotation` (for the script). AAD is `laratik-planner:social-dek:v1`, distinct from the credentials AAD.
+- **Repository** — `createPendingConnection` / `updateConnectionCredentials` / `openConnectionCredentials` resolve the per-agency DEK via the cache; the env-key `getEncryptionKey` / `seal` / `open` helpers are removed.
+- **Sync worker** — `runSyncTick` is a soft no-op when the KEK is unavailable (`kekStatus: "kek_missing"`) instead of throwing. `runOne` resolves the DEK per profile and surfaces `MissingKekError` / `DekNotEnabledError` as a 24h backoff with a `platform_kek_missing` / `social_not_enabled` code, without marking the connection as `needs_reauth`.
+- **Lazy KEK** — `src/lib/validation/env.ts` no longer boot-blocks on a missing or wrong-length `SOCIAL_TOKEN_ENCRYPTION_KEY`. The application boots cleanly without it; the social admin UI shows a "platform KEK not configured" banner; the cron worker returns zero counts.
+- **Service orchestration** — `src/lib/social/service.ts` wraps the key-management primitives with authorization, audit logging, and HTTP error translation. Every mutation writes a `security_audit_event` row.
+- **API** — five routes under `/api/agencies/[agencyId]/social/`: `GET` (status), `POST enable`, `POST disable`, `POST dek/rotate`, `POST dek/reset-recovery`. Agency admin only.
+- **UI** — `/app/agency-settings/social` renders a social card with enable / rotate / disable / reset-recovery flows. The recovery-key modal enforces a "I have saved my recovery key" checkbox before Close. The agency-settings index page links to it from the managed-services card.
+- **KEK rotation script** — `scripts/rotate-social-kek.ts` re-wraps every `agency_social_dek` row from an old KEK to a new KEK. Refuses to run if old == new, refuses wrong-length keys, prints fingerprints for the audit log. Dry-run mode is supported.
+- **Tests** — 18 new unit tests in `tests/unit/social-key-management.test.ts` (crypto roundtrip, AAD isolation, env handling, cache locality), 8 new unit tests in `tests/unit/rotate-social-kek-args.test.ts` (CLI surface), 6 new integration tests in `tests/integration/social-dek-repository.test.ts` (per-agency isolation, rotation re-seal, disable cascade, KEK re-wrap), and the existing `tests/integration/social-repository.test.ts` and `tests/unit/social-crypto.test.ts` were updated to drive the DEK-in-hand API.
+- **Docs** — `docs/operations/runbook.md` § "Platform KEK rotation" rewritten with the exact script invocation, dry-run step, post-rotation runbook, and a clear "do not rotate without the script" warning. `docs/operations/environment.md` § M4.5 added explaining the multi-tenant key model and the boot behaviour.
+
 ## 2026-08-24 — Navigation-first UI/UX refinement
 
 Commit `7536d4d` completes a screen-by-screen navigation and responsive-layout

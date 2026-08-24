@@ -182,16 +182,16 @@ ssh laratik-vps 'cd /opt/laratik-planner && docker compose up -d app'
 
 ## Rotation
 
-| What                          | Where                            | How                                                                                                                                                                                                            |
-| ----------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AUTH_SECRET`                 | `.env` on VPS                    | `openssl rand -base64 32`, update, `docker compose up -d --no-deps app`. Active sessions are invalidated.                                                                                                      |
-| `GOOGLE_CLIENT_SECRET`        | Google Cloud Console + `.env`    | Same as above.                                                                                                                                                                                                 |
-| `SMTP_PASSWORD`               | Mailcow admin                    | Same as above.                                                                                                                                                                                                 |
-| `SOCIAL_TOKEN_ENCRYPTION_KEY` | `.env` on VPS                    | Decrypt every `social_connection` row with the old key, re-encrypt with the new key, then swap. See the **Social credential key rotation** section below for the exact script.                                 |
-| `META_APP_SECRET`             | Meta App Dashboard + `.env`      | Same pattern as `GOOGLE_CLIENT_SECRET`; the secret applies to long-lived token exchange. After rotation, the cron route will re-issue long-lived tokens for every active connection on the next refresh cycle. |
-| `TIKTOK_CLIENT_SECRET`        | TikTok Developer Portal + `.env` | Same as above. TikTok's 365-day refresh token is bound to the app secret at the time of grant issuance; a secret rotation invalidates existing refresh tokens, so all workspaces must reconnect.               |
-| Image                         | GHCR                             | Automatic on `main` push. Old tags pruned via `docker image prune` (see disk hygiene below).                                                                                                                   |
-| LE cert                       | Traefik (vps-ops)                | Auto-renewed by Traefik; check with `ssh laratik-vps 'sudo bash /root/gitops/scripts/ops/check-certs.sh 30'`.                                                                                                  |
+| What                          | Where                            | How                                                                                                                                                                                                                                                                                             |
+| ----------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTH_SECRET`                 | `.env` on VPS                    | `openssl rand -base64 32`, update, `docker compose up -d --no-deps app`. Active sessions are invalidated.                                                                                                                                                                                       |
+| `GOOGLE_CLIENT_SECRET`        | Google Cloud Console + `.env`    | Same as above.                                                                                                                                                                                                                                                                                  |
+| `SMTP_PASSWORD`               | Mailcow admin                    | Same as above.                                                                                                                                                                                                                                                                                  |
+| `SOCIAL_TOKEN_ENCRYPTION_KEY` | `.env` on VPS                    | Re-wrap every `agency_social_dek` row from the old KEK to the new KEK, then swap. The per-agency DEKs are unchanged; only the platform KEK is rotated. See the **Platform KEK rotation** section below for the exact script. The env var is **optional at boot** (M4.5 — per-agency DEK model). |
+| `META_APP_SECRET`             | Meta App Dashboard + `.env`      | Same pattern as `GOOGLE_CLIENT_SECRET`; the secret applies to long-lived token exchange. After rotation, the cron route will re-issue long-lived tokens for every active connection on the next refresh cycle.                                                                                  |
+| `TIKTOK_CLIENT_SECRET`        | TikTok Developer Portal + `.env` | Same as above. TikTok's 365-day refresh token is bound to the app secret at the time of grant issuance; a secret rotation invalidates existing refresh tokens, so all workspaces must reconnect.                                                                                                |
+| Image                         | GHCR                             | Automatic on `main` push. Old tags pruned via `docker image prune` (see disk hygiene below).                                                                                                                                                                                                    |
+| LE cert                       | Traefik (vps-ops)                | Auto-renewed by Traefik; check with `ssh laratik-vps 'sudo bash /root/gitops/scripts/ops/check-certs.sh 30'`.                                                                                                                                                                                   |
 
 ## Disk hygiene
 
@@ -469,17 +469,47 @@ The provider HTTP client retries `429` and `5xx` up to twice with full-jitter de
 
 If Meta or TikTok revokes the application entirely (the `META_APP_ID` or `TIKTOK_CLIENT_KEY` is disabled), every call returns `4xx auth_expired`. The repository marks every attached connection `revoked` and every channel `disconnected`. Historical metrics are preserved. Recovery is a full re-authorization through the OAuth flow after the provider-side reactivation.
 
-### Social credential key rotation
+### Platform KEK rotation (M4.5)
 
-`SOCIAL_TOKEN_ENCRYPTION_KEY` encrypts every `social_connection.credentials_*` column. The key is versioned (`credentials_key_version`); currently only version 1 is supported. To rotate:
+`SOCIAL_TOKEN_ENCRYPTION_KEY` is the platform **Key Encryption Key (KEK)** that wraps each agency's **Data Encryption Key (DEK)** in `agency_social_dek`. Per-agency tokens are sealed with the agency DEK, NOT the platform KEK — so rotating the KEK only re-wraps the DEK envelopes, not the per-connection envelopes. The application boots fine without the KEK; it is only required when an agency enables social or when the cron worker runs. To rotate:
 
-1. Generate the new key: `openssl rand -base64 32 > /tmp/new-key`.
-2. Run a one-off script that selects every active (non-revoked) connection, decrypts with the old key, re-encrypts with the new key, and writes back in a single transaction per row. The script lives at `scripts/vps/rotate-social-key.ts` and is invoked once during the rotation window.
-3. Update `SOCIAL_TOKEN_ENCRYPTION_KEY` in `/opt/laratik-planner/.env` and `docker compose up -d --no-deps app`.
-4. The old key is retained in a side-channel env var (`SOCIAL_TOKEN_ENCRYPTION_KEY_PREVIOUS`) for 24 h to allow the one-off script to read mixed-version rows that arrived between step 2 and step 3. The application code only ever reads `SOCIAL_TOKEN_ENCRYPTION_KEY`; the rotation script is the only consumer of the previous key.
-5. After 24 h, remove `SOCIAL_TOKEN_ENCRYPTION_KEY_PREVIOUS` and prune the side-channel.
+1. **Generate the new KEK** on the VPS:
+   ```bash
+   NEW_KEK=$(openssl rand -base64 32)
+   ```
+2. **Re-wrap every `agency_social_dek` row** from the old KEK to the new KEK. The script is `scripts/rotate-social-kek.ts` (run inside the application container because it talks to Postgres):
+   ```bash
+   cd /opt/laratik-planner
+   sudo docker compose exec -T app \
+     pnpm tsx scripts/rotate-social-kek.ts \
+       --old-kek "$(grep ^SOCIAL_TOKEN_ENCRYPTION_KEY= .env | cut -d= -f2-)" \
+       --new-kek "$NEW_KEK"
+   ```
+   The script prints KEK fingerprints (sha256, last 4 bytes hex) for the audit log. It exits 0 on success, 1 on operator error, 2 on partial failure (one or more rows could not be unwrapped with the supplied old KEK).
+3. **Dry-run first** to verify scope:
+   ```bash
+   sudo docker compose exec -T app \
+     pnpm tsx scripts/rotate-social-kek.ts \
+       --old-kek "$OLD" --new-kek "$NEW" --dry-run
+   ```
+   The dry-run prints `scanned N agency_social_dek rows; ok=N, failed=0` and writes nothing.
+4. **Update the env var** and restart:
+   ```bash
+   sudo -e /opt/laratik-planner/.env  # paste the new KEK into SOCIAL_TOKEN_ENCRYPTION_KEY
+   sudo docker compose up -d --no-deps app
+   ```
+5. **Verify** the next sync tick reports `kekStatus: "ok"`:
+   ```bash
+   curl -sH "Authorization: Bearer $CRON_SECRET" \
+     https://planner.laratik.com/api/cron/social-metrics
+   ```
+   The response includes a `kekStatus: "ok" | "kek_missing" | null` field. `"ok"` confirms the rotation took effect.
 
-Do NOT rotate the key without running the script. The application has no recovery path for rows sealed with an unknown key version; the user would be forced to re-authorize every connection, which surfaces in the audit log as a sharp spike in `pending_selection` rows.
+**Do NOT rotate the KEK without running the script.** Without the script, every agency's wrapped DEK stays bound to the old KEK. The application then fails to unwrap any DEK on first read, which surfaces as `dek_unwrap_failed` 500s on every social operation. Recovery in that state is the same script — re-run with the old KEK as `--old-kek` and the new KEK as `--new-kek`.
+
+**What the script does NOT do:** it does not rotate agency DEKs. Agency DEK rotation is an in-app action triggered by an agency admin from `/app/agency-settings/social` (Rotate DEK button). The script only re-binds the DEK envelopes to a new platform KEK.
+
+**Audit trail:** every KEK rotation run writes a summary line to the operator's shell; the script itself does NOT write to the audit log (it is operator-only, not a user action). Record the rotation in the change-management log with the timestamp, the old / new KEK fingerprints, and the script's exit code.
 
 ### Historical metric export / delete
 
