@@ -102,7 +102,7 @@ export default async function ForgotPasswordPage({
             aria-live="polite"
             tabIndex={-1}
             data-testid="forgot-password-sent"
-            className="border-success/20 bg-success-subtle text-success flex items-start gap-3 rounded-[var(--radius-control)] border p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            className="border-success/20 bg-success-subtle text-success focus-visible:ring-focus-ring flex items-start gap-3 rounded-[var(--radius-control)] border p-3 focus:outline-none focus-visible:ring-2"
           >
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <div className="flex flex-col">

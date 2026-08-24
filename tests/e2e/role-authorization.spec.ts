@@ -62,16 +62,18 @@ test.describe("role-separated workspace access", () => {
 type RoleCase = {
   role: Exclude<FixtureRole, "agency_admin">;
   can: { route: string; heading?: RegExp; testid?: string }[];
-  cannot: { route: string; assertion: "notFound" | "missingHeading" | "missingTestId"; marker: RegExp | string }[];
+  cannot: {
+    route: string;
+    assertion: "notFound" | "missingHeading" | "missingTestId";
+    marker: RegExp | string;
+  }[];
 };
 
 const ROLE_MATRIX: RoleCase[] = [
   {
     role: "workspace_manager",
     can: [{ route: "/app/w/acme", heading: /^Acme$/ }],
-    cannot: [
-      { route: "/app/w/acme/reviews", assertion: "notFound", marker: /Page not found/i },
-    ],
+    cannot: [{ route: "/app/w/acme/reviews", assertion: "notFound", marker: /Page not found/i }],
   },
   {
     role: "content_planner",
