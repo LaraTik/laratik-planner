@@ -26,6 +26,13 @@ import {
   type CreatePendingConnectionInput,
 } from "@/lib/social/repository";
 import { newRequestId } from "@/lib/social/http";
+import {
+  createDekCache,
+  DekNotEnabledError,
+  enableAgencyDek,
+  getDekForWorkspace,
+} from "@/lib/social/key-management";
+import { openCredentialsWithDek } from "@/lib/social/crypto";
 
 /**
  * M4 — repository integration test.
@@ -58,7 +65,7 @@ const pool = new Pool({ connectionString: TEST_DB_URL });
 const db = drizzle(pool);
 
 let workspaceId: string;
-
+let agencyId: string;
 let userId: string;
 
 async function seed() {
@@ -80,7 +87,11 @@ async function seed() {
     })
     .returning();
   workspaceId = ws!.id;
+  agencyId = agency!.id;
   userId = user!.id;
+  // Enable social for the agency so the DEK row exists and
+  // createPendingConnection can resolve the DEK.
+  await enableAgencyDek(db, { agencyId: agency!.id, actorId: user!.id });
 }
 
 async function seedConnection(provider: "meta" | "tiktok" = "meta"): Promise<string> {
@@ -151,9 +162,28 @@ describe("M4 — repository", () => {
         refreshTokenExpiresAt: null,
         connectedBy: userId,
       });
-      const opened = openConnectionCredentials(conn);
+      const cache = createDekCache(db);
+      const dek = await getDekForWorkspace(db, cache, workspaceId);
+      const opened = openConnectionCredentials(conn, dek);
       expect(opened.accessToken).toBe("secret");
       expect(opened.refreshToken).toBe("refresh");
+    });
+
+    it("rejects with DekNotEnabledError when the agency DEK row is missing", async () => {
+      // Disable the DEK row so the next call fails.
+      await db.execute(sql`DELETE FROM agency_social_dek WHERE agency_id = ${agencyId}`);
+      await expect(
+        createPendingConnection(db, {
+          workspaceId,
+          provider: "meta",
+          providerSubjectId: "psid-no-dek",
+          scopes: ["x"],
+          credentials: { accessToken: "x" },
+          accessTokenExpiresAt: null,
+          refreshTokenExpiresAt: null,
+          connectedBy: userId,
+        }),
+      ).rejects.toBeInstanceOf(DekNotEnabledError);
     });
   });
 
@@ -182,7 +212,18 @@ describe("M4 — repository", () => {
         .from(socialConnections)
         .where(sql`id = ${conn.id}`)
         .limit(1);
-      expect(openConnectionCredentials(fresh[0]!).accessToken).toBe("v2");
+      const cache = createDekCache(db);
+      const dek = await getDekForWorkspace(db, cache, workspaceId);
+      const opened = openCredentialsWithDek(
+        {
+          ciphertext: fresh[0]!.credentialsCiphertext,
+          iv: fresh[0]!.credentialsIv,
+          tag: fresh[0]!.credentialsTag,
+          keyVersion: fresh[0]!.credentialsKeyVersion as 1,
+        },
+        dek,
+      );
+      expect(opened.accessToken).toBe("v2");
       expect(fresh[0]!.lastRefreshedAt).not.toBeNull();
     });
   });

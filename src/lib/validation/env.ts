@@ -125,11 +125,16 @@ const serverSchema = z.object({
   CRON_SECRET: stringOrEmpty,
   BOOTSTRAP_SETUP_TOKEN: stringOrEmpty,
 
-  // M4 — social profile analytics. The encryption key is required
-  // when SOCIAL_SYNC_ENABLED is true; the provider credentials are
-  // optional in dev so the rest of the app can boot without a Meta
-  // app configured. None of these may be exposed as NEXT_PUBLIC_*.
-  // Generate the key with: openssl rand -base64 32
+  // M4.5 — social profile analytics. The encryption key is
+  // OPTIONAL at boot: the platform can deploy without it and
+  // agencies can sign in / use the rest of the app. The key is
+  // read lazily inside `src/lib/social/key-management.ts` on the
+  // first agency enable / unwrap. A missing or wrong-length key
+  // surfaces a 503 `platform_kek_missing` from the API and a
+  // soft `kekStatus: 'kek_missing'` field from the sync worker
+  // — never a boot crash. Generate the key with:
+  //   openssl rand -base64 32
+  // None of these may be exposed as NEXT_PUBLIC_*.
   SOCIAL_TOKEN_ENCRYPTION_KEY: stringOrEmpty,
   META_APP_ID: stringOrEmpty,
   META_APP_SECRET: stringOrEmpty,
@@ -189,22 +194,21 @@ if (!skipValidation) {
     throw new Error("Invalid provider configuration");
   }
 
-  // M4 — when social sync is enabled, the encryption key is required
-  // and must decode to exactly 32 bytes. The provider credentials
-  // remain optional so a deployment can ship with the key set and the
-  // cron route disabled (the recommended starting state).
-  if (serverEnv.SOCIAL_SYNC_ENABLED) {
-    if (!serverEnv.SOCIAL_TOKEN_ENCRYPTION_KEY) {
-      throw new Error(
-        "SOCIAL_TOKEN_ENCRYPTION_KEY is required when SOCIAL_SYNC_ENABLED=true (generate with: openssl rand -base64 32)",
-      );
-    }
-    const decoded = Buffer.from(serverEnv.SOCIAL_TOKEN_ENCRYPTION_KEY, "base64");
-    if (decoded.length !== 32) {
-      throw new Error(
-        `SOCIAL_TOKEN_ENCRYPTION_KEY must decode to 32 bytes (got ${decoded.length})`,
-      );
-    }
+  // M4.5 — the social encryption key is OPTIONAL at boot. The
+  // application refuses to seal a new social_connection if the
+  // platform KEK is missing, with a 503 / soft-no-op surface
+  // (see src/lib/social/key-management.ts). The provider
+  // credentials remain optional so a deployment can ship with
+  // the key set and the cron route disabled (the recommended
+  // starting state). If both SOCIAL_SYNC_ENABLED and the KEK
+  // are set, we log a soft warning so the operator notices the
+  // misconfiguration without crashing the boot.
+  if (serverEnv.SOCIAL_SYNC_ENABLED && !serverEnv.SOCIAL_TOKEN_ENCRYPTION_KEY) {
+    console.error(
+      "[env] SOCIAL_SYNC_ENABLED=true but SOCIAL_TOKEN_ENCRYPTION_KEY is not set. " +
+        "The cron worker will no-op until the platform operator sets the KEK. " +
+        "Generate with: openssl rand -base64 32",
+    );
   }
 }
 

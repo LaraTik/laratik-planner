@@ -7,18 +7,24 @@ import {
 } from "node:crypto";
 
 /**
- * M4 — provider credential envelope.
+ * M4 — provider credential envelope (DEK-in-hand API).
  *
  * The M4 plan calls for AES-256-GCM with a versioned AAD so that a
  * single leaked ciphertext cannot be replayed against a future key
- * rotation. The 32-byte key is read from `SOCIAL_TOKEN_ENCRYPTION_KEY`
- * (base64); any other length is rejected up-front so a misconfigured
- * env var fails closed rather than degrading to a weaker key.
+ * rotation. The 32-byte key is the **agency DEK** (see
+ * `src/lib/social/key-management.ts`), NOT a platform env var. The
+ * caller is responsible for resolving the DEK via
+ * `getDekForAgency` or `getDekForWorkspace`.
  *
  * The AAD `laratik-planner:social-credentials:v1` is bound to the
  * ciphertext. A row sealed with key version 1 will refuse to open
  * against a future `v2` AAD, and a row sealed with v1 of the AAD
  * cannot be replayed against a v2 key set.
+ *
+ * The legacy `sealCredentials(payload, base64Key)` /
+ * `openCredentials(sealed, base64Key)` helpers have been removed in
+ * M4.5. All callers now use the DEK-in-hand API. Tests, the
+ * repository, and the sync worker were updated in the same commit.
  *
  * Tokens never appear in:
  *
@@ -60,35 +66,24 @@ export class SocialCredentialError extends Error {
   }
 }
 
-/**
- * Decode and validate the base64 encryption key. The key must be
- * exactly 32 bytes (AES-256). Anything else is a configuration error,
- * not a runtime failure, so we throw immediately.
- */
-function decodeKey(base64Key: string): Buffer {
-  if (typeof base64Key !== "string" || base64Key.length === 0) {
+function validateDek(dek: Buffer): void {
+  if (!Buffer.isBuffer(dek) || dek.length !== KEY_BYTES) {
     throw new SocialCredentialError(
-      "SOCIAL_TOKEN_ENCRYPTION_KEY is not set (expected 32 base64 bytes)",
+      `DEK must be a ${KEY_BYTES}-byte Buffer (got ${dek?.length ?? "n/a"})`,
     );
   }
-  const key = Buffer.from(base64Key, "base64");
-  if (key.length !== KEY_BYTES) {
-    throw new SocialCredentialError(
-      `SOCIAL_TOKEN_ENCRYPTION_KEY must decode to ${KEY_BYTES} bytes (got ${key.length})`,
-    );
-  }
-  return key;
 }
 
 /**
- * Encrypt a credentials payload. Returns the sealed envelope. The IV
- * is fresh for every call (the unit test asserts that two seals of
- * the same payload differ in IV, ciphertext, and tag).
+ * Encrypt a credentials payload with the agency's DEK. The IV is
+ * fresh for every call (the unit test asserts that two seals of the
+ * same payload differ in IV, ciphertext, and tag). Returns the
+ * sealed envelope in the existing column-friendly string format.
  */
-export function sealCredentials(payload: SocialCredentials, base64Key: string): SealedCredentials {
-  const key = decodeKey(base64Key);
+export function sealCredentialsWithDek(payload: SocialCredentials, dek: Buffer): SealedCredentials {
+  validateDek(dek);
   const iv = randomBytes(IV_BYTES);
-  const cipher: CipherGCM = createCipheriv("aes-256-gcm", key, iv);
+  const cipher: CipherGCM = createCipheriv("aes-256-gcm", dek, iv);
   cipher.setAAD(AAD);
   const plaintext = Buffer.from(JSON.stringify(payload), "utf8");
   const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
@@ -102,13 +97,14 @@ export function sealCredentials(payload: SocialCredentials, base64Key: string): 
 }
 
 /**
- * Decrypt a sealed envelope. Throws `SocialCredentialError` (with a
- * sanitized message that contains no key material, no IV, and no
- * ciphertext) when the envelope has been tampered with, when the AAD
- * does not match, or when the key does not match.
+ * Decrypt a sealed envelope with the agency's DEK. Throws
+ * `SocialCredentialError` (with a sanitized message that contains
+ * no key material, no IV, and no ciphertext) when the envelope has
+ * been tampered with, when the AAD does not match, or when the key
+ * does not match.
  */
-export function openCredentials(sealed: SealedCredentials, base64Key: string): SocialCredentials {
-  const key = decodeKey(base64Key);
+export function openCredentialsWithDek(sealed: SealedCredentials, dek: Buffer): SocialCredentials {
+  validateDek(dek);
   if (sealed.keyVersion !== KEY_VERSION) {
     throw new SocialCredentialError(
       `Unsupported social credential envelope version (got ${sealed.keyVersion}, expected ${KEY_VERSION})`,
@@ -127,7 +123,7 @@ export function openCredentials(sealed: SealedCredentials, base64Key: string): S
   if (iv.length !== IV_BYTES) {
     throw new SocialCredentialError("Unable to decrypt social credentials");
   }
-  const decipher: DecipherGCM = createDecipheriv("aes-256-gcm", key, iv);
+  const decipher: DecipherGCM = createDecipheriv("aes-256-gcm", dek, iv);
   decipher.setAAD(AAD);
   decipher.setAuthTag(tag);
   let plaintext: Buffer;

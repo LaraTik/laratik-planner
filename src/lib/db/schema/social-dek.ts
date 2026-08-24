@@ -1,12 +1,4 @@
-import {
-  customType,
-  index,
-  pgTable,
-  smallint,
-  text,
-  timestamp,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { customType, index, pgTable, smallint, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { agencies, users } from "./identity";
 
 /**
@@ -58,9 +50,7 @@ export const agencySocialDek = pgTable(
     dekIv: bytea("dek_iv").notNull(),
     dekTag: bytea("dek_tag").notNull(),
     dekKeyVersion: smallint("dek_key_version").notNull().default(1),
-    enabledAt: timestamp("enabled_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
+    enabledAt: timestamp("enabled_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     enabledBy: uuid("enabled_by")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
@@ -69,12 +59,8 @@ export const agencySocialDek = pgTable(
       onDelete: "set null",
     }),
     rotationReason: text("rotation_reason"),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   },
   (t) => [index("agency_social_dek_kv_idx").on(t.dekKeyVersion)],
 );

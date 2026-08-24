@@ -19,6 +19,13 @@ import { metaAdapter } from "./providers/meta";
 import { tiktokAdapter } from "./providers/tiktok";
 import type { SocialProviderAdapter, ProfileSnapshot, ConnectedProfileRef } from "./types";
 import { serverEnv } from "@/lib/validation/env";
+import {
+  createDekCache,
+  DekNotEnabledError,
+  getDekForWorkspace,
+  isKekAvailable,
+  MissingKekError,
+} from "./key-management";
 
 /**
  * M4 — sync worker.
@@ -63,6 +70,12 @@ export type SyncTickResult = {
   needsReauth: number;
   skipped: number;
   retention: { oauthStatesDeleted: number; oldMetricsDeleted: number };
+  /**
+   * Set to 'kek_missing' when the platform KEK is unavailable AND
+   * `SOCIAL_SYNC_ENABLED=true`. The tick is a soft no-op (no claims
+   * are made, no errors are thrown). Set to null in all other cases.
+   */
+  kekStatus: "ok" | "kek_missing" | null;
 };
 
 const BACKOFF_MS: readonly number[] = [15 * 60_000, 60 * 60_000, 6 * 60 * 60_000];
@@ -73,23 +86,27 @@ const RETENTION_OAUTH_HOURS = 24;
 const RETENTION_METRIC_MONTHS = 25;
 
 export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResult> {
+  const noop = (kekStatus: "ok" | "kek_missing" | null = null): SyncTickResult => ({
+    claimed: 0,
+    succeeded: 0,
+    failed: 0,
+    needsReauth: 0,
+    skipped: 0,
+    retention: { oauthStatesDeleted: 0, oldMetricsDeleted: 0 },
+    kekStatus,
+  });
   if (!serverEnv.SOCIAL_SYNC_ENABLED) {
-    return {
-      claimed: 0,
-      succeeded: 0,
-      failed: 0,
-      needsReauth: 0,
-      skipped: 0,
-      retention: { oauthStatesDeleted: 0, oldMetricsDeleted: 0 },
-    };
+    return noop(null);
   }
-  if (!serverEnv.SOCIAL_TOKEN_ENCRYPTION_KEY) {
-    // Fail closed: the route must not be reachable without the key,
-    // but if a misconfigured operator flips SOCIAL_SYNC_ENABLED=true
-    // without setting the key, we refuse to start.
-    throw new Error("SOCIAL_TOKEN_ENCRYPTION_KEY is required to run the sync worker");
+  // Soft no-op if the platform KEK is unavailable. We do NOT throw —
+  // the rest of the platform must continue to work even if the
+  // operator forgets to set the env var. The route layer surfaces
+  // this to the operator as a `kekStatus: 'kek_missing'` field.
+  if (!isKekAvailable()) {
+    return noop("kek_missing");
   }
 
+  const dekCache = createDekCache(db);
   const claimed = await claimDueProfiles(db);
   let succeeded = 0;
   let failed = 0;
@@ -108,7 +125,7 @@ export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResul
         .where(eq(socialChannels.id, profile.channel.id));
       continue;
     }
-    const result = await runOne(adapter, profile, now);
+    const result = await runOne(adapter, profile, now, dekCache);
     if (result === "ok") succeeded += 1;
     else if (result === "needs_reauth") needsReauth += 1;
     else failed += 1;
@@ -131,6 +148,7 @@ export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResul
     needsReauth,
     skipped,
     retention: { oauthStatesDeleted, oldMetricsDeleted },
+    kekStatus: "ok",
   };
 }
 
@@ -138,10 +156,12 @@ async function runOne(
   adapter: SocialProviderAdapter,
   profile: ClaimedProfile,
   now: Date,
+  dekCache: ReturnType<typeof createDekCache>,
 ): Promise<"ok" | "needs_reauth" | "failed"> {
   const { channel, connection } = profile;
   try {
-    let credentials = openConnectionCredentials(connection);
+    const dek = await getDekForWorkspace(db, dekCache, connection.workspaceId);
+    let credentials = openConnectionCredentials(connection, dek);
 
     // Refresh proactively if the access token is within 5 minutes
     // of expiry, or the worker hit a 401 on the last snapshot.
@@ -207,6 +227,20 @@ async function runOne(
     await markSyncSuccess(db, channel.id, next);
     return "ok";
   } catch (err) {
+    // Platform-level errors (KEK missing, agency not enabled) get a
+    // long backoff but are NOT marked as needs_reauth — those are
+    // operator issues, not agency issues.
+    if (err instanceof MissingKekError || err instanceof DekNotEnabledError) {
+      const backoffDate = new Date(now.getTime() + 24 * 60 * 60_000);
+      await markSyncFailure(
+        db,
+        channel.id,
+        err instanceof MissingKekError ? "platform_kek_missing" : "social_not_enabled",
+        backoffDate,
+        false,
+      );
+      return "failed";
+    }
     if (isSocialProviderError(err)) {
       if (err.code === "auth_expired" || err.code === "permission_denied") {
         // Increment failure count. If 3 consecutive, mark needs_reauth.

@@ -6,13 +6,8 @@ import {
   socialOauthStates,
   socialProfileDailyMetrics,
 } from "@/lib/db/schema";
-import {
-  openCredentials,
-  sealCredentials,
-  type SealedCredentials,
-  type SocialCredentials,
-} from "./crypto";
-import { serverEnv } from "@/lib/validation/env";
+import { openCredentialsWithDek, sealCredentialsWithDek, type SocialCredentials } from "./crypto";
+import { createDekCache, type DekCache, getDekForWorkspace } from "./key-management";
 import { LimitExceededError, reserveCapacity } from "@/lib/entitlements";
 import type { ConnectedProfile, ProfileSnapshot } from "./types";
 
@@ -22,16 +17,17 @@ type SocialOauthState = typeof socialOauthStates.$inferSelect;
 type SocialProfileDailyMetric = typeof socialProfileDailyMetrics.$inferSelect;
 
 /**
- * M4 — tenant-scoped repository.
+ * M4.5 — tenant-scoped repository.
  *
  * Every function accepts the `workspaceId` and the record ID. The
  * repository never resolves a cross-workspace record; the calling
  * server boundary is responsible for proving that the actor may
  * read or write the row in question.
  *
- * The encryption key is read from `SOCIAL_TOKEN_ENCRYPTION_KEY`. When
- * the key is missing, seal/open fail closed; the cron worker checks
- * the flag at the route boundary and never reaches this module.
+ * The encryption key for social credentials is the per-agency DEK
+ * (see `src/lib/social/key-management.ts`). The DEK is wrapped by
+ * the platform KEK and cached per request. The cron worker creates
+ * one cache per tick; the API routes create one cache per request.
  *
  * Functions exposed:
  *
@@ -58,19 +54,15 @@ type Db = typeof appDb;
 const BATCH_LIMIT = 20;
 const LEASE_MS = 5 * 60 * 1000;
 
-function getEncryptionKey(): string {
-  if (!serverEnv.SOCIAL_TOKEN_ENCRYPTION_KEY) {
-    throw new Error("SOCIAL_TOKEN_ENCRYPTION_KEY is required to read or write social credentials");
-  }
-  return serverEnv.SOCIAL_TOKEN_ENCRYPTION_KEY;
-}
-
-function seal(credentials: SocialCredentials): SealedCredentials {
-  return sealCredentials(credentials, getEncryptionKey());
-}
-
-function open(sealed: SealedCredentials): SocialCredentials {
-  return openCredentials(sealed, getEncryptionKey());
+/**
+ * Per-call short-lived DEK cache. Most repository calls hit a
+ * single agency per invocation, so the per-request cache is
+ * effectively per-call here. Callers that process many profiles
+ * across many agencies (the cron worker) should pass a shared
+ * cache to amortize the DEK unwrap.
+ */
+function shortLivedDekCache(db: Db): DekCache {
+  return createDekCache(db);
 }
 
 // ─── Connection lifecycle ─────────────────────────────────────────────────
@@ -90,7 +82,9 @@ export async function createPendingConnection(
   db: Db,
   input: CreatePendingConnectionInput,
 ): Promise<SocialConnection> {
-  const sealed = seal(input.credentials);
+  const cache = shortLivedDekCache(db);
+  const dek = await getDekForWorkspace(db, cache, input.workspaceId);
+  const sealed = sealCredentialsWithDek(input.credentials, dek);
   const [row] = await db
     .insert(socialConnections)
     .values({
@@ -138,13 +132,19 @@ export async function findConnectionsByWorkspace(
     .orderBy(asc(socialConnections.connectedAt));
 }
 
-export function openConnectionCredentials(connection: SocialConnection): SocialCredentials {
-  return open({
-    ciphertext: connection.credentialsCiphertext,
-    iv: connection.credentialsIv,
-    tag: connection.credentialsTag,
-    keyVersion: connection.credentialsKeyVersion as 1,
-  });
+export function openConnectionCredentials(
+  connection: SocialConnection,
+  dek: Buffer,
+): SocialCredentials {
+  return openCredentialsWithDek(
+    {
+      ciphertext: connection.credentialsCiphertext,
+      iv: connection.credentialsIv,
+      tag: connection.credentialsTag,
+      keyVersion: connection.credentialsKeyVersion as 1,
+    },
+    dek,
+  );
 }
 
 export async function updateConnectionCredentials(
@@ -155,7 +155,16 @@ export async function updateConnectionCredentials(
   refreshTokenExpiresAt: Date | null,
   status: SocialConnection["status"] = "active",
 ): Promise<void> {
-  const sealed = seal(credentials);
+  // We need the workspaceId to resolve the DEK. Look it up first.
+  const [row] = await db
+    .select({ workspaceId: socialConnections.workspaceId })
+    .from(socialConnections)
+    .where(eq(socialConnections.id, connectionId))
+    .limit(1);
+  if (!row) throw new Error(`Connection ${connectionId} not found`);
+  const cache = shortLivedDekCache(db);
+  const dek = await getDekForWorkspace(db, cache, row.workspaceId);
+  const sealed = sealCredentialsWithDek(credentials, dek);
   await db
     .update(socialConnections)
     .set({

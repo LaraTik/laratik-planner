@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { sealCredentials, openCredentials, type SocialCredentials } from "@/lib/social/crypto";
+import {
+  openCredentialsWithDek,
+  sealCredentialsWithDek,
+  type SocialCredentials,
+} from "@/lib/social/crypto";
 
 /**
- * M4 — provider credential envelope.
+ * M4.5 — provider credential envelope (DEK-in-hand API).
  *
  * The envelope uses AES-256-GCM with a versioned AAD so that a single
  * leaked ciphertext cannot be replayed against a future key rotation.
- * The 32-byte key is read from `SOCIAL_TOKEN_ENCRYPTION_KEY` (base64);
- * any other length is rejected up-front so a misconfigured env var
- * fails closed rather than degrading to a weaker key.
+ * The 32-byte key is the per-agency DEK, supplied by the caller as a
+ * `Buffer` (the repository resolves the DEK via
+ * `src/lib/social/key-management.ts`). A wrong key length throws
+ * immediately, not at first encrypt.
  *
  * What this suite guarantees:
  *
@@ -19,20 +24,20 @@ import { sealCredentials, openCredentials, type SocialCredentials } from "@/lib/
  *   - a wrong key length throws immediately, not at first encrypt
  *   - extra fields on the payload are preserved
  */
-describe("sealCredentials / openCredentials", () => {
-  const validKey = Buffer.alloc(32, 7).toString("base64");
+describe("sealCredentialsWithDek / openCredentialsWithDek", () => {
+  const validDek = Buffer.alloc(32, 7);
 
   it("round-trips a provider credential envelope", () => {
     const payload: SocialCredentials = {
       accessToken: "access",
       refreshToken: "refresh",
     };
-    const sealed = sealCredentials(payload, validKey);
-    expect(openCredentials(sealed, validKey)).toEqual(payload);
+    const sealed = sealCredentialsWithDek(payload, validDek);
+    expect(openCredentialsWithDek(sealed, validDek)).toEqual(payload);
   });
 
   it("does not contain the plaintext in the sealed envelope", () => {
-    const sealed = sealCredentials({ accessToken: "access" }, validKey);
+    const sealed = sealCredentialsWithDek({ accessToken: "access" }, validDek);
     const serialized = JSON.stringify(sealed);
     expect(serialized).not.toContain("access");
   });
@@ -42,60 +47,62 @@ describe("sealCredentials / openCredentials", () => {
       accessToken: "a",
       profileAccessTokens: { p1: "tok1" },
     };
-    const sealed = sealCredentials(payload, validKey);
-    expect(openCredentials(sealed, validKey)).toEqual(payload);
+    const sealed = sealCredentialsWithDek(payload, validDek);
+    expect(openCredentialsWithDek(sealed, validDek)).toEqual(payload);
   });
 
   it("fails closed when the ciphertext changes", () => {
-    const sealed = sealCredentials({ accessToken: "access" }, validKey);
+    const sealed = sealCredentialsWithDek({ accessToken: "access" }, validDek);
     const tampered = { ...sealed, ciphertext: `${sealed.ciphertext}AA` };
-    expect(() => openCredentials(tampered, validKey)).toThrow(
+    expect(() => openCredentialsWithDek(tampered, validDek)).toThrow(
       "Unable to decrypt social credentials",
     );
   });
 
   it("fails closed when the auth tag changes", () => {
-    const sealed = sealCredentials({ accessToken: "access" }, validKey);
+    const sealed = sealCredentialsWithDek({ accessToken: "access" }, validDek);
     // Replace the auth tag with one that decodes to a valid 16-byte length
     // but a different value. Using a different valid base64 tag.
     const differentTag = Buffer.alloc(16, 0xab).toString("base64");
     const tampered = { ...sealed, tag: differentTag };
-    expect(() => openCredentials(tampered, validKey)).toThrow(
+    expect(() => openCredentialsWithDek(tampered, validDek)).toThrow(
       "Unable to decrypt social credentials",
     );
   });
 
   it("fails closed when the IV changes", () => {
-    const sealed = sealCredentials({ accessToken: "access" }, validKey);
+    const sealed = sealCredentialsWithDek({ accessToken: "access" }, validDek);
     const tampered = { ...sealed, iv: sealed.iv === "AA" ? "BB" : "AA" };
-    expect(() => openCredentials(tampered, validKey)).toThrow(
+    expect(() => openCredentialsWithDek(tampered, validDek)).toThrow(
       "Unable to decrypt social credentials",
     );
   });
 
-  it("rejects a key that is not exactly 32 bytes when decoded", () => {
-    const shortKey = Buffer.alloc(16, 1).toString("base64");
-    expect(() => sealCredentials({ accessToken: "a" }, shortKey)).toThrow(/32 bytes/);
-    const sealed = sealCredentials({ accessToken: "a" }, validKey);
-    expect(() => openCredentials(sealed, shortKey)).toThrow(/32 bytes/);
+  it("rejects a DEK that is not exactly 32 bytes", () => {
+    const shortDek = Buffer.alloc(16, 1);
+    expect(() => sealCredentialsWithDek({ accessToken: "a" }, shortDek)).toThrow(/32/);
+    const sealed = sealCredentialsWithDek({ accessToken: "a" }, validDek);
+    expect(() => openCredentialsWithDek(sealed, shortDek)).toThrow(/32/);
   });
 
-  it("fails closed with a different key of the same length", () => {
-    const otherKey = Buffer.alloc(32, 9).toString("base64");
-    const sealed = sealCredentials({ accessToken: "access" }, validKey);
-    expect(() => openCredentials(sealed, otherKey)).toThrow("Unable to decrypt social credentials");
+  it("fails closed with a different DEK of the same length", () => {
+    const otherDek = Buffer.alloc(32, 9);
+    const sealed = sealCredentialsWithDek({ accessToken: "access" }, validDek);
+    expect(() => openCredentialsWithDek(sealed, otherDek)).toThrow(
+      "Unable to decrypt social credentials",
+    );
   });
 
   it("uses a fresh IV for every seal", () => {
-    const a = sealCredentials({ accessToken: "access" }, validKey);
-    const b = sealCredentials({ accessToken: "access" }, validKey);
+    const a = sealCredentialsWithDek({ accessToken: "access" }, validDek);
+    const b = sealCredentialsWithDek({ accessToken: "access" }, validDek);
     expect(a.iv).not.toEqual(b.iv);
     expect(a.ciphertext).not.toEqual(b.ciphertext);
     expect(a.tag).not.toEqual(b.tag);
   });
 
   it("tags the envelope with keyVersion 1", () => {
-    const sealed = sealCredentials({ accessToken: "a" }, validKey);
+    const sealed = sealCredentialsWithDek({ accessToken: "a" }, validDek);
     expect(sealed.keyVersion).toBe(1);
   });
 });

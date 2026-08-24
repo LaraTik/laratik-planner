@@ -1,6 +1,7 @@
 import "server-only";
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto";
+import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { serverEnv } from "@/lib/validation/env";
+import { deriveDevKey } from "./dev-key";
 
 /**
  * Per-agency encrypted secret helpers (M3.4 — AI in-DB secret).
@@ -111,10 +112,10 @@ function readKey(version: number = CURRENT_KEY_VERSION): Buffer {
     throw new MissingEncryptionKeyError("AI_SECRET_ENCRYPTION_KEY");
   }
 
-  // Dev / test fallback. scrypt-derive a deterministic 32-byte key
-  // from a fixed string + constant salt so the value is not a
-  // hard-coded constant. The first call in the process logs a
-  // single line so the developer notices the misconfiguration.
+  // Dev / test fallback. Use the shared dev-key derivation so the
+  // fallback is not a hard-coded constant in the source tree. The
+  // first call in the process logs a single line so the developer
+  // notices the misconfiguration.
   if (!loggedDevFallback) {
     console.error(
       "[security.secrets] AI_SECRET_ENCRYPTION_KEY is not set; using a derived dev key. " +
@@ -122,7 +123,7 @@ function readKey(version: number = CURRENT_KEY_VERSION): Buffer {
     );
     loggedDevFallback = true;
   }
-  return scryptSync("laratik-ai-secret-dev-fallback", "laratik-ai-secret-dev-salt", 32);
+  return deriveDevKey();
 }
 
 export type EncryptedSecret = {
