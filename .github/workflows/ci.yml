@@ -383,19 +383,26 @@ jobs:
         # Security audit of the workflows. Uses the project-level
         # `zizmor.yml` config (which documents the accepted findings:
         # unpinned-uses and dangerous-triggers on deploy.yml). The
-        # action runs `--persona=regular` (errors only) and
-        # `--min-severity=high` so accepted warnings don't fail the
-        # gate. New errors fail the deploy.
+        # action exposes `persona:` and `min-severity:` as its own
+        # inputs (NOT CLI flags — the action's `args:` input is
+        # reserved for the inputs list, not flags). `persona: regular`
+        # (errors only) + `min-severity: high` means accepted
+        # warnings in zizmor.yml don't fail the gate.
+        #
+        # `advanced-security: false` skips the SARIF upload to GitHub
+        # Advanced Security — laratik-planner is private and we don't
+        # have Advanced Security on the free plan. Without this, the
+        # step fails on "Resource not accessible by integration" because
+        # the workflow needs `security-events: write` to upload SARIF,
+        # and we don't want to grant that scope just to publish
+        # findings. The findings are still in the action's stdout
+        # and in the run summary.
         uses: zizmorcore/zizmor-action@v0.1.2
         with:
-          # We pass `inputs: .` so zizmor audits the current directory
-          # (the workflows + zizmor.yml config). The action defaults
-          # to `.` so this is implicit, but explicit for auditability.
           inputs: .
-          # `args:` here are the flags passed to zizmor itself.
-          # `--persona=regular` (errors only) + `--min-severity=high`
-          # means accepted warnings in zizmor.yml don't fail the gate.
-          args: --persona=regular --min-severity=high
+          persona: regular
+          min-severity: high
+          advanced-security: false
         timeout-minutes: 5
 
       - name: hadolint
