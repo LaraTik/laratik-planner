@@ -65,6 +65,7 @@ describe("GET /api/health/ready", () => {
         {
           migration_table: "drizzle.__drizzle_migrations",
           applied_migration_timestamps: appliedMigrationTimestamps,
+          required_schema_present: true,
         },
       ],
     });
@@ -77,6 +78,27 @@ describe("GET /api/health/ready", () => {
     expect(body.db).toBe("up");
     expect(body.schema).toBe("ready");
     expect(body.version).toBe("a1b2c3d4e5f678901234567890abcdef12345678");
+  });
+
+  it("returns 200 for a baselined database with a complete recorded suffix", async () => {
+    const appliedMigrationTimestamps = migrationJournal.entries
+      .filter((entry) => Number(entry.tag.slice(0, 4)) >= 11)
+      .map((entry) => String(entry.when));
+    mockExecute.mockResolvedValueOnce({ rows: [{ "?column?": 1 }] }).mockResolvedValueOnce({
+      rows: [
+        {
+          migration_table: "drizzle.__drizzle_migrations",
+          applied_migration_timestamps: appliedMigrationTimestamps,
+          required_schema_present: true,
+        },
+      ],
+    });
+
+    const { GET } = await import("@/app/api/health/ready/route");
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.schema).toBe("ready");
   });
 
   it("returns 503 when db is down", async () => {
@@ -113,6 +135,7 @@ describe("GET /api/health/ready", () => {
         {
           migration_table: "drizzle.__drizzle_migrations",
           applied_migration_timestamps: appliedMigrationTimestamps,
+          required_schema_present: true,
         },
       ],
     });
@@ -123,6 +146,25 @@ describe("GET /api/health/ready", () => {
     const body = await res.json();
     expect(body.ok).toBe(false);
     expect(body.db).toBe("up");
+    expect(body.schema).toBe("missing");
+  });
+
+  it("returns 503 when a deployment-critical table is missing", async () => {
+    const appliedMigrationTimestamps = migrationJournal.entries.map((entry) => String(entry.when));
+    mockExecute.mockResolvedValueOnce({ rows: [{ "?column?": 1 }] }).mockResolvedValueOnce({
+      rows: [
+        {
+          migration_table: "drizzle.__drizzle_migrations",
+          applied_migration_timestamps: appliedMigrationTimestamps,
+          required_schema_present: false,
+        },
+      ],
+    });
+
+    const { GET } = await import("@/app/api/health/ready/route");
+    const res = await GET();
+    expect(res.status).toBe(503);
+    const body = await res.json();
     expect(body.schema).toBe("missing");
   });
 });
@@ -139,6 +181,7 @@ describe("GET /api/health (backwards-compat alias)", () => {
         {
           migration_table: "drizzle.__drizzle_migrations",
           applied_migration_timestamps: appliedMigrationTimestamps,
+          required_schema_present: true,
         },
       ],
     });

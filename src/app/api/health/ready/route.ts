@@ -9,9 +9,10 @@ import migrationJournal from "@/lib/db/migrations/meta/_journal.json";
  * GET /api/health/ready
  *
  * Readiness probe. Returns 200 only if the process is up AND the database
- * is reachable AND every migration in the bundled journal is recorded
- * in the database ledger. Returns 503 otherwise with a JSON body
- * explaining which check failed.
+ * is reachable, the deployment-critical schema exists, and the recorded
+ * migration suffix matches the bundled journal. Older installations were
+ * baselined before the Drizzle ledger existed, so an absent historical
+ * prefix is valid; gaps within the recorded suffix are not.
  *
  * Used by:
  *   - Traefik upstream probe (loadbalancer.server.url points here in
@@ -56,7 +57,12 @@ async function checkSchema(): Promise<"ready" | "missing" | "disabled"> {
           COALESCE(
             array_agg(created_at::text ORDER BY created_at),
             ARRAY[]::text[]
-          ) AS applied_migration_timestamps
+          ) AS applied_migration_timestamps,
+          to_regclass('public.support_access_request') IS NOT NULL
+            AND to_regclass('public.support_access_grant') IS NOT NULL
+            AND to_regclass('public.support_access_audit') IS NOT NULL
+            AND to_regclass('public.ai_daily_budget_usage') IS NOT NULL
+            AS required_schema_present
         FROM drizzle.__drizzle_migrations
       `,
     );
@@ -65,17 +71,39 @@ async function checkSchema(): Promise<"ready" | "missing" | "disabled"> {
         rows?: Array<{
           migration_table: string | null;
           applied_migration_timestamps: string[];
+          required_schema_present: boolean;
         }>;
       }
     ).rows;
     const row = rows?.[0];
-    if (!row?.migration_table) return "missing";
+    if (!row?.migration_table || !row.required_schema_present) return "missing";
 
-    const expected = migrationJournal.entries.map((entry) => String(entry.when)).sort();
+    const expectedEntries = migrationJournal.entries;
     const applied = [...row.applied_migration_timestamps].sort();
-    const complete =
-      applied.length === expected.length &&
-      applied.every((timestamp, index) => timestamp === expected[index]);
+
+    // An out-of-order journal timestamp can be skipped by Drizzle when it is
+    // merged after newer migrations. Such entries must always be present even
+    // when the installation has a legitimate pre-ledger baseline prefix.
+    const reorderedTimestamps = expectedEntries
+      .filter((entry, index) => index > 0 && entry.when <= expectedEntries[index - 1]!.when)
+      .map((entry) => String(entry.when));
+    const normalApplied = applied.filter((timestamp) => !reorderedTimestamps.includes(timestamp));
+    const earliestNormalApplied = normalApplied[0];
+    if (!earliestNormalApplied) return "missing";
+
+    const expectedSuffix = expectedEntries
+      .filter(
+        (entry) =>
+          reorderedTimestamps.includes(String(entry.when)) ||
+          String(entry.when) >= earliestNormalApplied,
+      )
+      .map((entry) => String(entry.when))
+      .sort();
+    const suffixComplete =
+      applied.length === expectedSuffix.length &&
+      applied.every((timestamp, index) => timestamp === expectedSuffix[index]);
+    const reorderedComplete = reorderedTimestamps.every((timestamp) => applied.includes(timestamp));
+    const complete = suffixComplete && reorderedComplete;
     return complete ? "ready" : "missing";
   } catch {
     return "missing";

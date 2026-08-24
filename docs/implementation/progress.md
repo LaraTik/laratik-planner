@@ -13,7 +13,7 @@ Only an independent reviewer may mark a tracker item `Verified`. Implementation 
 
 ## 2026-08-24 — Production login render incident repair
 
-Status: **Tested locally; production deployment evidence pending CI/deploy completion.**
+Status: **Database repair applied in production; corrected app readiness deployment pending.**
 
 Reference `1145607673` mapped to a production Postgres error: relation
 `support_access_grant` did not exist. Login and session creation were
@@ -28,8 +28,9 @@ continued with later entries. The repair is forward-only:
 - `0017_repair_support_access_grants.sql` idempotently restores the four M3
   tables, indexes, append-only audit trigger, comments, and the original 0012
   ledger row.
-- Readiness now requires the database ledger timestamps to exactly match the
-  bundled migration journal; a partial schema cannot pass the deploy gate.
+- Readiness now requires the critical M3 tables and a complete recorded ledger
+  suffix. It accepts the production database's legitimate pre-ledger baseline,
+  while still rejecting gaps and the historically reordered 0012 entry.
 - A journal-order unit guard documents the single historical inversion and
   requires the repair plus strictly monotonic timestamps afterward.
 - The Docker context now excludes nested `.DS_Store` files so local macOS
@@ -42,6 +43,13 @@ Evidence on disposable Postgres 16: focused unit tests 9/9 PASS;
 tenant data is unaffected because the migration is additive. Application
 rollback can retain the tables; destructive schema rollback requires the
 verified pre-deploy backup.
+
+CI run `32774784826` passed. Deploy run `32775688443` created the backup and
+applied 0017, restoring all four tables and the 0012 ledger row. Its app stage
+rolled back because the first exact-ledger readiness check did not account for
+the production database's historical baseline (seven recorded recent rows vs.
+18 on a fresh database). The additive schema repair remains applied; the
+baseline-aware readiness follow-up has focused regression coverage.
 
 ## 2026-08-24 — Social profile analytics (M4) merged
 

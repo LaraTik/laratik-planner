@@ -53,8 +53,10 @@ restoring schema remains approval-gated.
 
 ### Prevention and evidence
 
-- `/api/health/ready` now compares every applied ledger timestamp with the
-  bundled migration journal and returns 503 for any missing or extra row.
+- `/api/health/ready` now verifies the deployment-critical M3 tables and the
+  complete recorded ledger suffix against the bundled migration journal. This
+  permits the production database's legitimate pre-ledger baseline while
+  rejecting gaps, unknown rows, and the historically reordered 0012 entry.
 - `tests/unit/migration-journal-order.test.ts` allows only the documented 0012
   inversion, requires the 0017 repair, and enforces strict monotonicity after
   it.
@@ -70,6 +72,14 @@ Local result on disposable Postgres 16 (2026-08-24): 5/5 drills PASS; from-zero
 ledger 18/18; skipped-migration repair restored all four tables and the 0012
 ledger row; backup/restore preserved 18/18 ledger rows; failed migration left
 the schema unchanged.
+
+The first deployment of `79ff927` applied the repair successfully and created a
+verified pre-migration backup, but the new app was rolled back because the
+initial readiness implementation required all 18 ledger rows. Production was
+legitimately baselined before the Drizzle ledger and records the contiguous
+recent suffix (0011–0017, including the reconciled 0012 row). The follow-up
+readiness logic models that baseline explicitly; the rollback did not undo the
+additive database repair.
 
 ## Baseline findings (pre-M3a) — all resolved
 
