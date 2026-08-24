@@ -434,3 +434,25 @@ newer `pg_dump` session setting without masking SQL failures.
 Still reviewer/owner gated: Linux visual-baseline capture and review, manual
 keyboard/screen-reader/200% zoom sign-off, the separated-account 30-step UAT,
 and external OAuth/SMTP/MiniMax/Sentry/offsite-backup checks.
+
+## 2026-08-24 — Navigation-first UI/UX refinement
+
+Implementation commit `7536d4d` was reviewed screen by screen against the
+StudioFlow route inventory and canonical captures. UI/UX Pro Max guidance was
+applied for responsive hierarchy, touch targets, focus behavior, safe areas and
+mobile task shaping while retaining the canonical StudioFlow indigo/Inter token
+system. No database schema or production data changes are involved.
+
+| Gate                                                                         | SHA                       | Result                                                                                                                                                                        |
+| ---------------------------------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                | `7536d4d` change snapshot | Pass: formatting, lint, strict typecheck, 133 unit files / 1,543 tests, and the Next.js 16.3.1 webpack production build.                                                      |
+| Focused Vitest: sidebar, mobile navigation, Calendar event card              | `7536d4d` change snapshot | 3 files / 34 tests passed.                                                                                                                                                    |
+| `TEST_DATABASE_URL=… pnpm test:integration`                                  | `7536d4d` change snapshot | Migrations and 15 files / 106 tests passed on a named disposable Postgres database; both temporary test databases were removed afterward.                                     |
+| `pnpm exec playwright test tests/e2e/mobile.spec.ts --project=mobile-chrome` | `7536d4d` change snapshot | 8/8 passed: 72px tablet rail, 44px touch targets, mobile More-sheet reachability and authorization, calendar agenda, axe scans, and no horizontal overflow.                   |
+| `pnpm exec playwright test tests/e2e/workspace.spec.ts --project=chromium`   | `7536d4d` change snapshot | 8/8 passed with 8 workers. The switcher keyboard test now waits for visible, confirmed focus before sending Enter; it does not fall back to pointer activation.               |
+| `pnpm audit --prod`                                                          | `7536d4d` change snapshot | Pass: no known vulnerabilities.                                                                                                                                               |
+| Manual responsive review                                                     | `7536d4d` change snapshot | Planning at mobile/tablet/desktop, the mobile More sheet, and the mobile Calendar agenda were captured and inspected for hierarchy, density, clipping and route reachability. |
+
+Status remains `READY FOR INDEPENDENT REVIEW`. This pass does not satisfy the
+pending Linux visual-baseline capture in QA-004 or the owner-sign-off portion of
+QA-005, and it does not promote any tracker item to `Verified`.
