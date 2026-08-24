@@ -1,6 +1,21 @@
 import "server-only";
 import { serverEnv } from "@/lib/validation/env";
 
+// Re-export the M3.3 governance surface so callers can import
+// from a single entry point. The governance module is the
+// authoritative gate for the AI budget and capability
+// intersection; the AI client below is the actual provider
+// transport.
+export {
+  resolveEnabledCapabilities,
+  loadEnabledCapabilities,
+  enforceAiBudget,
+  reconcileAiBudget,
+  getUserDailyBudgetSnapshot,
+  AiBudgetReservationSchema,
+} from "./governance";
+export type { AiBudgetReservation } from "./governance";
+
 /**
  * MiniMax AI client (Goal 11 — master prompt §15).
  *
