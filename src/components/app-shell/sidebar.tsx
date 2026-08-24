@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
+  BarChart3,
   Bot,
   Briefcase,
   CalendarDays,
@@ -37,7 +38,7 @@ import { SidebarGroup, SidebarLink, SidebarSubLink } from "./sidebar-group";
  *      - Brand: logo + workspace name
  *      - My Work (global, top)
  *      - Workspace tabs (vertical): Overview, Planning, Calendar,
- *        Reviews, Social Channels, Brand Kit, Team
+ *        Reviews, Social Channels, Social Analytics, Brand Kit, Team
  *      - Create content (primary button, bottom of nav)
  *      - Settings (expandable group): Lifecycle, Lead times,
  *        Assignment defaults, Approval mode, AI assistance
@@ -170,6 +171,13 @@ export function Sidebar({
                   active={isActivePath(`${wsBase}/channels`, pathname)}
                 >
                   Social Channels
+                </SidebarLink>
+                <SidebarLink
+                  href={`${wsBase}/analytics/social`}
+                  icon={<BarChart3 className="h-4 w-4" />}
+                  active={isActivePath(`${wsBase}/analytics/social`, pathname)}
+                >
+                  Social Analytics
                 </SidebarLink>
                 <SidebarLink
                   href={`${wsBase}/brand-kit`}

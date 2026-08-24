@@ -91,12 +91,10 @@ export function MetaAccountPicker({
     <Card padding="lg" data-testid="meta-account-picker">
       <div className="space-y-4">
         <div>
-          <h2 className="text-h3 text-fg-primary font-semibold">
-            Connect Meta accounts
-          </h2>
+          <h2 className="text-h3 text-fg-primary font-semibold">Connect Meta accounts</h2>
           <p className="text-body text-fg-muted mt-1">
-            We found {profiles.length} profile{profiles.length === 1 ? "" : "s"} on the Pages
-            you manage. Pick the ones you want to track.
+            We found {profiles.length} profile{profiles.length === 1 ? "" : "s"} on the Pages you
+            manage. Pick the ones you want to track.
           </p>
         </div>
 
@@ -120,9 +118,7 @@ export function MetaAccountPicker({
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                       <PlatformIcon platform={p.platform} />
-                      <span className="text-body text-fg-primary font-medium">
-                        {p.accountName}
-                      </span>
+                      <span className="text-body text-fg-primary font-medium">{p.accountName}</span>
                       {p.handle ? (
                         <span className="text-label text-fg-muted">@{p.handle}</span>
                       ) : null}
@@ -160,15 +156,8 @@ export function MetaAccountPicker({
         ) : null}
 
         <div className="flex items-center justify-end gap-2">
-          <span className="text-label text-fg-muted">
-            {selected.size} selected
-          </span>
-          <Button
-            type="button"
-            disabled={pending}
-            onClick={submit}
-            data-testid="picker-submit"
-          >
+          <span className="text-label text-fg-muted">{selected.size} selected</span>
+          <Button type="button" disabled={pending} onClick={submit} data-testid="picker-submit">
             {pending ? "Linking…" : "Link selected profiles"}
           </Button>
         </div>

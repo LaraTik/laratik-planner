@@ -17,15 +17,18 @@ import { formatRelativeDate } from "@/lib/utils/format-relative-date";
  */
 
 export type ConnectionStatus =
-  | "manual"
-  | "connected"
-  | "needs_reauth"
-  | "sync_error"
-  | "disconnected";
+  "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected";
 
 const STALE_AFTER_MS = 36 * 60 * 60 * 1000;
 
-const STATUS_COPY: Record<ConnectionStatus, { label: string; icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>; description: string }> = {
+const STATUS_COPY: Record<
+  ConnectionStatus,
+  {
+    label: string;
+    icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+    description: string;
+  }
+> = {
   manual: {
     label: "Manual",
     icon: CircleDashed,
@@ -65,20 +68,24 @@ export function ConnectionStatusBadge({
   const meta = STATUS_COPY[status];
   const Icon = meta.icon;
   const stale =
-    status === "connected" &&
-    lastSyncedAt &&
-    Date.now() - lastSyncedAt.getTime() > STALE_AFTER_MS;
+    status === "connected" && lastSyncedAt && Date.now() - lastSyncedAt.getTime() > STALE_AFTER_MS;
   const effective: ConnectionStatus = stale ? "sync_error" : status;
   const effectiveMeta = STATUS_COPY[effective];
   const EffectiveIcon = effectiveMeta.icon;
   return (
-    <span className="inline-flex flex-col items-start gap-1" data-testid={`connection-status-${status}`}>
+    <span
+      className="inline-flex flex-col items-start gap-1"
+      data-testid={`connection-status-${status}`}
+    >
       <Badge variant={variant}>
         <EffectiveIcon className="h-3 w-3" aria-hidden={true} />
         {effectiveMeta.label}
       </Badge>
       {lastSyncedAt ? (
-        <span className="text-label text-fg-muted" aria-label={`Last synced ${formatRelativeDate(lastSyncedAt)}`}>
+        <span
+          className="text-label text-fg-muted"
+          aria-label={`Last synced ${formatRelativeDate(lastSyncedAt)}`}
+        >
           Synced {formatRelativeDate(lastSyncedAt)}
         </span>
       ) : status === "connected" ? (

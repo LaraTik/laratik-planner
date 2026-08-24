@@ -80,7 +80,10 @@ function channelsColumns(props: {
       header: "State",
       cell: (row) => (
         <ConnectionStatusBadge
-          status={(row.connectionStatus ?? "manual") as "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected"}
+          status={
+            (row.connectionStatus ?? "manual") as
+              "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected"
+          }
           lastSyncedAt={row.lastSyncedAt}
         />
       ),
@@ -162,12 +165,10 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
         <Card padding="md" data-testid="connect-meta-card">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h3 className="text-body text-fg-primary font-semibold">
-                Connect a Meta account
-              </h3>
+              <h3 className="text-body text-fg-primary font-semibold">Connect a Meta account</h3>
               <p className="text-label text-fg-muted mt-1">
-                Authorize Facebook Pages and any linked Instagram professional accounts.
-                Read-only — no publishing, no ads.
+                Authorize Facebook Pages and any linked Instagram professional accounts. Read-only —
+                no publishing, no ads.
               </p>
             </div>
             <form action="/api/social/meta/connect" method="POST">
