@@ -46,6 +46,7 @@ export function AppShell({
     email: string;
     image: string | null;
     isAdmin: boolean;
+    isPlatformAdmin?: boolean;
   };
   buildInfo: BuildInfo;
   workspaces: { id: string; slug: string; name: string }[];
@@ -128,7 +129,11 @@ export function AppShell({
             initialUnread={unreadCount}
             badgeTestId="unread-badge-mobile"
           />
-          <UserMenu user={user} buildInfo={buildInfo} variant="mobile" />
+          <UserMenu
+            user={{ ...user, isPlatformAdmin: isPlatformAdmin || user.isPlatformAdmin || false }}
+            buildInfo={buildInfo}
+            variant="mobile"
+          />
         </div>
       </header>
 

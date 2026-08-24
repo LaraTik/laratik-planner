@@ -328,18 +328,30 @@ export function Sidebar({
           <AgencySwitcher
             active={agencySwitcher.active}
             options={agencySwitcher.options}
+            isPlatformAdmin={isPlatformAdmin}
             testId="sidebar-agency-switcher-trigger"
           />
         </div>
 
         {/* Workspace switcher lives in the sidebar bottom (per Stitch). */}
         <div className="pt-1">
-          <WorkspaceSwitcher
-            active={currentWorkspace ?? workspaceSwitcherOptions[0] ?? null}
-            options={workspaceSwitcherOptions}
-            canCreate={canCreateWorkspace}
-            testId="sidebar-workspace-switcher-trigger"
-          />
+          {workspaceSwitcherOptions.length === 0 ? (
+            <Link
+              href="/app/workspaces/new"
+              className="text-body text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex items-center gap-2 rounded-[var(--radius-control)] border border-dashed px-3 py-2 font-semibold focus:outline-none focus-visible:ring-2"
+              data-testid="sidebar-workspace-empty"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Create your first workspace
+            </Link>
+          ) : (
+            <WorkspaceSwitcher
+              active={currentWorkspace ?? workspaceSwitcherOptions[0] ?? null}
+              options={workspaceSwitcherOptions}
+              canCreate={canCreateWorkspace}
+              testId="sidebar-workspace-switcher-trigger"
+            />
+          )}
         </div>
       </div>
     </nav>

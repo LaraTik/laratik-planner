@@ -13,7 +13,14 @@ export function Topbar({
   notifications,
   unreadCount,
 }: {
-  user: { id: string; name: string; email: string; image: string | null; isAdmin: boolean };
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+    isAdmin: boolean;
+    isPlatformAdmin?: boolean;
+  };
   buildInfo: BuildInfo;
   notifications: {
     id: string;

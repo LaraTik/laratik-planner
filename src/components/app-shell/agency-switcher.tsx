@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronsUpDown, Shield } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { switchActiveAgency } from "@/lib/auth/agency-actions";
@@ -36,10 +37,12 @@ export function AgencySwitcher({
   active,
   options,
   testId,
+  isPlatformAdmin = false,
 }: {
   active: AgencyRow | null;
   options: AgencyRow[];
   testId?: string;
+  isPlatformAdmin?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -218,6 +221,18 @@ export function AgencySwitcher({
               })
             )}
           </ul>
+          {isPlatformAdmin ? (
+            <div className="border-border border-t p-1.5">
+              <Link
+                href="/app/platform/agencies"
+                className="text-body text-fg-primary hover:bg-surface-subtle flex items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 font-semibold"
+                data-testid="agency-switcher-create"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Create new agency
+              </Link>
+            </div>
+          ) : null}
         </div>
       </PopoverContent>
     </Popover>

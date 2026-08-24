@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Settings, User as UserIcon } from "lucide-react";
+import { Settings, ShieldCheck, User as UserIcon } from "lucide-react";
 import type { BuildInfo } from "@/lib/build-info";
 import { SignOutForm } from "@/app/(app)/app/account/sign-out-form";
 import {
@@ -33,6 +33,7 @@ type UserMenuUser = {
   email: string;
   image: string | null;
   isAdmin: boolean;
+  isPlatformAdmin?: boolean;
 };
 
 function AvatarTrigger({ user, compact = false }: { user: UserMenuUser; compact?: boolean }) {
@@ -91,7 +92,19 @@ export function UserMenu({
           className="top-auto bottom-0 left-0 w-full max-w-none translate-x-0 translate-y-0 gap-0 rounded-t-[var(--radius-card)] rounded-b-none p-0"
         >
           <DialogHeader className="border-border border-b px-4 py-4 pr-14">
-            <DialogTitle className="truncate">{user.name}</DialogTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <DialogTitle className="truncate">{user.name}</DialogTitle>
+              {user.isPlatformAdmin ? (
+                <span
+                  className="text-label text-info border-info/30 bg-info-subtle inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-semibold"
+                  data-testid="user-menu-platform-admin-chip"
+                  title="This account can reach /app/platform/* (manage agencies, plans, support access)"
+                >
+                  <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+                  Platform Admin
+                </span>
+              ) : null}
+            </div>
             <DialogDescription className="truncate">{user.email}</DialogDescription>
           </DialogHeader>
           <div role="menu" aria-label="Account" className="space-y-1 p-2 pb-4">
@@ -138,8 +151,18 @@ export function UserMenu({
         className="w-64"
       >
         <DropdownMenuLabel className="normal-case">
-          <span className="text-body text-fg-primary block truncate font-semibold tracking-normal">
-            {user.name}
+          <span className="text-body text-fg-primary flex items-center gap-2 truncate font-semibold tracking-normal">
+            <span className="truncate">{user.name}</span>
+            {user.isPlatformAdmin ? (
+              <span
+                className="text-label text-info border-info/30 bg-info-subtle inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 font-semibold"
+                data-testid="user-menu-platform-admin-chip"
+                title="This account can reach /app/platform/* (manage agencies, plans, support access)"
+              >
+                <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+                Platform Admin
+              </span>
+            ) : null}
           </span>
           <span className="text-label text-fg-muted block truncate font-normal tracking-normal">
             {user.email}

@@ -120,6 +120,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         email: session.user.email ?? "",
         image: session.user.image ?? null,
         isAdmin,
+        isPlatformAdmin: platformAdmin,
       }}
       workspaces={switcher.options}
       agencySwitcher={{ active: activeAgency, options: agencyOptions }}
