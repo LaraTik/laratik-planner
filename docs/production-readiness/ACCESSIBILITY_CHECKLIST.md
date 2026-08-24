@@ -173,6 +173,17 @@ to `Verified`; this checklist never self-assigns `Verified`.
 
 ### Auto-check coverage (2026-08-22 pre-fill on `96e7048`)
 
+> **2026-08-24 automated refresh:** the axe paragraph below is retained as
+> historical evidence for the 2026-08-22 pre-fill and is superseded by the
+> current run. Chromium now passes all 23 authenticated route checks,
+> including the new publish-package route, plus the 3 public route scans;
+> the authenticated redirect/focus contract also passes. The UI refinement
+> replaced prompt/alert interactions with labelled, focus-managed dialogs,
+> added persistent form labels and live error/status regions, fixed the
+> mobile account-sheet trigger, and removed internal navigation from the
+> client-reviewer shell. Manual keyboard, screen-reader and 200% zoom columns
+> remain intentionally unsigned for the independent reviewer.
+
 - **axe (chromium)** — 6 of 27 rows have a real automated result
   because the route is covered by `tests/e2e/a11y-routes.spec.ts`
   (2 PASS, 4 FAIL, 21 OUT OF SCOPE). The PASS rows are

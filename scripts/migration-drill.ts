@@ -393,6 +393,16 @@ async function drillBackupRestore(): Promise<void> {
       );
       return;
     }
+    // PostgreSQL 17's pg_dump emits this session setting even when
+    // connected to a PostgreSQL 16 server. PostgreSQL 16 correctly
+    // rejects the unknown parameter during restore. It has no effect
+    // on schema or data, so remove only this exact compatibility line.
+    const dumpSql = readFileSync(dumpFile, "utf8");
+    const compatibleDumpSql = dumpSql.replace(/^SET transaction_timeout = 0;\r?\n/m, "");
+    if (compatibleDumpSql !== dumpSql) {
+      writeFileSync(dumpFile, compatibleDumpSql);
+      detail.push("normalized pg_dump 17 session setting for PostgreSQL 16");
+    }
     detail.push(`pg_dump → ${dumpFile.split("/").pop()}`);
 
     await dropAndRecreateDb(dbName);
