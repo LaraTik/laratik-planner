@@ -123,7 +123,7 @@ export default async function PlatformAdminsPage() {
         title="Admins"
         description="Grant or revoke the platform-admin role. The role is global — it controls agencies, not their content. Every change is audited."
         action={
-          <Badge variant="info" className="inline-flex items-center gap-1">
+          <Badge variant="info" className="inline-flex w-fit items-center gap-1">
             <Shield className="h-3 w-3" aria-hidden="true" />
             {admins.length} {admins.length === 1 ? "admin" : "admins"}
           </Badge>
@@ -145,7 +145,7 @@ export default async function PlatformAdminsPage() {
       ) : null}
 
       <Card padding="lg" className="space-y-4">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <UserPlus className="text-primary h-5 w-5" aria-hidden="true" />
           <CardTitle>Add platform admin</CardTitle>
         </div>
