@@ -79,6 +79,12 @@ export const agencies = pgTable(
     // any legacy query that still names it. New code must not
     // reference `singleton_key`; a follow-up migration will drop
     // the column once reads have been audited and removed.
+    // M3.4 — `locale` and `timezone` are top-level columns
+    // (migration 0014). They were previously inside the
+    // `settings` jsonb. The jsonb is kept for future free-form
+    // fields; the new columns are the read path.
+    locale: text("locale").notNull().default("en"),
+    timezone: text("timezone").notNull().default("UTC"),
     bootstrapCompletedAt: timestamp("bootstrap_completed_at", {
       withTimezone: true,
       mode: "date",
