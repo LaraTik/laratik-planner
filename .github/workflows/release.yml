@@ -57,7 +57,7 @@ permissions:
 jobs:
   release:
     name: Tag + GitHub release
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -113,8 +113,14 @@ jobs:
           # Create an immutable tag through the API. Refuse to move an
           # existing tag to a different SHA; a repeated dispatch for the
           # same deploy remains safe and idempotent.
-          EXISTING_SHA="$(gh api "repos/${REPOSITORY}/git/ref/tags/${TAG}" \
-            --jq '.object.sha' 2>/dev/null || true)"
+          if EXISTING_SHA="$(gh api "repos/${REPOSITORY}/git/ref/tags/${TAG}" \
+            --jq '.object.sha' 2>/dev/null)"; then
+            :
+          else
+            # `gh api` writes a structured error body to stdout on 404;
+            # reset the captured value so a missing ref follows the create path.
+            EXISTING_SHA=""
+          fi
           if [[ -z "${EXISTING_SHA}" ]]; then
             gh api --method POST "repos/${REPOSITORY}/git/refs" \
               -f ref="refs/tags/${TAG}" \
