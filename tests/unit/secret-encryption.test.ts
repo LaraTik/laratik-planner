@@ -90,6 +90,27 @@ describe("encryptForAgency + decryptForAgency (round trip)", () => {
     const { lastFour } = encryptForAgency("sk-abcdefghijklmnop");
     expect(lastFour).toBe("mnop");
   });
+
+  it("selects the requested key from a versioned rotation list", () => {
+    envMock.AI_SECRET_ENCRYPTION_KEY = `1:${"a".repeat(32)} | 2:${"b".repeat(32)}`;
+
+    const encrypted = encryptForAgency("sk-versioned-rotation");
+
+    expect(decryptForAgency(encrypted.ciphertext, encrypted.keyVersion)).toBe(
+      "sk-versioned-rotation",
+    );
+  });
+});
+
+describe("encryptForAgency input validation", () => {
+  it("rejects an empty plaintext with the stable malformed code", () => {
+    expect(() => encryptForAgency("")).toThrowError(
+      expect.objectContaining({
+        name: "EncryptedSecretError",
+        code: EncryptedSecretErrorCode.Malformed,
+      }),
+    );
+  });
 });
 
 describe("decryptForAgency error paths", () => {
