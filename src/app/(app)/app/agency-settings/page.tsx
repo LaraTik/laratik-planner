@@ -149,6 +149,12 @@ export default async function AgencySettingsPage() {
               href="/app/agency-settings/ai"
             />
             <Service
+              label="Social analytics"
+              enabled={!!serverEnv.SOCIAL_TOKEN_ENCRYPTION_KEY}
+              testId="agency-service-social"
+              href="/app/agency-settings/social"
+            />
+            <Service
               label="Sentry"
               enabled={!!serverEnv.SENTRY_DSN}
               // Half-configured: SENTRY_DSN is set but SENTRY_AUTH_TOKEN
