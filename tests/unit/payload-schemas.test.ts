@@ -41,9 +41,7 @@ describe("M4.1 — platform payload Zod schemas (unit)", () => {
     });
 
     it("rejects a non-current schemaVersion", () => {
-      expect(() =>
-        CommonPublishingFieldsSchema.parse({ schemaVersion: 2 }),
-      ).toThrow();
+      expect(() => CommonPublishingFieldsSchema.parse({ schemaVersion: 2 })).toThrow();
     });
 
     it("rejects a hashtag that is too long", () => {

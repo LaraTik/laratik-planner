@@ -46,7 +46,6 @@ export {
   MATERIAL_RESOURCES,
   MATERIAL_RESOURCE_PLATFORM_PAYLOAD,
   MaterialityReasonCodeSchema,
-  RecordMaterialityEventInputSchema,
   RecordNonMaterialityEventInputSchema,
   recordMaterialityEvent,
   recordNonMaterialityEvent,

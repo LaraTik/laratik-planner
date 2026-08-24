@@ -97,7 +97,11 @@ export type ReadinessReport = z.infer<typeof ReadinessReportSchema>;
 export class ReadinessError extends Error {
   public readonly code: "FORBIDDEN" | "NOT_FOUND" | "INVALID";
   public readonly details: Record<string, unknown>;
-  constructor(code: "FORBIDDEN" | "NOT_FOUND" | "INVALID", message: string, details: Record<string, unknown> = {}) {
+  constructor(
+    code: "FORBIDDEN" | "NOT_FOUND" | "INVALID",
+    message: string,
+    details: Record<string, unknown> = {},
+  ) {
     super(message);
     this.name = "ReadinessError";
     this.code = code;
@@ -152,7 +156,9 @@ const REQUIRED_FIELDS: Record<string, RequiredFieldCheck[]> = {
       path: "payload.caption",
       code: "missing_caption",
       message: "Instagram posts require a caption.",
-      test: (p) => !!(p as CommonPublishingFields).caption && (p as CommonPublishingFields).caption!.length > 0,
+      test: (p) =>
+        !!(p as CommonPublishingFields).caption &&
+        (p as CommonPublishingFields).caption!.length > 0,
     },
     {
       path: "payload.destinationProfile",
@@ -170,7 +176,9 @@ const REQUIRED_FIELDS: Record<string, RequiredFieldCheck[]> = {
       path: "payload.altText",
       code: "missing_alt_text",
       message: "Instagram posts require alt text.",
-      test: (p) => !!(p as CommonPublishingFields).altText && (p as CommonPublishingFields).altText!.length > 0,
+      test: (p) =>
+        !!(p as CommonPublishingFields).altText &&
+        (p as CommonPublishingFields).altText!.length > 0,
     },
   ],
   instagram_reel: [
@@ -179,27 +187,36 @@ const REQUIRED_FIELDS: Record<string, RequiredFieldCheck[]> = {
       code: "missing_audio_rights",
       message: "Reel audio rights must be confirmed.",
       test: (p) =>
-        (p as PlatformPayload & { platform: "instagram_reel"; audioRightsConfirmed?: boolean }).audioRightsConfirmed === true,
+        (p as PlatformPayload & { platform: "instagram_reel"; audioRightsConfirmed?: boolean })
+          .audioRightsConfirmed === true,
     },
     {
       path: "payload.transcriptReviewed",
       code: "transcript_not_reviewed",
       message: "Reel transcript must be reviewed.",
       test: (p) =>
-        (p as PlatformPayload & { platform: "instagram_reel"; transcriptReviewed?: boolean }).transcriptReviewed === true,
+        (p as PlatformPayload & { platform: "instagram_reel"; transcriptReviewed?: boolean })
+          .transcriptReviewed === true,
     },
     {
       path: "payload.coverFrame",
       code: "missing_cover",
       message: "Reel requires a cover frame.",
       test: (p) =>
-        !!(p as PlatformPayload & { platform: "instagram_reel"; coverFrame?: { deliveryVersionId: string } }).coverFrame,
+        !!(
+          p as PlatformPayload & {
+            platform: "instagram_reel";
+            coverFrame?: { deliveryVersionId: string };
+          }
+        ).coverFrame,
     },
     {
       path: "payload.altText",
       code: "missing_alt_text",
       message: "Reels require alt text / accessibility description.",
-      test: (p) => !!(p as CommonPublishingFields).altText && (p as CommonPublishingFields).altText!.length > 0,
+      test: (p) =>
+        !!(p as CommonPublishingFields).altText &&
+        (p as CommonPublishingFields).altText!.length > 0,
     },
     {
       path: "payload.approval.finalCopyApproved",
@@ -214,14 +231,14 @@ const REQUIRED_FIELDS: Record<string, RequiredFieldCheck[]> = {
       code: "missing_music_rights",
       message: "TikTok requires music rights confirmation.",
       test: (p) =>
-        (p as PlatformPayload & { platform: "tiktok"; musicRightsConfirmed?: boolean }).musicRightsConfirmed === true,
+        (p as PlatformPayload & { platform: "tiktok"; musicRightsConfirmed?: boolean })
+          .musicRightsConfirmed === true,
     },
     {
       path: "payload.privacy",
       code: "missing_privacy",
       message: "TikTok requires a privacy level.",
-      test: (p) =>
-        !!(p as PlatformPayload & { platform: "tiktok"; privacy?: string }).privacy,
+      test: (p) => !!(p as PlatformPayload & { platform: "tiktok"; privacy?: string }).privacy,
     },
     {
       path: "payload.approval.finalCopyApproved",
@@ -242,14 +259,15 @@ const REQUIRED_FIELDS: Record<string, RequiredFieldCheck[]> = {
       code: "missing_thumbnail",
       message: "YouTube requires a thumbnail.",
       test: (p) =>
-        !!(p as PlatformPayload & { platform: "youtube"; thumbnail?: { deliveryVersionId: string } }).thumbnail,
+        !!(
+          p as PlatformPayload & { platform: "youtube"; thumbnail?: { deliveryVersionId: string } }
+        ).thumbnail,
     },
     {
       path: "payload.privacy",
       code: "missing_privacy",
       message: "YouTube requires a privacy status.",
-      test: (p) =>
-        !!(p as PlatformPayload & { platform: "youtube"; privacy?: string }).privacy,
+      test: (p) => !!(p as PlatformPayload & { platform: "youtube"; privacy?: string }).privacy,
     },
     {
       path: "payload.approval.finalCopyApproved",
@@ -275,7 +293,9 @@ const REQUIRED_FIELDS: Record<string, RequiredFieldCheck[]> = {
       path: "payload.altText",
       code: "missing_alt_text",
       message: "Pinterest requires alt text.",
-      test: (p) => !!(p as CommonPublishingFields).altText && (p as CommonPublishingFields).altText!.length > 0,
+      test: (p) =>
+        !!(p as CommonPublishingFields).altText &&
+        (p as CommonPublishingFields).altText!.length > 0,
     },
     {
       path: "payload.approval.finalCopyApproved",
@@ -289,7 +309,9 @@ const REQUIRED_FIELDS: Record<string, RequiredFieldCheck[]> = {
       path: "payload.caption",
       code: "missing_post_text",
       message: "X posts require post text.",
-      test: (p) => !!(p as CommonPublishingFields).caption && (p as CommonPublishingFields).caption!.length > 0,
+      test: (p) =>
+        !!(p as CommonPublishingFields).caption &&
+        (p as CommonPublishingFields).caption!.length > 0,
     },
     {
       path: "payload.approval.finalCopyApproved",

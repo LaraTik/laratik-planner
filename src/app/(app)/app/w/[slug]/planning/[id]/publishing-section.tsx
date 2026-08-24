@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ type Publication = {
 
 export function PublishingSection({
   workspaceSlug,
+  contentItemId,
   channels,
   publications,
   isPublisher,
@@ -45,7 +47,16 @@ export function PublishingSection({
 
   return (
     <Card>
-      <CardTitle className="mb-3">Publishing (per channel)</CardTitle>
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <CardTitle>Publishing (per channel)</CardTitle>
+        <Link
+          href={`/app/w/${workspaceSlug}/planning/${contentItemId}/publish`}
+          className="text-primary focus-visible:ring-focus-ring text-body inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
+          data-testid="publish-package-link"
+        >
+          Configure publish package
+        </Link>
+      </div>
       <ul className="divide-border divide-y">
         {channels.map((ch) => {
           const pub = publications.find((p) => p.contentItemChannelId === ch.id);

@@ -166,11 +166,9 @@ export async function readPlatformPayload(input: {
     "viewer",
   ]);
   if (!allowed) {
-    throw new PlatformPayloadError(
-      "FORBIDDEN",
-      "Not a member of this workspace.",
-      { workspaceId: input.workspaceId },
-    );
+    throw new PlatformPayloadError("FORBIDDEN", "Not a member of this workspace.", {
+      workspaceId: input.workspaceId,
+    });
   }
   await ensureContentItemChannelInWorkspace(
     input.contentItemId,
@@ -227,11 +225,9 @@ export async function readAllChannelPayloads(input: {
     "viewer",
   ]);
   if (!allowed) {
-    throw new PlatformPayloadError(
-      "FORBIDDEN",
-      "Not a member of this workspace.",
-      { workspaceId: input.workspaceId },
-    );
+    throw new PlatformPayloadError("FORBIDDEN", "Not a member of this workspace.", {
+      workspaceId: input.workspaceId,
+    });
   }
   const rows = await db
     .select({

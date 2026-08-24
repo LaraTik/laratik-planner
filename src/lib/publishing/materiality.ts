@@ -93,7 +93,11 @@ export type RecordMaterialityEventInput = z.infer<typeof RecordMaterialityEventI
 export class MaterialityError extends Error {
   public readonly code: "FORBIDDEN" | "NOT_FOUND" | "INVALID";
   public readonly details: Record<string, unknown>;
-  constructor(code: "FORBIDDEN" | "NOT_FOUND" | "INVALID", message: string, details: Record<string, unknown> = {}) {
+  constructor(
+    code: "FORBIDDEN" | "NOT_FOUND" | "INVALID",
+    message: string,
+    details: Record<string, unknown> = {},
+  ) {
     super(message);
     this.name = "MaterialityError";
     this.code = code;
@@ -211,11 +215,7 @@ export async function recordMaterialityEvent(
     for (const row of await tx
       .select({ requestedBy: approvalRequests.requestedBy })
       .from(approvalRequests)
-      .where(
-        and(
-          eq(approvalRequests.contentItemId, input.contentItemId),
-        ),
-      )) {
+      .where(and(eq(approvalRequests.contentItemId, input.contentItemId)))) {
       if (row.requestedBy) reviewerIds.add(row.requestedBy);
     }
     // Drop the actor themselves — they don't need to be
@@ -256,11 +256,9 @@ export const RecordNonMaterialityEventInputSchema = z.object({
   contentItemId: z.string().uuid(),
   resource: z.string().min(1).max(80),
   summary: z.string().min(1).max(200),
-  metadata: z.record(z.unknown()).default({}),
+  metadata: z.record(z.unknown()).optional(),
 });
-export type RecordNonMaterialityEventInput = z.infer<
-  typeof RecordNonMaterialityEventInputSchema
->;
+export type RecordNonMaterialityEventInput = z.infer<typeof RecordNonMaterialityEventInputSchema>;
 
 export async function recordNonMaterialityEvent(
   input: RecordNonMaterialityEventInput,

@@ -133,12 +133,7 @@ export const DisclosuresSchema = z.object({
  * at the scheduled time"; the API and the manual path both
  * end up in this state.
  */
-export const PublicationMethodSchema = z.enum([
-  "api",
-  "manual",
-  "scheduled",
-  "draft_only",
-]);
+export const PublicationMethodSchema = z.enum(["api", "manual", "scheduled", "draft_only"]);
 
 /**
  * Approval state for the final copy. The publish UI writes
@@ -224,9 +219,7 @@ export const InstagramPostPayloadSchema = CommonPublishingFieldsSchema.merge(
   z.object({
     platform: z.literal("instagram"),
     /** The selected feed-crop — the agency's social_profile determines what's supported. */
-    feedCrop: z
-      .enum(["1:1", "4:5", "16:9", "9:16", "original"])
-      .default("original"),
+    feedCrop: z.enum(["1:1", "4:5", "16:9", "9:16", "original"]).default("original"),
     /** Media ordering for a carousel. Empty for single-image / single-video. */
     carouselOrder: z.array(z.string().uuid()).max(10).default([]),
     /** Branded-content partner handle. */
@@ -270,9 +263,7 @@ export const FacebookPayloadSchema = CommonPublishingFieldsSchema.merge(
     platform: z.literal("facebook"),
     title: z.string().min(1).max(100).optional(),
     descriptionOverride: z.string().min(1).max(500).optional(),
-    mediaPresentation: z
-      .enum(["feed", "story", "reel", "marketplace_listing"])
-      .default("feed"),
+    mediaPresentation: z.enum(["feed", "story", "reel", "marketplace_listing"]).default("feed"),
     reelInteraction: z
       .object({
         allowComments: z.boolean().default(true),
@@ -290,9 +281,7 @@ export const FacebookPayloadSchema = CommonPublishingFieldsSchema.merge(
 export const TikTokPayloadSchema = CommonPublishingFieldsSchema.merge(
   z.object({
     platform: z.literal("tiktok"),
-    privacy: z
-      .enum(["public", "friends", "private", "followers_only"])
-      .default("public"),
+    privacy: z.enum(["public", "friends", "private", "followers_only"]).default("public"),
     allowComments: z.boolean().default(true),
     allowDuet: z.boolean().default(true),
     allowStitch: z.boolean().default(true),
@@ -312,9 +301,7 @@ export const LinkedInPayloadSchema = CommonPublishingFieldsSchema.merge(
     articleTitle: z.string().min(1).max(150).optional(),
     articleDescription: z.string().min(1).max(2_000).optional(),
     documentTitle: z.string().min(1).max(150).optional(),
-    visibility: z
-      .enum(["public", "connections", "logged_in"])
-      .default("public"),
+    visibility: z.enum(["public", "connections", "logged_in"]).default("public"),
     audienceTargeting: z
       .object({
         industryCodes: z.array(z.string().min(1).max(20)).max(50).optional(),
@@ -393,7 +380,9 @@ export const XPayloadSchema = CommonPublishingFieldsSchema.merge(
       .enum(["everyone", "mentioned", "followers", "subscribers"])
       .default("everyone"),
     mediaAlt: z
-      .array(z.object({ mediaIndex: z.number().int().min(0), altText: z.string().min(1).max(1_000) }))
+      .array(
+        z.object({ mediaIndex: z.number().int().min(0), altText: z.string().min(1).max(1_000) }),
+      )
       .max(4)
       .default([]),
     poll: z
