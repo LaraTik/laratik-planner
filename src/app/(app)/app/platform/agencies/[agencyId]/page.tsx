@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { PlanAiSections } from "./plan-ai-sections";
 import { SupportAccessSection } from "./support-section";
+import { PlatformEditAgencyForm } from "./edit-agency-form";
 
 /**
  * Platform · Agency detail — Stitch screen
@@ -29,6 +30,8 @@ type AgencyDetail = {
   id: string;
   name: string;
   slug: string;
+  locale: string;
+  timezone: string;
   createdAt: Date;
   bootstrapCompletedAt: Date | null;
   memberCount: number;
@@ -43,6 +46,8 @@ async function loadAgencyDetail(agencyId: string): Promise<AgencyDetail | null> 
       id: agencies.id,
       name: agencies.name,
       slug: agencies.slug,
+      locale: agencies.locale,
+      timezone: agencies.timezone,
       createdAt: agencies.createdAt,
       bootstrapCompletedAt: agencies.bootstrapCompletedAt,
     })
@@ -84,6 +89,8 @@ async function loadAgencyDetail(agencyId: string): Promise<AgencyDetail | null> 
     id: agency.id,
     name: agency.name,
     slug: agency.slug,
+    locale: agency.locale,
+    timezone: agency.timezone,
     createdAt: agency.createdAt,
     bootstrapCompletedAt: agency.bootstrapCompletedAt,
     memberCount: Number(memberRow[0]?.value ?? 0),
@@ -158,6 +165,16 @@ export default async function PlatformAgencyDetailPage({
           value={detail.totalAiCalls}
           tone="success"
           data-testid="platform-agency-kpi-ai"
+        />
+      </div>
+
+      <div data-testid="platform-agency-identity-section" id="identity">
+        <PlatformEditAgencyForm
+          agencyId={detail.id}
+          initialName={detail.name}
+          initialSlug={detail.slug}
+          initialLocale={detail.locale}
+          initialTimezone={detail.timezone}
         />
       </div>
 

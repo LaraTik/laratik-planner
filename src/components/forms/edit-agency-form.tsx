@@ -58,15 +58,26 @@ export function EditAgencyForm({
   initialLocale,
   initialTimezone,
   testIdPrefix = "agency-settings",
+  // Optional override of the action target. When the caller
+  // supplies a different `formAction`, the form posts to that
+  // action instead of the default `editAgencyAction` (the
+  // agency-admin surface). The platform-admin surface passes
+  // its own action so the form reuses the same body without
+  // needing two copies.
+  formAction,
+  hiddenFields = {},
 }: {
   initialName: string;
   initialSlug: string;
   initialLocale: string;
   initialTimezone: string;
   testIdPrefix?: string;
+  formAction?: (formData: FormData) => void | Promise<void>;
+  hiddenFields?: Record<string, string>;
 }) {
-  const [state, action, pending] = useActionState(editAgencyAction, initial);
+  const [state, defaultAction, pending] = useActionState(editAgencyAction, initial);
   void pending; // pending is read by FormSubmitButton via useFormStatus
+  const action = formAction ?? defaultAction;
   // Keep the timezone datalist stable; the supported-values list
   // is captured once per mount.
   const timezones = React.useMemo(
@@ -90,6 +101,9 @@ export function EditAgencyForm({
         className="mt-5 space-y-4"
         data-testid={`${testIdPrefix}-edit-identity-form`}
       >
+        {Object.entries(hiddenFields).map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="agency-edit-name">
