@@ -374,7 +374,7 @@ jobs:
         # Fast structural + syntax check on all 3 workflows. Surfaces
         # shellcheck-level findings inside the workflow's `run: |` blocks
         # (actionlint runs shellcheck internally) and undeclared inputs.
-        uses: reviewdog/action-actionlint@v1
+        uses: reviewdog/action-actionlint@v1.65.2
         with:
           level: error
         timeout-minutes: 3
@@ -386,17 +386,25 @@ jobs:
         # action runs `--persona=regular` (errors only) and
         # `--min-severity=high` so accepted warnings don't fail the
         # gate. New errors fail the deploy.
-        uses: woodruffw/zizmor-action@v1
+        uses: zizmorcore/zizmor-action@v0.1.2
         with:
-          version: v1.29.0
+          # We pass `inputs: .` so zizmor audits the current directory
+          # (the workflows + zizmor.yml config). The action defaults
+          # to `.` so this is implicit, but explicit for auditability.
+          inputs: .
+          # `args:` here are the flags passed to zizmor itself.
+          # `--persona=regular` (errors only) + `--min-severity=high`
+          # means accepted warnings in zizmor.yml don't fail the gate.
           args: --persona=regular --min-severity=high
         timeout-minutes: 5
 
       - name: hadolint
         # Dockerfile best-practices. The image is built from node:20-alpine
         # so the hadolint Debian image sees nothing to lint beyond what
-        # the Dockerfile itself contains.
-        uses: hadolint/hadolint-action@v3
+        # the Dockerfile itself contains. v3.1.0 is the latest stable;
+        # we pin to a specific minor because the `v3` floating tag is
+        # not a published ref.
+        uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
           failure-threshold: warning
