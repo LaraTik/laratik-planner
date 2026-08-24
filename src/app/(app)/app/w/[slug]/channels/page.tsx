@@ -1,18 +1,21 @@
 import { redirect, notFound } from "next/navigation";
 import { and, desc, eq, isNull } from "drizzle-orm";
-import { Clock, ExternalLink, MoreHorizontal, Radio } from "lucide-react";
+import { Clock, ExternalLink, MoreHorizontal, PlugZap, Radio } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
-import { socialChannels } from "@/lib/db/schema";
+import { socialChannels, socialConnections, socialProfileDailyMetrics } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import { serverEnv } from "@/lib/validation/env";
+import { ConnectionStatusBadge } from "./connection-status-badge";
 import { AddChannelButton } from "./add-channel-button";
 import { ChannelForm } from "./channel-form";
 import { ChannelRowActions } from "./channel-edit-drawer";
@@ -75,18 +78,12 @@ function channelsColumns(props: {
     {
       key: "state",
       header: "State",
-      cell: (row) =>
-        row.isActive ? (
-          <Badge variant="success">
-            <span className="bg-success h-1.5 w-1.5 rounded-full" aria-hidden="true" />
-            Active
-          </Badge>
-        ) : (
-          <Badge variant="outline">
-            <span className="bg-fg-secondary h-1.5 w-1.5 rounded-full" aria-hidden="true" />
-            Inactive
-          </Badge>
-        ),
+      cell: (row) => (
+        <ConnectionStatusBadge
+          status={(row.connectionStatus ?? "manual") as "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected"}
+          lastSyncedAt={row.lastSyncedAt}
+        />
+      ),
     },
     {
       key: "owner",
@@ -160,6 +157,28 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
         }
         action={canManage ? <AddChannelButton formId="channel-add-card" /> : null}
       />
+
+      {canManage && serverEnv.META_APP_ID ? (
+        <Card padding="md" data-testid="connect-meta-card">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-body text-fg-primary font-semibold">
+                Connect a Meta account
+              </h3>
+              <p className="text-label text-fg-muted mt-1">
+                Authorize Facebook Pages and any linked Instagram professional accounts.
+                Read-only — no publishing, no ads.
+              </p>
+            </div>
+            <form action="/api/social/meta/connect" method="POST">
+              <input type="hidden" name="slug" value={slug} />
+              <Button type="submit" variant="secondary" data-testid="connect-meta-button">
+                <PlugZap className="h-4 w-4" aria-hidden={true} /> Connect Meta
+              </Button>
+            </form>
+          </div>
+        </Card>
+      ) : null}
 
       {canManage ? <ChannelForm slug={slug} /> : null}
 
