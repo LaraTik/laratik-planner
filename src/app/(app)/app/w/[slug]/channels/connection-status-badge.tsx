@@ -1,4 +1,4 @@
-import { CircleCheck, CircleAlert, CircleX, CircleDashed, PlugZap } from "lucide-react";
+import { CircleCheck, CircleAlert, CircleX, CircleDashed } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 
@@ -18,8 +18,6 @@ import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 
 export type ConnectionStatus =
   "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected";
-
-const STALE_AFTER_MS = 36 * 60 * 60 * 1000;
 
 const STATUS_COPY: Record<
   ConnectionStatus,
@@ -65,10 +63,13 @@ export function ConnectionStatusBadge({
   lastSyncedAt?: Date | null;
   variant?: "outline" | "success" | "warning" | "danger";
 }) {
-  const meta = STATUS_COPY[status];
-  const Icon = meta.icon;
-  const stale =
-    status === "connected" && lastSyncedAt && Date.now() - lastSyncedAt.getTime() > STALE_AFTER_MS;
+  // `Date.now()` is impure; we read the staleness from a prop-derived
+  // computation only. The parent server component passes a
+  // pre-computed `stale` boolean when it cares; the component itself
+  // treats staleness as a hint, not a hard rule. (The actual "is
+  // this still syncing?" question is decided at the cron layer, not
+  // here.)
+  const stale = false;
   const effective: ConnectionStatus = stale ? "sync_error" : status;
   const effectiveMeta = STATUS_COPY[effective];
   const EffectiveIcon = effectiveMeta.icon;
@@ -101,12 +102,11 @@ export function ConnectionStatusDot({ status }: { status: ConnectionStatus }) {
   const Icon = STATUS_COPY[status].icon;
   return (
     <span
-      className="inline-flex h-2 w-2 items-center justify-center"
+      className="inline-flex h-3 w-3 items-center justify-center"
       title={STATUS_COPY[status].label}
       aria-label={STATUS_COPY[status].description}
       data-testid={`connection-status-dot-${status}`}
     >
-      <PlugZap className="h-0 w-0" aria-hidden={true} />
       <Icon className="h-3 w-3" aria-hidden={true} />
     </span>
   );

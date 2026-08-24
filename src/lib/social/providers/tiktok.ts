@@ -166,9 +166,7 @@ export async function refreshTikTokCredentials(input: {
   };
 }
 
-export async function fetchTikTokProfile(
-  accessToken: string,
-): Promise<{
+export async function fetchTikTokProfile(accessToken: string): Promise<{
   openId: string;
   displayName: string;
   username: string;
@@ -311,7 +309,6 @@ export const tiktokAdapter: SocialProviderAdapter = {
       if (!isSocialProviderError(err)) {
         // Best-effort: surface in logs but do not throw, the local
         // state transition is the source of truth.
-        // eslint-disable-next-line no-console
         console.error("[tiktok] revoke failed", err);
       }
     }

@@ -58,7 +58,7 @@ const pool = new Pool({ connectionString: TEST_DB_URL });
 const db = drizzle(pool);
 
 let workspaceId: string;
-let _agencyId: string;
+
 let userId: string;
 
 async function seed() {
@@ -79,7 +79,6 @@ async function seed() {
       createdBy: user!.id,
     })
     .returning();
-  _agencyId = agency!.id;
   workspaceId = ws!.id;
   userId = user!.id;
 }
