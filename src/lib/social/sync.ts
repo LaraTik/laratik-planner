@@ -16,6 +16,7 @@ import {
 } from "./repository";
 import { isSocialProviderError, newRequestId } from "./http";
 import { metaAdapter } from "./providers/meta";
+import { tiktokAdapter } from "./providers/tiktok";
 import type { SocialProviderAdapter, ProfileSnapshot, ConnectedProfileRef } from "./types";
 import { serverEnv } from "@/lib/validation/env";
 
@@ -52,22 +53,7 @@ import { serverEnv } from "@/lib/validation/env";
 
 const PROVIDER_ADAPTERS: Record<"meta" | "tiktok", SocialProviderAdapter> = {
   meta: metaAdapter,
-  // tiktok adapter is added in M4. Until then, tiktok connections
-  // are skipped with a logged warning. The cron still cleans up
-  // OAuth states and old metrics every tick.
-  tiktok: {
-    provider: "tiktok",
-    discoverProfiles: async () => ({ profiles: [], credentials: { accessToken: "" } }),
-    refreshCredentials: async () => ({
-      credentials: { accessToken: "" },
-      accessTokenExpiresAt: null,
-      refreshTokenExpiresAt: null,
-    }),
-    fetchSnapshot: async () => {
-      throw new Error("TikTok provider not yet enabled");
-    },
-    revoke: async () => {},
-  },
+  tiktok: tiktokAdapter,
 };
 
 export type SyncTickResult = {
