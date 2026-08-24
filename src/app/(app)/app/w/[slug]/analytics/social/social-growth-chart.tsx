@@ -90,8 +90,9 @@ export function SocialGrowthChart({
         viewBox="0 0 600 220"
         className="mt-4 w-full"
         role="img"
-        aria-label={`${title} for ${profileName}`}
+        aria-label={`${title} for ${profileName}. Numeric values are in the table below.`}
         preserveAspectRatio="none"
+        style={{ transition: "none" }}
       >
         <title>{title}</title>
         <desc id={descId}>

@@ -8,16 +8,22 @@ Stitch manifest exported by `tests/e2e/stitch-cases.ts` and asserted by
 ## Totals
 
 - **51 captures** on disk (PNG + HTML each, 102 files plus the
-  `DESIGN.md` companion).
+  `DESIGN.md` companion), plus the **2 M4 captures** referenced
+  below.
 - **27 canonical** surfaces (one route or evidence group per row in the
-  parity matrix).
+  parity matrix), plus the **2 M4 surfaces** (`meta-account-picker`
+  embedded on the channels page and the dedicated analytics
+  dashboard).
 - **11 responsive** captures (same surfaces at mobile/tablet viewports).
 - **3 supporting** captures (Create Workspace brand step plus desktop
   and mobile Build Identity references).
 - **3 historical** captures (early references, all with a successor).
 - **7 superseded** captures (older revisions, all with a successor).
 - **41 active targets** (canonical + responsive + supporting) and
-  **10 historical/superseded exclusions**.
+  **10 historical/superseded exclusions**. The M4 surfaces are
+  tracked separately because they were generated against the
+  existing project tokens without a new Stitch MCP run; see the
+  M4 entry below.
 
 Viewports used by Stitch: desktop 1440×900, mobile 390×844,
 tablet 768×1024. These three sizes are the only widths Stitch emits;
@@ -120,3 +126,60 @@ six-viewport matrix (see `SCREEN_PARITY.md`).
   `/signin/forgot-password` (`793a08d8`). The previous "approved
   deviation" note for that screen is obsolete; the row is now a real
   parity target. See `SCREEN_PARITY.md` for the updated count.
+
+## M4 — Social profile analytics captures (2026-08-24)
+
+The two new M4 surfaces were designed against the existing project
+tokens (same palette, typography, spacing, radii as the channels
+page capture `45d945d7`). The `ui-ux-pro-max` skill was invoked
+first to confirm the design system ("Data-Dense Dashboard" pattern;
+WCAG AA contrast; Line Chart for time-series growth; data table as
+the source of truth with chart as the visualization). The
+`web-design-guidelines` skill was invoked for the review pass.
+
+| screenId (planned) | slug                                           | route / surface                                 | viewport | state   | classification | source                                                       |
+| ------------------ | ---------------------------------------------- | ----------------------------------------------- | -------- | ------- | -------------- | ------------------------------------------------------------ |
+| `m4picker0001`     | `laratik-planner---meta-account-picker`        | `/app/w/[slug]/channels?pending=<connectionId>` | desktop  | default | canonical      | new — see ADR-0004 + `src/app/.../meta-account-picker.tsx`   |
+| `m4social0001`     | `laratik-planner---social-analytics-dashboard` | `/app/w/[slug]/analytics/social`                | desktop  | default | canonical      | new — see ADR-0004 + `src/app/.../analytics/social/page.tsx` |
+
+**Why these are recorded separately:** both surfaces are
+implemented, accessible, and aligned to the existing project
+tokens. They have not yet been captured through the Stitch MCP
+(the `ui-ux-pro-max` skill provided the design system but the
+project does not currently have a live Stitch connection in the
+worktree). The captures listed above are the planned identifiers
+and the source-of-truth file paths; when the operator runs the
+next Stitch MCP sync, drop the PNG/HTML into `designs/stitch/`
+under these slugs and add the rows to `tests/e2e/stitch-cases.ts`
+(see `tests/e2e/stitch-cases.ts` for the manifest contract).
+
+**What the implementation carries today:**
+
+- A `data-testid="meta-account-picker"` on the picker card with a
+  `role="list"` of `role="listitem"` rows, each with a labelled
+  checkbox and a focus-within ring. Errors render in a
+  `role="alert"` region. The submit button has `aria-busy` and
+  the count chip has `aria-live="polite"`.
+- A `data-testid="social-analytics-page"` on the dashboard. The
+  chart is a hand-rolled SVG with `role="img"`, an
+  `aria-describedby` pointer to a hidden paragraph that names the
+  table below, focusable data points with `aria-label`, and
+  tabular numeric font for follower counts.
+- A `data-testid="connection-status-{status}"` on the new
+  connection-status badge with icon + text and a relative date
+  subtitle.
+- A focus-managed revoke dialog
+  (`data-testid="revoke-dialog"`) with `aria-modal="true"`,
+  `aria-labelledby`, `aria-describedby`, Escape-to-close, and
+  click-outside-to-cancel.
+
+**Operator action items:**
+
+1. Run the Stitch MCP sync for both surfaces; drop the PNG + HTML
+   files into `designs/stitch/` under the slugs above.
+2. Add the two rows to `tests/e2e/stitch-cases.ts` (set
+   `viewport: VIEWPORTS.desktop` and a real `screenId`).
+3. Update `tests/unit/stitch-cases.test.ts` to expect 53 captures
+   (51 existing + 2 new).
+4. Update `docs/production-readiness/SCREEN_PARITY.md` to add the
+   two new routes to the parity matrix.

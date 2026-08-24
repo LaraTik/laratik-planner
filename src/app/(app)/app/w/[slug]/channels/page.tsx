@@ -15,6 +15,7 @@ import { PlatformIcon, platformLabel } from "@/components/workspace/platform-ico
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { serverEnv } from "@/lib/validation/env";
 import { ConnectionStatusBadge } from "./connection-status-badge";
+import { ConnectionActions } from "./connection-actions";
 import { AddChannelButton } from "./add-channel-button";
 import { ChannelForm } from "./channel-form";
 import { ChannelRowActions } from "./channel-edit-drawer";
@@ -25,11 +26,16 @@ type ChannelRow = typeof socialChannels.$inferSelect;
  * Column definitions for the channels table. Hoisted out of the page
  * so the JSX stays focused on data + layout. Row actions render
  * through the `ChannelRowActions` client component (kebab menu +
- * edit drawer + archive confirm).
+ * edit drawer + archive confirm) for manual channels, and through
+ * the `ConnectionActions` client component for connected channels.
  */
 function channelsColumns(props: {
   slug: string;
   canManage: boolean;
+  affectedByConnection: Record<
+    string,
+    Array<{ id: string; accountName: string; platform: "instagram" | "facebook" | "tiktok" }>
+  >;
 }): DataTableColumnDef<ChannelRow>[] {
   return [
     {
@@ -104,14 +110,31 @@ function channelsColumns(props: {
       header: "",
       headerClassName: "w-12",
       cellClassName: "text-right",
-      cell: (row) =>
-        props.canManage ? (
-          <ChannelRowActions slug={props.slug} channel={row} />
-        ) : (
-          <span aria-hidden="true" className="inline-flex h-10 w-10 items-center justify-center">
-            <MoreHorizontal className="text-fg-muted h-4 w-4" />
-          </span>
-        ),
+      cell: (row) => {
+        if (!props.canManage) {
+          return (
+            <span aria-hidden="true" className="inline-flex h-10 w-10 items-center justify-center">
+              <MoreHorizontal className="text-fg-muted h-4 w-4" />
+            </span>
+          );
+        }
+        if (!row.socialConnectionId) {
+          return <ChannelRowActions slug={props.slug} channel={row} />;
+        }
+        const affected = props.affectedByConnection[row.socialConnectionId] ?? [];
+        return (
+          <ConnectionActions
+            slug={props.slug}
+            channel={{
+              id: row.id,
+              accountName: row.accountName,
+              platform: (row.platform as "instagram" | "facebook" | "tiktok") ?? "instagram",
+              socialConnectionId: row.socialConnectionId,
+            }}
+            affectedChannels={affected}
+          />
+        );
+      },
     },
   ];
 }
@@ -142,6 +165,25 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
     .from(socialChannels)
     .where(and(eq(socialChannels.workspaceId, workspace.id), isNull(socialChannels.archivedAt)))
     .orderBy(desc(socialChannels.isActive), desc(socialChannels.updatedAt));
+  // Build the affected-channels map: for every connection that has
+  // more than one attached channel, list those channels. The revoke
+  // dialog uses this list to show the operator exactly what will be
+  // disconnected.
+  const affectedByConnection: Record<
+    string,
+    Array<{ id: string; accountName: string; platform: "instagram" | "facebook" | "tiktok" }>
+  > = {};
+  for (const row of rows) {
+    if (!row.socialConnectionId) continue;
+    if (affectedByConnection[row.socialConnectionId]) continue;
+    affectedByConnection[row.socialConnectionId] = rows
+      .filter((r) => r.socialConnectionId === row.socialConnectionId)
+      .map((r) => ({
+        id: r.id,
+        accountName: r.accountName,
+        platform: (r.platform as "instagram" | "facebook" | "tiktok") ?? "instagram",
+      }));
+  }
   return (
     <div className="space-y-6">
       <PageHeader
@@ -193,6 +235,7 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
               columns={channelsColumns({
                 slug,
                 canManage,
+                affectedByConnection: affectedByConnection,
               })}
             />
           </div>

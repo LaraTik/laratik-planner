@@ -105,22 +105,30 @@ export function MetaAccountPicker({
             return (
               <li key={p.providerAccountId}>
                 <label
-                  className="border-border bg-surface hover:bg-surface-subtle flex items-start gap-3 rounded-lg border p-4 transition"
+                  className="border-border bg-surface hover:bg-surface-subtle focus-within:ring-primary flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition focus-within:ring-2 focus-within:ring-offset-2"
                   data-testid={`picker-row-${p.providerAccountId}`}
                 >
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggle(p.providerAccountId)}
-                    className="mt-1 h-4 w-4"
+                    onKeyDown={(e) => {
+                      if (e.key === " " || e.key === "Enter") {
+                        e.preventDefault();
+                        toggle(p.providerAccountId);
+                      }
+                    }}
+                    className="mt-1 h-4 w-4 cursor-pointer"
                     aria-label={`Select ${p.accountName}`}
                   />
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
                       <PlatformIcon platform={p.platform} />
-                      <span className="text-body text-fg-primary font-medium">{p.accountName}</span>
+                      <span className="text-body text-fg-primary truncate font-medium">
+                        {p.accountName}
+                      </span>
                       {p.handle ? (
-                        <span className="text-label text-fg-muted">@{p.handle}</span>
+                        <span className="text-label text-fg-muted truncate">@{p.handle}</span>
                       ) : null}
                     </div>
                     <div className="text-label text-fg-muted flex items-center gap-2">
@@ -156,8 +164,16 @@ export function MetaAccountPicker({
         ) : null}
 
         <div className="flex items-center justify-end gap-2">
-          <span className="text-label text-fg-muted">{selected.size} selected</span>
-          <Button type="button" disabled={pending} onClick={submit} data-testid="picker-submit">
+          <span className="text-label text-fg-muted" aria-live="polite" data-testid="picker-count">
+            {selected.size} selected
+          </span>
+          <Button
+            type="button"
+            disabled={pending}
+            onClick={submit}
+            data-testid="picker-submit"
+            aria-busy={pending}
+          >
             {pending ? "Linking…" : "Link selected profiles"}
           </Button>
         </div>
