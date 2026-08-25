@@ -72,30 +72,34 @@ export default async function EditorialCalendarPage({
             Nothing is scheduled for this month.
           </div>
         ) : (
-          items.map((item) => (
-            <div
-              key={item.id}
-              className="border-border bg-surface grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3 rounded-[var(--radius-card)] border p-3"
-            >
-              <time
-                dateTime={item.plannedPublishAt.toISOString()}
-                className="text-label text-fg-secondary font-semibold"
+          items.map((item) => {
+            const isTodayItem = isSameDay(item.plannedPublishAt, today);
+            return (
+              <div
+                key={item.id}
+                className="border-border bg-surface grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3 rounded-[var(--radius-card)] border p-3"
               >
-                {item.plannedPublishAt.toLocaleDateString("en-US", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                })}
-              </time>
-              <CalendarEventCard
-                id={item.id}
-                href={`/app/w/${slug}/planning/${item.id}`}
-                title={item.title}
-                status={item.status}
-                format={item.format}
-              />
-            </div>
-          ))
+                <time
+                  dateTime={item.plannedPublishAt.toISOString()}
+                  {...(isTodayItem ? { "aria-current": "date" as const } : {})}
+                  className="text-label text-fg-secondary font-semibold"
+                >
+                  {item.plannedPublishAt.toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </time>
+                <CalendarEventCard
+                  id={item.id}
+                  href={`/app/w/${slug}/planning/${item.id}`}
+                  title={item.title}
+                  status={item.status}
+                  format={item.format}
+                />
+              </div>
+            );
+          })
         )}
       </section>
 
@@ -125,21 +129,30 @@ export default async function EditorialCalendarPage({
                 )}
               >
                 <div className="flex items-center justify-between">
-                  <span
-                    className={cn(
-                      "text-label",
-                      !inMonth ? "invisible" : isToday ? "text-fg-primary" : "text-fg-muted",
-                    )}
-                  >
-                    {day}
-                  </span>
+                  {inMonth ? (
+                    <time
+                      dateTime={cellDate.toISOString().slice(0, 10)}
+                      {...(isToday ? { "aria-current": "date" as const } : {})}
+                      className={cn(
+                        "text-label",
+                        isToday ? "text-fg-primary font-semibold" : "text-fg-muted",
+                      )}
+                    >
+                      {day}
+                    </time>
+                  ) : (
+                    <span className="text-label invisible">{day}</span>
+                  )}
                   {isToday ? (
                     // `text-white` (not `text-on-primary`) because the
                     // project doesn't define an `on-primary` token and
                     // the inherited `text-fg-primary` (#172033) on the
                     // indigo `bg-primary` (#4f46e5) only reaches 2.58:1
                     // — fails WCAG AA. White-on-indigo is 5.85:1.
-                    <span className="text-label bg-primary rounded-full px-1.5 font-semibold text-white">
+                    <span
+                      aria-label={`Today, ${cellDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}`}
+                      className="text-label bg-primary rounded-full px-1.5 font-semibold text-white"
+                    >
                       Today
                     </span>
                   ) : null}
