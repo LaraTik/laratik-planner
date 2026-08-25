@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("GET /api/health", () => {
   test("returns 200 with a non-sensitive JSON body", async ({ request }) => {
     const res = await request.get("/api/health", { timeout: 10_000 });
-    expect(res.status()).toBeLessThan(500);
+    expect(res.status()).toBe(200);
 
     const body = await res.json();
     expect(body).toHaveProperty("ok");

@@ -34,8 +34,8 @@ test.describe("auth gate: protected /app/* routes redirect to /signin", () => {
       const res = await page.goto(route, { waitUntil: "domcontentloaded" });
       // The proxy returns 307 + Location header; the page may end up at /signin
       // (or render /signin directly if it follows redirects). Either way,
-      // it must NOT 500/401/blank.
-      expect(res?.status()).toBeLessThan(500);
+      // the protected route MUST issue a 307 redirect to /signin.
+      expect([200, 307]).toContain(res?.status() ?? 0);
       await expect(page).toHaveURL(/\/signin/);
       // The callbackUrl must round-trip the original path
       await expect(page).toHaveURL(new RegExp(`callbackUrl=${encodeURIComponent(route)}`));
@@ -61,7 +61,10 @@ test.describe("auth gate: signed-in users skip /signin", () => {
     const { devSignIn } = await import("./_helpers");
     await devSignIn(page.request);
     const res = await page.goto("/signin", { waitUntil: "domcontentloaded" });
-    expect(res?.status()).toBeLessThan(500);
+    // The /signin page issues a 307 redirect to /app (or /setup) when
+    // the visitor is already signed in. We accept either the redirect
+    // status or the followed 200.
+    expect([200, 307]).toContain(res?.status() ?? 0);
     // After auth, /signin redirects to /app (or /setup if no agency)
     await expect(page).toHaveURL(/\/(app|setup)/);
   });
@@ -72,7 +75,10 @@ test.describe("auth gate: public routes still work while authed", () => {
     const { devSignIn } = await import("./_helpers");
     await devSignIn(page.request);
     const home = await page.goto("/", { waitUntil: "domcontentloaded" });
-    expect(home?.status()).toBeLessThan(500);
+    // The landing page is a public route — it must serve 200 even
+    // for authed visitors. (A 307 would silently send the user to
+    // /app and is the bug this assertion guards against.)
+    expect(home?.status()).toBe(200);
     // The home page must NOT redirect to /app — it's a public landing.
     expect(home?.url()).toMatch(/\/$|laratik\.com|\/laratik-planner/);
   });
@@ -134,7 +140,9 @@ test.describe("auth gate: callbackUrl edge cases", () => {
     // Workspace lookup deliberately masks inaccessible tenants as not found.
     // App Router may stream that boundary with a 200 status, so the rendered
     // surface—not the transport status—is the stable security contract.
-    expect(res?.status()).toBeLessThan(500);
+    // We accept 200 (rendered not-found boundary) OR 404 (transport-level
+    // not-found); both are valid responses for a masked tenant.
+    expect([200, 404]).toContain(res?.status() ?? 0);
     await expect(page).not.toHaveURL(/\/setup/);
     await expect(page.getByRole("heading", { name: /Page not found/i })).toBeVisible();
     await expect(page.getByTestId("workspace-overview")).toHaveCount(0);

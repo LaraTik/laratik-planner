@@ -46,9 +46,10 @@ test.describe("Loading + error boundaries", () => {
     const res = await page.goto(`/app/w/acme/planning/${fakeId}`, {
       waitUntil: "domcontentloaded",
     });
-    // 200 (rendered) or 404 — both are acceptable; what matters is the
-    // user sees a usable page, not a 500.
-    expect(res?.status()).toBeLessThan(500);
+    // 200 (rendered not-found boundary) or 404 (transport-level
+    // not-found) — both are acceptable; what matters is the user
+    // sees a usable page, not a 500.
+    expect([200, 404]).toContain(res?.status() ?? 0);
     // The not-found page renders the "Back to My Work" CTA
     await expect(page.getByRole("link", { name: /My Work/i }).first()).toBeVisible();
   });
@@ -58,7 +59,7 @@ test.describe("Loading + error boundaries", () => {
     const res = await page.goto("/app/w/this-workspace-does-not-exist", {
       waitUntil: "domcontentloaded",
     });
-    expect(res?.status()).toBeLessThan(500);
+    expect([200, 404]).toContain(res?.status() ?? 0);
     await expect(page.getByRole("link", { name: /My Work/i }).first()).toBeVisible();
   });
 });

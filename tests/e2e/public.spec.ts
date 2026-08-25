@@ -11,7 +11,7 @@ import { test, expect } from "@playwright/test";
 test.describe("GET /", () => {
   test("renders the landing page", async ({ page }) => {
     const res = await page.goto("/");
-    expect(res?.status()).toBeLessThan(500);
+    expect(res?.status()).toBe(200);
     await expect(page.getByRole("heading", { name: "laratik-planner" })).toBeVisible();
   });
 
@@ -35,7 +35,7 @@ test.describe("GET /", () => {
 test.describe("GET /signin", () => {
   test("renders the configured sign-in entry state", async ({ page }) => {
     const res = await page.goto("/signin");
-    expect(res?.status()).toBeLessThan(500);
+    expect(res?.status()).toBe(200);
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
     const providerControls = page.getByRole("button", {
       name: /Continue with Google|Email me a sign-in link/i,
@@ -55,7 +55,7 @@ test.describe("GET /signin", () => {
 test.describe("GET /signin/verify", () => {
   test("renders the verify-request page", async ({ page }) => {
     const res = await page.goto("/signin/verify");
-    expect(res?.status()).toBeLessThan(500);
+    expect(res?.status()).toBe(200);
     await expect(page.getByText(/check your email|sign-in link|magic link/i).first()).toBeVisible();
   });
 });
@@ -63,7 +63,7 @@ test.describe("GET /signin/verify", () => {
 test.describe("GET /api/health", () => {
   test("returns 200 with the expected JSON shape", async ({ request }) => {
     const res = await request.get("/api/health");
-    expect(res.status()).toBeLessThan(500);
+    expect(res.status()).toBe(200);
     const body = await res.json();
     expect(body).toMatchObject({
       ok: expect.any(Boolean),
@@ -97,7 +97,7 @@ test.describe("GET /api/health", () => {
 test.describe("GET /api/bootstrap/status", () => {
   test("returns 200 with { configured, agencyId, signedIn }", async ({ request }) => {
     const res = await request.get("/api/bootstrap/status");
-    expect(res.status()).toBeLessThan(500);
+    expect(res.status()).toBe(200);
     const body = await res.json();
     expect(body).toMatchObject({
       configured: expect.any(Boolean),
@@ -110,14 +110,14 @@ test.describe("GET /api/bootstrap/status", () => {
 test.describe("Dev-only API endpoints (guarded server-side)", () => {
   test("GET /api/dev/sign-in returns a help message", async ({ request }) => {
     const res = await request.get("/api/dev/sign-in");
-    expect(res.status()).toBeLessThan(500);
+    expect(res.status()).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
   });
 
   test("GET /api/dev/seed returns the fixtures definition", async ({ request }) => {
     const res = await request.get("/api/dev/seed");
-    expect(res.status()).toBeLessThan(500);
+    expect(res.status()).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.fixtures).toHaveProperty("email");

@@ -51,7 +51,11 @@ test.describe("a11y: authed routes redirect cleanly", () => {
   // not a blank screen (master prompt §3.7 "never leave blank screens")
   test("@a11y /app redirects to /signin with proper form focus", async ({ page }) => {
     const response = await page.goto("/app", { waitUntil: "domcontentloaded" });
-    expect(response?.status()).toBeLessThan(500);
+    // The unauthed /app request is served as a 307 redirect to
+    // /signin; the page object follows the redirect and lands on
+    // /signin with a 200. We accept the 307 OR the followed 200 to
+    // stay robust against proxy-vs-API edge cases.
+    expect([200, 307]).toContain(response?.status() ?? 0);
     await expect(page).toHaveURL(/\/signin/);
     // The sign-in form must have a focused email field after redirect
     await page.waitForLoadState("networkidle");
