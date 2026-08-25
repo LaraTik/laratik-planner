@@ -278,6 +278,40 @@ export function mergeAiDraftIntoBrief(
   return combined.slice(0, 2000);
 }
 
+/**
+ * FEAT-09 (GAP-FULL-REVIEW-2026-08-25) — encode / decode a cursor for
+ * the planning list's "load more" button. The cursor is a JSON tuple
+ * of the last item's `plannedPublishAt` (ISO) and `id` (UUID), base64
+ * so it survives as a URL search param. Round-tripping is best-effort:
+ * an invalid cursor is treated as "no cursor" (start from the
+ * beginning) so a stale bookmark never 500s.
+ */
+export function encodeContentCursor(cursor: { plannedPublishAt: Date; id: string }): string {
+  const json = JSON.stringify({
+    plannedPublishAt: cursor.plannedPublishAt.toISOString(),
+    id: cursor.id,
+  });
+  return Buffer.from(json, "utf8").toString("base64url");
+}
+
+export function decodeContentCursor(
+  raw: string | undefined | null,
+): { plannedPublishAt: Date; id: string } | undefined {
+  if (!raw) return undefined;
+  try {
+    const json = Buffer.from(raw, "base64url").toString("utf8");
+    const parsed = JSON.parse(json) as { plannedPublishAt?: unknown; id?: unknown };
+    if (typeof parsed.plannedPublishAt !== "string" || typeof parsed.id !== "string") {
+      return undefined;
+    }
+    const date = new Date(parsed.plannedPublishAt);
+    if (Number.isNaN(date.getTime())) return undefined;
+    return { plannedPublishAt: date, id: parsed.id };
+  } catch {
+    return undefined;
+  }
+}
+
 /** Create an entire pasted batch atomically; one invalid row rolls back all rows. */
 export async function batchCreateContentItems(actor: Actor, input: BatchCreateInput) {
   const parsed = BatchCreateSchema.parse(input);
@@ -403,6 +437,26 @@ export async function listWorkspaceContent(
     monthEnd?: Date;
     status?: string;
     limit?: number;
+    /**
+     * FEAT-09 (GAP-FULL-REVIEW-2026-08-25) — new filters for the
+     * planning list. All optional; missing means "no filter on this
+     * field". Search is case-insensitive and matches either title or
+     * brief. `format` must be one of the values declared in
+     * `QuickCreateSchema`; `ownerId` is the content owner (the row
+     * that drives the assignee column on the list).
+     */
+    search?: string;
+    ownerId?: string;
+    format?: string;
+    /**
+     * Cursor-based pagination. The cursor is the
+     * `{ plannedPublishAt, id }` of the last item from the previous
+     * page. The next page returns rows whose
+     * `(plannedPublishAt, id)` tuple is strictly greater, so the
+     * ordering is stable even when many items share the same
+     * publish date.
+     */
+    cursor?: { plannedPublishAt: Date; id: string };
   } = {},
 ) {
   await requirePolicy(
@@ -414,12 +468,35 @@ export async function listWorkspaceContent(
   if (opts.monthStart) conditions.push(sql`${contentItems.plannedPublishAt} >= ${opts.monthStart}`);
   if (opts.monthEnd) conditions.push(sql`${contentItems.plannedPublishAt} < ${opts.monthEnd}`);
   if (opts.status) conditions.push(sql`${contentItems.status} = ${opts.status}`);
+  if (opts.ownerId) conditions.push(eq(contentItems.contentOwnerId, opts.ownerId));
+  if (opts.format) {
+    // Cast at the SQL boundary — the page has already validated the
+    // string against the ContentFormat enum before passing it in.
+    conditions.push(eq(contentItems.format, opts.format as never));
+  }
+  if (opts.cursor) {
+    // Compound keyset condition: same plannedPublishAt but a later
+    // id, or a strictly later plannedPublishAt. Keeps the page
+    // boundary stable when two items share a publish date.
+    const c = opts.cursor;
+    conditions.push(
+      sql`(${contentItems.plannedPublishAt} > ${c.plannedPublishAt}) OR (${contentItems.plannedPublishAt} = ${c.plannedPublishAt} AND ${contentItems.id} > ${c.id})`,
+    );
+  }
+  if (opts.search) {
+    const needle = `%${opts.search.toLowerCase()}%`;
+    // ilike is case-insensitive in Postgres; lower(title) keeps the
+    // path index-friendly for short queries.
+    conditions.push(
+      sql`(lower(${contentItems.title}) LIKE ${needle} OR lower(${contentItems.brief}) LIKE ${needle})`,
+    );
+  }
 
   return db
     .select()
     .from(contentItems)
     .where(and(...conditions))
-    .orderBy(sql`${contentItems.plannedPublishAt} ASC`)
+    .orderBy(sql`${contentItems.plannedPublishAt} ASC`, sql`${contentItems.id} ASC`)
     .limit(opts.limit ?? 200);
 }
 
