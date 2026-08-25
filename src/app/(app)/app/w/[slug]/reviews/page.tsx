@@ -10,9 +10,19 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { Card } from "@/components/ui/card";
 import { KpiTile } from "@/components/workspace/kpi-tile";
 import { PageHeader } from "@/components/workspace/page-header";
+import { ReviewsFilters } from "@/components/workspace/reviews-filters";
 import { ReviewRow, type ReviewRowItem } from "@/components/workspace/review-row";
 
-export default async function ReviewsQueuePage({ params }: { params: Promise<{ slug: string }> }) {
+type Gate = "content" | "creative_internal" | "creative_client";
+type SortKey = "requested_desc" | "due_asc" | "due_desc";
+
+export default async function ReviewsQueuePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ gate?: string; sort?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -26,6 +36,14 @@ export default async function ReviewsQueuePage({ params }: { params: Promise<{ s
     ...(internal ? (["content", "creative_internal"] as const) : []),
     ...(client ? (["creative_client"] as const) : []),
   ];
+  const params2 = await searchParams;
+  const requestedGate = params2.gate as Gate | undefined;
+  const sort: SortKey =
+    params2.sort === "due_asc" || params2.sort === "due_desc" ? params2.sort : "requested_desc";
+  const activeGate =
+    requestedGate && (gates as readonly string[]).includes(requestedGate)
+      ? requestedGate
+      : undefined;
   const rows = gates.length
     ? await db
         .select({
@@ -43,11 +61,19 @@ export default async function ReviewsQueuePage({ params }: { params: Promise<{ s
           and(
             eq(contentItems.workspaceId, workspace.id),
             eq(approvalRequests.status, "pending"),
-            inArray(approvalRequests.gate, gates),
+            inArray(approvalRequests.gate, activeGate ? [activeGate] : gates),
           ),
         )
     : [];
-  const overdueCount = rows.filter((r) => r.dueAt && r.dueAt < new Date()).length;
+  const sortedRows = [...rows].sort((a, b) => {
+    if (sort === "due_asc" || sort === "due_desc") {
+      const aDue = a.dueAt ? a.dueAt.getTime() : Number.POSITIVE_INFINITY;
+      const bDue = b.dueAt ? b.dueAt.getTime() : Number.POSITIVE_INFINITY;
+      if (aDue !== bDue) return sort === "due_asc" ? aDue - bDue : bDue - aDue;
+    }
+    return b.requestedAt.getTime() - a.requestedAt.getTime();
+  });
+  const overdueCount = sortedRows.filter((r) => r.dueAt && r.dueAt < new Date()).length;
   const nowMs = new Date().getTime();
   return (
     <div className="space-y-6" data-testid="reviews-kpi-row">
@@ -56,7 +82,7 @@ export default async function ReviewsQueuePage({ params }: { params: Promise<{ s
         title="Reviews queue"
         description={
           <>
-            {rows.length} decision{rows.length === 1 ? "" : "s"} waiting for you.
+            {sortedRows.length} decision{sortedRows.length === 1 ? "" : "s"} waiting for you.
             <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
@@ -69,7 +95,7 @@ export default async function ReviewsQueuePage({ params }: { params: Promise<{ s
         <KpiTile
           icon={<Inbox className="h-3.5 w-3.5" aria-hidden="true" />}
           label="Pending"
-          value={rows.length}
+          value={sortedRows.length}
         />
         <KpiTile
           icon={<Calendar className="h-3.5 w-3.5" aria-hidden="true" />}
@@ -80,14 +106,22 @@ export default async function ReviewsQueuePage({ params }: { params: Promise<{ s
         <KpiTile
           icon={<Clock className="h-3.5 w-3.5" aria-hidden="true" />}
           label="On time"
-          value={rows.length - overdueCount}
+          value={sortedRows.length - overdueCount}
         />
       </section>
 
-      {rows.length ? (
+      <ReviewsFilters
+        slug={slug}
+        gates={gates}
+        selectedGate={activeGate}
+        selectedSort={sort}
+        hasFilter={Boolean(activeGate) || sort !== "requested_desc"}
+      />
+
+      {sortedRows.length ? (
         <Card padding="none">
           <ul className="divide-border divide-y">
-            {rows.map((row) => (
+            {sortedRows.map((row) => (
               <ReviewRow
                 key={row.id}
                 item={
@@ -111,8 +145,12 @@ export default async function ReviewsQueuePage({ params }: { params: Promise<{ s
         <Card variant="dashed" padding="lg">
           <EmptyState
             icon={<Inbox className="h-8 w-8" />}
-            title="You're all caught up"
-            description="New content and creative review requests will appear here."
+            title={activeGate ? "No items match this filter" : "You're all caught up"}
+            description={
+              activeGate
+                ? "Try clearing the filter to see all reviews waiting for you."
+                : "New content and creative review requests will appear here."
+            }
           />
         </Card>
       )}
