@@ -6,6 +6,7 @@ import {
   agencies,
   agencyMemberships,
   contentItems,
+  securityAuditEvents,
   workspaceMembershipRoles,
   workspaceMemberships,
   workspaces,
@@ -159,13 +160,54 @@ export async function canWriteToWorkspace(actor: Actor, workspaceId: string): Pr
  * actor is read-only. The route layer should treat that throw as a
  * 403. Pair with `requirePolicy` callers — the helper uses the same
  * throw contract.
+ *
+ * FEAT-20 (GAP-FULL-REVIEW-2026-08-25) — also writes a
+ * `security_audit_event` row with `outcome: "denied"` so a
+ * security-relevant authorization denial is observable in the
+ * audit trail. The audit insert runs *before* the throw, in its
+ * own try/catch — a failure to write the audit row must not
+ * suppress the original 403, and a successful audit write must
+ * not be undone by the throw. The metadata captures the actor's
+ * current workspace roles (if any) so the security reviewer can
+ * tell a `viewer` denial apart from a no-membership denial.
  */
 export async function requireWriteCapability(
   actor: Actor,
   workspaceId: string,
   action: string,
 ): Promise<void> {
-  await requirePolicy(canWriteToWorkspace(actor, workspaceId), `write_workspace:${action}`);
+  const allowed = await canWriteToWorkspace(actor, workspaceId);
+  if (allowed) return;
+
+  // Read the actor's role set for the audit metadata. We use the
+  // same `getWorkspaceRoles` cache the auth check used; a
+  // per-denial round-trip to the DB would be wasteful.
+  const roles = await getWorkspaceRoles(actor, workspaceId);
+  const rolesList = Array.from(roles).sort();
+
+  try {
+    await db.insert(securityAuditEvents).values({
+      actorId: actor.id,
+      action: `write_workspace:${action}`,
+      targetType: "workspace",
+      targetId: workspaceId,
+      outcome: "denied",
+      metadata: {
+        reason: "actor_not_write_capable",
+        actorRoles: rolesList,
+        ...(rolesList.length === 0 ? { reason: "actor_not_a_member" } : {}),
+      },
+    });
+  } catch {
+    // Audit failures must never change the deny contract. The
+    // security-guard wrapper (when wired) will surface the
+    // audit-write failure to the observability stack via
+    // captureError; the in-process catch is the belt-and-braces
+    // path so a transient DB blip during a 403 path cannot
+    // accidentally allow the action through.
+  }
+
+  throw new PermissionDeniedError(`write_workspace:${action}`);
 }
 
 /**
