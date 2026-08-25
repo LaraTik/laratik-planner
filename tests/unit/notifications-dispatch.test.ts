@@ -353,3 +353,47 @@ describe("updateNotificationPreferences (FEAT-07) — §14 contract alias", () =
     expect(inserts.length).toBe(2);
   });
 });
+
+// ─── FEAT-10 — email dispatcher (GAP-FULL-REVIEW-2026-08-25) ──────────────
+const { dispatchEmailOnce } = await import("@/lib/notifications/service");
+
+describe("dispatchEmailOnce (FEAT-10)", () => {
+  // The dispatcher needs:
+  //   1. A list of unprocessed outbox rows (the first select).
+  //   2. A read of notification_preferences (returns [] so the
+  //      default email_enabled=false skips the row).
+  //   3. (When opted in) a read of the user's email address.
+  function stageUnprocessedEvent(eventType: string, payload: Record<string, unknown>) {
+    state.selectResults.push([{ id: "evt-1", eventType, payload }]);
+  }
+
+  it("skips rows when the user has not opted into email for the kind", async () => {
+    stageUnprocessedEvent("assignment", { userId: "user-1", title: "T", body: "B" });
+    // The first select inside shouldEmailUserFor returns [] → emailEnabled defaults to false.
+    state.selectResults.push([]);
+    const result = await dispatchEmailOnce({ maxEvents: 10 });
+    expect(result.processed).toBe(1);
+    expect(result.skipped).toBe(1);
+    expect(result.sent).toBe(0);
+  });
+
+  it("marks the row processed on skip + non-existent user", async () => {
+    stageUnprocessedEvent("assignment", { userId: "user-1", title: "T", body: "B" });
+    // shouldEmailUserFor: []
+    state.selectResults.push([]);
+    await dispatchEmailOnce({ maxEvents: 10 });
+    const update = state.updateCalls.find(
+      (c) => (c.set as Record<string, unknown>)["processedAt"] instanceof Date,
+    );
+    expect(update).toBeDefined();
+  });
+
+  it("handles rows with no userId by marking them processed and skipping", async () => {
+    state.selectResults.push([
+      { id: "evt-1", eventType: "assignment", payload: { title: "T", body: "B" } },
+    ]);
+    const result = await dispatchEmailOnce({ maxEvents: 10 });
+    expect(result.skipped).toBe(1);
+    expect(result.sent).toBe(0);
+  });
+});

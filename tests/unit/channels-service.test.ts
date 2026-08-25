@@ -202,7 +202,8 @@ describe("createChannel", () => {
     // mocked function drops the tx (a tx-shaped object) and accepts
     // the agencyId + items; we just verify the items are correct.
     const calls = capacityMock.reserveCapacity.mock.calls;
-    const lastCallArgs = calls[calls.length - 1]!;
+    expect(calls.length).toBeGreaterThan(0);
+    const lastCallArgs = calls[calls.length - 1] as unknown[];
     expect(lastCallArgs[1]).toBe("agency-1");
     expect(lastCallArgs[2]).toEqual([
       { resource: "social_profiles", increase: 1 },
@@ -210,9 +211,9 @@ describe("createChannel", () => {
     ]);
   });
   it("rejects invalid input", async () => {
-    await expect(createChannel(actor, workspaceId, { platform: "instagram" })).rejects.toThrow(
-      /Required/,
-    );
+    await expect(
+      createChannel(actor, workspaceId, { platform: "instagram", accountName: "" }),
+    ).rejects.toThrow(/at least 2 character/);
   });
 });
 

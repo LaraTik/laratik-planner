@@ -1,8 +1,9 @@
 import "server-only";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { notifications, notificationPreferences, outboxEvents } from "@/lib/db/schema";
+import { notifications, notificationPreferences, outboxEvents, users } from "@/lib/db/schema";
 import { type Actor } from "@/lib/auth/policy";
+import { sendEmail } from "@/lib/email";
 import { z } from "zod";
 
 /**
@@ -191,6 +192,157 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
     }
   }
   return { processed: processed.length };
+}
+
+// ─── FEAT-10 — email dispatch (GAP-FULL-REVIEW-2026-08-25) ─────────────────
+//
+// The in-app dispatcher above handles the bell. This companion
+// function reads the same outbox_events rows, but fans out via
+// `sendEmail` (Mailcow) instead. It honours
+// `notification_preferences.email_enabled` per (user, kind) and
+// silently skips the row when the user hasn't opted in.
+//
+// Invariants:
+//   - Re-reads the user + preference for every row (avoids stale
+//     reads when a user toggles their preference between writes).
+//   - Never deletes the outbox row on failure; bumps
+//     `attempt_count` + writes `last_error` so the row can be
+//     retried by the next cron tick. The outbox dispatcher + the
+//     email worker share the same retry surface.
+//   - The cron route (/api/cron/email-dispatch) only invokes this
+//     helper, so all side effects flow through one place.
+//
+// The per-event envelope is the same one the in-app dispatcher
+// writes; the email body is whatever `payload.title` /
+// `payload.body` the call site set. For comment mentions, the
+// notification_kind is "mention" so the preference lookup is
+// consistent across surfaces.
+
+/**
+ * One email-dispatch tick. Claims at most `maxEvents` due
+ * outbox_events rows, sends the email when the recipient's
+ * `email_enabled` flag is set for the matching kind, and updates
+ * `processed_at` / `attempt_count` on every row. Returns the
+ * counts the cron route logs.
+ */
+export async function dispatchEmailOnce(
+  opts: { maxEvents?: number; now?: Date } = {},
+): Promise<{ processed: number; sent: number; skipped: number; failed: number }> {
+  const now = opts.now ?? new Date();
+  const maxEvents = opts.maxEvents ?? 50;
+
+  const events = await db
+    .select()
+    .from(outboxEvents)
+    .where(and(isNull(outboxEvents.processedAt), sql`${outboxEvents.availableAt} <= ${now}`))
+    .orderBy(outboxEvents.availableAt)
+    .limit(maxEvents);
+
+  let sent = 0;
+  let skipped = 0;
+  let failed = 0;
+  for (const evt of events) {
+    const payload = (evt.payload as Record<string, unknown> | null) ?? {};
+    const userId = payload["userId"] as string | undefined;
+    if (!userId) {
+      // No recipient — count as skipped and mark processed so the
+      // queue doesn't loop on the row.
+      await db
+        .update(outboxEvents)
+        .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
+        .where(eq(outboxEvents.id, evt.id));
+      skipped += 1;
+      continue;
+    }
+    // Map the outbox eventType → the notification kind we use for
+    // the preference lookup. comment_created / claim / release
+    // collapse to "mention" / "assignment" respectively (the
+    // schema enum has no separate claim/release kinds).
+    const kind = eventTypeToNotificationKind(evt.eventType as string);
+    if (!kind) {
+      skipped += 1;
+      await db
+        .update(outboxEvents)
+        .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
+        .where(eq(outboxEvents.id, evt.id));
+      continue;
+    }
+    const wantsEmail = await shouldEmailUserFor(userId, kind);
+    if (!wantsEmail) {
+      skipped += 1;
+      await db
+        .update(outboxEvents)
+        .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
+        .where(eq(outboxEvents.id, evt.id));
+      continue;
+    }
+    const [user] = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (!user) {
+      skipped += 1;
+      await db
+        .update(outboxEvents)
+        .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
+        .where(eq(outboxEvents.id, evt.id));
+      continue;
+    }
+    const title = (payload["title"] as string | undefined) ?? defaultTitleFor(kind);
+    const body = (payload["body"] as string | undefined) ?? defaultBodyFor(kind);
+    try {
+      await sendEmail({ to: user.email, subject: title, text: body });
+      await db
+        .update(outboxEvents)
+        .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
+        .where(eq(outboxEvents.id, evt.id));
+      sent += 1;
+    } catch (err) {
+      // Failure path: bump attempt_count + write last_error. The
+      // row stays in the queue (processedAt is null) so the next
+      // tick retries. The Mailcow transient-error rate is the
+      // natural backoff (the cron runs every minute).
+      await db
+        .update(outboxEvents)
+        .set({
+          attemptCount: sql`${outboxEvents.attemptCount} + 1`,
+          lastError: err instanceof Error ? err.message : String(err),
+        })
+        .where(eq(outboxEvents.id, evt.id));
+      failed += 1;
+    }
+  }
+  return { processed: events.length, sent, skipped, failed };
+}
+
+function eventTypeToNotificationKind(eventType: string): NotificationKind | null {
+  switch (eventType as OutboxEventType) {
+    case "comment_created":
+      return "mention";
+    case "assignment":
+    case "claim":
+    case "release":
+      return "assignment";
+    case "review_request":
+      return "review_request";
+    case "approval":
+      return "approval";
+    case "changes_requested":
+      return "changes_requested";
+    case "reply":
+      return "reply";
+    case "unresolved_question":
+      return "unresolved_question";
+    case "deadline":
+      return "deadline";
+    case "delivery":
+      return "delivery";
+    case "ready_to_publish":
+      return "ready_to_publish";
+    default:
+      return null;
+  }
 }
 
 async function fanOutCommentCreated(
