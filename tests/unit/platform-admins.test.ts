@@ -1,32 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-/**
- * Unit tests for `src/lib/platform/admins.ts` (superadmin-clarity).
- *
- * The service contract is:
- *   - `listPlatformAdmins()` — read every live grant with the grantor
- *     email joined for display.
- *   - `grantPlatformAdmin(actor, { email, reason })` — upsert a
- *     platform_administrator row keyed by the user's id (looked up
- *     by lower-cased email). Refuses to auto-create users.
- *   - `revokePlatformAdmin(actor, { userId, reason })` — soft-revoke
- *     (set `revoked_at`); refuses to revoke the last live admin.
- *   - `listPlatformAdminAudit(limit)` — last N audit rows for
- *     grant / revoke actions.
- *
- * DB is mocked at the chainable Drizzle surface. The policy module
- * is partially stubbed: `isPlatformAdmin` is flipped via
- * `policyOverrides`, the rest of the helpers come from the real
- * module (so the SUT's actual flow is exercised).
- */
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
 type DrizzleState = {
   selectResults: unknown[][];
-  insertCalls: { values: unknown }[];
-  updateCalls: { set: unknown; where: unknown }[];
   executeResults: unknown[][];
+  insertCalls: unknown[];
+  updateCalls: unknown[];
 };
 
 function dequeue(state: DrizzleState): unknown[] {
@@ -34,346 +14,301 @@ function dequeue(state: DrizzleState): unknown[] {
 }
 
 function makeDrizzleMock(state: DrizzleState) {
-  function makeChain(): Record<string, unknown> {
+  function selectChain(): Record<string, unknown> {
     const chain: Record<string, unknown> = {};
     chain.from = vi.fn(() => chain);
+    chain.innerJoin = vi.fn(() => chain);
+    chain.where = vi.fn(() => chain);
+    chain.orderBy = vi.fn(() => chain);
     chain.limit = vi.fn(() => Promise.resolve(dequeue(state)));
-    const thenable = (next: () => Record<string, unknown>) =>
-      new Proxy(next(), {
-        get(target, prop, receiver) {
-          if (prop === "then") {
-            return (resolve: (v: unknown) => void) => resolve(dequeue(state));
-          }
-          if (prop === "limit") {
-            return target.limit;
-          }
-          return Reflect.get(target, prop, receiver);
-        },
-      });
-    chain.where = vi.fn(() => thenable(() => chain));
-    chain.orderBy = vi.fn(() => thenable(() => chain));
+    chain.then = (resolve: (value: unknown[]) => void) => resolve(dequeue(state));
     return chain;
   }
-  const chain = makeChain();
-  const select = vi.fn(() => chain);
 
-  const insertChain: Record<string, unknown> = {};
-  insertChain.values = vi.fn((values: unknown) => {
-    state.insertCalls.push({ values });
-    return Promise.resolve();
-  });
-  const insert = vi.fn(() => insertChain);
-
-  const updateChain: Record<string, unknown> = {};
-  let lastSet: unknown = undefined;
-  updateChain.set = vi.fn((set: unknown) => {
-    lastSet = set;
-    return updateChain;
-  });
-  updateChain.where = vi.fn((where: unknown) => {
-    state.updateCalls.push({ set: lastSet, where });
-    lastSet = undefined;
-    return Promise.resolve();
-  });
-  const update = vi.fn(() => updateChain);
-
-  // `db.transaction(async (tx) => ...)` — give the test a callback
-  // that re-uses the same mocked db shape inside the transaction
-  // (the test suite doesn't exercise inside-tx branch variants).
-  const transaction = vi.fn(async (cb: (tx: typeof dbMock) => unknown) => cb(dbMock));
-  const execute = vi.fn(() => {
-    const result = state.executeResults.shift() ?? [];
-    return Promise.resolve({ rows: result });
-  });
-
-  return { select, insert, update, transaction, execute, state };
+  const select = vi.fn(() => selectChain());
+  const insert = vi.fn(() => ({
+    values: vi.fn((values: unknown) => {
+      state.insertCalls.push(values);
+      return Promise.resolve();
+    }),
+  }));
+  const update = vi.fn(() => ({
+    set: vi.fn((values: unknown) => ({
+      where: vi.fn(() => {
+        state.updateCalls.push(values);
+        return Promise.resolve();
+      }),
+    })),
+  }));
+  const execute = vi.fn(() => Promise.resolve({ rows: state.executeResults.shift() ?? [] }));
+  const mock = { select, insert, update, execute };
+  const transaction = vi.fn(async (callback: (tx: typeof mock) => unknown) => callback(mock));
+  return { ...mock, transaction, state };
 }
 
 const dbMock = vi.hoisted(() =>
   makeDrizzleMock({
     selectResults: [],
+    executeResults: [],
     insertCalls: [],
     updateCalls: [],
-    executeResults: [],
   }),
 );
 
-vi.mock("@/lib/db", () => ({
-  db: {
-    ...dbMock,
-    transaction: (...args: unknown[]) =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (dbMock.transaction as any)(...args),
-    execute: (...args: unknown[]) =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (dbMock.execute as any)(...args),
-  },
-}));
+vi.mock("@/lib/db", () => ({ db: dbMock }));
 
-const policyOverrides = vi.hoisted(() => ({
-  isPlatformAdminResult: true as boolean,
-}));
+const accessMock = vi.hoisted(() => ({ requirePermission: vi.fn() }));
 
-vi.mock("@/lib/auth/platform-admin", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/auth/platform-admin")>(
-    "@/lib/auth/platform-admin",
+vi.mock("@/lib/auth/platform-access", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/auth/platform-access")>(
+    "@/lib/auth/platform-access",
   );
-  return {
-    ...actual,
-    requirePlatformAdmin: vi.fn(async () => {
-      if (!policyOverrides.isPlatformAdminResult) {
-        const { PermissionDeniedError } = await import("@/lib/auth/policy");
-        throw new PermissionDeniedError("platform-admin-required");
-      }
-    }),
-  };
+  return { ...actual, requirePlatformPermission: accessMock.requirePermission };
 });
 
-const {
-  grantPlatformAdmin,
-  revokePlatformAdmin,
-  listPlatformAdmins,
-  listPlatformAdminAudit,
-  GrantPlatformAdminSchema,
-  RevokePlatformAdminSchema,
-  PlatformAdminErrorCode,
-  PlatformAdminServiceError,
-} = await import("@/lib/platform/admins");
+const service = await import("@/lib/platform/access");
 
 const ACTOR_ID = "00000000-0000-4000-8000-00000000a001";
-const GRANTEE_ID = "00000000-0000-4000-8000-00000000a002";
-
+const TARGET_ID = "00000000-0000-4000-8000-00000000a002";
 const actor = { id: ACTOR_ID };
-const grantee = { id: GRANTEE_ID, email: "GRANTEE@example.com" };
 
 beforeEach(() => {
   dbMock.state.selectResults = [];
+  dbMock.state.executeResults = [];
   dbMock.state.insertCalls = [];
   dbMock.state.updateCalls = [];
-  dbMock.state.executeResults = [];
   dbMock.select.mockClear();
   dbMock.insert.mockClear();
   dbMock.update.mockClear();
   dbMock.execute.mockClear();
   dbMock.transaction.mockClear();
-  policyOverrides.isPlatformAdminResult = true;
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
-
-describe("GrantPlatformAdminSchema / RevokePlatformAdminSchema", () => {
-  it("accepts a valid email + reason", () => {
-    const parsed = GrantPlatformAdminSchema.parse({
-      email: "person@example.com",
-      reason: "onboarding operator",
-    });
-    expect(parsed.email).toBe("person@example.com");
-    expect(parsed.reason).toBe("onboarding operator");
-  });
-
-  it("rejects an invalid email", () => {
-    expect(() =>
-      GrantPlatformAdminSchema.parse({ email: "not-an-email", reason: "abc" }),
-    ).toThrow();
-  });
-
-  it("rejects a too-short reason", () => {
-    expect(() =>
-      GrantPlatformAdminSchema.parse({ email: "person@example.com", reason: "ab" }),
-    ).toThrow();
-  });
-
-  it("requires a non-empty uuid for revoke", () => {
-    expect(() =>
-      RevokePlatformAdminSchema.parse({ userId: "not-a-uuid", reason: "abc" }),
-    ).toThrow();
+  accessMock.requirePermission.mockReset();
+  accessMock.requirePermission.mockResolvedValue({
+    actor,
+    role: "platform_owner",
+    permissions: new Set(),
   });
 });
 
-describe("listPlatformAdmins", () => {
-  it("returns an empty array when no rows exist", async () => {
-    dbMock.state.executeResults.push([]);
-    const rows = await listPlatformAdmins();
-    expect(rows).toEqual([]);
+describe("platform access schemas", () => {
+  it.each([
+    "platform_owner",
+    "agency_operator",
+    "platform_auditor",
+    "support_operator",
+  ] as const)("accepts the closed %s role", (role) => {
+    expect(
+      service.GrantPlatformAccessSchema.parse({
+        email: "person@example.com",
+        role,
+        reason: "Operational need",
+      }).role,
+    ).toBe(role);
   });
 
-  it("maps the raw rows into the typed shape", async () => {
+  it("normalizes email and rejects unknown roles or weak reasons", () => {
+    expect(
+      service.GrantPlatformAccessSchema.parse({
+        email: " Person@Example.COM ",
+        role: "platform_owner",
+        reason: "Emergency owner",
+      }).email,
+    ).toBe("person@example.com");
+    expect(() =>
+      service.GrantPlatformAccessSchema.parse({
+        email: "person@example.com",
+        role: "super_admin",
+        reason: "No",
+      }),
+    ).toThrow();
+  });
+});
+
+describe("platform access reads", () => {
+  it("requires access-read and maps only active assignments", async () => {
     dbMock.state.executeResults.push([
       {
-        user_id: grantee.id,
-        email: "grantee@example.com",
-        display_name: "Grantee",
-        granted_by: actor.id,
-        granted_at: new Date("2026-08-24T10:00:00Z"),
-        revoked_at: null,
-        reason: "first grant",
-        grantor_email: "actor@example.com",
+        user_id: TARGET_ID,
+        email: "operator@example.com",
+        display_name: "Operator",
+        role: "agency_operator",
+        granted_by: ACTOR_ID,
+        granted_at: new Date("2026-08-25T08:00:00Z"),
+        updated_at: new Date("2026-08-25T09:00:00Z"),
+        reason: "Operations",
+        grantor_email: "owner@example.com",
       },
     ]);
-    const rows = await listPlatformAdmins();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.userId).toBe(grantee.id);
-    expect(rows[0]?.email).toBe("grantee@example.com");
-    expect(rows[0]?.grantedByEmail).toBe("actor@example.com");
-  });
-});
 
-describe("grantPlatformAdmin", () => {
-  it("rejects when the actor is not a platform admin", async () => {
-    policyOverrides.isPlatformAdminResult = false;
-    await expect(
-      grantPlatformAdmin(actor, { email: "x@example.com", reason: "ops" }),
-    ).rejects.toThrow();
-  });
+    const rows = await service.listPlatformAccess(actor);
 
-  it("throws UserNotFound when no user row matches the email", async () => {
-    dbMock.state.selectResults.push([]); // user lookup
-    try {
-      await grantPlatformAdmin(actor, { email: "ghost@example.com", reason: "ops" });
-      throw new Error("should have thrown");
-    } catch (e) {
-      expect(e).toBeInstanceOf(PlatformAdminServiceError);
-      expect((e as InstanceType<typeof PlatformAdminServiceError>).code).toBe(
-        PlatformAdminErrorCode.UserNotFound,
-      );
-    }
-  });
-
-  it("is idempotent when the user already has a live grant", async () => {
-    // user lookup → existing row with revoked_at null
-    dbMock.state.selectResults.push([{ id: grantee.id, email: grantee.email }]);
-    dbMock.state.selectResults.push([{ userId: grantee.id, revokedAt: null }]);
-    const result = await grantPlatformAdmin(actor, {
-      email: grantee.email,
-      reason: "duplicate grant",
-    });
-    expect(result.alreadyGranted).toBe(true);
-    expect(result.userId).toBe(grantee.id);
-    expect(dbMock.insert).not.toHaveBeenCalled();
-  });
-
-  it("re-activates a soft-revoked grant instead of inserting a duplicate", async () => {
-    dbMock.state.selectResults.push([{ id: grantee.id, email: grantee.email }]);
-    dbMock.state.selectResults.push([{ userId: grantee.id, revokedAt: new Date() }]);
-    const result = await grantPlatformAdmin(actor, {
-      email: grantee.email,
-      reason: "re-activation",
-    });
-    expect(result.alreadyGranted).toBe(false);
-    expect(dbMock.update).toHaveBeenCalledTimes(1);
-    expect(dbMock.insert).toHaveBeenCalledTimes(1); // the audit row
-  });
-
-  it("inserts a new grant + audit row when no row exists", async () => {
-    dbMock.state.selectResults.push([{ id: grantee.id, email: grantee.email }]);
-    dbMock.state.selectResults.push([]); // no existing row
-    const result = await grantPlatformAdmin(actor, {
-      email: grantee.email,
-      reason: "first grant",
-    });
-    expect(result.userId).toBe(grantee.id);
-    expect(result.alreadyGranted).toBe(false);
-    // One insert for the grant row, one insert for the audit row.
-    expect(dbMock.insert).toHaveBeenCalledTimes(2);
-    const insertValues = dbMock.state.insertCalls.map((c) => c.values);
-    expect(insertValues[0]).toMatchObject({ userId: grantee.id, grantedBy: actor.id });
-    expect(insertValues[1]).toMatchObject({
-      action: "platform_admin.grant",
-      targetType: "user",
-      targetId: grantee.id,
-      outcome: "success",
-    });
-  });
-});
-
-describe("revokePlatformAdmin", () => {
-  it("rejects when the actor is not a platform admin", async () => {
-    policyOverrides.isPlatformAdminResult = false;
-    await expect(
-      revokePlatformAdmin(actor, { userId: grantee.id, reason: "left team" }),
-    ).rejects.toThrow();
-  });
-
-  it("throws NotFound when no grant exists for the user", async () => {
-    dbMock.state.selectResults.push([]); // no target row
-    try {
-      await revokePlatformAdmin(actor, { userId: grantee.id, reason: "left team" });
-      throw new Error("should have thrown");
-    } catch (e) {
-      expect(e).toBeInstanceOf(PlatformAdminServiceError);
-      expect((e as InstanceType<typeof PlatformAdminServiceError>).code).toBe(
-        PlatformAdminErrorCode.NotFound,
-      );
-    }
-  });
-
-  it("is idempotent when the grant is already revoked", async () => {
-    dbMock.state.selectResults.push([
-      { userId: grantee.id, revokedAt: new Date("2026-08-01T00:00:00Z") },
+    expect(accessMock.requirePermission).toHaveBeenCalledWith(actor, "platform.access.read");
+    expect(rows).toEqual([
+      expect.objectContaining({
+        userId: TARGET_ID,
+        role: "agency_operator",
+        grantedByEmail: "owner@example.com",
+      }),
     ]);
-    const result = await revokePlatformAdmin(actor, {
-      userId: grantee.id,
-      reason: "already revoked",
+  });
+
+  it("requires access-read for the audit timeline", async () => {
+    dbMock.state.selectResults.push([]);
+    await service.listPlatformAccessAudit(actor, 10);
+    expect(accessMock.requirePermission).toHaveBeenCalledWith(actor, "platform.access.read");
+  });
+});
+
+describe("grantPlatformAccess", () => {
+  it("requires manage permission and writes an explicit role plus atomic audit", async () => {
+    dbMock.state.selectResults.push([{ id: TARGET_ID, email: "person@example.com" }], []);
+
+    const result = await service.grantPlatformAccess(actor, {
+      email: "person@example.com",
+      role: "support_operator",
+      reason: "Support rotation",
     });
-    expect(result.userId).toBe(grantee.id);
+
+    expect(accessMock.requirePermission).toHaveBeenCalledWith(actor, "platform.access.manage");
+    expect(dbMock.execute).toHaveBeenCalledTimes(1);
+    expect(dbMock.state.insertCalls[0]).toMatchObject({
+      userId: TARGET_ID,
+      role: "support_operator",
+      grantedBy: ACTOR_ID,
+    });
+    expect(dbMock.state.insertCalls[1]).toMatchObject({
+      action: "platform_access.grant",
+      metadata: {
+        previousRole: null,
+        newRole: "support_operator",
+        reason: "Support rotation",
+      },
+    });
+    expect(result).toEqual({ userId: TARGET_ID, role: "support_operator", unchanged: false });
+  });
+
+  it("reactivates a revoked assignment with the submitted role", async () => {
+    dbMock.state.selectResults.push(
+      [{ id: TARGET_ID, email: "person@example.com" }],
+      [{ userId: TARGET_ID, role: "platform_auditor", revokedAt: new Date() }],
+    );
+
+    await service.grantPlatformAccess(actor, {
+      email: "person@example.com",
+      role: "agency_operator",
+      reason: "Return to operations",
+    });
+
+    expect(dbMock.state.updateCalls[0]).toMatchObject({
+      role: "agency_operator",
+      revokedAt: null,
+      grantedBy: ACTOR_ID,
+    });
+    expect(dbMock.state.insertCalls[0]).toMatchObject({
+      action: "platform_access.grant",
+      metadata: {
+        previousRole: "platform_auditor",
+        newRole: "agency_operator",
+      },
+    });
+  });
+
+  it("is idempotent for an already-active assignment with the same role", async () => {
+    dbMock.state.selectResults.push(
+      [{ id: TARGET_ID, email: "person@example.com" }],
+      [{ userId: TARGET_ID, role: "support_operator", revokedAt: null }],
+    );
+
+    const result = await service.grantPlatformAccess(actor, {
+      email: "person@example.com",
+      role: "support_operator",
+      reason: "Duplicate submission",
+    });
+
+    expect(result.unchanged).toBe(true);
+    expect(dbMock.insert).not.toHaveBeenCalled();
+    expect(dbMock.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("changePlatformRole", () => {
+  it("is idempotent when the role is unchanged", async () => {
+    dbMock.state.selectResults.push([
+      { userId: TARGET_ID, role: "platform_auditor", revokedAt: null },
+    ]);
+    const result = await service.changePlatformRole(actor, {
+      userId: TARGET_ID,
+      role: "platform_auditor",
+      reason: "No effective change",
+    });
+    expect(result.unchanged).toBe(true);
     expect(dbMock.update).not.toHaveBeenCalled();
   });
 
-  it("refuses to revoke the last live platform admin (lockout guard)", async () => {
-    dbMock.state.selectResults.push([{ userId: grantee.id, revokedAt: null }]);
-    dbMock.state.selectResults.push([{ value: 1 }]); // live count = 1
-    try {
-      await revokePlatformAdmin(actor, { userId: grantee.id, reason: "lockout guard" });
-      throw new Error("should have thrown");
-    } catch (e) {
-      expect(e).toBeInstanceOf(PlatformAdminServiceError);
-      expect((e as InstanceType<typeof PlatformAdminServiceError>).code).toBe(
-        PlatformAdminErrorCode.LastAdmin,
-      );
-    }
+  it("blocks downgrading the final active Owner", async () => {
+    dbMock.state.selectResults.push(
+      [{ userId: TARGET_ID, role: "platform_owner", revokedAt: null }],
+      [{ value: 1 }],
+    );
+    await expect(
+      service.changePlatformRole(actor, {
+        userId: TARGET_ID,
+        role: "platform_auditor",
+        reason: "Reduce privileges",
+      }),
+    ).rejects.toMatchObject({ code: service.PlatformAccessErrorCode.LastOwner });
   });
 
-  it("soft-revokes + appends audit when more than one admin is live", async () => {
-    dbMock.state.selectResults.push([{ userId: grantee.id, revokedAt: null }]);
-    dbMock.state.selectResults.push([{ value: 2 }]); // live count = 2
-    const result = await revokePlatformAdmin(actor, {
-      userId: grantee.id,
-      reason: "role change",
+  it("changes role and records old/new role metadata", async () => {
+    dbMock.state.selectResults.push([
+      { userId: TARGET_ID, role: "agency_operator", revokedAt: null },
+    ]);
+    await service.changePlatformRole(actor, {
+      userId: TARGET_ID,
+      role: "platform_auditor",
+      reason: "Move to assurance",
     });
-    expect(result.userId).toBe(grantee.id);
-    expect(dbMock.update).toHaveBeenCalledTimes(1);
-    const updateCall = dbMock.state.updateCalls[0];
-    expect(updateCall?.set).toMatchObject({ reason: "role change" });
-    expect(updateCall?.set).toHaveProperty("revokedAt");
-    expect(dbMock.insert).toHaveBeenCalledTimes(1); // audit row
-    const auditRow = dbMock.state.insertCalls[0]?.values;
-    expect(auditRow).toMatchObject({
-      action: "platform_admin.revoke",
-      targetType: "user",
-      targetId: grantee.id,
-      outcome: "success",
+    expect(dbMock.state.updateCalls[0]).toMatchObject({ role: "platform_auditor" });
+    expect(dbMock.state.insertCalls[0]).toMatchObject({
+      action: "platform_access.role_change",
+      metadata: {
+        previousRole: "agency_operator",
+        newRole: "platform_auditor",
+        reason: "Move to assurance",
+      },
     });
   });
 });
 
-describe("listPlatformAdminAudit", () => {
-  it("returns the rows the SUT selects, newest first", async () => {
-    const rows = [
-      {
-        id: 1,
-        actorId: actor.id,
-        action: "platform_admin.grant",
-        targetType: "user",
-        targetId: grantee.id,
-        outcome: "success",
-        metadata: { reason: "x" },
-        createdAt: new Date(),
+describe("revokePlatformAccess", () => {
+  it("blocks revoking the final active Owner", async () => {
+    dbMock.state.selectResults.push(
+      [{ userId: TARGET_ID, role: "platform_owner", revokedAt: null }],
+      [{ value: 1 }],
+    );
+    await expect(
+      service.revokePlatformAccess(actor, { userId: TARGET_ID, reason: "Offboarding" }),
+    ).rejects.toMatchObject({ code: service.PlatformAccessErrorCode.LastOwner });
+  });
+
+  it("soft-revokes and audits a non-final assignment", async () => {
+    dbMock.state.selectResults.push([
+      { userId: TARGET_ID, role: "support_operator", revokedAt: null },
+    ]);
+    const result = await service.revokePlatformAccess(actor, {
+      userId: TARGET_ID,
+      reason: "Rotation ended",
+    });
+    expect(dbMock.state.updateCalls[0]).toMatchObject({ reason: "Rotation ended" });
+    expect(dbMock.state.updateCalls[0]).toHaveProperty("revokedAt");
+    expect(dbMock.state.insertCalls[0]).toMatchObject({
+      action: "platform_access.revoke",
+      metadata: {
+        previousRole: "support_operator",
+        newRole: null,
+        reason: "Rotation ended",
       },
-    ];
-    dbMock.state.selectResults.push(rows);
-    const out = await listPlatformAdminAudit(20);
-    expect(out).toEqual(rows);
+    });
+    expect(result).toEqual({ userId: TARGET_ID, role: "support_operator", unchanged: false });
   });
 });
