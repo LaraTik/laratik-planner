@@ -313,7 +313,7 @@ export function ChannelRowActions({ slug, channel }: { slug: string; channel: Ch
             aria-label={`Open actions for ${channel.accountName}`}
             data-testid={`channel-row-actions-${channel.id}`}
           >
-            <MoreHorizontal className="h-4 w-4" />
+            <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
