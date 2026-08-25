@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { AlertTriangle, PlugZap, RefreshCw } from "lucide-react";
+import { AlertTriangle, Check, PlugZap, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,7 +11,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { disconnectChannelAction, revokeConnectionAction } from "./actions";
+import {
+  disconnectChannelAction,
+  revokeConnectionAction,
+  testChannelConnectionAction,
+} from "./actions";
+import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 
 /**
  * M4 — connection lifecycle client component.
@@ -19,8 +24,16 @@ import { disconnectChannelAction, revokeConnectionAction } from "./actions";
  * Renders the workspace-manager row of buttons for a single
  * connected channel:
  *
- *   - Sync now   — sets `next_sync_at=now()`; the cron worker is
- *                  the only path that actually calls the provider.
+ *   - Re-test    — runs the same end-to-end pipeline the cron does
+ *                  (refresh creds → fetchSnapshot → upsert metric →
+ *                  markSyncSuccess) and surfaces the result inline.
+ *                  On success, the row's `lastSyncedAt` advances
+ *                  immediately and the user sees a "Validated just
+ *                  now" flash. On failure, an inline error chip
+ *                  shows the humanized error code. The button label
+ *                  shifts between "Re-test" (connected) and "Sync
+ *                  now" (delayed/error) so the affordance matches
+ *                  what the user is trying to recover from.
  *   - Disconnect — clears the provider link, preserves the row ID
  *                  and the metric history. No confirm dialog: the
  *                  metric preservation is a soft guarantee, and the
@@ -45,9 +58,12 @@ type ChannelRow = {
   accountName: string;
   platform: "instagram" | "facebook" | "tiktok";
   socialConnectionId: string | null;
+  connectionStatus: "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected";
 };
 
 type AffectedChannel = Pick<ChannelRow, "id" | "accountName" | "platform">;
+
+type TestFlash = { kind: "success"; lastSyncedAt: Date } | { kind: "error"; message: string };
 
 export function ConnectionActions({
   slug,
@@ -59,19 +75,25 @@ export function ConnectionActions({
   affectedChannels?: AffectedChannel[];
 }) {
   const [pending, startTransition] = useTransition();
-  const [syncFlash, setSyncFlash] = useState<"queued" | null>(null);
+  const [flash, setFlash] = useState<TestFlash | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showRevoke, setShowRevoke] = useState(false);
 
-  function requestSync() {
+  function requestTest() {
     setError(null);
-    setSyncFlash(null);
+    setFlash(null);
     startTransition(async () => {
-      // The Sync now action is a stub for now — the wire is in place
-      // but the cron is the executor. We surface a queued state so
-      // the user sees the action was registered. The next successful
-      // snapshot will clear the indicator.
-      setSyncFlash("queued");
+      const result = await testChannelConnectionAction(slug, channel.id);
+      if ("error" in result && result.error) {
+        setFlash({ kind: "error", message: result.error });
+        return;
+      }
+      if ("success" in result && result.success && result.lastSyncedAt) {
+        setFlash({
+          kind: "success",
+          lastSyncedAt: new Date(result.lastSyncedAt),
+        });
+      }
     });
   }
 
@@ -102,6 +124,18 @@ export function ConnectionActions({
 
   const otherChannels = affectedChannels.filter((c) => c.id !== channel.id);
   const isShared = otherChannels.length > 0;
+  // "Sync now" is the right label when the connection is in a
+  // degraded state (delayed sync / needs_reauth) — the user is
+  // trying to recover, not just check. "Re-test" is the right label
+  // for a healthy connection — the user is verifying, not kicking.
+  const testLabel =
+    channel.connectionStatus === "connected" || channel.connectionStatus === "manual"
+      ? pending
+        ? "Validating…"
+        : "Re-test"
+      : pending
+        ? "Retrying…"
+        : "Sync now";
 
   return (
     <div className="flex flex-col items-end gap-1" data-testid="connection-actions">
@@ -110,13 +144,13 @@ export function ConnectionActions({
           type="button"
           variant="ghost"
           size="sm"
-          disabled={pending}
-          onClick={requestSync}
+          disabled={pending || !channel.socialConnectionId}
+          onClick={requestTest}
           aria-busy={pending}
-          data-testid="sync-now-button"
+          data-testid="retest-button"
         >
           <RefreshCw className="h-3 w-3" aria-hidden={true} />
-          {pending ? "Queuing…" : "Sync now"}
+          {testLabel}
         </Button>
         {channel.socialConnectionId ? (
           <>
@@ -147,9 +181,24 @@ export function ConnectionActions({
           </>
         ) : null}
       </div>
-      {syncFlash === "queued" ? (
-        <span className="text-label text-fg-muted" aria-live="polite" data-testid="sync-queued">
-          Sync queued — the cron will run within 15 minutes.
+      {flash?.kind === "success" ? (
+        <span
+          className="text-label text-fg-muted inline-flex items-center gap-1"
+          aria-live="polite"
+          data-testid="retest-success"
+        >
+          <Check className="text-success h-3 w-3" aria-hidden={true} />
+          Validated {formatRelativeDate(flash.lastSyncedAt)}
+        </span>
+      ) : null}
+      {flash?.kind === "error" ? (
+        <span
+          role="alert"
+          className="text-label text-danger inline-flex items-center gap-1"
+          data-testid="retest-error"
+        >
+          <AlertTriangle className="h-3 w-3" aria-hidden={true} />
+          {flash.message}
         </span>
       ) : null}
       {error ? (

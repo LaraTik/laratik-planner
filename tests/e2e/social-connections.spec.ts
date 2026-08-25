@@ -42,4 +42,23 @@ test.describe("M4 — social connections (workspace_manager)", () => {
     // The unit test for ConnectionActions covers the queued state
     // directly.
   });
+
+  // M4.1 follow-up — "Re-test" affordance. The dev seed has no
+  // connected channel, so the button is not present in the rendered
+  // table; this test pins the surface contract (the channels page
+  // does not error when a connected channel is absent, and the
+  // "Add channel" form remains the only action surface). The
+  // happy-path "click Re-test" flow is covered by the unit test
+  // for ConnectionActions in tests/unit/connection-revoke-dialog.test.tsx
+  // and by the social-analytics E2E once a connected channel is
+  // available in the dev seed (TODO: enable META_APP_ID in the E2E
+  // env and seed a connected channel).
+  test("channels page renders without a Re-test button when no connected channel exists", async ({
+    page,
+  }) => {
+    await bootstrapRoleSession(page, "workspace_manager");
+    await page.goto("/app/w/acme/channels");
+    await expect(page.getByTestId("channel-add-card")).toBeVisible();
+    await expect(page.getByTestId("retest-button")).toHaveCount(0);
+  });
 });

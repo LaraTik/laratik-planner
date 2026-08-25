@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { addDays, addMinutes, addHours } from "date-fns";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { socialChannels, socialProfileDailyMetrics } from "@/lib/db/schema";
+import { socialChannels, socialConnections, socialProfileDailyMetrics } from "@/lib/db/schema";
 import {
   claimDueProfiles,
   markNeedsReauth,
@@ -14,7 +14,7 @@ import {
   cleanupOldMetrics,
   type ClaimedProfile,
 } from "./repository";
-import { isSocialProviderError, newRequestId } from "./http";
+import { isSocialProviderError, newRequestId, SocialProviderError } from "./http";
 import { metaAdapter } from "./providers/meta";
 import { tiktokAdapter } from "./providers/tiktok";
 import type { SocialProviderAdapter, ProfileSnapshot, ConnectedProfileRef } from "./types";
@@ -26,6 +26,9 @@ import {
   isKekAvailable,
   MissingKekError,
 } from "./key-management";
+
+type SocialChannel = typeof socialChannels.$inferSelect;
+type SocialConnection = typeof socialConnections.$inferSelect;
 
 /**
  * M4 — sync worker.
@@ -126,8 +129,8 @@ export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResul
       continue;
     }
     const result = await runOne(adapter, profile, now, dekCache);
-    if (result === "ok") succeeded += 1;
-    else if (result === "needs_reauth") needsReauth += 1;
+    if (result.outcome === "ok") succeeded += 1;
+    else if (result.outcome === "needs_reauth") needsReauth += 1;
     else failed += 1;
   }
 
@@ -152,13 +155,62 @@ export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResul
   };
 }
 
-async function runOne(
+// ─── Per-channel sync core (shared by cron tick + user "Re-test") ─────────
+
+type SyncOutcome = "ok" | "needs_reauth" | "failed";
+type SyncErrorCode =
+  | "auth_expired"
+  | "permission_denied"
+  | "rate_limited"
+  | "provider_unavailable"
+  | "not_found"
+  | "platform_kek_missing"
+  | "social_not_enabled"
+  | "unknown";
+
+type SyncResult = {
+  outcome: SyncOutcome;
+  /**
+   * On failure, the user-facing error code. Cron and the user "Re-test"
+   * surface this through different channels (cron JSON vs. inline UI)
+   * but the taxonomy is shared so operator dashboards and the
+   * `last_sync_error_code` column stay in sync.
+   */
+  errorCode: SyncErrorCode | null;
+  /**
+   * True when the channel was flipped to `needs_reauth` as a result
+   * of THIS call. Distinct from `outcome === "needs_reauth"` because
+   * a single auth failure may bump the failure counter without yet
+   * tripping the 3-strike threshold.
+   */
+  needsReauth: boolean;
+  /**
+   * On success, the timestamp that was written to `lastSyncedAt`. The
+   * user "Re-test" surfaces this so the UI can render
+   * "Validated X seconds ago" without re-reading the row.
+   */
+  lastSyncedAt: Date | null;
+};
+
+/**
+ * The per-channel pipeline: open the credential envelope, refresh if
+ * near-expiry, fetch the snapshot, upsert the metric row, mark
+ * success/failure. This is the same code path the cron uses; the user
+ * "Re-test" action calls the same function and just renders the
+ * result inline.
+ *
+ * The lease is *not* taken here — `runChannelTest` is a user-triggered
+ * single channel and doesn't need cross-worker serialization. The cron
+ * still claims via `claimDueProfiles` (which sets the lease) before
+ * looping over its batch.
+ */
+async function runChannelSyncCore(
   adapter: SocialProviderAdapter,
-  profile: ClaimedProfile,
+  channel: SocialChannel,
+  connection: SocialConnection,
   now: Date,
   dekCache: ReturnType<typeof createDekCache>,
-): Promise<"ok" | "needs_reauth" | "failed"> {
-  const { channel, connection } = profile;
+): Promise<SyncResult> {
   try {
     const dek = await getDekForWorkspace(db, dekCache, connection.workspaceId);
     let credentials = openConnectionCredentials(connection, dek);
@@ -180,7 +232,12 @@ async function runOne(
           (refreshErr.code === "auth_expired" || refreshErr.code === "permission_denied")
         ) {
           await markNeedsReauth(db, channel.id, connection.id);
-          return "needs_reauth";
+          return {
+            outcome: "needs_reauth",
+            errorCode: refreshErr.code,
+            needsReauth: true,
+            lastSyncedAt: null,
+          };
         }
         throw refreshErr;
       }
@@ -214,9 +271,7 @@ async function runOne(
           .digest("hex"),
     };
 
-    const metricDate = channel.lastSyncedAt
-      ? new Date().toISOString().slice(0, 10)
-      : new Date().toISOString().slice(0, 10);
+    const metricDate = new Date().toISOString().slice(0, 10);
     await saveSnapshot(db, {
       socialChannelId: channel.id,
       metricDate,
@@ -225,37 +280,54 @@ async function runOne(
 
     const next = nextSyncAt(now);
     await markSyncSuccess(db, channel.id, next);
-    return "ok";
+    return {
+      outcome: "ok",
+      errorCode: null,
+      needsReauth: false,
+      lastSyncedAt: now,
+    };
   } catch (err) {
     // Platform-level errors (KEK missing, agency not enabled) get a
     // long backoff but are NOT marked as needs_reauth — those are
     // operator issues, not agency issues.
     if (err instanceof MissingKekError || err instanceof DekNotEnabledError) {
       const backoffDate = new Date(now.getTime() + 24 * 60 * 60_000);
-      await markSyncFailure(
-        db,
-        channel.id,
-        err instanceof MissingKekError ? "platform_kek_missing" : "social_not_enabled",
-        backoffDate,
-        false,
-      );
-      return "failed";
+      const code: SyncErrorCode =
+        err instanceof MissingKekError ? "platform_kek_missing" : "social_not_enabled";
+      await markSyncFailure(db, channel.id, code, backoffDate, false);
+      return { outcome: "failed", errorCode: code, needsReauth: false, lastSyncedAt: null };
     }
-    if (isSocialProviderError(err)) {
+    if (err instanceof SocialProviderError) {
       if (err.code === "auth_expired" || err.code === "permission_denied") {
         // Increment failure count. If 3 consecutive, mark needs_reauth.
         const failureCount = (channel.syncFailureCount ?? 0) + 1;
         if (failureCount >= 3) {
           await markNeedsReauth(db, channel.id, connection.id);
-          return "needs_reauth";
+          return {
+            outcome: "needs_reauth",
+            errorCode: err.code,
+            needsReauth: true,
+            lastSyncedAt: null,
+          };
         }
         await markSyncFailure(db, channel.id, err.code, backoffAt(now, failureCount));
-        return "needs_reauth";
+        return {
+          outcome: "needs_reauth",
+          errorCode: err.code,
+          needsReauth: false,
+          lastSyncedAt: null,
+        };
       }
       if (err.retryable) {
         const failureCount = (channel.syncFailureCount ?? 0) + 1;
         await markSyncFailure(db, channel.id, err.code, backoffAt(now, failureCount));
-        return "failed";
+        const code: SyncErrorCode =
+          err.code === "rate_limited"
+            ? "rate_limited"
+            : err.code === "not_found"
+              ? "not_found"
+              : "provider_unavailable";
+        return { outcome: "failed", errorCode: code, needsReauth: false, lastSyncedAt: null };
       }
     }
     const failureCount = (channel.syncFailureCount ?? 0) + 1;
@@ -265,8 +337,17 @@ async function runOne(
       err instanceof Error ? err.name : "unknown",
       backoffAt(now, failureCount),
     );
-    return "failed";
+    return { outcome: "failed", errorCode: "unknown", needsReauth: false, lastSyncedAt: null };
   }
+}
+
+async function runOne(
+  adapter: SocialProviderAdapter,
+  profile: ClaimedProfile,
+  now: Date,
+  dekCache: ReturnType<typeof createDekCache>,
+): Promise<SyncResult> {
+  return runChannelSyncCore(adapter, profile.channel, profile.connection, now, dekCache);
 }
 
 export function backoffAt(now: Date, failureCount: number): Date {
@@ -286,6 +367,151 @@ export function nextSyncAt(now: Date): Date {
   next.setUTCDate(next.getUTCDate() + 1);
   next.setUTCHours(NEXT_DAY_HOUR, NEXT_DAY_MINUTE, 0, 0);
   return next;
+}
+
+// ─── User-triggered "Re-test" (M4.1 follow-up) ─────────────────────────────
+
+/**
+ * Closed union of every error code the user "Re-test" path can
+ * surface. Kept as a named type (not a derived conditional) so the
+ * component can import it directly and the `humanizeTestError`
+ * switch stays exhaustively typed under `noUncheckedIndexedAccess`.
+ */
+export type TestErrorCode = SyncErrorCode | "no_connection" | "not_connected";
+
+/**
+ * UI-facing result for the workspace-manager "Re-test" action.
+ * Discriminated by `ok` so the component can render a single ternary
+ * without an additional discriminator field.
+ */
+export type TestChannelResult =
+  { ok: true; lastSyncedAt: Date } | { ok: false; errorCode: TestErrorCode; message: string };
+
+/**
+ * Human-readable copy for each error code. Kept in one place so the
+ * table status badge, the edit-drawer health section, and any future
+ * toast all stay in sync. The function is a tiny pure helper — no
+ * React, no i18n, no DB.
+ */
+export function humanizeTestError(code: TestErrorCode): string {
+  switch (code) {
+    case "auth_expired":
+      return "Your Meta access has expired. Reconnect to resume.";
+    case "permission_denied":
+      return "The connected account is missing the analytics permission. Reconnect and grant access.";
+    case "rate_limited":
+      return "Meta is rate-limiting this account. The next scheduled sync will retry.";
+    case "provider_unavailable":
+      return "Meta is temporarily unavailable. Try again in a few minutes.";
+    case "not_found":
+      return "The connected account could not be found. It may have been deleted or renamed.";
+    case "platform_kek_missing":
+      return "Platform credential envelope is not configured. Contact your agency admin.";
+    case "social_not_enabled":
+      return "Social sync is not enabled for this agency. Contact your agency admin.";
+    case "no_connection":
+      return "This channel is not currently linked to a provider grant.";
+    case "not_connected":
+      return "This channel is not in a connected state. Reconnect to resume.";
+    case "unknown":
+      return "The validation request failed. Try again, or check the system status.";
+  }
+}
+
+/**
+ * Run a single "Re-test" against one channel. Used by the
+ * workspace-manager "Re-test" / "Sync now" button on the channels
+ * page and the edit drawer. Validates credentials end-to-end by
+ * calling the provider's snapshot endpoint for this channel's
+ * external account id; on success, the metric row is upserted and
+ * the channel's `lastSyncedAt` advances just like a cron tick.
+ *
+ * The function is intentionally synchronous from the UI's
+ * perspective — there is no "queued" state. The user sees
+ * "Validating…" with `aria-busy`, then the result.
+ *
+ * Returns a typed discriminated union, never throws. Application
+ * errors (KEK missing, agency disabled) and provider errors
+ * (auth_expired, rate_limited, ...) are all mapped to the same
+ * `{ ok: false, errorCode, message }` shape so the UI can render
+ * one inline error block.
+ */
+export async function runChannelTest(channelId: string): Promise<TestChannelResult> {
+  if (!isKekAvailable()) {
+    return {
+      ok: false,
+      errorCode: "platform_kek_missing",
+      message: humanizeTestError("platform_kek_missing"),
+    };
+  }
+
+  // Load the channel + its (active) connection in a single round trip.
+  // We deliberately do not use `claimDueProfiles` because the user
+  // path has no concurrency to serialize against — the row is
+  // claimed by definition when the user clicks the button.
+  const [row] = await db
+    .select({ channel: socialChannels, connection: socialConnections })
+    .from(socialChannels)
+    .innerJoin(
+      socialConnections,
+      and(
+        eq(socialConnections.id, socialChannels.socialConnectionId),
+        isNull(socialConnections.revokedAt),
+      ),
+    )
+    .where(
+      and(
+        eq(socialChannels.id, channelId),
+        isNull(socialChannels.archivedAt),
+        eq(socialChannels.connectionStatus, "connected"),
+      ),
+    )
+    .limit(1);
+
+  if (!row) {
+    // Two reasons this can happen: (a) the channel has no active
+    // connection (manual channel, or the connection was revoked), or
+    // (b) the channel was archived. Distinguish at the error-code
+    // level so the UI can route to the right next action.
+    const [chan] = await db
+      .select({ connectionStatus: socialChannels.connectionStatus })
+      .from(socialChannels)
+      .where(and(eq(socialChannels.id, channelId), isNull(socialChannels.archivedAt)))
+      .limit(1);
+    if (!chan) {
+      return {
+        ok: false,
+        errorCode: "no_connection",
+        message: humanizeTestError("no_connection"),
+      };
+    }
+    const code: TestErrorCode =
+      chan.connectionStatus === "connected" ? "no_connection" : "not_connected";
+    return { ok: false, errorCode: code, message: humanizeTestError(code) };
+  }
+
+  const { channel, connection } = row;
+  const provider = connection.provider as "meta" | "tiktok";
+  const adapter = PROVIDER_ADAPTERS[provider];
+  if (!adapter) {
+    // Provider row exists but no adapter is wired (e.g. tiktok with
+    // SOCIAL_TIKTOK_ENABLED=false). This is an operator config, not
+    // a user error — surface it as `not_connected` so the UI tells
+    // the user to reconnect.
+    return {
+      ok: false,
+      errorCode: "not_connected",
+      message: humanizeTestError("not_connected"),
+    };
+  }
+
+  const dekCache = createDekCache(db);
+  const result = await runChannelSyncCore(adapter, channel, connection, new Date(), dekCache);
+  if (result.outcome === "ok" && result.lastSyncedAt) {
+    return { ok: true, lastSyncedAt: result.lastSyncedAt };
+  }
+  const errorCode: TestErrorCode = result.errorCode ?? "unknown";
+  return { ok: false, errorCode, message: humanizeTestError(errorCode) };
 }
 
 // Silence the unused import linter for `socialProfileDailyMetrics`,

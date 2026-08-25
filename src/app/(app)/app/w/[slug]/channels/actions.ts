@@ -16,6 +16,7 @@ import {
   disconnectProfile,
   revokeConnectionAndDetach,
 } from "@/lib/social/repository";
+import { runChannelTest } from "@/lib/social/sync";
 import type { ConnectedProfile } from "@/lib/social/types";
 
 export async function createChannelAction(slug: string, _previous: unknown, formData: FormData) {
@@ -253,6 +254,49 @@ export async function disconnectChannelAction(slug: string, channelId: string) {
   await disconnectProfile(db, workspace.id, channelId);
   revalidatePath(`/app/w/${slug}/channels`);
   return { success: true };
+}
+
+/**
+ * Re-test a single connected channel. Runs the same end-to-end
+ * pipeline the cron does (refresh creds → fetchSnapshot → upsert
+ * metric → markSyncSuccess) and returns the typed result for the
+ * UI to render inline. workspace_manager only.
+ *
+ * The action is a thin wrapper around `runChannelTest` in
+ * `src/lib/social/sync.ts`; the wrapper exists to enforce the
+ * auth + workspace gate and to give the component a uniform action
+ * shape (`{ success?, error? }`) it can handle with the same
+ * `useTransition` pattern as the surrounding actions. We
+ * intentionally `revalidatePath` on success so the channels table
+ * re-renders with the freshly-updated `lastSyncedAt` (and the
+ * connection status flips back to `connected` if the previous
+ * attempt had set `needs_reauth`).
+ *
+ * On failure, the path is *not* revalidated — the failure state is
+ * surfaced in the row's own inline alert, and the channel row's
+ * `last_sync_error_code` / `last_sync_error_at` columns are already
+ * updated by `runChannelTest` so the next page load will show the
+ * stale `Synced X ago` timestamp + a status badge driven by
+ * `connection_status`. Revalidating would force a needless
+ * round-trip and could hide the in-place error chip.
+ */
+export async function testChannelConnectionAction(slug: string, channelId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Sign in is required." };
+  const actor = { id: session.user.id };
+  const context = await resolveActiveAgencyContext({ actor });
+  if (!context) return { error: "Agency not configured." };
+  const workspace = await getAccessibleWorkspace(actor, slug, context.agencyId);
+  if (!workspace) return { error: "Workspace not found." };
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
+    return { error: "Workspace manager access is required." };
+
+  const result = await runChannelTest(channelId);
+  if (result.ok) {
+    revalidatePath(`/app/w/${slug}/channels`);
+    return { success: true, lastSyncedAt: result.lastSyncedAt.toISOString() } as const;
+  }
+  return { error: result.message, errorCode: result.errorCode } as const;
 }
 
 /**

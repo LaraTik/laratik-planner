@@ -119,7 +119,28 @@ function channelsColumns(props: {
           );
         }
         if (!row.socialConnectionId) {
-          return <ChannelRowActions slug={props.slug} channel={row} />;
+          return (
+            <ChannelRowActions
+              slug={props.slug}
+              channel={{
+                id: row.id,
+                platform: row.platform,
+                accountName: row.accountName,
+                handle: row.handle,
+                url: row.url,
+                accountType: row.accountType,
+                isActive: row.isActive,
+                socialConnectionId: row.socialConnectionId,
+                lastSyncedAt: row.lastSyncedAt,
+                lastSyncErrorCode: row.lastSyncErrorCode,
+                lastSyncErrorAt: row.lastSyncErrorAt,
+                connectionStatus:
+                  (row.connectionStatus as
+                    "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected") ??
+                  "manual",
+              }}
+            />
+          );
         }
         const affected = props.affectedByConnection[row.socialConnectionId] ?? [];
         return (
@@ -130,6 +151,10 @@ function channelsColumns(props: {
               accountName: row.accountName,
               platform: (row.platform as "instagram" | "facebook" | "tiktok") ?? "instagram",
               socialConnectionId: row.socialConnectionId,
+              connectionStatus:
+                (row.connectionStatus as
+                  "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected") ??
+                "connected",
             }}
             affectedChannels={affected}
           />

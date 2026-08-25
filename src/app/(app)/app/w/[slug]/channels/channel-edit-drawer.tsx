@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { MoreHorizontal } from "lucide-react";
+import { AlertTriangle, Check, MoreHorizontal, RefreshCw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { archiveChannelAction, updateChannelAction } from "./actions";
+import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import { archiveChannelAction, testChannelConnectionAction, updateChannelAction } from "./actions";
 
 /**
  * Channel edit form fields are kept inline here rather than extracted
@@ -44,6 +45,11 @@ type Channel = {
   url: string | null;
   accountType: string | null;
   isActive: boolean;
+  socialConnectionId: string | null;
+  lastSyncedAt: Date | null;
+  lastSyncErrorCode: string | null;
+  lastSyncErrorAt: Date | null;
+  connectionStatus: "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected";
 };
 
 const PLATFORM_OPTIONS = [
@@ -89,6 +95,30 @@ export function ChannelEditDrawer({
   );
   const [state, formAction] = useActionState<ActionState, FormData>(boundAction, {});
 
+  // Re-test state. The result is captured locally so the user sees
+  // "Validated just now" inline even if the page revalidation hasn't
+  // returned the new `lastSyncedAt` to the drawer prop yet (the
+  // parent re-mounts the drawer with the fresh row after revalidate,
+  // but we want the chip to appear instantly).
+  const [reTestPending, startReTest] = useTransition();
+  const [reTestResult, setReTestResult] = useState<
+    { kind: "success"; lastSyncedAt: string } | { kind: "error"; message: string } | null
+  >(null);
+
+  function reTest() {
+    setReTestResult(null);
+    startReTest(async () => {
+      const result = await testChannelConnectionAction(slug, channel.id);
+      if ("error" in result && result.error) {
+        setReTestResult({ kind: "error", message: result.error });
+        return;
+      }
+      if ("success" in result && result.success && result.lastSyncedAt) {
+        setReTestResult({ kind: "success", lastSyncedAt: result.lastSyncedAt });
+      }
+    });
+  }
+
   // Close the drawer when the server action reports success. The
   // revalidatePath in the action also refreshes the table.
   useEffect(() => {
@@ -132,6 +162,19 @@ export function ChannelEditDrawer({
                 ) : null}
               </p>
             </div>
+
+            {channel.socialConnectionId ? (
+              <ConnectionHealthSection
+                channelId={channel.id}
+                lastSyncedAt={channel.lastSyncedAt}
+                lastSyncErrorCode={channel.lastSyncErrorCode}
+                lastSyncErrorAt={channel.lastSyncErrorAt}
+                connectionStatus={channel.connectionStatus}
+                onReTest={reTest}
+                reTestPending={reTestPending}
+                reTestResult={reTestResult}
+              />
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor={`edit-platform-${channel.id}`}>Platform</Label>
@@ -335,4 +378,143 @@ export function ChannelRowActions({ slug, channel }: { slug: string; channel: Ch
       </Dialog>
     </>
   );
+}
+
+/**
+ * Drawer-local "Connection health" section. Renders only for
+ * connected channels (the parent gates on `socialConnectionId`).
+ * Shows:
+ *
+ *   - Last sync (the most recent successful snapshot, surfaced as
+ *     a relative timestamp via `formatRelativeDate`)
+ *   - Last error (the most recent failure, with the humanized
+ *     provider error code)
+ *   - Re-test button (same action as the row-level one, so the
+ *     user can validate without closing the drawer)
+ *
+ * Inline feedback is rendered under the button: a green "Validated
+ * X ago" chip on success, a red `role="alert"` line with the
+ * error message on failure. The state is owned by the parent
+ * drawer so the chip survives re-renders triggered by the
+ * save-changes form action.
+ */
+function ConnectionHealthSection({
+  channelId,
+  lastSyncedAt,
+  lastSyncErrorCode,
+  lastSyncErrorAt,
+  connectionStatus,
+  onReTest,
+  reTestPending,
+  reTestResult,
+}: {
+  channelId: string;
+  lastSyncedAt: Date | null;
+  lastSyncErrorCode: string | null;
+  lastSyncErrorAt: Date | null;
+  connectionStatus: Channel["connectionStatus"];
+  onReTest: () => void;
+  reTestPending: boolean;
+  reTestResult:
+    { kind: "success"; lastSyncedAt: string } | { kind: "error"; message: string } | null;
+}) {
+  // Prefer the in-flight Re-test result (fresher than the row
+  // prop) when present. On success, surface the result timestamp;
+  // on failure, show the inline error and ignore the stale row
+  // error columns (the row will be re-rendered after revalidate
+  // with the new `last_sync_error_code`).
+  const showError =
+    reTestResult?.kind === "error"
+      ? reTestResult.message
+      : connectionStatus !== "connected" && lastSyncErrorCode
+        ? `${humanizeErrorCode(lastSyncErrorCode)}${lastSyncErrorAt ? ` (${formatRelativeDate(lastSyncErrorAt)})` : ""}`
+        : null;
+  const showSuccess = reTestResult?.kind === "success";
+  return (
+    <section
+      className="border-border bg-surface-subtle space-y-3 rounded-[var(--radius-control)] border p-4"
+      data-testid={`channel-health-${channelId}`}
+      aria-label="Connection health"
+    >
+      <header className="flex items-center justify-between gap-2">
+        <h3 className="text-body text-fg-primary font-semibold">Connection health</h3>
+        <span className="text-label text-fg-muted" aria-live="polite" data-testid="health-status">
+          {connectionStatus === "connected"
+            ? "Connected"
+            : connectionStatus === "needs_reauth"
+              ? "Needs reconnect"
+              : connectionStatus === "sync_error"
+                ? "Sync delayed"
+                : connectionStatus === "disconnected"
+                  ? "Disconnected"
+                  : "Manual"}
+        </span>
+      </header>
+      <dl className="text-label grid gap-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <dt className="text-fg-muted">Last sync</dt>
+          <dd className="text-fg-primary font-medium">
+            {lastSyncedAt ? formatRelativeDate(lastSyncedAt) : "Never"}
+          </dd>
+        </div>
+      </dl>
+      {showError ? (
+        <p
+          role="alert"
+          className="text-label text-danger inline-flex items-center gap-1"
+          data-testid="health-error"
+        >
+          <AlertTriangle className="h-3 w-3" aria-hidden={true} />
+          {showError}
+        </p>
+      ) : null}
+      {showSuccess && reTestResult?.kind === "success" ? (
+        <p
+          className="text-label text-fg-muted inline-flex items-center gap-1"
+          data-testid="health-success"
+        >
+          <Check className="text-success h-3 w-3" aria-hidden={true} />
+          Validated {formatRelativeDate(new Date(reTestResult.lastSyncedAt))}
+        </p>
+      ) : null}
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={onReTest}
+        disabled={reTestPending}
+        aria-busy={reTestPending}
+        data-testid="health-retest-button"
+      >
+        <RefreshCw className="h-3 w-3" aria-hidden={true} />
+        {reTestPending ? "Validating…" : "Re-test connection"}
+      </Button>
+    </section>
+  );
+}
+
+/**
+ * Local copy map for `lastSyncErrorCode` values. Mirrors the
+ * `humanizeTestError` taxonomy in `src/lib/social/sync.ts` but
+ * covers the subset of codes the user is likely to see in the
+ * drawer's persistent health section. Provider error codes that
+ * never reach the row (e.g. `platform_kek_missing`) are omitted —
+ * those are operator-only and would never appear in a user-visible
+ * "last error" chip.
+ */
+function humanizeErrorCode(code: string): string {
+  switch (code) {
+    case "auth_expired":
+      return "Meta access expired";
+    case "permission_denied":
+      return "Missing analytics permission";
+    case "rate_limited":
+      return "Meta rate-limited this account";
+    case "provider_unavailable":
+      return "Meta was temporarily unavailable";
+    case "not_found":
+      return "Connected account not found";
+    default:
+      return code;
+  }
 }
