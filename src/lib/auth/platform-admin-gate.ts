@@ -1,20 +1,17 @@
 import "server-only";
 import { auth } from "@/lib/auth/config";
-import {
-  requirePlatformPermission,
-  type PlatformPrincipal,
-} from "@/lib/auth/platform-access";
+import { requirePlatformPermission, type PlatformPrincipal } from "@/lib/auth/platform-access";
 import type { Actor } from "@/lib/auth/policy";
 
 /**
- * Platform-admin route gate (Milestone 1.8).
+ * Platform console-entry route gate (Milestone 1.8 compatibility name).
  *
  * Pure orchestration: read the current NextAuth session, then ask
  * the permission DAL to confirm the actor can enter the platform console.
  * The result is a small discriminated union the layout
  * renders against.
  *
- * Why a separate function and not just inline `requirePlatformAdmin`
+ * Why a separate function and not inline permission resolution
  * in the layout?
  *  1. Testability — the layout is an async React component and
  *     exercising its "Forbidden" branch needs a rendered tree. This
@@ -28,9 +25,9 @@ import type { Actor } from "@/lib/auth/policy";
  *     the audit log"). A non-redirecting response means an audit-log
  *     reader can resolve `/app/platform/...` to the same view the
  *     actor saw.
- *  3. Reuse — the same gate shape will back M2 (platform admin
- *     mutation routes) and M3 (agency detail tab actions). The
- *     layout is just one consumer.
+ *  3. Reuse — all platform pages share console-entry behavior, then enforce
+ *     their own exact read or mutation permissions. The layout is one
+ *     presentation consumer, never the command security boundary.
  *
  * The "anonymous" reason is split out from "not-platform-admin" so
  * the layout can render a different explanation if needed (anon

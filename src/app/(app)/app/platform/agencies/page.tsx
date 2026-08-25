@@ -39,7 +39,8 @@ import { PermissionNotice } from "@/components/platform/permission-notice";
 export const metadata = { title: "Platform · Agencies" };
 
 // See /app/platform/overview for the rationale. The page is gated
-// by the (app)/app/platform layout (auth + requirePlatformAdmin) and
+// by the platform layout's console-entry permission and this page's exact
+// `platform.agency.read` check. It
 // queries the agencies table — neither has a meaningful static
 // representation, so we force-dynamic.
 export const dynamic = "force-dynamic";

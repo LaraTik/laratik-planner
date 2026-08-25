@@ -28,13 +28,13 @@ import { PermissionNotice } from "@/components/platform/permission-notice";
  *
  * Each value falls back to 0 when the table is empty so the page is
  * never blank in a fresh environment. The layout above this page
- * already enforces the platform-admin gate, so the page itself does
- * not re-check authority.
+ * enforces console entry; this page re-checks exact agency-read authority
+ * before loading data.
  */
 export const metadata = { title: "Platform overview" };
 
-// The page is gated by the (app)/app/platform layout which calls
-// `auth()` and `requirePlatformAdmin()` before rendering. Both are
+// The page is gated by the platform layout's console-entry check and then by
+// its own exact `platform.agency.read` check. Both are
 // runtime-only — there is no meaningful static prerender — so we
 // mark the route force-dynamic to prevent Next.js from invoking the
 // data loaders during `next build` against a possibly-unreachable

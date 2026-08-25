@@ -1,39 +1,45 @@
 # Authorization model
 
-This document describes the runtime authorization model after **Milestone 1
-(multi-agency tenancy and platform/admin separation)**. It is the source of
-truth for the relationship between **platform authority** and **agency
-authority**, and for how the active agency is resolved on every request.
+This document describes the runtime authorization model after multi-agency
+tenancy and the 2026-08-25 platform-role split. It is the source of truth for
+the relationship between platform, agency, workspace, and temporary support
+authority, and for how the active agency is resolved on every request.
 
 The data-model side of Milestone 1 (the new `platform_administrator` table and
 the removal of the `singleton_key` invariant) lives in
 [`data-model.md`](./data-model.md). The system map and request path are in
 [`overview.md`](./overview.md).
 
-## 1. Two scopes of authority
+## 1. Independent scopes of authority
 
-There are two independent scopes of authority in the system. They do not
-collide and they do not inherit from one another. A user must hold each scope
+The scopes do not inherit from one another. A user must hold each scope
 explicitly to act within it.
 
-| Scope                  | Authoritative table                            | Granted by                                                                         | Who has it                                                                                                  | What it unlocks                                                                                                                                                                                                       |
-| ---------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Platform authority** | `platform_administrator`                       | Another platform admin (or a SQL grant)                                            | A small set of operators who manage the platform itself. Not created through any product UI in Milestone 1. | `/app/platform/*` routes (M2): list/inspect/suspend agencies, view platform-level KPIs. **No tenant content access** — a platform admin who is not also an agency member cannot read or write any agency's data.      |
-| **Agency authority**   | `agency_membership` (`is_agency_admin = true`) | The first agency admin (bootstrap), then any existing agency admin via invitation. | The first user to complete `/setup` for each agency, plus everyone they invite as `is_agency_admin = true`. | Agency admin surface: agency settings (incl. AI config), invitations, team, channels, brand kit, billing (M2), and (for the production agency today) the single agency row in the system. Tenant-scoped reads/writes. |
+| Scope                       | Authoritative records                                  | What it unlocks                                                                                    |
+| --------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| **Platform authority**      | Active `platform_administrator` with one closed `role` | Exact global permissions for console, agency operations, audit, support request, or access control |
+| **Agency authority**        | `agency_membership.is_agency_admin = true`             | Tenant-scoped agency administration and every workspace within that agency                         |
+| **Workspace authority**     | Workspace membership plus assigned workspace roles     | Tenant content/workflow commands for the specific workspace                                        |
+| **Temporary support grant** | Approved, active, scoped `support_access_grant`        | Time-limited tenant access within the approved agency/workspace scope                              |
 
-The two are deliberately disjoint so that:
+The scopes are deliberately disjoint so that:
 
-- **A platform admin is not an automatic tenant admin.** They cannot see the
+- **A platform role is not automatic tenant authority.** The actor cannot see the
   contents of an agency just because they can manage the platform. Acting
   inside a tenant still requires an `agency_membership` row.
-- **A tenant admin is not an automatic platform admin.** The product surface
+- **A tenant admin is not an automatic platform role.** The product surface
   they can reach is bounded by their agency; they cannot see or manage other
   agencies. Cross-tenant reads return `404` (anti-IDOR; see §5).
 
-Implementation:
+Platform implementation:
 
-- `src/lib/auth/platform-admin.ts` — `isPlatformAdmin(actor)`,
-  `requirePlatformAdmin(actor)` (throws `PermissionDeniedError("platform-admin-required")`).
+- `src/lib/auth/platform-access.ts` — closed role-to-permission matrix,
+  `getPlatformPrincipal`, `hasPlatformPermission`, and
+  `requirePlatformPermission`.
+- `src/lib/auth/platform-admin.ts` — compatibility console-entry helper only;
+  it must not authorize a platform mutation.
+- `src/lib/platform/access.ts` — serialized assignment changes, the last-Owner
+  invariant, and atomic security audit.
 - `src/lib/auth/policy.ts` — `isAgencyAdmin(actor, agencyId)`,
   `isAgencyMember(actor, agencyId)`, `canAccessWorkspace(actor, workspaceId)`,
   `canAccessInternalWorkspace(actor, workspaceId)`,
@@ -44,6 +50,27 @@ The asymmetry: an actor with **no** platform role and **no** agency
 membership can still sign in (the NextAuth flow runs before any tenant
 check), but every request that hits an authorized route returns `404` (for
 tenant routes) or `403` (for platform routes) — see §5.
+
+### 1.1 Platform permission matrix
+
+| Permission                         | Owner | Agency Operator | Auditor | Support Operator |
+| ---------------------------------- | :---: | :-------------: | :-----: | :--------------: |
+| `platform.console.read`            |  ✅   |       ✅        |   ✅    |        ✅        |
+| `platform.agency.read`             |  ✅   |       ✅        |   ✅    |        ✅        |
+| `platform.agency.create`           |  ✅   |       ✅        |   ❌    |        ❌        |
+| `platform.agency.update`           |  ✅   |       ✅        |   ❌    |        ❌        |
+| `platform.agency.plan.manage`      |  ✅   |       ✅        |   ❌    |        ❌        |
+| `platform.agency.lifecycle.manage` |  ✅   |       ✅        |   ❌    |        ❌        |
+| `platform.agency.archive`          |  ✅   |       ❌        |   ❌    |        ❌        |
+| `platform.support.request`         |  ✅   |       ❌        |   ❌    |        ✅        |
+| `platform.access.read`             |  ✅   |       ❌        |   ✅    |        ❌        |
+| `platform.access.manage`           |  ✅   |       ❌        |   ❌    |        ❌        |
+| `platform.audit.read`              |  ✅   |       ❌        |   ✅    |        ❌        |
+
+The database assignment is one role per identity. Custom or composed roles are
+not supported. Role changes serialize and cannot remove the final active
+Owner. UI capability booleans omit unauthorized controls, while the service
+must independently enforce the exact permission.
 
 ## 2. The `Actor` shape
 
@@ -227,17 +254,23 @@ by an actor in agency A. This is enforced at the policy layer
 (`canAccessWorkspace` returns `false`; the route maps `false` to
 `notFound()`) and is covered by the tenant-isolation tests (M1.9).
 
-## 6. Platform admin separation
+## 6. Platform permission separation
 
-Platform routes (M2: `/app/platform/*`) gate on
-`requirePlatformAdmin(actor)`. The layout renders a "Forbidden" message
-in place — not a redirect — so the URL is preserved for the audit log.
+Platform routes gate console entry with `platform.console.read`. The layout
+renders a Forbidden surface in place for actors without a platform assignment,
+preserving the attempted URL. Each page requires its read permission before
+data access; each mutation service then requires its exact command permission.
 
-A platform admin who is **not** an active member of any agency still
-cannot read or write tenant data. The platform surface lists and manages
-agencies, but never opens agency content without an explicit
-agency-scoped action (which requires the corresponding `agency_membership`
-row).
+A platform actor without agency membership can manage an agency's global
+identity when their role permits it; this is a platform operation, not tenant
+content access. Tenant content still requires an active agency membership or a
+valid support grant. Platform Auditors receive bounded audit DTOs. Support
+Operators receive only their request workflow and own-view audit data.
+
+The role-management surface is `/app/platform/access`. It requires
+`platform.access.read`; only `platform.access.manage` renders and authorizes
+grant/change/revoke. `/app/platform/admins` is a permanent compatibility
+redirect.
 
 ## 7. Bootstrap path (pre-membership)
 
@@ -254,8 +287,19 @@ note on the legacy global helper it wraps.
 
 ## 8. Agency lifecycle gate
 
-The resolver joins `agency_membership` to `agency` and accepts only active memberships whose agency has both `suspended_at IS NULL` and `archived_at IS NULL`. This check applies to explicit requests, signed cookies, fallback selection, and the agency switcher. A stale cookie cannot bypass a lifecycle change.
+The resolver joins `agency_membership` to `agency` and accepts only active
+memberships whose agency has both `suspended_at IS NULL` and
+`archived_at IS NULL`. This check applies to explicit requests, signed cookies,
+fallback selection, and the agency switcher. A stale cookie cannot bypass a
+lifecycle change.
 
-A signed-in user whose only membership belongs to an unavailable agency is sent to `/agency-unavailable`. A platform administrator may have no agency membership at all and still reach `/app/platform/*`; that exception grants platform-console access only and does not create tenant authority.
+A signed-in user whose only membership belongs to an unavailable agency is
+sent to `/agency-unavailable`. A platform actor may have no agency membership
+and still reach the permitted console routes; that exception creates no tenant
+authority.
 
-Suspend, archive, restore, plan change, and agency creation are service-layer operations gated by `requirePlatformAdmin`. Each successful platform mutation writes an append-only `platform_audit_event` with actor, target, before/after state, reason, and timestamp.
+Agency creation, identity update, plan change, normal lifecycle, and archive
+are separate service permissions. Normal `restore` rejects an archived agency;
+only Owner-only `unarchive` can reverse archive. Each successful platform
+mutation writes an append-only audit event with actor, target, before/after
+state, reason, and timestamp.

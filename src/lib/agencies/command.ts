@@ -34,13 +34,10 @@ import { isAgencyAdmin, requirePolicy, type Actor } from "@/lib/auth/policy";
  * query. A slug conflict throws `SlugConflictError`, which the
  * form renders inline.
  *
- * Authorization: `requirePolicy(isAgencyAdmin(actor, agencyId), "update_agency")`.
- * The platform admin is also an agency admin of every agency
- * they belong to; the platform-only "edit any agency" path goes
- * through the same gate (the platform admin must be a member
- * of the agency OR have an active `support_access_grant`).
- * Platform mutation routes that bypass the membership check
- * use the platform's own `requirePlatformAdmin` gate.
+ * Authorization: `updateAgency` requires agency-admin policy.
+ * `updateAgencyAsPlatform` is a separate global operation that requires the
+ * exact `platform.agency.update` permission and does not create or require
+ * tenant membership. Neither path grants access to tenant content.
  *
  * Audit: every successful update appends a row to
  * `security_audit_events` with `action = "agency.update"` and

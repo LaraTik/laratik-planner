@@ -45,7 +45,7 @@ and is threaded explicitly into every agency-scoped helper. See
 - Client-review queries select a dedicated safe shape; internal comments, assignments, activity, notes, and approval gates never enter client results.
 - Raw invitation tokens and provider credentials are never stored. Invitation acceptance binds a verified normalized identity to the invited email.
 - Cross-tenant requests are denied with `404`, not `403`, to avoid leaking the existence of resources in other agencies (anti-IDOR).
-- Platform-admin routes gate on `requirePlatformAdmin(actor)` and never acquire tenant content access without an explicit `agency_membership` row.
+- Platform routes gate console entry and every read/mutation with exact permissions from `platform-access.ts`; no platform role acquires tenant content without an explicit agency membership or approved active support grant.
 - Agency plans resolve from a plan template plus per-agency replacement overrides. Live counters are separate from policy and are reserved transactionally with per-resource advisory locks.
 - Agency lifecycle is soft and recoverable. Suspended/archived agencies are excluded by the central agency-context resolver; platform-only operators can still reach the platform console.
 - Production configuration validates complete provider combinations before serving traffic.

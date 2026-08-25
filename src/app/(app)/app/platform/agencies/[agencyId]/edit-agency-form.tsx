@@ -10,7 +10,7 @@ const initial: PlatformEditAgencyActionState = {};
  * Platform-scoped wrapper around the shared EditAgencyForm
  * (M3.4 — agency CRUD). The wrapper:
  *   - Calls the platform-specific server action, which
- *     enforces `requirePlatformAdmin` at the boundary
+ *     enforces exact `platform.agency.update` authority at the service boundary
  *   - Carries the `agencyId` as a hidden field so the action
  *     does not need to read it from the URL
  *   - Prepends a "platform" prefix to the data-testids so the

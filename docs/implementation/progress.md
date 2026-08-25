@@ -11,6 +11,33 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-08-25 — Platform role permissions and render-error hardening
+
+Status: **Implemented and focused suites Tested; independent verification is
+not claimed.**
+
+The former binary Platform Admin assignment is now a closed four-role model:
+Platform Owner, Agency Operator, Platform Auditor, and Support Operator. Exact
+permissions are enforced in the service/DAL, existing assignments migrate to
+Owner, role changes audit atomically, and concurrent changes cannot remove the
+final Owner. Normal restore no longer acts as an unarchive path.
+
+The new `/app/platform/access` surface provides Owner-only assignment
+management and Auditor read-only oversight. Agency detail controls are
+role-aware; archive/unarchive is Owner-only, while support requests remain
+ticketed and agency-admin approved. Eleven selected Chromium journeys pass,
+including explicit role behavior and six responsive viewports.
+
+Browser testing also found and fixed two generic-render-error causes: a
+non-function export from a `"use server"` action module and a server/browser
+timezone-list hydration mismatch. The platform agency table now uses a stable
+relative-time reference during hydration. These fixes prevent authenticated
+agency/platform pages from falling into the reference-only error surface.
+
+Decision: `docs/decisions/0005-platform-role-permissions.md`. Operations:
+`docs/agency-setup.md`. Release evidence is recorded in the production-readiness
+bundle after the full verification and migration drill.
+
 ## 2026-08-24 — Production login render incident repair
 
 Status: **Database repair applied in production; corrected app readiness deployment pending.**
