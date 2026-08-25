@@ -4,13 +4,13 @@
 
 ## 1. Test-class taxonomy
 
-| Class        | Path                       | Command                                              | Boundary                                              | Speed target |
-| ------------ | -------------------------- | ---------------------------------------------------- | ----------------------------------------------------- | ------------ |
-| Unit         | `tests/unit/**/*.test.ts`  | `pnpm test:unit`                                     | Pure schemas, workflow rules, KPI math, security helpers, UI behavior. **Never** connects to PostgreSQL. | < 1s/file    |
-| Integration  | `tests/integration/**/*.test.ts` | `TEST_DATABASE_URL=...test... pnpm test:integration` | Applies migrations to a disposable PostgreSQL database and runs real constraints, authorization, transaction, and concurrency cases. **Never** skips. | < 30s/file   |
-| E2E (browser) | `tests/e2e/**/*.spec.ts`   | `pnpm test:e2e` (critical) / `pnpm test:e2e:isolated` (full matrix) | Real Next.js dev server + Playwright; runs against the dev seed (`/api/dev/sign-in`, `/api/dev/seed`). | < 60s/spec   |
-| A11y         | `tests/e2e/a11y/*.spec.ts` + `pnpm test:a11y` | `pnpm test:a11y`                                     | WCAG 2.2 AA via axe + keyboard-only journeys.         | < 60s/spec   |
-| Visual       | `tests/e2e/visual-regression.spec.ts` | `pnpm test:visual`                                  | Per-viewport baselines; 23 unique routes × 6 viewports = 138 baselines. Capture mode (`PW_VISUAL_CAPTURE=1`) regenerates; compare mode fails on diff. | < 30m/full   |
+| Class         | Path                                          | Command                                                             | Boundary                                                                                                                                              | Speed target |
+| ------------- | --------------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| Unit          | `tests/unit/**/*.test.ts`                     | `pnpm test:unit`                                                    | Pure schemas, workflow rules, KPI math, security helpers, UI behavior. **Never** connects to PostgreSQL.                                              | < 1s/file    |
+| Integration   | `tests/integration/**/*.test.ts`              | `TEST_DATABASE_URL=...test... pnpm test:integration`                | Applies migrations to a disposable PostgreSQL database and runs real constraints, authorization, transaction, and concurrency cases. **Never** skips. | < 30s/file   |
+| E2E (browser) | `tests/e2e/**/*.spec.ts`                      | `pnpm test:e2e` (critical) / `pnpm test:e2e:isolated` (full matrix) | Real Next.js dev server + Playwright; runs against the dev seed (`/api/dev/sign-in`, `/api/dev/seed`).                                                | < 60s/spec   |
+| A11y          | `tests/e2e/a11y/*.spec.ts` + `pnpm test:a11y` | `pnpm test:a11y`                                                    | WCAG 2.2 AA via axe + keyboard-only journeys.                                                                                                         | < 60s/spec   |
+| Visual        | `tests/e2e/visual-regression.spec.ts`         | `pnpm test:visual`                                                  | Per-viewport baselines; 23 unique routes × 6 viewports = 138 baselines. Capture mode (`PW_VISUAL_CAPTURE=1`) regenerates; compare mode fails on diff. | < 30m/full   |
 
 A new test belongs in **one** class only. A unit test that talks to the database is a misclassification. An integration test that uses Playwright is a misclassification. The `strategy.md` "Test layers" table is the source of truth for which class a piece of work lands in.
 
@@ -42,19 +42,19 @@ In capture mode (`PW_VISUAL_CAPTURE=1`) the dev endpoints are retried up to 3 ti
 
 The CI coverage thresholds in `strategy.md:84-91` apply to specific globs. A new test file must live under one of these globs and contribute to the right floor:
 
-| Glob                                       | Statements | Branches | Notes                                                                  |
-| ------------------------------------------ | ---------- | -------- | ---------------------------------------------------------------------- |
-| `src/lib/auth/**`                          | 95%        | 90%      | "Critical" — the authorization boundary is the highest-risk surface.  |
-| `src/lib/workflow/**`                      | 95%        | 90%      | "Critical" — the state machine drives every content transition.        |
-| `src/lib/deliveries/**`                    | 95%        | 90%      | "Critical" — immutable version chain.                                  |
-| `src/lib/publishing/**`                    | 95%        | 90%      | "Critical" — manual publish + partial completion + failure recovery.   |
-| `src/lib/invitations/**`                   | 95%        | 90%      | "Critical" — the only user-acquisition path.                           |
-| `src/lib/kpi/**`                           | 95%        | 90%      | "Critical" — client-visible numbers; rounding errors are a UX bug.     |
-| `src/lib/services/**` (other)              | 85%        | 80%      | "Service" — the application-services floor.                            |
-| `src/lib/repositories/**`                  | 85%        | 80%      | "Service" — data access is exercised by integration tests.            |
-| `src/lib/commands/**`                      | 85%        | 80%      | "Service" — Zod schemas, no I/O.                                       |
-| `src/lib/validation/**`                    | 85%        | 80%      | "Service" — the env schema is the boot-time gate.                     |
-| Everything else under `src/lib/**`         | —          | —        | Tracked, not gated (current numbers in `TEST_EVIDENCE.md`).           |
+| Glob                               | Statements | Branches | Notes                                                                |
+| ---------------------------------- | ---------- | -------- | -------------------------------------------------------------------- |
+| `src/lib/auth/**`                  | 95%        | 90%      | "Critical" — the authorization boundary is the highest-risk surface. |
+| `src/lib/workflow/**`              | 95%        | 90%      | "Critical" — the state machine drives every content transition.      |
+| `src/lib/deliveries/**`            | 95%        | 90%      | "Critical" — immutable version chain.                                |
+| `src/lib/publishing/**`            | 95%        | 90%      | "Critical" — manual publish + partial completion + failure recovery. |
+| `src/lib/invitations/**`           | 95%        | 90%      | "Critical" — the only user-acquisition path.                         |
+| `src/lib/kpi/**`                   | 95%        | 90%      | "Critical" — client-visible numbers; rounding errors are a UX bug.   |
+| `src/lib/services/**` (other)      | 85%        | 80%      | "Service" — the application-services floor.                          |
+| `src/lib/repositories/**`          | 85%        | 80%      | "Service" — data access is exercised by integration tests.           |
+| `src/lib/commands/**`              | 85%        | 80%      | "Service" — Zod schemas, no I/O.                                     |
+| `src/lib/validation/**`            | 85%        | 80%      | "Service" — the env schema is the boot-time gate.                    |
+| Everything else under `src/lib/**` | —          | —        | Tracked, not gated (current numbers in `TEST_EVIDENCE.md`).          |
 
 A new file under `src/lib/auth/**` is critical and needs the 95/90 floor from the start. The Vitest config (`vitest.config.ts`) enforces the thresholds via `coverage.thresholds`; a PR that drops a critical file below the floor fails CI.
 
@@ -62,11 +62,11 @@ A new file under `src/lib/auth/**` is critical and needs the 95/90 floor from th
 
 `docs/production-readiness/UAT_RELEASE.md` records the per-feature UAT verdict. The status column is one of three values:
 
-| Status          | When                                                                                                            | What the row contains |
-| --------------- | --------------------------------------------------------------------------------------------------------------- | --------------------- |
-| `PASS`          | The UAT journey completed end-to-end against the real deployment with no operator-supplied exceptions.          | The §23 step ID(s), the UAT evidence path, the operator + date. |
-| `PARTIAL`       | The UAT journey completed for the documented surface but with operator-supplied exceptions, or the journey is blocked on a separate (named) item. | The §23 step ID(s), the operator-supplied exception (verbatim), the dependency that closes the gap, the owner. |
-| `OUT OF SCOPE`  | The feature is explicitly deferred (M-tag, master-prompt §X, or a tracker row) and is not part of the v1 contract. | The M-tag or §X reference, the deferral reason, the planned milestone. |
+| Status         | When                                                                                                                                              | What the row contains                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `PASS`         | The UAT journey completed end-to-end against the real deployment with no operator-supplied exceptions.                                            | The §23 step ID(s), the UAT evidence path, the operator + date.                                                |
+| `PARTIAL`      | The UAT journey completed for the documented surface but with operator-supplied exceptions, or the journey is blocked on a separate (named) item. | The §23 step ID(s), the operator-supplied exception (verbatim), the dependency that closes the gap, the owner. |
+| `OUT OF SCOPE` | The feature is explicitly deferred (M-tag, master-prompt §X, or a tracker row) and is not part of the v1 contract.                                | The M-tag or §X reference, the deferral reason, the planned milestone.                                         |
 
 A `PARTIAL` row must be **named** — the operator-supplied exception is part of the row, not a comment. A `PARTIAL` row that has no owner is a review-blocker; the row is the artifact that ties the gap to a person.
 

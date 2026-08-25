@@ -28,11 +28,11 @@ The key_version (`smallint`, 1 today) is the rotation seam. A future migration c
 
 The global env-var path is the default for new agencies and the fallback for agencies that have not set a managed secret. The variables live in `.env` on the VPS (validated at boot by `src/lib/validation/env.ts:100-102`):
 
-| Variable           | Required? | Default                                  | Purpose                                                   |
-| ------------------ | :-------: | ---------------------------------------- | --------------------------------------------------------- |
-| `MINIMAX_API_KEY`  | optional  | empty string                             | The MiniMax API key (or any OpenAI-compatible key).      |
-| `MINIMAX_BASE_URL` | optional  | `https://api.minimax.io/anthropic`       | The provider's API base URL.                              |
-| `MINIMAX_MODEL`    | optional  | `MiniMax-M3`                              | The default model identifier sent on every request.       |
+| Variable           | Required? | Default                            | Purpose                                             |
+| ------------------ | :-------: | ---------------------------------- | --------------------------------------------------- |
+| `MINIMAX_API_KEY`  | optional  | empty string                       | The MiniMax API key (or any OpenAI-compatible key). |
+| `MINIMAX_BASE_URL` | optional  | `https://api.minimax.io/anthropic` | The provider's API base URL.                        |
+| `MINIMAX_MODEL`    | optional  | `MiniMax-M3`                       | The default model identifier sent on every request. |
 
 The variables are optional because the agency-managed secret is the preferred surface. If both are missing, `/api/ai/generate` returns `503` (the `AI_FEATURE_ENABLED` flag is independent — it gates the route, not the key).
 

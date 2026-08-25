@@ -66,16 +66,16 @@ The PR must leave the operational surface in a known state. The reviewer verifie
 
 The reviewer records the verdict in the PR description and in the relevant `PRODUCTION_READINESS_TRACKER.md` row. The sign-off is the gate that flips the row from `Tested` to `Verified`; the tracker is the single source of truth for that transition.
 
-| Item                                                 | Confirmed by reviewer | Notes |
-| ---------------------------------------------------- | :-------------------: | ----- |
-| IDOR / authorization                                  | ☐                     |       |
-| Transaction boundaries                                | ☐                     |       |
-| Audit rows                                            | ☐                     |       |
-| Per-agency / per-workspace boundary                   | ☐                     |       |
-| Coverage and tests                                    | ☐                     |       |
-| Migrations, secrets, and operational surface          | ☐                     |       |
-| `pnpm verify` green on `main` at the merged SHA       | ☐                     |       |
-| `pnpm migration-drill` PASS at the merged SHA         | ☐                     |       |
+| Item                                                                  |  Confirmed by reviewer   | Notes |
+| --------------------------------------------------------------------- | :----------------------: | ----- |
+| IDOR / authorization                                                  |            ☐             |       |
+| Transaction boundaries                                                |            ☐             |       |
+| Audit rows                                                            |            ☐             |       |
+| Per-agency / per-workspace boundary                                   |            ☐             |       |
+| Coverage and tests                                                    |            ☐             |       |
+| Migrations, secrets, and operational surface                          |            ☐             |       |
+| `pnpm verify` green on `main` at the merged SHA                       |            ☐             |       |
+| `pnpm migration-drill` PASS at the merged SHA                         |            ☐             |       |
 | Release-candidate `pnpm test:e2e:isolated` + `pnpm test:visual` green | ☐ (if release-candidate) |       |
 
 A `Verified` row in the tracker is the reviewer's assertion that every box above is checked.

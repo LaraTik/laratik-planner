@@ -6,19 +6,19 @@
 
 A deploy is a single `Deploy` workflow run. The gate is the evidence the operator attaches to the run:
 
-| Gate                                                       | Source                                                                                  | Required? |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------- | :-------: |
-| `CI` workflow green on the exact `head_sha`                | `.github/workflows/ci.yml` (deploy-gate)                                                | ✅        |
-| No skipped required tests                                  | `pnpm test:unit` + `pnpm test:integration` outputs                                      | ✅        |
-| Zero critical / high production-dependency advisories       | `pnpm audit --prod` output                                                              | ✅        |
-| Migration drill PASS at the merged SHA                      | `pnpm migration-drill` (1–5) on disposable Postgres 16                                  | ✅        |
-| `pnpm verify` green at the merged SHA                       | `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit && pnpm build`     | ✅        |
-| Docker image builds cleanly (app + migrator)               | `docker build` output (no `RUN warnings`)                                               | ✅        |
-| Pre-deploy `pg_dump` taken and verified                     | `scripts/vps/backup.sh` exit code 0; backup on `/opt/laratik-planner/backups/` and offsite | ✅        |
-| `/api/health` returns the new SHA + `db: up` + `schema: ready` | `curl https://planner.laratik.com/api/health`                                           | ✅        |
-| Critical browser + visual smoke                             | `pnpm test:e2e:critical` on the live URL                                                | ✅        |
-| Release-candidate full 5-browser + visual matrix            | `pnpm test:e2e:isolated` + `pnpm test:visual` (workflow_dispatch on `e2e.yml`)         | ✅ for `READY` verdict |
-| `pg_dump` post-deploy captures the new SHA's schema         | `pg_dump --schema-only` includes the migration set                                      | ✅        |
+| Gate                                                           | Source                                                                                     |       Required?        |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | :--------------------: |
+| `CI` workflow green on the exact `head_sha`                    | `.github/workflows/ci.yml` (deploy-gate)                                                   |           ✅           |
+| No skipped required tests                                      | `pnpm test:unit` + `pnpm test:integration` outputs                                         |           ✅           |
+| Zero critical / high production-dependency advisories          | `pnpm audit --prod` output                                                                 |           ✅           |
+| Migration drill PASS at the merged SHA                         | `pnpm migration-drill` (1–5) on disposable Postgres 16                                     |           ✅           |
+| `pnpm verify` green at the merged SHA                          | `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit && pnpm build`         |           ✅           |
+| Docker image builds cleanly (app + migrator)                   | `docker build` output (no `RUN warnings`)                                                  |           ✅           |
+| Pre-deploy `pg_dump` taken and verified                        | `scripts/vps/backup.sh` exit code 0; backup on `/opt/laratik-planner/backups/` and offsite |           ✅           |
+| `/api/health` returns the new SHA + `db: up` + `schema: ready` | `curl https://planner.laratik.com/api/health`                                              |           ✅           |
+| Critical browser + visual smoke                                | `pnpm test:e2e:critical` on the live URL                                                   |           ✅           |
+| Release-candidate full 5-browser + visual matrix               | `pnpm test:e2e:isolated` + `pnpm test:visual` (workflow_dispatch on `e2e.yml`)             | ✅ for `READY` verdict |
+| `pg_dump` post-deploy captures the new SHA's schema            | `pg_dump --schema-only` includes the migration set                                         |           ✅           |
 
 A deploy with any required gate failing is rolled back. The rollback procedure is in `docs/production-readiness/MIGRATION_DEPLOYMENT.md:102` and `docs/operations/READY_TO_DEPLOY.md` §"First-deploy rollback". The deploy record (the workflow run URL, the SHA, the operator, the date) is the artifact that ties the deploy to the evidence.
 
@@ -26,16 +26,16 @@ A deploy with any required gate failing is rolled back. The rollback procedure i
 
 A `READY FOR INDEPENDENT REVIEW` → `READY` verdict transition is gated by the long-lived evidence. The reviewer confirms every box below before flipping the verdict in `PRODUCTION_READINESS_TRACKER.md` and `docs/production-readiness/UAT_RELEASE.md`:
 
-| Item                                                                                     | Evidence path                                                       | Confirmed |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | :-------: |
-| The 30-step §23 journey PASS for every step                                               | `docs/production-readiness/UAT_RELEASE.md` (one row per step)       | ☐         |
-| The `EXTERNAL_SERVICES_UAT.md` rows are signed by the owner                              | `docs/production-readiness/EXTERNAL_SERVICES_UAT.md` (owner column) | ☐         |
-| Sentry DSN + alert rules live (`OBS-001` closure)                                         | Sentry project + 4 alert rules per `docs/operations/observability.md:73-78` | ☐        |
-| Manual a11y sign-off (`QA-005` closure)                                                   | `docs/production-readiness/ACCESSIBILITY_CHECKLIST.md` (operator + date) | ☐         |
-| Visual baselines on the stable UI (`QA-004` closure)                                      | `coverage/visual/` artifacts (per-viewport)                          | ☐         |
-| Migration drill at the current HEAD matches the production DB ledger                     | `pnpm migration-drill` 5/5 + `drizzle.__drizzle_migrations` SELECT  | ☐         |
-| Encrypted offsite backup + restore drill (`OPS-001` closure)                             | `docs/operations/backup-recovery.md` (last drill date + SHA)         | ☐         |
-| Independent reviewer (not the author) has signed the `pr-review-checklist.md` boxes      | PR comment + tracker row `Verified`                                 | ☐         |
+| Item                                                                                | Evidence path                                                               | Confirmed |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | :-------: |
+| The 30-step §23 journey PASS for every step                                         | `docs/production-readiness/UAT_RELEASE.md` (one row per step)               |     ☐     |
+| The `EXTERNAL_SERVICES_UAT.md` rows are signed by the owner                         | `docs/production-readiness/EXTERNAL_SERVICES_UAT.md` (owner column)         |     ☐     |
+| Sentry DSN + alert rules live (`OBS-001` closure)                                   | Sentry project + 4 alert rules per `docs/operations/observability.md:73-78` |     ☐     |
+| Manual a11y sign-off (`QA-005` closure)                                             | `docs/production-readiness/ACCESSIBILITY_CHECKLIST.md` (operator + date)    |     ☐     |
+| Visual baselines on the stable UI (`QA-004` closure)                                | `coverage/visual/` artifacts (per-viewport)                                 |     ☐     |
+| Migration drill at the current HEAD matches the production DB ledger                | `pnpm migration-drill` 5/5 + `drizzle.__drizzle_migrations` SELECT          |     ☐     |
+| Encrypted offsite backup + restore drill (`OPS-001` closure)                        | `docs/operations/backup-recovery.md` (last drill date + SHA)                |     ☐     |
+| Independent reviewer (not the author) has signed the `pr-review-checklist.md` boxes | PR comment + tracker row `Verified`                                         |     ☐     |
 
 A single unchecked box is a verdict-blocker. The `READY` verdict is the operator-facing promise that every box is checked; the `READY FOR INDEPENDENT REVIEW` verdict is the intermediate state during the closure process.
 

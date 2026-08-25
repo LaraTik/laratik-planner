@@ -66,12 +66,8 @@ const ROLE_MATRIX: RoleCase[] = [
   // ... existing roles ...
   {
     role: "finance_reviewer",
-    can: [
-      { route: "/app/w/acme/finance", testid: "finance-overview" },
-    ],
-    cannot: [
-      { route: "/app/w/acme/planning/new", heading: /Creation access required/i },
-    ],
+    can: [{ route: "/app/w/acme/finance", testid: "finance-overview" }],
+    cannot: [{ route: "/app/w/acme/planning/new", heading: /Creation access required/i }],
   },
 ];
 ```
