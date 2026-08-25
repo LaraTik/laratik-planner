@@ -24,3 +24,33 @@ Known critical/high areas include vulnerable Auth.js/NextAuth, `@auth/core`, Dri
 - Secret scan of tracked files and history.
 - Production header capture.
 - Owner-recorded credential rotation date without secret values.
+
+## 2026-08-25 — Platform role authorization
+
+Code snapshot `40d0dc8` replaces the binary platform-administrator capability
+with four closed roles: Platform Owner, Agency Operator, Platform Auditor, and
+Support Operator. Authorization is enforced by named server permissions; the
+sidebar and controls reflect those permissions but are not the security
+boundary.
+
+- Only Owners can grant, change, or revoke platform assignments. The final
+  active Owner cannot be downgraded or revoked; a transaction-scoped advisory
+  lock serializes concurrent attempts.
+- Agency Operators can create and maintain agencies, plans, and lifecycle state
+  without receiving agency membership. Archive/unarchive remains Owner-only.
+- Auditors have read-only access to agency metadata, access assignments, and
+  audit surfaces.
+- Support Operators can read agency metadata and request ticketed, time-limited
+  support access. A platform role alone never grants tenant-content access;
+  tenant content still requires the separate support-grant workflow.
+- Role changes and their security audit events commit atomically. The database
+  rejects roles outside the closed vocabulary and the audit history remains
+  append-only.
+- Revoked assignments fail closed, non-platform users receive the stable
+  forbidden surface, and the legacy `/app/platform/admins` URL permanently
+  redirects to `/app/platform/access`.
+
+Evidence: 1,701 unit tests, 150 integration tests, 11 focused platform browser
+tests, the six-viewport responsive matrix, and the Chromium axe sweep all pass.
+`pnpm audit --prod` reports no known vulnerabilities. Status remains `READY FOR
+INDEPENDENT REVIEW`; this implementation has not assigned itself `Verified`.

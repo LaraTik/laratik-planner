@@ -203,3 +203,45 @@ Captured 2026-08-23 on disposable Postgres 16.
 All changes are additive. Existing tenant identifiers and content rows are preserved. An older application image can ignore the new tables and lifecycle columns; normal rollback therefore pins the previous application image while leaving the schema in place. A destructive schema rollback requires the verified pre-deploy backup and explicit approval because it removes entitlement and audit history.
 
 The 2026-08-23 drill uses the real Drizzle migrator for official migrations. From-zero produces 47 public application tables and a 12/12 `drizzle.__drizzle_migrations` ledger. The in-place helper adds its private 48th public tracking table only for synthetic drill migrations. Backup/restore preserves both data and all 12 official ledger rows, and an immediate post-restore `pnpm db:migrate` succeeds without replaying migration `0000`. This supersedes the earlier drill mechanic that applied official SQL with only a custom ledger.
+
+## 2026-08-25 — Migration 0018 platform access roles
+
+Code snapshot `40d0dc8` adds `role` and `updated_at` to
+`platform_administrator`, a closed four-role database constraint, and the
+active-role review index. Existing rows receive `platform_owner`, preserving
+the authority held by the previous binary during the rolling-deployment
+compatibility window. No agency membership, tenant identifier, tenant content,
+or support grant is changed.
+
+The first disposable repair drill correctly failed because its historical
+0012 incident simulation retained the newer 0018 ledger row. That meant
+Drizzle could not migrate backward to the 0017 repair. Commit `aaaec09` now
+rewinds the known 0018 schema and ledger as one unit and refuses to run if an
+unknown post-repair migration exists. The corrected rerun passed all five
+drills:
+
+- from-zero: 56 application tables and 19/19 official ledger rows;
+- skipped-0012 repair: all four M3 tables restored, exactly one 0012 row,
+  exactly one 0018 row, and both role columns restored;
+- in-place add/drop: marker column added and removed cleanly;
+- backup/restore: `pg_dump` restore retained 19/19 ledger rows and the
+  deployment-critical schema;
+- failed migration: the runner aborted with 57 tables before and after, with
+  no missing or partially added table.
+
+### Compatible application rollback
+
+Migration 0018 is forward-only and its additive columns stay in place. Before
+starting an old binary, the operator must snapshot all platform assignments and
+soft-revoke every active non-Owner assignment. The old binary only understands
+`revoked_at IS NULL`, so this leaves exactly the Owner set active and prevents a
+bounded role from being interpreted as a full administrator. After the
+role-aware image returns, restore the snapshot's `role`, `revoked_at`, and
+`updated_at` values.
+
+`tests/integration/platform-access.test.ts` executes this exact sequence on
+disposable Postgres: the old predicate sees two active assignments before the
+rollback, only the Owner during rollback, and both original roles after restore.
+The complete integration suite passed 19 files / 150 tests. A destructive
+column rollback remains approval-gated and would require the verified
+pre-deployment backup.
