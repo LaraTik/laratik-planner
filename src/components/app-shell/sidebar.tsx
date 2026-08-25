@@ -30,6 +30,7 @@ import { isActivePath } from "@/lib/utils";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 import { AgencySwitcher, type AgencyRow } from "./agency-switcher";
 import { SidebarGroup, SidebarLink, SidebarSubLink } from "./sidebar-group";
+import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
 
 /**
  * Primary navigation sidebar.
@@ -68,7 +69,7 @@ export function Sidebar({
   workspaceSwitcherOptions,
   agencySwitcher,
   canCreateWorkspace,
-  isPlatformAdmin = false,
+  platformAccess,
 }: {
   user: { name: string; isAdmin: boolean };
   workspaces: { id: string; slug: string; name: string }[];
@@ -77,7 +78,7 @@ export function Sidebar({
   workspaceSwitcherOptions: { id: string; name: string; slug: string }[];
   agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   canCreateWorkspace: boolean;
-  isPlatformAdmin?: boolean;
+  platformAccess: PlatformNavigationAccess;
 }) {
   const pathname = usePathname();
 
@@ -335,7 +336,7 @@ export function Sidebar({
                 </SidebarGroup>
               </>
             ) : null}
-            {isPlatformAdmin ? (
+            {platformAccess.canEnter ? (
               <>
                 <div className="text-label text-fg-muted hidden px-2 pt-6 pb-2 font-semibold tracking-wide uppercase xl:block">
                   Platform
@@ -347,27 +348,33 @@ export function Sidebar({
                 >
                   Platform overview
                 </SidebarLink>
-                <SidebarLink
-                  href="/app/platform/agencies"
-                  icon={<Shield className="h-4 w-4" />}
-                  active={isActivePath("/app/platform/agencies", pathname)}
-                >
-                  Agencies
-                </SidebarLink>
-                <SidebarLink
-                  href="/app/platform/security"
-                  icon={<Lock className="h-4 w-4" />}
-                  active={isActivePath("/app/platform/security", pathname)}
-                >
-                  Security & support
-                </SidebarLink>
-                <SidebarLink
-                  href="/app/platform/admins"
-                  icon={<ShieldCheck className="h-4 w-4" />}
-                  active={isActivePath("/app/platform/admins", pathname)}
-                >
-                  Platform admins
-                </SidebarLink>
+                {platformAccess.canReadAgencies ? (
+                  <SidebarLink
+                    href="/app/platform/agencies"
+                    icon={<Shield className="h-4 w-4" />}
+                    active={isActivePath("/app/platform/agencies", pathname)}
+                  >
+                    Agencies
+                  </SidebarLink>
+                ) : null}
+                {platformAccess.canReadSecurity ? (
+                  <SidebarLink
+                    href="/app/platform/security"
+                    icon={<Lock className="h-4 w-4" />}
+                    active={isActivePath("/app/platform/security", pathname)}
+                  >
+                    Security & support
+                  </SidebarLink>
+                ) : null}
+                {platformAccess.canReadAccess ? (
+                  <SidebarLink
+                    href="/app/platform/access"
+                    icon={<ShieldCheck className="h-4 w-4" />}
+                    active={isActivePath("/app/platform/access", pathname)}
+                  >
+                    Platform access
+                  </SidebarLink>
+                ) : null}
               </>
             ) : null}
           </>
@@ -393,12 +400,12 @@ export function Sidebar({
             M1.5 + Stitch design). The active agency scopes the
             workspace list the user can pick from, so the agency
             switcher is the outermost switcher. */}
-        {agencySwitcher.options.length > 1 || isPlatformAdmin ? (
+        {agencySwitcher.options.length > 1 || platformAccess.canEnter ? (
           <div className="pt-1">
             <AgencySwitcher
               active={agencySwitcher.active}
               options={agencySwitcher.options}
-              isPlatformAdmin={isPlatformAdmin}
+              isPlatformAdmin={platformAccess.canEnter}
               compact
               testId="sidebar-agency-switcher-trigger"
             />

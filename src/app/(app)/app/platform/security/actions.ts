@@ -12,11 +12,14 @@ import {
   expireStaleSupportAccessGrants,
   listActiveGrantsForActor,
   listRecentAuditForActor,
+  listRecentSupportAuditAsPlatform,
   listRequestsForAgency,
   revokeSupportAccessGrant,
   SupportAccessError,
 } from "@/lib/support";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { getPlatformPrincipal } from "@/lib/auth/platform-access";
+import { PermissionDeniedError } from "@/lib/auth/policy";
 
 /**
  * M3.4 — Platform console support-access actions.
@@ -58,27 +61,55 @@ const CreateSupportAccessRequestFormSchema = z.object({
 export async function createSupportAccessRequestAction(
   input: z.input<typeof CreateSupportAccessRequestFormSchema>,
 ) {
-  const { actor } = await requirePlatformActor();
-  const parsed = CreateSupportAccessRequestFormSchema.parse(input);
-  const limit = await enforceRateLimit({
-    scope: "support_access_request",
-    subject: actor.id,
-    actorId: actor.id,
-  });
-  if (!limit.allowed) {
-    return { ok: false as const, error: "Too many requests. Try again shortly." };
-  }
   try {
+    const { actor } = await requirePlatformActor();
+    const parsed = CreateSupportAccessRequestFormSchema.parse(input);
+    const limit = await enforceRateLimit({
+      scope: "support_access_request",
+      subject: actor.id,
+      actorId: actor.id,
+    });
+    if (!limit.allowed) {
+      return { ok: false as const, error: "Too many requests. Try again shortly." };
+    }
     const request = await createSupportAccessRequest(actor, {
       ...parsed,
       scopeWorkspaceId: parsed.scopeWorkspaceId ?? null,
     });
     revalidatePath("/app/platform/security");
+    revalidatePath(`/app/platform/agencies/${parsed.targetAgencyId}`);
     revalidatePath("/app/agency-settings/plan");
-    return { ok: true as const, request };
+    return { ok: true as const, requestId: request.id };
   } catch (e) {
     return translateSupportError(e);
   }
+}
+
+export type SupportAccessRequestActionState = Readonly<{
+  ok?: boolean;
+  error?: string;
+  code?: string;
+  requestId?: string;
+}>;
+
+export async function createSupportAccessRequestFormAction(
+  _previous: SupportAccessRequestActionState,
+  formData: FormData,
+): Promise<SupportAccessRequestActionState> {
+  const stringValue = (key: string) => {
+    const value = formData.get(key);
+    return typeof value === "string" ? value : "";
+  };
+  const workspace = formData.get("scopeWorkspaceId");
+  return createSupportAccessRequestAction({
+    ticketReference: stringValue("ticketReference"),
+    reason: stringValue("reason"),
+    targetAgencyId: stringValue("targetAgencyId"),
+    scopeWorkspaceId: typeof workspace === "string" && workspace ? workspace : null,
+    scopeMetadataOnly: formData.get("scopeMetadataOnly") === "on",
+    requestedDurationHours: Number(stringValue("requestedDurationHours")),
+    downloadsRequested: formData.get("downloadsRequested") === "on",
+  });
 }
 
 const DecideFormSchema = z.object({
@@ -138,6 +169,12 @@ export async function expireStaleSupportAccessGrantsAction() {
 }
 
 export async function loadPlatformSecurityOverview(actor: { id: string }) {
+  const principal = await getPlatformPrincipal(actor);
+  const canAudit = principal?.permissions.has("platform.audit.read") === true;
+  const canRequestSupport = principal?.permissions.has("platform.support.request") === true;
+  if (!canAudit && !canRequestSupport) {
+    throw new PermissionDeniedError("platform-security-read");
+  }
   // The platform security page renders:
   //   - the platform admin's own active grants
   //   - the platform admin's own recent audit log entries
@@ -145,9 +182,11 @@ export async function loadPlatformSecurityOverview(actor: { id: string }) {
   // The agency-id scan is cheap: every agency has at most a
   // handful of recent requests, and the list is bounded.
   const [activeGrants, recentAudit, allAgencies] = await Promise.all([
-    listActiveGrantsForActor(actor),
-    listRecentAuditForActor(actor),
-    db.select({ id: agencies.id, name: agencies.name, slug: agencies.slug }).from(agencies),
+    canRequestSupport ? listActiveGrantsForActor(actor) : [],
+    canAudit ? listRecentSupportAuditAsPlatform(actor) : listRecentAuditForActor(actor),
+    canRequestSupport
+      ? db.select({ id: agencies.id, name: agencies.name, slug: agencies.slug }).from(agencies)
+      : [],
   ]);
   const requestsByAgency = await Promise.all(
     allAgencies.map(async (a) => {
@@ -156,6 +195,8 @@ export async function loadPlatformSecurityOverview(actor: { id: string }) {
     }),
   );
   return {
+    canAudit,
+    canRequestSupport,
     activeGrants,
     recentAudit,
     requestsByAgency: requestsByAgency.filter((row) => row.requests.length > 0),

@@ -32,6 +32,7 @@ export type { MergeInput } from "./get-effective-entitlement";
 
 export {
   changeAgencyPlan,
+  changeAgencyPlanAsPlatform,
   findRemovedLimits,
   ChangeAgencyPlanInputSchema,
 } from "./change-agency-plan";

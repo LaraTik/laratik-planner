@@ -1,4 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
+import type { PlatformRole } from "../../src/lib/auth/platform-access-types";
 
 /**
  * Shared E2E test helpers.
@@ -143,6 +144,8 @@ export async function devSeed(
      * e2e exercises both branches.
      */
     platformAdmin?: boolean;
+    /** Explicit platform role. Takes precedence over the legacy platformAdmin alias. */
+    platformRole?: PlatformRole;
   } = {},
 ): Promise<SeedResult> {
   return withRetry(async () => {
@@ -157,6 +160,7 @@ export async function devSeed(
         ...(options.agencyAdmin !== undefined ? { agencyAdmin: options.agencyAdmin } : {}),
         ...(options.workspaceRoles ? { workspaceRoles: options.workspaceRoles } : {}),
         ...(options.platformAdmin !== undefined ? { platformAdmin: options.platformAdmin } : {}),
+        ...(options.platformRole ? { platformRole: options.platformRole } : {}),
       },
       // Lower the request timeout in capture mode so a hung seed
       // does not eat the entire per-test budget. The compare step

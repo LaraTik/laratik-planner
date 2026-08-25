@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   CreateSupportAccessRequestSchema,
@@ -31,6 +33,13 @@ import {
  * by the integration suite in `tests/integration/support-access.test.ts`.
  */
 describe("M3.2 — support access constants and schemas (unit)", () => {
+  it("enforces support request and Owner-only third-party revoke permissions", () => {
+    const source = readFileSync(resolve(__dirname, "../../src/lib/support/access.ts"), "utf8");
+    expect(source).toContain('requirePlatformPermission(actor, "platform.support.request")');
+    expect(source).toContain("hasPlatformPermission(");
+    expect(source).toContain('"platform.access.manage"');
+    expect(source).not.toContain("const isPlatform = await isPlatformAdmin(actor)");
+  });
   it("exposes the documented duration cap, default, and auto-expiry window", () => {
     expect(SUPPORT_ACCESS_REQUEST_DURATION_LIMIT_HOURS).toBe(168);
     expect(SUPPORT_ACCESS_DEFAULT_DURATION_HOURS).toBe(2);

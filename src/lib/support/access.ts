@@ -9,7 +9,7 @@ import {
   supportAccessRequests,
   workspaces,
 } from "@/lib/db/schema";
-import { isPlatformAdmin, requirePlatformAdmin } from "@/lib/auth/platform-admin";
+import { hasPlatformPermission, requirePlatformPermission } from "@/lib/auth/platform-access";
 import { isAgencyAdmin, requirePolicy, type Actor } from "@/lib/auth/policy";
 
 /**
@@ -249,7 +249,7 @@ export async function createSupportAccessRequest(
   actor: Actor,
   input: CreateSupportAccessRequestInput,
 ): Promise<SupportAccessRequestRow> {
-  await requirePlatformAdmin(actor);
+  await requirePlatformPermission(actor, "platform.support.request");
   const parsed = CreateSupportAccessRequestSchema.parse(input);
 
   // Workspace scope must belong to the target agency (IDOR defence).
@@ -480,16 +480,15 @@ export async function revokeSupportAccessGrant(
     if (grant.revokedAt) {
       return SupportAccessGrantRow.parse(grant);
     }
-    // Authority: the platform admin who asked, the agency admin who
-    // approved, or any platform admin. The isPlatformAdmin() check
-    // covers the third case; the others need an explicit DB check.
-    const isPlatform = await isPlatformAdmin(actor);
+    // Authority: the requester, an administrator of the target agency,
+    // or a Platform Owner exercising incident-response authority.
+    const canManagePlatformAccess = await hasPlatformPermission(actor, "platform.access.manage");
     const isAgency = await isAgencyAdmin(actor, grant.targetAgencyId);
     const isRequester = grant.grantedToUserId === actor.id;
-    if (!isPlatform && !isAgency && !isRequester) {
+    if (!canManagePlatformAccess && !isAgency && !isRequester) {
       throw new SupportAccessError(
         SupportAccessErrorCode.NotAgencyAdmin,
-        "Only the requesting platform admin, the approving agency admin, or any platform admin can revoke a grant.",
+        "Only the requester, an agency administrator, or a Platform Owner can revoke this grant.",
         { grantId, agencyId: grant.targetAgencyId },
       );
     }
@@ -763,6 +762,37 @@ export async function listRecentAuditForActor(actor: Actor): Promise<
   return rows;
 }
 
+export async function listRecentSupportAuditAsPlatform(
+  actor: Actor,
+  limit = 50,
+): Promise<
+  Array<{
+    id: number;
+    targetAgencyId: string;
+    targetType: string;
+    targetId: string | null;
+    action: string;
+    outcome: string;
+    createdAt: Date;
+  }>
+> {
+  await requirePlatformPermission(actor, "platform.audit.read");
+  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 100);
+  return db
+    .select({
+      id: supportAccessAudit.id,
+      targetAgencyId: supportAccessAudit.targetAgencyId,
+      targetType: supportAccessAudit.targetType,
+      targetId: supportAccessAudit.targetId,
+      action: supportAccessAudit.action,
+      outcome: supportAccessAudit.outcome,
+      createdAt: supportAccessAudit.createdAt,
+    })
+    .from(supportAccessAudit)
+    .orderBy(desc(supportAccessAudit.createdAt))
+    .limit(safeLimit);
+}
+
 // ─── 8. IDOR guard for tenant views ─────────────────────────────────────
 
 /**
@@ -843,7 +873,4 @@ export async function authorizePlatformDownload(input: {
   return { allowed, grant };
 }
 
-// Re-export requirePlatformAdmin for callers that compose multiple
-// checks (e.g. the platform console page). The helpers above already
-// call it, so most consumers won't need to import it directly.
-export { requirePlatformAdmin, isPlatformAdmin, requirePolicy };
+export { requirePolicy };

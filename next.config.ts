@@ -22,6 +22,16 @@ const nextConfig: NextConfig = {
   // Disable powered-by header (Traefik already adds its own).
   poweredByHeader: false,
 
+  async redirects() {
+    return [
+      {
+        source: "/app/platform/admins",
+        destination: "/app/platform/access",
+        permanent: true,
+      },
+    ];
+  },
+
   async headers() {
     const environment =
       process.env.NODE_ENV === "production"

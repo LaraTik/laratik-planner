@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { logError, sanitizeLogContext } from "@/lib/observability/logger";
+import { logError, logWarn, sanitizeLogContext } from "@/lib/observability/logger";
 
 describe("sanitizeLogContext", () => {
   it("redacts authorization, cookie, secret, token, password, api_key, body, content, prompt, brief", () => {
@@ -101,5 +101,34 @@ describe("logError", () => {
     const parsed = JSON.parse(line as string);
     expect(parsed.level).toBe("error");
     expect(parsed.event).toBe("event-only");
+  });
+});
+
+describe("logWarn", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("emits a sanitized JSON warning", () => {
+    logWarn("platform_access.denied", {
+      actorId: "user-1",
+      permission: "platform.agency.update",
+      token: "must-not-leak",
+    });
+
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    const [line] = (console.warn as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    const parsed = JSON.parse(line as string);
+    expect(parsed).toMatchObject({
+      level: "warn",
+      event: "platform_access.denied",
+      actorId: "user-1",
+      permission: "platform.agency.update",
+      token: "[redacted]",
+    });
   });
 });

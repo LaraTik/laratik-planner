@@ -1,181 +1,211 @@
-# Agency setup & authority scopes
+# Agency setup and authority scopes
 
-> **What this file is:** the single canonical reference for the three authority scopes in laratik-planner, the bootstrap path, the platform-admin grant path, and the agency admin's CRUD surface.
->
-> **Read this when:** you (the operator) need to figure out who controls what, especially around the "superadmin / who can manage agencies" question, or when an agency admin needs to know what they can and cannot edit.
+> Canonical operating guide for platform roles, agency administration,
+> workspace roles, bootstrap, access recovery, and review.
 
----
+## 1. Independent authority scopes
 
-## 1. Three independent authority scopes
+Authority is explicit and non-inheriting. A person may hold a platform role,
+agency membership, and workspace roles independently.
 
-There are **three disjoint scopes** of authority. A user holds each scope explicitly — there is no inheritance. A user can hold one, two, or all three (and a user can hold the same scope against multiple agencies).
+| Scope                    | Authoritative records                                 | What it controls                                                                                      |
+| ------------------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Platform role**        | Active `platform_administrator` row with one `role`   | Global console and agency operations allowed by the role; never tenant content by itself              |
+| **Agency administrator** | `agency_membership.is_agency_admin = true`            | Members, configuration, and all workspaces inside that agency                                         |
+| **Workspace member**     | `workspace_membership` + `workspace_membership_roles` | Content and workflow commands allowed by the assigned workspace roles                                 |
+| **Support grant**        | Active, approved, scoped `support_access_grant`       | Temporary tenant access for the approved scope; expires automatically and every supported view audits |
 
-| Scope                | Authoritative table                                   | Code helper                                              | What it unlocks                                                                                                                                                                                                                                                                 | Where in the UI                                                                                                                                  |
-| -------------------- | ----------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Platform Admin**   | `platform_administrator`                              | `isPlatformAdmin(actor)` / `requirePlatformAdmin(actor)` | List, create, suspend, archive, restore, change plan, file / revoke support-access requests for **any** agency. **No tenant content access by itself** — must hold an `agency_membership` row to read tenant data, or an active `support_access_grant` for the targeted agency. | `/app/platform/*` (gated by `(app)/app/platform/layout.tsx`). The sidebar shows a `Platform` section only for these users.                       |
-| **Agency Admin**     | `agency_membership` (`is_agency_admin = true`)        | `isAgencyAdmin(actor, agencyId)`                         | Manage members, AI configuration, plan (read-only), brand kit, channels of **their own agency**. Implies full access to every workspace inside the agency (master prompt §9).                                                                                                   | `/app/agency-settings/*`, `/app/users`, and **everything inside the agency's workspaces** (via `canAccessWorkspace` → `isAgencyAdmin` shortcut). |
-| **Workspace member** | `workspace_membership` + `workspace_membership_roles` | `hasWorkspaceRole(actor, workspaceId, roles)`            | Edit content, comment, do work — at the level of the role (`workspace_manager`, `content_planner`, `designer`, `internal_reviewer`, `publisher`, `viewer`, `client_reviewer`).                                                                                                  | `/app/w/[slug]/*`.                                                                                                                               |
+Anti-confusion rules:
 
-**The "superadmin who controls agencies (not their workspaces)" is the Platform Admin.** The Agency Admin controls the workspaces _inside_ their own agency; the Platform Admin controls the agencies themselves but cannot read tenant content without an `agency_membership` row or an active `support_access_grant`.
+- A platform role is not an agency membership.
+- An Agency Admin cannot administer another agency or the platform.
+- A Support Operator can request access but cannot approve the request.
+- A Platform Auditor reads bounded platform/audit data, not tenant content.
+- The first `/setup` user becomes an Agency Admin only. Platform authority is
+  granted separately.
 
-### 1.1 Anti-confusion checks
+## 2. Platform role matrix
 
-- **A Platform Admin is not automatically an Agency Admin.** They cannot see the contents of an agency just because they can manage the platform. Acting inside a tenant still requires an `agency_membership` row (or an active `support_access_grant`).
-- **An Agency Admin is not automatically a Platform Admin.** The product surface they can reach is bounded by their agency; they cannot see or manage other agencies. Cross-tenant reads return `404` (anti-IDOR; see `docs/architecture/authorization.md §5`).
-- **The first user to bootstrap the system is only an Agency Admin.** They have zero Platform Admin authority. To become a Platform Admin, they must be granted (or run the SQL fallback in §3.3 below).
+Use the narrowest role matching the person's ongoing responsibility.
 
----
+| Capability                                  | Platform Owner | Agency Operator | Platform Auditor | Support Operator |
+| ------------------------------------------- | :------------: | :-------------: | :--------------: | :--------------: |
+| Enter platform console                      |       ✅       |       ✅        |        ✅        |        ✅        |
+| Read agencies                               |       ✅       |       ✅        |        ✅        |        ✅        |
+| Create and edit agency identity             |       ✅       |       ✅        |        ❌        |        ❌        |
+| Manage plan                                 |       ✅       |       ✅        |        ❌        |        ❌        |
+| Suspend and restore a suspended agency      |       ✅       |       ✅        |        ❌        |        ❌        |
+| Archive and unarchive an agency             |       ✅       |       ❌        |        ❌        |        ❌        |
+| Request ticketed temporary support access   |       ✅       |       ❌        |        ❌        |        ✅        |
+| Read Platform Access and role-change audits |       ✅       |       ❌        |        ✅        |        ❌        |
+| Grant, change, or revoke platform roles     |       ✅       |       ❌        |        ❌        |        ❌        |
+| Read bounded platform-wide support audit    |       ✅       |       ❌        |        ✅        |        ❌        |
 
-## 2. "Who am I?" — the four buckets
+There is no hard delete for an agency. “Delete” in the operating workflow
+means an Owner-only soft archive. Archived agencies can be returned only by
+Owner-only **Unarchive**. **Restore** clears suspension and cannot unarchive.
 
-A user running the app today lands in exactly one of these four buckets, identified by what the sidebar shows:
+## 3. Granting platform access
 
-1. **Signed-out** → `/signin`. The login screen offers Google OAuth + email magic link. In dev, `/dev/signin` is available.
-2. **Signed-in, no agency** → `/setup`. The user is the first to arrive at this deployment. They fill in the bootstrap form with `BOOTSTRAP_SETUP_TOKEN` and become the Agency Admin of the new agency.
-3. **Signed-in, has agency membership, not a Platform Admin** → sidebar shows `Workspace` (a switcher that lists every workspace in the active agency) + `Admin` (which contains `User Management` and `Agency Settings`, with the `AI configuration` sub-link). The `Platform` section is **not** in the sidebar.
-4. **Signed-in, has agency membership, is also a Platform Admin** → same as (3) + an additional `Platform` section: `Platform overview`, `Agencies`, `Security & support`, `Platform admins`.
+### 3.1 Product UI: `/app/platform/access`
 
-A user can be a Platform Admin without any agency membership at all (e.g., an operator on the LaraTik side). Such a user can reach `/app/platform/*` and nothing else — they have no tenant context, so the (app) layout sends them to `/app/platform/overview` directly.
+Only a Platform Owner can add, change, or revoke assignments. The person must
+have signed in once so their `user` row exists.
 
----
+1. Open **Platform → Platform access**.
+2. Select **Add platform member**.
+3. Enter the existing user's email, choose the narrowest role, and give a
+   concrete operational reason.
+4. Confirm the assignment in **Current assignments**.
 
-## 3. How a Platform Admin is granted
+The server returns minimal mutation results, stores the reason, and writes the
+role change atomically to `security_audit_event`. It refuses any action that
+would remove the final active Platform Owner, including concurrent requests.
 
-Three paths exist. The product UI is the preferred path; the SQL and dev-seed paths are operational escape hatches.
+The former `/app/platform/admins` URL permanently redirects here.
 
-### 3.1 The product UI: `/app/platform/admins`
+### 3.2 Emergency SQL Owner recovery
 
-- **Who can use it:** an existing Platform Admin. The page is gated by the same `requirePlatformAdmin` as the rest of `/app/platform/*`.
-- **What it does:** lists every user with a non-revoked `platform_administrator` row, plus the grant timestamp and the grantor. The "Add Platform Admin" form accepts an email; if the user already exists, a row is upserted; if not, the form returns a clear "user not found — they must sign in at least once first" message. The "Revoke" action soft-revokes (sets `revoked_at`) and requires a reason; every grant / revoke appends an audit row to `security_audit_events`.
-- **Where the service lives:** `src/lib/platform/admins.ts`. The service is the only writer; the route is the only reader.
-
-### 3.2 The SQL fallback (production)
-
-When the platform has zero Platform Admins (e.g., the bootstrap user is the only account and they are not yet a Platform Admin), the UI is unreachable. Recover with a one-line SQL:
+Use this only when no active Owner can reach the UI. Back up first and record
+the incident/change reference outside the database.
 
 ```sql
-INSERT INTO platform_administrator (user_id, granted_by, reason)
-VALUES ('<your-user-id>', NULL, 'initial seed')
+INSERT INTO platform_administrator
+  (user_id, role, granted_by, granted_at, revoked_at, reason, updated_at)
+VALUES
+  ('<your-user-id>', 'platform_owner', NULL, now(), NULL,
+   'break-glass Owner recovery: <change-reference>', now())
 ON CONFLICT (user_id) DO UPDATE
-  SET revoked_at = NULL,
+  SET role = 'platform_owner',
+      revoked_at = NULL,
       granted_by = EXCLUDED.granted_by,
       granted_at = now(),
-      reason = EXCLUDED.reason;
+      reason = EXCLUDED.reason,
+      updated_at = now();
 ```
 
-To find your `user_id`:
+Find the user without copying other production identities:
 
 ```sql
-SELECT id, email, display_name FROM "user" WHERE lower(email) = '<your-email>';
+SELECT id, email, display_name
+FROM "user"
+WHERE lower(email) = lower('<your-email>');
 ```
 
-`granted_by` is allowed to be `NULL` for the very first grant. Every subsequent grant should reference an existing platform admin's `user_id`. The `reason` column is a free-text field; capture the operational context.
+`granted_by = NULL` is permitted only for initial/break-glass recovery. After
+access is restored, add a second Owner through the UI and review the audit log.
 
-### 3.3 The dev seed (dev / test only)
+### 3.3 Development fixtures
 
-`POST /api/dev/seed` accepts `platformAdmin: true` in the body. The route is gated by `NODE_ENV !== "production"`, so the endpoint returns `404` in production builds. The seed is the only place tests can flip platform-admin state. See `src/app/api/dev/seed/route.ts:230-243` for the exact logic.
+`POST /api/dev/seed` accepts an explicit role:
 
----
-
-## 4. The bootstrap path: `/setup` + `BOOTSTRAP_SETUP_TOKEN`
-
-The bootstrap path is a **one-shot** path that runs only when **no `is_agency_admin = true` row exists anywhere on the platform**. After it lands:
-
-1. The user is marked `users.role = "agency_admin"`.
-2. An `agency_membership` row is written with `is_agency_admin = true`.
-3. A `bootstrap_lock` row is written (idempotency marker).
-
-The bootstrap admin is **only an Agency Admin**, not a Platform Admin. The contract is: **bootstrap = agency scope**. Platform authority must be granted separately, per §3.
-
-### 4.1 What the form does
-
-`/setup` (the page) renders a form with three fields: `agencyName`, `agencySlug`, and `token`. The token is the value of `BOOTSTRAP_SETUP_TOKEN` from the server environment. The form `POST`s to `/api/bootstrap/admin`, which calls `bootstrapFirstAdmin(...)`. The transaction takes a Postgres advisory lock (`pg_advisory_xact_lock(7342891)`) so concurrent bootstrap calls serialize; the first wins, the rest return `409 Already configured`.
-
-### 4.2 If the token is lost
-
-A lost `BOOTSTRAP_SETUP_TOKEN` does not block the system — it only blocks new agencies from being bootstrapped via `/setup`. The agency admin can still sign in, manage their agency, and (with another platform admin's grant) manage the platform.
-
-To recover the token on the VPS, read the value directly from the running container's environment:
-
-```bash
-# from the VPS host
-cd /opt/laratik-planner
-docker compose exec -T app env | grep BOOTSTRAP_SETUP_TOKEN
+```json
+{ "platformRole": "platform_auditor" }
 ```
 
-Rotate the token by editing `.env` on the VPS and restarting the app container. There is no automated rotation; the token is a low-privilege secret that only unlocks the bootstrap path.
+Allowed values are `platform_owner`, `agency_operator`, `platform_auditor`,
+and `support_operator`. `platformAdmin: true` remains a compatibility alias for
+`platform_owner`; new tests use `platformRole`. The endpoint returns `404` in
+production.
 
-### 4.3 Multi-agency in production
+## 4. Bootstrap: `/setup`
 
-The same user can be a member of two agencies (e.g., a LaraTik operator who is both the platform admin and an agency admin for two tenants). The active agency is resolved on every request by `resolveActiveAgencyContext(actor)` (`src/lib/auth/agency-context.ts:376`), with this priority chain:
+Bootstrap is a one-shot agency operation available only while no Agency Admin
+exists anywhere. The signed-in user submits agency name, slug, and
+`BOOTSTRAP_SETUP_TOKEN`.
 
-1. **Explicit override** — `?agency=<id>` (or path param). Membership-checked; fail-closed.
-2. **Signed cookie** — `laratik_active_agency`, HMAC-SHA-256, mixed with the user id. Membership-re-checked on every decode; fail-closed.
-3. **Single-membership fallback** — if the actor has exactly one active membership, pick it. 0 or 2+ active memberships return `null` and the route layer prompts the user.
+The transaction takes a PostgreSQL advisory lock, creates the agency
+membership with `is_agency_admin = true`, updates the user's application role,
+and writes `bootstrap_lock`. Concurrent attempts serialize; only the first can
+succeed.
 
-The agency switcher (`src/components/app-shell/agency-switcher.tsx`) calls `switchActiveAgency(agencyId)` (`src/lib/auth/agency-actions.ts:49`), which re-issues the cookie after a membership re-check.
+Bootstrap does not create a platform assignment. Use §3 afterward if the user
+also needs platform responsibility.
 
----
+### Active agency selection
 
-## 5. What the agency admin can edit
+`resolveActiveAgencyContext(actor)` resolves, in order:
 
-The agency admin can change the agency's own identity, members, AI configuration, and (via the workspace admin surfaces inside each workspace) the workspace settings. The full CRUD matrix:
+1. an explicit requested agency after membership validation;
+2. the signed `laratik_active_agency` cookie after expiry/signature/membership
+   validation;
+3. a single active-membership fallback.
 
-| Surface                                          | Read | Create                   | Update                                                                 | Delete / archive        |
-| ------------------------------------------------ | ---- | ------------------------ | ---------------------------------------------------------------------- | ----------------------- |
-| **Agency identity** (`/app/agency-settings`)     | ✅   | n/a                      | ✅ name, slug, locale, timezone                                        | n/a                     |
-| **Plan and usage** (`/app/agency-settings/plan`) | ✅   | n/a                      | ❌ read-only — the platform admin owns the plan                        | n/a                     |
-| **AI configuration** (`/app/agency-settings/ai`) | ✅   | ✅ first save            | ✅ master switch, model, capabilities, managed secret, test connection | n/a                     |
-| **Members** (`/app/users`)                       | ✅   | ✅ invite by email       | ✅ role per workspace, deactivate                                      | ✅ deactivate           |
-| **Invitations**                                  | ✅   | (from send-invite)       | n/a                                                                    | ✅ revoke               |
-| **Workspaces** (`/app/w/[slug]/*`)               | ✅   | ✅ `/app/workspaces/new` | ✅ settings (lifecycle / lead times / approval / defaults)             | n/a (no archive UI yet) |
-| **Brand Kit** (`/app/w/[slug]/brand-kit`)        | ✅   | ✅ per section           | ✅ per section                                                         | ✅ archive              |
+Invalid explicit or cookie context fails closed. Platform-only users can enter
+`/app/platform/*` without an agency membership but cannot enter tenant content.
 
-A non-admin member of the agency sees the same surfaces in read-only mode. The agency identity card on `/app/agency-settings` becomes an `<EditAgencyForm>` only when the actor is an Agency Admin.
+## 5. Who can add, edit, or archive agencies?
 
----
+- **Add:** Platform Owner or Agency Operator.
+- **Edit identity:** Platform Owner or Agency Operator. Platform authority is
+  sufficient; they do not need tenant membership.
+- **Change plan:** Platform Owner or Agency Operator.
+- **Suspend/restore:** Platform Owner or Agency Operator. Restore applies only
+  to suspended, non-archived agencies.
+- **Archive/unarchive:** Platform Owner only.
+- **Hard delete:** no product or routine operations path.
 
-## 6. What the platform admin can do
+Agency Admins can edit their own agency identity, members, AI configuration,
+social configuration, Brand Kit, channels, and workspace settings. They see
+plan/usage but cannot change the platform-owned entitlement.
 
-In addition to the agency admin's surface (for any agency they belong to), the platform admin reaches the `/app/platform/*` console:
+## 6. Temporary support access
 
-- **`/app/platform/overview`** — platform-wide KPIs and the five most recently created agencies.
-- **`/app/platform/agencies`** — list, search, create, suspend, archive, change plan. Row actions on the table.
-- **`/app/platform/agencies/[id]`** — agency detail with tabs (Overview / Workspaces / Plan & usage / AI / Security). Editable identity; lifecycle (suspend / restore / archive) is here.
-- **`/app/platform/security`** — "my active grants" (time-limited support access), "my recent views" (audit log), "open requests" (per-agency pending support requests).
-- **`/app/platform/admins`** — list, grant, revoke Platform Admins.
+Platform roles never reveal tenant content. When investigation requires tenant
+access:
 
-All `/app/platform/*` routes gate on `requirePlatformAdmin(actor)` and never acquire tenant content access without an explicit `agency_membership` row or an active `support_access_grant`.
+1. A Platform Owner or Support Operator files a ticketed request from the
+   agency detail page.
+2. The request specifies duration (maximum seven days), agency/workspace scope,
+   metadata-only preference, download request, and reason.
+3. An Agency Admin approves or rejects it. Downloads remain off unless the
+   Agency Admin explicitly allows them.
+4. An approved grant is scoped, time-limited, revocable, and audited.
 
----
+Platform Auditors see bounded support audit summaries. They cannot file or
+approve requests and do not receive open-request workflow data.
 
-## 7. How to recover from "I have no Platform Admin"
+## 7. Quarterly access review
 
-This is the most common operational situation after a fresh bootstrap. The user has run `/setup`, they are an Agency Admin, and they cannot reach `/app/platform/*`. Two recovery paths:
+The system owner performs this review at least quarterly and after any
+platform-team change:
 
-1. **If you can sign in as someone who is already a Platform Admin** — open `/app/platform/admins`, fill in the email of the user you want to elevate, save. (Most common when the LaraTik operator has a separate user; grant them via the UI.)
-2. **If no one is a Platform Admin** — run the SQL in §3.2 above. The migration scripts on the VPS have a `psql` shortcut:
+1. Export or inspect active assignments from `/app/platform/access` without
+   copying tenant data.
+2. Confirm every person is individually identifiable and still needs the
+   assigned responsibility.
+3. Reduce broad roles where a narrower role now fits.
+4. Confirm at least two active Owners before offboarding or role reduction.
+5. Review recent grant/change/revoke audit rows and all active/expiring support
+   grants.
+6. Revoke stale assignments with a reason and record reviewer/date/change
+   reference in the operational evidence bundle.
 
-   ```bash
-   # from the VPS host
-   cd /opt/laratik-planner
-   scripts/vps/exec-sql.sh "INSERT INTO platform_administrator (user_id, granted_by, reason) VALUES ('<uuid>', NULL, 'recovery from bootstrap') ON CONFLICT (user_id) DO UPDATE SET revoked_at = NULL;"
-   ```
+Shared accounts are not acceptable for platform roles.
 
-3. **If the user has not yet signed in** — they must sign in at least once (Google OAuth or magic link) so a `user` row exists. The Platform Admin grant form will refuse with "user not found" if the email is unknown.
+## 8. Safe application rollback
 
----
+The pre-role application treats every active `platform_administrator` row as
+an unrestricted administrator. Before deploying that image:
 
-## 8. Cross-references
+1. Enable maintenance mode and take a verified backup.
+2. Snapshot active assignment IDs, roles, and audit-safe metadata to a
+   protected operational artifact.
+3. Soft-revoke every active non-Owner assignment. Do not roll back while an
+   Auditor, Agency Operator, or Support Operator remains active.
+4. Deploy the prior image. Keep the additive `role`/`updated_at` columns.
+5. When the role-aware image returns, restore assignments from the snapshot,
+   confirm at least one Owner, and review audit rows.
 
-- `docs/architecture/authorization.md` — the full authorization model (two scopes of authority, agency context resolution, cookie format).
-- `docs/architecture/overview.md` — the runtime map and how the platform / agency / workspace layers fit together.
-- `docs/architecture/ai-governance-and-support-access.md` — the AI configuration flow (master switch, capability allowlist, per-user daily budget, support access workflow).
-- `src/lib/auth/policy.ts` — the policy helpers (`isPlatformAdmin`, `isAgencyAdmin`, `isAgencyMember`, `hasWorkspaceRole`, `canAccessWorkspace`, etc.).
-- `src/lib/auth/agency-context.ts` — the agency context resolver (the priority chain).
-- `src/lib/auth/bootstrap.ts` — the bootstrap-first-admin service.
-- `src/lib/platform/agencies.ts` — agency CRUD at the platform level.
-- `src/lib/agencies/command.ts` — agency CRUD at the agency-admin level (UpdateAgencySchema, updateAgency).
-- `src/lib/platform/admins.ts` — Platform Admin grant / revoke / list.
-- `src/lib/ai/provider-secret.ts` — the managed-secret service for AI provider keys.
-- `docs/operations/runbook.md` — operational runbook (deploys, backups, key rotation, recovery).
+Destructive migration rollback requires separate approval and the backup.
+
+## 9. Cross-references
+
+- `docs/decisions/0005-platform-role-permissions.md`
+- `docs/architecture/authorization.md`
+- `docs/architecture/ai-governance-and-support-access.md`
+- `src/lib/auth/platform-access.ts`
+- `src/lib/platform/access.ts`
+- `src/lib/platform/agencies.ts`
+- `src/lib/support/access.ts`
+- `docs/operations/runbook.md`

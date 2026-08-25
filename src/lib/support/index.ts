@@ -32,14 +32,12 @@ export {
   listActiveGrantsForActor,
   listActiveAgencyIds,
   listRecentAuditForActor,
+  listRecentSupportAuditAsPlatform,
   authorizePlatformTenantView,
   authorizePlatformDownload,
   recordSupportAccessAudit,
   // Audit vocabulary
   SupportAccessAuditAction,
-  // Re-exports
-  requirePlatformAdmin,
-  isPlatformAdmin,
 } from "./access";
 export type {
   CreateSupportAccessRequestInput,

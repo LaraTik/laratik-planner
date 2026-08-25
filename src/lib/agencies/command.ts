@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { agencies, securityAuditEvents } from "@/lib/db/schema";
+import { requirePlatformPermission } from "@/lib/auth/platform-access";
 import { isAgencyAdmin, requirePolicy, type Actor } from "@/lib/auth/policy";
 
 /**
@@ -33,13 +34,10 @@ import { isAgencyAdmin, requirePolicy, type Actor } from "@/lib/auth/policy";
  * query. A slug conflict throws `SlugConflictError`, which the
  * form renders inline.
  *
- * Authorization: `requirePolicy(isAgencyAdmin(actor, agencyId), "update_agency")`.
- * The platform admin is also an agency admin of every agency
- * they belong to; the platform-only "edit any agency" path goes
- * through the same gate (the platform admin must be a member
- * of the agency OR have an active `support_access_grant`).
- * Platform mutation routes that bypass the membership check
- * use the platform's own `requirePlatformAdmin` gate.
+ * Authorization: `updateAgency` requires agency-admin policy.
+ * `updateAgencyAsPlatform` is a separate global operation that requires the
+ * exact `platform.agency.update` permission and does not create or require
+ * tenant membership. Neither path grants access to tenant content.
  *
  * Audit: every successful update appends a row to
  * `security_audit_events` with `action = "agency.update"` and
@@ -137,6 +135,24 @@ export async function updateAgency(
   raw: UpdateAgencyInput,
 ): Promise<UpdateAgencyResult> {
   await requirePolicy(isAgencyAdmin(actor, agencyId), "update_agency");
+  return updateAgencyIdentity(actor, agencyId, raw, "agency");
+}
+
+export async function updateAgencyAsPlatform(
+  actor: Actor,
+  agencyId: string,
+  raw: UpdateAgencyInput,
+): Promise<UpdateAgencyResult> {
+  await requirePlatformPermission(actor, "platform.agency.update");
+  return updateAgencyIdentity(actor, agencyId, raw, "platform");
+}
+
+async function updateAgencyIdentity(
+  actor: Actor,
+  agencyId: string,
+  raw: UpdateAgencyInput,
+  authorityScope: "agency" | "platform",
+): Promise<UpdateAgencyResult> {
   const input = UpdateAgencySchema.parse(raw);
 
   return db.transaction(async (tx) => {
@@ -215,6 +231,7 @@ export async function updateAgency(
         targetId: agencyId,
         outcome: "success",
         metadata: {
+          authorityScope,
           changedFields,
           before: beforeSubset,
           after: afterSubset,

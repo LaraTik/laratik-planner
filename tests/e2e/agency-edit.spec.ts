@@ -26,18 +26,20 @@ test.describe("agency identity edit", () => {
     // Seed the admin (with isAgencyAdmin) and a member (no
     // agency_admin) on the same agency.
     await devSeed(page.request, {
-      email: adminEmail,
-      agencyAdmin: true,
-      platformAdmin: false,
-      agencySlug: "edit-target",
-      workspaceSlug: "edit-target-ws",
-    });
-    await devSeed(page.request, {
       email: memberEmail,
       agencyAdmin: false,
       platformAdmin: false,
       agencySlug: "edit-target-2",
       workspaceSlug: "edit-target-2-ws",
+    });
+    // Seed the actor last so the agency-context cookie belongs to the actor
+    // who signs in below, not the unrelated member fixture.
+    await devSeed(page.request, {
+      email: adminEmail,
+      agencyAdmin: true,
+      platformAdmin: false,
+      agencySlug: "edit-target",
+      workspaceSlug: "edit-target-ws",
     });
     await devSignIn(page.request, { email: adminEmail, role: "agency_admin" });
 
@@ -58,13 +60,20 @@ test.describe("agency identity edit", () => {
 
     // Switch to the non-admin and verify the page does not
     // render the editable form.
-    await devSignIn(page.request, { email: memberEmail, role: "user" });
     // The member is a member of a DIFFERENT agency (we seeded
     // two). The active agency context will pick the member's
     // own agency; the admin's agency is not in the cookie.
     // The /app/agency-settings path requires isAgencyAdmin,
     // so the member sees the Forbidden surface on their own
     // agency (since they're not an admin there either).
+    await devSeed(page.request, {
+      email: memberEmail,
+      agencyAdmin: false,
+      platformAdmin: false,
+      agencySlug: "edit-target-2",
+      workspaceSlug: "edit-target-2-ws",
+    });
+    await devSignIn(page.request, { email: memberEmail, role: "user" });
     await page.goto("/app/agency-settings");
     await expect(page.getByTestId("agency-settings-forbidden")).toBeVisible();
     await expect(page.getByTestId("agency-settings-edit-identity-form")).toHaveCount(0);
@@ -75,7 +84,7 @@ test.describe("agency identity edit", () => {
     await devSeed(page.request, {
       email: adminEmail,
       agencyAdmin: true,
-      platformAdmin: true,
+      platformRole: "platform_owner",
       agencySlug: "platform-target",
       workspaceSlug: "platform-target-ws",
     });

@@ -53,6 +53,34 @@ a local repro.
 - Dynamic visual values must be masked before baseline comparison.
 - Provider calls use a controlled account or explicit fake boundary; production secrets never appear in fixtures, reports, logs, or screenshots.
 
+## Platform role authorization contract
+
+Every new platform permission must be proven at three layers:
+
+1. **Unit matrix:** each of `platform_owner`, `agency_operator`,
+   `platform_auditor`, and `support_operator` has the exact documented
+   permission set; unknown/malformed/revoked assignments fail closed.
+2. **Service/integration:** direct command calls deny unauthorized roles,
+   successful mutations and their audit rows commit atomically, failed audit
+   writes roll back the mutation, and concurrent Owner downgrade/revoke cannot
+   remove the final active Owner.
+3. **Browser presentation:** unauthorized controls are absent, but the server
+   denial remains authoritative. Owner role management, Auditor read-only
+   access, Operator agency edit without tenant membership, Support Operator
+   request workflow, non-platform Forbidden behavior, and the legacy redirect
+   are required journeys.
+
+The Platform Access responsive contract covers 320×568, 390×844, 768×1024,
+1024×768, 1280×800, and 1440×900. Identity, role, and the permitted primary
+action must remain visible; action targets are at least 44px and the document
+must not horizontally overflow. This non-Stitch route stores diagnostic
+screenshots as test artifacts rather than adding them to the canonical Stitch
+baseline manifest.
+
+`platformAdmin: true` in the dev seed is a compatibility alias for
+`platform_owner`. Authorization tests use the explicit `platformRole` field so
+role intent is never ambiguous.
+
 ## Release thresholds
 
 - Zero required skipped tests.

@@ -68,7 +68,7 @@ test.describe("/app/platform overview — gate behavior", () => {
       email: adminEmail,
       agencyAdmin: false,
       workspaceRoles: [],
-      platformAdmin: true,
+      platformRole: "platform_owner",
     });
     await devSignIn(page.request, { email: adminEmail, role: "user" });
 

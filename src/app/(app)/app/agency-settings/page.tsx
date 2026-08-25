@@ -195,26 +195,26 @@ function Row({
   href?: string;
   testId?: string;
 }) {
-  const inner = (
+  return (
     <div
       className="border-border flex flex-wrap items-center justify-between gap-2 border-b pb-3 last:border-0 last:pb-0"
       data-testid={testId}
     >
       <dt className="text-body text-fg-secondary">{label}</dt>
-      <dd className="text-body text-fg-primary font-semibold break-all">{value}</dd>
+      <dd className="text-body text-fg-primary font-semibold break-all">
+        {href ? (
+          <Link
+            href={href}
+            className="text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+          >
+            {value}
+          </Link>
+        ) : (
+          value
+        )}
+      </dd>
     </div>
   );
-  if (href) {
-    return (
-      <Link
-        href={href}
-        className="text-primary focus-visible:ring-focus-ring block rounded-[var(--radius-control)] px-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
-      >
-        {inner}
-      </Link>
-    );
-  }
-  return inner;
 }
 
 function Service({

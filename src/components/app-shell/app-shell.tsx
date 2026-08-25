@@ -8,6 +8,7 @@ import { UserMenu } from "./user-menu";
 import { MobileContextHeader } from "./mobile-context-header";
 import type { AgencyRow } from "./agency-switcher";
 import type { BuildInfo } from "@/lib/build-info";
+import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
 
 /**
  * App shell — sidebar (left, persistent on desktop) + topbar (right
@@ -38,7 +39,7 @@ export function AppShell({
   canCreateWorkspace,
   notifications,
   unreadCount,
-  isPlatformAdmin,
+  platformAccess,
   supportGrants = [],
   children,
 }: {
@@ -66,7 +67,7 @@ export function AppShell({
     createdAt: string;
   }[];
   unreadCount: number;
-  isPlatformAdmin: boolean;
+  platformAccess: PlatformNavigationAccess;
   supportGrants?: Array<{
     id: string;
     targetAgencyId: string;
@@ -104,7 +105,7 @@ export function AppShell({
           workspaceSwitcherOptions={workspaces}
           agencySwitcher={agencySwitcher}
           canCreateWorkspace={canCreateWorkspace}
-          isPlatformAdmin={isPlatformAdmin}
+          platformAccess={platformAccess}
         />
       </aside>
 
@@ -128,7 +129,10 @@ export function AppShell({
             badgeTestId="unread-badge-mobile"
           />
           <UserMenu
-            user={{ ...user, isPlatformAdmin: isPlatformAdmin || user.isPlatformAdmin || false }}
+            user={{
+              ...user,
+              isPlatformAdmin: platformAccess.canEnter || user.isPlatformAdmin || false,
+            }}
             buildInfo={buildInfo}
             variant="mobile"
           />
@@ -139,7 +143,7 @@ export function AppShell({
       <main
         id="main-content"
         tabIndex={-1}
-        className="pb-[calc(5.25rem+env(safe-area-inset-bottom))] focus:outline-none md:ml-[72px] md:pb-0 xl:ml-[248px]"
+        className="min-w-0 overflow-x-clip pb-[calc(5.25rem+env(safe-area-inset-bottom))] focus:outline-none md:ml-[72px] md:pb-0 xl:ml-[248px]"
       >
         <div className="mx-auto w-full max-w-7xl px-4 py-5 md:px-6 md:py-6 xl:px-8 xl:py-8">
           <SupportSessionBanner grants={supportGrants} />
@@ -155,7 +159,7 @@ export function AppShell({
         workspaceCanCreateContent={workspaceCanCreateContent}
         agencySwitcher={agencySwitcher}
         canCreateWorkspace={canCreateWorkspace}
-        isPlatformAdmin={isPlatformAdmin}
+        platformAccess={platformAccess}
       />
     </div>
   );

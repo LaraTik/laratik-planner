@@ -52,6 +52,8 @@ const COMMON_LOCALES: { code: string; label: string }[] = [
   { code: "nl", label: "Nederlands" },
 ];
 
+const subscribeToHydration = () => () => undefined;
+
 export function EditAgencyForm({
   initialName,
   initialSlug,
@@ -65,6 +67,7 @@ export function EditAgencyForm({
   // its own action so the form reuses the same body without
   // needing two copies.
   formAction,
+  actionState,
   hiddenFields = {},
 }: {
   initialName: string;
@@ -73,17 +76,22 @@ export function EditAgencyForm({
   initialTimezone: string;
   testIdPrefix?: string;
   formAction?: (formData: FormData) => void | Promise<void>;
+  actionState?: EditAgencyActionState;
   hiddenFields?: Record<string, string>;
 }) {
-  const [state, defaultAction, pending] = useActionState(editAgencyAction, initial);
+  const [localState, defaultAction, pending] = useActionState(editAgencyAction, initial);
+  const state = actionState ?? localState;
   void pending; // pending is read by FormSubmitButton via useFormStatus
   const action = formAction ?? defaultAction;
-  // Keep the timezone datalist stable; the supported-values list
-  // is captured once per mount.
-  const timezones = React.useMemo(
-    () => (typeof Intl !== "undefined" ? Intl.supportedValuesOf("timeZone") : []),
-    [],
+  // Node and the browser can ship different ICU timezone lists. The server
+  // snapshot stays empty through hydration; React then reads the browser
+  // snapshot without an effect-driven state cascade.
+  const isHydrated = React.useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
   );
+  const timezones = isHydrated ? Intl.supportedValuesOf("timeZone") : [];
 
   return (
     <Card data-testid={`${testIdPrefix}-edit-identity-card`}>

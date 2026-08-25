@@ -15,7 +15,7 @@ import {
 } from "@/lib/db/schema";
 import { sendEmail } from "@/lib/email";
 import { OverrideShapeSchema } from "@/lib/entitlements";
-import { requirePlatformAdmin } from "@/lib/auth/platform-admin";
+import { requirePlatformPermission } from "@/lib/auth/platform-access";
 import type { Actor } from "@/lib/auth/policy";
 import { clientEnv, serverEnv } from "@/lib/validation/env";
 import { logError } from "@/lib/observability/logger";
@@ -41,7 +41,7 @@ export const CreateAgencySchema = z.object({
 export type CreateAgencyInput = z.infer<typeof CreateAgencySchema>;
 
 export async function createAgency(actor: Actor, raw: CreateAgencyInput) {
-  await requirePlatformAdmin(actor);
+  await requirePlatformPermission(actor, "platform.agency.create");
   const input = CreateAgencySchema.parse(raw);
   const rawToken = randomBytes(32).toString("base64url");
   const tokenHash = createHash("sha256").update(rawToken).digest("hex");
@@ -158,16 +158,31 @@ export async function createAgency(actor: Actor, raw: CreateAgencyInput) {
 
 export const AgencyLifecycleActionSchema = z.object({
   agencyId: z.string().uuid(),
-  action: z.enum(["suspend", "restore", "archive"]),
+  action: z.enum(["suspend", "restore", "archive", "unarchive"]),
   reason: z.string().trim().min(3).max(500),
 });
+
+export class AgencyLifecycleError extends Error {
+  constructor(
+    message: string,
+    public readonly code: "not-found" | "restore-archived",
+  ) {
+    super(message);
+    this.name = "AgencyLifecycleError";
+  }
+}
 
 export async function changeAgencyLifecycle(
   actor: Actor,
   raw: z.infer<typeof AgencyLifecycleActionSchema>,
 ) {
-  await requirePlatformAdmin(actor);
   const input = AgencyLifecycleActionSchema.parse(raw);
+  await requirePlatformPermission(
+    actor,
+    input.action === "archive" || input.action === "unarchive"
+      ? "platform.agency.archive"
+      : "platform.agency.lifecycle.manage",
+  );
   return db.transaction(async (tx) => {
     const [before] = await tx
       .select({ suspendedAt: agencies.suspendedAt, archivedAt: agencies.archivedAt })
@@ -175,14 +190,22 @@ export async function changeAgencyLifecycle(
       .where(eq(agencies.id, input.agencyId))
       .for("update")
       .limit(1);
-    if (!before) throw new Error("Agency not found");
+    if (!before) throw new AgencyLifecycleError("Agency not found", "not-found");
+    if (input.action === "restore" && before.archivedAt) {
+      throw new AgencyLifecycleError(
+        "Archived agencies must be unarchived by a Platform Owner before they can be restored.",
+        "restore-archived",
+      );
+    }
     const now = new Date();
     const update =
       input.action === "suspend"
         ? { suspendedAt: now }
         : input.action === "archive"
           ? { archivedAt: now, suspendedAt: now }
-          : { suspendedAt: null, archivedAt: null };
+          : input.action === "unarchive"
+            ? { archivedAt: null, suspendedAt: null }
+            : { suspendedAt: null };
     await tx
       .update(agencies)
       .set({ ...update, updatedAt: now })

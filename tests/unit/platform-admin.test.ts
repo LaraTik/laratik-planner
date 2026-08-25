@@ -49,6 +49,7 @@ vi.mock("@/lib/db", () => ({ db: dbMock }));
 
 const platformAdmin = await import("@/lib/auth/platform-admin");
 const policy = await import("@/lib/auth/policy");
+const { PLATFORM_ROLE_VALUES } = await import("@/lib/auth/platform-access-types");
 
 const actor = { id: "user-1" };
 
@@ -58,11 +59,13 @@ beforeEach(() => {
 });
 
 describe("isPlatformAdmin", () => {
-  it("returns true for a user in platform_administrator with revoked_at IS NULL", async () => {
-    // SELECT 1 FROM platform_administrator WHERE user_id = $1 AND revoked_at IS NULL LIMIT 1
-    dbMock.state.limitResults = [[{ x: 1 }]];
-    expect(await platformAdmin.isPlatformAdmin(actor)).toBe(true);
-  });
+  it.each(PLATFORM_ROLE_VALUES)(
+    "returns true for an active %s principal with console access",
+    async (role) => {
+      dbMock.state.limitResults = [[{ role }]];
+      expect(await platformAdmin.isPlatformAdmin(actor)).toBe(true);
+    },
+  );
 
   it("returns false for a user not in platform_administrator", async () => {
     dbMock.state.limitResults = [[]];
@@ -99,7 +102,7 @@ describe("requirePlatformAdmin", () => {
     );
   });
 
-  it("uses the action code 'platform-admin-required' on the thrown error", async () => {
+  it("uses the exact console permission in the thrown action code", async () => {
     dbMock.state.limitResults = [[]];
     try {
       await platformAdmin.requirePlatformAdmin(actor);
@@ -107,13 +110,13 @@ describe("requirePlatformAdmin", () => {
     } catch (err) {
       expect(err).toBeInstanceOf(policy.PermissionDeniedError);
       expect((err as InstanceType<typeof policy.PermissionDeniedError>).action).toBe(
-        "platform-admin-required",
+        "platform-permission:platform.console.read",
       );
     }
   });
 
   it("resolves silently when the actor is a live platform admin", async () => {
-    dbMock.state.limitResults = [[{ x: 1 }]];
+    dbMock.state.limitResults = [[{ role: "platform_owner" }]];
     await expect(platformAdmin.requirePlatformAdmin(actor)).resolves.toBeUndefined();
   });
 });

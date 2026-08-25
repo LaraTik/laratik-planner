@@ -13,6 +13,10 @@ import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { PlanAiSections } from "./plan-ai-sections";
 import { SupportAccessSection } from "./support-section";
 import { PlatformEditAgencyForm } from "./edit-agency-form";
+import { currentActor } from "@/lib/auth/current-actor";
+import { requirePlatformPermission } from "@/lib/auth/platform-access";
+import { PermissionNotice } from "@/components/platform/permission-notice";
+import { deriveAgencyDetailCapabilities } from "@/lib/auth/platform-agency-capabilities";
 
 /**
  * Platform · Agency detail — Stitch screen
@@ -105,9 +109,25 @@ export default async function PlatformAgencyDetailPage({
 }: {
   params: Promise<{ agencyId: string }>;
 }) {
+  const actor = await currentActor();
+  if (!actor) {
+    return <PermissionNotice title="Sign in required" description="Sign in to view this agency." />;
+  }
+  let principal;
+  try {
+    principal = await requirePlatformPermission(actor, "platform.agency.read");
+  } catch {
+    return (
+      <PermissionNotice
+        title="Agency access unavailable"
+        description="Your platform role does not include agency oversight."
+      />
+    );
+  }
   const { agencyId } = await params;
   const detail = await loadAgencyDetail(agencyId);
   if (!detail) notFound();
+  const capabilities = deriveAgencyDetailCapabilities(principal.permissions);
 
   return (
     <>
@@ -201,13 +221,20 @@ export default async function PlatformAgencyDetailPage({
       </nav>
 
       <div data-testid="platform-agency-identity-section" id="identity">
-        <PlatformEditAgencyForm
-          agencyId={detail.id}
-          initialName={detail.name}
-          initialSlug={detail.slug}
-          initialLocale={detail.locale}
-          initialTimezone={detail.timezone}
-        />
+        {capabilities.canUpdate ? (
+          <PlatformEditAgencyForm
+            agencyId={detail.id}
+            initialName={detail.name}
+            initialSlug={detail.slug}
+            initialLocale={detail.locale}
+            initialTimezone={detail.timezone}
+          />
+        ) : (
+          <PermissionNotice
+            title="Identity is read-only"
+            description="Your platform role can inspect this agency but cannot change its identity."
+          />
+        )}
       </div>
 
       <Card id="workspaces" padding="lg" className="space-y-4">
@@ -243,11 +270,24 @@ export default async function PlatformAgencyDetailPage({
         )}
       </Card>
 
-      <PlanAiSections agencyId={detail.id} />
+      <PlanAiSections
+        agencyId={detail.id}
+        agencyName={detail.name}
+        canManagePlan={capabilities.canManagePlan}
+        canManageLifecycle={capabilities.canManageLifecycle}
+        canArchive={capabilities.canArchive}
+      />
 
-      <div id="security">
-        <SupportAccessSection agencyId={detail.id} />
-      </div>
+      {capabilities.canRequestSupport || capabilities.canAuditSupport ? (
+        <div id="security">
+          <SupportAccessSection
+            agencyId={detail.id}
+            agencyName={detail.name}
+            workspaces={detail.recentWorkspaces.map(({ id, name }) => ({ id, name }))}
+            canRequestSupport={capabilities.canRequestSupport}
+          />
+        </div>
+      ) : null}
     </>
   );
 }

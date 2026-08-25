@@ -103,16 +103,16 @@ requests" lists. The `support_access_grant.revoked_at` +
 
 ### 2.2 Authority
 
-- **Platform admin authority** is required to file a request
-  (`createSupportAccessRequest` calls `requirePlatformAdmin`).
-  Platform admin authority is _not_ a back door to tenant
+- **Support-request platform authority** is required to file a request
+  (`createSupportAccessRequest` requires `platform.support.request`).
+  Platform authority is _not_ a back door to tenant
   content; the request must be approved by an agency admin.
 - **Agency admin authority** is required to decide a request.
   The service calls `isAgencyAdmin(actor, targetAgencyId)`.
   A cross-agency attempt is rejected.
-- **Either side** can revoke: the platform admin who asked,
-  the agency admin who approved, or any platform admin
-  (incident response).
+- **Either party can revoke:** the platform actor who asked or the Agency Admin
+  who approved. A different platform actor needs Owner-only
+  `platform.access.manage` for incident response.
 
 ### 2.3 The gate
 

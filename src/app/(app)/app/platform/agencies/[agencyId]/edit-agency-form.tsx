@@ -10,7 +10,7 @@ const initial: PlatformEditAgencyActionState = {};
  * Platform-scoped wrapper around the shared EditAgencyForm
  * (M3.4 — agency CRUD). The wrapper:
  *   - Calls the platform-specific server action, which
- *     enforces `requirePlatformAdmin` at the boundary
+ *     enforces exact `platform.agency.update` authority at the service boundary
  *   - Carries the `agencyId` as a hidden field so the action
  *     does not need to read it from the URL
  *   - Prepends a "platform" prefix to the data-testids so the
@@ -34,7 +34,7 @@ export function PlatformEditAgencyForm({
   // action. EditAgencyForm expects a (formData) => Promise<void>
   // action. We bridge with a thin wrapper that drops the
   // prev-state argument.
-  const [, dispatchWithPrev] = useActionState(platformEditAgencyAction, initial);
+  const [state, dispatchWithPrev] = useActionState(platformEditAgencyAction, initial);
   const formAction = (formData: FormData) => {
     void dispatchWithPrev(formData);
   };
@@ -46,6 +46,7 @@ export function PlatformEditAgencyForm({
       initialTimezone={initialTimezone}
       testIdPrefix="platform-agency"
       formAction={formAction}
+      actionState={state}
       hiddenFields={{ agencyId }}
     />
   );

@@ -6,6 +6,9 @@ import { agencyMemberships, agencies, aiUsageEvents, workspaces } from "@/lib/db
 import { PageHeader } from "@/components/workspace/page-header";
 import { KpiTile } from "@/components/workspace/kpi-tile";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { currentActor } from "@/lib/auth/current-actor";
+import { requirePlatformPermission } from "@/lib/auth/platform-access";
+import { PermissionNotice } from "@/components/platform/permission-notice";
 
 /**
  * Platform overview (Milestone 1.8) — Stitch screen `46cf5746bbd14e67aac6565fc53530f8`.
@@ -25,13 +28,13 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
  *
  * Each value falls back to 0 when the table is empty so the page is
  * never blank in a fresh environment. The layout above this page
- * already enforces the platform-admin gate, so the page itself does
- * not re-check authority.
+ * enforces console entry; this page re-checks exact agency-read authority
+ * before loading data.
  */
 export const metadata = { title: "Platform overview" };
 
-// The page is gated by the (app)/app/platform layout which calls
-// `auth()` and `requirePlatformAdmin()` before rendering. Both are
+// The page is gated by the platform layout's console-entry check and then by
+// its own exact `platform.agency.read` check. Both are
 // runtime-only — there is no meaningful static prerender — so we
 // mark the route force-dynamic to prevent Next.js from invoking the
 // data loaders during `next build` against a possibly-unreachable
@@ -84,6 +87,22 @@ async function loadRecentAgencies(limit = 5) {
 }
 
 export default async function PlatformOverviewPage() {
+  const actor = await currentActor();
+  if (!actor) {
+    return (
+      <PermissionNotice title="Sign in required" description="Sign in to view platform health." />
+    );
+  }
+  try {
+    await requirePlatformPermission(actor, "platform.agency.read");
+  } catch {
+    return (
+      <PermissionNotice
+        title="Platform overview unavailable"
+        description="Your platform role does not include agency oversight."
+      />
+    );
+  }
   const [kpis, recent] = await Promise.all([loadOverviewKpis(), loadRecentAgencies(5)]);
 
   return (

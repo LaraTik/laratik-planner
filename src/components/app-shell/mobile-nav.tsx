@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 import { AgencySwitcher, type AgencyRow } from "./agency-switcher";
+import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
 
 type Workspace = { id: string; name: string; slug: string };
 
@@ -49,7 +50,7 @@ type MobileNavProps = {
   workspaceCanCreateContent: Record<string, boolean>;
   agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   canCreateWorkspace: boolean;
-  isPlatformAdmin: boolean;
+  platformAccess: PlatformNavigationAccess;
 };
 
 /**
@@ -64,7 +65,7 @@ export function MobileNav({
   workspaceCanCreateContent,
   agencySwitcher,
   canCreateWorkspace,
-  isPlatformAdmin,
+  platformAccess,
 }: MobileNavProps) {
   const pathname = usePathname();
   const slug = pathname.match(/^\/app\/w\/([^/]+)/)?.[1];
@@ -153,7 +154,7 @@ export function MobileNav({
               <AgencySwitcher
                 active={agencySwitcher.active}
                 options={agencySwitcher.options}
-                isPlatformAdmin={isPlatformAdmin}
+                isPlatformAdmin={platformAccess.canEnter}
                 testId="mobile-agency-switcher-trigger"
               />
               <WorkspaceSwitcher
@@ -215,24 +216,34 @@ export function MobileNav({
               </MenuSection>
             ) : null}
 
-            {isPlatformAdmin && !currentWorkspace ? (
+            {platformAccess.canEnter && !currentWorkspace ? (
               <MenuSection label="Platform">
                 <MobileMenuLink
                   href="/app/platform/overview"
                   icon={<LayoutDashboard />}
                   label="Platform overview"
                 />
-                <MobileMenuLink href="/app/platform/agencies" icon={<Shield />} label="Agencies" />
-                <MobileMenuLink
-                  href="/app/platform/security"
-                  icon={<Lock />}
-                  label="Security and support"
-                />
-                <MobileMenuLink
-                  href="/app/platform/admins"
-                  icon={<ShieldCheck />}
-                  label="Platform admins"
-                />
+                {platformAccess.canReadAgencies ? (
+                  <MobileMenuLink
+                    href="/app/platform/agencies"
+                    icon={<Shield />}
+                    label="Agencies"
+                  />
+                ) : null}
+                {platformAccess.canReadSecurity ? (
+                  <MobileMenuLink
+                    href="/app/platform/security"
+                    icon={<Lock />}
+                    label="Security and support"
+                  />
+                ) : null}
+                {platformAccess.canReadAccess ? (
+                  <MobileMenuLink
+                    href="/app/platform/access"
+                    icon={<ShieldCheck />}
+                    label="Platform access"
+                  />
+                ) : null}
               </MenuSection>
             ) : null}
 

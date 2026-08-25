@@ -45,7 +45,19 @@ const baseProps = {
     options: [{ id: "agency-1", name: "Creative Agency", slug: "creative", isAdmin: true }],
   },
   canCreateWorkspace: true,
-  isPlatformAdmin: false,
+  platformAccess: {
+    canEnter: false,
+    canReadAgencies: false,
+    canReadSecurity: false,
+    canReadAccess: false,
+  },
+};
+
+const ownerAccess = {
+  canEnter: true,
+  canReadAgencies: true,
+  canReadSecurity: true,
+  canReadAccess: true,
 };
 
 describe("MobileNav", () => {
@@ -136,4 +148,27 @@ describe("MobileNav", () => {
     );
     expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
   });
+
+  it.each([
+    ["Owner", ownerAccess, true, true],
+    [
+      "Agency Operator",
+      { ...ownerAccess, canReadSecurity: false, canReadAccess: false },
+      false,
+      false,
+    ],
+    ["Auditor", ownerAccess, true, true],
+    ["Support", { ...ownerAccess, canReadAccess: false }, true, false],
+  ])(
+    "renders the %s platform destinations in More",
+    async (_label, access, security, accessPage) => {
+      usePathnameMock.mockReturnValue("/app/platform/overview");
+      const user = userEvent.setup();
+      render(<MobileNav {...baseProps} platformAccess={access as typeof ownerAccess} />);
+      await user.click(screen.getByTestId("mobile-navigation-more"));
+      expect(screen.getByRole("link", { name: /^Agencies$/i })).toBeInTheDocument();
+      expect(!!screen.queryByRole("link", { name: /Security and support/i })).toBe(security);
+      expect(!!screen.queryByRole("link", { name: /Platform access/i })).toBe(accessPage);
+    },
+  );
 });

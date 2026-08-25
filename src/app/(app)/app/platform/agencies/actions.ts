@@ -3,8 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { currentActor } from "@/lib/auth/current-actor";
-import { requirePlatformAdmin } from "@/lib/auth/platform-admin";
-import { changeAgencyPlan, OverrideShapeSchema } from "@/lib/entitlements";
+import { changeAgencyPlanAsPlatform, OverrideShapeSchema } from "@/lib/entitlements";
 import {
   AgencyLifecycleActionSchema,
   changeAgencyLifecycle,
@@ -116,7 +115,6 @@ export async function createAgencyAction(
 export async function changeLifecycleAction(formData: FormData): Promise<void> {
   const actor = await currentActor();
   if (!actor) throw new Error("Sign in is required");
-  await requirePlatformAdmin(actor);
   const input = AgencyLifecycleActionSchema.parse({
     agencyId: formData.get("agencyId"),
     action: formData.get("action"),
@@ -130,14 +128,12 @@ export async function changeLifecycleAction(formData: FormData): Promise<void> {
 export async function changePlanAction(formData: FormData): Promise<void> {
   const actor = await currentActor();
   if (!actor) throw new Error("Sign in is required");
-  await requirePlatformAdmin(actor);
   const agencyId = z.string().uuid().parse(formData.get("agencyId"));
-  await changeAgencyPlan({
+  await changeAgencyPlanAsPlatform(actor, {
     agencyId,
     planTemplateId: z.string().uuid().parse(formData.get("planTemplateId")),
     overrides: overridesFromForm(formData),
     reason: z.string().trim().min(3).max(500).parse(formData.get("reason")),
-    actorUserId: actor.id,
   });
   revalidatePath(`/app/platform/agencies/${agencyId}`);
   revalidatePath("/app/agency-settings/plan");

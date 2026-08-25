@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { currentActor } from "@/lib/auth/current-actor";
-import { isPlatformAdmin } from "@/lib/auth/platform-admin";
 import { PageHeader } from "@/components/workspace/page-header";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
@@ -8,6 +7,7 @@ import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { loadPlatformSecurityOverview } from "./actions";
+import { PermissionNotice } from "@/components/platform/permission-notice";
 
 /**
  * M3.4 — Platform · Security & support access.
@@ -72,17 +72,17 @@ export default async function PlatformSecurityPage() {
       </div>
     );
   }
-  const isPlatform = await isPlatformAdmin(actor);
-  if (!isPlatform) {
+  let overview;
+  try {
+    overview = await loadPlatformSecurityOverview(actor);
+  } catch {
     return (
-      <div className="p-8" data-testid="platform-security-forbidden">
-        <p className="text-body text-fg-muted">
-          You need platform administrator access to view this page.
-        </p>
-      </div>
+      <PermissionNotice
+        title="Security view unavailable"
+        description="Your platform role does not include audit oversight or support access."
+      />
     );
   }
-  const overview = await loadPlatformSecurityOverview(actor);
 
   const grantColumns: DataTableColumnDef<GrantRow>[] = [
     {
@@ -149,34 +149,37 @@ export default async function PlatformSecurityPage() {
         description="Ticketed, approved, time-limited access to tenant content. Every view through an active grant is audited."
       />
 
-      <Card>
-        <CardTitle>My active grants</CardTitle>
-        <CardDescription>
-          The time-bound grants you currently hold. A grant unlocks tenant content for the listed
-          scope; the audit log records every view.
-        </CardDescription>
-        <div className="mt-4">
-          {overview.activeGrants.length === 0 ? (
-            <EmptyState
-              title="No active grants"
-              description="File a support access request from the agency detail page to get started."
-              data-testid="platform-security-no-active-grants"
-            />
-          ) : (
-            <DataTable
-              columns={grantColumns}
-              rows={overview.activeGrants as GrantRow[]}
-              getRowKey={(row) => row.id}
-            />
-          )}
-        </div>
-      </Card>
+      {overview.canRequestSupport ? (
+        <Card>
+          <CardTitle>My active grants</CardTitle>
+          <CardDescription>
+            The time-bound grants you currently hold. A grant unlocks tenant content for the listed
+            scope; the audit log records every view.
+          </CardDescription>
+          <div className="mt-4">
+            {overview.activeGrants.length === 0 ? (
+              <EmptyState
+                title="No active grants"
+                description="File a support access request from the agency detail page to get started."
+                data-testid="platform-security-no-active-grants"
+              />
+            ) : (
+              <DataTable
+                columns={grantColumns}
+                rows={overview.activeGrants as GrantRow[]}
+                getRowKey={(row) => row.id}
+              />
+            )}
+          </div>
+        </Card>
+      ) : null}
 
       <Card>
-        <CardTitle>My recent views</CardTitle>
+        <CardTitle>{overview.canAudit ? "Recent support activity" : "My recent views"}</CardTitle>
         <CardDescription>
-          The last 50 audit rows where you are the viewer. Only action + target type + outcome are
-          shown — never tenant content.
+          {overview.canAudit
+            ? "The latest platform-wide support audit summaries. Tenant content is never included."
+            : "The last 50 audit rows where you are the viewer. Only action, target type, and outcome are shown."}
         </CardDescription>
         <div className="mt-4">
           {overview.recentAudit.length === 0 ? (
@@ -195,62 +198,64 @@ export default async function PlatformSecurityPage() {
         </div>
       </Card>
 
-      <Card>
-        <CardTitle>Open requests</CardTitle>
-        <CardDescription>
-          Pending support access requests across every agency. Agency admins decide from the agency
-          detail page.
-        </CardDescription>
-        <div className="mt-4 space-y-3">
-          {overview.requestsByAgency.length === 0 ? (
-            <EmptyState
-              title="No open requests"
-              description="No agency has a pending support access request right now."
-              data-testid="platform-security-no-requests"
-            />
-          ) : (
-            overview.requestsByAgency.map((row) => (
-              <div
-                key={row.agency.id}
-                className="border-border rounded-[var(--radius-control)] border p-3"
-                data-testid={`platform-security-agency-${row.agency.slug}`}
-              >
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <Link
-                    href={`/app/platform/agencies/${row.agency.id}`}
-                    className="text-body text-fg-primary font-semibold"
-                  >
-                    {row.agency.name}
-                  </Link>
-                  <Button asChild variant="ghost" size="sm">
-                    <Link href={`/app/platform/agencies/${row.agency.id}`}>Open agency</Link>
-                  </Button>
-                </div>
-                <ul className="space-y-2">
-                  {(row.requests as RequestRow[]).map((req) => (
-                    <li
-                      key={req.id}
-                      className="border-border flex flex-col gap-1 rounded-[var(--radius-control)] border p-2 text-sm"
-                      data-testid={`platform-security-request-${req.id}`}
+      {overview.canRequestSupport ? (
+        <Card>
+          <CardTitle>Open requests</CardTitle>
+          <CardDescription>
+            Pending support access requests across every agency. Agency admins decide from the
+            agency detail page.
+          </CardDescription>
+          <div className="mt-4 space-y-3">
+            {overview.requestsByAgency.length === 0 ? (
+              <EmptyState
+                title="No open requests"
+                description="No agency has a pending support access request right now."
+                data-testid="platform-security-no-requests"
+              />
+            ) : (
+              overview.requestsByAgency.map((row) => (
+                <div
+                  key={row.agency.id}
+                  className="border-border rounded-[var(--radius-control)] border p-3"
+                  data-testid={`platform-security-agency-${row.agency.slug}`}
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <Link
+                      href={`/app/platform/agencies/${row.agency.id}`}
+                      className="text-body text-fg-primary font-semibold"
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-body text-fg-primary font-mono">
-                          {req.ticketReference}
-                        </span>
-                        <span className="text-label text-fg-muted">
-                          {req.status} · {req.requestedDurationHours}h ·{" "}
-                          {formatRelativeDate(req.createdAt)}
-                        </span>
-                      </div>
-                      <p className="text-body text-fg-muted line-clamp-2">{req.reason}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))
-          )}
-        </div>
-      </Card>
+                      {row.agency.name}
+                    </Link>
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href={`/app/platform/agencies/${row.agency.id}`}>Open agency</Link>
+                    </Button>
+                  </div>
+                  <ul className="space-y-2">
+                    {(row.requests as RequestRow[]).map((req) => (
+                      <li
+                        key={req.id}
+                        className="border-border flex flex-col gap-1 rounded-[var(--radius-control)] border p-2 text-sm"
+                        data-testid={`platform-security-request-${req.id}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-body text-fg-primary font-mono">
+                            {req.ticketReference}
+                          </span>
+                          <span className="text-label text-fg-muted">
+                            {req.status} · {req.requestedDurationHours}h ·{" "}
+                            {formatRelativeDate(req.createdAt)}
+                          </span>
+                        </div>
+                        <p className="text-body text-fg-muted line-clamp-2">{req.reason}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+      ) : null}
     </div>
   );
 }

@@ -22,6 +22,8 @@ import {
   encodeAgencyContext,
 } from "@/lib/auth/agency-context";
 import { serverEnv } from "@/lib/validation/env";
+import { PLATFORM_ROLE_VALUES, type PlatformRole } from "@/lib/auth/platform-access-types";
+import { z } from "zod";
 
 /**
  * POST /api/dev/seed
@@ -87,7 +89,11 @@ type SeedBody = {
    * working unchanged.
    */
   platformAdmin?: boolean;
+  /** Explicit role for platform authorization tests. Takes precedence over the legacy alias. */
+  platformRole?: PlatformRole;
 };
+
+const PlatformRoleSchema = z.enum(PLATFORM_ROLE_VALUES);
 
 const FIXTURES = {
   email: "test@laratik.local",
@@ -113,6 +119,11 @@ export async function POST(req: NextRequest) {
   }
 
   const body = (await req.json().catch(() => ({}))) as SeedBody;
+  const explicitPlatformRole =
+    body.platformRole === undefined ? null : PlatformRoleSchema.safeParse(body.platformRole);
+  if (explicitPlatformRole && !explicitPlatformRole.success) {
+    return NextResponse.json({ error: "Invalid platformRole" }, { status: 400 });
+  }
   const f = {
     email: (body.email ?? FIXTURES.email).trim().toLowerCase(),
     name: (body.name ?? FIXTURES.name).trim(),
@@ -124,6 +135,8 @@ export async function POST(req: NextRequest) {
     agencyAdmin: body.agencyAdmin ?? true,
     workspaceRoles: body.workspaceRoles ?? [],
     platformAdmin: body.platformAdmin ?? false,
+    platformRole:
+      explicitPlatformRole?.data ?? (body.platformAdmin ? ("platform_owner" as const) : null),
   };
 
   try {
@@ -156,6 +169,7 @@ async function seedInternal(f: {
     | "viewer"
   )[];
   platformAdmin: boolean;
+  platformRole: PlatformRole | null;
 }) {
   // ─── User ────────────────────────────────────────────────────────────────
   let userId: string;
@@ -251,13 +265,18 @@ async function seedInternal(f: {
   // upsert a live grant (`revoked_at` null) when the fixture says so
   // and revoke any prior grant when it does not. The seed is the
   // only place tests can flip platform-admin state.
-  if (f.platformAdmin) {
+  if (f.platformRole) {
     await db
       .insert(platformAdministrators)
-      .values({ userId, grantedBy: userId })
+      .values({ userId, role: f.platformRole, grantedBy: userId })
       .onConflictDoUpdate({
         target: platformAdministrators.userId,
-        set: { revokedAt: null, grantedBy: userId },
+        set: {
+          role: f.platformRole,
+          revokedAt: null,
+          grantedBy: userId,
+          updatedAt: new Date(),
+        },
       });
   } else {
     await db
@@ -425,7 +444,8 @@ async function seedInternal(f: {
     workspaceSlug: f.workspaceSlug,
     channelIds,
     contentItemId,
-    platformAdmin: f.platformAdmin,
+    platformAdmin: f.platformRole !== null,
+    platformRole: f.platformRole,
     fixtures: f,
   });
   response.cookies.set({

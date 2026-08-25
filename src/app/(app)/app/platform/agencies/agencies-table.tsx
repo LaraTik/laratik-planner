@@ -33,8 +33,15 @@ export type PlatformAgencyRow = {
  * server, and never persists across navigations. The server already
  * shipped the full row set.
  */
-export function AgenciesTable({ rows }: { rows: readonly PlatformAgencyRow[] }) {
+export function AgenciesTable({
+  rows,
+  relativeNow,
+}: {
+  rows: readonly PlatformAgencyRow[];
+  relativeNow: string;
+}) {
   const [query, setQuery] = React.useState("");
+  const columns = React.useMemo(() => createColumns(new Date(relativeNow)), [relativeNow]);
 
   // Wire up to the page-level search input (rendered above the table
   // by the server component). The input is server-rendered; this
@@ -86,75 +93,77 @@ export function AgenciesTable({ rows }: { rows: readonly PlatformAgencyRow[] }) 
   );
 }
 
-const columns: DataTableColumnDef<PlatformAgencyRow>[] = [
-  {
-    key: "name",
-    header: "Agency",
-    headerClassName: "w-1/3",
-    cell: (r) => (
-      <div className="flex items-center gap-3">
-        <span
-          className="bg-primary-subtle text-primary inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)]"
-          aria-hidden="true"
-        >
-          <Building2 className="h-4 w-4" />
-        </span>
-        <div className="min-w-0">
-          <Link
-            href={`/app/platform/agencies/${r.id}`}
-            className="text-body text-fg-primary hover:text-primary block truncate font-semibold"
+function createColumns(relativeNow: Date): DataTableColumnDef<PlatformAgencyRow>[] {
+  return [
+    {
+      key: "name",
+      header: "Agency",
+      headerClassName: "w-1/3",
+      cell: (r) => (
+        <div className="flex items-center gap-3">
+          <span
+            className="bg-primary-subtle text-primary inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)]"
+            aria-hidden="true"
           >
-            {r.name}
-          </Link>
-          <p className="text-label text-fg-muted truncate">{r.slug}</p>
+            <Building2 className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <Link
+              href={`/app/platform/agencies/${r.id}`}
+              className="text-body text-fg-primary hover:text-primary block truncate font-semibold"
+            >
+              {r.name}
+            </Link>
+            <p className="text-label text-fg-muted truncate">{r.slug}</p>
+          </div>
         </div>
-      </div>
-    ),
-  },
-  {
-    key: "members",
-    header: "Members",
-    cell: (r) => (
-      <span className="text-body text-fg-primary font-medium">
-        {r.memberCount} {r.memberCount === 1 ? "member" : "members"}
-      </span>
-    ),
-  },
-  {
-    key: "workspaces",
-    header: "Workspaces",
-    cell: (r) => (
-      <span className="text-body text-fg-primary font-medium">
-        {r.workspaceCount} {r.workspaceCount === 1 ? "workspace" : "workspaces"}
-      </span>
-    ),
-  },
-  {
-    key: "plan",
-    header: "Plan / status",
-    cell: (r) => (
-      <span className="text-body text-fg-primary">
-        {r.planName} · {r.lifecycle}
-      </span>
-    ),
-  },
-  {
-    key: "created",
-    header: "Created",
-    cell: (r) => formatRelativeDate(r.createdAt),
-  },
-  {
-    key: "actions",
-    header: "",
-    headerClassName: "w-12",
-    cellClassName: "text-right",
-    cell: (r) => (
-      <Link
-        href={`/app/platform/agencies/${r.id}#identity`}
-        className="text-primary focus-visible:ring-focus-ring text-body inline-block rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
-      >
-        Open
-      </Link>
-    ),
-  },
-];
+      ),
+    },
+    {
+      key: "members",
+      header: "Members",
+      cell: (r) => (
+        <span className="text-body text-fg-primary font-medium">
+          {r.memberCount} {r.memberCount === 1 ? "member" : "members"}
+        </span>
+      ),
+    },
+    {
+      key: "workspaces",
+      header: "Workspaces",
+      cell: (r) => (
+        <span className="text-body text-fg-primary font-medium">
+          {r.workspaceCount} {r.workspaceCount === 1 ? "workspace" : "workspaces"}
+        </span>
+      ),
+    },
+    {
+      key: "plan",
+      header: "Plan / status",
+      cell: (r) => (
+        <span className="text-body text-fg-primary">
+          {r.planName} · {r.lifecycle}
+        </span>
+      ),
+    },
+    {
+      key: "created",
+      header: "Created",
+      cell: (r) => formatRelativeDate(r.createdAt, relativeNow),
+    },
+    {
+      key: "actions",
+      header: "",
+      headerClassName: "w-12",
+      cellClassName: "text-right",
+      cell: (r) => (
+        <Link
+          href={`/app/platform/agencies/${r.id}#identity`}
+          className="text-primary focus-visible:ring-focus-ring text-body inline-block rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
+        >
+          Open
+        </Link>
+      ),
+    },
+  ];
+}

@@ -14,6 +14,9 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { AgenciesTable, type PlatformAgencyRow } from "./agencies-table";
 import { AddAgencyDrawer } from "./add-agency-drawer";
+import { currentActor } from "@/lib/auth/current-actor";
+import { requirePlatformPermission } from "@/lib/auth/platform-access";
+import { PermissionNotice } from "@/components/platform/permission-notice";
 
 /**
  * Platform agencies list (Milestone 1.8) — Stitch screen `973d8624f25441de8abecd6e16e5e403`.
@@ -36,7 +39,8 @@ import { AddAgencyDrawer } from "./add-agency-drawer";
 export const metadata = { title: "Platform · Agencies" };
 
 // See /app/platform/overview for the rationale. The page is gated
-// by the (app)/app/platform layout (auth + requirePlatformAdmin) and
+// by the platform layout's console-entry permission and this page's exact
+// `platform.agency.read` check. It
 // queries the agencies table — neither has a meaningful static
 // representation, so we force-dynamic.
 export const dynamic = "force-dynamic";
@@ -97,6 +101,22 @@ async function loadTotalAgencyCount(): Promise<number> {
 }
 
 export default async function PlatformAgenciesPage() {
+  const actor = await currentActor();
+  if (!actor) {
+    return <PermissionNotice title="Sign in required" description="Sign in to view agencies." />;
+  }
+  let principal;
+  try {
+    principal = await requirePlatformPermission(actor, "platform.agency.read");
+  } catch {
+    return (
+      <PermissionNotice
+        title="Agency access unavailable"
+        description="Your platform role does not include agency oversight."
+      />
+    );
+  }
+  const canCreateAgency = principal.permissions.has("platform.agency.create");
   const [rows, total, plans] = await Promise.all([
     loadAgencies(),
     loadTotalAgencyCount(),
@@ -115,8 +135,15 @@ export default async function PlatformAgenciesPage() {
         eyebrow="Platform"
         title="Agencies"
         description="Every agency on the platform. Use search to narrow by name or slug."
-        action={<AddAgencyDrawer plans={plans} />}
+        action={canCreateAgency ? <AddAgencyDrawer plans={plans} /> : undefined}
       />
+
+      {!canCreateAgency ? (
+        <PermissionNotice
+          title="Read-only agency access"
+          description="You can inspect agencies, but your platform role cannot create them."
+        />
+      ) : null}
 
       {rows.length === 0 ? (
         <Card padding="none">
@@ -149,7 +176,7 @@ export default async function PlatformAgenciesPage() {
               />
             </div>
           </div>
-          <AgenciesTable rows={rows} />
+          <AgenciesTable rows={rows} relativeNow={new Date().toISOString()} />
         </Card>
       )}
 

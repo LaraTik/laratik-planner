@@ -109,8 +109,19 @@ vi.mock("@/lib/auth/policy", async () => {
   };
 });
 
-const { updateAgency, UpdateAgencySchema, AgencyUpdateError, AGENCY_UPDATE_ERROR_CODES } =
-  await import("@/lib/agencies/command");
+const platformAccessMock = vi.hoisted(() => ({ requirePermission: vi.fn() }));
+
+vi.mock("@/lib/auth/platform-access", () => ({
+  requirePlatformPermission: platformAccessMock.requirePermission,
+}));
+
+const {
+  updateAgency,
+  updateAgencyAsPlatform,
+  UpdateAgencySchema,
+  AgencyUpdateError,
+  AGENCY_UPDATE_ERROR_CODES,
+} = await import("@/lib/agencies/command");
 
 const AGENCY_ID = "00000000-0000-4000-8000-00000000a201";
 const ACTOR_ID = "00000000-0000-4000-8000-00000000a202";
@@ -127,6 +138,8 @@ beforeEach(() => {
   dbMock.update.mockClear();
   dbMock.transaction.mockClear();
   policyOverrides.isAgencyAdminResult = true;
+  platformAccessMock.requirePermission.mockReset();
+  platformAccessMock.requirePermission.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -323,6 +336,7 @@ describe("updateAgency", () => {
           changedFields: string[];
           before: Record<string, unknown>;
           after: Record<string, unknown>;
+          authorityScope: string;
         };
       }
     ).metadata;
@@ -334,6 +348,7 @@ describe("updateAgency", () => {
       name: "LaraTik Studio",
       slug: "laratik-studio",
     });
+    expect(metadata.authorityScope).toBe("agency");
   });
 
   it("does not write a security audit row when nothing changed", async () => {
@@ -356,5 +371,31 @@ describe("updateAgency", () => {
     // No audit row when nothing changed (a rename with no
     // effective delta is a no-op audit-wise).
     expect(dbMock.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateAgencyAsPlatform", () => {
+  it("updates an agency without tenant membership and records platform authority", async () => {
+    policyOverrides.isAgencyAdminResult = false;
+    dbMock.state.selectResults.push([
+      { id: AGENCY_ID, name: "Old", slug: "laratik", locale: "en", timezone: "UTC" },
+    ]);
+
+    const result = await updateAgencyAsPlatform(actor, AGENCY_ID, {
+      name: "New platform name",
+      slug: "laratik",
+      locale: "en",
+      timezone: "UTC",
+    });
+
+    expect(platformAccessMock.requirePermission).toHaveBeenCalledWith(
+      actor,
+      "platform.agency.update",
+    );
+    expect(result.changedFields).toEqual(["name"]);
+    expect(dbMock.state.insertCalls).toHaveLength(1);
+    expect(dbMock.state.insertCalls[0]?.values).toMatchObject({
+      metadata: { authorityScope: "platform" },
+    });
   });
 });

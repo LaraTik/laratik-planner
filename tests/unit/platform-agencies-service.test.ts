@@ -32,8 +32,8 @@ describe("M2 platform agency service", () => {
     ).toThrow();
   });
 
-  it("supports suspend, restore, and recoverable archive actions", () => {
-    for (const action of ["suspend", "restore", "archive"] as const) {
+  it("keeps suspension and archive recovery as distinct actions", () => {
+    for (const action of ["suspend", "restore", "archive", "unarchive"] as const) {
       expect(
         AgencyLifecycleActionSchema.parse({
           agencyId: "00000000-0000-0000-0000-000000000001",
@@ -42,6 +42,24 @@ describe("M2 platform agency service", () => {
         }).action,
       ).toBe(action);
     }
+  });
+
+  it("enforces exact service permissions and never restores an archive indirectly", () => {
+    const source = readFileSync(resolve(__dirname, "../../src/lib/platform/agencies.ts"), "utf8");
+    expect(source).toContain('requirePlatformPermission(actor, "platform.agency.create")');
+    expect(source).toContain('"platform.agency.lifecycle.manage"');
+    expect(source).toContain('"platform.agency.archive"');
+    expect(source).toContain('input.action === "unarchive"');
+    expect(source).not.toContain("{ suspendedAt: null, archivedAt: null };");
+  });
+
+  it("puts plan authorization inside the service wrapper", () => {
+    const source = readFileSync(
+      resolve(__dirname, "../../src/lib/entitlements/change-agency-plan.ts"),
+      "utf8",
+    );
+    expect(source).toContain("changeAgencyPlanAsPlatform");
+    expect(source).toContain('requirePlatformPermission(actor, "platform.agency.plan.manage")');
   });
 
   it("keeps agency, entitlement, admin invitation, counters, and audit in one transaction", () => {
