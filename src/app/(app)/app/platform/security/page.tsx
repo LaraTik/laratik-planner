@@ -152,25 +152,25 @@ export default async function PlatformSecurityPage() {
       {overview.canRequestSupport ? (
         <Card>
           <CardTitle>My active grants</CardTitle>
-        <CardDescription>
-          The time-bound grants you currently hold. A grant unlocks tenant content for the listed
-          scope; the audit log records every view.
-        </CardDescription>
-        <div className="mt-4">
-          {overview.activeGrants.length === 0 ? (
-            <EmptyState
-              title="No active grants"
-              description="File a support access request from the agency detail page to get started."
-              data-testid="platform-security-no-active-grants"
-            />
-          ) : (
-            <DataTable
-              columns={grantColumns}
-              rows={overview.activeGrants as GrantRow[]}
-              getRowKey={(row) => row.id}
-            />
-          )}
-        </div>
+          <CardDescription>
+            The time-bound grants you currently hold. A grant unlocks tenant content for the listed
+            scope; the audit log records every view.
+          </CardDescription>
+          <div className="mt-4">
+            {overview.activeGrants.length === 0 ? (
+              <EmptyState
+                title="No active grants"
+                description="File a support access request from the agency detail page to get started."
+                data-testid="platform-security-no-active-grants"
+              />
+            ) : (
+              <DataTable
+                columns={grantColumns}
+                rows={overview.activeGrants as GrantRow[]}
+                getRowKey={(row) => row.id}
+              />
+            )}
+          </div>
         </Card>
       ) : null}
 
@@ -201,59 +201,59 @@ export default async function PlatformSecurityPage() {
       {overview.canRequestSupport ? (
         <Card>
           <CardTitle>Open requests</CardTitle>
-        <CardDescription>
-          Pending support access requests across every agency. Agency admins decide from the agency
-          detail page.
-        </CardDescription>
-        <div className="mt-4 space-y-3">
-          {overview.requestsByAgency.length === 0 ? (
-            <EmptyState
-              title="No open requests"
-              description="No agency has a pending support access request right now."
-              data-testid="platform-security-no-requests"
-            />
-          ) : (
-            overview.requestsByAgency.map((row) => (
-              <div
-                key={row.agency.id}
-                className="border-border rounded-[var(--radius-control)] border p-3"
-                data-testid={`platform-security-agency-${row.agency.slug}`}
-              >
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <Link
-                    href={`/app/platform/agencies/${row.agency.id}`}
-                    className="text-body text-fg-primary font-semibold"
-                  >
-                    {row.agency.name}
-                  </Link>
-                  <Button asChild variant="ghost" size="sm">
-                    <Link href={`/app/platform/agencies/${row.agency.id}`}>Open agency</Link>
-                  </Button>
-                </div>
-                <ul className="space-y-2">
-                  {(row.requests as RequestRow[]).map((req) => (
-                    <li
-                      key={req.id}
-                      className="border-border flex flex-col gap-1 rounded-[var(--radius-control)] border p-2 text-sm"
-                      data-testid={`platform-security-request-${req.id}`}
+          <CardDescription>
+            Pending support access requests across every agency. Agency admins decide from the
+            agency detail page.
+          </CardDescription>
+          <div className="mt-4 space-y-3">
+            {overview.requestsByAgency.length === 0 ? (
+              <EmptyState
+                title="No open requests"
+                description="No agency has a pending support access request right now."
+                data-testid="platform-security-no-requests"
+              />
+            ) : (
+              overview.requestsByAgency.map((row) => (
+                <div
+                  key={row.agency.id}
+                  className="border-border rounded-[var(--radius-control)] border p-3"
+                  data-testid={`platform-security-agency-${row.agency.slug}`}
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <Link
+                      href={`/app/platform/agencies/${row.agency.id}`}
+                      className="text-body text-fg-primary font-semibold"
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-body text-fg-primary font-mono">
-                          {req.ticketReference}
-                        </span>
-                        <span className="text-label text-fg-muted">
-                          {req.status} · {req.requestedDurationHours}h ·{" "}
-                          {formatRelativeDate(req.createdAt)}
-                        </span>
-                      </div>
-                      <p className="text-body text-fg-muted line-clamp-2">{req.reason}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))
-          )}
-        </div>
+                      {row.agency.name}
+                    </Link>
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href={`/app/platform/agencies/${row.agency.id}`}>Open agency</Link>
+                    </Button>
+                  </div>
+                  <ul className="space-y-2">
+                    {(row.requests as RequestRow[]).map((req) => (
+                      <li
+                        key={req.id}
+                        className="border-border flex flex-col gap-1 rounded-[var(--radius-control)] border p-2 text-sm"
+                        data-testid={`platform-security-request-${req.id}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-body text-fg-primary font-mono">
+                            {req.ticketReference}
+                          </span>
+                          <span className="text-label text-fg-muted">
+                            {req.status} · {req.requestedDurationHours}h ·{" "}
+                            {formatRelativeDate(req.createdAt)}
+                          </span>
+                        </div>
+                        <p className="text-body text-fg-muted line-clamp-2">{req.reason}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            )}
+          </div>
         </Card>
       ) : null}
     </div>

@@ -9,10 +9,7 @@ import {
   supportAccessRequests,
   workspaces,
 } from "@/lib/db/schema";
-import {
-  hasPlatformPermission,
-  requirePlatformPermission,
-} from "@/lib/auth/platform-access";
+import { hasPlatformPermission, requirePlatformPermission } from "@/lib/auth/platform-access";
 import { isAgencyAdmin, requirePolicy, type Actor } from "@/lib/auth/policy";
 
 /**
@@ -485,10 +482,7 @@ export async function revokeSupportAccessGrant(
     }
     // Authority: the requester, an administrator of the target agency,
     // or a Platform Owner exercising incident-response authority.
-    const canManagePlatformAccess = await hasPlatformPermission(
-      actor,
-      "platform.access.manage",
-    );
+    const canManagePlatformAccess = await hasPlatformPermission(actor, "platform.access.manage");
     const isAgency = await isAgencyAdmin(actor, grant.targetAgencyId);
     const isRequester = grant.grantedToUserId === actor.id;
     if (!canManagePlatformAccess && !isAgency && !isRequester) {

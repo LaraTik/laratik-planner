@@ -48,8 +48,11 @@ describe("M3.6 — support access workflow (integration)", () => {
   });
 
   async function seedPlatformAdmin(
-    role: "platform_owner" | "agency_operator" | "platform_auditor" | "support_operator" =
-      "platform_owner",
+    role:
+      | "platform_owner"
+      | "agency_operator"
+      | "platform_auditor"
+      | "support_operator" = "platform_owner",
   ): Promise<{ id: string }> {
     const [u] = await db
       .insert(schema.users)

@@ -68,11 +68,7 @@ describe("platform role permission matrix", () => {
       "platform.access.read",
       "platform.audit.read",
     ],
-    support_operator: [
-      "platform.console.read",
-      "platform.agency.read",
-      "platform.support.request",
-    ],
+    support_operator: ["platform.console.read", "platform.agency.read", "platform.support.request"],
   };
 
   it.each(Object.entries(expected))("derives the exact %s bundle", (role, permissions) => {
@@ -83,14 +79,12 @@ describe("platform role permission matrix", () => {
 
   it("keeps a newly added permission Owner-only until deliberately assigned", () => {
     for (const permission of platformAccess.PLATFORM_PERMISSIONS) {
-      expect(
-        platformAccess.permissionsForPlatformRole("platform_owner").has(permission),
-      ).toBe(true);
+      expect(platformAccess.permissionsForPlatformRole("platform_owner").has(permission)).toBe(
+        true,
+      );
     }
     expect(
-      platformAccess.permissionsForPlatformRole("agency_operator").has(
-        "platform.access.manage",
-      ),
+      platformAccess.permissionsForPlatformRole("agency_operator").has("platform.access.manage"),
     ).toBe(false);
   });
 });
@@ -133,9 +127,9 @@ describe("getPlatformPrincipal", () => {
 describe("permission checks", () => {
   it("allows a permission present in the actor's role", async () => {
     dbMock.state.limitResults = [[{ role: "platform_auditor" }]];
-    await expect(
-      platformAccess.hasPlatformPermission(actor, "platform.audit.read"),
-    ).resolves.toBe(true);
+    await expect(platformAccess.hasPlatformPermission(actor, "platform.audit.read")).resolves.toBe(
+      true,
+    );
   });
 
   it("denies and logs a permission absent from the actor's role", async () => {

@@ -1,9 +1,6 @@
 import "server-only";
 import type { Actor } from "@/lib/auth/policy";
-import {
-  hasPlatformPermission,
-  requirePlatformPermission,
-} from "@/lib/auth/platform-access";
+import { hasPlatformPermission, requirePlatformPermission } from "@/lib/auth/platform-access";
 
 /**
  * Compatibility helpers for callers that only need platform-console entry.

@@ -151,16 +151,24 @@ describe("MobileNav", () => {
 
   it.each([
     ["Owner", ownerAccess, true, true],
-    ["Agency Operator", { ...ownerAccess, canReadSecurity: false, canReadAccess: false }, false, false],
+    [
+      "Agency Operator",
+      { ...ownerAccess, canReadSecurity: false, canReadAccess: false },
+      false,
+      false,
+    ],
     ["Auditor", ownerAccess, true, true],
     ["Support", { ...ownerAccess, canReadAccess: false }, true, false],
-  ])("renders the %s platform destinations in More", async (_label, access, security, accessPage) => {
-    usePathnameMock.mockReturnValue("/app/platform/overview");
-    const user = userEvent.setup();
-    render(<MobileNav {...baseProps} platformAccess={access as typeof ownerAccess} />);
-    await user.click(screen.getByTestId("mobile-navigation-more"));
-    expect(screen.getByRole("link", { name: /^Agencies$/i })).toBeInTheDocument();
-    expect(!!screen.queryByRole("link", { name: /Security and support/i })).toBe(security);
-    expect(!!screen.queryByRole("link", { name: /Platform access/i })).toBe(accessPage);
-  });
+  ])(
+    "renders the %s platform destinations in More",
+    async (_label, access, security, accessPage) => {
+      usePathnameMock.mockReturnValue("/app/platform/overview");
+      const user = userEvent.setup();
+      render(<MobileNav {...baseProps} platformAccess={access as typeof ownerAccess} />);
+      await user.click(screen.getByTestId("mobile-navigation-more"));
+      expect(screen.getByRole("link", { name: /^Agencies$/i })).toBeInTheDocument();
+      expect(!!screen.queryByRole("link", { name: /Security and support/i })).toBe(security);
+      expect(!!screen.queryByRole("link", { name: /Platform access/i })).toBe(accessPage);
+    },
+  );
 });

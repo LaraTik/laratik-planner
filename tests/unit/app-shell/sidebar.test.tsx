@@ -105,9 +105,7 @@ describe("Sidebar (workspace-aware)", () => {
 
   it("shows plan usage to agency admins and platform console only to platform admins", () => {
     usePathnameMock.mockReturnValue("/app/agency-settings/plan");
-    const { rerender } = render(
-      <Sidebar {...baseProps} user={{ name: "Lara", isAdmin: true }} />,
-    );
+    const { rerender } = render(<Sidebar {...baseProps} user={{ name: "Lara", isAdmin: true }} />);
     expect(screen.getByRole("link", { name: /Plan and usage/i })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Platform overview/i })).toBeNull();
 
@@ -125,16 +123,25 @@ describe("Sidebar (workspace-aware)", () => {
 
   it.each([
     ["Owner", ownerAccess, true, true, true],
-    ["Agency Operator", { ...ownerAccess, canReadSecurity: false, canReadAccess: false }, true, false, false],
+    [
+      "Agency Operator",
+      { ...ownerAccess, canReadSecurity: false, canReadAccess: false },
+      true,
+      false,
+      false,
+    ],
     ["Auditor", { ...ownerAccess, canReadSecurity: true, canReadAccess: true }, true, true, true],
     ["Support", { ...ownerAccess, canReadSecurity: true, canReadAccess: false }, true, true, false],
-  ])("renders the %s platform navigation matrix", (_label, access, agencies, security, accessPage) => {
-    usePathnameMock.mockReturnValue("/app/platform/overview");
-    render(<Sidebar {...baseProps} platformAccess={access as typeof ownerAccess} />);
-    expect(!!screen.queryByRole("link", { name: /^Agencies$/i })).toBe(agencies);
-    expect(!!screen.queryByRole("link", { name: /Security & support/i })).toBe(security);
-    expect(!!screen.queryByRole("link", { name: /Platform access/i })).toBe(accessPage);
-  });
+  ])(
+    "renders the %s platform navigation matrix",
+    (_label, access, agencies, security, accessPage) => {
+      usePathnameMock.mockReturnValue("/app/platform/overview");
+      render(<Sidebar {...baseProps} platformAccess={access as typeof ownerAccess} />);
+      expect(!!screen.queryByRole("link", { name: /^Agencies$/i })).toBe(agencies);
+      expect(!!screen.queryByRole("link", { name: /Security & support/i })).toBe(security);
+      expect(!!screen.queryByRole("link", { name: /Platform access/i })).toBe(accessPage);
+    },
+  );
 
   it("renders the workspace nav when the user is inside /app/w/[slug]/*", () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");

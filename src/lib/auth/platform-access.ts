@@ -6,10 +6,7 @@ import { db } from "@/lib/db";
 import { platformAdministrators } from "@/lib/db/schema";
 import { logError, logWarn } from "@/lib/observability/logger";
 import { PermissionDeniedError, type Actor } from "@/lib/auth/policy";
-import {
-  PLATFORM_ROLE_VALUES,
-  type PlatformRole,
-} from "@/lib/auth/platform-access-types";
+import { PLATFORM_ROLE_VALUES, type PlatformRole } from "@/lib/auth/platform-access-types";
 
 export const PLATFORM_PERMISSIONS = [
   "platform.console.read",
@@ -49,18 +46,12 @@ const ROLE_PERMISSIONS: Record<PlatformRole, readonly PlatformPermission[]> = {
     "platform.access.read",
     "platform.audit.read",
   ],
-  support_operator: [
-    "platform.console.read",
-    "platform.agency.read",
-    "platform.support.request",
-  ],
+  support_operator: ["platform.console.read", "platform.agency.read", "platform.support.request"],
 };
 
 const PlatformRoleSchema = z.enum(PLATFORM_ROLE_VALUES);
 
-export function permissionsForPlatformRole(
-  role: PlatformRole,
-): ReadonlySet<PlatformPermission> {
+export function permissionsForPlatformRole(role: PlatformRole): ReadonlySet<PlatformPermission> {
   return new Set(ROLE_PERMISSIONS[role]);
 }
 
