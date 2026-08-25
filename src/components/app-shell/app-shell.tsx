@@ -84,7 +84,11 @@ export function AppShell({
     <div className="bg-canvas flex min-h-screen flex-col">
       <RouteScrollReset />
       {/* Skip-to-content link for keyboard / screen-reader users. Hidden
-          until focused, then snaps to the top. */}
+          until focused, then snaps to the top. Required by the OTHER-09
+          audit (GAP-FULL-REVIEW-2026-08-25) — the link + matching
+          `id="main-content" tabIndex={-1}` below must stay in lockstep
+          so a screen-reader user can bypass the sidebar/topbar in a
+          single keystroke. */}
       <a
         href="#main-content"
         className="bg-primary text-label focus-visible:ring-focus-ring pointer-events-none absolute top-2 left-2 z-50 inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3 py-1.5 font-semibold text-white opacity-0 focus:pointer-events-auto focus:opacity-100 focus:outline-none focus-visible:ring-2"
