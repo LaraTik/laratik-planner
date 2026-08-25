@@ -11,7 +11,7 @@ import {
 import { ALL_FORMATS, ALL_STATUSES, humanFormat } from "@/lib/content/status";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
-import { Clock, Files, Plus, FileText } from "lucide-react";
+import { Clock, Files, Plus, FileText, Download } from "lucide-react";
 import { StatusBadge } from "@/components/content/status-badge";
 import { PageHeader } from "@/components/workspace/page-header";
 import { ListCard, ListItem } from "@/components/workspace/list-item";
@@ -211,6 +211,21 @@ export default async function PlanningPage({
                 </Button>
               </>
             ) : null}
+            {/* FEAT-15 (GAP-FULL-REVIEW-2026-08-25) — CSV export
+                of the current month's content. The link carries
+                the active month so the download matches what's
+                on screen. The role gate is enforced server-side
+                in /api/export/content-csv. */}
+            <Button variant="outline" asChild>
+              <a
+                href={`/api/export/content-csv?slug=${encodeURIComponent(slug)}&month=${monthParam(0)}`}
+                data-testid="planning-export-csv"
+                download
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+                Export CSV
+              </a>
+            </Button>
           </div>
         }
       />

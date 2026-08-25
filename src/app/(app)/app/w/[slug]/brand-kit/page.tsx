@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { and, eq, isNull } from "drizzle-orm";
-import { Clock, Tag } from "lucide-react";
+import { Clock, Download, Tag } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { brandAssets, brandVoiceRules } from "@/lib/db/schema";
@@ -14,6 +14,7 @@ import {
 } from "@/lib/brand/service";
 import { getSignedDownloadUrl } from "@/lib/storage";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { WorkspaceTopTabs } from "@/components/workspace/top-tabs";
@@ -149,7 +150,28 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
             </span>
           </>
         }
-        action={canManage ? <AddAssetMenu /> : null}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            {/* FEAT-15 (GAP-FULL-REVIEW-2026-08-25) — bundle every
+                active brand asset into a single ZIP for the
+                designer / external partner handoff. The link is
+                a plain <a download> so the browser handles the
+                save dialog natively; the server endpoint
+                enforces the role gate. Visible to every internal
+                workspace member, not just managers. */}
+            <Button variant="outline" asChild>
+              <a
+                href={`/api/export/brand-assets-zip?slug=${encodeURIComponent(slug)}`}
+                data-testid="brand-kit-export-zip"
+                download
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+                Download ZIP
+              </a>
+            </Button>
+            {canManage ? <AddAssetMenu /> : null}
+          </div>
+        }
       />
 
       <WorkspaceTopTabs tabs={tabs} ariaLabel="Brand kit sections" />
