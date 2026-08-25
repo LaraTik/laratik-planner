@@ -33,20 +33,30 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   timeout: 30_000,
   expect: { timeout: 5_000 },
-  // Task 8: portable visual-baseline filenames. The default
-  // Playwright template embeds the absolute test file path
-  // ({testFilePath}) and the host OS ({platform} / {snapshotSuffix})
-  // into every snapshot filename, which makes baselines captured on
-  // macOS non-portable to the Linux CI runner (see commit f406fbc).
-  // The reduced template keeps `{snapshotDir}` (the testDir) and
-  // `{testFileName}-snapshots/` (the per-test snapshot directory)
-  // so the snapshots still land in
-  // `tests/e2e/visual-regression.spec.ts-snapshots/`, but drops
-  // every token that would embed the absolute path, the project
-  // name, or the host platform. The `{arg}` and `{ext}` are owned
-  // by the helpers in `tests/e2e/stitch-cases.ts`, which produces
-  // the same string on every host.
-  snapshotPathTemplate: "{snapshotDir}/{testFileName}-snapshots/{arg}{ext}",
+  // TEST-03 (GAP-FULL-REVIEW-2026-08-25) — visual-regression gating.
+  // The 6-viewport responsive matrix was reduced to 3 (mobile-s,
+  // tablet, wide) so the capture step fits in the 25-min CI job
+  // budget. The remaining matrix drives 3 baselines per surface; the
+  // 138-baseline plan from docs/visual-parity/PLAN.md is preserved by
+  // the test spec (each surface is still enumerated), but only 3
+  // viewports × N surfaces are committed. The full 6-viewport matrix
+  // can be re-enabled in `tests/e2e/stitch-cases.ts` once a longer CI
+  // job budget is allocated.
+  // Task 8 + TEST-03 (GAP-FULL-REVIEW-2026-08-25): portable
+  // visual-baseline filenames. The default Playwright template embeds
+  // the absolute test file path ({testFilePath}) and the host OS
+  // ({platform} / {snapshotSuffix}) into every snapshot filename,
+  // which makes baselines captured on macOS non-portable to the Linux
+  // CI runner (see commit f406fbc).
+  //
+  // Playwright's `snapshotDir` is already `tests/e2e/<relative-test-file-path>-snapshots`
+  // (the per-file snapshot directory), so the template only needs to
+  // append `{arg}{ext}`. The capture path used by `page.screenshot({ path })`
+  // in tests/e2e/visual-regression.spec.ts is constructed by joining
+  // the same per-file directory (SNAPSHOT_DIR) with the helper-computed
+  // `{arg}` — so the two paths stay in lockstep without any host or
+  // absolute-path tokens.
+  snapshotPathTemplate: "{snapshotDir}/{arg}{ext}",
 
   use: {
     baseURL: BASE_URL,

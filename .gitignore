@@ -38,12 +38,22 @@ yarn-error.log*
 /.worktrees/
 /worktrees/
 
-# Visual-regression snapshots are generated artifacts. Filenames embed the
-# absolute path of the worktree that produced them and the host OS
-# (e.g. `darwin`), so they are not portable. They must be re-captured on
-# the CI runner (Linux) and committed as a deliberate baseline update
-# once reviewed.
-tests/e2e/visual-regression.spec.ts-snapshots/
+# Visual-regression snapshots (TEST-03, GAP-FULL-REVIEW-2026-08-25).
+# The capture step (`pnpm test:visual:update`) writes portable PNG
+# baselines into `tests/e2e/visual-regression.spec.ts-snapshots/` under
+# `reference/` and `responsive/`. With the portable
+# `snapshotPathTemplate` in playwright.config.ts the filenames no
+# longer embed the worktree path or the host OS, so the baselines are
+# committed and serve as the assert-mode gate. The previous exclusion
+# was removed so the first capture run can seed the baselines.
+#
+# Anything that lands in the snapshots dir but is NOT under
+# `reference/` or `responsive/` (e.g. old `-darwin.png` leftovers from
+# previous worktree captures) is still ignored — it would be a stale
+# capture, not a baseline.
+tests/e2e/visual-regression.spec.ts-snapshots/*
+!tests/e2e/visual-regression.spec.ts-snapshots/reference/
+!tests/e2e/visual-regression.spec.ts-snapshots/responsive/
 
 # editor
 .vscode/
