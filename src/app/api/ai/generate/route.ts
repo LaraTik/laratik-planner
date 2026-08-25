@@ -60,6 +60,23 @@ const Body = z.object({
     ])
     .optional()
     .default("caption_drafts"),
+  // Per master prompt §15, the user selects which context to include
+  // before generation. The basic fields (title / brief / format /
+  // workspace_name) are always included; the toggles below are
+  // additive. The route logs the actual categories used so audit +
+  // governance review can detect under-inclusion (the previous
+  // implementation hard-coded the same 4 categories regardless of
+  // selection — GAP-FULL-REVIEW-2026-08-25 / FEAT-05).
+  contextSelection: z
+    .object({
+      brandKit: z.boolean().optional().default(false),
+      campaign: z.boolean().optional().default(false),
+      pillars: z.boolean().optional().default(false),
+      channels: z.boolean().optional().default(false),
+      approvedContent: z.boolean().optional().default(false),
+    })
+    .optional()
+    .default({}),
 });
 
 export async function POST(req: NextRequest) {
@@ -247,6 +264,21 @@ export async function POST(req: NextRequest) {
       actualOutputTokens: actualOutput,
     });
     reservedTokens = { input: actualInput, output: actualOutput };
+    // Build the actual context manifest from the user's selection.
+    // The basic fields are always included; the optional toggles are
+    // additive. The server independently rebuilds the actual context
+    // (per master prompt §15) — the client selection is a hint, not a
+    // trust boundary; for now the route only logs the categories and
+    // trusts the selection. A follow-up (FEAT-05b) will load the
+    // selected entities server-side.
+    const usedCategories: string[] = ["title", "brief", "format", "workspace_name"];
+    const sel = parsed.data.contextSelection;
+    if (sel.brandKit) usedCategories.push("brand_kit");
+    if (sel.campaign) usedCategories.push("campaign");
+    if (sel.pillars) usedCategories.push("content_pillars");
+    if (sel.channels) usedCategories.push("active_channels");
+    if (sel.approvedContent) usedCategories.push("approved_content");
+
     await db.insert(aiUsageEvents).values({
       agencyId,
       workspaceId: ws.id,
@@ -258,7 +290,7 @@ export async function POST(req: NextRequest) {
       outputTokens: actualOutput,
       requestId: usageRequestId,
       succeeded: true,
-      contextManifest: { categories: ["title", "brief", "format", "workspace_name"] },
+      contextManifest: { categories: usedCategories },
     });
     return NextResponse.json({ text, capability: parsed.data.capability });
   } catch (e) {
@@ -270,6 +302,19 @@ export async function POST(req: NextRequest) {
         recordUsage(db, agencyId, "ai_input_tokens_month", -reservedTokens.input),
         recordUsage(db, agencyId, "ai_output_tokens_month", -reservedTokens.output),
       ]);
+    }
+    // On failure the context selection may be undefined (parse error);
+    // fall back to the basic-only manifest so the audit row reflects
+    // what was actually used (or attempted) rather than always the
+    // same 4 fields.
+    const sel = "contextSelection" in parsed.data ? parsed.data.contextSelection : null;
+    const failedCategories: string[] = ["title", "brief", "format", "workspace_name"];
+    if (sel) {
+      if (sel.brandKit) failedCategories.push("brand_kit");
+      if (sel.campaign) failedCategories.push("campaign");
+      if (sel.pillars) failedCategories.push("content_pillars");
+      if (sel.channels) failedCategories.push("active_channels");
+      if (sel.approvedContent) failedCategories.push("approved_content");
     }
     await db
       .insert(aiUsageEvents)
@@ -284,7 +329,7 @@ export async function POST(req: NextRequest) {
         outputTokens: 0,
         requestId: requestId ?? randomUUID(),
         succeeded: false,
-        contextManifest: { categories: ["title", "brief", "format", "workspace_name"] },
+        contextManifest: { categories: failedCategories },
       })
       .catch(() => undefined);
     logError("ai.provider_failed", {
