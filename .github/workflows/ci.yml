@@ -62,6 +62,27 @@ jobs:
           --health-timeout 3s
           --health-retries 10
 
+      # Mailpit catches every email the integration tests send
+      # (invitation, magic-link, password reset) on 1025 SMTP and
+      # exposes them on 8025 HTTP for debug. Without it, SMTP at
+      # localhost:1025 (the env below) refuses every connection and
+      # the §23 journey fails at step 6 (invite 5 members). The
+      # mirror of the service in `docker-compose.dev.yml`.
+      mailpit:
+        image: axllent/mailpit:latest
+        ports:
+          - 1025:1025
+          - 8025:8025
+        env:
+          MP_MAX_MESSAGES: "5000"
+          MP_SMTP_AUTH_ACCEPT_ANY: "1"
+          MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+        options: >-
+          --health-cmd "wget -qO- http://localhost:8025/api/v1/info >/dev/null 2>&1 || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
     env:
       DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
       AUTH_SECRET: ci_secret_only_not_for_production_xxxxxxxxxxxxxxxx

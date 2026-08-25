@@ -327,6 +327,23 @@ async function writeAudit(
     // the JSON log stream and Sentry (when configured) so an
     // audit-write outage shows up on the on-call dashboard rather
     // than just in stderr.
+    //
+    // OTHER-16 audit (GAP-FULL-REVIEW-2026-08-25): the previous
+    // implementation only `console.error`-ed; a sustained audit
+    // outage (constraint violation, disk full, permission flip)
+    // was completely silent. The wrapper now fires a tagged
+    // `captureError` event so the Sentry alert rule from OBS-001
+    // (`security.audit_write_failed:5m` > 0) trips.
+    //
+    // Retry-mechanism follow-up: the primary action
+    // (enable/rotate/disable) has already mutated the
+    // social_connection / DEK rows by the time the audit fails,
+    // so the audit gap leaves a "shadow" of the change. A future
+    // sweep job (tracked in PRODUCTION_READINESS_TRACKER.md) will
+    // re-emit missed audits by reading the `audit_retry_pending`
+    // counter on a small per-row queue; that column is added in
+    // the same migration as the sweep job so this commit stays
+    // free of a schema change.
     captureError("social.audit.write_failed", err, {
       action,
       agencyId,
