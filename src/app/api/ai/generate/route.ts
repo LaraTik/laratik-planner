@@ -8,11 +8,14 @@ import { db } from "@/lib/db";
 import { aiFeatureSettings, aiUsageEvents, contentItems, workspaces } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import {
+  campaignIdeas,
   checkCompleteness,
   draftCaption,
   getActiveApiKey,
   improveBrief,
   isAiEnabled,
+  platformAdapt,
+  relatedFormatIdeas,
   type ChatResult,
 } from "@/lib/ai";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -60,6 +63,18 @@ const Body = z.object({
     ])
     .optional()
     .default("caption_drafts"),
+  /**
+   * For `platform_adaptation` — the target platform the user wants
+   * the source caption adapted for (e.g. "x", "linkedin", "tiktok").
+   * Ignored for every other capability.
+   */
+  targetPlatform: z.string().trim().min(1).max(40).optional(),
+  /**
+   * For `platform_adaptation` — the source caption text the planner
+   * is starting from. The content item's own brief is the fallback
+   * when the caller doesn't supply one.
+   */
+  sourceText: z.string().max(4000).optional(),
   // Per master prompt §15, the user selects which context to include
   // before generation. The basic fields (title / brief / format /
   // workspace_name) are always included; the toggles below are
@@ -142,14 +157,10 @@ export async function POST(req: NextRequest) {
       { status: 403 },
     );
   }
-  if (
-    parsed.data.capability === "platform_adaptation" ||
-    parsed.data.capability === "campaign_ideas" ||
-    parsed.data.capability === "related_format_ideas"
-  ) {
+  if (parsed.data.capability === "platform_adaptation" && !parsed.data.targetPlatform) {
     return NextResponse.json(
-      { error: `Capability "${parsed.data.capability}" is not yet implemented.` },
-      { status: 501 },
+      { error: "platform_adaptation requires a targetPlatform." },
+      { status: 400 },
     );
   }
 
@@ -241,6 +252,19 @@ export async function POST(req: NextRequest) {
         break;
       case "completeness_check":
         text = await checkCompleteness(baseInput);
+        break;
+      case "platform_adaptation":
+        text = await platformAdapt({
+          ...baseInput,
+          targetPlatform: parsed.data.targetPlatform ?? "instagram",
+          sourceText: parsed.data.sourceText ?? item.brief ?? "",
+        });
+        break;
+      case "campaign_ideas":
+        text = await campaignIdeas(baseInput);
+        break;
+      case "related_format_ideas":
+        text = await relatedFormatIdeas(baseInput);
         break;
       default:
         return NextResponse.json({ error: "Unknown capability" }, { status: 400 });

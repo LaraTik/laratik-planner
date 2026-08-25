@@ -184,13 +184,13 @@ describe("CreateCampaignSchema", () => {
 describe("createCampaign", () => {
   it("requires workspace_manager or content_planner", async () => {
     policyMock.hasWorkspaceRole.mockResolvedValueOnce(false);
-    await expect(createCampaign(actor, workspaceId, { name: "Test" })).rejects.toThrow(
-      /Permission denied/,
-    );
+    await expect(
+      createCampaign(actor, workspaceId, { name: "Test", status: "draft" }),
+    ).rejects.toThrow(/Permission denied/);
   });
   it("inserts the campaign row + an activity_event", async () => {
     state.insertReturningIds.push({ id: "campaign-1" });
-    const out = await createCampaign(actor, workspaceId, { name: "Test" });
+    const out = await createCampaign(actor, workspaceId, { name: "Test", status: "draft" });
     expect(out.id).toBe("campaign-1");
     // The first insert is the campaign row, the second is the activity event.
     expect(state.insertCalls.length).toBe(2);
@@ -300,6 +300,7 @@ describe("createTemplate", () => {
     const out = await createTemplate(actor, workspaceId, {
       name: "Quote card",
       format: "static_post",
+      defaultChannelIds: [],
     });
     expect(out.id).toBe("tpl-1");
     const values = state.insertCalls[0]!.values as Record<string, unknown>;

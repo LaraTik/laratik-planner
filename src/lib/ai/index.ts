@@ -266,3 +266,157 @@ export async function checkCompleteness(input: {
   if (result) input.onUsage?.(result);
   return result?.content ?? null;
 }
+
+/**
+ * FEAT-03 (GAP-FULL-REVIEW-2026-08-25) — three prompt builders that
+ * close out the §15 capability set. Pre-fix, `/api/ai/generate`
+ * returned 501 for `platform_adaptation`, `campaign_ideas`, and
+ * `related_format_ideas`; the agency settings page advertised them
+ * and they failed at runtime. These three new exports mirror the
+ * shape of `draftCaption` / `improveBrief` / `checkCompleteness` so
+ * the route's existing `switch` can wire them without changes
+ * beyond removing the 501 early-return.
+ */
+
+/**
+ * Adapt a draft caption to the conventions of a target social
+ * platform (e.g. Twitter's character economy, LinkedIn's
+ * first-line-as-hook norm, TikTok's 6-second spoken intro).
+ */
+export async function platformAdapt(input: {
+  title: string;
+  brief: string;
+  format: string;
+  sourceText: string;
+  targetPlatform: string;
+  audience?: string | undefined;
+  apiKey?: string | undefined;
+  onUsage?: (result: ChatResult) => void;
+  maxTokens?: number | undefined;
+}): Promise<string | null> {
+  if (!isAiEnabled() && !input.apiKey) return null;
+  const result = await chat({
+    temperature: 0.7,
+    maxTokens: input.maxTokens ?? 600,
+    apiKey: input.apiKey,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a senior social media strategist. Adapt the user's draft caption to the conventions of the target platform. " +
+          "Preserve the underlying message; rewrite length, tone, hook placement, hashtag density, and CTA phrasing to fit the platform. " +
+          "Return ONLY the adapted caption — no preamble, no quotes, no explanation. If the target is X / Twitter, " +
+          "keep the rewrite under 280 characters and front-load the hook. If LinkedIn, lead with a one-line insight and use " +
+          "short paragraphs. If TikTok / Reels, write for spoken delivery (short sentences, second-person). If Instagram, " +
+          "front-load the first 125 characters (the 'see more' cutoff).",
+      },
+      {
+        role: "user",
+        content: [
+          `Title: ${input.title}`,
+          `Format: ${input.format}`,
+          input.audience ? `Audience: ${input.audience}` : null,
+          `Brief: ${input.brief || "(none)"}`,
+          `Target platform: ${input.targetPlatform}`,
+          `Source caption:\n${input.sourceText || "(empty)"}`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      },
+    ],
+  });
+  if (result) input.onUsage?.(result);
+  return result?.content ?? null;
+}
+
+/**
+ * Generate a short list of campaign ideas (3-5) that align with a
+ * workspace's current brief. Each idea is a single line: a name and
+ * a one-sentence angle.
+ */
+export async function campaignIdeas(input: {
+  title: string;
+  brief: string;
+  format: string;
+  audience?: string | undefined;
+  apiKey?: string | undefined;
+  onUsage?: (result: ChatResult) => void;
+  maxTokens?: number | undefined;
+}): Promise<string | null> {
+  if (!isAiEnabled() && !input.apiKey) return null;
+  const result = await chat({
+    temperature: 0.8,
+    maxTokens: input.maxTokens ?? 600,
+    apiKey: input.apiKey,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a senior social media strategist. Generate 3-5 campaign ideas that ladder up to the planner's brief. " +
+          "Each idea is exactly one line in the format: 'Name — <one-sentence angle>'. Ideas should be distinct in tone or hook, " +
+          "and each should be plausibly executable by a single content team in a week. Return ONLY the bullet list, no preamble, " +
+          "no markdown, no labels. Use a leading dash + space for each bullet.",
+      },
+      {
+        role: "user",
+        content: [
+          `Title: ${input.title}`,
+          `Format: ${input.format}`,
+          input.audience ? `Audience: ${input.audience}` : null,
+          `Brief: ${input.brief || "(none)"}`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      },
+    ],
+  });
+  if (result) input.onUsage?.(result);
+  return result?.content ?? null;
+}
+
+/**
+ * Suggest formats that pair well with the planner's current brief —
+ * the §15 "related format ideas" capability. Returns 3-5 suggestions,
+ * each on its own line: 'Format — <why it pairs>'. Limited to the 8
+ * content_format enum values so the UI can render the result as a
+ * jump-off to a new content item.
+ */
+export async function relatedFormatIdeas(input: {
+  title: string;
+  brief: string;
+  format: string;
+  audience?: string | undefined;
+  apiKey?: string | undefined;
+  onUsage?: (result: ChatResult) => void;
+  maxTokens?: number | undefined;
+}): Promise<string | null> {
+  if (!isAiEnabled() && !input.apiKey) return null;
+  const result = await chat({
+    temperature: 0.7,
+    maxTokens: input.maxTokens ?? 500,
+    apiKey: input.apiKey,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a senior social media strategist. Given the planner's current format and brief, suggest 3-5 related formats " +
+          "from this fixed list: static_post, carousel, story, short_form_video, long_form_video, live_content, article, other. " +
+          "Each line: 'format — <one-sentence reason it pairs>'. Skip the planner's current format. Return ONLY the bullet list, " +
+          "no preamble, no markdown, no labels. Use a leading dash + space for each bullet.",
+      },
+      {
+        role: "user",
+        content: [
+          `Title: ${input.title}`,
+          `Current format: ${input.format}`,
+          input.audience ? `Audience: ${input.audience}` : null,
+          `Brief: ${input.brief || "(none)"}`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      },
+    ],
+  });
+  if (result) input.onUsage?.(result);
+  return result?.content ?? null;
+}
