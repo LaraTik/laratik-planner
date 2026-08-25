@@ -41,7 +41,7 @@ export interface WorkflowBoardProps {
  */
 export function WorkflowBoard({ items, columns, workspaceSlug }: WorkflowBoardProps) {
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
       {columns.map((column) => {
         const rows = items.filter((item) =>
           (column.statuses as readonly string[]).includes(item.status),
