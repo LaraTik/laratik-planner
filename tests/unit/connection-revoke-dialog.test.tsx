@@ -97,16 +97,50 @@ describe("ConnectionActions revoke dialog", () => {
 });
 
 describe("ConnectionActions Re-test", () => {
-  it("renders a Re-test button for a connected channel", () => {
+  it("renders a 'Re-test' label for a healthy connected channel", () => {
     render(
       <ConnectionActions
         slug="acme"
-        channel={channel}
+        channel={{ ...channel, connectionStatus: "connected" }}
         affectedChannels={[channel, ...otherChannels]}
       />,
     );
     const button = screen.getByTestId("retest-button");
     expect(button).toBeInTheDocument();
+    expect(button).toHaveTextContent(/Re-test/);
+    expect(button).not.toHaveTextContent(/Sync now/);
+  });
+
+  it("renders a 'Sync now' label for a delayed / needs_reauth / sync_error channel (UX-07, GAP-FULL-REVIEW-2026-08-25)", () => {
+    // The original audit said this label was attached to a silent
+    // stub. The button is now wired to testChannelConnectionAction;
+    // we pin the "Sync now" label transition so a future change does
+    // not silently break the recovery affordance for users on a
+    // degraded connection.
+    for (const degraded of ["needs_reauth", "sync_error"] as const) {
+      const { unmount } = render(
+        <ConnectionActions
+          slug="acme"
+          channel={{ ...channel, connectionStatus: degraded }}
+          affectedChannels={[channel, ...otherChannels]}
+        />,
+      );
+      const button = screen.getByTestId("retest-button");
+      expect(button).toHaveTextContent(/Sync now/);
+      expect(button).not.toHaveTextContent(/Re-test/);
+      unmount();
+    }
+  });
+
+  it("renders a 'Re-test' label for a manual channel (no live connection yet)", () => {
+    render(
+      <ConnectionActions
+        slug="acme"
+        channel={{ ...channel, connectionStatus: "manual" }}
+        affectedChannels={[]}
+      />,
+    );
+    const button = screen.getByTestId("retest-button");
     expect(button).toHaveTextContent(/Re-test/);
   });
 
