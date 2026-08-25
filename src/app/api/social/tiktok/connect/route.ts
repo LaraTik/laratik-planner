@@ -7,16 +7,18 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
 import { buildTikTokAuthorizationUrl, TIKTOK_SCOPES } from "@/lib/social/providers/tiktok";
 import { createOauthState } from "@/lib/social/repository";
-import { clientEnv, serverEnv } from "@/lib/validation/env";
+import { getAgencyProviderConfig } from "@/lib/social/provider-config";
+import { clientEnv } from "@/lib/validation/env";
 
 /**
  * POST /api/social/tiktok/connect
  *
- * Mirrors the Meta connect route. Gated on `SOCIAL_TIKTOK_ENABLED`
- * (the M4 seven-day gate). The route:
+ * Mirrors the Meta connect route. M4.6 — gated on the agency's
+ * per-agency provider config (no env fallback by design). The route:
  *
  *   1. Verifies the actor is a workspace_manager.
- *   2. Refuses to start when `SOCIAL_TIKTOK_ENABLED=false`.
+ *   2. Resolves the agency's `agency_social_provider_config` row
+ *      for `tiktok`. Returns 409 + `setupUrl` when missing.
  *   3. Generates 32 random bytes for `state`, persists the
  *      sha256 digest with a 10-minute expiry, and redirects to
  *      `https://www.tiktok.com/v2/auth/authorize/`.
@@ -30,6 +32,7 @@ export const runtime = "nodejs";
 
 const CHANNELS_PATH = /^\/app\/w\/[a-z0-9-]+\/channels$/;
 const STATE_TTL_MS = 10 * 60_000;
+const SETUP_URL = "/app/agency-settings/social/providers";
 
 function buildCallbackUrl(): string {
   const base = clientEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
@@ -59,14 +62,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Workspace manager access is required." }, { status: 403 });
   }
 
-  if (!serverEnv.SOCIAL_TIKTOK_ENABLED) {
+  // M4.6 — per-agency config. No env fallback.
+  const config = await getAgencyProviderConfig(db, context.agencyId, "tiktok");
+  if (!("appId" in config)) {
     return NextResponse.json(
-      { error: "TikTok integration is not yet enabled for this deployment." },
-      { status: 503 },
+      {
+        error: "Provider not configured for this agency",
+        errorCode: "not_configured",
+        setupUrl: SETUP_URL,
+      },
+      { status: 409 },
     );
   }
-  if (!serverEnv.TIKTOK_CLIENT_KEY) {
-    return NextResponse.json({ error: "TikTok is not configured." }, { status: 503 });
+  if (!config.enabled) {
+    return NextResponse.json(
+      {
+        error: "TikTok is disabled for this agency",
+        errorCode: "provider_disabled",
+        setupUrl: SETUP_URL,
+      },
+      { status: 409 },
+    );
   }
 
   const state = randomBytes(32).toString("hex");
@@ -85,7 +101,7 @@ export async function POST(req: NextRequest) {
   });
 
   const url = buildTikTokAuthorizationUrl({
-    clientKey: serverEnv.TIKTOK_CLIENT_KEY,
+    clientKey: config.appId,
     state,
     redirectUri: buildCallbackUrl(),
     scopes: TIKTOK_SCOPES,

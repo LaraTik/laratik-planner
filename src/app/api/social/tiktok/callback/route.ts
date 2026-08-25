@@ -1,9 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createHash } from "node:crypto";
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { workspaces } from "@/lib/db/schema";
 import { consumeOauthState, createPendingConnection } from "@/lib/social/repository";
 import { exchangeTikTokCodeForTokens, fetchTikTokProfile } from "@/lib/social/providers/tiktok";
-import { clientEnv, serverEnv } from "@/lib/validation/env";
+import { getAgencyProviderConfig } from "@/lib/social/provider-config";
+import { clientEnv } from "@/lib/validation/env";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -13,9 +16,9 @@ import { revalidatePath } from "next/cache";
  * row, exchanges the code for access + refresh tokens, fetches the
  * profile, and persists a `pending_selection` connection.
  *
- * The TikTok adapter is gated by `SOCIAL_TIKTOK_ENABLED`. Until the
- * seven-day Meta observation window passes, this route returns 503
- * with a sanitized error — even if the env flag is off.
+ * M4.6 — provider credentials come from the agency's per-agency
+ * config row, not from env. The cookie state row's `workspaceId`
+ * is the lookup key into the workspace's agency.
  */
 
 export const dynamic = "force-dynamic";
@@ -42,12 +45,6 @@ function redirectWithError(returnPath: string, code: string): NextResponse {
 }
 
 export async function GET(req: NextRequest) {
-  if (!serverEnv.SOCIAL_TIKTOK_ENABLED) {
-    return NextResponse.json(
-      { error: "TikTok integration is not yet enabled for this deployment." },
-      { status: 503 },
-    );
-  }
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
@@ -66,14 +63,25 @@ export async function GET(req: NextRequest) {
   if (!code) {
     return redirectWithError(returnPath, "missing_code");
   }
-  if (!serverEnv.TIKTOK_CLIENT_KEY || !serverEnv.TIKTOK_CLIENT_SECRET) {
+
+  // M4.6 — per-agency provider config. No env fallback.
+  const [ws] = await db
+    .select({ agencyId: workspaces.agencyId })
+    .from(workspaces)
+    .where(eq(workspaces.id, stateRow.workspaceId))
+    .limit(1);
+  if (!ws) {
+    return redirectWithError(returnPath, "not_configured");
+  }
+  const config = await getAgencyProviderConfig(db, ws.agencyId, "tiktok");
+  if (!("appId" in config)) {
     return redirectWithError(returnPath, "not_configured");
   }
 
   try {
     const token = await exchangeTikTokCodeForTokens({
-      clientKey: serverEnv.TIKTOK_CLIENT_KEY,
-      clientSecret: serverEnv.TIKTOK_CLIENT_SECRET,
+      clientKey: config.appId,
+      clientSecret: config.appSecret,
       code,
       redirectUri: buildCallbackUrl(),
     });

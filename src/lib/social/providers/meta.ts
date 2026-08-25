@@ -7,7 +7,6 @@ import type {
   RefreshedCredentials,
   SocialProviderAdapter,
 } from "@/lib/social/types";
-import { serverEnv } from "@/lib/validation/env";
 
 /**
  * M2 — Meta (Facebook Login for Business) provider adapter.
@@ -69,23 +68,24 @@ const ANALYTICS_TASKS = new Set([
 ]);
 
 type MetaGraphVersion = `v${number}.${number}`;
+const DEFAULT_GRAPH_VERSION: MetaGraphVersion = "v25.0";
 
-function resolveGraphVersion(): MetaGraphVersion {
-  const v = (serverEnv.META_GRAPH_API_VERSION ?? "v25.0") as string;
-  // Conservative validation — we only need it to look like `v<num>.<num>`.
-  if (/^v\d+\.\d+$/.test(v)) return v as MetaGraphVersion;
-  return "v25.0";
+function resolveGraphVersion(override: string | null | undefined): MetaGraphVersion {
+  if (override && /^v\d+\.\d+$/.test(override)) {
+    return override as MetaGraphVersion;
+  }
+  return DEFAULT_GRAPH_VERSION;
 }
 
-function graphBaseUrl(): string {
-  return `https://graph.facebook.com/${resolveGraphVersion()}`;
+function graphBaseUrl(version?: string | null): string {
+  return `https://graph.facebook.com/${resolveGraphVersion(version)}`;
 }
 
-function dialogBaseUrl(): string {
+function dialogBaseUrl(version?: string | null): string {
   // The Login for Business dialog version is always `v<major>.0` for the
   // current major. We derive it from the pinned graph version so a
   // future bump to `v26.0` does not require two separate changes.
-  const v = resolveGraphVersion();
+  const v = resolveGraphVersion(version);
   return `https://www.facebook.com/${v}`;
 }
 
@@ -94,10 +94,12 @@ export type BuildMetaAuthorizationUrlInput = {
   loginConfigId: string;
   state: string;
   redirectUri: string;
+  /** Per-agency Graph API version override. Null falls back to v25.0. */
+  graphApiVersion?: string | null;
 };
 
 export function buildMetaAuthorizationUrl(input: BuildMetaAuthorizationUrlInput): string {
-  const url = new URL(`${dialogBaseUrl()}/dialog/oauth`);
+  const url = new URL(`${dialogBaseUrl(input.graphApiVersion)}/dialog/oauth`);
   url.searchParams.set("client_id", input.appId);
   url.searchParams.set("config_id", input.loginConfigId);
   url.searchParams.set("response_type", "code");
@@ -119,6 +121,7 @@ export type ExchangeShortLivedInput = {
   appSecret: string;
   code: string;
   redirectUri: string;
+  graphApiVersion?: string | null;
 };
 
 /**
@@ -135,11 +138,14 @@ export async function exchangeMetaCodeForShortLivedToken(
     code: input.code,
     redirect_uri: input.redirectUri,
   });
-  const { body: responseText } = await providerRequest(`${graphBaseUrl()}/oauth/access_token`, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
+  const { body: responseText } = await providerRequest(
+    `${graphBaseUrl(input.graphApiVersion)}/oauth/access_token`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    },
+  );
   return parseTokenResponse(responseText);
 }
 
@@ -147,6 +153,7 @@ export type ExchangeLongLivedInput = {
   appId: string;
   appSecret: string;
   shortLivedToken: string;
+  graphApiVersion?: string | null;
 };
 
 export type LongLivedTokenResult = {
@@ -167,7 +174,7 @@ export type LongLivedTokenResult = {
 export async function exchangeShortLivedForLongLivedToken(
   input: ExchangeLongLivedInput,
 ): Promise<LongLivedTokenResult> {
-  const url = new URL(`${graphBaseUrl()}/oauth/access_token`);
+  const url = new URL(`${graphBaseUrl(input.graphApiVersion)}/oauth/access_token`);
   url.searchParams.set("grant_type", "fb_exchange_token");
   url.searchParams.set("client_id", input.appId);
   url.searchParams.set("client_secret", input.appSecret);
@@ -235,6 +242,7 @@ export type DiscoverMetaPagesInput = {
   appId: string;
   appSecret: string;
   accessToken: string;
+  graphApiVersion?: string | null;
 };
 
 export type DiscoverMetaPagesResult = {
@@ -299,7 +307,7 @@ export async function discoverMetaPages(
     "instagram_business_account{id,username,name,profile_picture_url,followers_count,media_count}",
   ].join(",");
 
-  const firstUrl = new URL(`${graphBaseUrl()}/me/accounts`);
+  const firstUrl = new URL(`${graphBaseUrl(input.graphApiVersion)}/me/accounts`);
   firstUrl.searchParams.set("fields", fields);
   firstUrl.searchParams.set("limit", "100");
   firstUrl.searchParams.set("access_token", input.accessToken);
@@ -423,7 +431,11 @@ export async function fetchMetaFacebookPageSnapshot(args: {
   // endpoint. We attempt the call and treat empty datasets as `null`,
   // never `0` — the plan calls out "missing/empty insight datasets
   // become `null`, never zero".
-  const insights = await fetchMetaPageDailyInsights({ accessToken, pageId }).catch(() => null);
+  const insights = await fetchMetaPageDailyInsights({
+    accessToken,
+    pageId,
+    apiVersion,
+  }).catch(() => null);
   const sourceMetadata: Record<string, string | number | boolean | null> = {
     partial: follower === null,
   };
@@ -454,13 +466,17 @@ export async function fetchMetaFacebookPageSnapshot(args: {
   };
 }
 
-async function fetchMetaPageDailyInsights(args: { accessToken: string; pageId: string }): Promise<{
+async function fetchMetaPageDailyInsights(args: {
+  accessToken: string;
+  pageId: string;
+  apiVersion: string;
+}): Promise<{
   reach: number | null;
   views: number | null;
   engagedAccounts: number | null;
   interactions: number | null;
 } | null> {
-  const url = new URL(`${graphBaseUrl()}/${args.pageId}/insights`);
+  const url = new URL(`${graphBaseUrl(args.apiVersion)}/${args.pageId}/insights`);
   url.searchParams.set("metric", "page_impressions_unique,page_views,page_post_engagements");
   url.searchParams.set("period", "day");
   url.searchParams.set("access_token", args.accessToken);
@@ -494,7 +510,7 @@ export async function fetchMetaInstagramSnapshot(args: {
   requestIdHint: string;
 }): Promise<MetaPageSnapshot> {
   const { accessToken, igUserId, apiVersion, requestIdHint } = args;
-  const url = new URL(`${graphBaseUrl()}/${igUserId}`);
+  const url = new URL(`${graphBaseUrl(apiVersion)}/${igUserId}`);
   url.searchParams.set("fields", "followers_count,media_count,follows_count,username,name");
   url.searchParams.set("access_token", accessToken);
   const { body, requestId } = await providerRequest(url.toString());
@@ -509,9 +525,11 @@ export async function fetchMetaInstagramSnapshot(args: {
   const following = typeof parsed.follows_count === "number" ? parsed.follows_count : null;
   // Account-level daily insights: views, reach, engaged accounts,
   // interactions. Empty datasets are `null`, never `0`.
-  const insights = await fetchMetaIgAccountDailyInsights({ accessToken, igUserId }).catch(
-    () => null,
-  );
+  const insights = await fetchMetaIgAccountDailyInsights({
+    accessToken,
+    igUserId,
+    apiVersion,
+  }).catch(() => null);
   const sourceMetadata: Record<string, string | number | boolean | null> = {
     partial: follower === null,
   };
@@ -551,13 +569,14 @@ export async function fetchMetaInstagramSnapshot(args: {
 async function fetchMetaIgAccountDailyInsights(args: {
   accessToken: string;
   igUserId: string;
+  apiVersion: string;
 }): Promise<{
   reach: number | null;
   views: number | null;
   engagedAccounts: number | null;
   interactions: number | null;
 } | null> {
-  const url = new URL(`${graphBaseUrl()}/${args.igUserId}/insights`);
+  const url = new URL(`${graphBaseUrl(args.apiVersion)}/${args.igUserId}/insights`);
   url.searchParams.set("metric", "reach,profile_views,accounts_engaged,total_interactions");
   url.searchParams.set("period", "day");
   url.searchParams.set("access_token", args.accessToken);
@@ -594,22 +613,25 @@ async function fetchMetaIgAccountDailyInsights(args: {
 export const metaAdapter: SocialProviderAdapter = {
   provider: "meta",
 
-  async discoverProfiles(credentials: SocialCredentials) {
+  async discoverProfiles(credentials: SocialCredentials, appCredentials) {
     return discoverMetaPages({
-      appId: serverEnv.META_APP_ID,
-      appSecret: serverEnv.META_APP_SECRET,
+      appId: appCredentials.appId,
+      appSecret: appCredentials.appSecret,
       accessToken: credentials.accessToken,
     });
   },
 
-  async refreshCredentials(credentials: SocialCredentials): Promise<RefreshedCredentials> {
+  async refreshCredentials(
+    credentials: SocialCredentials,
+    appCredentials,
+  ): Promise<RefreshedCredentials> {
     // Meta's long-lived user access token is refreshed by re-running
     // the short→long exchange. The user access token (top-level) is
     // what backs every Page access token in
     // `profileAccessTokens`, so a single refresh suffices.
     const short = await exchangeShortLivedForLongLivedToken({
-      appId: serverEnv.META_APP_ID,
-      appSecret: serverEnv.META_APP_SECRET,
+      appId: appCredentials.appId,
+      appSecret: appCredentials.appSecret,
       shortLivedToken: credentials.accessToken,
     });
     return {
@@ -627,10 +649,15 @@ export const metaAdapter: SocialProviderAdapter = {
   async fetchSnapshot(
     profile: ConnectedProfileRef,
     credentials: SocialCredentials,
+    appCredentials,
   ): Promise<ProfileSnapshot> {
+    // The snapshot path only needs the access token (carried in the
+    // per-connection SocialCredentials envelope). The Graph API
+    // version comes from the per-agency app config; null falls
+    // back to the compile-time default.
     const accessToken =
       credentials.profileAccessTokens?.[profile.providerAccountId] ?? credentials.accessToken;
-    const apiVersion = resolveGraphVersion();
+    const apiVersion = resolveGraphVersion(appCredentials.graphApiVersion);
     const requestIdHint = createHash("sha256")
       .update(`${profile.providerAccountId}:${apiVersion}:${Date.now()}`)
       .digest("hex")
@@ -654,14 +681,14 @@ export const metaAdapter: SocialProviderAdapter = {
     throw new SocialProviderError("permission_denied", false, null);
   },
 
-  async revoke(credentials: SocialCredentials): Promise<void> {
+  async revoke(credentials: SocialCredentials, _appCredentials): Promise<void> {
     // Best-effort revoke per the adapter contract. We DELETE the
     // user access token; Page tokens are children of the user token
     // and become invalid automatically. Errors are swallowed because
     // the application is about to mark the connection revoked
     // locally anyway.
     try {
-      const url = new URL(`${graphBaseUrl()}/me/permissions`);
+      const url = new URL(`${graphBaseUrl(_appCredentials.graphApiVersion)}/me/permissions`);
       url.searchParams.set("access_token", credentials.accessToken);
       await providerRequest(url.toString(), { method: "DELETE" });
     } catch {

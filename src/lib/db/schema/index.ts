@@ -24,5 +24,9 @@ export * from "./support";
 // M4 — social profile analytics. Imported after identity / workspaces
 // because `social-analytics.ts` references both at the schema layer.
 // M4.5 — agency social DEK. Imported after identity (agencies, users).
+// M4.6 — per-agency social provider config. Imported after identity
+// (agencies, users) and after social-dek (the envelope is sealed
+// with the same per-agency DEK).
 export * from "./social-analytics";
 export * from "./social-dek";
+export * from "./provider-config";

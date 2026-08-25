@@ -71,6 +71,19 @@ export type RefreshedCredentials = {
   refreshTokenExpiresAt: Date | null;
 };
 
+export type AppCredentials = {
+  appId: string;
+  appSecret: string;
+  /**
+   * Optional per-agency Graph API version override (Meta only).
+   * Null falls back to the adapter's compile-time default
+   * (`v25.0`). Pinned per agency so a tenant's app does not
+   * silently get bumped to a new Graph version on platform
+   * upgrades.
+   */
+  graphApiVersion?: string | null;
+};
+
 export interface SocialProviderAdapter {
   /** Provider key, e.g. `'meta'` or `'tiktok'`. */
   readonly provider: "meta" | "tiktok";
@@ -80,7 +93,10 @@ export interface SocialProviderAdapter {
    * Used at connection-finalize time. Returns the token-free profile
    * list plus the (possibly rotated) credentials envelope.
    */
-  discoverProfiles(credentials: SocialCredentials): Promise<{
+  discoverProfiles(
+    credentials: SocialCredentials,
+    appCredentials: AppCredentials,
+  ): Promise<{
     profiles: ConnectedProfile[];
     credentials: SocialCredentials;
   }>;
@@ -91,7 +107,10 @@ export interface SocialProviderAdapter {
    * refresh token itself has expired (TikTok 365-day) by surfacing
    * `SocialProviderError('auth_expired', false)`.
    */
-  refreshCredentials(credentials: SocialCredentials): Promise<RefreshedCredentials>;
+  refreshCredentials(
+    credentials: SocialCredentials,
+    appCredentials: AppCredentials,
+  ): Promise<RefreshedCredentials>;
 
   /**
    * Fetch the normalized daily snapshot for one profile. The adapter
@@ -101,6 +120,7 @@ export interface SocialProviderAdapter {
   fetchSnapshot(
     profile: ConnectedProfileRef,
     credentials: SocialCredentials,
+    appCredentials: AppCredentials,
   ): Promise<ProfileSnapshot>;
 
   /**
@@ -108,5 +128,5 @@ export interface SocialProviderAdapter {
    * does not abort the local state transition if the provider call
    * fails, because the connection is being disconnected anyway.
    */
-  revoke(credentials: SocialCredentials): Promise<void>;
+  revoke(credentials: SocialCredentials, appCredentials: AppCredentials): Promise<void>;
 }

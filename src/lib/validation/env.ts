@@ -144,21 +144,18 @@ const serverSchema = z.object({
   // — never a boot crash. Generate the key with:
   //   openssl rand -base64 32
   // None of these may be exposed as NEXT_PUBLIC_*.
+  //
+  // M4.6 (hard cutover): the per-provider app secrets are no longer
+  // read from env. They are now stored per-agency in
+  // `agency_social_provider_config` (sealed with this KEK). The
+  // env vars removed in M4.6: META_APP_ID, META_APP_SECRET,
+  // META_LOGIN_CONFIG_ID, META_GRAPH_API_VERSION, TIKTOK_CLIENT_KEY,
+  // TIKTOK_CLIENT_SECRET, SOCIAL_TIKTOK_ENABLED.
   SOCIAL_TOKEN_ENCRYPTION_KEY: stringOrEmpty,
-  META_APP_ID: stringOrEmpty,
-  META_APP_SECRET: stringOrEmpty,
-  META_LOGIN_CONFIG_ID: stringOrEmpty,
-  META_GRAPH_API_VERSION: z.string().default("v25.0"),
-  TIKTOK_CLIENT_KEY: stringOrEmpty,
-  TIKTOK_CLIENT_SECRET: stringOrEmpty,
+  // Master switch for the social cron. Default false so a fresh
+  // deployment does not start syncing until an agency admin has
+  // configured a provider row.
   SOCIAL_SYNC_ENABLED: z
-    .string()
-    .optional()
-    .transform((v) => v === "true" || v === "1"),
-  // Per-provider gate. When false, the TikTok provider and callback
-  // routes return 404 / disabled. Default false until the seven-day
-  // Meta observation window passes.
-  SOCIAL_TIKTOK_ENABLED: z
     .string()
     .optional()
     .transform((v) => v === "true" || v === "1"),

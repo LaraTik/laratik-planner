@@ -6,7 +6,6 @@ import {
   isSocialProviderError,
   type ProviderRequestInit,
 } from "../http";
-import { serverEnv } from "@/lib/validation/env";
 import type {
   ConnectedProfile,
   ConnectedProfileRef,
@@ -44,19 +43,13 @@ const TIKTOK_TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/";
 const TIKTOK_REVOKE_URL = "https://open.tiktokapis.com/v2/oauth/revoke/";
 const TIKTOK_USER_INFO_URL = "https://open.tiktokapis.com/v2/user/info/";
 
-const STUB_DISABLED: SocialProviderAdapter = {
-  provider: "tiktok",
-  discoverProfiles: async () => {
-    throw new SocialProviderError("auth_expired", false, null);
-  },
-  refreshCredentials: async () => {
-    throw new SocialProviderError("auth_expired", false, null);
-  },
-  fetchSnapshot: async () => {
-    throw new SocialProviderError("auth_expired", false, null);
-  },
-  revoke: async () => {},
-};
+void ((): void => {
+  // M4.6 (hard cutover): the per-provider `STUB_DISABLED` adapter
+  // is gone. The TikTok provider is gated per agency by the
+  // `agency_social_provider_config` row's `enabled` column. The
+  // cron worker now checks the agency config before calling into
+  // the adapter (see `src/lib/social/sync.ts` -> `runOne`).
+})();
 
 export function buildTikTokAuthorizationUrl(input: {
   clientKey: string;
@@ -212,10 +205,11 @@ export async function fetchTikTokProfile(accessToken: string): Promise<{
 export const tiktokAdapter: SocialProviderAdapter = {
   provider: "tiktok",
 
-  discoverProfiles: async (credentials) => {
-    if (!serverEnv.SOCIAL_TIKTOK_ENABLED) {
-      throw new SocialProviderError("auth_expired", false, null);
-    }
+  discoverProfiles: async (credentials, appCredentials) => {
+    // The TikTok user-info endpoint authenticates with the user
+    // access token alone; the app credentials are not used here
+    // but the param is in the contract for interface symmetry.
+    void appCredentials;
     const profile = await fetchTikTokProfile(credentials.accessToken);
     const connected: ConnectedProfile = {
       providerAccountId: profile.openId,
@@ -229,13 +223,13 @@ export const tiktokAdapter: SocialProviderAdapter = {
     return { profiles: [connected], credentials };
   },
 
-  refreshCredentials: async (credentials) => {
+  refreshCredentials: async (credentials, appCredentials) => {
     if (!credentials.refreshToken) {
       throw new SocialProviderError("auth_expired", false, null);
     }
     const refreshed = await refreshTikTokCredentials({
-      clientKey: serverEnv.TIKTOK_CLIENT_KEY ?? "",
-      clientSecret: serverEnv.TIKTOK_CLIENT_SECRET ?? "",
+      clientKey: appCredentials.appId,
+      clientSecret: appCredentials.appSecret,
       refreshToken: credentials.refreshToken,
     });
     const out: RefreshedCredentials = {
@@ -246,10 +240,11 @@ export const tiktokAdapter: SocialProviderAdapter = {
     return out;
   },
 
-  fetchSnapshot: async (profile: ConnectedProfileRef, credentials) => {
-    if (!serverEnv.SOCIAL_TIKTOK_ENABLED) {
-      throw new SocialProviderError("auth_expired", false, null);
-    }
+  fetchSnapshot: async (profile: ConnectedProfileRef, credentials, appCredentials) => {
+    // Same as `discoverProfiles` — user-info authenticates with the
+    // access token, app credentials are not used. Param kept for
+    // interface symmetry.
+    void appCredentials;
     const p = await fetchTikTokProfile(credentials.accessToken);
     const observedAt = new Date();
     const sourceMetadata: Record<string, string | number | boolean | null> = {
@@ -297,12 +292,12 @@ export const tiktokAdapter: SocialProviderAdapter = {
     return snapshot;
   },
 
-  revoke: async (credentials) => {
+  revoke: async (credentials, appCredentials) => {
     if (!credentials.refreshToken) return;
     try {
       await postForm(TIKTOK_REVOKE_URL, {
-        client_key: serverEnv.TIKTOK_CLIENT_KEY ?? "",
-        client_secret: serverEnv.TIKTOK_CLIENT_SECRET ?? "",
+        client_key: appCredentials.appId,
+        client_secret: appCredentials.appSecret,
         token: credentials.refreshToken,
       });
     } catch (err) {
@@ -316,8 +311,14 @@ export const tiktokAdapter: SocialProviderAdapter = {
 };
 
 // Helper retained for the cron worker's adapter registry.
+//
+// Hard cutover (M4.6): the platform-wide `SOCIAL_TIKTOK_ENABLED`
+// flag is gone. The TikTok provider is gated per agency by the
+// `agency_social_provider_config` row's `enabled` column. The
+// adapter is always returned here; the cron path checks the agency
+// config before calling into it.
 export function tiktokAdapterOrDisabled(): SocialProviderAdapter {
-  return serverEnv.SOCIAL_TIKTOK_ENABLED ? tiktokAdapter : STUB_DISABLED;
+  return tiktokAdapter;
 }
 
 // Backwards-compat re-export for the sync worker adapter registry.

@@ -2,14 +2,15 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { socialOauthStates } from "@/lib/db/schema";
+import { socialOauthStates, workspaces } from "@/lib/db/schema";
 import { consumeOauthState, createPendingConnection } from "@/lib/social/repository";
 import {
   discoverMetaPages,
   exchangeMetaCodeForShortLivedToken,
   exchangeShortLivedForLongLivedToken,
 } from "@/lib/social/providers/meta";
-import { clientEnv, serverEnv } from "@/lib/validation/env";
+import { getAgencyProviderConfig } from "@/lib/social/provider-config";
+import { clientEnv } from "@/lib/validation/env";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -103,21 +104,35 @@ export async function GET(req: NextRequest) {
     return redirectWithError(returnPath, "missing_code");
   }
 
-  if (!serverEnv.META_APP_ID || !serverEnv.META_APP_SECRET) {
+  // M4.6 — resolve per-agency provider config. The cookie state
+  // row carries the workspaceId; we follow the FK to the
+  // workspace's agencyId, then load the per-agency config row.
+  const [ws] = await db
+    .select({ agencyId: workspaces.agencyId })
+    .from(workspaces)
+    .where(eq(workspaces.id, stateRow.workspaceId))
+    .limit(1);
+  if (!ws) {
+    return redirectWithError(returnPath, "not_configured");
+  }
+  const config = await getAgencyProviderConfig(db, ws.agencyId, "meta");
+  if (!("appId" in config)) {
     return redirectWithError(returnPath, "not_configured");
   }
 
   try {
     const short = await exchangeMetaCodeForShortLivedToken({
-      appId: serverEnv.META_APP_ID,
-      appSecret: serverEnv.META_APP_SECRET,
+      appId: config.appId,
+      appSecret: config.appSecret,
       code,
       redirectUri: buildCallbackUrl(),
+      graphApiVersion: config.graphApiVersion,
     });
     const long = await exchangeShortLivedForLongLivedToken({
-      appId: serverEnv.META_APP_ID,
-      appSecret: serverEnv.META_APP_SECRET,
+      appId: config.appId,
+      appSecret: config.appSecret,
       shortLivedToken: short.access_token,
+      graphApiVersion: config.graphApiVersion,
     });
 
     // 3) Discover Pages and (optionally) linked Instagram accounts.
@@ -125,9 +140,10 @@ export async function GET(req: NextRequest) {
     // `profileAccessTokens`; the caller's `ConnectedProfile[]` is
     // token-free.
     const discovered = await discoverMetaPages({
-      appId: serverEnv.META_APP_ID,
-      appSecret: serverEnv.META_APP_SECRET,
+      appId: config.appId,
+      appSecret: config.appSecret,
       accessToken: long.accessToken,
+      graphApiVersion: config.graphApiVersion,
     });
 
     // 4) Persist a pending connection. The provider_subject_id is a

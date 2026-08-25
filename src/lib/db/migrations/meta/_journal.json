@@ -134,6 +134,13 @@
       "when": 1788600000000,
       "tag": "0018_platform_access_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788700000000,
+      "tag": "0019_agency_social_provider_config",
+      "breakpoints": true
     }
   ]
 }

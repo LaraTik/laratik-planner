@@ -2,7 +2,12 @@ import { createHash } from "node:crypto";
 import { addDays, addMinutes, addHours } from "date-fns";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { socialChannels, socialConnections, socialProfileDailyMetrics } from "@/lib/db/schema";
+import {
+  socialChannels,
+  socialConnections,
+  socialProfileDailyMetrics,
+  workspaces,
+} from "@/lib/db/schema";
 import {
   claimDueProfiles,
   markNeedsReauth,
@@ -26,6 +31,7 @@ import {
   isKekAvailable,
   MissingKekError,
 } from "./key-management";
+import { getAgencyProviderConfig, type SocialProvider } from "./provider-config";
 
 type SocialChannel = typeof socialChannels.$inferSelect;
 type SocialConnection = typeof socialConnections.$inferSelect;
@@ -117,11 +123,14 @@ export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResul
   let skipped = 0;
 
   for (const profile of claimed) {
-    const provider = profile.connection.provider as "meta" | "tiktok";
+    const provider = profile.connection.provider as SocialProvider;
     const adapter = PROVIDER_ADAPTERS[provider];
-    if (provider === "tiktok" || !adapter) {
+    if (!adapter) {
+      // Unknown provider in the registry. Clear the lease so the
+      // tick does not re-pick it; treat as a backoff until operator
+      // intervention (the next sync attempt will re-enter the same
+      // branch).
       skipped += 1;
-      // Clear the lease so the next tick does not re-pick this row.
       await db
         .update(socialChannels)
         .set({ syncLeaseUntil: null, updatedAt: now })
@@ -131,6 +140,7 @@ export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResul
     const result = await runOne(adapter, profile, now, dekCache);
     if (result.outcome === "ok") succeeded += 1;
     else if (result.outcome === "needs_reauth") needsReauth += 1;
+    else if (result.outcome === "skipped") skipped += 1;
     else failed += 1;
   }
 
@@ -157,7 +167,7 @@ export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResul
 
 // ─── Per-channel sync core (shared by cron tick + user "Re-test") ─────────
 
-type SyncOutcome = "ok" | "needs_reauth" | "failed";
+type SyncOutcome = "ok" | "needs_reauth" | "failed" | "skipped";
 type SyncErrorCode =
   | "auth_expired"
   | "permission_denied"
@@ -166,6 +176,7 @@ type SyncErrorCode =
   | "not_found"
   | "platform_kek_missing"
   | "social_not_enabled"
+  | "not_configured"
   | "unknown";
 
 type SyncResult = {
@@ -206,6 +217,7 @@ type SyncResult = {
  */
 async function runChannelSyncCore(
   adapter: SocialProviderAdapter,
+  appCredentials: { appId: string; appSecret: string; graphApiVersion: string | null },
   channel: SocialChannel,
   connection: SocialConnection,
   now: Date,
@@ -220,7 +232,7 @@ async function runChannelSyncCore(
     const expiresAt = connection.accessTokenExpiresAt;
     if (expiresAt && expiresAt.getTime() - now.getTime() < 5 * 60_000) {
       try {
-        const refreshed = await adapter.refreshCredentials(credentials);
+        const refreshed = await adapter.refreshCredentials(credentials, appCredentials);
         credentials = refreshed.credentials;
         await db
           .update(socialChannels) // touch to keep Drizzle happy
@@ -253,7 +265,7 @@ async function runChannelSyncCore(
             : "tiktok",
       parentProviderAccountId: null,
     };
-    const rawSnapshot = await adapter.fetchSnapshot(profileRef, credentials);
+    const rawSnapshot = await adapter.fetchSnapshot(profileRef, credentials, appCredentials);
     const snapshot: ProfileSnapshot = {
       ...rawSnapshot,
       providerRequestId: rawSnapshot.providerRequestId ?? newRequestId(),
@@ -347,7 +359,59 @@ async function runOne(
   now: Date,
   dekCache: ReturnType<typeof createDekCache>,
 ): Promise<SyncResult> {
-  return runChannelSyncCore(adapter, profile.channel, profile.connection, now, dekCache);
+  // Resolve the agency's provider config (M4.6 — hard cutover from
+  // env). The config carries the app id + sealed app secret, both
+  // required to call the provider's OAuth endpoints during the
+  // refresh / snapshot phases. A channel whose agency has not
+  // configured this provider (or has it disabled) is skipped with
+  // a long backoff — operator must set the config before the cron
+  // can sync it.
+  const [workspaceRow] = await db
+    .select({ agencyId: workspaces.agencyId })
+    .from(workspaces)
+    .where(eq(workspaces.id, profile.channel.workspaceId))
+    .limit(1);
+  if (!workspaceRow) {
+    return { outcome: "failed", errorCode: "unknown", needsReauth: false, lastSyncedAt: null };
+  }
+  const providerKey = profile.connection.provider as SocialProvider;
+  const config = await getAgencyProviderConfig(db, workspaceRow.agencyId, providerKey);
+  if (!("appId" in config)) {
+    // Not configured — back off for a day so the operator has a
+    // chance to configure the row. The cron increments the
+    // failure count via the standard markSyncFailure path below.
+    await markSyncFailure(db, profile.channel.id, "not_configured", addDays(now, 1), false);
+    return {
+      outcome: "failed",
+      errorCode: "not_configured",
+      needsReauth: false,
+      lastSyncedAt: null,
+    };
+  }
+  if (!config.enabled) {
+    await db
+      .update(socialChannels)
+      .set({ syncLeaseUntil: null, updatedAt: now })
+      .where(eq(socialChannels.id, profile.channel.id));
+    return {
+      outcome: "skipped",
+      errorCode: "not_configured",
+      needsReauth: false,
+      lastSyncedAt: null,
+    };
+  }
+  return runChannelSyncCore(
+    adapter,
+    {
+      appId: config.appId,
+      appSecret: config.appSecret,
+      graphApiVersion: config.graphApiVersion,
+    },
+    profile.channel,
+    profile.connection,
+    now,
+    dekCache,
+  );
 }
 
 export function backoffAt(now: Date, failureCount: number): Date {
@@ -413,6 +477,8 @@ export function humanizeTestError(code: TestErrorCode): string {
       return "This channel is not currently linked to a provider grant.";
     case "not_connected":
       return "This channel is not in a connected state. Reconnect to resume.";
+    case "not_configured":
+      return "Your agency admin hasn't set up this provider yet. Ask them to add the app credentials in Agency Settings.";
     case "unknown":
       return "The validation request failed. Try again, or check the system status.";
   }
@@ -491,13 +557,43 @@ export async function runChannelTest(channelId: string): Promise<TestChannelResu
   }
 
   const { channel, connection } = row;
-  const provider = connection.provider as "meta" | "tiktok";
+  const provider = connection.provider as SocialProvider;
   const adapter = PROVIDER_ADAPTERS[provider];
   if (!adapter) {
-    // Provider row exists but no adapter is wired (e.g. tiktok with
-    // SOCIAL_TIKTOK_ENABLED=false). This is an operator config, not
-    // a user error — surface it as `not_connected` so the UI tells
-    // the user to reconnect.
+    // Provider row exists but no adapter is wired. This is an
+    // operator config, not a user error — surface it as
+    // `not_connected` so the UI tells the user to reconnect.
+    return {
+      ok: false,
+      errorCode: "not_connected",
+      message: humanizeTestError("not_connected"),
+    };
+  }
+
+  // Resolve the agency's per-provider config (M4.6 hard cutover).
+  // The app id + sealed app secret are required to call the
+  // provider's OAuth endpoints during refresh / snapshot.
+  const [ws] = await db
+    .select({ agencyId: workspaces.agencyId })
+    .from(workspaces)
+    .where(eq(workspaces.id, channel.workspaceId))
+    .limit(1);
+  if (!ws) {
+    return {
+      ok: false,
+      errorCode: "not_configured",
+      message: humanizeTestError("not_configured"),
+    };
+  }
+  const config = await getAgencyProviderConfig(db, ws.agencyId, provider);
+  if (!("appId" in config)) {
+    return {
+      ok: false,
+      errorCode: "not_configured",
+      message: humanizeTestError("not_configured"),
+    };
+  }
+  if (!config.enabled) {
     return {
       ok: false,
       errorCode: "not_connected",
@@ -506,7 +602,18 @@ export async function runChannelTest(channelId: string): Promise<TestChannelResu
   }
 
   const dekCache = createDekCache(db);
-  const result = await runChannelSyncCore(adapter, channel, connection, new Date(), dekCache);
+  const result = await runChannelSyncCore(
+    adapter,
+    {
+      appId: config.appId,
+      appSecret: config.appSecret,
+      graphApiVersion: config.graphApiVersion,
+    },
+    channel,
+    connection,
+    new Date(),
+    dekCache,
+  );
   if (result.outcome === "ok" && result.lastSyncedAt) {
     return { ok: true, lastSyncedAt: result.lastSyncedAt };
   }
