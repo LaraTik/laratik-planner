@@ -29,6 +29,15 @@ import {
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { BatchCreateSchema, type BatchCreateInput } from "@/lib/content/batch";
+import {
+  enqueueApprovalNotification,
+  enqueueAssignmentNotification,
+  enqueueChangesRequestedNotification,
+  enqueueClaimNotification,
+  enqueueReadyToPublishNotification,
+  enqueueReleaseNotification,
+  enqueueReviewRequestNotification,
+} from "@/lib/notifications/service";
 
 /**
  * Content service — the heart of the app.
@@ -608,6 +617,94 @@ export async function transitionContent(
       metadata: { action: input.action },
     });
 
+    // FEAT-01 — fire the right in-app notification for each
+    // meaningful transition. Skipped when the recipient is the actor
+    // themselves (self-approval / self-submit). The kinds map per
+    // master prompt §12:
+    //   submit_content_review / resubmit_content → "review_request"
+    //     to the assigned content reviewer (fallback: the owner)
+    //   approve_content                        → "approval"
+    //     to the content owner + the designer (so they know the
+    //     item is ready for the next step)
+    //   request_content_changes                → "changes_requested"
+    //     to the content owner
+    //   any transition that lands in ready_to_publish
+    //                                          → "ready_to_publish"
+    //     to the content owner + designer
+    const ownerId = item.contentOwnerId;
+    const designerId = item.designerId;
+    const contentReviewerId = item.contentReviewerId;
+    const title = item.title;
+    const skipSelf = (uid: string | null | undefined): string | null =>
+      uid && uid !== actor.id ? uid : null;
+    if (input.action === "submit_content_review" || input.action === "resubmit_content") {
+      const reviewer = skipSelf(contentReviewerId) ?? skipSelf(ownerId);
+      if (reviewer) {
+        await enqueueReviewRequestNotification(
+          {
+            userId: reviewer,
+            workspaceId: item.workspaceId,
+            contentItemId: item.id,
+            title: `Review requested: "${title}"`,
+            body: "A planner submitted this item for content review.",
+          },
+          tx,
+        );
+      }
+    } else if (input.action === "approve_content") {
+      for (const recipient of [skipSelf(ownerId), skipSelf(designerId)].filter((u): u is string =>
+        Boolean(u),
+      )) {
+        await enqueueApprovalNotification(
+          {
+            userId: recipient,
+            workspaceId: item.workspaceId,
+            contentItemId: item.id,
+            title: `Content approved: "${title}"`,
+            body: "The brief was approved. The item is ready for the next step.",
+          },
+          tx,
+        );
+      }
+    } else if (input.action === "request_content_changes") {
+      const recipient = skipSelf(ownerId);
+      if (recipient) {
+        await enqueueChangesRequestedNotification(
+          {
+            userId: recipient,
+            workspaceId: item.workspaceId,
+            contentItemId: item.id,
+            title: `Changes requested: "${title}"`,
+            body: input.reason
+              ? `Reviewer feedback: ${input.reason.slice(0, 240)}`
+              : "Open the item to see the reviewer's notes.",
+          },
+          tx,
+        );
+      }
+    } else if (transition.to === "ready_to_publish") {
+      for (const recipient of [skipSelf(ownerId), skipSelf(designerId)].filter((u): u is string =>
+        Boolean(u),
+      )) {
+        await enqueueReadyToPublishNotification(
+          {
+            userId: recipient,
+            workspaceId: item.workspaceId,
+            contentItemId: item.id,
+            title: `Ready to publish: "${title}"`,
+            body: "All approvals are in. The item is ready to publish.",
+          },
+          tx,
+        );
+      }
+    }
+    // Deadline warnings (a planned-publish window is approaching)
+    // are emitted by the outbox cron, not by the transition path —
+    // see FEAT-18 (P2 backlog). Today the in-app kind is wired but
+    // no scheduled worker fires it; the dispatcher will simply
+    // process any future `deadline` events the moment they are
+    // inserted.
+
     revalidatePath(`/app/w/`);
     return { from: item.status, to: transition.to };
   });
@@ -620,6 +717,8 @@ export async function claimAsDesigner(actor: Actor, contentItemId: string) {
       workspaceId: contentItems.workspaceId,
       designerId: contentItems.designerId,
       status: contentItems.status,
+      contentOwnerId: contentItems.contentOwnerId,
+      title: contentItems.title,
     })
     .from(contentItems)
     .where(eq(contentItems.id, contentItemId))
@@ -633,15 +732,258 @@ export async function claimAsDesigner(actor: Actor, contentItemId: string) {
     throw new Error(`Cannot claim when status is ${item.status}`);
   }
 
-  await db
-    .update(contentItems)
-    .set({ designerId: actor.id, status: "in_design", updatedAt: new Date() })
-    .where(eq(contentItems.id, contentItemId));
-  await db.insert(contentAssignments).values({
-    contentItemId,
-    assignmentType: "designer",
-    userId: actor.id,
-    active: true,
+  await db.transaction(async (tx) => {
+    await tx
+      .update(contentItems)
+      .set({ designerId: actor.id, status: "in_design", updatedAt: new Date() })
+      .where(eq(contentItems.id, contentItemId));
+    await tx.insert(contentAssignments).values({
+      contentItemId,
+      assignmentType: "designer",
+      userId: actor.id,
+      active: true,
+    });
+    // FEAT-01 — fire an in-app "assignment" notification to the
+    // content owner so they know work has started. Skip the
+    // self-notify case (the owner claimed their own item).
+    if (item.contentOwnerId && item.contentOwnerId !== actor.id) {
+      await enqueueClaimNotification(
+        {
+          userId: item.contentOwnerId,
+          workspaceId: item.workspaceId,
+          contentItemId,
+          title: `Designer claimed "${item.title}"`,
+          body: "The design task is now in progress. You'll be notified when a delivery is submitted.",
+        },
+        tx,
+      );
+    }
+  });
+  revalidatePath(`/app/w/`);
+}
+
+// ─── FEAT-07 — §14 required commands (GAP-FULL-REVIEW-2026-08-25) ──────────
+//
+// `assignDesigner` / `releaseDesignTask` / `rescheduleContentItem` are
+// the §14 contract names. `claimAsDesigner` (the designer's
+// self-claim) was the only one in place; assign and release are the
+// planner-driven paths the workspace manager uses to move a task
+// off a stuck designer or rotate it to a different one.
+
+/**
+ * Planner assigns a specific designer to a content item. Workspace
+ * manager / content planner only.
+ */
+export const AssignDesignerSchema = z.object({
+  contentItemId: z.string().uuid(),
+  designerId: z.string().uuid(),
+});
+export type AssignDesignerInput = z.infer<typeof AssignDesignerSchema>;
+
+export async function assignDesigner(actor: Actor, input: AssignDesignerInput) {
+  const parsed = AssignDesignerSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+  const [item] = await db
+    .select({
+      workspaceId: contentItems.workspaceId,
+      designerId: contentItems.designerId,
+      title: contentItems.title,
+    })
+    .from(contentItems)
+    .where(eq(contentItems.id, parsed.data.contentItemId))
+    .limit(1);
+  if (!item) throw new Error("Content item not found");
+  await requirePolicy(
+    hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),
+    "assign_designer",
+  );
+  if (item.designerId === parsed.data.designerId) return; // idempotent
+  const previousDesigner = item.designerId;
+  await db.transaction(async (tx) => {
+    await tx
+      .update(contentItems)
+      .set({ designerId: parsed.data.designerId, updatedAt: new Date() })
+      .where(eq(contentItems.id, parsed.data.contentItemId));
+    await tx.insert(contentAssignments).values({
+      contentItemId: parsed.data.contentItemId,
+      assignmentType: "designer",
+      userId: parsed.data.designerId,
+      assignedBy: actor.id,
+      active: true,
+    });
+    await tx.insert(activityEvents).values({
+      workspaceId: item.workspaceId,
+      contentItemId: parsed.data.contentItemId,
+      actorId: actor.id,
+      kind: "assignment",
+      summary: `Assigned designer ${parsed.data.designerId} to "${item.title}"`,
+      beforeData: { designerId: previousDesigner },
+      afterData: { designerId: parsed.data.designerId },
+    });
+    // FEAT-01 — fire an assignment notification to the new designer
+    // and, if there was a previous designer, a release to them.
+    await enqueueAssignmentNotification(
+      {
+        userId: parsed.data.designerId,
+        workspaceId: item.workspaceId,
+        contentItemId: parsed.data.contentItemId,
+        title: `You were assigned "${item.title}"`,
+        body: "A planner assigned this design task to you. Open the item to start.",
+      },
+      tx,
+    );
+    if (previousDesigner && previousDesigner !== parsed.data.designerId) {
+      await enqueueReleaseNotification(
+        {
+          userId: previousDesigner,
+          workspaceId: item.workspaceId,
+          contentItemId: parsed.data.contentItemId,
+          title: `Design task reassigned: "${item.title}"`,
+          body: "This design task was reassigned to another designer.",
+        },
+        tx,
+      );
+    }
+  });
+  revalidatePath(`/app/w/`);
+}
+
+/**
+ * Planner releases a designer's hold on an item. Sets designer_id to
+ * null and rolls the item back to `approved_for_design` so it shows
+ * up in the unassigned queue. workspace_manager / content_planner.
+ */
+export const ReleaseDesignTaskSchema = z.object({
+  contentItemId: z.string().uuid(),
+});
+export type ReleaseDesignTaskInput = z.infer<typeof ReleaseDesignTaskSchema>;
+
+export async function releaseDesignTask(actor: Actor, input: ReleaseDesignTaskInput) {
+  const parsed = ReleaseDesignTaskSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+  const [item] = await db
+    .select({
+      workspaceId: contentItems.workspaceId,
+      designerId: contentItems.designerId,
+      status: contentItems.status,
+      title: contentItems.title,
+    })
+    .from(contentItems)
+    .where(eq(contentItems.id, parsed.data.contentItemId))
+    .limit(1);
+  if (!item) throw new Error("Content item not found");
+  await requirePolicy(
+    hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),
+    "release_design_task",
+  );
+  if (!item.designerId) {
+    throw new Error("Content item is not currently assigned to a designer");
+  }
+  const releasedDesigner = item.designerId;
+  await db.transaction(async (tx) => {
+    await tx
+      .update(contentItems)
+      .set({
+        designerId: null,
+        status:
+          item.status === "in_design" || item.status === "changes_requested"
+            ? "approved_for_design"
+            : item.status,
+        updatedAt: new Date(),
+      })
+      .where(eq(contentItems.id, parsed.data.contentItemId));
+    // Close out the active assignment row.
+    await tx
+      .update(contentAssignments)
+      .set({ active: false, releasedAt: new Date() })
+      .where(
+        and(
+          eq(contentAssignments.contentItemId, parsed.data.contentItemId),
+          eq(contentAssignments.userId, releasedDesigner),
+          eq(contentAssignments.assignmentType, "designer"),
+          eq(contentAssignments.active, true),
+        ),
+      );
+    await tx.insert(activityEvents).values({
+      workspaceId: item.workspaceId,
+      contentItemId: parsed.data.contentItemId,
+      actorId: actor.id,
+      kind: "assignment",
+      summary: `Released designer hold on "${item.title}"`,
+      beforeData: { designerId: releasedDesigner, status: item.status },
+      afterData: { designerId: null },
+    });
+    // FEAT-01 — notify the released designer.
+    if (releasedDesigner !== actor.id) {
+      await enqueueReleaseNotification(
+        {
+          userId: releasedDesigner,
+          workspaceId: item.workspaceId,
+          contentItemId: parsed.data.contentItemId,
+          title: `Design task released: "${item.title}"`,
+          body: "A planner released your hold on this design task. The item is back in the unassigned queue.",
+        },
+        tx,
+      );
+    }
+  });
+  revalidatePath(`/app/w/`);
+}
+
+/**
+ * Move a content item's planned publish date. Distinct from the
+ * broader `updateContentItem` (which also changes the brief / title
+ * etc.) so the calendar UI can re-schedule without round-tripping
+ * the full edit form. Accepts both the standard `workspaces.tz`
+ * `Date` and a string for ergonomic `useActionState` form binding.
+ */
+export const RescheduleContentItemSchema = z.object({
+  contentItemId: z.string().uuid(),
+  plannedPublishAt: z.coerce.date(),
+});
+export type RescheduleContentItemInput = z.infer<typeof RescheduleContentItemSchema>;
+
+export async function rescheduleContentItem(actor: Actor, input: RescheduleContentItemInput) {
+  const parsed = RescheduleContentItemSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+  const [item] = await db
+    .select({
+      workspaceId: contentItems.workspaceId,
+      plannedPublishAt: contentItems.plannedPublishAt,
+      designerId: contentItems.designerId,
+      contentOwnerId: contentItems.contentOwnerId,
+      title: contentItems.title,
+    })
+    .from(contentItems)
+    .where(eq(contentItems.id, parsed.data.contentItemId))
+    .limit(1);
+  if (!item) throw new Error("Content item not found");
+  await requirePolicy(
+    hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),
+    "reschedule_content",
+  );
+  // No-op when the date didn't change.
+  if (item.plannedPublishAt.getTime() === parsed.data.plannedPublishAt.getTime()) return;
+  await db.transaction(async (tx) => {
+    await tx
+      .update(contentItems)
+      .set({ plannedPublishAt: parsed.data.plannedPublishAt, updatedAt: new Date() })
+      .where(eq(contentItems.id, parsed.data.contentItemId));
+    await tx.insert(activityEvents).values({
+      workspaceId: item.workspaceId,
+      contentItemId: parsed.data.contentItemId,
+      actorId: actor.id,
+      kind: "schedule_change",
+      summary: `Rescheduled "${item.title}"`,
+      beforeData: { plannedPublishAt: item.plannedPublishAt.toISOString() },
+      afterData: { plannedPublishAt: parsed.data.plannedPublishAt.toISOString() },
+    });
   });
   revalidatePath(`/app/w/`);
 }

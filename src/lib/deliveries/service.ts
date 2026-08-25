@@ -15,6 +15,11 @@ import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { deriveCreativeApprovalOutcome } from "@/lib/deliveries/approval-workflow";
+import {
+  enqueueApprovalNotification,
+  enqueueDeliveryNotification,
+  enqueueReadyToPublishNotification,
+} from "@/lib/notifications/service";
 
 /**
  * Delivery service (Goal 9 — master prompt §8 + §10).
@@ -159,6 +164,40 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
       afterData: { status: "creative_review", deliveryVersionId: created!.id },
     });
 
+    // FEAT-01 — fire a `delivery` in-app notification to the
+    // content owner and the assigned internal creative reviewer.
+    // These are the two users the §12 contract names as "must
+    // hear about a delivery submission". Skip the actor themselves.
+    const skipSelf = (uid: string | null | undefined): string | null =>
+      uid && uid !== actor.id ? uid : null;
+    const itemRow = await tx
+      .select({
+        title: contentItems.title,
+        contentOwnerId: contentItems.contentOwnerId,
+        internalCreativeReviewerId: contentItems.internalCreativeReviewerId,
+      })
+      .from(contentItems)
+      .where(eq(contentItems.id, input.contentItemId))
+      .limit(1);
+    const itemMeta = itemRow[0];
+    if (itemMeta) {
+      for (const recipient of [
+        skipSelf(itemMeta.contentOwnerId),
+        skipSelf(itemMeta.internalCreativeReviewerId),
+      ].filter((u): u is string => Boolean(u))) {
+        await enqueueDeliveryNotification(
+          {
+            userId: recipient,
+            workspaceId: item.workspaceId,
+            contentItemId: input.contentItemId,
+            title: `Delivery submitted: "${itemMeta.title}"`,
+            body: `Delivery V${nextVersion} is waiting on creative review.`,
+          },
+          tx,
+        );
+      }
+    }
+
     revalidatePath(`/app/w/`);
     return { deliveryVersionId: created!.id, versionNumber: nextVersion };
   });
@@ -292,6 +331,84 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
         deliveryVersionId: lockedRequest.deliveryVersionId,
       },
     });
+
+    // FEAT-01 — emit the right in-app kind for the creative decision:
+    //   - `approval`           → the content owner + the designer,
+    //                            so they know the creative review
+    //                            cleared.
+    //   - `changes_requested`  → the designer (the one who has to
+    //                            iterate), and the content owner
+    //                            (kept in the loop).
+    //   - transition to
+    //     ready_to_publish     → `ready_to_publish` to the owner +
+    //                            designer (the "go live" signal).
+    // The client_reviewer (creative_client gate) is intentionally
+    // not in the notify set — that audience sees the review via
+    // the dedicated client portal, not the bell.
+    const itemMetaRows = await tx
+      .select({
+        title: contentItems.title,
+        contentOwnerId: contentItems.contentOwnerId,
+        designerId: contentItems.designerId,
+      })
+      .from(contentItems)
+      .where(eq(contentItems.id, lockedRequest.contentItemId))
+      .limit(1);
+    const itemMeta = itemMetaRows[0];
+    const skipSelf = (uid: string | null | undefined): string | null =>
+      uid && uid !== actor.id ? uid : null;
+    if (itemMeta && input.decision === "approved") {
+      for (const recipient of [
+        skipSelf(itemMeta.contentOwnerId),
+        skipSelf(itemMeta.designerId),
+      ].filter((u): u is string => Boolean(u))) {
+        await enqueueApprovalNotification(
+          {
+            userId: recipient,
+            workspaceId: item.workspaceId,
+            contentItemId: lockedRequest.contentItemId,
+            title: `Creative approved: "${itemMeta.title}"`,
+            body: `The ${lockedRequest.gate} reviewer approved this delivery.`,
+          },
+          tx,
+        );
+      }
+      if (outcome.contentStatus === "ready_to_publish") {
+        for (const recipient of [
+          skipSelf(itemMeta.contentOwnerId),
+          skipSelf(itemMeta.designerId),
+        ].filter((u): u is string => Boolean(u))) {
+          await enqueueReadyToPublishNotification(
+            {
+              userId: recipient,
+              workspaceId: item.workspaceId,
+              contentItemId: lockedRequest.contentItemId,
+              title: `Ready to publish: "${itemMeta.title}"`,
+              body: "All approvals are in. The item is ready to publish.",
+            },
+            tx,
+          );
+        }
+      }
+    } else if (itemMeta && input.decision === "changes_requested") {
+      for (const recipient of [
+        skipSelf(itemMeta.designerId),
+        skipSelf(itemMeta.contentOwnerId),
+      ].filter((u): u is string => Boolean(u))) {
+        await enqueueDeliveryNotification(
+          {
+            userId: recipient,
+            workspaceId: item.workspaceId,
+            contentItemId: lockedRequest.contentItemId,
+            title: `Changes requested: "${itemMeta.title}"`,
+            body: input.feedback
+              ? `Reviewer feedback: ${input.feedback.slice(0, 240)}`
+              : "The reviewer requested changes on the latest delivery.",
+          },
+          tx,
+        );
+      }
+    }
 
     revalidatePath(`/app/w/`);
     return { ok: true };
