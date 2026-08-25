@@ -2,6 +2,22 @@
 
 > Day-2 operations for `laratik-planner` on `laratik-vps`. Mirrors the vps-ops pattern (`mavis-trader`, `laratik-social-platform`).
 
+## Milestone scope (M-tag glossary)
+
+The runbook uses `M1`–`M4.5` tags inline to anchor a procedure to a release. A new operator reading the runbook does not need to load the milestone plan to follow any individual section, but the scope is summarised here for self-contained reading. Authoritative per-milestone evidence lives in [`docs/implementation/progress.md`](../implementation/progress.md) and [`docs/architecture/overview.md`](../architecture/overview.md).
+
+| Tag    | Scope (one-line summary)                                                                                                                                | First appeared on `main`     | Canonical reference                                                                                                    |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `M1`   | Auth + security: Google OAuth sign-in, agency cookie + HMAC, CSRF for server actions, base rate limiting, audit row for auth events.                    | pre-2026-08-19               | `progress.md` "auth/security"                                                                                          |
+| `M2`   | Workflow + publishing + AI foundations: content lifecycle, channels, brand kit, invitations, MiniMax default, per-agency `provider_secret` placeholder. | 2026-08-19                   | `progress.md` round-2 review plan; `MIGRATION_DRILL_RESULTS.md` § "2026-08-23 M2 ledger-safe rerun"                    |
+| `M3`   | AI governance + support access: per-agency `ai_provider_secret`, `support_access_grant` lifecycle, platform-only `support_session` banner.              | 2026-08-24 (merge `4a999fe`) | `progress.md` "M3 (AI governance + support access) merged"                                                             |
+| `M3a`  | Infra + deploy chain: VPS, Docker, GHCR, M3a migrator image, `deploy.yml` workflow_run gate, schema-readiness probe.                                    | 2026-08-20                   | `progress.md` "deploy chain live on `laratik-vps`"; this runbook § "Deploying a new version"                           |
+| `M3b`  | Product + docs: authenticated surfaces (workspace, content, channels, brand, design, library), E2E coverage, axe-core a11y, role-by-route matrix.       | 2026-08-22                   | This runbook § "End-to-end tests" (E2E spec table)                                                                     |
+| `M4`   | Social profile analytics: read-only Meta + TikTok per-profile metrics, AES-256-GCM envelope, 5-state staged rollout, daily cron, 25-month retention.    | 2026-08-24 (merge `0f6d552`) | `progress.md` "Social profile analytics (M4) merged"; this runbook § "Social analytics (M4)"                           |
+| `M4.5` | Per-agency social DEK + lazy platform KEK: agency-scoped DEKs wrapped by the platform KEK, `rotate-social-kek.ts` script, optional-at-boot env var.     | 2026-08-24                   | `progress.md` "Per-agency social DEK + lazy platform KEK (M4.5) merged"; this runbook § "Platform KEK rotation (M4.5)" |
+
+When a section header in this runbook carries an M-tag, that tag is the contract for which milestone's behaviour the procedure relies on. If the milestone is undone or re-scoped, the section must be re-read before following it.
+
 ## Locations
 
 | What                 | Where                                        |
