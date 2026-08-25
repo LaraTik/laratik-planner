@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { securityAuditEvents, socialConnections } from "@/lib/db/schema";
 import { isAgencyAdmin, type Actor } from "@/lib/auth/policy";
+import { captureError } from "@/lib/observability/sentry";
 import {
   DekAlreadyEnabledError,
   DekNotEnabledError,
@@ -320,10 +321,16 @@ async function writeAudit(
         agency_id: agencyId,
       },
     });
-  } catch {
+  } catch (err) {
     // Audit failures must never break the primary action. Log
-    // and move on.
-    console.error(`[social.service] failed to write audit event ${action} for agency ${agencyId}`);
+    // and move on. The structured wrapper fans the error to both
+    // the JSON log stream and Sentry (when configured) so an
+    // audit-write outage shows up on the on-call dashboard rather
+    // than just in stderr.
+    captureError("social.audit.write_failed", err, {
+      action,
+      agencyId,
+    });
   }
 }
 

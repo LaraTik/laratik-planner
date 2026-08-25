@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { accounts, sessions, users, verificationTokens } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/validation/env";
 import { findUserByEmailAndPassword } from "@/lib/auth/password";
+import { captureError } from "@/lib/observability/sentry";
 import { sendVerificationEmail } from "@/lib/email";
 
 /**
@@ -213,7 +214,11 @@ export const authConfig: NextAuthConfig = {
         // Never fail the sign-in over a verification stamp. The
         // accept-invitation check would re-fire and surface its own
         // "Invalid invitation" error if this silently failed.
-        console.error("[auth.events.signIn] failed to stamp emailVerified", err);
+        // Surface the failure to Sentry (when configured) so the
+        // on-call sees a sustained stamp failure.
+        captureError("auth.events.signIn.email_verified_stamp_failed", err, {
+          userId: user.id,
+        });
       }
     },
   },

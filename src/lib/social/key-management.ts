@@ -12,6 +12,7 @@ import { serverEnv } from "@/lib/validation/env";
 import { deriveDevKey } from "@/lib/security/dev-key";
 import { openCredentialsWithDek, sealCredentialsWithDek } from "./crypto";
 import { socialChannels } from "@/lib/db/schema/channels";
+import { captureError } from "@/lib/observability/sentry";
 
 // NOTE: this module does NOT import `server-only` because it is
 // also consumed by `scripts/rotate-social-kek.ts`, which runs
@@ -169,10 +170,13 @@ export function getKekOrThrow(): Buffer {
     throw new MissingKekError();
   }
   if (!loggedDevFallback) {
-    console.error(
-      "[social.key-management] SOCIAL_TOKEN_ENCRYPTION_KEY is not set or wrong length; " +
-        "using a derived dev key. DO NOT deploy this configuration.",
-    );
+    // Surface the misconfiguration through both the structured log
+    // stream and Sentry so the on-call sees a dev-fallback warning
+    // even when there's no DSN. The sentinel value lets us
+    // de-dupe per-process.
+    captureError("social.kek.dev_fallback", new Error("SOCIAL_TOKEN_ENCRYPTION_KEY missing"), {
+      expectedBytes: KEK_BYTES,
+    });
     loggedDevFallback = true;
   }
   return deriveDevKey();

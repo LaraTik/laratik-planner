@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { agencies, agencyMemberships } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/validation/env";
 import type { Actor } from "@/lib/auth/policy";
+import { captureError } from "@/lib/observability/sentry";
 
 /**
  * Agency context cookie (Milestone 1.2).
@@ -90,10 +91,14 @@ function getSecret(): string | null {
 
   if (serverEnv.NODE_ENV === "production") {
     if (!missingSecretLogged) {
-      console.error(
-        "[auth.agency-context] AGENCY_COOKIE_SECRET is not set or is too short " +
-          "(need ≥ 32 bytes). Production must have a stable secret; refusing " +
-          "to issue cookies. Generate one with: openssl rand -base64 32",
+      // Production misconfiguration: cookie issuance is refused
+      // (we already return null below), but the operator still
+      // needs a loud signal in Sentry. Fire once per process to
+      // avoid log spam.
+      captureError(
+        "auth.agency_context.missing_secret_prod",
+        new Error("AGENCY_COOKIE_SECRET missing or too short"),
+        { minBytes: 32 },
       );
       missingSecretLogged = true;
     }
@@ -106,9 +111,10 @@ function getSecret(): string | null {
   // produces parseable output. This branch is never taken in
   // production (returned null above).
   if (!missingSecretLogged) {
-    console.error(
-      "[auth.agency-context] AGENCY_COOKIE_SECRET is not set. Issuing cookies " +
-        "with a derived dev key — DO NOT deploy this configuration.",
+    captureError(
+      "auth.agency_context.missing_secret_dev",
+      new Error("AGENCY_COOKIE_SECRET missing (dev fallback)"),
+      {},
     );
     missingSecretLogged = true;
   }
