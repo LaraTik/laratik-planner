@@ -19,6 +19,9 @@
 #   3. Every 15 minutes — Social metrics sync (see scripts/vps/social-metrics-sync.sh)
 #      Calls /api/cron/social-metrics. Returns the standard cron shape
 #      { claimed, succeeded, failed, needsReauth, retention } on stdout.
+#   4. Every minute — Notification outbox dispatcher (see scripts/vps/outbox-dispatch.sh)
+#      Calls /api/cron/outbox. Returns { ok, processed, durationMs }. Drives the
+#      bell counter; without it the in-app notification fan-out never fires.
 #
 # Why a single cron file: cron on Debian/Ubuntu reads /etc/cron.d/* owned by
 # root. Putting both entries in one file makes the deploy chain surface-able
@@ -38,9 +41,11 @@ PROJECT_DIR="${PROJECT_DIR:-/opt/laratik-planner}"
 BACKUP_SCHEDULE="30 3 * * *"
 CERT_SCHEDULE="30 7 * * *"
 SOCIAL_SCHEDULE="*/15 * * * *"
+OUTBOX_SCHEDULE="* * * * *"
 BACKUP_CMD="${PROJECT_DIR}/scripts/vps/backup.sh"
 CERT_CMD="${PROJECT_DIR}/scripts/vps/check-smtp-cert.sh"
 SOCIAL_CMD="${PROJECT_DIR}/scripts/vps/social-metrics-sync.sh"
+OUTBOX_CMD="${PROJECT_DIR}/scripts/vps/outbox-dispatch.sh"
 
 DRY_RUN=0
 UNINSTALL=0
@@ -85,15 +90,17 @@ fi
 CRON_BODY="# laratik-planner crons — installed by scripts/vps/install-cron.sh
 # Do not edit by hand; re-run the installer to make changes idempotently.
 # Backup: 03:30 UTC daily. Cert probe: 07:30 UTC daily. Social sync: every 15m.
+# Outbox dispatcher: every minute.
 ${BACKUP_SCHEDULE} root ${BACKUP_CMD} >> /var/log/laratik-planner-backup.log 2>&1
 ${CERT_SCHEDULE} root ${CERT_CMD} >/dev/null
 ${SOCIAL_SCHEDULE} root ${SOCIAL_CMD} >/var/log/laratik-planner-social-sync.log 2>&1
+${OUTBOX_SCHEDULE} root ${OUTBOX_CMD} >/var/log/laratik-planner-outbox.log 2>&1
 "
 
 # Verify the target scripts exist (and are executable) before installing the
 # cron. A cron that points at a missing script fails silently — the runbook
 # already calls this out as the failure mode install-cron.sh prevents.
-for cmd in "$BACKUP_CMD" "$CERT_CMD" "$SOCIAL_CMD"; do
+for cmd in "$BACKUP_CMD" "$CERT_CMD" "$SOCIAL_CMD" "$OUTBOX_CMD"; do
   if [[ ! -x "$cmd" ]]; then
     echo "✗ install-cron: $cmd is missing or not executable." >&2
     echo "  Run: chmod +x $cmd" >&2

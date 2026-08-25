@@ -523,6 +523,28 @@ DELETE FROM social_channel WHERE id = ':channel_id';
 
 The first statement preserves the channel row but drops its metric history; the second statement drops the channel entirely. Both statements are logged in the platform audit log (M3 surface).
 
+## Notification outbox
+
+The notification bell is driven by an **outbox + dispatcher** pattern: domain code (`comments.create`, `assignments.assign`, etc.) writes a row to `outbox_events` and returns; a dispatcher worker claims unprocessed rows and fans out the actual in-app notifications (and, in a Goal 13+ follow-up, emails). The dispatcher must run on a cron, otherwise the bell counter is decorative — every comment / assignment / mention is queued but never delivered.
+
+### Route + cron
+
+The dispatcher is exposed at `GET|POST /api/cron/outbox`. The route is gated by the same `CRON_SECRET` `Authorization: Bearer <secret>` header as `/api/cron/social-metrics` and calls `dispatchOutboxOnce({ maxEvents: 50 })`. The VPS-side cron invokes it every minute via `scripts/vps/outbox-dispatch.sh`; the script sources `CRON_SECRET` from `/opt/laratik-planner/.env`, POSTs to `http://127.0.0.1:3100/api/cron/outbox` with a 60-second timeout, and never echoes the secret.
+
+The entry is added by `scripts/vps/install-cron.sh` alongside the existing backup / cert-probe / social-sync entries. Re-running the installer is idempotent: the cron file at `/etc/cron.d/laratik-planner` is rewritten only when the body actually changes.
+
+```bash
+# On the VPS, after the first install:
+grep outbox /etc/cron.d/laratik-planner       # confirm the * * * * * entry exists
+sudo /opt/laratik-planner/scripts/vps/outbox-dispatch.sh   # one-off manual run
+```
+
+The expected response shape is `{ "ok": true, "processed": <int>, "durationMs": <int> }`. A non-JSON response or an HTTP non-2xx indicates the secret rotated, the route is down, or the dispatcher threw. The dispatcher writes per-event failures to `outbox_events.last_error` and bumps `attempt_count` so a stuck event is observable without spamming the cron mail.
+
+### Why a 1-minute cadence (not 5 or 15)
+
+The bell counter is the user's primary signal that something needs their attention. Five minutes of latency on a `comment_created` mention would feel broken on a chatty day. The route is cheap — at most 50 single-row transactions per tick, no external calls in v1 — so the cost of a 1-minute cadence is negligible against the cost of "the bell doesn't update for 5 minutes". The integration test `tests/integration/discussions.test.ts` exercises the same `dispatchOutboxOnce` entry point directly, so the worker code is covered without depending on the cron.
+
 ## Repository protection (GitHub Settings)
 
 The deploy chain is gated in two places: the `ci.yml` workflow (which is code) and the GitHub repository's protection rules (which are configured in the GH UI, not in code). This section is the canonical reference so a new maintainer can reproduce the production posture from a fresh checkout + the runbook.
