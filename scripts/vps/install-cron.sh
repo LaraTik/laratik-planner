@@ -27,6 +27,10 @@
 #      failed, durationMs }. Drives the FEAT-10 email leg; the same outbox
 #      rows feed both the in-app fan-out and the email leg, so the two
 #      workers tick at the same cadence and stay in lockstep.
+#   6. Daily 04:00 UTC — Audit / rate-limit retention prune
+#      (see scripts/vps/audit-retention.sh). Bounded retention
+#      keeps security_audit_event (365d default) and rate_limit_event
+#      (30d default) from growing unbounded. Silent on success.
 #
 # Why a single cron file: cron on Debian/Ubuntu reads /etc/cron.d/* owned by
 # root. Putting both entries in one file makes the deploy chain surface-able
@@ -47,11 +51,13 @@ BACKUP_SCHEDULE="30 3 * * *"
 CERT_SCHEDULE="30 7 * * *"
 SOCIAL_SCHEDULE="*/15 * * * *"
 OUTBOX_SCHEDULE="* * * * *"
+RETENTION_SCHEDULE="0 4 * * *"
 BACKUP_CMD="${PROJECT_DIR}/scripts/vps/backup.sh"
 CERT_CMD="${PROJECT_DIR}/scripts/vps/check-smtp-cert.sh"
 SOCIAL_CMD="${PROJECT_DIR}/scripts/vps/social-metrics-sync.sh"
 OUTBOX_CMD="${PROJECT_DIR}/scripts/vps/outbox-dispatch.sh"
 EMAIL_CMD="${PROJECT_DIR}/scripts/vps/email-dispatch.sh"
+RETENTION_CMD="${PROJECT_DIR}/scripts/vps/audit-retention.sh"
 
 DRY_RUN=0
 UNINSTALL=0
@@ -97,17 +103,19 @@ CRON_BODY="# laratik-planner crons — installed by scripts/vps/install-cron.sh
 # Do not edit by hand; re-run the installer to make changes idempotently.
 # Backup: 03:30 UTC daily. Cert probe: 07:30 UTC daily. Social sync: every 15m.
 # Outbox dispatcher: every minute. Email dispatcher: every minute.
+# Audit / rate-limit retention prune: 04:00 UTC daily.
 ${BACKUP_SCHEDULE} root ${BACKUP_CMD} >> /var/log/laratik-planner-backup.log 2>&1
 ${CERT_SCHEDULE} root ${CERT_CMD} >/dev/null
 ${SOCIAL_SCHEDULE} root ${SOCIAL_CMD} >/var/log/laratik-planner-social-sync.log 2>&1
 ${OUTBOX_SCHEDULE} root ${OUTBOX_CMD} >/var/log/laratik-planner-outbox.log 2>&1
 ${OUTBOX_SCHEDULE} root ${EMAIL_CMD} >/var/log/laratik-planner-email.log 2>&1
+${RETENTION_SCHEDULE} root ${RETENTION_CMD} >/var/log/laratik-planner-retention.log 2>&1
 "
 
 # Verify the target scripts exist (and are executable) before installing the
 # cron. A cron that points at a missing script fails silently — the runbook
 # already calls this out as the failure mode install-cron.sh prevents.
-for cmd in "$BACKUP_CMD" "$CERT_CMD" "$SOCIAL_CMD" "$OUTBOX_CMD" "$EMAIL_CMD"; do
+for cmd in "$BACKUP_CMD" "$CERT_CMD" "$SOCIAL_CMD" "$OUTBOX_CMD" "$EMAIL_CMD" "$RETENTION_CMD"; do
   if [[ ! -x "$cmd" ]]; then
     echo "✗ install-cron: $cmd is missing or not executable." >&2
     echo "  Run: chmod +x $cmd" >&2
