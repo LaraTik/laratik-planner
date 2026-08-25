@@ -36,30 +36,30 @@ After adding all five, re-run the most recent failed deploy from the Actions tab
 
 Edit `/opt/laratik-planner/.env` on the VPS (or use the `laratik_vps_secrets` env file pattern from `mavis-trader` / `laratik-social-platform`). The values below are required; the app fails fast at startup if any are missing or in the wrong shape (`src/lib/validation/env.ts`).
 
-| Variable                     | Purpose                                                   | Source                                                                                   |
-| ---------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `DATABASE_URL`               | Postgres 16 connection string for the app                 | Internal Docker network `postgresql://planner:…@laratik-planner-postgres-1:5432/planner` |
-| `AUTH_SECRET`                | NextAuth v5 session secret (≥ 32 random bytes, base64)    | `openssl rand -base64 48` — store in Vault, not in shell history                         |
-| `AUTH_URL`                   | Canonical app URL                                         | `https://planner.laratik.com`                                                            |
-| `NEXTAUTH_URL`               | NextAuth v5 legacy alias                                  | `https://planner.laratik.com`                                                            |
-| `GOOGLE_OAUTH_CLIENT_ID`     | Google OAuth client id                                    | Google Cloud Console → APIs & Services → Credentials                                     |
-| `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth client secret                                | Same as above                                                                            |
-| `SMTP_HOST`                  | Mailcow SMTP                                              | `mail.laratik.com`                                                                       |
-| `SMTP_PORT`                  | SMTP port                                                 | `587` (STARTTLS)                                                                         |
-| `SMTP_USER`                  | Mailcow mailbox user                                      | `planner@laratik.com` (or the alias the agency uses)                                     |
-| `SMTP_PASSWORD`              | Mailcow mailbox password                                  | Mailcow admin → Mailboxes                                                                |
-| `SMTP_FROM`                  | `From:` address for transactional email                   | `planner@laratik.com`                                                                    |
-| `MINIMAX_API_KEY`            | MiniMax API key                                           | `api.minimax.io` → API keys (only used if `AI_FEATURE_ENABLED=true`)                     |
-| `MINIMAX_BASE_URL`           | MiniMax OpenAI-compat base                                | `https://api.minimax.io/v1`                                                              |
-| `MINIMAX_MODEL`              | MiniMax model id                                          | `MiniMax-M3`                                                                             |
-| `AI_FEATURE_ENABLED`         | Gates the entire AI surface                               | `false` for v1 launch (default); flip to `true` when ready to expose AI                  |
-| `SENTRY_DSN`                 | Sentry project DSN                                        | `sentry.io` → Projects → planner-laravel / planner → Client Keys (DSN)                   |
-| `SENTRY_AUTH_TOKEN`          | Sentry auth token for source-map upload (build-time only) | `sentry.io` → Settings → Auth Tokens                                                     |
-| `SENTRY_ORG`                 | Sentry org slug                                           | `laratik`                                                                                |
-| `SENTRY_PROJECT`             | Sentry project slug                                       | `laratik-planner`                                                                        |
-| `BOOTSTRAP_SETUP_TOKEN`      | First-administrator setup token                           | `openssl rand -hex 32`; rotate on first setup                                            |
-| `LOG_LEVEL`                  | Structured-log level                                      | `info` (prod)                                                                            |
-| `NODE_ENV`                   | Next.js mode                                              | `production`                                                                             |
+| Variable                | Purpose                                                                                                 | Source                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | Postgres 16 connection string for the app                                                               | Internal Docker network `postgresql://planner:…@laratik-planner-postgres-1:5432/planner` |
+| `AUTH_SECRET`           | NextAuth v5 session secret (≥ 32 random bytes, base64)                                                  | `openssl rand -base64 48` — store in Vault, not in shell history                         |
+| `AUTH_URL`              | Canonical app URL                                                                                       | `https://planner.laratik.com`                                                            |
+| `NEXTAUTH_URL`          | NextAuth v5 legacy alias (read by NextAuth for backward compat; the canonical name is `AUTH_URL` above) | `https://planner.laratik.com`                                                            |
+| `GOOGLE_CLIENT_ID`      | Google OAuth client id                                                                                  | Google Cloud Console → APIs & Services → Credentials                                     |
+| `GOOGLE_CLIENT_SECRET`  | Google OAuth client secret                                                                              | Same as above                                                                            |
+| `SMTP_HOST`             | Mailcow SMTP                                                                                            | `mail.laratik.com`                                                                       |
+| `SMTP_PORT`             | SMTP port                                                                                               | `587` (STARTTLS)                                                                         |
+| `SMTP_USER`             | Mailcow mailbox user                                                                                    | `planner@laratik.com` (or the alias the agency uses)                                     |
+| `SMTP_PASSWORD`         | Mailcow mailbox password                                                                                | Mailcow admin → Mailboxes                                                                |
+| `SMTP_FROM`             | `From:` address for transactional email                                                                 | `planner@laratik.com`                                                                    |
+| `MINIMAX_API_KEY`       | MiniMax API key                                                                                         | `api.minimax.io` → API keys (only used if `AI_FEATURE_ENABLED=true`)                     |
+| `MINIMAX_BASE_URL`      | MiniMax OpenAI-compat base                                                                              | `https://api.minimax.io/v1`                                                              |
+| `MINIMAX_MODEL`         | MiniMax model id                                                                                        | `MiniMax-M3`                                                                             |
+| `AI_FEATURE_ENABLED`    | Gates the entire AI surface                                                                             | `false` for v1 launch (default); flip to `true` when ready to expose AI                  |
+| `SENTRY_DSN`            | Sentry project DSN                                                                                      | `sentry.io` → Projects → planner-laravel / planner → Client Keys (DSN)                   |
+| `SENTRY_AUTH_TOKEN`     | Sentry auth token for source-map upload (build-time only)                                               | `sentry.io` → Settings → Auth Tokens                                                     |
+| `SENTRY_ORG`            | Sentry org slug                                                                                         | `laratik`                                                                                |
+| `SENTRY_PROJECT`        | Sentry project slug                                                                                     | `laratik-planner`                                                                        |
+| `BOOTSTRAP_SETUP_TOKEN` | First-administrator setup token                                                                         | `openssl rand -hex 32`; rotate on first setup                                            |
+| `LOG_LEVEL`             | Structured-log level                                                                                    | `info` (prod)                                                                            |
+| `NODE_ENV`              | Next.js mode                                                                                            | `production`                                                                             |
 
 ### 3. Offsite backup target
 
