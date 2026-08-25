@@ -8,6 +8,14 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   disableSocialAction,
   enableSocialAction,
   resetSocialRecoveryAction,
@@ -446,6 +454,14 @@ function RecoveryKeyModal({
 }) {
   const [confirmed, setConfirmed] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
+  // UX-03 — closing via the X button or the backdrop requires the same
+  // checkbox tick. We prevent the dismiss so the user can never
+  // accidentally lose the one-time recovery key. Radix exposes
+  // `onInteractOutside` and `onEscapeKeyDown` for this; both default
+  // to firing `onOpenChange(false)`, which we short-circuit here.
+  const blockDismiss = (e: Event) => {
+    if (!confirmed) e.preventDefault();
+  };
 
   const handleCopy = async () => {
     try {
@@ -457,25 +473,28 @@ function RecoveryKeyModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      data-testid="agency-social-recovery-key-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="agency-social-recovery-key-modal-title"
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        // Only allow programmatic close when the user has confirmed.
+        if (!next && !confirmed) return;
+        if (!next) onClose();
+      }}
     >
-      <div className="bg-surface border-border w-full max-w-md rounded-[var(--radius-card)] border p-6 shadow-lg">
-        <h2
-          id="agency-social-recovery-key-modal-title"
-          className="text-title-section text-fg-primary mb-2 font-semibold"
-        >
-          Save your recovery key
-        </h2>
-        <p className="text-body text-fg-secondary mb-4">
-          This key decrypts your agency&apos;s social connection tokens. It will not be shown again.
-          Save it in your password manager before closing this dialog.
-        </p>
-        <div className="bg-surface-subtle border-border mb-3 flex items-center gap-2 rounded-[var(--radius-control)] border p-3">
+      <DialogContent
+        data-testid="agency-social-recovery-key-modal"
+        onInteractOutside={blockDismiss}
+        onEscapeKeyDown={blockDismiss}
+        onPointerDownOutside={blockDismiss}
+      >
+        <DialogHeader>
+          <DialogTitle>Save your recovery key</DialogTitle>
+          <DialogDescription>
+            This key decrypts your agency&apos;s social connection tokens. It will not be shown
+            again. Save it in your password manager before closing this dialog.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="bg-surface-subtle border-border flex items-center gap-2 rounded-[var(--radius-control)] border p-3">
           <code
             className="text-body text-fg-primary flex-1 overflow-x-auto font-mono break-all whitespace-pre"
             data-testid="agency-social-recovery-key-value"
@@ -493,10 +512,10 @@ function RecoveryKeyModal({
             {copied ? "Copied" : "Copy"}
           </Button>
         </div>
-        <p className="text-label text-fg-muted mb-4">
+        <p className="text-label text-fg-muted">
           Key version {dekKeyVersion}. The DEK is wrapped by the platform KEK at rest.
         </p>
-        <div className="mb-4 flex items-start gap-2">
+        <div className="flex items-start gap-2">
           <input
             id="agency-social-recovery-key-confirm"
             type="checkbox"
@@ -509,7 +528,7 @@ function RecoveryKeyModal({
             I have saved the recovery key in my password manager.
           </Label>
         </div>
-        <div className="flex justify-end">
+        <DialogFooter>
           <Button
             type="button"
             disabled={!confirmed}
@@ -518,9 +537,9 @@ function RecoveryKeyModal({
           >
             Close
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -557,51 +576,47 @@ function ConfirmDestructiveModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      data-testid={testId}
-      role="dialog"
-      aria-modal="true"
-    >
-      <form
-        onSubmit={onSubmit}
-        className="bg-surface border-border w-full max-w-md space-y-4 rounded-[var(--radius-card)] border p-6 shadow-lg"
-      >
-        <h2 className="text-title-section text-fg-primary font-semibold">{title}</h2>
-        <p className="text-body text-fg-secondary">{body}</p>
-        <div className="space-y-2">
-          <Label htmlFor={`${testId}-confirm`} className="text-body">
-            Type the last 6 characters of the agency id (<code>{expected}</code>) to confirm:
-          </Label>
-          <input
-            id={`${testId}-confirm`}
-            type="text"
-            value={typed}
-            onChange={(e) => setTyped(e.target.value)}
-            className="border-border bg-surface text-body w-full rounded-[var(--radius-control)] border px-3 py-2 font-mono"
-            data-testid={`${testId}-confirm-input`}
-            autoComplete="off"
-          />
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            data-testid={`${testId}-cancel`}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            variant="destructive"
-            disabled={!canConfirm || pending}
-            data-testid={`${testId}-submit`}
-          >
-            {pending ? "Working…" : confirmLabel}
-          </Button>
-        </div>
-      </form>
-    </div>
+    <Dialog open onOpenChange={(next) => !next && onClose()}>
+      <DialogContent data-testid={testId}>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{body}</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor={`${testId}-confirm`} className="text-body">
+              Type the last 6 characters of the agency id (<code>{expected}</code>) to confirm:
+            </Label>
+            <input
+              id={`${testId}-confirm`}
+              type="text"
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              className="border-border bg-surface text-body w-full rounded-[var(--radius-control)] border px-3 py-2 font-mono"
+              data-testid={`${testId}-confirm-input`}
+              autoComplete="off"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              data-testid={`${testId}-cancel`}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="destructive"
+              disabled={!canConfirm || pending}
+              data-testid={`${testId}-submit`}
+            >
+              {pending ? "Working…" : confirmLabel}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

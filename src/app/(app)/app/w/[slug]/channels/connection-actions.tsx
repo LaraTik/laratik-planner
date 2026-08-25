@@ -1,8 +1,16 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { AlertTriangle, PlugZap, RefreshCw, X } from "lucide-react";
+import { useState, useTransition } from "react";
+import { AlertTriangle, PlugZap, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { disconnectChannelAction, revokeConnectionAction } from "./actions";
 
 /**
@@ -25,11 +33,11 @@ import { disconnectChannelAction, revokeConnectionAction } from "./actions";
  *                  `revoked`, and disconnects every attached channel
  *                  in one transaction.
  *
- * The dialog traps focus, restores focus on close, and is dismissable
- * by Escape, by clicking the backdrop, or by clicking Cancel. We do
- * not use a third-party modal because the project's UI library does
- * not ship one; the dialog is hand-rolled to keep the dep surface
- * flat and to make the focus management explicit.
+ * The dialog is built on the project's shared Radix-based
+ * `Dialog` primitive (UX-03) — focus trap, Escape to close, and
+ * focus restoration all come for free from Radix, so the only
+ * responsibilities this file owns are the open-state toggle and
+ * the action handler.
  */
 
 type ChannelRow = {
@@ -54,7 +62,6 @@ export function ConnectionActions({
   const [syncFlash, setSyncFlash] = useState<"queued" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showRevoke, setShowRevoke] = useState(false);
-  const cancelRef = useRef<HTMLButtonElement | null>(null);
 
   function requestSync() {
     setError(null);
@@ -151,103 +158,52 @@ export function ConnectionActions({
         </span>
       ) : null}
 
-      {showRevoke ? (
-        <RevokeDialog
-          affectedChannels={otherChannels}
-          onCancel={() => setShowRevoke(false)}
-          onConfirm={revoke}
-          pending={pending}
-          cancelRef={cancelRef}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-function RevokeDialog({
-  affectedChannels,
-  onCancel,
-  onConfirm,
-  pending,
-  cancelRef,
-}: {
-  affectedChannels: AffectedChannel[];
-  onCancel: () => void;
-  onConfirm: () => void;
-  pending: boolean;
-  cancelRef: React.RefObject<HTMLButtonElement | null>;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="revoke-dialog-title"
-      aria-describedby="revoke-dialog-desc"
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onCancel();
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel();
-      }}
-      data-testid="revoke-dialog"
-      style={{ overscrollBehavior: "contain" }}
-    >
-      <div className="bg-surface border-border w-full max-w-md rounded-lg border p-6 shadow-xl">
-        <div className="flex items-start justify-between gap-3">
-          <h2 id="revoke-dialog-title" className="text-title-section text-fg-primary font-semibold">
-            Revoke this Meta grant?
-          </h2>
-          <button
-            type="button"
-            onClick={onCancel}
-            aria-label="Close"
-            className="text-fg-muted hover:text-fg-primary cursor-pointer rounded p-1"
-          >
-            <X className="h-4 w-4" aria-hidden={true} />
-          </button>
-        </div>
-        <p id="revoke-dialog-desc" className="text-body text-fg-secondary mt-3">
-          This will revoke the shared Meta grant and disconnect every account attached to it.
-          Historical metrics are preserved.
-        </p>
-        <div className="mt-4">
-          <p className="text-label text-fg-muted">Affected channels ({affectedChannels.length}):</p>
-          <ul
-            className="border-border bg-surface-subtle mt-2 max-h-40 space-y-1 overflow-y-auto rounded border p-3"
-            data-testid="revoke-affected-list"
-          >
-            {affectedChannels.map((c) => (
-              <li key={c.id} className="text-body text-fg-primary flex items-center gap-2">
-                <span className="text-fg-muted text-label uppercase">{c.platform}</span>
-                <span className="truncate">{c.accountName}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="mt-6 flex items-center justify-end gap-2">
-          <button
-            ref={cancelRef}
-            type="button"
-            onClick={onCancel}
-            disabled={pending}
-            className="border-border text-fg-primary hover:bg-surface-subtle text-body cursor-pointer rounded-md border px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
-            data-testid="revoke-cancel"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={pending}
-            aria-busy={pending}
-            className="bg-danger text-body cursor-pointer rounded-md px-3 py-1.5 font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            data-testid="revoke-confirm"
-          >
-            {pending ? "Revoking…" : "Yes, revoke access"}
-          </button>
-        </div>
-      </div>
+      <Dialog open={showRevoke} onOpenChange={setShowRevoke}>
+        <DialogContent data-testid="revoke-dialog">
+          <DialogHeader>
+            <DialogTitle>Revoke this Meta grant?</DialogTitle>
+            <DialogDescription>
+              This will revoke the shared Meta grant and disconnect every account attached to it.
+              Historical metrics are preserved.
+            </DialogDescription>
+          </DialogHeader>
+          <div>
+            <p className="text-label text-fg-muted">Affected channels ({otherChannels.length}):</p>
+            <ul
+              className="border-border bg-surface-subtle mt-2 max-h-40 space-y-1 overflow-y-auto rounded border p-3"
+              data-testid="revoke-affected-list"
+            >
+              {otherChannels.map((c) => (
+                <li key={c.id} className="text-body text-fg-primary flex items-center gap-2">
+                  <span className="text-fg-muted text-label uppercase">{c.platform}</span>
+                  <span className="truncate">{c.accountName}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowRevoke(false)}
+              disabled={pending}
+              data-testid="revoke-cancel"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={revoke}
+              disabled={pending}
+              aria-busy={pending}
+              data-testid="revoke-confirm"
+            >
+              {pending ? "Revoking…" : "Yes, revoke access"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
