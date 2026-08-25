@@ -50,7 +50,13 @@ async function checkDatabase(): Promise<"up" | "down" | "disabled"> {
   }
 }
 
-const UPLOADS_DIR = process.env["UPLOADS_DIR"] || "/data/uploads";
+// Resolve at call time, not at module load. The test suite sets
+// `process.env["UPLOADS_DIR"]` from a `vi.mock`/`vi.hoisted` block;
+// on some worker runtimes (CI on Linux) the route module is
+// evaluated before the test's env assignment runs, so a module-load
+// read here would fall back to `/data/uploads` and the probe write
+// would ENOENT — turning the "all green" readiness test into a 503.
+const DEFAULT_UPLOADS_DIR = "/data/uploads";
 
 /**
  * Storage health check. Writes a 1-byte probe file under UPLOADS_DIR
@@ -61,8 +67,9 @@ const UPLOADS_DIR = process.env["UPLOADS_DIR"] || "/data/uploads";
  */
 async function checkStorage(): Promise<"up" | "down" | "disabled"> {
   if (!serverEnv.DATABASE_URL) return "disabled";
+  const uploadsDir = process.env["UPLOADS_DIR"] || DEFAULT_UPLOADS_DIR;
   try {
-    const probePath = join(UPLOADS_DIR, `.health-probe-${randomBytes(4).toString("hex")}`);
+    const probePath = join(uploadsDir, `.health-probe-${randomBytes(4).toString("hex")}`);
     await writeFile(probePath, "1", { flag: "wx" });
     await unlink(probePath);
     return "up";
