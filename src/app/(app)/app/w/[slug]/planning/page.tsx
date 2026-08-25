@@ -18,6 +18,7 @@ import { ListCard, ListItem } from "@/components/workspace/list-item";
 import { MonthNav } from "@/components/workspace/month-nav";
 import { PlanningFilters } from "@/components/workspace/planning-filters";
 import { PlanningKpiBar } from "@/components/workspace/planning-kpi-bar";
+import { describeActiveFilter } from "./filter-describe";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import {
   type KpiContentFormat,
@@ -254,11 +255,30 @@ export default async function PlanningPage({
           title={hasFilter ? "No items match your filters" : "Nothing planned for this month"}
           description={
             hasFilter
-              ? "Try clearing one of the filters above."
+              ? `No items match ${describeActiveFilter(
+                  Object.fromEntries(
+                    Object.entries({
+                      status: selectedStatus,
+                      format: selectedFormat,
+                      ownerId: ownerFilter,
+                      search: searchTerm,
+                      risk: filters.risk,
+                    }).filter(([, v]) => v != null),
+                  ) as Parameters<typeof describeActiveFilter>[0],
+                )}. Try clearing the filter to see everything planned for this month.`
               : "Use Quick Create to add a draft — it'll show up here ready to schedule."
           }
           action={
-            canCreate && !hasFilter ? (
+            hasFilter ? (
+              <Button variant="outline" asChild>
+                <Link
+                  href={`/app/w/${slug}/planning?month=${monthParam(0)}`}
+                  data-testid="planning-empty-clear-filters"
+                >
+                  Clear filters
+                </Link>
+              </Button>
+            ) : canCreate ? (
               <Button asChild>
                 <Link href={`/app/w/${slug}/planning/new`}>
                   <Plus className="h-4 w-4" aria-hidden="true" />
