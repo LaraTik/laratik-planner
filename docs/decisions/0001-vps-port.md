@@ -24,8 +24,8 @@ Port the entire StudioFlow stack to a self-hosted topology on
 
 | Master prompt layer | We use                                                 |
 | ------------------- | ------------------------------------------------------ |
-| Auth                | NextAuth v5 (Auth.js) + Drizzle adapter                 |
-| Database            | Self-hosted Postgres 16 sidecar (Drizzle dialect)       |
+| Auth                | NextAuth v5 (Auth.js) + Drizzle adapter                |
+| Database            | Self-hosted Postgres 16 sidecar (Drizzle dialect)      |
 | Storage             | Local volume `app-data` (v1) → MinIO when uploads land |
 | AI                  | `ai` SDK + raw HTTP to MiniMax (OpenAI-compat)         |
 | Email               | Nodemailer → Mailcow SMTP                              |
@@ -45,9 +45,9 @@ is `docs/operations/runbook.md`.
 - **Data sovereignty.** Tenant data never leaves the VPS. Backups are
   restic-encrypted to a Backblaze B2 bucket the VPS owns.
 - **Portability.** Every layer is a standard pattern (Drizzle + Postgres
-  + NextAuth + Nodemailer + `ai` SDK + Docker). Switching the AI vendor,
-  SMTP host, or even the entire deploy target is a config change, not a
-  rewrite.
+  - NextAuth + Nodemailer + `ai` SDK + Docker). Switching the AI vendor,
+    SMTP host, or even the entire deploy target is a config change, not a
+    rewrite.
 - **Loss of Supabase-specific helpers.** We hand-rolled equivalent
   patterns for RLS (Drizzle policies + app-level scoping), Auth (NextAuth
   callbacks), and Storage (local volume + signed URLs). These are

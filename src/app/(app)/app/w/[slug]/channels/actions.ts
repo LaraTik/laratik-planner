@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
@@ -187,18 +187,16 @@ export async function finalizeMetaSelectionAction(
   const parsed = finalizeSelectionSchema.safeParse(payload);
   if (!parsed.success) return { error: "Invalid selection payload." };
 
-  // Verify the connection belongs to this workspace before linking.
-  const connection = await db
-    .select()
-    .from(socialChannels) // import on first use
-    .where(eq(socialChannels.workspaceId, workspace.id))
-    .limit(1);
-
-  // Resolve existing channel IDs in one query (cross-workspace denial
-  // is enforced by the workspace_id filter on the candidate rows).
-  const candidateExternalIds = parsed.data.profiles
-    .map((p) => p.providerAccountId)
-    .filter((id, i, arr) => arr.indexOf(id) === i);
+  // Build the candidate set in one query, scoped to the union of
+  // platforms the picker returned. Cross-workspace denial is enforced
+  // by the workspace_id filter. The previous implementation hard-coded
+  // `platform = 'instagram'`, which meant Facebook or TikTok
+  // finalization could never find an existing channel and silently
+  // inserted a duplicate on every reconnect.
+  const candidatePlatforms = Array.from(new Set(parsed.data.profiles.map((p) => p.platform)));
+  const candidateExternalIds = Array.from(
+    new Set(parsed.data.profiles.map((p) => p.providerAccountId)),
+  );
   const candidates =
     candidateExternalIds.length > 0
       ? await db
@@ -207,32 +205,33 @@ export async function finalizeMetaSelectionAction(
           .where(
             and(
               eq(socialChannels.workspaceId, workspace.id),
-              eq(socialChannels.platform, "instagram"), // default; refined per-profile below
+              inArray(socialChannels.platform, candidatePlatforms),
             ),
           )
       : [];
 
   try {
-    const linked: string[] = [];
-    for (const profile of parsed.data.profiles) {
-      const existing = candidates.find((c) => c.externalAccountId === profile.providerAccountId);
-      const result = await linkProfile(db, {
-        connectionId: parsed.data.connectionId,
-        agencyId: context.agencyId,
-        profile: profile as ConnectedProfile,
-        ...(existing?.id ? { existingChannelId: existing.id } : {}),
-      });
-      linked.push(result.channel.id);
-    }
-    await setConnectionStatus(db, parsed.data.connectionId, "active");
-    revalidatePath(`/app/w/${slug}/channels`);
-    return { success: true, linked };
+    return await db.transaction(async (tx) => {
+      const linked: string[] = [];
+      for (const profile of parsed.data.profiles) {
+        const existing = candidates.find((c) => c.externalAccountId === profile.providerAccountId);
+        const result = await linkProfile(tx, {
+          connectionId: parsed.data.connectionId,
+          agencyId: context.agencyId,
+          profile: profile as ConnectedProfile,
+          ...(existing?.id ? { existingChannelId: existing.id } : {}),
+        });
+        linked.push(result.channel.id);
+      }
+      await setConnectionStatus(tx, parsed.data.connectionId, "active");
+      revalidatePath(`/app/w/${slug}/channels`);
+      return { success: true as const, linked };
+    });
   } catch (err) {
     if (err instanceof LimitExceededError) return { error: err.message };
     return { error: err instanceof Error ? err.message : "Failed to link profiles." };
   }
-  // `connection` and `_previous` are reserved for future enhancements.
-  void connection;
+  // _previous is the form prevState from useFormState; reserved.
   void _previous;
 }
 

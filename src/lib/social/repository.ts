@@ -50,6 +50,17 @@ type SocialProfileDailyMetric = typeof socialProfileDailyMetrics.$inferSelect;
  */
 
 type Db = typeof appDb;
+/**
+ * Drizzle's `db.transaction(async (tx) => ...)` yields a `PgTransaction`
+ * handle. It is structurally a subset of the full `db` client and can be
+ * passed anywhere a `db` is expected for ordinary queries. Repository
+ * helpers that are safe to call both from a top-level request handler
+ * (where we want the outer `db`) and from within an outer transaction
+ * (where we want the `tx` so the work is part of the caller's atomic
+ * unit) accept this union.
+ */
+type DbTx = Parameters<typeof appDb.transaction>[0] extends (tx: infer T) => unknown ? T : never;
+type DbOrTx = Db | DbTx;
 
 const BATCH_LIMIT = 20;
 const LEASE_MS = 5 * 60 * 1000;
@@ -182,11 +193,11 @@ export async function updateConnectionCredentials(
 }
 
 export async function setConnectionStatus(
-  db: Db,
+  tx: DbOrTx,
   connectionId: string,
   status: SocialConnection["status"],
 ): Promise<void> {
-  await db
+  await tx
     .update(socialConnections)
     .set({ status, updatedAt: new Date() })
     .where(eq(socialConnections.id, connectionId));
@@ -276,82 +287,91 @@ export type LinkProfileResult = {
   created: boolean;
 };
 
-export async function linkProfile(db: Db, input: LinkProfileInput): Promise<LinkProfileResult> {
-  return db.transaction(async (tx) => {
-    if (input.existingChannelId) {
-      const [channel] = await tx
-        .select()
-        .from(socialChannels)
-        .where(
-          and(
-            eq(socialChannels.id, input.existingChannelId),
-            eq(
-              socialChannels.workspaceId,
-              input.profile.providerAccountId ? sql`workspace_id` : sql`workspace_id`,
-            ),
+/**
+ * Link a provider account to a `social_channel` row, creating the row
+ * if no `existingChannelId` is supplied. The caller is responsible for
+ * the transaction boundary: pass either the top-level `db` (the
+ * function will run its work on it; if you need atomicity, wrap the
+ * call in `db.transaction(async (tx) => linkProfile(tx, input))`),
+ * or pass a `tx` from an outer `db.transaction` to make the work part
+ * of the caller's atomic unit (the `finalizeMetaSelectionAction`
+ * pattern: one outer tx wraps N `linkProfile` calls so a failure on
+ * profile 3 rolls back profiles 1 and 2).
+ */
+export async function linkProfile(tx: DbOrTx, input: LinkProfileInput): Promise<LinkProfileResult> {
+  if (input.existingChannelId) {
+    const [channel] = await tx
+      .select()
+      .from(socialChannels)
+      .where(
+        and(
+          eq(socialChannels.id, input.existingChannelId),
+          eq(
+            socialChannels.workspaceId,
+            input.profile.providerAccountId ? sql`workspace_id` : sql`workspace_id`,
           ),
-        )
-        .for("update")
-        .limit(1);
-      if (!channel) throw new Error("Existing channel not found in workspace");
-      const [updated] = await tx
-        .update(socialChannels)
-        .set({
-          socialConnectionId: input.connectionId,
-          externalAccountId: input.profile.providerAccountId,
-          avatarUrl: input.profile.avatarUrl,
-          connectionStatus: "connected",
-          lastSyncErrorAt: null,
-          lastSyncErrorCode: null,
-          syncFailureCount: 0,
-          nextSyncAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(socialChannels.id, channel.id))
-        .returning();
-      if (!updated) throw new Error("Failed to update existing channel");
-      return { channel: updated, created: false };
-    }
-
-    // New row path — reserve entitlement capacity inside the same
-    // transaction as the insert. The agency_id is required here; the
-    // caller resolves it from the workspace.
-    try {
-      await reserveCapacity(tx, input.agencyId, [
-        { resource: "social_profiles", increase: 1 },
-        { resource: `social_profiles:${input.profile.platform}`, increase: 1 },
-      ]);
-    } catch (err) {
-      if (err instanceof LimitExceededError) throw err;
-      throw err;
-    }
-
-    const [inserted] = await tx
-      .insert(socialChannels)
-      .values({
-        // workspaceId is required but the caller's input only provides
-        // a connectionId. The caller is expected to pass the
-        // workspaceId via the connection row; we resolve it here.
-        workspaceId: sql`(SELECT workspace_id FROM social_connection WHERE id = ${input.connectionId})`,
-        platform:
-          input.profile.platform === "instagram"
-            ? "instagram"
-            : input.profile.platform === "facebook"
-              ? "facebook"
-              : "tiktok",
-        accountName: input.profile.accountName,
-        handle: input.profile.handle,
-        url: input.profile.profileUrl,
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!channel) throw new Error("Existing channel not found in workspace");
+    const [updated] = await tx
+      .update(socialChannels)
+      .set({
         socialConnectionId: input.connectionId,
         externalAccountId: input.profile.providerAccountId,
         avatarUrl: input.profile.avatarUrl,
         connectionStatus: "connected",
+        lastSyncErrorAt: null,
+        lastSyncErrorCode: null,
+        syncFailureCount: 0,
         nextSyncAt: new Date(),
+        updatedAt: new Date(),
       })
+      .where(eq(socialChannels.id, channel.id))
       .returning();
-    if (!inserted) throw new Error("Failed to insert new social_channel");
-    return { channel: inserted, created: true };
-  });
+    if (!updated) throw new Error("Failed to update existing channel");
+    return { channel: updated, created: false };
+  }
+
+  // New row path — reserve entitlement capacity inside the same
+  // transaction as the insert. The agency_id is required here; the
+  // caller resolves it from the workspace.
+  try {
+    await reserveCapacity(tx, input.agencyId, [
+      { resource: "social_profiles", increase: 1 },
+      { resource: `social_profiles:${input.profile.platform}`, increase: 1 },
+    ]);
+  } catch (err) {
+    if (err instanceof LimitExceededError) throw err;
+    throw err;
+  }
+
+  const [inserted] = await tx
+    .insert(socialChannels)
+    .values({
+      // workspaceId is required but the caller's input only provides
+      // a connectionId. The caller is expected to pass the
+      // workspaceId via the connection row; we resolve it here.
+      workspaceId: sql`(SELECT workspace_id FROM social_connection WHERE id = ${input.connectionId})`,
+      platform:
+        input.profile.platform === "instagram"
+          ? "instagram"
+          : input.profile.platform === "facebook"
+            ? "facebook"
+            : "tiktok",
+      accountName: input.profile.accountName,
+      handle: input.profile.handle,
+      url: input.profile.profileUrl,
+      socialConnectionId: input.connectionId,
+      externalAccountId: input.profile.providerAccountId,
+      avatarUrl: input.profile.avatarUrl,
+      connectionStatus: "connected",
+      nextSyncAt: new Date(),
+    })
+    .returning();
+  if (!inserted) throw new Error("Failed to insert new social_channel");
+  return { channel: inserted, created: true };
 }
 
 // ─── Sync worker ──────────────────────────────────────────────────────────
@@ -517,7 +537,7 @@ export async function markNeedsReauth(
         updatedAt: new Date(),
       })
       .where(eq(socialChannels.id, channelId));
-    await setConnectionStatus(tx as unknown as Db, connectionId, "needs_reauth");
+    await setConnectionStatus(tx, connectionId, "needs_reauth");
   });
 }
 
