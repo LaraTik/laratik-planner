@@ -75,7 +75,7 @@ The authorization layer uses a closed TypeScript union, not free-form strings su
 | `platform.access.manage`           |  Yes  |       No        |   No    |        No        |
 | `platform.audit.read`              |  Yes  |       No        |   Yes   |        No        |
 
-`platform.agency.lifecycle.manage` covers suspension and restoration only. Archive is deliberately separate because it removes the agency from normal operation and requires a higher level of authority.
+`platform.agency.lifecycle.manage` covers suspension and restoration of a suspended agency only. Archive and unarchive are deliberately separate because they remove an agency from, or return it to, normal operation and require a higher level of authority. A normal `restore` operation must never clear `archived_at`.
 
 Platform Owners receive the complete closed permission set. Other roles receive explicitly enumerated bundles. A newly added permission is therefore Owner-only until deliberately assigned to another role, which is the safe default.
 
@@ -116,8 +116,8 @@ The same exact-permission rule applies to all existing platform commands:
 | Create agency                            | `platform.agency.create`           |
 | Edit agency identity                     | `platform.agency.update`           |
 | Change plan or overrides                 | `platform.agency.plan.manage`      |
-| Suspend or restore                       | `platform.agency.lifecycle.manage` |
-| Archive                                  | `platform.agency.archive`          |
+| Suspend or restore a suspended agency    | `platform.agency.lifecycle.manage` |
+| Archive or unarchive                     | `platform.agency.archive`          |
 | Create support-access request            | `platform.support.request`         |
 | View platform-access assignments         | `platform.access.read`             |
 | Grant, change, or revoke a platform role | `platform.access.manage`           |
@@ -211,7 +211,7 @@ Desktop uses a compact table. At narrow widths, lower-value audit columns collap
 - Create and mutation controls render only when the principal has the corresponding permission.
 - Auditors see a read-only banner instead of unexplained missing controls.
 - Support Operators see the support-request surface but no identity, plan, lifecycle, or archive controls.
-- Archive is visually separated from suspend/restore and is Owner-only.
+- Archive and unarchive are visually separated from suspend/restore and are Owner-only. Restoring a suspension never unarchives an agency.
 - Every destructive or access-changing dialog places initial focus safely, names the target, requires a reason, and returns focus to the trigger when closed.
 
 Unauthorized controls are not merely hidden with CSS; they are omitted from the server-rendered tree, and direct action calls are rejected by the server.
@@ -268,6 +268,7 @@ The SQL bootstrap escape hatch grants `platform_owner` explicitly. Recovery inst
 - A Platform Owner can grant, change, and revoke all supported platform roles.
 - The final active Platform Owner cannot be revoked or downgraded, including under concurrent requests.
 - An Agency Operator can perform allowed agency operations but cannot archive an agency or manage platform access.
+- An Agency Operator cannot unarchive an agency indirectly through the normal restore action.
 - A Platform Auditor can inspect permitted views but cannot mutate platform or agency state.
 - A Support Operator can request scoped support access but cannot mutate agency administration data or approve their own request.
 - Platform agency identity edits succeed for an authorized platform role without agency membership.
