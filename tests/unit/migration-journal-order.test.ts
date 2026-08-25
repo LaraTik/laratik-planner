@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import migrationJournal from "@/lib/db/migrations/meta/_journal.json";
@@ -7,6 +7,24 @@ const KNOWN_OUT_OF_ORDER_TAG = "0012_support_access_grants";
 const REPAIR_TAG = "0017_repair_support_access_grants";
 
 describe("Drizzle migration journal ordering", () => {
+  it("keeps snapshot ancestry linear so drizzle-kit can generate the next migration", () => {
+    const metaDir = join(process.cwd(), "src", "lib", "db", "migrations", "meta");
+    const snapshots = readdirSync(metaDir)
+      .filter((name) => name.endsWith("_snapshot.json"))
+      .map(
+        (name) =>
+          JSON.parse(readFileSync(join(metaDir, name), "utf8")) as {
+            id: string;
+            prevId: string;
+          },
+      );
+    const childrenByParent = new Map<string, number>();
+    for (const snapshot of snapshots) {
+      childrenByParent.set(snapshot.prevId, (childrenByParent.get(snapshot.prevId) ?? 0) + 1);
+    }
+    expect([...childrenByParent.entries()].filter(([, count]) => count > 1)).toEqual([]);
+  });
+
   it("contains no timestamp inversion except the known 0012 incident", () => {
     let latestSeen = Number.NEGATIVE_INFINITY;
     const inversions: string[] = [];

@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { idColumn, jsonb, timestamps } from "./_helpers";
 import { agencyMemberStatusEnum } from "./enums";
+import type { PlatformRole } from "@/lib/auth/platform-access-types";
 
 /**
  * STUDIOFLOW_MASTER_PROMPT.md §8 — Identity & tenancy.
@@ -156,10 +157,23 @@ export const platformAdministrators = pgTable(
     grantedAt: timestamp("granted_at", { withTimezone: true, mode: "date" })
       .notNull()
       .default(sql`now()`),
+    role: text("role").$type<PlatformRole>().notNull().default("platform_owner"),
     revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "date" }),
     reason: text("reason"),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
   },
-  (t) => [index("platform_administrator_granted_at_idx").on(t.grantedAt)],
+  (t) => [
+    index("platform_administrator_granted_at_idx").on(t.grantedAt),
+    index("platform_administrator_active_role_idx")
+      .on(t.role, t.updatedAt)
+      .where(sql`${t.revokedAt} IS NULL`),
+    check(
+      "platform_administrator_role_check",
+      sql`${t.role} IN ('platform_owner', 'agency_operator', 'platform_auditor', 'support_operator')`,
+    ),
+  ],
 );
 
 // ─── accounts / sessions / verificationTokens (NextAuth Drizzle adapter) ───

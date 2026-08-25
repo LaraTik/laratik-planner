@@ -1,6 +1,6 @@
 {
-  "id": "4b46340f-cb2c-45a0-8ee1-64321a7132e8",
-  "prevId": "07dae8b1-29c8-4bed-9e11-542b3a46702a",
+  "id": "0f97cc68-1f8e-4658-b4f8-99651537427f",
+  "prevId": "181990eb-1f63-45a8-affd-531e147e8526",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -144,6 +144,20 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "locale": {
+          "name": "locale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'en'"
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'UTC'"
         },
         "bootstrap_completed_at": {
           "name": "bootstrap_completed_at",
@@ -414,6 +428,13 @@
           "notNull": true,
           "default": "now()"
         },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'platform_owner'"
+        },
         "revoked_at": {
           "name": "revoked_at",
           "type": "timestamp with time zone",
@@ -425,6 +446,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {
@@ -439,6 +467,28 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "platform_administrator_active_role_idx": {
+          "name": "platform_administrator_active_role_idx",
+          "columns": [
+            {
+              "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"platform_administrator\".\"revoked_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -475,7 +525,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "platform_administrator_role_check": {
+          "name": "platform_administrator_role_check",
+          "value": "\"platform_administrator\".\"role\" IN ('platform_owner', 'agency_operator', 'platform_auditor', 'support_operator')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.session": {
@@ -5107,6 +5162,91 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.ai_provider_secret": {
+      "name": "ai_provider_secret",
+      "schema": "",
+      "columns": {
+        "agency_id": {
+          "name": "agency_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "ciphertext": {
+          "name": "ciphertext",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key_version": {
+          "name": "key_version",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "last_four": {
+          "name": "last_four",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rotated_by_user_id": {
+          "name": "rotated_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "ai_provider_secret_agency_id_agency_id_fk": {
+          "name": "ai_provider_secret_agency_id_agency_id_fk",
+          "tableFrom": "ai_provider_secret",
+          "tableTo": "agency",
+          "columnsFrom": [
+            "agency_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ai_provider_secret_rotated_by_user_id_user_id_fk": {
+          "name": "ai_provider_secret_rotated_by_user_id_user_id_fk",
+          "tableFrom": "ai_provider_secret",
+          "tableTo": "user",
+          "columnsFrom": [
+            "rotated_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.ai_usage_event": {
       "name": "ai_usage_event",
       "schema": "",
@@ -7607,6 +7747,151 @@
           "value": "follower_count >= 0\n        AND (following_count IS NULL OR following_count >= 0)\n        AND (media_count IS NULL OR media_count >= 0)\n        AND (likes_count IS NULL OR likes_count >= 0)\n        AND (reach IS NULL OR reach >= 0)\n        AND (views IS NULL OR views >= 0)\n        AND (engaged_accounts IS NULL OR engaged_accounts >= 0)\n        AND (interactions IS NULL OR interactions >= 0)"
         }
       },
+      "isRLSEnabled": false
+    },
+    "public.agency_social_dek": {
+      "name": "agency_social_dek",
+      "schema": "",
+      "columns": {
+        "agency_id": {
+          "name": "agency_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "dek_ciphertext": {
+          "name": "dek_ciphertext",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dek_iv": {
+          "name": "dek_iv",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dek_tag": {
+          "name": "dek_tag",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dek_key_version": {
+          "name": "dek_key_version",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "enabled_at": {
+          "name": "enabled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "enabled_by": {
+          "name": "enabled_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_rotated_at": {
+          "name": "last_rotated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_rotated_by": {
+          "name": "last_rotated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rotation_reason": {
+          "name": "rotation_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "agency_social_dek_kv_idx": {
+          "name": "agency_social_dek_kv_idx",
+          "columns": [
+            {
+              "expression": "dek_key_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "agency_social_dek_agency_id_agency_id_fk": {
+          "name": "agency_social_dek_agency_id_agency_id_fk",
+          "tableFrom": "agency_social_dek",
+          "tableTo": "agency",
+          "columnsFrom": [
+            "agency_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "agency_social_dek_enabled_by_user_id_fk": {
+          "name": "agency_social_dek_enabled_by_user_id_fk",
+          "tableFrom": "agency_social_dek",
+          "tableTo": "user",
+          "columnsFrom": [
+            "enabled_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "agency_social_dek_last_rotated_by_user_id_fk": {
+          "name": "agency_social_dek_last_rotated_by_user_id_fk",
+          "tableFrom": "agency_social_dek",
+          "tableTo": "user",
+          "columnsFrom": [
+            "last_rotated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     }
   },
