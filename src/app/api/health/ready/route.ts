@@ -1,3 +1,6 @@
+import { writeFile, unlink } from "node:fs/promises";
+import { join } from "node:path";
+import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { serverEnv } from "@/lib/validation/env";
 import { db } from "@/lib/db";
@@ -42,6 +45,61 @@ async function checkDatabase(): Promise<"up" | "down" | "disabled"> {
   try {
     await db.execute("select 1");
     return "up";
+  } catch {
+    return "down";
+  }
+}
+
+const UPLOADS_DIR = process.env["UPLOADS_DIR"] || "/data/uploads";
+
+/**
+ * Storage health check. Writes a 1-byte probe file under UPLOADS_DIR
+ * and removes it on success. Touches the disk to surface a
+ * permission / disk-full condition early — a readiness check that
+ * only checks the DB misses the second-most-common outage vector
+ * (disk full on the upload volume).
+ */
+async function checkStorage(): Promise<"up" | "down" | "disabled"> {
+  if (!serverEnv.DATABASE_URL) return "disabled";
+  try {
+    const probePath = join(UPLOADS_DIR, `.health-probe-${randomBytes(4).toString("hex")}`);
+    await writeFile(probePath, "1", { flag: "wx" });
+    await unlink(probePath);
+    return "up";
+  } catch {
+    return "down";
+  }
+}
+
+/**
+ * Rate-limit storage round-trip. Mirrors what `enforceRateLimit` does
+ * on the hot path so a slow or failing rate-limit table shows up
+ * here, not as silent 500s on the routes that depend on it. Uses raw
+ * SQL so the existing health-test mock (which intercepts
+ * `db.execute`) covers this check without needing a query-builder
+ * mock.
+ */
+async function checkRateLimitStorage(): Promise<"up" | "down" | "disabled"> {
+  if (!serverEnv.DATABASE_URL) return "disabled";
+  try {
+    await db.execute(sql`
+      INSERT INTO "rate_limit_event" ("scope", "subject_hash", "occurred_at")
+      VALUES ('health_probe', '00000000000000000000000000000000', now())
+    `);
+    const result = await db.execute(sql`
+      SELECT count(*)::int AS count
+      FROM "rate_limit_event"
+      WHERE "occurred_at" >= now() - interval '60 seconds'
+    `);
+    // Best-effort prune of the probe row so the table doesn't
+    // accumulate noise; failure here is non-fatal.
+    await db.execute(sql`
+      DELETE FROM "rate_limit_event"
+      WHERE "scope" = 'health_probe'
+        AND "subject_hash" = '00000000000000000000000000000000'
+    `);
+    const rows = (result as unknown as { rows?: Array<{ count: number }> }).rows;
+    return rows?.[0]?.count !== undefined ? "up" : "down";
   } catch {
     return "down";
   }
@@ -113,7 +171,13 @@ async function checkSchema(): Promise<"ready" | "missing" | "disabled"> {
 export async function GET() {
   const dbStatus = await checkDatabase();
   const schemaStatus = await checkSchema();
-  const ok = dbStatus === "up" && schemaStatus === "ready";
+  const storageStatus = await checkStorage();
+  const rateLimitStatus = await checkRateLimitStorage();
+  const ok =
+    dbStatus === "up" &&
+    schemaStatus === "ready" &&
+    (storageStatus === "up" || storageStatus === "disabled") &&
+    (rateLimitStatus === "up" || rateLimitStatus === "disabled");
   const buildInfo = createBuildInfo({
     version: serverEnv.APP_VERSION,
     environment: serverEnv.NODE_ENV,
@@ -126,6 +190,8 @@ export async function GET() {
       env: serverEnv.NODE_ENV,
       db: dbStatus,
       schema: schemaStatus,
+      storage: storageStatus,
+      rateLimit: rateLimitStatus,
       uptime: Math.floor((Date.now() - startedAt) / 1000),
       timestamp: new Date().toISOString(),
     },
