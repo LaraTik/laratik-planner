@@ -99,13 +99,16 @@ export function MobileNav({
         ...(user.isAdmin ? [mobileLink("/app/users", "People", <Users />, pathname)] : []),
       ];
 
-  const createHref = currentWorkspace
-    ? !clientOnly && workspaceCanCreateContent[currentWorkspace.id]
-      ? `${wsBase}/planning/new`
-      : null
-    : canCreateWorkspace
-      ? "/app/workspaces/new"
-      : null;
+  const onPlatformRoute = pathname.startsWith("/app/platform/");
+  const createHref = onPlatformRoute
+    ? null
+    : currentWorkspace
+      ? !clientOnly && workspaceCanCreateContent[currentWorkspace.id]
+        ? `${wsBase}/planning/new`
+        : null
+      : canCreateWorkspace
+        ? "/app/workspaces/new"
+        : null;
   const createLabel = currentWorkspace ? "Create content" : "Create workspace";
 
   return (
