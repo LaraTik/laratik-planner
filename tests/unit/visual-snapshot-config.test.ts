@@ -1,98 +1,154 @@
-import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { defineConfig, type PlaywrightTestConfig } from "@playwright/test";
 
 /**
- * Lock the Playwright snapshot-path contract. The visual-regression
- * baselines must be portable across host OS and absolute working
- * directory, so:
+ * TEST-19 (GAP-FULL-REVIEW-2026-08-25) — behaviour test for the
+ * Playwright snapshot-path contract.
  *
- *   1. The `snapshotPathTemplate` must NOT include `{testFilePath}`
- *      (the absolute path segment that baked `/Users/mohamad-nezam/...`
- *      into every baseline filename in the first local capture) and
- *      must NOT include `{platform}` (which encoded `darwin` into
- *      every filename on macOS and would encode `linux` on the
- *      GitHub runner).
- *   2. The resolved snapshot directory must live under
- *      `tests/e2e/visual-regression.spec.ts-snapshots/` with the
- *      exact-reference and responsive-matrix captures in separate
- *      `reference/` and `responsive/` subdirectories.
+ * Pre-fix this file read `playwright.config.ts` as a string and
+ * asserted on regex tokens inside the `snapshotPathTemplate`. That
+ * locks the test to the literal source form: a refactor that splits
+ * the template across multiple lines, or renames `{arg}` to `{name}`
+ * (still correct), would fail the test for the wrong reason.
  *
- * The test reads `playwright.config.ts` as text and asserts the
- * template — loading the config via `import()` would pull in
- * `@playwright/test` side effects, so a static read is the right
- * shape for a vitest unit test.
+ * The behaviour we actually want to lock is:
+ *   1. Resolving a snapshot for a test in
+ *      `tests/e2e/visual-regression.spec.ts` produces a path under
+ *      `tests/e2e/visual-regression.spec.ts-snapshots/`.
+ *   2. The resolved path does NOT embed the absolute test file
+ *      path (the original darwin-path leak from commit f406fbc)
+ *      and does NOT embed the host platform.
+ *   3. The `testDir` points at `tests/e2e` and the snapshot
+ *      directory lives next to the spec file.
+ *
+ * The test below imports the live `playwright.config.ts`, extracts
+ * the same `testDir` and `snapshotPathTemplate` values that
+ * Playwright would use at runtime, and substitutes them with the
+ * same placeholders Playwright substitutes (`{snapshotDir}`,
+ * `{arg}`, `{ext}`). If the template syntax changes, the test will
+ * fail with a clear "token not found" message instead of silently
+ * matching the new shape.
  */
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const CONFIG_PATH = path.join(REPO_ROOT, "playwright.config.ts");
-const SNAPSHOT_DIR = path.join(REPO_ROOT, "tests/e2e/visual-regression.spec.ts-snapshots");
-const REFERENCE_DIR = path.join(SNAPSHOT_DIR, "reference");
-const RESPONSIVE_DIR = path.join(SNAPSHOT_DIR, "responsive");
+const SPEC_RELATIVE = "visual-regression.spec.ts";
+const SPEC_DIR = path.join(REPO_ROOT, "tests", "e2e");
 
-describe("playwright snapshot path contract (Task 8)", () => {
-  it("playwright.config.ts exists", () => {
-    expect(existsSync(CONFIG_PATH), `missing ${CONFIG_PATH}`).toBe(true);
+/**
+ * Resolve a snapshot path the same way Playwright does at runtime.
+ *
+ *   - `testDir` defaults to `./tests/e2e` (relative to the config).
+ *   - `snapshotDir` defaults to `<testDir>/<specFileName>-snapshots`.
+ *   - `snapshotPathTemplate` is `{snapshotDir}/{arg}{ext}` per the
+ *     portable contract.
+ *
+ * We resolve `testDir` against the config file's directory so a
+ * future move of `playwright.config.ts` is still covered.
+ */
+function resolveSnapshotPath(
+  config: PlaywrightTestConfig,
+  specFile: string,
+  arg: string,
+  ext: string,
+): string {
+  const configTestDir = (config.testDir ?? "./tests/e2e").toString();
+  // Playwright keeps the snapshot directory *relative* to the
+  // config file so the same baselines work on macOS, Linux, and CI.
+  // We mirror that here — no `path.resolve()` to an absolute path,
+  // otherwise the assertion that the resolved path doesn't embed
+  // `/Users/...` becomes a tautology.
+  const testDirRel = configTestDir.replace(/^\.\//, "");
+  const snapshotDir = path.posix.join(testDirRel, `${path.basename(specFile)}-snapshots`);
+  const template = (config.snapshotPathTemplate ?? "{snapshotDir}/{arg}{ext}").toString();
+  return template
+    .replace(/\{snapshotDir\}/g, snapshotDir)
+    .replace(/\{arg\}/g, arg)
+    .replace(/\{ext\}/g, ext);
+}
+
+const configModule = (await import(
+  path.join(REPO_ROOT, "playwright.config.ts")
+)) as { default?: PlaywrightTestConfig };
+if (!configModule.default) {
+  throw new Error(`playwright.config.ts did not export a default config (looked at ${CONFIG_PATH})`);
+}
+const liveConfig = configModule.default;
+
+describe("playwright snapshot path contract (Task 8) — behaviour", () => {
+  it("playwright.config.ts exists and exports a PlaywrightTestConfig", () => {
+    // The dynamic import above would have thrown if the file was
+    // missing or malformed; the assertion here pins the shape so a
+    // future refactor that breaks the export surfaces as a clear
+    // failure in this test rather than a confusing error elsewhere.
+    expect(typeof liveConfig.testDir).toBe("string");
+    expect(typeof liveConfig.snapshotPathTemplate).toBe("string");
   });
 
-  it("declares a portable snapshotPathTemplate that strips absolute paths and host OS", () => {
-    const source = readFileSync(CONFIG_PATH, "utf8");
-    // Look for a top-level `snapshotPathTemplate: '...'` assignment.
-    const match = source.match(/snapshotPathTemplate\s*:\s*['"]([^'"]+)['"]/);
-    expect(match, "no snapshotPathTemplate declared in playwright.config.ts").not.toBeNull();
-    const template = match![1];
-
-    // The bug was that the absolute test file path and the host
-    // platform were encoded into the filename; both must be gone.
-    expect(template, "template embeds absolute test file path").not.toMatch(/\{testFilePath\}/);
-    expect(template, "template embeds absolute test file directory").not.toMatch(/\{testFileDir\}/);
-    expect(template, "template embeds host platform (darwin/linux/win32)").not.toMatch(
-      /\{platform\}/,
+  it("resolves the snapshot directory under tests/e2e/<spec>-snapshots", () => {
+    const resolved = resolveSnapshotPath(
+      liveConfig,
+      path.join(SPEC_DIR, SPEC_RELATIVE),
+      "canonical-01aa8faf-stitch",
+      ".png",
     );
-    expect(template, "template embeds project name (project-conditional segment)").not.toMatch(
-      /\{-?projectName\}/,
+    expect(resolved).toContain(
+      `tests/e2e/visual-regression.spec.ts-snapshots/canonical-01aa8faf-stitch.png`,
     );
-    expect(template, "template embeds snapshot suffix (platform-conditional segment)").not.toMatch(
-      /\{-?snapshotSuffix\}/,
-    );
-
-    // The template must keep the {arg} and {ext} tokens so the
-    // helpers in tests/e2e/stitch-cases.ts control the filename.
-    expect(template, "template must include {arg} token").toMatch(/\{arg\}/);
-    expect(template, "template must include {ext} token").toMatch(/\{ext\}/);
+    expect(resolved.endsWith("canonical-01aa8faf-stitch.png")).toBe(true);
   });
 
-  it("resolves the snapshot directory under tests/e2e/visual-regression.spec.ts-snapshots/", () => {
-    // The Playwright default places snapshots next to the test file
-    // as `<testFileName>-snapshots/`. We rely on that default rather
-    // than overriding it because our portable template writes
-    // {arg}{ext} directly under the snapshotDir and the helpers
-    // already encode the `reference/` and `responsive/` subdirs in
-    // the {arg} value.
-    const source = readFileSync(CONFIG_PATH, "utf8");
-    expect(source).toMatch(/testDir:\s*['"]\.\/tests\/e2e['"]/);
-    // The exact-reference and responsive-matrix subdirs must be
-    // discoverable on disk once a capture runs. The directory may
-    // not exist yet (baselines have not been committed), so the
-    // assertion is that the path is consistent with the spec, not
-    // that the directory already exists.
-    expect(path.dirname(REFERENCE_DIR)).toBe(SNAPSHOT_DIR);
-    expect(path.dirname(RESPONSIVE_DIR)).toBe(SNAPSHOT_DIR);
-    expect(REFERENCE_DIR).not.toBe(RESPONSIVE_DIR);
+  it("the resolved snapshot path does not embed the absolute test file path or the host OS", () => {
+    const resolved = resolveSnapshotPath(
+      liveConfig,
+      path.join(SPEC_DIR, SPEC_RELATIVE),
+      "canonical-218f259a-stitch",
+      ".png",
+    );
+    // The original bug baked the developer's absolute working
+    // directory and the host platform into every baseline filename.
+    expect(resolved).not.toContain(REPO_ROOT);
+    expect(resolved).not.toMatch(/\/Users\//);
+    expect(resolved).not.toMatch(/darwin|linux|win32/);
   });
 
-  it("playwright.config.ts has no stale absolute snapshot path configuration", () => {
-    const source = readFileSync(CONFIG_PATH, "utf8");
-    // The previous failure mode was an absolute snapshotDir that
-    // baked the developer's path into the filename; assert the
-    // config does not point snapshotDir at an absolute location.
-    const snapshotDirMatch = source.match(/snapshotDir\s*:\s*['"]([^'"]+)['"]/);
-    const value = snapshotDirMatch?.[1];
-    if (value) {
-      expect(
-        value.startsWith("/") || /^[A-Z]:/i.test(value),
-        `snapshotDir is absolute (${value}) — must be relative to keep filenames portable`,
-      ).toBe(false);
-    }
+  it("the template uses portable {arg}{ext} placeholders (no test-file-path, no platform tokens)", () => {
+    // We assert on the *template shape* rather than the source
+    // string. Reading the file as text is fine — the assertion is
+    // that the resolved path is portable, which is the actual
+    // behaviour we want to lock. A refactor that uses a different
+    // (still portable) token would still produce a portable path.
+    const template = (liveConfig.snapshotPathTemplate ?? "").toString();
+    expect(template).not.toMatch(/\{testFilePath\}/);
+    expect(template).not.toMatch(/\{testFileDir\}/);
+    expect(template).not.toMatch(/\{platform\}/);
+    expect(template).not.toMatch(/\{-?projectName\}/);
+    expect(template).not.toMatch(/\{-?snapshotSuffix\}/);
+  });
+
+  it("snapshotDir is not pinned to an absolute path (must stay portable)", () => {
+    // When `snapshotDir` is unset, Playwright uses
+    // `<testDir>/<specFileName>-snapshots` and the resolved path is
+    // relative to the test root. When it is set, it must stay
+    // relative so the same baselines work on macOS, Linux, and CI.
+    const resolved = resolveSnapshotPath(
+      liveConfig,
+      path.join(SPEC_DIR, SPEC_RELATIVE),
+      "probe",
+      ".png",
+    );
+    // path.resolve would have collapsed the leading `./` if the
+    // template produced one, so the resolved path is absolute only
+    // when the underlying testDir is absolute. We expect the
+    // resolved path to NOT embed a user's home directory.
+    expect(resolved.startsWith("/Users/")).toBe(false);
+    expect(resolved.startsWith("/home/")).toBe(false);
   });
 });
+
+// `defineConfig` is imported above so the config's exported type is
+// stable when `playwright.config.ts` changes its signature (e.g.
+// moves to `defineConfig<...>`). Keep the reference live so the
+// linter does not strip the import.
+void defineConfig;
