@@ -5,12 +5,21 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { campaigns, contentPillars, contentTemplates } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionHeader } from "@/components/workspace/section-header";
 import { humanFormat } from "@/lib/content/status";
+import {
+  ArchiveCampaignButton,
+  ArchivePillarButton,
+  ArchiveTemplateButton,
+  NewCampaignForm,
+  NewPillarForm,
+  NewTemplateForm,
+} from "./library-forms";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "outline"> = {
   active: "success",
@@ -59,6 +68,14 @@ export default async function PlanningLibraryPage({
       .where(
         and(eq(contentTemplates.workspaceId, workspace.id), isNull(contentTemplates.archivedAt)),
       ),
+  ]);
+  // FEAT-06 — show the "New ..." forms only to roles that may
+  // mutate the library (workspace_manager / content_planner). The
+  // service layer is the authoritative gate; this is purely a UX
+  // hide so reviewers don't see a form they can't submit.
+  const canEditLibrary = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
+    "workspace_manager",
+    "content_planner",
   ]);
   return (
     <div className="space-y-6" data-testid="library-campaigns">
@@ -110,10 +127,16 @@ export default async function PlanningLibraryPage({
                   {formatCampaignWindow(row.startDate, row.endDate)}
                 </div>
                 <Badge variant={STATUS_VARIANT[row.status] ?? "outline"}>{row.status}</Badge>
+                {canEditLibrary ? <ArchiveCampaignButton slug={slug} id={row.id} /> : null}
               </li>
             ))}
           </ul>
         )}
+        {canEditLibrary ? (
+          <div className="border-border border-t px-4 py-3">
+            <NewCampaignForm slug={slug} />
+          </div>
+        ) : null}
       </Card>
 
       <Card padding="none" className="overflow-hidden">
@@ -136,10 +159,15 @@ export default async function PlanningLibraryPage({
               getRowKey={(p) => p.id}
               getRowTestId={(p) => `library-pillar-${p.id}`}
               rows={pillars}
-              columns={pillarColumns()}
+              columns={pillarColumns(canEditLibrary, slug)}
             />
           </div>
         )}
+        {canEditLibrary ? (
+          <div className="border-border border-t px-4 py-3">
+            <NewPillarForm slug={slug} />
+          </div>
+        ) : null}
       </Card>
 
       <Card padding="none" className="overflow-hidden">
@@ -167,10 +195,16 @@ export default async function PlanningLibraryPage({
                   <p className="text-body text-fg-primary font-semibold">{row.name}</p>
                   <p className="text-label text-fg-muted mt-0.5">{humanFormat(row.format)}</p>
                 </div>
+                {canEditLibrary ? <ArchiveTemplateButton slug={slug} id={row.id} /> : null}
               </li>
             ))}
           </ul>
         )}
+        {canEditLibrary ? (
+          <div className="border-border border-t px-4 py-3">
+            <NewTemplateForm slug={slug} />
+          </div>
+        ) : null}
       </Card>
     </div>
   );
@@ -187,7 +221,10 @@ function formatCampaignWindow(start: Date | string | null, end: Date | string | 
   return "No window set";
 }
 
-function pillarColumns(): DataTableColumnDef<typeof contentPillars.$inferSelect>[] {
+function pillarColumns(
+  canEditLibrary: boolean,
+  slug: string,
+): DataTableColumnDef<typeof contentPillars.$inferSelect>[] {
   return [
     {
       key: "name",
@@ -204,5 +241,16 @@ function pillarColumns(): DataTableColumnDef<typeof contentPillars.$inferSelect>
           <span className="text-fg-muted">&mdash;</span>
         ),
     },
+    ...(canEditLibrary
+      ? [
+          {
+            key: "actions",
+            header: "Actions",
+            cell: (p: typeof contentPillars.$inferSelect) => (
+              <ArchivePillarButton slug={slug} id={p.id} />
+            ),
+          },
+        ]
+      : []),
   ];
 }
