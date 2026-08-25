@@ -90,5 +90,5 @@ export const CardDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
 >(function CardDescription({ className, ...props }, ref) {
-  return <p ref={ref} className={cn("text-body text-fg-secondary", className)} {...props} />;
+  return <p ref={ref} className={cn("text-body text-fg-secondary mt-1", className)} {...props} />;
 });
