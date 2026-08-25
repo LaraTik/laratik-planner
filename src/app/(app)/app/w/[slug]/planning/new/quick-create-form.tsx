@@ -45,7 +45,7 @@ export function QuickCreateForm({
             name="format"
             required
             defaultValue="static_post"
-            className="border-border bg-surface text-fg-primary text-body flex h-10 w-full rounded-[var(--radius-control)] border px-3 py-2"
+            className="border-border bg-surface text-fg-primary text-body focus-visible:ring-focus-ring flex h-10 w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
           >
             <option value="static_post">Static post</option>
             <option value="carousel">Carousel</option>
@@ -73,7 +73,7 @@ export function QuickCreateForm({
           rows={4}
           maxLength={2000}
           placeholder="What's the message? Who's it for?"
-          className="border-border bg-surface text-fg-primary text-body placeholder:text-fg-muted w-full rounded-[var(--radius-control)] border px-3 py-2"
+          className="border-border bg-surface text-fg-primary text-body placeholder:text-fg-muted focus-visible:ring-focus-ring w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
         />
       </FormField>
 

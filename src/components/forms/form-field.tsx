@@ -7,14 +7,26 @@ import { cn } from "@/lib/utils";
 /**
  * FormField — accessible label + input + error/hint combo.
  * Built per master prompt §18 (labels always associated, errors announced).
+ *
+ * `children` may be any control that accepts the id / aria-* attributes
+ * we inject: an `<Input>`, a native `<select>`, a native `<textarea>`,
+ * etc. The structural type intentionally accepts the union of
+ * `InputHTMLAttributes` and `TextareaHTMLAttributes` so that adding a
+ * `<select>` consumer (a real use case at quick-create-form.tsx:43-58)
+ * does not silently bypass the focus-ring / a11y contract — see
+ * the GAP-FULL-REVIEW-2026-08-25 / UX-01 fix.
  */
+type FieldControlProps = React.InputHTMLAttributes<HTMLInputElement> &
+  React.TextareaHTMLAttributes<HTMLTextAreaElement> &
+  React.SelectHTMLAttributes<HTMLSelectElement>;
+
 export interface FormFieldProps {
   id: string;
   label: string;
   hint?: string;
   error?: string;
   required?: boolean;
-  children: React.ReactElement<React.InputHTMLAttributes<HTMLInputElement>>;
+  children: React.ReactElement<FieldControlProps>;
   className?: string;
 }
 
