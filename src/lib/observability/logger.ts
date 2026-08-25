@@ -23,3 +23,14 @@ export function logError(event: string, context: Record<string, unknown> = {}) {
     }),
   );
 }
+
+export function logWarn(event: string, context: Record<string, unknown> = {}) {
+  console.warn(
+    JSON.stringify({
+      level: "warn",
+      event,
+      timestamp: new Date().toISOString(),
+      ...(sanitizeLogContext(context) as Record<string, unknown>),
+    }),
+  );
+}
