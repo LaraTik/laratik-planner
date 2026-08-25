@@ -60,6 +60,14 @@ describe("src/lib/publishing barrel", () => {
       "evaluateReadiness",
       "foldAiSuggestions",
       "ReadinessError",
+      // FEAT-17 (GAP-FULL-REVIEW-2026-08-25) — publishing adapter
+      // slot. LinkedIn + X stubs are the first concrete adapters;
+      // the registry entry point is what the M4.5 dispatcher will
+      // call into.
+      "LinkedInPublishingAdapter",
+      "XPublishingAdapter",
+      "publishingAdapterRegistry",
+      "isSupportedPlatform",
     ] as const;
 
     for (const name of barrelValueExports) {

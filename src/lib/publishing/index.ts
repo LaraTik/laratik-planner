@@ -55,6 +55,22 @@ export {
   ReadinessError,
 } from "./materiality-helpers";
 
+// FEAT-17 (GAP-FULL-REVIEW-2026-08-25) — per-platform publishing
+// adapter slot. The LinkedIn + X stubs ship today; the M4.5 worker
+// will replace their bodies with real provider calls.
+export {
+  LinkedInPublishingAdapter,
+  XPublishingAdapter,
+  publishingAdapterRegistry,
+  isSupportedPlatform,
+} from "./adapters";
+export type {
+  PublishingAdapter,
+  PublishResult,
+  PublishFailureReason,
+  SupportedPlatform,
+} from "./adapters";
+
 // Type re-exports.
 export type {
   PlatformPayload,
