@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
-import { and, eq, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
-import { db } from "@/lib/db";
-import { contentItems } from "@/lib/db/schema";
+import { listUnassignedDesignWork } from "@/lib/content/service";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { StatusBadge } from "@/components/content/status-badge";
 import { EmptyState } from "@/components/feedback/empty-state";
@@ -17,17 +15,11 @@ export default async function DesignQueuePage({ params }: { params: Promise<{ sl
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
-  const rows = await db
-    .select()
-    .from(contentItems)
-    .where(
-      and(
-        eq(contentItems.workspaceId, workspace.id),
-        eq(contentItems.status, "approved_for_design"),
-        isNull(contentItems.designerId),
-        isNull(contentItems.archivedAt),
-      ),
-    );
+  // FEAT-12 (GAP-FULL-REVIEW-2026-08-25) — delegate to the
+  // canonical §14 `listUnassignedDesignWork` query so the page
+  // picks up the role-gate, future cursor support, and any
+  // downstream filters without further changes here.
+  const rows = await listUnassignedDesignWork({ id: session.user.id }, workspace.id);
   return (
     <div className="space-y-6" data-testid="workspace-design-queue">
       <PageHeader

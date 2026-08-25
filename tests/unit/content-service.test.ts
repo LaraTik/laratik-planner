@@ -138,6 +138,7 @@ const {
   batchCreateContentItems,
   getContentItem,
   listWorkspaceContent,
+  listUnassignedDesignWork,
   transitionContent,
   claimAsDesigner,
   UPDATEABLE_STATUSES,
@@ -423,6 +424,20 @@ describe("listWorkspaceContent", () => {
     const rows = await listWorkspaceContent(actor, workspaceId);
     expect(rows).toHaveLength(1);
     expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, expect.any(Array));
+  });
+});
+
+describe("listUnassignedDesignWork (FEAT-12)", () => {
+  it("returns the queued items, gated by INTERNAL_WORKSPACE_ROLES", async () => {
+    dbMock.state.selectResults.push([{ id: "i-1", status: "approved_for_design" }]);
+    const rows = await listUnassignedDesignWork(actor, workspaceId);
+    expect(rows).toHaveLength(1);
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(actor, workspaceId, expect.any(Array));
+  });
+
+  it("rejects when the actor lacks the role", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    await expect(listUnassignedDesignWork(actor, workspaceId)).rejects.toThrow(/permission denied/i);
   });
 });
 

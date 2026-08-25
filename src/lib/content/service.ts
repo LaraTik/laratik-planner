@@ -509,6 +509,65 @@ export async function listWorkspaceContent(
     .limit(opts.limit ?? 200);
 }
 
+/**
+ * FEAT-12 (GAP-FULL-REVIEW-2026-08-25) — the "Unassigned Design Queue"
+ * page (§3 Stitch frame, master prompt §14 `listUnassignedDesignWork`).
+ *
+ * Returns content items that:
+ *   1. live in the given workspace,
+ *   2. are NOT archived,
+ *   3. are in `approved_for_design` (the §10 state where a designer
+ *      may claim them), and
+ *   4. have no `designer_id` set.
+ *
+ * Ordered by `planned_publish_at` ascending so the items the team is
+ * about to ship float to the top. The `status` / `limit` / `cursor`
+ * options are parity with `listWorkspaceContent` so the page can page
+ * through a large backlog without rewriting the listing code.
+ *
+ * The role gate is the same `INTERNAL_WORKSPACE_ROLES` set the planning
+ * list uses — a client reviewer must never see this surface (their
+ * counterpart is the `client/...` portal).
+ */
+export interface ListUnassignedDesignWorkOptions {
+  status?: string;
+  limit?: number;
+  cursor?: { plannedPublishAt: Date; id: string };
+}
+
+export async function listUnassignedDesignWork(
+  actor: Actor,
+  workspaceId: string,
+  opts: ListUnassignedDesignWorkOptions = {},
+) {
+  await requirePolicy(
+    hasWorkspaceRole(actor, workspaceId, [...INTERNAL_WORKSPACE_ROLES]),
+    "list_unassigned_design_work",
+  );
+
+  const conditions = [
+    eq(contentItems.workspaceId, workspaceId),
+    isNull(contentItems.archivedAt),
+    isNull(contentItems.designerId),
+    // `status` is a pg enum; the page has already validated the
+    // string against the allowed values before passing it in.
+    eq(contentItems.status, (opts.status ?? "approved_for_design") as never),
+  ];
+  if (opts.cursor) {
+    const c = opts.cursor;
+    conditions.push(
+      sql`(${contentItems.plannedPublishAt} > ${c.plannedPublishAt}) OR (${contentItems.plannedPublishAt} = ${c.plannedPublishAt} AND ${contentItems.id} > ${c.id})`,
+    );
+  }
+
+  return db
+    .select()
+    .from(contentItems)
+    .where(and(...conditions))
+    .orderBy(sql`${contentItems.plannedPublishAt} ASC`, sql`${contentItems.id} ASC`)
+    .limit(opts.limit ?? 200);
+}
+
 // ─── Workflow transitions (master prompt §10) ──────────────────────────
 export type { WorkflowAction } from "@/lib/content/workflow";
 
