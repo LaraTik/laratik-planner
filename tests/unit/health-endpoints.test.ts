@@ -94,7 +94,7 @@ describe("GET /api/health/ready", () => {
     expect(body.schema).toBe("ready");
     expect(body.storage).toBe("up");
     expect(body.rateLimit).toBe("up");
-    expect(body.version).toBe("a1b2c3d4e5f678901234567890abcdef12345678");
+    expect(body.version).toBe("a1b2c3d");
   });
 
   it("returns 200 for a baselined database with a complete recorded suffix", async () => {

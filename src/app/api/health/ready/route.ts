@@ -193,7 +193,11 @@ export async function GET() {
   return NextResponse.json(
     {
       ok,
-      version: buildInfo.fullSha ?? buildInfo.displayLabel,
+      // Use the short SHA (7 chars) — enough to correlate with the
+      // public commit history without exposing the full deploy
+      // identity on a public, unauthenticated endpoint. The full
+      // SHA is reserved for the authenticated ApplicationInfoCard.
+      version: buildInfo.shortSha ?? buildInfo.displayLabel,
       env: serverEnv.NODE_ENV,
       db: dbStatus,
       schema: schemaStatus,
