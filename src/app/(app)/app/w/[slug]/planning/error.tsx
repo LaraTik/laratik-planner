@@ -53,7 +53,10 @@ export default function PlanningError({
         }
       />
       {error.digest ? (
-        <p data-testid="planning-error-digest" className="text-label text-fg-muted mt-4 text-center">
+        <p
+          data-testid="planning-error-digest"
+          className="text-label text-fg-muted mt-4 text-center"
+        >
           Reference:{" "}
           <code className="bg-surface-subtle rounded px-1.5 py-0.5 font-mono">{error.digest}</code>
         </p>
