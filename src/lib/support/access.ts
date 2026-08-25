@@ -9,7 +9,10 @@ import {
   supportAccessRequests,
   workspaces,
 } from "@/lib/db/schema";
-import { isPlatformAdmin, requirePlatformAdmin } from "@/lib/auth/platform-admin";
+import {
+  hasPlatformPermission,
+  requirePlatformPermission,
+} from "@/lib/auth/platform-access";
 import { isAgencyAdmin, requirePolicy, type Actor } from "@/lib/auth/policy";
 
 /**
@@ -249,7 +252,7 @@ export async function createSupportAccessRequest(
   actor: Actor,
   input: CreateSupportAccessRequestInput,
 ): Promise<SupportAccessRequestRow> {
-  await requirePlatformAdmin(actor);
+  await requirePlatformPermission(actor, "platform.support.request");
   const parsed = CreateSupportAccessRequestSchema.parse(input);
 
   // Workspace scope must belong to the target agency (IDOR defence).
@@ -480,16 +483,18 @@ export async function revokeSupportAccessGrant(
     if (grant.revokedAt) {
       return SupportAccessGrantRow.parse(grant);
     }
-    // Authority: the platform admin who asked, the agency admin who
-    // approved, or any platform admin. The isPlatformAdmin() check
-    // covers the third case; the others need an explicit DB check.
-    const isPlatform = await isPlatformAdmin(actor);
+    // Authority: the requester, an administrator of the target agency,
+    // or a Platform Owner exercising incident-response authority.
+    const canManagePlatformAccess = await hasPlatformPermission(
+      actor,
+      "platform.access.manage",
+    );
     const isAgency = await isAgencyAdmin(actor, grant.targetAgencyId);
     const isRequester = grant.grantedToUserId === actor.id;
-    if (!isPlatform && !isAgency && !isRequester) {
+    if (!canManagePlatformAccess && !isAgency && !isRequester) {
       throw new SupportAccessError(
         SupportAccessErrorCode.NotAgencyAdmin,
-        "Only the requesting platform admin, the approving agency admin, or any platform admin can revoke a grant.",
+        "Only the requester, an agency administrator, or a Platform Owner can revoke this grant.",
         { grantId, agencyId: grant.targetAgencyId },
       );
     }
@@ -843,7 +848,4 @@ export async function authorizePlatformDownload(input: {
   return { allowed, grant };
 }
 
-// Re-export requirePlatformAdmin for callers that compose multiple
-// checks (e.g. the platform console page). The helpers above already
-// call it, so most consumers won't need to import it directly.
-export { requirePlatformAdmin, isPlatformAdmin, requirePolicy };
+export { requirePolicy };

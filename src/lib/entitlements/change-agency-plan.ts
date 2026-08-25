@@ -19,6 +19,8 @@ import {
   type PlatformPlanTemplateRow,
 } from "./types";
 import { loadEntitlementForUpdate } from "./get-effective-entitlement";
+import { requirePlatformPermission } from "@/lib/auth/platform-access";
+import type { Actor } from "@/lib/auth/policy";
 
 /**
  * M2.2 — changeAgencyPlan service.
@@ -310,6 +312,14 @@ export async function changeAgencyPlan(
       },
     };
   });
+}
+
+export async function changeAgencyPlanAsPlatform(
+  actor: Actor,
+  input: Omit<ChangeAgencyPlanInput, "actorUserId">,
+): Promise<ChangeAgencyPlanResult> {
+  await requirePlatformPermission(actor, "platform.agency.plan.manage");
+  return changeAgencyPlan({ ...input, actorUserId: actor.id });
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────

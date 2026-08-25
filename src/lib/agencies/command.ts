@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { agencies, securityAuditEvents } from "@/lib/db/schema";
+import { requirePlatformPermission } from "@/lib/auth/platform-access";
 import { isAgencyAdmin, requirePolicy, type Actor } from "@/lib/auth/policy";
 
 /**
@@ -137,6 +138,24 @@ export async function updateAgency(
   raw: UpdateAgencyInput,
 ): Promise<UpdateAgencyResult> {
   await requirePolicy(isAgencyAdmin(actor, agencyId), "update_agency");
+  return updateAgencyIdentity(actor, agencyId, raw, "agency");
+}
+
+export async function updateAgencyAsPlatform(
+  actor: Actor,
+  agencyId: string,
+  raw: UpdateAgencyInput,
+): Promise<UpdateAgencyResult> {
+  await requirePlatformPermission(actor, "platform.agency.update");
+  return updateAgencyIdentity(actor, agencyId, raw, "platform");
+}
+
+async function updateAgencyIdentity(
+  actor: Actor,
+  agencyId: string,
+  raw: UpdateAgencyInput,
+  authorityScope: "agency" | "platform",
+): Promise<UpdateAgencyResult> {
   const input = UpdateAgencySchema.parse(raw);
 
   return db.transaction(async (tx) => {
@@ -215,6 +234,7 @@ export async function updateAgency(
         targetId: agencyId,
         outcome: "success",
         metadata: {
+          authorityScope,
           changedFields,
           before: beforeSubset,
           after: afterSubset,

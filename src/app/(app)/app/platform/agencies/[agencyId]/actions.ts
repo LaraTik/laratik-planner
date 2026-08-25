@@ -1,10 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
-import { requirePlatformAdmin } from "@/lib/auth/platform-admin";
-import { updateAgency, UpdateAgencySchema, AgencyUpdateError } from "@/lib/agencies/command";
+import {
+  updateAgencyAsPlatform,
+  UpdateAgencySchema,
+  AgencyUpdateError,
+} from "@/lib/agencies/command";
+import { z } from "zod";
 
 /**
  * Platform admin: edit-agency server action.
@@ -18,21 +21,15 @@ import { updateAgency, UpdateAgencySchema, AgencyUpdateError } from "@/lib/agenc
  * an active support-access grant that the platform console
  * surfaces as a tenant view).
  *
- * Authorization: `requirePlatformAdmin(actor)` gates the
- * action; the service-layer `isAgencyAdmin` check is the
- * second layer. A platform admin who is NOT a member of the
- * agency and does NOT hold a grant cannot rename it from this
- * surface.
+ * Authorization is enforced again in `updateAgencyAsPlatform`
+ * through the exact `platform.agency.update` permission. Platform
+ * authority remains separate from agency membership and does not
+ * create or require a tenant membership.
  */
 
 async function requirePlatformActor() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not signed in");
-  }
   const actor = await currentActor();
   if (!actor) throw new Error("Not signed in");
-  await requirePlatformAdmin(actor);
   return actor;
 }
 
@@ -48,10 +45,8 @@ export async function platformEditAgencyAction(
   formData: FormData,
 ): Promise<PlatformEditAgencyActionState> {
   const actor = await requirePlatformActor();
-  const agencyId = String(formData.get("agencyId") ?? "");
-  if (!agencyId) {
-    return { error: "Missing agency id." };
-  }
+  const agencyId = z.string().uuid().safeParse(formData.get("agencyId"));
+  if (!agencyId.success) return { error: "Missing or invalid agency id." };
   const parsed = UpdateAgencySchema.safeParse({
     name: formData.get("name"),
     slug: formData.get("slug"),
@@ -64,8 +59,8 @@ export async function platformEditAgencyAction(
     };
   }
   try {
-    const result = await updateAgency(actor, agencyId, parsed.data);
-    revalidatePath(`/app/platform/agencies/${agencyId}`);
+    const result = await updateAgencyAsPlatform(actor, agencyId.data, parsed.data);
+    revalidatePath(`/app/platform/agencies/${agencyId.data}`);
     revalidatePath("/app/agency-settings");
     return { ok: true, changedFields: result.changedFields };
   } catch (e) {

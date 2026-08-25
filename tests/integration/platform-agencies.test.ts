@@ -9,6 +9,7 @@ import {
   platformAdministrators,
   platformAuditEvents,
   platformPlanTemplates,
+  securityAuditEvents,
   users,
 } from "@/lib/db/schema";
 
@@ -19,10 +20,12 @@ describe("M2.5/M2.7 — platform agency lifecycle", () => {
   let db: typeof import("@/lib/db").db;
   let createAgency: typeof import("@/lib/platform/agencies").createAgency;
   let changeAgencyLifecycle: typeof import("@/lib/platform/agencies").changeAgencyLifecycle;
+  let updateAgencyAsPlatform: typeof import("@/lib/agencies/command").updateAgencyAsPlatform;
 
   beforeAll(async () => {
     ({ db } = await import("@/lib/db"));
     ({ createAgency, changeAgencyLifecycle } = await import("@/lib/platform/agencies"));
+    ({ updateAgencyAsPlatform } = await import("@/lib/agencies/command"));
   });
 
   beforeEach(async () => {
@@ -30,7 +33,7 @@ describe("M2.5/M2.7 — platform agency lifecycle", () => {
     await db.execute(sql`
       TRUNCATE agency_usage_counter, agency_usage_threshold_event,
         agency_entitlement_change, agency_entitlement,
-        platform_audit_event, platform_administrator,
+        platform_audit_event, security_audit_event, platform_administrator,
         platform_plan_template, invitation, agency_membership,
         agency, "user"
       RESTART IDENTITY CASCADE
@@ -106,7 +109,34 @@ describe("M2.5/M2.7 — platform agency lifecycle", () => {
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
-  it("suspends, archives, and restores with an audit event for every action", async () => {
+  it("updates agency identity through platform authority without tenant membership", async () => {
+    const { actor } = await seedPlatformActor();
+    const [agency] = await db
+      .insert(agencies)
+      .values({ name: "Old Agency", slug: "old-agency" })
+      .returning();
+    if (!agency) throw new Error("agency fixture failed");
+
+    await updateAgencyAsPlatform(actor, agency.id, {
+      name: "Updated Agency",
+      slug: "updated-agency",
+      locale: "en",
+      timezone: "Europe/Berlin",
+    });
+
+    const memberships = await db
+      .select()
+      .from(agencyMemberships)
+      .where(eq(agencyMemberships.agencyId, agency.id));
+    const [audit] = await db
+      .select({ metadata: securityAuditEvents.metadata })
+      .from(securityAuditEvents)
+      .where(eq(securityAuditEvents.targetId, agency.id));
+    expect(memberships).toHaveLength(0);
+    expect(audit?.metadata).toMatchObject({ authorityScope: "platform" });
+  });
+
+  it("keeps restore separate from Owner-only archive recovery", async () => {
     const { actor, planId } = await seedPlatformActor();
     const [agency] = await db
       .insert(agencies)
@@ -122,8 +152,30 @@ describe("M2.5/M2.7 — platform agency lifecycle", () => {
     });
     await changeAgencyLifecycle(actor, {
       agencyId: agency.id,
+      action: "restore",
+      reason: "payment resolved",
+    });
+    await changeAgencyLifecycle(actor, {
+      agencyId: agency.id,
       action: "archive",
       reason: "contract ended",
+    });
+    await expect(
+      changeAgencyLifecycle(actor, {
+        agencyId: agency.id,
+        action: "restore",
+        reason: "unsafe indirect recovery",
+      }),
+    ).rejects.toMatchObject({ code: "restore-archived" });
+    await changeAgencyLifecycle(actor, {
+      agencyId: agency.id,
+      action: "unarchive",
+      reason: "owner approved recovery",
+    });
+    await changeAgencyLifecycle(actor, {
+      agencyId: agency.id,
+      action: "suspend",
+      reason: "post-recovery review",
     });
     await changeAgencyLifecycle(actor, {
       agencyId: agency.id,
@@ -140,7 +192,10 @@ describe("M2.5/M2.7 — platform agency lifecycle", () => {
       .where(sql`${platformAuditEvents.target} ->> 'id' = ${agency.id}`);
     expect(events.map((event) => event.action)).toEqual([
       "agency.suspend",
+      "agency.restore",
       "agency.archive",
+      "agency.unarchive",
+      "agency.suspend",
       "agency.restore",
     ]);
     expect(

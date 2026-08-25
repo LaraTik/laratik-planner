@@ -37,9 +37,6 @@ export {
   recordSupportAccessAudit,
   // Audit vocabulary
   SupportAccessAuditAction,
-  // Re-exports
-  requirePlatformAdmin,
-  isPlatformAdmin,
 } from "./access";
 export type {
   CreateSupportAccessRequestInput,

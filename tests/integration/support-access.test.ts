@@ -47,7 +47,10 @@ describe("M3.6 — support access workflow (integration)", () => {
     `);
   });
 
-  async function seedPlatformAdmin(): Promise<{ id: string }> {
+  async function seedPlatformAdmin(
+    role: "platform_owner" | "agency_operator" | "platform_auditor" | "support_operator" =
+      "platform_owner",
+  ): Promise<{ id: string }> {
     const [u] = await db
       .insert(schema.users)
       .values({
@@ -60,6 +63,7 @@ describe("M3.6 — support access workflow (integration)", () => {
     await db.insert(schema.platformAdministrators).values({
       userId: u.id,
       grantedBy: u.id,
+      role,
     });
     return { id: u.id };
   }
@@ -141,6 +145,42 @@ describe("M3.6 — support access workflow (integration)", () => {
         grantDownloads: false,
       }),
     ).rejects.toMatchObject({ code: support.SupportAccessErrorCode.NotAgencyAdmin });
+  });
+
+  it("lets Support request while reserving third-party revoke for Owners", async () => {
+    const requester = await seedPlatformAdmin("support_operator");
+    const agencyOperator = await seedPlatformAdmin("agency_operator");
+    const owner = await seedPlatformAdmin("platform_owner");
+    const { adminId, agencyId } = await seedAgencyAdminAndAgency("role-boundary");
+    const request = await support.createSupportAccessRequest(requester, {
+      ticketReference: "SUP-ROLE-1",
+      reason: "Investigating a role-boundary incident.",
+      targetAgencyId: agencyId,
+      scopeMetadataOnly: false,
+      downloadsRequested: false,
+      requestedDurationHours: 1,
+    });
+
+    await expect(
+      support.decideSupportAccessRequest(requester, request.id, "approved", {
+        reason: "Self approval must fail.",
+        grantDownloads: false,
+      }),
+    ).rejects.toMatchObject({ code: support.SupportAccessErrorCode.NotAgencyAdmin });
+
+    const { grant } = await support.decideSupportAccessRequest(
+      { id: adminId },
+      request.id,
+      "approved",
+      { reason: "Agency approval.", grantDownloads: false },
+    );
+    if (!grant) throw new Error("grant missing");
+
+    await expect(
+      support.revokeSupportAccessGrant(agencyOperator, grant.id, "Unrelated operator"),
+    ).rejects.toMatchObject({ code: support.SupportAccessErrorCode.NotAgencyAdmin });
+    const revoked = await support.revokeSupportAccessGrant(owner, grant.id, "Owner response");
+    expect(revoked.revokedByUserId).toBe(owner.id);
   });
 
   it("rejects a second approval of the same request", async () => {
