@@ -106,6 +106,154 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     expect(seeded.channelIds.length).toBe(3);
   });
 
+  // TEST-12 (GAP-FULL-REVIEW-2026-08-25): the full §23 happy path
+  // for the content state machine. The previous "full happy path"
+  // test stopped at `approved_for_design`; the §23 spec continues
+  // through design, creative review, client review, ready-to-publish,
+  // and final publication. This test exercises every transition in
+  // the §10 state machine (via the §23 surface) end-to-end, across
+  // the four actor roles that participate.
+  test("full §23 path: draft → published across planner/reviewer/designer/publisher", async ({
+    context,
+  }) => {
+    // Open one browser context per role; each owns its own
+    // authenticated cookie jar. We hand the planning detail URL
+    // across contexts so each actor lands on the same content item.
+    const plannerContext = await context.browser()!.newContext();
+    const reviewerContext = await context.browser()!.newContext();
+    const designerContext = await context.browser()!.newContext();
+    const publisherContext = await context.browser()!.newContext();
+
+    const plannerPage = await plannerContext.newPage();
+    const reviewerPage = await reviewerContext.newPage();
+    const designerPage = await designerContext.newPage();
+    const publisherPage = await publisherContext.newPage();
+
+    try {
+      // ─── 1. Planner: create a draft ───
+      await bootstrapRoleSession(plannerPage, "content_planner");
+      await plannerPage.goto("/app/w/acme/planning/new");
+      const title = `E2E §23 full ${Date.now()}`;
+      await plannerPage.getByLabel(/Title/i).first().fill(title);
+      await plannerPage.getByRole("button", { name: /Create draft/i }).click();
+      await plannerPage.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
+        timeout: 20_000,
+        waitUntil: "commit",
+      });
+      const detailUrl = plannerPage.url();
+
+      // ─── 2. Planner: submit for content review ───
+      await plannerPage
+        .getByRole("button", { name: /submit.*review/i })
+        .first()
+        .click();
+      await expect(plannerPage.getByText(/content review/i).first()).toBeVisible({
+        timeout: 10_000,
+      });
+
+      // ─── 3. Internal reviewer: approve content → approved_for_design ───
+      await bootstrapRoleSession(reviewerPage, "internal_reviewer");
+      await reviewerPage.goto(detailUrl);
+      await reviewerPage
+        .getByRole("button", { name: /approve/i })
+        .first()
+        .click();
+      await expect(reviewerPage.getByText(/approved for design/i).first()).toBeVisible({
+        timeout: 10_000,
+      });
+
+      // ─── 4. Workspace manager: assign designer → in_design ───
+      const managerContext = await context.browser()!.newContext();
+      const managerPage = await managerContext.newPage();
+      try {
+        await bootstrapRoleSession(managerPage, "workspace_manager");
+        await managerPage.goto(detailUrl);
+        const assignBtn = managerPage.getByRole("button", { name: /assign designer/i }).first();
+        await expect(assignBtn).toBeVisible({ timeout: 10_000 });
+        await assignBtn.click();
+        await expect(managerPage.getByText(/in design/i).first()).toBeVisible({ timeout: 10_000 });
+      } finally {
+        await managerContext.close();
+      }
+
+      // ─── 5. Designer: submit a delivery → creative_review ───
+      await bootstrapRoleSession(designerPage, "designer");
+      await designerPage.goto(detailUrl);
+      // The delivery form starts open when the content is in_design
+      // and no past deliveries exist. We assert the form is reachable
+      // and fill it.
+      const deliveryForm = designerPage.getByTestId("delivery-submit-form");
+      const deliveryCta = designerPage.getByTestId("delivery-submit-cta");
+      // Either the form is already open OR the CTA is the entry point.
+      const ctaVisible = await deliveryCta.isVisible().catch(() => false);
+      if (ctaVisible) {
+        await deliveryCta.getByRole("button", { name: /Submit delivery/i }).click();
+      }
+      await expect(deliveryForm).toBeVisible({ timeout: 10_000 });
+      await designerPage.locator('input[name="description"]').fill("V1 creatives");
+      // At least one HTTPS link is required.
+      await designerPage.locator('input[name="linkUrl"]').first().fill("https://example.com/v1");
+      await designerPage.getByRole("button", { name: /Submit for creative review/i }).click();
+      // The status should advance to creative_review.
+      await expect(designerPage.getByText(/creative review/i).first()).toBeVisible({
+        timeout: 15_000,
+      });
+
+      // ─── 6. Internal reviewer: approve internal creative → ready_to_publish ───
+      await reviewerPage.goto(detailUrl);
+      // The ApprovalTimeline is rendered when an approval is pending.
+      // The "Approve" button on the timeline advances the gate.
+      const approveCreativeBtn = reviewerPage.getByRole("button", { name: /^Approve$/i }).first();
+      await expect(approveCreativeBtn).toBeVisible({ timeout: 10_000 });
+      await approveCreativeBtn.click();
+      await expect(reviewerPage.getByText(/ready to publish/i).first()).toBeVisible({
+        timeout: 15_000,
+      });
+
+      // ─── 7. Publisher: record publications for each of the 3 channels → published ───
+      await bootstrapRoleSession(publisherPage, "publisher");
+      await publisherPage.goto(detailUrl);
+      // The publishing section shows a "Record" button per channel.
+      // We click each one, fill the published URL, and save.
+      const recordButtons = publisherPage.getByRole("button", { name: /^Record$/i });
+      const count = await recordButtons.count();
+      // The seed has 3 channels; the §23 path requires all of them
+      // to be recorded before the item transitions to `published`.
+      expect(count).toBeGreaterThanOrEqual(3);
+      for (let i = 0; i < count; i += 1) {
+        // The buttons are re-rendered after each save; we always
+        // re-query the first match so we iterate the right channel.
+        const btn = publisherPage.getByRole("button", { name: /^Record$/i }).first();
+        await btn.click();
+        // The form is in the same card; fill the URL and save.
+        const publishedUrl = publisherPage.locator('input[name="publishedUrl"]').first();
+        await publishedUrl.fill(`https://example.com/post-${i}`);
+        await publisherPage
+          .getByRole("button", { name: /^Save$/i })
+          .first()
+          .click();
+        // Wait for the form to close (the save button disappears).
+        await expect(publisherPage.getByRole("button", { name: /^Save$/i })).toHaveCount(0, {
+          timeout: 10_000,
+        });
+      }
+
+      // ─── 8. Verify the final state is `published` ───
+      // Refresh the page and assert the status badge.
+      await publisherPage.reload();
+      await expect(publisherPage.getByText(/^published$/i).first()).toBeVisible({
+        timeout: 15_000,
+      });
+    } finally {
+      await Promise.all([
+        plannerContext.close(),
+        reviewerContext.close(),
+        designerContext.close(),
+        publisherContext.close(),
+      ]);
+    }
+  });
+
   test("the seeded workspace has the expected 3 channels in the channel list", async ({ page }) => {
     await bootstrapTestSession(page);
     // Channels aren't directly visible in the UI yet (v1), but the

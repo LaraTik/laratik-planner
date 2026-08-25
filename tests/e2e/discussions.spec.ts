@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { bootstrapTestSession } from "./_helpers";
+import { bootstrapTestSession, devSeed, devSignIn } from "./_helpers";
 
 /**
  * Discussion / notifications E2E (Goal 8).
@@ -102,6 +102,60 @@ test.describe("Discussions (Goal 8)", () => {
     await expect(page.getByText(body)).toBeVisible({ timeout: 10_000 });
     // The visibility badge for the comment should say "client"
     await expect(page.getByText("client").first()).toBeVisible();
+  });
+
+  // TEST-12 (GAP-FULL-REVIEW-2026-08-25): @mention coverage was
+  // missing from the discussions spec. The discussions service
+  // extracts @-mentions from the body and stores them in
+  // `comment_mention` rows + an outbox event; the rendered comment
+  // item shows a "{N} mention(s)" badge. The test posts a comment
+  // with an @-mention aimed at a second seeded user and asserts the
+  // badge appears.
+  test("a comment that @mentions a workspace user renders a 'mention' badge", async ({ page }) => {
+    // Seed a second user in the same workspace so the @mention
+    // resolves. We use the devSeed + devSignIn flow directly so we
+    // can pass the workspaceRoles option that bootstrapTestSession
+    // does not expose.
+    const mentionEmail = `e2e-designer@laratik.local`;
+    await devSeed(page.request, { email: mentionEmail, workspaceRoles: ["designer"] });
+    await devSignIn(page.request, { email: mentionEmail, role: "user" });
+    await createDraftAndOpen(page, `Discussion mention ${Date.now()}`);
+
+    await page.getByRole("button", { name: /Add comment/i }).click();
+    // @-mention the designer's email-prefix (the service matches
+    // `@<email-prefix>` OR `@<displayName-without-spaces>`).
+    const body = `Hey @e2e-designer can you take a look? ${Date.now()}`;
+    await page.getByPlaceholder(/Add a comment/i).fill(body);
+    await page.getByRole("button", { name: /^Comment$/i }).click();
+
+    await expect(page.getByText(body)).toBeVisible({ timeout: 10_000 });
+    // The "1 mention" badge appears under the comment.
+    await expect(page.getByText(/1 mention\b/i)).toBeVisible();
+  });
+
+  // TEST-12: the visibility selector toggle path. The existing
+  // "an admin can post a client-visible comment" test covers
+  // selecting "client" and posting. This test pins the
+  // "switch to internal" branch — i.e. the same form can also
+  // post an internal comment without leaving the page.
+  test("a workspace member can toggle the visibility selector between client and internal", async ({
+    page,
+  }) => {
+    await bootstrapTestSession(page);
+    await createDraftAndOpen(page, `Discussion vis toggle ${Date.now()}`);
+
+    await page.getByRole("button", { name: /Add comment/i }).click();
+    const select = page.locator('select[name="visibility"]');
+    // Round 2 UX default is "client"; the user can switch to internal.
+    await expect(select).toHaveValue("client");
+    await select.selectOption("internal");
+    await expect(select).toHaveValue("internal");
+    // Posting an internal comment renders the "Internal" badge.
+    const body = `Internal note ${Date.now()}`;
+    await page.getByPlaceholder(/Add a comment/i).fill(body);
+    await page.getByRole("button", { name: /^Comment$/i }).click();
+    await expect(page.getByText(body)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("internal").first()).toBeVisible();
   });
 });
 
