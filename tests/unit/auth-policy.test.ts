@@ -352,3 +352,70 @@ describe("INTERNAL_WORKSPACE_ROLES", () => {
     ]);
   });
 });
+
+describe("WRITE_CAPABLE_ROLES (FEAT-16)", () => {
+  it("is INTERNAL_WORKSPACE_ROLES minus the read-only 'viewer' role", () => {
+    expect([...policy.WRITE_CAPABLE_ROLES].sort()).toEqual(
+      policy.INTERNAL_WORKSPACE_ROLES.filter((r) => r !== "viewer").sort(),
+    );
+  });
+
+  it("does not include client_reviewer (client reviewers may only comment)", () => {
+    expect(policy.WRITE_CAPABLE_ROLES).not.toContain("client_reviewer");
+  });
+});
+
+describe("canWriteToWorkspace / requireWriteCapability (FEAT-16)", () => {
+  it("returns true for a workspace_manager", async () => {
+    // workspace lookup + admin check (false) + role row
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    dbMock.state.selectResults.push([{ role: "workspace_manager" }]);
+    expect(await policy.canWriteToWorkspace(actor, "ws-1")).toBe(true);
+  });
+
+  it("returns true for a designer (the other five WRITE_CAPABLE_ROLES also pass)", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    dbMock.state.selectResults.push([{ role: "designer" }]);
+    expect(await policy.canWriteToWorkspace(actor, "ws-1")).toBe(true);
+  });
+
+  it("returns false for a client_reviewer (read-only)", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    dbMock.state.selectResults.push([{ role: "client_reviewer" }]);
+    expect(await policy.canWriteToWorkspace(actor, "ws-1")).toBe(false);
+  });
+
+  it("returns false for a viewer (read-only)", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    dbMock.state.selectResults.push([{ role: "viewer" }]);
+    expect(await policy.canWriteToWorkspace(actor, "ws-1")).toBe(false);
+  });
+
+  it("returns true for an agency admin via the admin shortcut", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: true }]);
+    expect(await policy.canWriteToWorkspace(actor, "ws-1")).toBe(true);
+  });
+
+  it("requireWriteCapability throws PermissionDeniedError for a read-only actor", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    dbMock.state.selectResults.push([{ role: "client_reviewer" }]);
+    await expect(policy.requireWriteCapability(actor, "ws-1", "upload_sign")).rejects.toBeInstanceOf(
+      policy.PermissionDeniedError,
+    );
+  });
+
+  it("requireWriteCapability resolves for a writer", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    dbMock.state.selectResults.push([{ role: "publisher" }]);
+    await expect(
+      policy.requireWriteCapability(actor, "ws-1", "ai_generate"),
+    ).resolves.toBeUndefined();
+  });
+});

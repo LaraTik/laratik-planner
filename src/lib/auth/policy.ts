@@ -37,6 +37,27 @@ export const INTERNAL_WORKSPACE_ROLES = [
   "viewer",
 ] as const;
 
+/**
+ * Roles that may mutate workspace state. Mirrors the master prompt
+ * §9 read/write matrix: every INTERNAL_WORKSPACE_ROLES role except
+ * `viewer`, plus the agency-admin shortcut honoured by
+ * `hasWorkspaceRole`. `client_reviewer` is intentionally absent —
+ * client reviewers can leave comments (the only mutating capability
+ * they are allowed) but cannot transition content, edit briefs,
+ * upload assets, or sign AI requests.
+ *
+ * Used by FEAT-16 (GAP-FULL-REVIEW-2026-08-25) to give write API
+ * routes an explicit, documentable read-only gate instead of relying
+ * on per-route role enumeration that can drift.
+ */
+export const WRITE_CAPABLE_ROLES = [
+  "workspace_manager",
+  "content_planner",
+  "designer",
+  "internal_reviewer",
+  "publisher",
+] as const;
+
 // ─── Agency-level ──────────────────────────────────────────────────────────
 /** Is the user an active admin of the given agency? */
 export async function isAgencyAdmin(actor: Actor, agencyId: string): Promise<boolean> {
@@ -112,6 +133,42 @@ export async function canAccessClientWorkspace(
   workspaceId: string,
 ): Promise<boolean> {
   return hasWorkspaceRole(actor, workspaceId, ["client_reviewer"]);
+}
+
+/**
+ * FEAT-16 (GAP-FULL-REVIEW-2026-08-25) — explicit read-only gate for
+ * write API routes. Returns true when the actor holds a role that
+ * may mutate workspace state (any of WRITE_CAPABLE_ROLES), false for
+ * `viewer` and `client_reviewer`. Agency admins still pass via the
+ * admin shortcut in `hasWorkspaceRole`.
+ *
+ * Use this on the API layer (route.ts files) in addition to the
+ * service-layer `hasWorkspaceRole` check so a misconfigured route
+ * that forgot to enumerate the full internal role set still rejects
+ * read-only users with a clear 403 instead of relying on a UI-only
+ * guard. The comments service intentionally does NOT call this —
+ * `client_reviewer` must still be able to leave client-visible
+ * comments per master prompt §9 / §11.
+ */
+export async function canWriteToWorkspace(
+  actor: Actor,
+  workspaceId: string,
+): Promise<boolean> {
+  return hasWorkspaceRole(actor, workspaceId, [...WRITE_CAPABLE_ROLES]);
+}
+
+/**
+ * Throw `PermissionDeniedError("write_workspace:<action>")` when the
+ * actor is read-only. The route layer should treat that throw as a
+ * 403. Pair with `requirePolicy` callers — the helper uses the same
+ * throw contract.
+ */
+export async function requireWriteCapability(
+  actor: Actor,
+  workspaceId: string,
+  action: string,
+): Promise<void> {
+  await requirePolicy(canWriteToWorkspace(actor, workspaceId), `write_workspace:${action}`);
 }
 
 /**

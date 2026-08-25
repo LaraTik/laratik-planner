@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
-import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { hasWorkspaceRole, requireWriteCapability } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { db } from "@/lib/db";
@@ -186,6 +186,23 @@ export async function POST(req: NextRequest) {
     ]))
   ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // FEAT-16 (GAP-FULL-REVIEW-2026-08-25) — explicit read-only gate
+  // for the AI generation route. The role check above is
+  // intentionally narrow (manager/planner only) and already excludes
+  // `client_reviewer` + `viewer`; the additional guard is the
+  // documentable single source of truth that future refactors can
+  // re-use. Defence-in-depth: a refactor that broadens the role
+  // list above without also loosening this guard would still block
+  // read-only users.
+  try {
+    await requireWriteCapability({ id: session.user.id }, ws.id, "ai_generate");
+  } catch {
+    return NextResponse.json(
+      { error: "Read-only users cannot trigger AI generation" },
+      { status: 403 },
+    );
   }
 
   let reservedTokens: { input: number; output: number } | null = null;

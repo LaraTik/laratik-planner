@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
-import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { hasWorkspaceRole, requireWriteCapability } from "@/lib/auth/policy";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getSignedUploadUrl, UPLOAD_SIZE_LIMITS, type UploadKind } from "@/lib/storage";
 
@@ -65,6 +65,22 @@ export async function POST(req: NextRequest) {
 
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspaceId, ["workspace_manager"]))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // FEAT-16 (GAP-FULL-REVIEW-2026-08-25) — explicit read-only gate.
+  // A `client_reviewer` or `viewer` who somehow reaches this route
+  // (the workspace_manager check above would have failed first if
+  // they were a non-manager, but defence-in-depth) is rejected with
+  // a clear 403. The `hasWorkspaceRole` admin shortcut still applies,
+  // so an agency admin remains able to upload on behalf of a
+  // workspace.
+  try {
+    await requireWriteCapability({ id: session.user.id }, workspaceId, "upload_sign");
+  } catch {
+    return NextResponse.json(
+      { error: "Read-only users cannot request upload URLs" },
+      { status: 403 },
+    );
   }
 
   const limit = UPLOAD_SIZE_LIMITS[kind as UploadKind];
