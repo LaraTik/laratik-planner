@@ -47,4 +47,37 @@ describe("safeHref", () => {
     expect(safeHref("JAVASCRIPT:alert(1)")).toEqual({ href: "#" });
     expect(safeHref("HTTPS://x.com")).toEqual({ href: "HTTPS://x.com" });
   });
+
+  // TEST-15 (GAP-FULL-REVIEW-2026-08-25) — the `safeHref` signature
+  // is `string` but the `brand_linked_resource.url` column is
+  // `string | null` in the DB, and runtime callers from
+  // template-string interpolation can pass anything. The current
+  // contract is that a non-string throws on `.trim()`; the desired
+  // contract is a safe fallback so the brand-kit page never 500s
+  // on a stale row. The throws-branch is asserted below so the
+  // current behavior is locked; the .todo() entries document the
+  // target contract a follow-up PR should land (defensive guard
+  // in safe-href.ts + flip the .todo()s to .it() with the matching
+  // `{ href: "#" }` expectation).
+  describe("defensive against non-string inputs (current contract: throws)", () => {
+    it("throws on null input", () => {
+      expect(() => safeHref(null as unknown as string)).toThrow();
+    });
+    it("throws on undefined input", () => {
+      expect(() => safeHref(undefined as unknown as string)).toThrow();
+    });
+    it("throws on number input", () => {
+      expect(() => safeHref(42 as unknown as string)).toThrow();
+    });
+    it("throws on object input", () => {
+      expect(() => safeHref({} as unknown as string)).toThrow();
+    });
+  });
+
+  describe("desired defensive contract (not yet implemented)", () => {
+    it.todo("returns { href: '#' } on null input");
+    it.todo("returns { href: '#' } on undefined input");
+    it.todo("returns { href: '#' } on number input");
+    it.todo("returns { href: '#' } on object input");
+  });
 });
