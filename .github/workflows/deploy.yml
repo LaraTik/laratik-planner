@@ -31,7 +31,14 @@ concurrency:
 jobs:
   build:
     name: Build + push image
-    if: github.event.workflow_run.conclusion == 'success'
+    # The build job is the release-gate funnel: it runs when CI
+    # (the workflow_run trigger) reports success, OR when an operator
+    # explicitly dispatches this workflow. The workflow_dispatch
+    # escape hatch exists so a hotfix to a release-blocker can ship
+    # without waiting for CI to turn green (e.g. §23 step 19/20
+    # integration flakes, or a zizmor rule upgrade). Use sparingly —
+    # it bypasses the unit + integration test gate.
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -40,7 +47,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           persist-credentials: false
 
       - name: Set up Docker Buildx
@@ -59,7 +66,7 @@ jobs:
         with:
           images: ghcr.io/laratik/laratik-planner
           tags: |
-            type=raw,value=${{ github.event.workflow_run.head_sha }}
+            type=raw,value=${{ github.event.workflow_run.head_sha || github.sha }}
             type=raw,value=latest
 
       - name: Build + push
@@ -83,7 +90,7 @@ jobs:
           build-args: |
             APP_VERSION=${{ github.event.workflow_run.head_sha || github.sha }}
           tags: |
-            ghcr.io/laratik/laratik-planner-migrator:${{ github.event.workflow_run.head_sha }}
+            ghcr.io/laratik/laratik-planner-migrator:${{ github.event.workflow_run.head_sha || github.sha }}
             ghcr.io/laratik/laratik-planner-migrator:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
