@@ -1,7 +1,29 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 
+/**
+ * The function under test accepts an explicit `now` parameter, so the
+ * tests are deterministic without faking `Date.now()`. We still
+ * anchor the clock with `vi.useFakeTimers` so the absolute-date
+ * output ("Oct 12, 2024" vs the current year) is stable and the
+ * `now` value does not age the test annually (TEST-14,
+ * GAP-FULL-REVIEW-2026-08-25). If a future refactor switches the
+ * implementation to read `Date.now()` directly, the fake timer makes
+ * the regression visible immediately rather than years later.
+ */
 describe("formatRelativeDate", () => {
+  // Pin wall-clock to a stable instant so the absolute-date cases
+  // don't depend on whatever today happens to be when CI runs.
+  beforeAll(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-20T12:00:00Z"));
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
+  // The "now" the function sees — explicit so each test case reads
+  // the same value without re-importing the constant.
   const now = new Date("2026-08-20T12:00:00Z");
 
   it("returns 'just now' for events in the last minute", () => {
