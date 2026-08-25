@@ -158,6 +158,7 @@ export default async function ContentDetailPage({
         <AiAssistanceSection
           workspaceSlug={slug}
           contentItemId={item.id}
+          contentStatus={item.status}
           isManager={actorRoles.isManager}
           isPlanner={actorRoles.isPlanner}
           enabledCapabilities={enabledCapabilities}

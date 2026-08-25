@@ -2,9 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import { db } from "@/lib/db";
+import { contentItems } from "@/lib/db/schema";
 import {
   QuickCreateSchema,
   UpdateContentSchema,
@@ -13,7 +17,9 @@ import {
   claimAsDesigner,
   updateContentItem,
   type WorkflowAction,
+  type UpdateContentInput,
   batchCreateContentItems,
+  mergeAiDraftIntoBrief,
 } from "@/lib/content/service";
 import { BatchCreateSchema, parseBatchRows } from "@/lib/content/batch";
 import {
@@ -96,6 +102,64 @@ export async function updateContentItemAction(
   revalidatePath(`/app/w/${workspaceSlug}/planning`);
   revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
   redirect(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
+}
+
+const ApplyAiDraftSchema = z.object({
+  contentItemId: z.string().uuid(),
+  draftText: z.string().min(1).max(4000),
+  mode: z.enum(["insert", "replace"]),
+});
+
+/**
+ * Apply an AI-generated draft to a content item's brief (§15: the human
+ * stays in control — Insert appends, Replace overwrites). Reuses the
+ * `updateContentItem` service so the editability guard and the
+ * `content_updated` activity event fire once, identically to the manual
+ * edit form. Returns the new brief text on success; an error string on
+ * failure (e.g. the item is past `draft | changes_requested`).
+ */
+export async function applyAiDraftAction(input: {
+  workspaceSlug: string;
+  contentItemId: string;
+  draftText: string;
+  mode: "insert" | "replace";
+}): Promise<{ error?: string; brief?: string }> {
+  const parsed = ApplyAiDraftSchema.safeParse({
+    contentItemId: input.contentItemId,
+    draftText: input.draftText,
+    mode: input.mode,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues.map((i) => i.message).join("; ") };
+  }
+  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  const [item] = await db
+    .select({
+      id: contentItems.id,
+      title: contentItems.title,
+      format: contentItems.format,
+      brief: contentItems.brief,
+      plannedPublishAt: contentItems.plannedPublishAt,
+    })
+    .from(contentItems)
+    .where(eq(contentItems.id, parsed.data.contentItemId))
+    .limit(1);
+  if (!item) return { error: "Content item not found" };
+  const newBrief = mergeAiDraftIntoBrief(item.brief ?? "", parsed.data.draftText, parsed.data.mode);
+  try {
+    await updateContentItem(actor, {
+      contentItemId: item.id,
+      title: item.title,
+      format: item.format as UpdateContentInput["format"],
+      brief: newBrief,
+      plannedPublishAt: item.plannedPublishAt,
+      channelIds: undefined,
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/app/w/${input.workspaceSlug}/planning/${input.contentItemId}`);
+  return { brief: newBrief };
 }
 
 export async function batchCreateAction(workspaceSlug: string, _prev: unknown, formData: FormData) {

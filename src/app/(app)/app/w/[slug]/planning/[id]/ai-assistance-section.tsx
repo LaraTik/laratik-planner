@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Sparkles, Wand2, Bot } from "lucide-react";
+import { Sparkles, Wand2, Bot, CornerDownLeft, Replace, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { applyAiDraftAction } from "../actions";
 
 /**
  * AI assistance entry points on the content detail page.
@@ -56,12 +57,20 @@ const CAPABILITIES: Capability[] = [
 export function AiAssistanceSection({
   workspaceSlug,
   contentItemId,
+  contentStatus,
   isManager,
   isPlanner,
   enabledCapabilities,
 }: {
   workspaceSlug: string;
   contentItemId: string;
+  /**
+   * Current workflow status of the content item. Insert/Replace are
+   * only enabled for `draft` and `changes_requested` — same guard the
+   * `updateContentItem` service uses — so the UI never offers a write
+   * that the server would reject.
+   */
+  contentStatus: string;
   isManager: boolean;
   isPlanner: boolean;
   /**
@@ -78,8 +87,15 @@ export function AiAssistanceSection({
   } | null>(null);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [applyError, setApplyError] = React.useState<string | null>(null);
+  const [applied, setApplied] = React.useState<null | "insert" | "replace">(null);
+  const [applying, setApplying] = React.useState(false);
 
   const canUse = isManager || isPlanner;
+  // Mirrors UPDATEABLE_STATUSES in the content service. Kept inline
+  // (the service module is "server-only" and can't be imported into a
+  // client component).
+  const canEditBrief = contentStatus === "draft" || contentStatus === "changes_requested";
 
   const onInvoke = async (capabilityId: string) => {
     setError(null);
@@ -114,6 +130,30 @@ export function AiAssistanceSection({
       await navigator.clipboard.writeText(text);
     } catch {
       // ignore — user can still select and copy manually
+    }
+  };
+
+  const onApply = async (mode: "insert" | "replace") => {
+    if (!draft) return;
+    setApplyError(null);
+    setApplied(null);
+    setApplying(true);
+    try {
+      const res = await applyAiDraftAction({
+        workspaceSlug,
+        contentItemId,
+        draftText: draft.text,
+        mode,
+      });
+      if (res.error) {
+        setApplyError(res.error);
+        return;
+      }
+      setApplied(mode);
+    } catch (e) {
+      setApplyError((e as Error).message);
+    } finally {
+      setApplying(false);
     }
   };
 
@@ -206,9 +246,76 @@ export function AiAssistanceSection({
             </Button>
           </div>
           <p className="text-body text-fg-primary whitespace-pre-wrap">{draft.text}</p>
-          <p className="text-label text-fg-muted">
-            Insert / Replace / Try Again per §15. We never auto-save.
-          </p>
+          {applyError ? (
+            <p
+              role="alert"
+              data-testid="ai-assistance-apply-error"
+              className="text-body text-danger font-semibold"
+            >
+              {applyError}
+            </p>
+          ) : null}
+          {applied ? (
+            <p
+              data-testid="ai-assistance-apply-success"
+              className="text-body text-success font-semibold"
+            >
+              {applied === "insert"
+                ? "Added to the brief below the existing text."
+                : "Replaced the brief with this draft."}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="default"
+              onClick={() => onApply("insert")}
+              disabled={applying || !canEditBrief}
+              title={
+                canEditBrief
+                  ? "Append this draft below the current brief"
+                  : "Insert is only available while the item is in draft or changes requested"
+              }
+              data-testid="ai-assistance-insert"
+            >
+              <CornerDownLeft className="h-3.5 w-3.5" aria-hidden="true" />
+              {applying ? "Working…" : "Insert"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => onApply("replace")}
+              disabled={applying || !canEditBrief}
+              title={
+                canEditBrief
+                  ? "Overwrite the current brief with this draft"
+                  : "Replace is only available while the item is in draft or changes requested"
+              }
+              data-testid="ai-assistance-replace"
+            >
+              <Replace className="h-3.5 w-3.5" aria-hidden="true" />
+              {applying ? "Working…" : "Replace"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => onInvoke(draft.capabilityId)}
+              disabled={pendingId === draft.capabilityId}
+              data-testid="ai-assistance-try-again"
+            >
+              <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              {pendingId === draft.capabilityId ? "Working…" : "Try again"}
+            </Button>
+          </div>
+          {!canEditBrief ? (
+            <p className="text-label text-fg-muted">
+              Item is in {contentStatus.replaceAll("_", " ")} — the brief is frozen for review. Use
+              &ldquo;Try again&rdquo; for a fresh draft, or copy the text manually.
+            </p>
+          ) : null}
         </div>
       ) : null}
     </Card>

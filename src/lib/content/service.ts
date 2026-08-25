@@ -255,6 +255,29 @@ export async function updateContentItem(
   revalidatePath(`/app/w/`);
 }
 
+/**
+ * Pure helper for the AI Insert / Replace behaviour (FEAT-04).
+ *
+ *  - `replace` overwrites the existing brief with the AI draft.
+ *  - `insert` appends the AI draft below the existing brief, separated by
+ *    a blank line. Both inputs are trimmed; the result is capped at 2000
+ *    chars to match the brief column constraint.
+ *
+ * Exported from the service module (not the "use server" actions file)
+ * so the unit test can exercise the merge logic without spinning up a
+ * database.
+ */
+export function mergeAiDraftIntoBrief(
+  currentBrief: string,
+  draftText: string,
+  mode: "insert" | "replace",
+): string {
+  const trimmed = draftText.trim();
+  if (mode === "replace") return trimmed.slice(0, 2000);
+  const combined = [currentBrief.trim(), trimmed].filter(Boolean).join("\n\n");
+  return combined.slice(0, 2000);
+}
+
 /** Create an entire pasted batch atomically; one invalid row rolls back all rows. */
 export async function batchCreateContentItems(actor: Actor, input: BatchCreateInput) {
   const parsed = BatchCreateSchema.parse(input);
