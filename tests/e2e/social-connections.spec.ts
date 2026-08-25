@@ -6,16 +6,34 @@ import { bootstrapRoleSession } from "./_helpers";
  *
  * The dev seed does not include a connected channel, so the
  * full happy-path (Connect → Picker → Finalize → Sync → Disconnect)
- * is exercised in the unit + integration suites. This spec asserts
- * the surface-level facts the picker depends on:
+ * is exercised in the unit + integration suites:
+ *   - tests/integration/social-repository.test.ts (disconnectProfile,
+ *     revokeConnectionAndDetach, lease semantics)
+ *   - tests/integration/social-analytics.test.ts (per-channel metrics)
+ *   - tests/integration/social-dek-repository.test.ts (DEK + key
+ *     management for connected providers)
+ *   - tests/unit/connection-revoke-dialog.test.tsx (the
+ *     ConnectionActions component, including the Re-test affordance)
+ *   - tests/unit/social-crypto.test.ts (envelope encrypt/decrypt)
+ *   - tests/unit/social-{meta,tiktok}-provider.test.ts (per-provider
+ *     OAuth finalize paths)
+ *
+ * This spec asserts the surface-level facts the picker depends on:
  *
  *   1. The channels page renders the channels table and the
  *      "Add channel" form.
  *   2. The new connection-status badge is reachable through the
  *      DOM (data-testid hooks are wired in the page).
- *   3. axe-core on the channels page has no critical violations
- *      (already covered by `a11y-routes.spec.ts`; we keep this
- *      spec alive so the test stays in CI).
+ *   3. The "Re-test" button is NOT rendered when no connected
+ *      channel exists in the dev seed.
+ *
+ * TEST-02 (GAP-FULL-REVIEW-2026-08-25): removed the previous
+ * "Sync now surfaces a queued message in aria-live region" test
+ * because it had zero `expect()` calls and was effectively a CI
+ * green-checkmark with no behavioural assertion. The aria-live
+ * contract is owned by tests/unit/connection-revoke-dialog.test.tsx
+ * (which renders <ConnectionActions> with a connected channel and
+ * asserts the queued message region).
  */
 
 test.describe("M4 — social connections (workspace_manager)", () => {
@@ -31,16 +49,6 @@ test.describe("M4 — social connections (workspace_manager)", () => {
     // The page is empty in the dev seed; the test only verifies the
     // page renders without errors and the form is reachable.
     await expect(page.getByTestId("channel-add-card")).toBeVisible();
-  });
-
-  test("Sync now surfaces a queued message in aria-live region", async ({ page }) => {
-    await bootstrapRoleSession(page, "workspace_manager");
-    await page.goto("/app/w/acme/channels");
-    // No connected channel in dev seed — the Sync now button is not
-    // rendered. The aria-live region is part of the ConnectionActions
-    // component which is exercised when a connected channel exists.
-    // The unit test for ConnectionActions covers the queued state
-    // directly.
   });
 
   // M4.1 follow-up — "Re-test" affordance. The dev seed has no
