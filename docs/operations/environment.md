@@ -48,6 +48,14 @@ Exposed to the browser. **Never** put a secret here.
 
 **Redirect URI** (configure in Google Cloud Console): `https://planner.laratik.com/api/auth/callback/google`
 
+### Agency context cookie (multi-tenant)
+
+| Name                   | Required (prod) | Default   | Purpose                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------- | --------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AGENCY_COOKIE_SECRET` | yes (prod)      | dev-only fallback | ≥ 32-byte random key used to HMAC-SHA-256 sign the `laratik_active_agency` HttpOnly cookie that records the active agency context. Generate with `openssl rand -base64 32`. **Required in production**; without it, the agency-context decoder returns `null` for every cookie and the operator gets a 500 / re-prompt loop. See `docs/architecture/authorization.md:90-186` for the resolver chain and the boot-time failure mode. |
+
+Rotation: changing `AGENCY_COOKIE_SECRET` invalidates every active `laratik_active_agency` cookie (same impact as rotating `AUTH_SECRET`). Plan the rotation during a low-traffic window or accept the one-time re-prompt for every signed-in user.
+
 ### Mailcow SMTP
 
 | Name            | Required | Default            | Purpose                                                 |
