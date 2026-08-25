@@ -3,12 +3,14 @@ import "server-only";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { platformAdministrators, securityAuditEvents, users } from "@/lib/db/schema";
-import { requirePlatformPermission } from "@/lib/auth/platform-access";
 import {
-  PLATFORM_ROLE_VALUES,
-  type PlatformRole,
-} from "@/lib/auth/platform-access-types";
+  platformAdministrators,
+  securityAuditEvents,
+  supportAccessGrants,
+  users,
+} from "@/lib/db/schema";
+import { requirePlatformPermission } from "@/lib/auth/platform-access";
+import { PLATFORM_ROLE_VALUES, type PlatformRole } from "@/lib/auth/platform-access-types";
 import type { Actor } from "@/lib/auth/policy";
 import { logError } from "@/lib/observability/logger";
 
@@ -153,6 +155,27 @@ export async function listPlatformAccessAudit(
     )
     .orderBy(desc(securityAuditEvents.createdAt))
     .limit(safeLimit);
+}
+
+export async function getPlatformSupportAccessSummary(
+  actor: Actor,
+): Promise<Readonly<{ active: number; expiring: number }>> {
+  await requirePlatformPermission(actor, "platform.access.read");
+  const now = new Date();
+  const expiringAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const [row] = await db
+    .select({
+      active: sql<number>`count(*)::int`,
+      expiring: sql<number>`count(*) filter (where ${supportAccessGrants.expiresAt} <= ${expiringAt})::int`,
+    })
+    .from(supportAccessGrants)
+    .where(
+      and(isNull(supportAccessGrants.revokedAt), sql`${supportAccessGrants.expiresAt} > ${now}`),
+    );
+  return {
+    active: Number(row?.active ?? 0),
+    expiring: Number(row?.expiring ?? 0),
+  };
 }
 
 export async function grantPlatformAccess(

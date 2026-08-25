@@ -91,20 +91,18 @@ beforeEach(() => {
 });
 
 describe("platform access schemas", () => {
-  it.each([
-    "platform_owner",
-    "agency_operator",
-    "platform_auditor",
-    "support_operator",
-  ] as const)("accepts the closed %s role", (role) => {
-    expect(
-      service.GrantPlatformAccessSchema.parse({
-        email: "person@example.com",
-        role,
-        reason: "Operational need",
-      }).role,
-    ).toBe(role);
-  });
+  it.each(["platform_owner", "agency_operator", "platform_auditor", "support_operator"] as const)(
+    "accepts the closed %s role",
+    (role) => {
+      expect(
+        service.GrantPlatformAccessSchema.parse({
+          email: "person@example.com",
+          role,
+          reason: "Operational need",
+        }).role,
+      ).toBe(role);
+    },
+  );
 
   it("normalizes email and rejects unknown roles or weak reasons", () => {
     expect(
@@ -155,6 +153,15 @@ describe("platform access reads", () => {
   it("requires access-read for the audit timeline", async () => {
     dbMock.state.selectResults.push([]);
     await service.listPlatformAccessAudit(actor, 10);
+    expect(accessMock.requirePermission).toHaveBeenCalledWith(actor, "platform.access.read");
+  });
+
+  it("returns a permission-gated active support summary", async () => {
+    dbMock.state.selectResults.push([{ active: 3, expiring: 1 }]);
+    await expect(service.getPlatformSupportAccessSummary(actor)).resolves.toEqual({
+      active: 3,
+      expiring: 1,
+    });
     expect(accessMock.requirePermission).toHaveBeenCalledWith(actor, "platform.access.read");
   });
 });

@@ -19,15 +19,15 @@ export const PLATFORM_ROLE_DETAILS: Record<
 > = {
   platform_owner: {
     label: "Platform Owner",
-    description: "Full platform control",
+    description: "Full platform control, including access and archives",
   },
   agency_operator: {
     label: "Agency Operator",
-    description: "Manage agencies",
+    description: "Manage agencies and lifecycle, excluding archives",
   },
   platform_auditor: {
     label: "Platform Auditor",
-    description: "Read-only oversight",
+    description: "Read-only agency, access, and audit oversight",
   },
   support_operator: {
     label: "Support Operator",
