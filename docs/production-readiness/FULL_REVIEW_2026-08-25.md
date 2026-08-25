@@ -112,6 +112,7 @@ The tracker is **not** wrong about any of these. It is **incomplete** at the gra
    - **Tracker link**: new — not in tracker. Pre-dates the SEC-003 audit because this is a server action, not an API route, so the role-by-route matrix did not exercise it.
 
 **P1 highlights**:
+
 - **OTHER-02** — N+1 in `hasWorkspaceRole` called 6× per planning detail render (`planning/[id]/page.tsx:54-61`). 6 sequential calls = ~12-18 round-trips. The hottest page in the app. Fix: `getWorkspaceRoles(actor, workspaceId)` returning a single query.
 - **OTHER-03** — No structured log for `failed to write audit event` + broader `console.log/error in production code` debt. OBS-001 has `logError` wired but call sites are sparse (only `ai/generate/route.ts`, `platform/agencies.ts`, `platform/admins.ts` use it). 10+ `console.error` sites bypass it. Sentry is configured with `tracesSampleRate: 0.1` and 0% of these errors will ever make it to Sentry.
 - **OTHER-04** — No request-correlation ID propagated through API routes and server actions. Only 2 routes read `x-request-id`; framework doesn't mint one. `logError` emits a `timestamp` but no `requestId`/`traceId`. The OBS-001 narrative claims "request-correlated logs" but the correlation ID is a header almost no caller sets.
@@ -131,34 +132,34 @@ No live TODO/FIXME debt, no `@ts-ignore`/`@ts-expect-error`, no `console.log` in
 
 Numbered in the order they should be addressed (impact × ease of fix). Track this list as a new tracker section `GAP-FULL-REVIEW-2026-08-25` when the verdict is next reviewed.
 
-| # | ID | Title | Axis | Effort |
-|---|----|-------|------|--------|
-| 1 | OTHER-01 | `finalizeMetaSelectionAction`: wrong-table dead query + hard-coded `platform='instagram'` + non-tx loop | Other (security) | XS (1 server action) |
-| 2 | TEST-01 | §23 journey test covers 4/30 steps | Tests | M (extend or split) |
-| 3 | TEST-03 | Visual regression is non-functional in CI (QA-004 PENDING) | Tests | S (re-enable gating + commit baselines) |
-| 4 | TEST-02 | `social-connections.spec.ts` is a vacuous shell | Tests | XS (delete or wire) |
-| 5 | TEST-04 | Bootstrap concurrency has no real `SELECT FOR UPDATE` race test | Tests | S (mirror `invitation-concurrency.test.ts`) |
-| 6 | FEAT-01 | In-app notifications stubbed to comment mentions only (10/11 §12 kinds never fire) | Features | M (extend `dispatchOutboxOnce` per-kind handlers) |
-| 7 | FEAT-02 | No outbox dispatcher scheduled | Features | S (new cron + route) |
-| 8 | FEAT-03 | AI capabilities 50% missing (3 of 6 return 501) | Features | M (3 prompt builders + tests) |
-| 9 | FEAT-04 | AI Insert / Replace / Try Again buttons missing | Features | S (3 buttons + 2 server actions) |
-| 10 | FEAT-05 | AI context manifest is a stub (always logs same 4 categories) | Features | S (context-selection block + log actuals) |
-| 11 | FEAT-06 | Planning library CRUD absent (3 of §14 mandatory commands missing) | Features | M (3 service modules + 4 actions + UI) |
-| 12 | FEAT-07 | 8 §14 required commands missing across services | Features | L |
-| 13 | FEAT-08 | Notification preferences are dead schema | Features | S |
-| 14 | FEAT-09 | Planning list filters/search/pagination missing | Features | S |
-| 15 | FEAT-10 | No email worker (outbox-driven bulk) | Features | M |
-| 16 | FEAT-11 | Rate-limit scopes missing (`upload_sign`, `password_reset_request`) | Features | S |
-| 17 | UX-01 | `FormField` type contract breaks `<select>`/`<textarea>` focus ring | UI/UX | XS (extract `SelectField`/`TextareaField`) |
-| 18 | UX-02 | Three non-existent utility classes ship in production (`text-secondary`, `text-danger-fg`, `text-h3`) | UI/UX | XS (sed across 6 files) |
-| 19 | UX-03 | Hand-rolled `RevokeDialog` + 2 other modals skip focus trap | UI/UX | S (use `dialog.tsx`) |
-| 20 | DOC-01 | Missing `docs/decisions/0001-vps-port.md` (referenced but absent) | Docs | XS (single ADR) |
-| 21 | DOC-02 | Missing `docs/operations/incident-response.md` | Docs | S |
-| 22 | DOC-03 | No RPO / RTO documented for backup/restore | Docs | S (numbers from owner + writeup) |
-| 23 | DOC-04 | Standard GitHub files missing (`LICENSE`, `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`) | Docs | S |
-| 24 | DOC-05 | API surface has no human-readable reference (23 route.ts, 0 docs) | Docs | M (1 doc + OpenAPI YAML) |
-| 25 | DOC-06 | `docs/architecture/data-model.md` only covers identity/tenancy; 38 of 47 tables undocumented | Docs | L (rename + new doc + ERD) |
-| 26 | DOC-07 | Environment promotion path (dev → staging → prod) undocumented | Docs | S |
+| #   | ID       | Title                                                                                                             | Axis             | Effort                                            |
+| --- | -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------- |
+| 1   | OTHER-01 | `finalizeMetaSelectionAction`: wrong-table dead query + hard-coded `platform='instagram'` + non-tx loop           | Other (security) | XS (1 server action)                              |
+| 2   | TEST-01  | §23 journey test covers 4/30 steps                                                                                | Tests            | M (extend or split)                               |
+| 3   | TEST-03  | Visual regression is non-functional in CI (QA-004 PENDING)                                                        | Tests            | S (re-enable gating + commit baselines)           |
+| 4   | TEST-02  | `social-connections.spec.ts` is a vacuous shell                                                                   | Tests            | XS (delete or wire)                               |
+| 5   | TEST-04  | Bootstrap concurrency has no real `SELECT FOR UPDATE` race test                                                   | Tests            | S (mirror `invitation-concurrency.test.ts`)       |
+| 6   | FEAT-01  | In-app notifications stubbed to comment mentions only (10/11 §12 kinds never fire)                                | Features         | M (extend `dispatchOutboxOnce` per-kind handlers) |
+| 7   | FEAT-02  | No outbox dispatcher scheduled                                                                                    | Features         | S (new cron + route)                              |
+| 8   | FEAT-03  | AI capabilities 50% missing (3 of 6 return 501)                                                                   | Features         | M (3 prompt builders + tests)                     |
+| 9   | FEAT-04  | AI Insert / Replace / Try Again buttons missing                                                                   | Features         | S (3 buttons + 2 server actions)                  |
+| 10  | FEAT-05  | AI context manifest is a stub (always logs same 4 categories)                                                     | Features         | S (context-selection block + log actuals)         |
+| 11  | FEAT-06  | Planning library CRUD absent (3 of §14 mandatory commands missing)                                                | Features         | M (3 service modules + 4 actions + UI)            |
+| 12  | FEAT-07  | 8 §14 required commands missing across services                                                                   | Features         | L                                                 |
+| 13  | FEAT-08  | Notification preferences are dead schema                                                                          | Features         | S                                                 |
+| 14  | FEAT-09  | Planning list filters/search/pagination missing                                                                   | Features         | S                                                 |
+| 15  | FEAT-10  | No email worker (outbox-driven bulk)                                                                              | Features         | M                                                 |
+| 16  | FEAT-11  | Rate-limit scopes missing (`upload_sign`, `password_reset_request`)                                               | Features         | S                                                 |
+| 17  | UX-01    | `FormField` type contract breaks `<select>`/`<textarea>` focus ring                                               | UI/UX            | XS (extract `SelectField`/`TextareaField`)        |
+| 18  | UX-02    | Three non-existent utility classes ship in production (`text-secondary`, `text-danger-fg`, `text-h3`)             | UI/UX            | XS (sed across 6 files)                           |
+| 19  | UX-03    | Hand-rolled `RevokeDialog` + 2 other modals skip focus trap                                                       | UI/UX            | S (use `dialog.tsx`)                              |
+| 20  | DOC-01   | Missing `docs/decisions/0001-vps-port.md` (referenced but absent)                                                 | Docs             | XS (single ADR)                                   |
+| 21  | DOC-02   | Missing `docs/operations/incident-response.md`                                                                    | Docs             | S                                                 |
+| 22  | DOC-03   | No RPO / RTO documented for backup/restore                                                                        | Docs             | S (numbers from owner + writeup)                  |
+| 23  | DOC-04   | Standard GitHub files missing (`LICENSE`, `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`) | Docs             | S                                                 |
+| 24  | DOC-05   | API surface has no human-readable reference (23 route.ts, 0 docs)                                                 | Docs             | M (1 doc + OpenAPI YAML)                          |
+| 25  | DOC-06   | `docs/architecture/data-model.md` only covers identity/tenancy; 38 of 47 tables undocumented                      | Docs             | L (rename + new doc + ERD)                        |
+| 26  | DOC-07   | Environment promotion path (dev → staging → prod) undocumented                                                    | Docs             | S                                                 |
 
 (Total P0 count = 26 = 1 + 4 + 11 + 7 + 3. The "Other" axis has only 1 P0 but it is the highest-impact single item.)
 
@@ -182,6 +183,7 @@ Full P1 list in each per-axis report. Cluster themes:
 The shared verdict in `PRODUCTION_READINESS_TRACKER.md` and `UAT_RELEASE.md` is currently `READY FOR INDEPENDENT REVIEW`. The independent-reviewer step is the right next move **only after the audit's P0 list is addressed**. The minimal viable order:
 
 **Sprint 1 — Bug class (≤ 1 day)**
+
 - OTHER-01 (XS)
 - UX-01, UX-02, UX-03 (XS × 3 — they cluster: one PR fixes the form / token / modal batch)
 - FEAT-02 (S — outbox cron)
@@ -191,6 +193,7 @@ The shared verdict in `PRODUCTION_READINESS_TRACKER.md` and `UAT_RELEASE.md` is 
 - DOC-01 (XS), DOC-17 (XS)
 
 **Sprint 2 — Coverage class (2-3 days)**
+
 - TEST-01 (M — extend `journey.test.ts` or split into per-step files)
 - TEST-02 (XS — delete or wire)
 - TEST-03 (S — re-enable visual capture gating + commit 138 baselines on CI; this is the biggest cost item because it requires the CI runner budget)
@@ -201,6 +204,7 @@ The shared verdict in `PRODUCTION_READINESS_TRACKER.md` and `UAT_RELEASE.md` is 
 - DOC-02, DOC-03, DOC-04, DOC-07 (S × 4)
 
 **Sprint 3 — Documentation + the deferred items (1-2 days)**
+
 - DOC-05, DOC-06 (M + L — API reference + full schema doc)
 - FEAT-07 (L — 8 §14 commands)
 - FEAT-10 (M — email worker)
