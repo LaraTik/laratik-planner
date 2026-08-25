@@ -145,6 +145,15 @@ function makeDrizzleMock(state: DrizzleState) {
       insert: txInsert,
       update: txUpdate,
       execute: vi.fn(() => Promise.resolve()),
+      // tx-aware delete — used by editInvitationAccess (FEAT-07)
+      // to wipe existing per-workspace role grants before inserting
+      // the new set.
+      delete: vi.fn(() => ({
+        where: vi.fn((where: unknown) => {
+          state.deleteCalls.push({ table: "tx-delete", where });
+          return Promise.resolve();
+        }),
+      })),
     };
     return cb(txApi);
   });
@@ -510,5 +519,76 @@ describe("listAgencyMembers", () => {
     dbMock.state.selectResults.push([{ userId: "u-1", email: "u@example.com" }]);
     const rows = await listAgencyMembers("agency-1");
     expect(rows).toHaveLength(1);
+  });
+});
+
+// ─── FEAT-07 — editInvitationAccess (GAP-FULL-REVIEW-2026-08-25) ───────────
+const { editInvitationAccess } = await import("@/lib/auth/invitations");
+
+describe("editInvitationAccess (FEAT-07)", () => {
+  it("rejects when the invitation is not pending", async () => {
+    dbMock.state.selectResults.push([{ status: "accepted" }]);
+    await expect(
+      editInvitationAccess({
+        invitationId: "inv-1",
+        agencyId: "agency-1",
+        actorUserId: "user-1",
+        workspaceRoles: [{ workspaceId: "ws-1", role: "workspace_manager" }],
+      }),
+    ).rejects.toThrow(/Cannot edit access on a accepted invitation/);
+  });
+  it("rejects unknown roles", async () => {
+    await expect(
+      editInvitationAccess({
+        invitationId: "inv-1",
+        agencyId: "agency-1",
+        actorUserId: "user-1",
+        workspaceRoles: [{ workspaceId: "ws-1", role: "nope" }],
+      }),
+    ).rejects.toThrow(/Invalid workspace access selection/);
+  });
+  it("rejects when a workspace is not owned by the agency", async () => {
+    dbMock.state.selectResults.push([{ status: "pending" }]);
+    dbMock.state.selectResults.push([{ id: "ws-1" }]); // only 1 of 2 requested
+    await expect(
+      editInvitationAccess({
+        invitationId: "inv-1",
+        agencyId: "agency-1",
+        actorUserId: "user-1",
+        workspaceRoles: [
+          { workspaceId: "ws-1", role: "workspace_manager" },
+          { workspaceId: "ws-2", role: "workspace_manager" },
+        ],
+      }),
+    ).rejects.toThrow(/Invalid workspace access selection/);
+  });
+  it("wipes existing role grants + inserts the new set + audit event", async () => {
+    dbMock.state.selectResults.push([{ status: "pending" }]);
+    dbMock.state.selectResults.push([{ id: "ws-1" }, { id: "ws-2" }, { id: "ws-3" }]); // agency ownership check
+    await editInvitationAccess({
+      invitationId: "inv-1",
+      agencyId: "agency-1",
+      actorUserId: "user-1",
+      workspaceRoles: [
+        { workspaceId: "ws-1", role: "workspace_manager" },
+        { workspaceId: "ws-2", role: "content_planner" },
+        { workspaceId: "ws-3", role: "" }, // empty == no access
+      ],
+    });
+    // Expect: 1 delete (existing grants), 1 insert (new grants), 1 audit event.
+    expect(dbMock.state.deleteCalls.length).toBe(1);
+    expect(dbMock.state.insertCalls.length).toBe(2); // grants + audit
+    const grantsInsert = dbMock.state.insertCalls.find(
+      (c) =>
+        Array.isArray(c.values) &&
+        (c.values[0] as Record<string, unknown>)["invitationId"] === "inv-1",
+    );
+    expect(grantsInsert, "expected a grants insert").toBeDefined();
+    const grants = grantsInsert!.values as Array<Record<string, unknown>>;
+    expect(grants).toHaveLength(2); // empty-role row is omitted
+    const auditInsert = dbMock.state.insertCalls.find(
+      (c) => (c.values as Record<string, unknown>)["action"] === "invitation_access_edit",
+    );
+    expect(auditInsert, "expected a security audit event").toBeDefined();
   });
 });

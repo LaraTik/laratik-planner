@@ -17,6 +17,7 @@ import { clientEnv, serverEnv } from "@/lib/validation/env";
 import { invitationIdentityMatches, normalizeEmailAddress } from "@/lib/auth/invitation-identity";
 import { assertCanDeactivateAgencyMember } from "@/lib/auth/member-safety";
 import type { InvitationCommand } from "@/lib/auth/invitation-command";
+import { workspaceRoleSchema } from "@/lib/auth/invitation-command";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { releaseCapacity, reserveCapacity } from "@/lib/entitlements";
 
@@ -400,6 +401,89 @@ export async function revokeInvitation(input: { invitationId: string; agencyId: 
       .where(eq(users.email, invitation.email))
       .limit(1);
     if (!activeMember) await releaseCapacity(tx, input.agencyId, ["users"]);
+  });
+}
+
+/**
+ * FEAT-07 (GAP-FULL-REVIEW-2026-08-25) — §14 `editInvitationAccess`.
+ *
+ * Replaces the per-workspace role grants on a pending invitation.
+ * Mirrors the contract `createInvitation` accepts (a list of
+ * `{ workspaceId, role }` pairs); the only difference is the row
+ * already exists, so we delete + insert in a single transaction
+ * and write a security_audit_event so the access change is
+ * auditable.
+ *
+ * Why this is a separate command rather than an option on
+ * resendInvitation: the §14 contract is explicit, and a planner
+ * should be able to edit a pending invite's access without
+ * rotating the token. The token (and its 7-day expiry) survive
+ * the edit; only the per-workspace role grants change.
+ */
+export async function editInvitationAccess(input: {
+  invitationId: string;
+  agencyId: string;
+  actorUserId: string;
+  workspaceRoles: { workspaceId: string; role: string }[];
+}): Promise<void> {
+  const { invitationId, agencyId, actorUserId, workspaceRoles } = input;
+  // Validate role strings against the enum. Empty role == "no
+  // access" for that workspace, which the schema expresses as
+  // "omit the row entirely".
+  for (const { workspaceId, role } of workspaceRoles) {
+    if (role !== "" && !workspaceRoleSchema.safeParse(role).success) {
+      throw new Error("Invalid workspace access selection");
+    }
+    if (!workspaceId || typeof workspaceId !== "string") {
+      throw new Error("Invalid workspace access selection");
+    }
+  }
+  await db.transaction(async (tx) => {
+    const [invitation] = await tx
+      .select({ status: invitations.status })
+      .from(invitations)
+      .where(and(eq(invitations.id, invitationId), eq(invitations.agencyId, agencyId)))
+      .for("update")
+      .limit(1);
+    if (!invitation) throw new Error("Invitation not found");
+    if (invitation.status !== "pending") {
+      throw new Error(`Cannot edit access on a ${invitation.status} invitation`);
+    }
+    // Scope check: every workspace must belong to the same agency.
+    const requestedWorkspaceIds = Array.from(new Set(workspaceRoles.map((r) => r.workspaceId)));
+    if (requestedWorkspaceIds.length > 0) {
+      const owned = await tx
+        .select({ id: workspaces.id })
+        .from(workspaces)
+        .where(
+          and(eq(workspaces.agencyId, agencyId), inArray(workspaces.id, requestedWorkspaceIds)),
+        );
+      if (owned.length !== requestedWorkspaceIds.length) {
+        throw new Error("Invalid workspace access selection");
+      }
+    }
+    // Wipe existing role grants + insert the new set.
+    await tx
+      .delete(invitationWorkspaceRoles)
+      .where(eq(invitationWorkspaceRoles.invitationId, invitationId));
+    const grants = workspaceRoles.filter((r) => r.role !== "");
+    if (grants.length > 0) {
+      await tx.insert(invitationWorkspaceRoles).values(
+        grants.map((g) => ({
+          invitationId,
+          workspaceId: g.workspaceId,
+          role: g.role as never,
+        })),
+      );
+    }
+    await tx.insert(securityAuditEvents).values({
+      actorId: actorUserId,
+      action: "invitation_access_edit",
+      targetType: "invitation",
+      targetId: invitationId,
+      outcome: "success",
+      metadata: { workspaceGrantCount: grants.length },
+    });
   });
 }
 
