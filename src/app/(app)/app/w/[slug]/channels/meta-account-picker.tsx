@@ -91,7 +91,9 @@ export function MetaAccountPicker({
     <Card padding="lg" data-testid="meta-account-picker">
       <div className="space-y-4">
         <div>
-          <h2 className="text-h3 text-fg-primary font-semibold">Connect Meta accounts</h2>
+          <h2 className="text-title-section text-fg-primary font-semibold">
+            Connect Meta accounts
+          </h2>
           <p className="text-body text-fg-muted mt-1">
             We found {profiles.length} profile{profiles.length === 1 ? "" : "s"} on the Pages you
             manage. Pick the ones you want to track.
@@ -158,7 +160,7 @@ export function MetaAccountPicker({
         </ul>
 
         {error ? (
-          <div role="alert" className="text-body text-danger-fg" data-testid="picker-error">
+          <div role="alert" className="text-body text-danger" data-testid="picker-error">
             <X className="mr-1 inline h-4 w-4" aria-hidden={true} /> {error}
           </div>
         ) : null}

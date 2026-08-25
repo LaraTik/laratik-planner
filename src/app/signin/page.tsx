@@ -434,7 +434,7 @@ export default async function SignInPage({
       </div>
 
       <footer className="flex flex-col items-center gap-3">
-        <p className="text-label text-secondary text-center">
+        <p className="text-label text-fg-secondary text-center">
           Invitation-only access. Contact your agency administrator for an invitation.
         </p>
         <p className="text-label text-fg-muted text-center">

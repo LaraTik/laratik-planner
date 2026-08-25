@@ -146,7 +146,7 @@ export function ConnectionActions({
         </span>
       ) : null}
       {error ? (
-        <span role="alert" className="text-label text-danger-fg" data-testid="connection-error">
+        <span role="alert" className="text-label text-danger" data-testid="connection-error">
           {error}
         </span>
       ) : null}
@@ -195,7 +195,7 @@ function RevokeDialog({
     >
       <div className="bg-surface border-border w-full max-w-md rounded-lg border p-6 shadow-xl">
         <div className="flex items-start justify-between gap-3">
-          <h2 id="revoke-dialog-title" className="text-h3 text-fg-primary font-semibold">
+          <h2 id="revoke-dialog-title" className="text-title-section text-fg-primary font-semibold">
             Revoke this Meta grant?
           </h2>
           <button
@@ -241,7 +241,7 @@ function RevokeDialog({
             onClick={onConfirm}
             disabled={pending}
             aria-busy={pending}
-            className="bg-danger text-danger-fg text-body cursor-pointer rounded-md px-3 py-1.5 font-medium hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="bg-danger text-body cursor-pointer rounded-md px-3 py-1.5 font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             data-testid="revoke-confirm"
           >
             {pending ? "Revoking…" : "Yes, revoke access"}

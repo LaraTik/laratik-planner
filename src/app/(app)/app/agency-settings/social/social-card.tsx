@@ -467,7 +467,7 @@ function RecoveryKeyModal({
       <div className="bg-surface border-border w-full max-w-md rounded-[var(--radius-card)] border p-6 shadow-lg">
         <h2
           id="agency-social-recovery-key-modal-title"
-          className="text-h3 text-fg-primary mb-2 font-semibold"
+          className="text-title-section text-fg-primary mb-2 font-semibold"
         >
           Save your recovery key
         </h2>
@@ -567,7 +567,7 @@ function ConfirmDestructiveModal({
         onSubmit={onSubmit}
         className="bg-surface border-border w-full max-w-md space-y-4 rounded-[var(--radius-card)] border p-6 shadow-lg"
       >
-        <h2 className="text-h3 text-fg-primary font-semibold">{title}</h2>
+        <h2 className="text-title-section text-fg-primary font-semibold">{title}</h2>
         <p className="text-body text-fg-secondary">{body}</p>
         <div className="space-y-2">
           <Label htmlFor={`${testId}-confirm`} className="text-body">

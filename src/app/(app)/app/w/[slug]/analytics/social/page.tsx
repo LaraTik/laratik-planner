@@ -181,7 +181,7 @@ export default async function SocialAnalyticsPage({
                     <div className="flex items-center gap-3">
                       <PlatformIcon platform={channel.platform} tile />
                       <div>
-                        <h2 className="text-h3 text-fg-primary font-semibold">
+                        <h2 className="text-title-section text-fg-primary font-semibold">
                           {channel.accountName}
                         </h2>
                         <p className="text-label text-fg-muted">
@@ -269,7 +269,7 @@ function SummaryCard({ label, value, sub }: { label: string; value: string; sub?
       data-testid="summary-card"
     >
       <p className="text-label text-fg-muted">{label}</p>
-      <p className="text-h3 text-fg-primary mt-1 font-semibold">{value}</p>
+      <p className="text-title-card text-fg-primary mt-1 font-semibold">{value}</p>
       {sub ? <p className="text-label text-fg-secondary">{sub}</p> : null}
     </div>
   );
