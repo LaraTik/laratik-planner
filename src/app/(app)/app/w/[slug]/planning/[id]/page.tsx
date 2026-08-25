@@ -6,7 +6,7 @@ import { getContentItem, UPDATEABLE_STATUSES } from "@/lib/content/service";
 import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
 import { listPublicationsForItem } from "@/lib/publishing/service";
 import { listCommentsForItem } from "@/lib/discussions/service";
-import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { getWorkspaceRoles } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { statusBadgeVariant, humanStatus, humanFormat } from "@/lib/content/status";
@@ -51,13 +51,17 @@ export default async function ContentDetailPage({
   const item = await getContentItem(actor, id);
   if (!item || item.workspaceId !== ws.id) notFound();
 
+  // One DB round-trip for the full role set (cached per request via
+  // React.cache). Replaces the historical 6× hasWorkspaceRole fan-out
+  // (12-18 round-trips on the busiest page in the app).
+  const roles = await getWorkspaceRoles(actor, ws.id);
   const actorRoles = {
-    isManager: await hasWorkspaceRole(actor, ws.id, ["workspace_manager"]),
-    isPlanner: await hasWorkspaceRole(actor, ws.id, ["content_planner"]),
-    isDesigner: await hasWorkspaceRole(actor, ws.id, ["designer"]),
-    isInternalReviewer: await hasWorkspaceRole(actor, ws.id, ["internal_reviewer"]),
-    isClientReviewer: await hasWorkspaceRole(actor, ws.id, ["client_reviewer"]),
-    isPublisher: await hasWorkspaceRole(actor, ws.id, ["publisher"]),
+    isManager: roles.has("workspace_manager"),
+    isPlanner: roles.has("content_planner"),
+    isDesigner: roles.has("designer"),
+    isInternalReviewer: roles.has("internal_reviewer"),
+    isClientReviewer: roles.has("client_reviewer"),
+    isPublisher: roles.has("publisher"),
   };
 
   const [approvals, publications, discussionComments, deliveries] = await Promise.all([

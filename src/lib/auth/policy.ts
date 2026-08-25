@@ -1,5 +1,6 @@
 import "server-only";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { cache } from "react";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   agencies,
@@ -114,6 +115,60 @@ export async function canAccessClientWorkspace(
 }
 
 /**
+ * Return the actor's full set of workspace roles for a given workspace,
+ * in a single query (joined to `workspace_membership` and filtered to
+ * the active membership).
+ *
+ * Agency admins get the union of all six INTERNAL_WORKSPACE_ROLES
+ * returned as a single Set — they always satisfy `hasWorkspaceRole`,
+ * and short-circuiting there means we don't have to fan out to
+ * `isAgencyAdmin` for every role check on a hot page.
+ *
+ * This helper is `React.cache`-wrapped so multiple components on the
+ * same render share the result. The planning detail page used to call
+ * `hasWorkspaceRole` 6× in a row, each running 2-3 queries (workspace
+ * lookup + agency-admin check + role check). The replacement path
+ * makes 1 query per request per workspace.
+ */
+export const getWorkspaceRoles = cache(
+  async (actor: Actor, workspaceId: string): Promise<Set<string>> => {
+    // Resolve agencyId for the admin shortcut.
+    const [ws] = await db
+      .select({ agencyId: workspaces.agencyId })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+    if (!ws) return new Set();
+
+    if (await isAgencyAdmin(actor, ws.agencyId)) {
+      return new Set<string>(INTERNAL_WORKSPACE_ROLES);
+    }
+
+    const rows = await db
+      .select({ role: workspaceMembershipRoles.role })
+      .from(workspaceMembershipRoles)
+      .innerJoin(
+        workspaceMemberships,
+        eq(workspaceMemberships.id, workspaceMembershipRoles.workspaceMembershipId),
+      )
+      .where(
+        and(
+          eq(workspaceMemberships.workspaceId, workspaceId),
+          eq(workspaceMemberships.userId, actor.id),
+          eq(workspaceMemberships.status, "active"),
+        ),
+      )
+      // Defensive upper bound: a user can hold at most a handful of
+      // roles in one workspace (the schema enum has 7 values). This
+      // keeps the query shape consistent with the rest of policy.ts
+      // (every other helper terminates with `.limit(1)`) and gives
+      // unit-test mocks a deterministic consumption point.
+      .limit(100);
+    return new Set(rows.map((r) => r.role));
+  },
+);
+
+/**
  * Does the user hold one of the given workspace roles?
  * Agency admins always return true (master prompt §9 rule).
  */
@@ -122,33 +177,14 @@ export async function hasWorkspaceRole(
   workspaceId: string,
   roles: string[],
 ): Promise<boolean> {
-  // Resolve agencyId for the admin shortcut
-  const [ws] = await db
-    .select({ agencyId: workspaces.agencyId })
-    .from(workspaces)
-    .where(eq(workspaces.id, workspaceId))
-    .limit(1);
-  if (!ws) return false;
-
-  if (await isAgencyAdmin(actor, ws.agencyId)) return true;
-
-  const rows = await db
-    .select({ role: workspaceMembershipRoles.role })
-    .from(workspaceMembershipRoles)
-    .innerJoin(
-      workspaceMemberships,
-      eq(workspaceMemberships.id, workspaceMembershipRoles.workspaceMembershipId),
-    )
-    .where(
-      and(
-        eq(workspaceMemberships.workspaceId, workspaceId),
-        eq(workspaceMemberships.userId, actor.id),
-        eq(workspaceMemberships.status, "active"),
-        inArray(workspaceMembershipRoles.role, roles as never),
-      ),
-    )
-    .limit(1);
-  return rows.length > 0;
+  // Single-query fast path: get the full role set (cached per
+  // request) and intersect with the requested roles. Avoids the
+  // historical 2-3 queries × N-calls N+1.
+  const held = await getWorkspaceRoles(actor, workspaceId);
+  for (const r of roles) {
+    if (held.has(r)) return true;
+  }
+  return false;
 }
 
 // ─── Content-level (master prompt §9) ────────────────────────────────────

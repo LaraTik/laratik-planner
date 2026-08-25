@@ -167,6 +167,51 @@ describe("hasWorkspaceRole", () => {
   });
 });
 
+describe("getWorkspaceRoles", () => {
+  it("returns an empty set when the workspace is missing", async () => {
+    dbMock.state.selectResults.push([]); // workspace lookup returns nothing
+    const result = await policy.getWorkspaceRoles(actor, "ws-missing");
+    expect(result).toBeInstanceOf(Set);
+    expect(result.size).toBe(0);
+  });
+
+  it("returns the full internal role set when the actor is an agency admin (no role-row select)", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: true }]);
+    const before = dbMock.select.mock.calls.length;
+    const result = await policy.getWorkspaceRoles(actor, "ws-1");
+    const after = dbMock.select.mock.calls.length;
+    // workspace lookup + agency-admin check; no role-row select.
+    expect(after - before).toBe(2);
+    expect(result.size).toBe(policy.INTERNAL_WORKSPACE_ROLES.length);
+    for (const role of policy.INTERNAL_WORKSPACE_ROLES) {
+      expect(result.has(role)).toBe(true);
+    }
+  });
+
+  it("returns a Set of the actor's actual workspace roles (single role query)", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    dbMock.state.selectResults.push([{ role: "workspace_manager" }, { role: "designer" }]);
+    const before = dbMock.select.mock.calls.length;
+    const result = await policy.getWorkspaceRoles(actor, "ws-1");
+    const after = dbMock.select.mock.calls.length;
+    expect(after - before).toBe(3); // workspace + admin + role query
+    expect(result.size).toBe(2);
+    expect(result.has("workspace_manager")).toBe(true);
+    expect(result.has("designer")).toBe(true);
+    expect(result.has("client_reviewer")).toBe(false);
+  });
+
+  it("returns an empty set when the actor holds no roles", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    dbMock.state.selectResults.push([]);
+    const result = await policy.getWorkspaceRoles(actor, "ws-1");
+    expect(result.size).toBe(0);
+  });
+});
+
 describe("canViewContent", () => {
   it("returns false when the content item is missing", async () => {
     dbMock.state.selectResults.push([]);
