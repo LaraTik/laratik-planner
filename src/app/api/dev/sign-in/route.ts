@@ -4,6 +4,7 @@ import {
   DEV_SESSION_MAX_AGE_SECONDS,
   signInDevUser,
 } from "@/lib/auth/dev-sign-in";
+import { mutatingApiHeaders } from "@/lib/security/headers";
 import { serverEnv } from "@/lib/validation/env";
 
 /**
@@ -43,15 +44,18 @@ export async function POST(req: NextRequest) {
   if (!result.ok) {
     const status =
       result.error === "invalid_email" ? 400 : result.error === "missing_auth_secret" ? 500 : 404;
-    return NextResponse.json({ error: result.error }, { status });
+    return NextResponse.json({ error: result.error }, { status, headers: mutatingApiHeaders() });
   }
 
-  const res = NextResponse.json({
-    ok: true,
-    userId: result.userId,
-    email: result.email,
-    role: result.role,
-  });
+  const res = NextResponse.json(
+    {
+      ok: true,
+      userId: result.userId,
+      email: result.email,
+      role: result.role,
+    },
+    { headers: mutatingApiHeaders() },
+  );
   res.cookies.set({
     name: DEV_SESSION_COOKIE_NAME,
     value: result.token,
@@ -66,7 +70,10 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   if (serverEnv.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not available in production" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Not available in production" },
+      { status: 404, headers: mutatingApiHeaders() },
+    );
   }
   return NextResponse.json({
     ok: true,

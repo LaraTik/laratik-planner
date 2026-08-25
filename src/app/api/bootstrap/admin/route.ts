@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/config";
 import { bootstrapFirstAdmin } from "@/lib/auth/bootstrap";
 import { firstAgencyForBootstrap, isAgencyAdmin } from "@/lib/auth/policy";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { mutatingApiHeaders } from "@/lib/security/headers";
 import { db } from "@/lib/db";
 import { securityAuditEvents } from "@/lib/db/schema";
 
@@ -29,7 +30,10 @@ const Body = z.object({
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Not signed in" },
+      { status: 401, headers: mutatingApiHeaders() },
+    );
   }
 
   const contentType = req.headers.get("content-type") ?? "";
@@ -40,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid request", issues: parsed.error.flatten().fieldErrors },
-      { status: 400 },
+      { status: 400, headers: mutatingApiHeaders() },
     );
   }
 
@@ -63,14 +67,20 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(
       { error: "Too many setup attempts. Please try again later." },
-      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+      {
+        status: 429,
+        headers: { ...mutatingApiHeaders(), "Retry-After": String(limit.retryAfterSeconds) },
+      },
     );
   }
 
   // If an agency admin already exists, refuse
   const agencyId = await firstAgencyForBootstrap();
   if (agencyId && (await isAgencyAdmin({ id: session.user.id }, agencyId))) {
-    return NextResponse.json({ error: "Already configured", agencyId }, { status: 409 });
+    return NextResponse.json(
+      { error: "Already configured", agencyId },
+      { status: 409, headers: mutatingApiHeaders() },
+    );
   }
 
   const result = await bootstrapFirstAdmin({
@@ -89,12 +99,15 @@ export async function POST(req: NextRequest) {
       ...(requestId ? { requestId } : {}),
       metadata: { reason: "invalid_token" },
     });
-    return NextResponse.json({ error: "Invalid token" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Invalid token" },
+      { status: 403, headers: mutatingApiHeaders() },
+    );
   }
   if (result.status === "already_configured") {
     return NextResponse.json(
       { error: "Already configured", agencyId: result.agencyId },
-      { status: 409 },
+      { status: 409, headers: mutatingApiHeaders() },
     );
   }
 
@@ -108,9 +121,12 @@ export async function POST(req: NextRequest) {
     metadata: { agencySlug: parsed.data.agencySlug },
   });
 
-  return NextResponse.json({
-    status: "ok",
-    agencyId: result.agencyId,
-    userId: result.userId,
-  });
+  return NextResponse.json(
+    {
+      status: "ok",
+      agencyId: result.agencyId,
+      userId: result.userId,
+    },
+    { headers: mutatingApiHeaders() },
+  );
 }

@@ -19,6 +19,7 @@ import {
   type ChatResult,
 } from "@/lib/ai";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { mutatingApiHeaders } from "@/lib/security/headers";
 import { publicProviderError } from "@/lib/security/public-error";
 import { randomUUID } from "node:crypto";
 import { serverEnv } from "@/lib/validation/env";
@@ -105,21 +106,37 @@ export async function POST(req: NextRequest) {
         error:
           "AI features are disabled. Set a managed secret at /app/agency-settings/ai or set AI_FEATURE_ENABLED=true and MINIMAX_API_KEY in the environment.",
       },
-      { status: 503 },
+      { status: 503, headers: mutatingApiHeaders() },
     );
   }
 
   const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  if (!session?.user?.id)
+    return NextResponse.json(
+      { error: "Not signed in" },
+      { status: 401, headers: mutatingApiHeaders() },
+    );
   const actor = await currentActor();
-  if (!actor) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  if (!actor)
+    return NextResponse.json(
+      { error: "Not signed in" },
+      { status: 401, headers: mutatingApiHeaders() },
+    );
 
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
-  if (!agencyId) return NextResponse.json({ error: "Agency not configured" }, { status: 409 });
+  if (!agencyId)
+    return NextResponse.json(
+      { error: "Agency not configured" },
+      { status: 409, headers: mutatingApiHeaders() },
+    );
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json(
+      { error: "Invalid body" },
+      { status: 400, headers: mutatingApiHeaders() },
+    );
 
   const requestId = req.headers.get("x-request-id") ?? undefined;
   const limit = await enforceRateLimit({
@@ -131,7 +148,10 @@ export async function POST(req: NextRequest) {
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "Too many AI requests. Please try again shortly." },
-      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+      {
+        status: 429,
+        headers: { ...mutatingApiHeaders(), "Retry-After": String(limit.retryAfterSeconds) },
+      },
     );
   }
 
@@ -147,20 +167,20 @@ export async function POST(req: NextRequest) {
       {
         error: `Capability "${parsed.data.capability}" is disabled in agency settings.`,
       },
-      { status: 403 },
+      { status: 403, headers: mutatingApiHeaders() },
     );
   }
   const entitlement = await getEffectiveEntitlement({ agencyId });
   if (!entitlement.enabledAiCapabilities.has(parsed.data.capability)) {
     return NextResponse.json(
       { error: `Capability "${parsed.data.capability}" is not included in this plan.` },
-      { status: 403 },
+      { status: 403, headers: mutatingApiHeaders() },
     );
   }
   if (parsed.data.capability === "platform_adaptation" && !parsed.data.targetPlatform) {
     return NextResponse.json(
       { error: "platform_adaptation requires a targetPlatform." },
-      { status: 400 },
+      { status: 400, headers: mutatingApiHeaders() },
     );
   }
 
@@ -169,7 +189,11 @@ export async function POST(req: NextRequest) {
     .from(contentItems)
     .where(eq(contentItems.id, parsed.data.contentItemId))
     .limit(1);
-  if (!item) return NextResponse.json({ error: "Content not found" }, { status: 404 });
+  if (!item)
+    return NextResponse.json(
+      { error: "Content not found" },
+      { status: 404, headers: mutatingApiHeaders() },
+    );
 
   // Get workspace slug for the platform hint
   const [ws] = await db
@@ -177,7 +201,11 @@ export async function POST(req: NextRequest) {
     .from(workspaces)
     .where(and(eq(workspaces.id, item.workspaceId), eq(workspaces.agencyId, agencyId)))
     .limit(1);
-  if (!ws) return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+  if (!ws)
+    return NextResponse.json(
+      { error: "Workspace not found" },
+      { status: 404, headers: mutatingApiHeaders() },
+    );
 
   if (
     !(await hasWorkspaceRole({ id: session.user.id }, ws.id, [
@@ -185,7 +213,10 @@ export async function POST(req: NextRequest) {
       "content_planner",
     ]))
   ) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403, headers: mutatingApiHeaders() },
+    );
   }
 
   // FEAT-16 (GAP-FULL-REVIEW-2026-08-25) — explicit read-only gate
@@ -201,7 +232,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json(
       { error: "Read-only users cannot trigger AI generation" },
-      { status: 403 },
+      { status: 403, headers: mutatingApiHeaders() },
     );
   }
 
@@ -226,7 +257,7 @@ export async function POST(req: NextRequest) {
           error:
             "No AI API key configured for this agency. Set a managed secret at /app/agency-settings/ai or set MINIMAX_API_KEY in the environment.",
         },
-        { status: 503 },
+        { status: 503, headers: mutatingApiHeaders() },
       );
     }
     // M3.3 — server-authoritative AI budget enforcement. The
@@ -284,10 +315,16 @@ export async function POST(req: NextRequest) {
         text = await relatedFormatIdeas(baseInput);
         break;
       default:
-        return NextResponse.json({ error: "Unknown capability" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Unknown capability" },
+          { status: 400, headers: mutatingApiHeaders() },
+        );
     }
     if (!text) {
-      return NextResponse.json({ error: "AI returned no result" }, { status: 502 });
+      return NextResponse.json(
+        { error: "AI returned no result" },
+        { status: 502, headers: mutatingApiHeaders() },
+      );
     }
     const actualInput = (providerUsage as ChatResult | null)?.inputTokens ?? estimatedInput;
     const actualOutput = (providerUsage as ChatResult | null)?.outputTokens ?? outputReservation;
@@ -333,10 +370,16 @@ export async function POST(req: NextRequest) {
       succeeded: true,
       contextManifest: { categories: usedCategories },
     });
-    return NextResponse.json({ text, capability: parsed.data.capability });
+    return NextResponse.json(
+      { text, capability: parsed.data.capability },
+      { headers: mutatingApiHeaders() },
+    );
   } catch (e) {
     if (e instanceof LimitExceededError) {
-      return NextResponse.json({ error: e.message, quota: e.details }, { status: 429 });
+      return NextResponse.json(
+        { error: e.message, quota: e.details },
+        { status: 429, headers: mutatingApiHeaders() },
+      );
     }
     if (reservedTokens) {
       await Promise.allSettled([
@@ -379,6 +422,9 @@ export async function POST(req: NextRequest) {
       userId: session.user.id,
       workspaceId: ws.id,
     });
-    return NextResponse.json({ error: publicProviderError("ai", e).message }, { status: 502 });
+    return NextResponse.json(
+      { error: publicProviderError("ai", e).message },
+      { status: 502, headers: mutatingApiHeaders() },
+    );
   }
 }

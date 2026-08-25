@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { mutatingApiHeaders } from "@/lib/security/headers";
 import { serverEnv } from "@/lib/validation/env";
 
 /**
@@ -12,9 +13,12 @@ export const runtime = "nodejs";
 
 export async function POST() {
   if (serverEnv.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not available in production" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Not available in production" },
+      { status: 404, headers: mutatingApiHeaders() },
+    );
   }
-  const res = NextResponse.json({ ok: true });
+  const res = NextResponse.json({ ok: true }, { headers: mutatingApiHeaders() });
   res.cookies.set({
     name: "authjs.session-token",
     value: "",
@@ -29,7 +33,10 @@ export async function POST() {
 
 export async function GET() {
   if (serverEnv.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not available in production" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Not available in production" },
+      { status: 404, headers: mutatingApiHeaders() },
+    );
   }
   return POST();
 }

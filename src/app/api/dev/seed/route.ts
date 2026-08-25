@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { mutatingApiHeaders } from "@/lib/security/headers";
 import { db } from "@/lib/db";
 import {
   agencies,
@@ -115,14 +116,20 @@ const FIXTURES = {
 
 export async function POST(req: NextRequest) {
   if (serverEnv.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not available in production" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Not available in production" },
+      { status: 404, headers: mutatingApiHeaders() },
+    );
   }
 
   const body = (await req.json().catch(() => ({}))) as SeedBody;
   const explicitPlatformRole =
     body.platformRole === undefined ? null : PlatformRoleSchema.safeParse(body.platformRole);
   if (explicitPlatformRole && !explicitPlatformRole.success) {
-    return NextResponse.json({ error: "Invalid platformRole" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid platformRole" },
+      { status: 400, headers: mutatingApiHeaders() },
+    );
   }
   const f = {
     email: (body.email ?? FIXTURES.email).trim().toLowerCase(),
@@ -145,7 +152,7 @@ export async function POST(req: NextRequest) {
     console.error("[dev/seed] failed:", err);
     return NextResponse.json(
       { error: "Seed failed", detail: err instanceof Error ? err.message : String(err) },
-      { status: 500 },
+      { status: 500, headers: mutatingApiHeaders() },
     );
   }
 }
@@ -436,18 +443,21 @@ async function seedInternal(f: {
     }
   }
 
-  const response = NextResponse.json({
-    ok: true,
-    userId,
-    agencyId,
-    workspaceId,
-    workspaceSlug: f.workspaceSlug,
-    channelIds,
-    contentItemId,
-    platformAdmin: f.platformRole !== null,
-    platformRole: f.platformRole,
-    fixtures: f,
-  });
+  const response = NextResponse.json(
+    {
+      ok: true,
+      userId,
+      agencyId,
+      workspaceId,
+      workspaceSlug: f.workspaceSlug,
+      channelIds,
+      contentItemId,
+      platformAdmin: f.platformRole !== null,
+      platformRole: f.platformRole,
+      fixtures: f,
+    },
+    { headers: mutatingApiHeaders() },
+  );
   response.cookies.set({
     name: AGENCY_CONTEXT_COOKIE_NAME,
     value: encodeAgencyContext({ agencyId, userId }),
@@ -462,7 +472,10 @@ async function seedInternal(f: {
 
 export async function GET() {
   if (serverEnv.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not available in production" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Not available in production" },
+      { status: 404, headers: mutatingApiHeaders() },
+    );
   }
   return NextResponse.json({
     ok: true,

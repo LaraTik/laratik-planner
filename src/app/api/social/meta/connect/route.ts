@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { mutatingApiHeaders } from "@/lib/security/headers";
 import { createHash, randomBytes } from "node:crypto";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
@@ -60,23 +61,38 @@ function buildReturnPath(slug: string): string {
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Not authenticated" },
+      { status: 401, headers: mutatingApiHeaders() },
+    );
   }
   const actor = { id: session.user.id };
   const context = await resolveActiveAgencyContext({ actor });
   if (!context) {
-    return NextResponse.json({ error: "Agency context required" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Agency context required" },
+      { status: 403, headers: mutatingApiHeaders() },
+    );
   }
   const body = (await req.json().catch(() => ({}))) as { slug?: string };
   if (typeof body.slug !== "string" || body.slug.length === 0) {
-    return NextResponse.json({ error: "Missing workspace slug" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing workspace slug" },
+      { status: 400, headers: mutatingApiHeaders() },
+    );
   }
   const workspace = await getAccessibleWorkspace(actor, body.slug, context.agencyId);
   if (!workspace) {
-    return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Workspace not found" },
+      { status: 404, headers: mutatingApiHeaders() },
+    );
   }
   if (!(await hasWorkspaceRole(actor, workspace.id, ["workspace_manager"]))) {
-    return NextResponse.json({ error: "Workspace manager role required" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Workspace manager role required" },
+      { status: 403, headers: mutatingApiHeaders() },
+    );
   }
 
   // M4.6 — resolve per-agency provider config. No env fallback by
@@ -91,7 +107,7 @@ export async function POST(req: NextRequest) {
         errorCode: "not_configured",
         setupUrl: SETUP_URL,
       },
-      { status: 409 },
+      { status: 409, headers: mutatingApiHeaders() },
     );
   }
   if (!config.loginConfigId) {
@@ -101,7 +117,7 @@ export async function POST(req: NextRequest) {
         errorCode: "missing_login_config",
         setupUrl: SETUP_URL,
       },
-      { status: 409 },
+      { status: 409, headers: mutatingApiHeaders() },
     );
   }
   if (!config.enabled) {
@@ -111,7 +127,7 @@ export async function POST(req: NextRequest) {
         errorCode: "provider_disabled",
         setupUrl: SETUP_URL,
       },
-      { status: 409 },
+      { status: 409, headers: mutatingApiHeaders() },
     );
   }
 
@@ -133,5 +149,5 @@ export async function POST(req: NextRequest) {
     redirectUri: buildCallbackUrl(),
     graphApiVersion: config.graphApiVersion,
   });
-  return NextResponse.json({ redirectUrl: authUrl });
+  return NextResponse.json({ redirectUrl: authUrl }, { headers: mutatingApiHeaders() });
 }

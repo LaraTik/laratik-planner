@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { enableSocial, SocialServiceError } from "@/lib/social/service";
+import { mutatingApiHeaders } from "@/lib/security/headers";
 
 /**
  * POST /api/agencies/[agencyId]/social/enable
@@ -35,26 +36,38 @@ export async function POST(
 ): Promise<NextResponse> {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Not authenticated" },
+      { status: 401, headers: mutatingApiHeaders() },
+    );
   }
   const actor = await currentActor();
   if (!actor) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Not authenticated" },
+      { status: 401, headers: mutatingApiHeaders() },
+    );
   }
   const { agencyId } = await ctx.params;
   if (typeof agencyId !== "string" || agencyId.length === 0) {
-    return NextResponse.json({ error: "Missing agencyId" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing agencyId" },
+      { status: 400, headers: mutatingApiHeaders() },
+    );
   }
   try {
     const result = await enableSocial(actor, agencyId);
-    return NextResponse.json(result);
+    return NextResponse.json(result, { headers: mutatingApiHeaders() });
   } catch (err) {
     if (err instanceof SocialServiceError) {
-      return NextResponse.json({ error: err.message, code: err.code }, { status: err.status });
+      return NextResponse.json(
+        { error: err.message, code: err.code },
+        { status: err.status, headers: mutatingApiHeaders() },
+      );
     }
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unexpected error" },
-      { status: 500 },
+      { status: 500, headers: mutatingApiHeaders() },
     );
   }
 }

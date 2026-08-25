@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { users, notifications } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { mutatingApiHeaders } from "@/lib/security/headers";
 import { serverEnv } from "@/lib/validation/env";
 
 /**
@@ -34,11 +35,17 @@ type Body = {
 
 export async function POST(req: NextRequest) {
   if (serverEnv.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not available in production" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Not available in production" },
+      { status: 404, headers: mutatingApiHeaders() },
+    );
   }
   const body = (await req.json().catch(() => ({}))) as Body;
   if (!body.email) {
-    return NextResponse.json({ error: "email is required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "email is required" },
+      { status: 400, headers: mutatingApiHeaders() },
+    );
   }
   const count = Math.min(Math.max(body.count ?? 1, 0), 50);
   const readCount = Math.min(Math.max(body.readCount ?? 0, 0), count);
@@ -49,7 +56,10 @@ export async function POST(req: NextRequest) {
     .where(eq(users.email, body.email))
     .limit(1);
   if (!user) {
-    return NextResponse.json({ error: `User not found: ${body.email}` }, { status: 404 });
+    return NextResponse.json(
+      { error: `User not found: ${body.email}` },
+      { status: 404, headers: mutatingApiHeaders() },
+    );
   }
 
   const now = Date.now();
@@ -64,12 +74,18 @@ export async function POST(req: NextRequest) {
     await db.insert(notifications).values(rows);
   }
 
-  return NextResponse.json({ ok: true, created: rows.length, userId: user.id });
+  return NextResponse.json(
+    { ok: true, created: rows.length, userId: user.id },
+    { headers: mutatingApiHeaders() },
+  );
 }
 
 export async function GET() {
   if (serverEnv.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not available in production" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Not available in production" },
+      { status: 404, headers: mutatingApiHeaders() },
+    );
   }
   return NextResponse.json({
     ok: true,

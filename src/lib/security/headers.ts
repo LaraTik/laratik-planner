@@ -35,3 +35,21 @@ export function buildSecurityHeaders(_environment: RuntimeEnvironment): Array<{
     { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   ];
 }
+
+/**
+ * Cache-Control header value for API mutating routes (POST/PUT/PATCH/DELETE).
+ * Defense in depth against any intermediate cache (browser back/forward,
+ * misconfigured CDN) holding a stale response that the server has since
+ * mutated. The primary correctness guard remains server-side auth + the
+ * session cookie; this header is a backstop.
+ */
+export const NO_STORE_CACHE_CONTROL = "no-store, max-age=0";
+
+/**
+ * Returns the headers object to spread into a `NextResponse` init for
+ * mutating API routes. Centralised so the policy is one edit, not N
+ * call sites.
+ */
+export function mutatingApiHeaders(): Record<string, string> {
+  return { "Cache-Control": NO_STORE_CACHE_CONTROL };
+}

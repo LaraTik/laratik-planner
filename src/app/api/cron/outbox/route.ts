@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { dispatchOutboxOnce } from "@/lib/notifications/service";
+import { mutatingApiHeaders } from "@/lib/security/headers";
 import { serverEnv } from "@/lib/validation/env";
 
 /**
@@ -44,7 +45,7 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 function unauthorized(): NextResponse {
-  return new NextResponse("Unauthorized", { status: 401 });
+  return new NextResponse("Unauthorized", { status: 401, headers: mutatingApiHeaders() });
 }
 
 function isAuthorized(req: NextRequest): boolean {
@@ -69,16 +70,19 @@ async function handle(req: NextRequest): Promise<NextResponse> {
         error: err instanceof Error ? err.message : "dispatch failed",
         durationMs: Date.now() - start,
       },
-      { status: 500 },
+      { status: 500, headers: mutatingApiHeaders() },
     );
   }
   if (Date.now() - start > MAX_RUNTIME_MS) {
     return NextResponse.json(
       { ok: true, ...result, deadlineExceeded: true, durationMs: Date.now() - start },
-      { status: 200 },
+      { status: 200, headers: mutatingApiHeaders() },
     );
   }
-  return NextResponse.json({ ok: true, ...result, durationMs: Date.now() - start });
+  return NextResponse.json(
+    { ok: true, ...result, durationMs: Date.now() - start },
+    { headers: mutatingApiHeaders() },
+  );
 }
 
 export async function GET(req: NextRequest) {
