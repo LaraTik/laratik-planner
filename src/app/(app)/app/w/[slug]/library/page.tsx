@@ -9,6 +9,7 @@ import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionHeader } from "@/components/workspace/section-header";
 import { humanFormat } from "@/lib/content/status";
@@ -106,9 +107,13 @@ export default async function PlanningLibraryPage({
           />
         </div>
         {campaignRows.length === 0 ? (
-          <p className="text-body text-fg-muted px-4 py-6">
-            No campaigns yet. Create one from the planning list to bundle related ideas.
-          </p>
+          <div className="px-4 py-6" data-testid="library-campaign-empty">
+            <EmptyState
+              icon={<Megaphone className="h-8 w-8" aria-hidden="true" />}
+              title="No campaigns yet"
+              description="Create one from the planning list to bundle related ideas."
+            />
+          </div>
         ) : (
           <ul className="divide-border divide-y" data-testid="library-campaign-list">
             {campaignRows.map((row) => (
@@ -152,7 +157,13 @@ export default async function PlanningLibraryPage({
           />
         </div>
         {pillars.length === 0 ? (
-          <p className="text-body text-fg-muted px-4 py-6">No content pillars yet.</p>
+          <div className="px-4 py-6" data-testid="library-pillar-empty">
+            <EmptyState
+              icon={<Layers className="h-8 w-8" aria-hidden="true" />}
+              title="No content pillars yet"
+              description="Pillars group your ideas into recurring themes for the workspace."
+            />
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <DataTable
@@ -183,7 +194,13 @@ export default async function PlanningLibraryPage({
           />
         </div>
         {templates.length === 0 ? (
-          <p className="text-body text-fg-muted px-4 py-6">No templates yet.</p>
+          <div className="px-4 py-6" data-testid="library-template-empty">
+            <EmptyState
+              icon={<Layers className="h-8 w-8" aria-hidden="true" />}
+              title="No templates yet"
+              description="Templates speed up drafting — save a proven format and reuse it for future ideas."
+            />
+          </div>
         ) : (
           <ul className="divide-border divide-y" data-testid="library-templates">
             {templates.map((row) => (
