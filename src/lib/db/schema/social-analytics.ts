@@ -39,6 +39,13 @@ import { socialChannels } from "./channels";
 // `(workspace_id, provider, provider_subject_id) WHERE revoked_at IS NULL`
 // is declared in SQL because Drizzle does not currently support partial
 // unique indexes; the constraint name is the source of truth.
+//
+// Index `social_connection_workspace_idx` on (workspace_id, status)
+// — the OTHER-11 audit (GAP-FULL-REVIEW-2026-08-25) confirmed this
+// index is required for the workspace-scoped lookups done by
+// `listConnectionsForWorkspace` and the finalize-selection flow.
+// Without it, every `eq(socialConnection.workspaceId, ws.id)` query
+// would do a sequential scan.
 export const socialConnections = pgTable(
   "social_connection",
   {
