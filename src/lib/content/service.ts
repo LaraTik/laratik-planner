@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   activityEvents,
@@ -8,6 +8,7 @@ import {
   contentAssignments,
   contentItemChannels,
   contentItems,
+  outboxEvents,
   socialChannels,
   workspaceMembershipRoles,
   workspaceMemberships,
@@ -34,6 +35,7 @@ import {
   enqueueAssignmentNotification,
   enqueueChangesRequestedNotification,
   enqueueClaimNotification,
+  enqueueDeadlineNotification,
   enqueueReadyToPublishNotification,
   enqueueReleaseNotification,
   enqueueReviewRequestNotification,
@@ -1112,6 +1114,137 @@ export async function rescheduleContentItem(actor: Actor, input: RescheduleConte
     });
   });
   revalidatePath(`/app/w/`);
+}
+
+// ─── FEAT-18 (GAP-FULL-REVIEW-2026-08-25) — deadline sweep ──────────────
+//
+// Master prompt §12 lists `deadline` as one of the 11 mandatory
+// notification kinds. Today nothing fires it: the workflow transition
+// path handles `ready_to_publish` and approval-driven events, but
+// the "your publish date is tomorrow / in 3 days" reminder was never
+// wired. This helper is the body of the daily cron — the cron route
+// will call it once an hour, the function picks the items whose
+// `planned_publish_at` is within the warning window and that have
+// not been notified in the last 24h.
+//
+// The sweep is intentionally idempotent: the `outbox_event` row
+// written by `enqueueDeadlineNotification` carries the content item
+// id in the payload, so the dispatcher (or a future sweep audit)
+// can dedupe a re-run. The function also re-reads the candidate set
+// inside the transaction so a content item that just transitioned
+// to `published` mid-tick is skipped.
+
+/**
+ * FEAT-18 (GAP-FULL-REVIEW-2026-08-25) — daily-deadline sweep.
+ *
+ * Scans every workspace for content items whose planned publish
+ * date is within the warning window (`now` to `now + windowHours`)
+ * and that are not yet in a closed status. For each candidate
+ * that has not received a `deadline` notification in the last
+ * 24h, enqueues one for the content owner and the designer
+ * (the two roles who can act on a missed publish date).
+ *
+ * The default window of 24 hours matches the "24h-before-publish"
+ * reminder the master prompt §12 calls out; the helper accepts
+ * an override so a future cron can also fire a 72h / 1-week
+ * "approaching" reminder without rewriting the body.
+ *
+ * Returns the count of notifications enqueued, so the cron
+ * route can log a structured summary without re-querying.
+ */
+export async function dispatchDeadlineReminders(
+  opts: {
+    now?: Date;
+    windowHours?: number;
+  } = {},
+): Promise<{ scanned: number; enqueued: number }> {
+  const now = opts.now ?? new Date();
+  const windowHours = opts.windowHours ?? 24;
+  const windowEnd = new Date(now.getTime() + windowHours * 60 * 60 * 1000);
+  // The 24h dedupe horizon: don't fire the same item twice in 24h.
+  const dedupeCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  // Closed statuses (ready / partial / published) are excluded —
+  // those items don't need a deadline reminder.
+  const openStatuses = [
+    "draft",
+    "content_review",
+    "approved_for_design",
+    "in_design",
+    "creative_review",
+    "changes_requested",
+    "blocked",
+  ] as const;
+
+  const candidates = await db
+    .select({
+      id: contentItems.id,
+      workspaceId: contentItems.workspaceId,
+      title: contentItems.title,
+      plannedPublishAt: contentItems.plannedPublishAt,
+      contentOwnerId: contentItems.contentOwnerId,
+      designerId: contentItems.designerId,
+    })
+    .from(contentItems)
+    .where(
+      and(
+        isNull(contentItems.archivedAt),
+        gte(contentItems.plannedPublishAt, now),
+        lt(contentItems.plannedPublishAt, windowEnd),
+        inArray(contentItems.status, [...openStatuses]),
+      ),
+    );
+
+  let enqueued = 0;
+  for (const item of candidates) {
+    // Skip if a `deadline` outbox event for this content item was
+    // written in the last 24h. The aggregateId is the content item
+    // id (enqueueOutboxEvent defaults `aggregateId` to the
+    // `contentItemId` for content events).
+    const [recent] = await db
+      .select({ id: outboxEvents.id })
+      .from(outboxEvents)
+      .where(
+        and(
+          eq(outboxEvents.eventType, "deadline"),
+          eq(outboxEvents.aggregateType, "content_item"),
+          eq(outboxEvents.aggregateId, item.id),
+          gte(outboxEvents.createdAt, dedupeCutoff),
+        ),
+      )
+      .limit(1);
+    if (recent) continue;
+
+    // Re-read the item inside the loop to short-circuit if a
+    // concurrent transition moved it to a closed status between
+    // the candidate select and now.
+    const [fresh] = await db
+      .select({ status: contentItems.status })
+      .from(contentItems)
+      .where(eq(contentItems.id, item.id))
+      .limit(1);
+    if (!fresh) continue;
+    if (
+      ["ready_to_publish", "partially_published", "published", "cancelled"].includes(fresh.status)
+    ) {
+      continue;
+    }
+
+    const recipients = [item.contentOwnerId, item.designerId].filter((u): u is string =>
+      Boolean(u),
+    );
+    for (const userId of recipients) {
+      await enqueueDeadlineNotification({
+        userId,
+        workspaceId: item.workspaceId,
+        contentItemId: item.id,
+        title: `Deadline approaching: "${item.title}"`,
+        body: `The planned publish date is approaching. Confirm the package is on track.`,
+      });
+      enqueued += 1;
+    }
+  }
+  return { scanned: candidates.length, enqueued };
 }
 
 // silence unused

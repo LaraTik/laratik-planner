@@ -11,6 +11,7 @@ import {
   socialChannels,
 } from "@/lib/db/schema";
 import { hasWorkspaceRole, type Actor } from "@/lib/auth/policy";
+import { enqueueReadyToPublishNotification } from "@/lib/notifications/service";
 import {
   PlatformPayloadSchema,
   type PlatformPayload,
@@ -649,7 +650,13 @@ export async function confirmPublishReadiness(
   }
 
   const [item] = await db
-    .select({ status: contentItems.status, revision: contentItems.revision })
+    .select({
+      status: contentItems.status,
+      revision: contentItems.revision,
+      title: contentItems.title,
+      contentOwnerId: contentItems.contentOwnerId,
+      designerId: contentItems.designerId,
+    })
     .from(contentItems)
     .where(
       and(
@@ -683,6 +690,34 @@ export async function confirmPublishReadiness(
       material: false,
     },
   });
+
+  // FEAT-18 (GAP-FULL-REVIEW-2026-08-25) — fire the
+  // `ready_to_publish` notification for the content owner and
+  // designer (skipping the actor who just confirmed, who has
+  // already seen the readiness report). The transition path in
+  // `content/service.ts:811` also fires this kind when the
+  // workflow state moves into `ready_to_publish`; this call
+  // covers the second "ready" event the master prompt §12
+  // expects — a publisher has just confirmed the package is
+  // ready, so anyone in the deliver lane (owner, designer) gets
+  // a fresh reminder that the publish window is open. The two
+  // notifications are intentionally distinct events: one fires
+  // on workflow transition, this one fires on publisher
+  // confirmation.
+  const skipSelf = (uid: string | null) => (uid && uid !== actor.id ? uid : null);
+  const readyRecipients = [skipSelf(item.contentOwnerId), skipSelf(item.designerId)].filter(
+    (u): u is string => Boolean(u),
+  );
+  for (const userId of readyRecipients) {
+    await enqueueReadyToPublishNotification({
+      userId,
+      workspaceId: parsed.workspaceId,
+      contentItemId: parsed.contentItemId,
+      title: `Ready to publish: "${item.title}"`,
+      body: "A publisher has confirmed the package is ready. The publish window is open.",
+    });
+  }
+
   return report;
 }
 
