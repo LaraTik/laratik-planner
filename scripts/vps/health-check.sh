@@ -21,11 +21,23 @@ for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
     ok="$(echo "$body" | sed -n 's/.*"ok":\s*\([a-z]*\).*/\1/p')"
     if [ "$ok" = "true" ]; then
       version="$(echo "$body" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
-      if [ -z "$EXPECTED_APP_VERSION" ] || [ "$version" = "$EXPECTED_APP_VERSION" ]; then
+      # The health endpoint now returns a 7-char short SHA (commit
+      # 721afbe moved from the full 40-char SHA to keep the response
+      # body small and stable for external consumers). The deploy
+      # script, however, still passes the full SHA as
+      # EXPECTED_APP_VERSION. Compare on a prefix of the expected
+      # value, the length of the health-reported version, so the
+      # deploy-time version match works for either format.
+      if [ -z "$EXPECTED_APP_VERSION" ]; then
         echo "✅ Health OK (attempt ${attempt}/${MAX_ATTEMPTS}): $body"
         exit 0
       fi
-      echo "→ Health is ready but build is ${version:-missing}; waiting for ${EXPECTED_APP_VERSION}…"
+      expected_prefix="${EXPECTED_APP_VERSION:0:${#version}}"
+      if [ "$version" = "$expected_prefix" ]; then
+        echo "✅ Health OK (attempt ${attempt}/${MAX_ATTEMPTS}): $body"
+        exit 0
+      fi
+      echo "→ Health is ready but build is ${version:-missing}; waiting for ${EXPECTED_APP_VERSION:0:7}…"
     fi
   fi
 
