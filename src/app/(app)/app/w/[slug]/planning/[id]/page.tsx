@@ -202,7 +202,16 @@ export default async function ContentDetailPage({
       <PublishingSection
         workspaceSlug={slug}
         contentItemId={item.id}
-        channels={item.channels}
+        channels={item.channels.map((ch) => ({
+          id: ch.id,
+          socialChannelId: ch.socialChannelId,
+          accountName: ch.accountName,
+          platform: ch.platform,
+          plannedPublishAtOverride:
+            ch.plannedPublishAtOverride instanceof Date
+              ? ch.plannedPublishAtOverride.toISOString()
+              : (ch.plannedPublishAtOverride ?? null),
+        }))}
         publications={publications.map((p) => ({
           id: p.publication_record.id,
           contentItemChannelId: p.publication_record.contentItemChannelId,

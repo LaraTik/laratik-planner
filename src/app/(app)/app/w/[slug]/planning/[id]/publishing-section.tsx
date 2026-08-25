@@ -13,7 +13,15 @@ type Channel = {
   id: string;
   accountName: string;
   platform: string;
-  plannedPublishAtOverride: Date | null;
+  /**
+   * ISO 8601 string (or null). The page is a Server Component — Date
+   * objects are not in React's RSC serialisation surface, so the
+   * source-of-truth Date from `getContentItem` is converted to a
+   * string in `page.tsx` before crossing the boundary. A raw Date here
+   * would throw "An error occurred in the Server Components render"
+   * (minified to React #441) on the post-action revalidation re-render.
+   */
+  plannedPublishAtOverride: string | null;
 };
 type Publication = {
   id: string;
