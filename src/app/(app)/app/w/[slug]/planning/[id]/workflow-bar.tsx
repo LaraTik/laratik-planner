@@ -82,9 +82,14 @@ export function WorkflowBar({
         ...(reason ? { reason } : {}),
       });
     } catch (error) {
+      // Set the error state and let the transition resolve normally.
+      // Re-throwing here (the previous behaviour) made React 19 surface
+      // "Rendered fewer hooks than expected" (production #441) on the
+      // post-failure re-render — `setActionError` is sufficient to
+      // surface the message and `run()`'s outer `.catch` already
+      // absorbs the rejected promise.
       const message = error instanceof Error ? error.message : "The workflow action failed.";
       setActionError(message);
-      throw new Error(message);
     }
   };
 
@@ -275,10 +280,11 @@ export function WorkflowBar({
                 feedback,
               });
             } catch (error) {
+              // Same rationale as `executeTransition` above — do not
+              // re-throw inside the transition; surface via state.
               const message =
                 error instanceof Error ? error.message : "The approval action failed.";
               setActionError(message);
-              throw new Error(message);
             }
           }}
         />

@@ -12,20 +12,35 @@ export interface KpiCardProps {
   label: string;
   value: number;
   icon: React.ReactNode;
-  href: string;
+  /**
+   * Optional. When omitted, the card is rendered as a non-clickable
+   * tile (e.g. on the cross-workspace "My Work" page where the KPIs
+   * span every workspace and a single href would 404).
+   */
+  href?: string;
   /** Render the icon in the danger color (e.g. for "At risk" tiles). */
   danger?: boolean;
 }
 
 export function KpiCard({ label, value, icon, href, danger = false }: KpiCardProps) {
-  return (
-    <Link
-      href={href}
-      className="border-border bg-surface hover:border-primary focus-visible:ring-focus-ring rounded-[var(--radius-card)] border p-4 transition-colors focus:outline-none focus-visible:ring-2"
-    >
+  const body = (
+    <>
       <div className={cn(danger ? "text-danger" : "text-primary")}>{icon}</div>
       <p className="text-title-page text-fg-primary mt-3 font-semibold">{value}</p>
       <p className="text-label text-fg-secondary">{label}</p>
-    </Link>
+    </>
+  );
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="border-border bg-surface hover:border-primary focus-visible:ring-focus-ring rounded-[var(--radius-card)] border p-4 transition-colors focus:outline-none focus-visible:ring-2"
+      >
+        {body}
+      </Link>
+    );
+  }
+  return (
+    <div className="border-border bg-surface rounded-[var(--radius-card)] border p-4">{body}</div>
   );
 }

@@ -156,30 +156,33 @@ export default async function MyWorkPage() {
       />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4" data-testid="my-work-kpi-row">
+        {/*
+         * The KPIs on My Work are cross-workspace — they aggregate
+         * every workspace the user has a stake in — so there is no
+         * single `/app/w/[slug]/planning|reviews` href to point at.
+         * Render them as display tiles; the workspace list and each
+         * workspace's own Overview provide the actionable deep links.
+         */}
         <KpiCard
           label="Assigned to me"
           value={assignedToMe}
           icon={<FileText className="h-4 w-4" aria-hidden="true" />}
-          href="/app/planning"
         />
         <KpiCard
           label="Awaiting my review"
           value={awaitingMyReview}
           icon={<Eye className="h-4 w-4" aria-hidden="true" />}
-          href="/app/reviews"
         />
         <KpiCard
           label="At risk"
           value={atRisk}
           icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
-          href="/app/planning?filter=at_risk"
           danger
         />
         <KpiCard
           label="Ready to publish"
           value={readyToPublish}
           icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
-          href="/app/planning?filter=ready"
         />
       </div>
 
