@@ -54,16 +54,19 @@ export async function createChannelAction(slug: string, _previous: unknown, form
   return { success: true };
 }
 
-export async function archiveChannelAction(slug: string, channelId: string) {
+export async function archiveChannelAction(
+  slug: string,
+  channelId: string,
+): Promise<{ error?: string }> {
   const session = await auth();
-  if (!session?.user?.id) return;
+  if (!session?.user?.id) return { error: "Sign in is required." };
   const actor = { id: session.user.id };
   const context = await resolveActiveAgencyContext({ actor });
-  if (!context) return;
+  if (!context) return { error: "Agency not configured." };
   const workspace = await getAccessibleWorkspace(actor, slug, context.agencyId);
-  if (!workspace) return;
+  if (!workspace) return { error: "Workspace not found." };
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
-    return;
+    return { error: "Workspace manager access is required." };
   await db.transaction(async (tx) => {
     const [channel] = await tx
       .select({ platform: socialChannels.platform, archivedAt: socialChannels.archivedAt })
@@ -87,6 +90,7 @@ export async function archiveChannelAction(slug: string, channelId: string) {
     ]);
   });
   revalidatePath(`/app/w/${slug}/channels`);
+  return {};
 }
 
 /**

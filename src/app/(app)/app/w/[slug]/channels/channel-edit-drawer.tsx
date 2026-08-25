@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { AlertTriangle, Check, MoreHorizontal, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -296,7 +297,16 @@ export function ChannelRowActions({ slug, channel }: { slug: string; channel: Ch
 
   const handleArchive = () => {
     startArchiveTransition(async () => {
-      await archiveChannelAction(slug, channel.id);
+      const result = await archiveChannelAction(slug, channel.id);
+      if (result.error) {
+        // OTHER-07 — the server action used to `return;` on every
+        // error path (auth, missing workspace, wrong role). The
+        // confirm dialog closed silently and the user had no idea
+        // why. Now the action returns `{ error?: string }` and we
+        // surface it in a destructive toast.
+        toast.error("Could not archive channel", { description: result.error });
+        return;
+      }
       setConfirmOpen(false);
     });
   };
