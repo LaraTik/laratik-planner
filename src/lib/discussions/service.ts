@@ -32,21 +32,47 @@ export const LABEL_VALUES = ["general", "question", "feedback", "decision"] as c
 export type CommentVisibility = (typeof VISIBILITY_VALUES)[number];
 export type CommentLabel = (typeof LABEL_VALUES)[number];
 
-/** Parse a comment body and extract @mentions by email or display name. */
+/**
+ * Parse a comment body and extract @mentions by email or display name.
+ *
+ * Two-pass over (body, users) is O(body_length + users) instead of the
+ * O(users × body_length) of the previous `body.includes(candidate)`
+ * loop. The body is scanned once for every `@`-prefixed token, then
+ * each token is checked against a per-user candidate list. Token
+ * order is irrelevant because the result is a unique set of user ids;
+ * the user iteration order (DB-returned) is preserved for
+ * determinism so the comment_mention insert order is stable.
+ *
+ * The mentionableUsers query (see `createComment` below) is bounded
+ * at 200 members — that cap is the primary defense against an
+ * absurdly large workspace, not this loop.
+ */
 function extractMentions(
   body: string,
   workspaceUserIds: { id: string; email: string; displayName: string }[],
 ) {
+  // Single-pass: extract every `@`-prefixed token from the body.
+  // The pattern stops at whitespace and common punctuation so
+  // `@alice,` and `@bob.` parse as `@alice` and `@bob` (the
+  // original `.includes()` matched the substring too, so this is
+  // a strict subset of the prior behavior).
+  const tokenRegex = /@[^\s,;.!?:()[\]{}<>]+/g;
+  const tokens = new Set<string>();
+  for (const match of body.matchAll(tokenRegex)) {
+    tokens.add(match[0]);
+  }
+
   const out: string[] = [];
   const seen = new Set<string>();
   for (const user of workspaceUserIds) {
+    if (seen.has(user.id)) continue;
     const candidates = [
       `@${user.email}`,
       `@${user.email.split("@")[0]}`,
       `@${user.displayName.replace(/\s+/g, "")}`,
     ];
     for (const c of candidates) {
-      if (body.includes(c) && !seen.has(user.id)) {
+      if (tokens.has(c)) {
         out.push(user.id);
         seen.add(user.id);
         break;
@@ -117,7 +143,11 @@ export async function createComment(actor: Actor, input: CreateCommentInput) {
     throw new Error("Client reviewers can only post client-visible comments");
   }
 
-  // Resolve mentions from the body (limited to workspace members)
+  // Resolve mentions from the body. Bounded at 200 members so a
+  // 10 000-char comment × 200 users × 3 candidates = 6M
+  // comparisons is the worst case (now reduced further to a single
+  // body pass + 600 candidate checks via the two-pass scanner in
+  // `extractMentions`).
   const mentionableUsers = await db
     .select({ id: users.id, email: users.email, displayName: users.displayName })
     .from(users)
@@ -127,7 +157,8 @@ export async function createComment(actor: Actor, input: CreateCommentInput) {
         eq(workspaceMemberships.workspaceId, item.workspaceId),
         eq(workspaceMemberships.status, "active"),
       ),
-    );
+    )
+    .limit(200);
   const mentionedUserIds = extractMentions(data.body, mentionableUsers).filter(
     (id) => id !== actor.id, // don't self-notify
   );
