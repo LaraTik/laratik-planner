@@ -268,13 +268,16 @@ export default async function SignInPage({
               />
             </div>
 
-            <label className="text-label text-fg-primary flex items-center gap-2">
+            <label
+              htmlFor="remember"
+              className="text-label text-fg-primary flex min-h-[var(--control-touch)] cursor-pointer items-center gap-2"
+            >
               <input
                 id="remember"
                 name="remember"
                 type="checkbox"
                 value="on"
-                className="border-border text-primary focus:ring-focus-ring bg-surface h-4 w-4 cursor-pointer rounded"
+                className="border-border text-primary focus-visible:ring-focus-ring bg-surface h-4 w-4 cursor-pointer rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
               />
               Remember me for 30 days
             </label>
