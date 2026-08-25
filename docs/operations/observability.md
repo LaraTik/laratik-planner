@@ -11,15 +11,17 @@
 
 ## Status
 
-| Surface             | Status            | Owner action                                                                                                                                | When |
-| ------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
-| Sentry DSN          | ⏳ owner-supplied | Set `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` + `SENTRY_AUTH_TOKEN` in `/opt/laratik-planner/.env`, then `docker compose up -d --no-deps app` | Once |
-| Sentry source maps  | ⏳ owner-supplied | `SENTRY_AUTH_TOKEN` is already wired in `next.config.ts`; source maps upload on every build automatically once the token is set             | Once |
-| Sentry alert rules  | ⏳ owner-supplied | Create the rules in the Sentry UI (templates below)                                                                                         | Once |
-| Uptime Kuma monitor | ⏳ owner-supplied | Add `https://planner.laratik.com/api/health` as an HTTP monitor, 60s interval, 3 retries                                                    | Once |
-| Telegram notifier   | ⏳ owner-supplied | Add a Telegram notifier in Uptime Kuma and the vps-ops ops-monitor stack (see vps-ops `gitops`)                                             | Once |
-| Log rotation        | ✅ live           | `docker-compose.yml` already rotates at `10m × 5` per service                                                                               | n/a  |
-| Health snap (daily) | ✅ live           | `ssh laratik-vps 'sudo bash /root/gitops/scripts/health-snap.sh'` runs in the vps-ops `gitops` cron                                         | n/a  |
+| Surface             | Status            | Owner action                                                                                                                                | When | Owner | Due         | Result    |
+| ------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ----- | ----------- | --------- |
+| Sentry DSN          | ⏳ owner-supplied | Set `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` + `SENTRY_AUTH_TOKEN` in `/opt/laratik-planner/.env`, then `docker compose up -d --no-deps app` | Once | Owner | pre-go-live | ☐ Pending |
+| Sentry source maps  | ⏳ owner-supplied | `SENTRY_AUTH_TOKEN` is already wired in `next.config.ts`; source maps upload on every build automatically once the token is set             | Once | Owner | pre-go-live | ☐ Pending |
+| Sentry alert rules  | ⏳ owner-supplied | Create the 4 rules in the Sentry UI (templates below)                                                                                       | Once | Owner | pre-go-live | ☐ Pending |
+| Uptime Kuma monitor | ⏳ owner-supplied | Add `https://planner.laratik.com/api/health` as an HTTP monitor, 60s interval, 3 retries                                                    | Once | Owner | pre-go-live | ☐ Pending |
+| Telegram notifier   | ⏳ owner-supplied | Add a Telegram notifier in Uptime Kuma and the vps-ops ops-monitor stack (see vps-ops `gitops`)                                             | Once | Owner | pre-go-live | ☐ Pending |
+| Log rotation        | ✅ live           | `docker-compose.yml` already rotates at `10m × 5` per service                                                                               | n/a  | n/a   | n/a         | ✅ Live   |
+| Health snap (daily) | ✅ live           | `ssh laratik-vps 'sudo bash /root/gitops/scripts/health-snap.sh'` runs in the vps-ops `gitops` cron                                         | n/a  | n/a   | n/a         | ✅ Live   |
+
+> **Closed-loop reminder (per OBS-001):** the four `⏳ owner-supplied` rows above block flipping OBS-001 from `Partial` to `Tested`. The `Due` and `Result` columns make the contract visible at a glance. Each row's surface has a runtime alert (see "Closed-loop alerts" below) — when that alert fires before the row is closed, the missing integration is observable without waiting for a manual audit.
 
 ## Sentry
 
@@ -131,12 +133,33 @@ ssh laratik-vps 'sudo ls -la /var/lib/docker/containers/*/'
 
 ## What's still owner-supplied (one-time)
 
-- [ ] `SENTRY_DSN` in `/opt/laratik-planner/.env` (Sentry → Settings → Projects → Client Keys)
-- [ ] `NEXT_PUBLIC_SENTRY_DSN` in `/opt/laratik-planner/.env` (same value as `SENTRY_DSN`)
-- [ ] `SENTRY_AUTH_TOKEN` in `/opt/laratik-planner/.env` (Sentry → Settings → Auth Tokens, with `project:releases` + `project:debug-files` scopes)
-- [ ] `docker compose up -d --no-deps app` to restart with the new env
-- [ ] Sentry alert rules: `prod-5xx-spike`, `deploy-rollback`, `slow-request`, `release-health-crash`
-- [ ] Uptime Kuma monitor: `https://planner.laratik.com/api/health` with body match `{"ok":true`
-- [ ] Telegram notifier for Kuma + the health-snap channel
+The following tracking table replaces the previous empty checkbox list. The columns mirror the `EXTERNAL_SERVICES_UAT.md` row template (`Owner` / `Date` / `Result` / `Evidence link`) so OBS-001 closure can be cross-referenced with the existing UAT evidence. Each row's `Surface` matches a row in the Status table above; the `Result` and `Date` columns close the loop.
 
-Once all of the above is in place, flip `OBS-001` in the tracker from `Partial` to `Tested` and capture the Sentry + Kuma screenshots in `docs/production-readiness/`.
+| #   | Surface / Item                                                                                                                               | Owner | Due                     | Date       | Result    | Evidence link                                                          |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ----------------------- | ---------- | --------- | ---------------------------------------------------------------------- |
+| 1   | `SENTRY_DSN` in `/opt/laratik-planner/.env` (Sentry → Settings → Projects → Client Keys)                                                     | Owner | pre-go-live             | 2026-**-** | ☐ Pending | (paste Sentry project URL + masked DSN)                                |
+| 2   | `NEXT_PUBLIC_SENTRY_DSN` in `/opt/laratik-planner/.env` (same value as `SENTRY_DSN`)                                                         | Owner | pre-go-live             | 2026-**-** | ☐ Pending | (same as #1)                                                           |
+| 3   | `SENTRY_AUTH_TOKEN` in `/opt/laratik-planner/.env` (Sentry → Settings → Auth Tokens, with `project:releases` + `project:debug-files` scopes) | Owner | pre-go-live             | 2026-**-** | ☐ Pending | (paste Sentry auth-token creation date)                                |
+| 4   | `docker compose up -d --no-deps app` to restart with the new env                                                                             | Owner | immediately after #1–#3 | 2026-**-** | ☐ Pending | (`docker ps` shows the new container; `docker logs` confirms SDK boot) |
+| 5   | Sentry alert rule `prod-5xx-spike`                                                                                                           | Owner | pre-go-live             | 2026-**-** | ☐ Pending | (paste Sentry alert rule URL)                                          |
+| 5a  | Sentry alert rule `deploy-rollback`                                                                                                          | Owner | pre-go-live             | 2026-**-** | ☐ Pending | (same)                                                                 |
+| 5b  | Sentry alert rule `slow-request`                                                                                                             | Owner | pre-go-live             | 2026-**-** | ☐ Pending | (same)                                                                 |
+| 5c  | Sentry alert rule `release-health-crash`                                                                                                     | Owner | pre-go-live             | 2026-**-** | ☐ Pending | (same)                                                                 |
+| 6   | Uptime Kuma monitor: `https://planner.laratik.com/api/health` with body match `{"ok":true`                                                   | Owner | pre-go-live             | 2026-**-** | ☐ Pending | (paste Kuma monitor status page)                                       |
+| 7   | Telegram notifier for Kuma + the health-snap channel                                                                                         | Owner | pre-go-live             | 2026-**-** | ☐ Pending | (paste vps-ops `gitops` notifier config)                               |
+
+When **all** rows above reach `☐ Pending` → `✅ Done` (replace the ☐ with ✅ and fill the Date + Evidence link), flip `OBS-001` in the tracker from `Partial` to `Tested` and capture the Sentry + Kuma screenshots in `docs/production-readiness/`. The Date column is the actual completion date; the Due column is the contract.
+
+## Closed-loop alerts (runtime surfaces that catch a missed item)
+
+The pattern below turns each unchecked row above into a runtime signal — so OBS-001 closure is observable without a manual audit, and a missed item surfaces the same week instead of at the next go-live review.
+
+| #    | Surface (above)          | Runtime alert that surfaces it                                                                                                                                                                                  | Where to look when the alert fires                                                                                    |
+| ---- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 1–3  | Sentry DSN / auth token  | `prod-5xx-spike` (Sentry alert rule) — errors that should be captured by the SDK are not, so a release with the missing DSN shows a 5xx spike in the vps-ops Telegram channel with **no** matching Sentry event | Sentry → Issues (should be populated) vs. vps-ops Telegram (5xx spike) → if Sentry is empty, the DSN is still missing |
+| 4    | App restart with new env | `deploy-rollback` Sentry rule + Uptime Kuma monitor (`/api/health` 60s, body match) — if the app fails to boot after the env swap, the health monitor flips DOWN within 60s                                     | Uptime Kuma → planner.laratik.com monitor                                                                             |
+| 5–5c | Sentry alert rules       | `slow-request` and `release-health-crash` are themselves the rules; if the rule list is empty, the vps-ops ops-monitor stack surfaces "no Sentry alert activity" via the daily `health-snap.sh` Telegram post   | Uptime Kuma → planner.laratik.com monitor + vps-ops `health-snap.sh` daily Telegram post                              |
+| 6    | Uptime Kuma monitor      | The monitor itself is the closed loop — if the rule is missing, the vps-ops `ops-monitor` stack alerts "Uptime Kuma: 0 monitors for planner.laratik.com" within 24h of the next daily check                     | Uptime Kuma → Dashboard (should show 1 monitor for the planner endpoint)                                              |
+| 7    | Telegram notifier        | The first `prod-5xx-spike` Sentry alert or the first Uptime Kuma DOWN should reach a Telegram chat. If no Telegram message is received within 5 minutes of a known event, the notifier is not wired             | vps-ops `gitops` ops-monitor stack notifier config                                                                    |
+
+> The pattern above is the same one that closed the 2026-08-22 SMTP-cert story: the cert-probe job now runs daily and gates deploy, so a missed renewal surfaces within 24h instead of at the next incident review. Apply the same model to OBS-001.
