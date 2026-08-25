@@ -1,71 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { randomBytes } from "node:crypto";
 import { z } from "zod";
-import * as Sentry from "@sentry/nextjs";
 import { signIn } from "@/lib/auth/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
 import { AlertCircle, Wrench } from "lucide-react";
 import { authError } from "./auth-error-codes";
+import { signInErrorRedirect, emailDomain } from "./auth-error-server";
 import { serverEnv } from "@/lib/validation/env";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { headers } from "next/headers";
-
-/**
- * Mint a short, log-friendly support reference we can include in the
- * `?ref=` query param. The user quotes this to support; the server-side
- * `logger.error({ ref, ... }, "...")` in the form-action catches prints
- * the same id, so a single string links a user report to a log line.
- *
- * The Next.js error digest (shown by `src/app/error.tsx`) is a separate
- * number issued by the framework; we keep our `ref` independent so
- * support can correlate either side without ambiguity.
- */
-function newSupportRef(): string {
-  return randomBytes(6).toString("hex"); // 12 hex chars, URL-safe
-}
-
-/**
- * Redirect to /signin with a user-readable error code. When the cause is
- * unexpected (anything that isn't a CredentialsSignin / RateLimited /
- * Configuration), we mint a support reference, log + Sentry-capture the
- * original error, and append `?ref=<id>` so the user can quote it to
- * support. The authError() map already covers the `Unknown` code with a
- * copy that tells the user to include the reference.
- *
- * Failing closed: if Sentry is not configured (no DSN), we still log to
- * stderr so the support ref is recoverable from the application log even
- * without a Sentry org.
- */
-function signInErrorRedirect(input: {
-  code: string;
-  callbackUrl: string;
-  cause?: unknown;
-  context?: Record<string, unknown>;
-}): never {
-  const ref = newSupportRef();
-  if (input.cause !== undefined) {
-    console.error(
-      `[auth.signin] ref=${ref} code=${input.code} context=${JSON.stringify(input.context ?? {})}`,
-      input.cause,
-    );
-    Sentry.captureException(input.cause, {
-      tags: { "auth.signin.code": input.code, "auth.signin.ref": ref },
-      // exactOptionalPropertyTypes is enabled in this project; we
-      // cannot pass `extra: undefined`. Only attach when there is
-      // something to attach.
-      ...(input.context ? { extra: input.context } : {}),
-    });
-  }
-  const params = new URLSearchParams({
-    error: input.code,
-    callbackUrl: input.callbackUrl,
-    ref,
-  });
-  redirect(`/signin?${params.toString()}`);
-}
 
 /**
  * Zod schema for the sign-in email input. We reject obvious non-emails
@@ -140,12 +85,6 @@ function isRedirectError(err: unknown): boolean {
     // Next.js 16 also exposes a `digest` on these throw values.
     typeof (err as { digest?: unknown }).digest === "string"
   );
-}
-
-/** Email-domain helper for the Sentry tag (never log the full email). */
-function emailDomain(email: string): string {
-  const at = email.lastIndexOf("@");
-  return at >= 0 ? email.slice(at + 1).toLowerCase() : "(none)";
 }
 
 export default async function SignInPage({
