@@ -68,11 +68,13 @@ function resolveSnapshotPath(
     .replace(/\{ext\}/g, ext);
 }
 
-const configModule = (await import(
-  path.join(REPO_ROOT, "playwright.config.ts")
-)) as { default?: PlaywrightTestConfig };
+const configModule = (await import(path.join(REPO_ROOT, "playwright.config.ts"))) as {
+  default?: PlaywrightTestConfig;
+};
 if (!configModule.default) {
-  throw new Error(`playwright.config.ts did not export a default config (looked at ${CONFIG_PATH})`);
+  throw new Error(
+    `playwright.config.ts did not export a default config (looked at ${CONFIG_PATH})`,
+  );
 }
 const liveConfig = configModule.default;
 

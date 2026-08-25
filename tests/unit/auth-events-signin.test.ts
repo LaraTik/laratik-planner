@@ -192,9 +192,7 @@ describe("events.signIn stamps emailVerified for unverified users", () => {
         return obj.value.flatMap((v) => collectSegments(v, depth + 1, seen));
       }
       if (Array.isArray(obj.queryChunks)) {
-        return (obj.queryChunks as unknown[]).flatMap((c) =>
-          collectSegments(c, depth + 1, seen),
-        );
+        return (obj.queryChunks as unknown[]).flatMap((c) => collectSegments(c, depth + 1, seen));
       }
       // Generic object (e.g. the `{ emailVerified: <SQL> }` set
       // envelope) — recurse into each property value so the
@@ -219,9 +217,7 @@ describe("events.signIn stamps emailVerified for unverified users", () => {
 
     const handler = authConfig.events?.signIn;
     expect(handler).toBeDefined();
-    await expect(
-      handler!({ user: { id: "user-explode" } } as never),
-    ).resolves.toBeUndefined();
+    await expect(handler!({ user: { id: "user-explode" } } as never)).resolves.toBeUndefined();
     expect(captureErrorMock).toHaveBeenCalledTimes(1);
     expect(captureErrorMock.mock.calls[0]?.[0]).toBe(
       "auth.events.signIn.email_verified_stamp_failed",
