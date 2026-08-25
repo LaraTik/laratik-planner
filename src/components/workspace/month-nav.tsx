@@ -21,22 +21,30 @@ export interface MonthNavProps {
 
 export function MonthNav({ month, buildHref, className }: MonthNavProps) {
   const label = month.toLocaleString("default", { month: "long", year: "numeric" });
+  const previousLabel = (() => {
+    const d = new Date(month.getFullYear(), month.getMonth() - 1, 1);
+    return d.toLocaleString("default", { month: "long", year: "numeric" });
+  })();
+  const nextLabel = (() => {
+    const d = new Date(month.getFullYear(), month.getMonth() + 1, 1);
+    return d.toLocaleString("default", { month: "long", year: "numeric" });
+  })();
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <Link
-        aria-label="Previous month"
+        aria-label={`Previous month, ${previousLabel}`}
         href={buildHref(-1)}
         className="border-border bg-surface focus-visible:ring-focus-ring rounded-[var(--radius-control)] border p-2 transition-colors focus:outline-none focus-visible:ring-2"
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
       </Link>
       <span className="text-body min-w-32 text-center font-semibold sm:min-w-36">{label}</span>
       <Link
-        aria-label="Next month"
+        aria-label={`Next month, ${nextLabel}`}
         href={buildHref(1)}
         className="border-border bg-surface focus-visible:ring-focus-ring rounded-[var(--radius-control)] border p-2 transition-colors focus:outline-none focus-visible:ring-2"
       >
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </Link>
     </div>
   );
