@@ -1,13 +1,11 @@
-import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { auth } from "@/lib/auth/config";
 import { listUnassignedDesignWork } from "@/lib/content/service";
+import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
-import { StatusBadge } from "@/components/content/status-badge";
-import { EmptyState } from "@/components/feedback/empty-state";
-import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
-import { Clock, Paintbrush } from "lucide-react";
+import { Clock } from "lucide-react";
+import { DesignQueueList, type DesignQueueListItem } from "./design-queue-list";
 
 export default async function DesignQueuePage({ params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();
@@ -20,6 +18,20 @@ export default async function DesignQueuePage({ params }: { params: Promise<{ sl
   // picks up the role-gate, future cursor support, and any
   // downstream filters without further changes here.
   const rows = await listUnassignedDesignWork({ id: session.user.id }, workspace.id);
+  // FEAT-14 (GAP-FULL-REVIEW-2026-08-25) — only the planner /
+  // manager sees the bulk-action toolbar. Designers still see
+  // the queue (so they can claim) but cannot archive in bulk.
+  const canBulkArchive = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
+    "workspace_manager",
+    "content_planner",
+  ]);
+  const items: DesignQueueListItem[] = rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    status: r.status,
+    plannedPublishAtIso: r.plannedPublishAt.toISOString(),
+    href: `/app/w/${slug}/planning/${r.id}`,
+  }));
   return (
     <div className="space-y-6" data-testid="workspace-design-queue">
       <PageHeader
@@ -35,31 +47,7 @@ export default async function DesignQueuePage({ params }: { params: Promise<{ sl
           </>
         }
       />
-      {rows.length ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {rows.map((row) => (
-            <Link
-              key={row.id}
-              href={`/app/w/${slug}/planning/${row.id}`}
-              className="border-border bg-surface hover:border-primary focus-visible:ring-focus-ring rounded-[var(--radius-card)] border p-4 transition-colors focus:outline-none focus-visible:ring-2"
-            >
-              <p className="text-body text-fg-primary font-semibold">{row.title}</p>
-              <p className="text-label text-fg-muted my-3">
-                Publish {row.plannedPublishAt.toLocaleDateString()}
-              </p>
-              <StatusBadge status={row.status} />
-            </Link>
-          ))}
-        </div>
-      ) : (
-        <Card variant="dashed" padding="lg">
-          <EmptyState
-            icon={<Paintbrush className="h-8 w-8" />}
-            title="No unassigned work"
-            description="Approved ideas with no designer will appear here."
-          />
-        </Card>
-      )}
+      <DesignQueueList workspaceId={workspace.id} items={items} canBulkArchive={canBulkArchive} />
     </div>
   );
 }

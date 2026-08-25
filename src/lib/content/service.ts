@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   activityEvents,
@@ -566,6 +566,73 @@ export async function listUnassignedDesignWork(
     .where(and(...conditions))
     .orderBy(sql`${contentItems.plannedPublishAt} ASC`, sql`${contentItems.id} ASC`)
     .limit(opts.limit ?? 200);
+}
+
+/**
+ * FEAT-14 (GAP-FULL-REVIEW-2026-08-25) — bulk archive a list of
+ * content items in a single transaction. Used by the design-queue
+ * "Archive selected" bulk action.
+ *
+ * The function is intentionally narrow: it does not change the
+ * `status` of the items (they keep their current workflow state)
+ * and does not emit a per-item activity event. The audit log
+ * records one summary event so a workspace manager reviewing the
+ * feed can see "Anna archived 12 unassigned items" instead of 12
+ * near-identical rows. The items are still soft-archived (the
+ * `archivedAt` column is the v1 archive mechanism), so the change
+ * is reversible by an operations script.
+ *
+ * Role gate: the same as `quickCreateContentItem` —
+ * `workspace_manager` or `content_planner`. The page-level UI
+ * hides the action from `designer` / `internal_reviewer` /
+ * `publisher` even though they could in principle mutate, so the
+ * bulk action stays in the planning / manager surface.
+ */
+export const BulkArchiveSchema = z.object({
+  workspaceId: z.string().uuid(),
+  contentItemIds: z.array(z.string().uuid()).min(1).max(500),
+});
+export type BulkArchiveInput = z.infer<typeof BulkArchiveSchema>;
+
+export async function bulkArchiveContentItems(actor: Actor, input: BulkArchiveInput) {
+  const parsed = BulkArchiveSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+  const { workspaceId, contentItemIds } = parsed.data;
+  await requirePolicy(
+    hasWorkspaceRole(actor, workspaceId, ["workspace_manager", "content_planner"]),
+    "bulk_archive_content",
+  );
+  const now = new Date();
+  return await db.transaction(async (tx) => {
+    const updated = await tx
+      .update(contentItems)
+      .set({ archivedAt: now, archivedBy: actor.id, updatedAt: now })
+      .where(
+        and(
+          eq(contentItems.workspaceId, workspaceId),
+          inArray(contentItems.id, contentItemIds),
+          // Defensive: ignore items that are already archived so the
+          // bulk action is idempotent.
+          isNull(contentItems.archivedAt),
+        ),
+      )
+      .returning({ id: contentItems.id });
+    const archivedSet = new Set(updated.map((u) => u.id));
+    // Keep only the items the caller asked for that the update
+    // actually touched.
+    const archivedIds = contentItemIds.filter((id) => archivedSet.has(id));
+    await tx.insert(activityEvents).values({
+      workspaceId,
+      actorId: actor.id,
+      kind: "bulk_archive",
+      summary: `Bulk-archived ${archivedIds.length} content item${archivedIds.length === 1 ? "" : "s"}`,
+      metadata: { contentItemIds: archivedIds },
+    });
+    revalidatePath(`/app/w/`);
+    return { archivedIds, skippedIds: contentItemIds.filter((id) => !archivedSet.has(id)) };
+  });
 }
 
 // ─── Workflow transitions (master prompt §10) ──────────────────────────
