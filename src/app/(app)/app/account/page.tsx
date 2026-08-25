@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
-import { Building2, Mail, ShieldCheck, User as UserIcon } from "lucide-react";
+import { Building2, Mail, ShieldCheck, User as UserIcon, Bell } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { agencyMemberships, agencies, users, workspaceMemberships } from "@/lib/db/schema";
@@ -11,9 +11,11 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { ProfileForm } from "./profile-form";
 import { PasswordForm } from "./password-form";
 import { SignOutForm } from "./sign-out-form";
+import { NotificationPreferencesForm } from "./notification-preferences-form";
 import { ApplicationInfoCard } from "@/components/build-info/application-info-card";
 import { createBuildInfo } from "@/lib/build-info";
 import { serverEnv } from "@/lib/validation/env";
+import { getNotificationPreferencesForUser } from "@/lib/notifications/service";
 
 /**
  * Account page — own profile, password, agency membership, sign out.
@@ -36,7 +38,7 @@ export default async function AccountPage() {
   // Read the user row + agency + workspace count + password state
   // in parallel. `getPasswordState` is a small helper that returns
   // { hasPassword } so the Password card can pick the right copy.
-  const [[profile], agencyRows, hasPassword] = await Promise.all([
+  const [[profile], agencyRows, hasPassword, notificationPrefs] = await Promise.all([
     db
       .select({
         id: users.id,
@@ -68,6 +70,7 @@ export default async function AccountPage() {
       .where(and(eq(agencyMemberships.userId, userId), eq(agencyMemberships.status, "active")))
       .limit(1),
     getPasswordState(userId),
+    getNotificationPreferencesForUser(userId),
   ]);
 
   // `getPasswordState` returns null when the user row has vanished
@@ -124,6 +127,24 @@ export default async function AccountPage() {
             : "Set a password to also sign in with email + password."}
         </p>
         <PasswordForm hasPassword={hasPassword.hasPassword} />
+      </Card>
+
+      <Card
+        aria-labelledby="notification-preferences-heading"
+        data-testid="notification-preferences-card"
+      >
+        <CardTitle id="notification-preferences-heading" className="mb-1 flex items-center gap-2">
+          <Bell className="h-4 w-4" aria-hidden="true" />
+          Notification preferences
+        </CardTitle>
+        <p className="text-body text-fg-muted mb-5">
+          Decide which notifications we email you about. Invitations and security events are always
+          sent.
+        </p>
+        <NotificationPreferencesForm
+          initialEmailOnMention={notificationPrefs.emailOnMention}
+          initialDailyDigest={notificationPrefs.dailyDigest}
+        />
       </Card>
 
       <Card aria-labelledby="agency-heading" data-testid="agency-card">

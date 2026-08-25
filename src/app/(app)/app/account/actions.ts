@@ -8,6 +8,7 @@ import {
   updateOwnProfile,
   type Locale,
 } from "@/lib/auth/profile";
+import { setNotificationPreferencesForUser } from "@/lib/notifications/service";
 
 /**
  * Own-profile server actions. All three:
@@ -37,6 +38,9 @@ export type PasswordActionState =
       field?: string;
     }
   | Record<string, never>;
+
+export type NotificationPreferencesActionState =
+  { saved: true } | { error: string } | Record<string, never>;
 
 export async function updateProfileAction(
   _previous: ProfileActionState,
@@ -99,4 +103,30 @@ export async function signOutAction(): Promise<void> {
   // turns it into a 307 to /signin. The throw is type `never`, so the
   // function is typed as Promise<void> for callers.
   await signOut({ redirectTo: "/signin" });
+}
+
+// ─── Notification preferences (FEAT-08) ─────────────────────────────────
+/**
+ * Save the two notification preferences surfaced on the account page
+ * ("Email me when I'm mentioned" + "Send me a daily digest"). The
+ * form posts the booleans as strings ("on" or absent); we coerce here
+ * so the client stays simple. Missing fields are treated as off — the
+ * checkbox is unchecked, so the absence is intentional.
+ */
+export async function setNotificationPreferencesAction(
+  _previous: NotificationPreferencesActionState,
+  formData: FormData,
+): Promise<NotificationPreferencesActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Sign in again to save your preferences." };
+  try {
+    await setNotificationPreferencesForUser(session.user.id, {
+      emailOnMention: formData.get("emailOnMention") === "on",
+      dailyDigest: formData.get("dailyDigest") === "on",
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath("/app/account");
+  return { saved: true };
 }

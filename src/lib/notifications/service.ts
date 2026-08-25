@@ -149,6 +149,14 @@ async function fanOutCommentCreated(
       },
       tx,
     );
+    // FEAT-08: read the user's email opt-in before queuing any email
+    // for this mention. The SMTP transport doesn't ship in v1, so
+    // today this is a single read + no-op (the "skip" the audit asks
+    // for). The future email worker calls the same helper, so when
+    // Mailcow wiring lands the opt-out is already enforced here.
+    if (!(await shouldEmailUserFor(userId, "mention"))) {
+      continue;
+    }
   }
 
   // (Reply notifications: would notify the parent comment's author.
@@ -188,6 +196,119 @@ async function maybeNotify(
     actionUrl: `/app/planning/${input.contentItemId}`,
     tx,
   });
+}
+
+// ─── Preference readers / writers (FEAT-08) ─────────────────────────────
+
+/**
+ * FEAT-08 (GAP-FULL-REVIEW-2026-08-25) — notification_preferences
+ * was a dead schema: the columns existed but no UI wrote them and no
+ * service read them. These helpers are the only API for the rest of
+ * the codebase, so the future email worker and the existing
+ * dispatchOutboxOnce funnel through one place.
+ *
+ * Conventions:
+ *  - `emailEnabled` is per (user, kind). Default OFF (opt-in).
+ *  - `digestEnabled` is a single user-level toggle stored on the
+ *    `system` kind (no other kind writes to it). Default OFF (opt-in).
+ *  - Missing rows mean "no preference saved" — callers fall back to
+ *    the safe default.
+ */
+
+async function readPreferenceRow(userId: string, kind: NotificationKind) {
+  const [row] = await db
+    .select({
+      inAppEnabled: notificationPreferences.inAppEnabled,
+      emailEnabled: notificationPreferences.emailEnabled,
+      digestEnabled: notificationPreferences.digestEnabled,
+    })
+    .from(notificationPreferences)
+    .where(and(eq(notificationPreferences.userId, userId), eq(notificationPreferences.kind, kind)))
+    .limit(1);
+  return row;
+}
+
+/**
+ * Should we email `userId` about a `kind` event? Master prompt §8
+ * defaults to off; the future email worker checks this before queueing
+ * a Mailcow SMTP send.
+ */
+export async function shouldEmailUserFor(userId: string, kind: NotificationKind): Promise<boolean> {
+  const row = await readPreferenceRow(userId, kind);
+  return row?.emailEnabled ?? false;
+}
+
+/**
+ * Should the daily digest include events for `userId`? The digest is a
+ * single user-level toggle (any "active" kind goes into the digest
+ * body), so we read the `system` row.
+ */
+export async function shouldDigestUserFor(userId: string): Promise<boolean> {
+  const row = await readPreferenceRow(userId, "system");
+  return row?.digestEnabled ?? false;
+}
+
+/**
+ * Snapshot of the user's notification preferences for the account-page
+ * UI. Returns safe defaults when no row exists yet.
+ */
+export async function getNotificationPreferencesForUser(userId: string): Promise<{
+  emailOnMention: boolean;
+  dailyDigest: boolean;
+}> {
+  const [mention, systemRow] = await Promise.all([
+    readPreferenceRow(userId, "mention"),
+    readPreferenceRow(userId, "system"),
+  ]);
+  return {
+    emailOnMention: mention?.emailEnabled ?? false,
+    dailyDigest: systemRow?.digestEnabled ?? false,
+  };
+}
+
+export const SetNotificationPreferencesSchema = z.object({
+  emailOnMention: z.boolean(),
+  dailyDigest: z.boolean(),
+});
+export type SetNotificationPreferencesInput = z.infer<typeof SetNotificationPreferencesSchema>;
+
+/**
+ * Upsert the user's notification preferences. Idempotent: subsequent
+ * saves overwrite the previous flag values for the two kinds we own.
+ * We never touch `inAppEnabled` — that flag is owned by the broader
+ * notification preferences writer and is always on today.
+ */
+export async function setNotificationPreferencesForUser(
+  userId: string,
+  input: SetNotificationPreferencesInput,
+): Promise<void> {
+  const parsed = SetNotificationPreferencesSchema.parse(input);
+  await db
+    .insert(notificationPreferences)
+    .values({
+      userId,
+      kind: "mention",
+      inAppEnabled: true,
+      emailEnabled: parsed.emailOnMention,
+      digestEnabled: false,
+    })
+    .onConflictDoUpdate({
+      target: [notificationPreferences.userId, notificationPreferences.kind],
+      set: { emailEnabled: parsed.emailOnMention },
+    });
+  await db
+    .insert(notificationPreferences)
+    .values({
+      userId,
+      kind: "system",
+      inAppEnabled: true,
+      emailEnabled: false,
+      digestEnabled: parsed.dailyDigest,
+    })
+    .onConflictDoUpdate({
+      target: [notificationPreferences.userId, notificationPreferences.kind],
+      set: { digestEnabled: parsed.dailyDigest },
+    });
 }
 
 // ─── Read helpers for the /app topbar ──────────────────────────────────
