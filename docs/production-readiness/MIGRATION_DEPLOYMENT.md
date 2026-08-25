@@ -245,3 +245,223 @@ rollback, only the Owner during rollback, and both original roles after restore.
 The complete integration suite passed 19 files / 150 tests. A destructive
 column rollback remains approval-gated and would require the verified
 pre-deployment backup.
+
+## Migration 0012 — Support access grants + AI budget tracking (M3)
+
+**Filename:** `src/lib/db/migrations/0012_support_access_grants.sql`
+**SHA-256:** `882d9fe62082cb5779281564ad3f25475e312827b75540256a3039c402e77d42`
+**Journal tag:** `0012_support_access_grants` (journal `when`: `1787544999872` — see §"2026-08-24 incident" above for the inversion)
+
+### Forward behavior
+
+Additive only. Four new tables are created:
+
+- `support_access_request` — ticketed platform-admin request to view tenant content. Status transitions: `pending → approved | rejected | cancelled | expired`. Duration is bounded (1–168 h) by `support_access_request_duration_positive`.
+- `support_access_grant` — the approved, time-limited grant that unlocks a specific scope. UNIQUE on `request_id` (one grant per request). Active when `revoked_at IS NULL AND expires_at > now()`. Downloads off by default.
+- `support_access_audit` — append-only audit of every viewed object. UPDATE / DELETE forbidden by the same `forbid_modify_audit_log()` trigger function that M2.1 attached to `agency_entitlement_change` and `platform_audit_event`.
+- `ai_daily_budget_usage` — per-(agency, user, day) request counter. Composite PK on `(agency_id, user_id, usage_date)`. The `/api/ai/generate` route reserves capacity here in the same transaction as the monthly reservation, so concurrent users cannot exceed `daily_ai_requests_per_user`.
+
+No existing table, column, index, check, or foreign key is modified. Total table count after migration: 47 (adds four to the M2 43-table baseline).
+
+### Compatibility statement
+
+Pre-migration application images remain compatible because all four tables are additive: no service query references them yet, so an older binary running against the post-migration schema behaves identically. The journal timestamp inversion is the documented exception — see §"2026-08-24 incident" above. The 0017 repair is the reconciliation path for production databases whose ledger skipped 0012.
+
+### Backup + rollback procedure
+
+Because the system is forward-only (no down-migrations):
+
+1. **Normal app rollback** — pin `image:` in `docker-compose.yml` back to the captured previous SHA. The previous binary never writes to any of the four new tables, so it is safe to leave them in place.
+2. **Schema rollback (if the new tables must be removed)** — restore the pre-migration `pg_dump` taken by `scripts/vps/backup.sh` immediately before the deploy. The four tables are dropped with the restore. Do NOT edit the applied migration file.
+3. **Destructive rollback** is approval-gated because `support_access_audit` rows are production evidence and `ai_daily_budget_usage` counters are operator-facing observability data.
+
+### Tests
+
+- `tests/integration/support-access.test.ts` — covers the four-table invariants: a `support_access_request` cannot be approved without an agency FK; the grant is UNIQUE per request; the audit log is append-only (UPDATE / DELETE raise via the trigger); `ai_daily_budget_usage` PK rejects duplicate `(agency, user, day)` writes.
+- `tests/integration/ai-governance.test.ts` — proves the daily budget reservation in `ai_daily_budget_usage` runs in the same transaction as the monthly reservation; concurrent requests cannot exceed the cap.
+- `tests/unit/migration-journal-order.test.ts` — the regression guard for the 0012 inversion. Allows only the documented 0012 inversion, requires the 0017 repair, and enforces strict monotonicity after it.
+- `pnpm migration-drill` drill 5 (skipped-0012 repair) — restores all four M3 tables and exactly one 0012 ledger row, passes on disposable Postgres 16 (2026-08-24).
+
+## Migration 0013 — ai_provider_secret (M3.4 — AI in-DB secret)
+
+**Filename:** `src/lib/db/migrations/0013_ai_provider_secret.sql`
+**SHA-256:** `036e4699974e54ff8f4ecc008e656c027c5ed2cfde890126eef4ddc71d807007`
+**Journal tag:** `0013_ai_provider_secret` (journal `when`: `1788100000000`)
+
+### Forward behavior
+
+Additive only. One new table:
+
+- `ai_provider_secret` — 1:1 with `agency` via `agency_id` PK. Holds the AES-256-GCM-sealed provider key (ciphertext, `iv(12) || authTag(16) || encrypted`), the `key_version` (1 today; rotation seam), the `last_four` mirrored to `ai_feature_setting.masked_key_suffix` for the UI badge, and the `rotated_by_user_id` audit context.
+
+Two CHECK constraints are added in the same migration:
+
+- `ai_provider_secret_last_four_len` — `char_length(last_four) = 4` (the masked-suffix contract).
+- `ai_provider_secret_key_version_range` — `key_version BETWEEN 1 AND 32767` (16-bit seam).
+
+The ciphertext column is `bytea` (not `text`) so an accidental `console.log(row)` will not produce readable output and a query builder that defaults to casting `bytea` to text will surface a build hazard. The encryption helper + service that write / read this table land in a follow-up commit (M3.4 service layer); until then, every existing read path is unaffected.
+
+### Compatibility statement
+
+Pre-migration application images remain compatible because the table is additive and the application code is unchanged by this migration. No existing row is modified. A subsequent service-layer commit introduces the read / write helper; before that, the table is written-but-unread by the application.
+
+### Backup + rollback procedure
+
+Because the system is forward-only:
+
+1. **Normal app rollback** — pin `image:` to the captured previous SHA. The previous binary never reads `ai_provider_secret`, so it is safe to leave the new table in place.
+2. **Schema rollback (destructive)** — `DROP TABLE ai_provider_secret`. Must be paired with a verified pre-migration `pg_dump` because the ciphertext is the only recoverable copy of the API key (rotation is not in scope for this milestone; the destructive path is only safe before any agency has stored a secret).
+
+### Tests
+
+- `tests/integration/ai-governance.test.ts` — covers the `ai_feature_setting` + `ai_provider_secret` split (config row + ciphertext row), the masked-suffix mirror invariant, and the key-version seam.
+- `tests/unit/ai-provider-secret-repository.test.ts` — the read / write round-trip for the encryption helper (M3.4 service layer).
+- `pnpm migration-drill` drill 1 (from-zero) and drill 3 (backup / restore) — both PASS with the new table included on disposable Postgres 16 (2026-08-23).
+
+## Migration 0014 — agency locale / timezone as top-level columns
+
+**Filename:** `src/lib/db/migrations/0014_agency_locale_timezone.sql`
+**SHA-256:** `fdfe3da633eccd741aa73a57c232f443c56c37a5dc6f546975b8f1f78d8fd800`
+**Journal tag:** `0014_agency_locale_timezone` (journal `when`: `1788200000000`)
+
+### Forward behavior
+
+Two new top-level columns on `agency`:
+
+- `locale text NOT NULL DEFAULT 'en'`
+- `timezone text NOT NULL DEFAULT 'UTC'`
+
+Followed by a single conditional `UPDATE` that backfills from the legacy `agency.settings ->> 'locale' / settings ->> 'timezone'` jsonb path when the new columns are still at their defaults. Two CHECK constraints are then added:
+
+- `agency_locale_len` — `char_length(locale) BETWEEN 2 AND 20`
+- `agency_timezone_len` — `char_length(timezone) BETWEEN 2 AND 80`
+
+The legacy `settings` jsonb column is left in place for any future free-form fields. The follow-up commit updates the application read path to the new columns; before that, the columns are written-but-unread by the application.
+
+### Compatibility statement
+
+Additive for the schema (two new columns + two new CHECK constraints). The backfill is read-mostly: the `UPDATE` is a `SELECT`-only read followed by a conditional `UPDATE` that only writes when the jsonb path is present and the new columns are still at their defaults. No existing row loses data. The M2-era `createAgency` server action writes the two fields to BOTH the new columns and the jsonb path, so the backfill never picks up a value that was missing in the new columns.
+
+### Backup + rollback procedure
+
+Because the system is forward-only:
+
+1. **Normal app rollback** — pin `image:` to the captured previous SHA. The previous binary reads `agency.settings.locale / settings.timezone` and ignores the new top-level columns, so it is safe to leave them in place.
+2. **Schema rollback (destructive)** — `ALTER TABLE agency DROP COLUMN timezone; ALTER TABLE agency DROP COLUMN locale;` The backfill is idempotent on re-run (only writes when the jsonb path is present and the new columns are still at their defaults), so a re-attempt after a fresh from-zero migration is safe.
+
+### Tests
+
+- `tests/integration/agency-singleton-constraint.test.ts` and the agency / agency_settings integration tests — cover the new top-level columns and the backfill.
+- `tests/unit/agency-repository.test.ts` — the read-path helper that switches from `settings.locale / settings.timezone` to the top-level columns.
+- `pnpm migration-drill` drill 1 (from-zero) — PASS with the new columns included on disposable Postgres 16 (2026-08-23).
+
+## Migration 0015 — Social profile analytics (M4)
+
+**Filename:** `src/lib/db/migrations/0015_social_profile_analytics.sql`
+**SHA-256:** `b39fb8a840278efeae38405bdfbd68a75d9b78da60f892d5a0228f589f4ddd51`
+**Journal tag:** `0015_social_profile_analytics` (journal `when`: `1788300000000`)
+
+### Forward behavior
+
+Additive only. Three new tables plus additive columns on `social_channel`:
+
+- `social_connection` — one row per (workspace, provider, provider_subject_id). Holds the AES-256-GCM-sealed credential envelope (`credentials_ciphertext`, `credentials_iv`, `credentials_tag`, `credentials_key_version`), the lifecycle status, the OAuth scopes, and the access / refresh token expiry. CHECK `social_connection_provider_valid` constrains `provider` to `('meta', 'tiktok')`. Partial UNIQUE on `(workspace_id, provider, provider_subject_id) WHERE revoked_at IS NULL` so a revoked connection does not block a fresh connect for the same subject.
+- `social_oauth_state` — short-lived CSRF bag. The start route inserts one row; the callback route consumes it exactly once inside a single transaction. The `state_digest` stores `sha256(state)` — the raw state is never persisted. CHECK `social_oauth_state_return_path_safe` pins the return path to `^/app/w/[a-z0-9-]+/channels$`.
+- `social_profile_daily_metric` — one row per (channel, calendar day in workspace timezone). Stores the normalized observed totals, the `response_hash`, the `provider_api_version`, and a small typed `source_metadata` bag. No raw provider payload is retained. CHECK `social_profile_metric_counts_non_negative` rejects negative counts on every numeric column.
+
+`social_channel` is extended additively with `social_connection_id`, `external_account_id`, `avatar_url`, `connection_status` (default `'manual'`), `last_synced_at`, `next_sync_at`, `sync_lease_until`, `sync_failure_count`, `last_sync_error_code`, `last_sync_error_at`. CHECK `social_channel_connection_status_valid` constrains the status. A partial UNIQUE on `(workspace_id, platform, external_account_id) WHERE external_account_id IS NOT NULL AND archived_at IS NULL` keeps manual and connected channels distinct. A partial index on `next_sync_at` keeps the cron worker scan cheap.
+
+No existing table has column drops. No existing index, check, or foreign key is modified. Existing manual channels pass the new `connection_status` check because the default is `'manual'`, which is in the allowed set.
+
+### Compatibility statement
+
+Pre-migration application images remain compatible because all three new tables are additive and every new `social_channel` column is nullable (or has a `'manual'` default). The M3 binary does not read `social_connection`, `social_oauth_state`, or `social_profile_daily_metric`, so it is safe to leave the new tables in place during a normal app rollback.
+
+### Backup + rollback procedure
+
+Because the system is forward-only:
+
+1. **Normal app rollback** — pin `image:` to the captured previous SHA. The previous binary never writes to any of the three new tables or the new `social_channel` columns, so it is safe to leave them in place. The new nullable columns remain valid even if the application does not read them.
+2. **Schema rollback (destructive)** — restore the pre-migration `pg_dump`. The three new tables are dropped with the restore; the new `social_channel` columns are dropped via a one-off `ALTER TABLE ... DROP COLUMN` if you want to keep forward-only and skip the restore. Do NOT edit the applied migration file.
+
+### Tests
+
+- `tests/integration/social-analytics.test.ts` — the three-table invariants: the partial UNIQUE on `social_connection` allows a re-connect after a revoke; the OAuth state row is consumed exactly once; `social_profile_daily_metric` rejects negative counts via the CHECK.
+- `tests/integration/social-repository.test.ts` — covers the `social_channel` additive columns, the `connection_status` default, and the partial UNIQUE on `external_account_id`.
+- `pnpm migration-drill` drills 1–4 — PASS with the new tables included on disposable Postgres 16 (2026-08-24).
+
+## Migration 0016 — per-agency social DEK (M4.5)
+
+**Filename:** `src/lib/db/migrations/0016_per_agency_social_dek.sql`
+**SHA-256:** `aeff866f432263be987a7b8461c189dff6f27734d8d7406755874b0e223f2171`
+**Journal tag:** `0016_per_agency_social_dek` (journal `when`: `1788400000000`)
+
+### Forward behavior
+
+Additive only. One new table:
+
+- `agency_social_dek` — 1:1 with `agency` via `agency_id` PK. Holds the wrapped DEK envelope (`dek_ciphertext bytea`, `dek_iv bytea` (12 bytes), `dek_tag bytea` (16 bytes), `dek_key_version smallint`) plus the `enabled_at` / `enabled_by`, `last_rotated_at` / `last_rotated_by`, and `rotation_reason` audit context. The DEK is generated on first enable, wrapped with the platform KEK, and stored here; the plaintext DEK is shown to the agency admin exactly once and is never persisted.
+
+Five CHECK constraints are added:
+
+- `agency_social_dek_key_version_range` — `dek_key_version BETWEEN 1 AND 32767` (mirrors `ai_provider_secret.key_version`).
+- `agency_social_dek_rotation_reason_valid` — `NULL` or one of `('manual', 'recovery_reset')`.
+- `agency_social_dek_ciphertext_min_length` — `octet_length(dek_ciphertext) >= 32`.
+- `agency_social_dek_iv_length` — `octet_length(dek_iv) = 12`.
+- `agency_social_dek_tag_length` — `octet_length(dek_tag) = 16`.
+
+One index is added: `agency_social_dek_kv_idx` on `dek_key_version` to support the KEK-rotation script (find every row sealed with the old KEK in one scan).
+
+The wrapped DEK columns are `bytea` (not `text`) so an accidental `console.log(row)` will not produce readable output, and a query builder that defaults to casting `bytea` to text will surface a build hazard.
+
+### Compatibility statement
+
+Pre-migration application images remain compatible because the table is additive. The application-side env contract changes in the same milestone (M4.5.4 — lazy KEK). Until that lands, the existing `SOCIAL_TOKEN_ENCRYPTION_KEY` env var is still read by the repository to seal / open existing `social_connection` rows. The new env var is not required at boot; the application refuses to seal a new `social_connection` if the row is missing AND the platform KEK is unset, with a clear 503 surface (no boot crash).
+
+### Backup + rollback procedure
+
+Because the system is forward-only:
+
+1. **Normal app rollback** — pin `image:` to the captured previous SHA. The previous binary never reads `agency_social_dek`, so it is safe to leave the new table in place.
+2. **Schema rollback (destructive)** — `DROP TABLE agency_social_dek`. Must be paired with a verified pre-migration `pg_dump` of any wrapped DEKs (which is the only way to re-derive the per-connection social tokens). In practice, rollback is only safe before any agency has enabled social.
+
+### Tests
+
+- `tests/integration/social-dek-repository.test.ts` — covers the wrap / unwrap round-trip, the `dek_key_version` seam, the `rotation_reason` enum, and the partial-unique invariant on `enabled_at`.
+- `tests/integration/social-analytics.test.ts` — proves that the existing `social_connection` row continues to seal / open with the platform `SOCIAL_TOKEN_ENCRYPTION_KEY` while the new `agency_social_dek` row is written for the per-agency path.
+- `pnpm migration-drill` drills 1–4 — PASS with the new table included on disposable Postgres 16 (2026-08-24).
+
+## Migration 0017 — repair the skipped M3 support-access migration
+
+**Filename:** `src/lib/db/migrations/0017_repair_support_access_grants.sql`
+**SHA-256:** `726532d5fa902e702e07206e1f34be72fe0e548a9eb152db77884b11ac65cc63`
+**Journal tag:** `0017_repair_support_access_grants` (journal `when`: `1788500000000`)
+
+### Forward behavior
+
+Additive repair, idempotent. Recreates the four 0012 tables and their indexes with `IF NOT EXISTS` guards, then reconciles the missing 0012 ledger row. Specifically:
+
+- `CREATE TABLE IF NOT EXISTS support_access_request / support_access_grant / support_access_audit / ai_daily_budget_usage` — same DDL as 0012.
+- `CREATE INDEX IF NOT EXISTS ...` — same index set as 0012.
+- `DROP TRIGGER IF EXISTS support_access_audit_no_update ON support_access_audit; CREATE TRIGGER support_access_audit_no_update ...` — re-attaches the append-only enforcement that 0012 added.
+- `COMMENT ON TABLE ...` — the same documentation comments 0012 added.
+- `INSERT INTO drizzle.__drizzle_migrations ("hash", "created_at") SELECT '882d9fe62082cb5779281564ad3f25475e312827b75540256a3039c402e77d42', 1787544999872 WHERE NOT EXISTS (...)` — records the original 0012 ledger row.
+
+On a fresh database, 0012 already created the same objects and ledger row, so this migration is idempotent. On a production database that skipped 0012, this migration recreates the missing objects and inserts the missing ledger row.
+
+### Compatibility statement
+
+No existing application row or identifier is changed. Older images ignore these additive tables, so application rollback leaves them in place. The 0012 journal timestamp (`1787544999872`) is older than 0011 (`1788000000000`); this inversion is the documented exception that the §"2026-08-24 incident" addresses and that `tests/unit/migration-journal-order.test.ts` guards.
+
+### Backup + rollback procedure
+
+Because the system is forward-only:
+
+1. **Normal app rollback** — pin `image:` to the captured previous SHA. The previous binary ignores the four additive tables, so it is safe to leave them in place.
+2. **Schema rollback (destructive)** — restore the pre-migration `pg_dump` taken before the 0017 deploy. The four tables are dropped with the restore. Do NOT edit the applied migration file. A destructive rollback requires approval because `support_access_audit` rows are production evidence and the repair itself is the only path to re-insert the original 0012 ledger row.
+
+### Tests
+
+- `pnpm migration-drill` drill 5 (skipped-0012 repair) — the canonical proof. Deletes the four M3 tables plus the 0012 / 0017 ledger rows while retaining later migrations, reruns the real Drizzle migrator, and proves all four tables plus exactly one 0012 ledger row return. PASS on disposable Postgres 16 (2026-08-24).
+- `tests/unit/migration-journal-order.test.ts` — the regression guard. Allows only the documented 0012 inversion, requires the 0017 repair, and enforces strict monotonicity after it.
+- `tests/integration/support-access.test.ts` — re-verifies the four-table invariants after the repair lands.
