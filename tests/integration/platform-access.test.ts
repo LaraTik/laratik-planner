@@ -3,11 +3,7 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
-import {
-  platformAdministrators,
-  securityAuditEvents,
-  users,
-} from "@/lib/db/schema";
+import { platformAdministrators, securityAuditEvents, users } from "@/lib/db/schema";
 
 const TEST_DB_URL = process.env.TEST_DATABASE_URL;
 if (!TEST_DB_URL) throw new Error("TEST_DATABASE_URL is required for integration tests");
@@ -145,6 +141,74 @@ describe("platform access database contract", () => {
       .where(eq(securityAuditEvents.action, "platform_access.role_change"));
     expect(assignment?.role).toBe("platform_owner");
     expect(auditRows).toHaveLength(0);
+  });
+
+  it("keeps an old binary safe through snapshot, soft-revoke, and role-aware restore", async () => {
+    await seedUsers();
+    await integrationDb.insert(platformAdministrators).values([
+      {
+        userId: OWNER_A_ID,
+        role: "platform_owner",
+        grantedBy: OWNER_A_ID,
+        reason: "Rollback drill owner",
+      },
+      {
+        userId: MEMBER_ID,
+        role: "platform_auditor",
+        grantedBy: OWNER_A_ID,
+        reason: "Rollback drill auditor",
+      },
+    ]);
+
+    const snapshot = await integrationDb
+      .select()
+      .from(platformAdministrators)
+      .where(inArray(platformAdministrators.userId, [OWNER_A_ID, MEMBER_ID]));
+    const oldBinaryBefore = await integrationDb
+      .select({ userId: platformAdministrators.userId })
+      .from(platformAdministrators)
+      .where(isNull(platformAdministrators.revokedAt));
+    expect(oldBinaryBefore).toHaveLength(2);
+
+    await integrationDb
+      .update(platformAdministrators)
+      .set({ revokedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(platformAdministrators.userId, MEMBER_ID),
+          sql`${platformAdministrators.role} <> 'platform_owner'`,
+          isNull(platformAdministrators.revokedAt),
+        ),
+      );
+
+    const oldBinaryDuringRollback = await integrationDb
+      .select({ userId: platformAdministrators.userId })
+      .from(platformAdministrators)
+      .where(isNull(platformAdministrators.revokedAt));
+    expect(oldBinaryDuringRollback).toEqual([{ userId: OWNER_A_ID }]);
+
+    for (const assignment of snapshot) {
+      await integrationDb
+        .update(platformAdministrators)
+        .set({
+          role: assignment.role,
+          revokedAt: assignment.revokedAt,
+          updatedAt: assignment.updatedAt,
+        })
+        .where(eq(platformAdministrators.userId, assignment.userId));
+    }
+
+    const restored = await integrationDb
+      .select({ userId: platformAdministrators.userId, role: platformAdministrators.role })
+      .from(platformAdministrators)
+      .where(isNull(platformAdministrators.revokedAt));
+    expect(restored).toEqual(
+      expect.arrayContaining([
+        { userId: OWNER_A_ID, role: "platform_owner" },
+        { userId: MEMBER_ID, role: "platform_auditor" },
+      ]),
+    );
+    expect(restored).toHaveLength(2);
   });
 });
 
