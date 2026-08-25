@@ -83,3 +83,11 @@ acme.json
 
 # Superpowers brainstorming sessions — local interactive design artifacts.
 .superpowers/
+
+# Husky — `_/` holds husky's own internal state (auto-managed, never
+# committed). The committed hooks live as siblings of `_/`.
+.husky/_/
+# Stray husky shim created by an accidental `husky --version` invocation
+# (which got parsed as `husky <hooks-path=--version>`). Safe to delete
+# if it ever resurfaces.
+./--version/

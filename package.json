@@ -40,7 +40,17 @@
     "codegraph:index": "codegraph index",
     "codegraph:sync": "codegraph sync",
     "codegraph:status": "codegraph status",
-    "codegraph:query": "codegraph query"
+    "codegraph:query": "codegraph query",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix --max-warnings=0",
+      "prettier --write"
+    ],
+    "*.{json,md,css,yml,yaml,html}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
@@ -101,7 +111,9 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
     "eslint-plugin-jsx-a11y": "^6.10.2",
+    "husky": "^9.1.7",
     "jsdom": "^25.0.1",
+    "lint-staged": "^15.5.0",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.9",
     "tailwindcss": "^4",

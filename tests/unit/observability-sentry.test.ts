@@ -103,21 +103,17 @@ describe("sentry wrapper (DSN + SDK-loaded path)", () => {
     expect(mod.isEnabled()).toBe(true);
   });
 
-  it("initialises the Sentry SDK on first call and re-uses the cached wrapper", async () => {
+  it("does NOT call Sentry.init from the wrapper (it is init'd once in instrumentation.ts)", async () => {
+    // The wrapper relies on the SDK being already initialised by
+    // `sentry.server.config.ts` (loaded via `instrumentation.ts`).
+    // A second `Sentry.init` in the same process is a known footgun
+    // — silent no-op + warning. This test pins that contract.
     const mod = await import("@/lib/observability/sentry");
     mod.captureException(new Error("first"));
-    expect(fakeSentry.init).toHaveBeenCalledTimes(1);
-    expect(fakeSentry.init).toHaveBeenCalledWith(
-      expect.objectContaining({
-        dsn: "https://public@sentry.example.com/1",
-        release: "test@1.0.0",
-        environment: "test",
-        tracesSampleRate: expect.any(Number),
-      }),
-    );
+    expect(fakeSentry.init).toHaveBeenCalledTimes(0);
     mod.captureException(new Error("second"));
-    // init should NOT be called again — the wrapper is cached.
-    expect(fakeSentry.init).toHaveBeenCalledTimes(1);
+    // init should never be called from the wrapper.
+    expect(fakeSentry.init).toHaveBeenCalledTimes(0);
   });
 
   it("forwards captureException with context (ctx truthy branch)", async () => {
@@ -156,23 +152,27 @@ describe("sentry wrapper (DSN + SDK-loaded path)", () => {
     });
   });
 
-  it("omits the release key from Sentry.init when SENTRY_RELEASE is not set", async () => {
+  it("omits the release key from Sentry.init when SENTRY_RELEASE is not set (no-op now)", async () => {
+    // Kept as a placeholder so the test list reflects that the
+    // wrapper no longer touches SENTRY_RELEASE / SENTRY_ENVIRONMENT
+    // — both are read by `sentry.server.config.ts` instead.
     process.env["SENTRY_RELEASE"] = "";
     vi.resetModules();
     const mod = await import("@/lib/observability/sentry");
     mod.captureException(new Error("boom"));
-    expect(fakeSentry.init).toHaveBeenCalledTimes(1);
-    const initArg = fakeSentry.init.mock.calls[0]![0] as Record<string, unknown>;
-    expect("release" in initArg).toBe(false);
+    expect(fakeSentry.init).toHaveBeenCalledTimes(0);
   });
 
-  it("falls back to NODE_ENV when SENTRY_ENVIRONMENT is not set", async () => {
+  it("falls back to NODE_ENV when SENTRY_ENVIRONMENT is not set (no-op now)", async () => {
+    // The wrapper no longer reads SENTRY_ENVIRONMENT; the
+    // `sentry.server.config.ts` init reads it. This test pins
+    // the contract so a future refactor that re-adds a
+    // wrapper-side Sentry.init must update this test in lockstep.
     delete process.env["SENTRY_ENVIRONMENT"];
     vi.resetModules();
     const mod = await import("@/lib/observability/sentry");
     mod.captureException(new Error("boom"));
-    const initArg = fakeSentry.init.mock.calls[0]![0] as Record<string, unknown>;
-    expect(initArg["environment"]).toBe(process.env["NODE_ENV"]);
+    expect(fakeSentry.init).toHaveBeenCalledTimes(0);
   });
 });
 
@@ -195,9 +195,15 @@ describe("sentry wrapper (DSN + SDK require throws)", () => {
     vi.restoreAllMocks();
   });
 
-  it("falls back to noopSentry (and logs a warning) when require throws", async () => {
+  it("falls back to noopSentry silently when require throws", async () => {
+    // The wrapper no longer logs a warning on init failure — the
+    // SDK is expected to be present whenever SENTRY_DSN is set,
+    // and a missing Sentry package in a DSN-configured environment
+    // is an operator error (visible at module load via the
+    // `require` exception). Logging it again here is noise.
     const mod = await import("@/lib/observability/sentry");
     expect(() => mod.captureException(new Error("boom"))).not.toThrow();
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("[sentry]"));
+    // No warning is emitted any more.
+    expect(console.warn).not.toHaveBeenCalled();
   });
 });

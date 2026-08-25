@@ -164,6 +164,7 @@ laratik-planner/
 - ❌ Never expose `MINIMAX_API_KEY`, `AUTH_SECRET`, `SMTP_PASSWORD`, or `SENTRY_AUTH_TOKEN` in client code (the split env schema enforces this structurally)
 - ✅ Always backup before upgrading — `./scripts/project.sh backup` (or `scripts/vps/backup.sh` on VPS)
 - ✅ Always run `pnpm verify` before pushing
+- ✅ Pre-commit hook catches lint/format/unit-test issues early — keep it fast by keeping its scope tight (lint-staged on staged files, `vitest related` on staged sources). Skip with `git commit --no-verify` for WIP / hotfixes.
 - ✅ Always merge finished work to `main` — review, commit, push as soon as `pnpm verify` is green. No half-finished work sitting in the local working tree or on a stale local branch. The deploy workflow fires on `workflow_run: CI success`, so the change is live on production the moment the deploy job finishes.
 - ✅ CI is authoritative — local git hooks are optional and never replace CI
 - ✅ Staging before production: not yet (single-environment for v1, see Goal 14)

@@ -15,6 +15,23 @@ import { logError } from "@/lib/observability/logger";
  *   3. Set SENTRY_AUTH_TOKEN + SENTRY_ORG + SENTRY_PROJECT for source-map upload
  *      (only at build time — see the Dockerfile)
  *   4. Restart the container; the wrapper initializes on first import.
+ *
+ * Why this wrapper exists alongside `@sentry/nextjs`:
+ *   - Centralised `captureError(scope, err, ctx)` that fans out to
+ *     BOTH the structured log stream (always) AND Sentry (when
+ *     configured), so the OBS-001 logger + Sentry never drift.
+ *   - Adds a stable `scope` tag to every Sentry event so the
+ *     on-call view can group by audit / auth / social surface.
+ *   - Re-uses the `requestId` from `AsyncLocalStorage` so a
+ *     Sentry event links to the structured log line.
+ *
+ * The SDK is initialised by `instrumentation.ts` →
+ * `sentry.{server,edge}.config.ts` before any user request runs;
+ * this module does NOT call `Sentry.init` (a second init in the
+ * same process is a known footgun — silent no-op + warning). The
+ * `error.tsx` files import `@sentry/nextjs` directly because they
+ * are client components running in the browser, where the wrapper
+ * is server-only by design (the DSN is the server-side secret).
  */
 
 let initialized = false;
@@ -41,17 +58,14 @@ function loadSentry(): SentryLike | null {
   }
 
   // Dynamic import so dev / CI without Sentry never loads the SDK
-  // (it's ~100 KB and pulls in @sentry/core).
+  // (it's ~100 KB and pulls in @sentry/core). The SDK is
+  // initialised by `instrumentation.ts` → `sentry.{server,edge}.config.ts`
+  // before any user request runs, so we just wrap the methods here
+  // and do NOT call `Sentry.init` again — a second `Sentry.init` in
+  // the same process is a known footgun (no-op + warning).
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Sentry = require("@sentry/nextjs") as typeof import("@sentry/nextjs");
-    const release = process.env["SENTRY_RELEASE"];
-    Sentry.init({
-      dsn,
-      tracesSampleRate: Number(process.env["SENTRY_TRACES_SAMPLE_RATE"] ?? 0.1),
-      environment: process.env["SENTRY_ENVIRONMENT"] ?? process.env["NODE_ENV"],
-      ...(release ? { release } : {}),
-    });
     cached = {
       captureException: (e, ctx) => {
         if (!ctx) return Sentry.captureException(e);
@@ -66,8 +80,7 @@ function loadSentry(): SentryLike | null {
     };
     return cached;
   } catch {
-    // Sentry package not installed or init failed — fall back to no-op
-    console.warn("[sentry] initialization failed; details suppressed");
+    // Sentry package not installed — fall back to no-op
     return (cached = noopSentry);
   }
 }
