@@ -4,8 +4,48 @@
 > checks. The destructive downgrade/rollback drill remains intentionally
 > separate because the project uses forward-only corrective migrations.
 >
-> Latest capture: 2026-08-24 on local Postgres 16
+> Latest capture: 2026-08-26 on local Postgres 16
 > (`127.0.0.1:5432`, database `planner_test`).
+> Result: **4/5 PASS** — drill 2 (skipped-migration repair) is blocked
+> on a `scripts/migration-drill.ts` historical-rewind allowlist that has
+> not been updated for migrations `0019_agency_social_provider_config`
+> and `0020_app_error_event`. The schema and Drizzle ledger are healthy
+> (drills 1, 3, 4, 5 all PASS at 21/21 ledger rows); the allowlist fix
+> is a one-line edit to the script and is tracked separately.
+
+## 2026-08-26 re-run result
+
+The drill was re-run on 2026-08-26 against the current `main` (21 SQL
+migrations in `src/lib/db/migrations/`, ledger rows 0–20 plus the
+reconciled 0012 row). Drill 1 (from-zero) and drill 4 (backup + restore)
+both pass at the new ledger count of **21/21**; drills 3 and 5 are
+unchanged. Drill 2 fails closed with the expected error because the
+script's `historical rewind` allowlist only knows the
+`0017_repair_support_access_grants` and `0018_platform_access_roles`
+timestamps:
+
+```text
+1. from-zero                PASS  58 public tables; Drizzle ledger 21/21
+2. skipped migration repair FAIL  | unexpected post-repair migration timestamps: 1788700000000, 1788700000001; update the historical rewind before running this drill
+3. in-place upgrade         PASS  marker add/drop cycle
+4. backup + restore         PASS  Drizzle ledger before=21; pg_dump → planner_test_backup_<ts>.sql; drop+recreate; psql restore OK; tables=59; rate_limit_event=present; Drizzle ledger after=21
+5. failed-migration abort   PASS  59 tables before / after; missing=0; added=0
+total: 3.1s
+```
+
+**Action required (out of `docs/` scope, file owner: scripts):** add
+`0019_agency_social_provider_config` and `0020_app_error_event` to the
+`platformRolesTimestamp` allowlist in `scripts/migration-drill.ts` (or
+generalise the rewind to read the post-`0017_repair_support_access_grants`
+timestamps dynamically from `drizzle.__drizzle_migrations`). Until that
+edit lands, drill 2 will fail every run, but the failure is the
+safety-gate working as designed — the database is healthy, the drill
+script is out of date. Do not interpret the 4/5 result as a
+database regression.
+
+The full historical capture (2026-08-24 5/5 PASS, 2026-08-23 ledger-safe
+4/4 PASS, 2026-08-19 baseline 4/4 PASS) is preserved below for
+provenance.
 
 ## 2026-08-24 skipped-0012 recovery result
 
