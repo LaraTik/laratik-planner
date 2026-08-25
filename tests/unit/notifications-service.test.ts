@@ -84,8 +84,9 @@ vi.mock("@/lib/db", () => ({ db: dbMock }));
 // to a real `db` symbol that has the method.
 const { db } = await import("@/lib/db");
 if (typeof (db as unknown as { transaction?: unknown }).transaction !== "function") {
-  (db as unknown as { transaction: (fn: (tx: typeof db) => unknown) => Promise<unknown> }).transaction =
-    async (fn) => fn(db);
+  (
+    db as unknown as { transaction: (fn: (tx: typeof db) => unknown) => Promise<unknown> }
+  ).transaction = async (fn) => fn(db);
 }
 
 const service = await import("@/lib/notifications/service");
@@ -143,15 +144,14 @@ describe("markNotificationsRead (batch)", () => {
   });
 
   it("rejects a non-UUID id (Zod uuid())", async () => {
-    await expect(
-      service.markNotificationsRead(ACTOR, { ids: ["not-a-uuid"] }),
-    ).rejects.toThrow();
+    await expect(service.markNotificationsRead(ACTOR, { ids: ["not-a-uuid"] })).rejects.toThrow();
     expect(dbMock.update).not.toHaveBeenCalled();
   });
 
   it("rejects more than 200 ids (Zod max(200))", async () => {
-    const tooMany = Array.from({ length: 201 }, (_, i) =>
-      `00000000-0000-0000-0000-${(i).toString(16).padStart(12, "0")}`,
+    const tooMany = Array.from(
+      { length: 201 },
+      (_, i) => `00000000-0000-0000-0000-${i.toString(16).padStart(12, "0")}`,
     );
     await expect(service.markNotificationsRead(ACTOR, { ids: tooMany })).rejects.toThrow();
     expect(dbMock.update).not.toHaveBeenCalled();

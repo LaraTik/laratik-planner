@@ -439,7 +439,9 @@ describe("listUnassignedDesignWork (FEAT-12)", () => {
 
   it("rejects when the actor lacks the role", async () => {
     policyMock.hasWorkspaceRole.mockResolvedValue(false);
-    await expect(listUnassignedDesignWork(actor, workspaceId)).rejects.toThrow(/permission denied/i);
+    await expect(listUnassignedDesignWork(actor, workspaceId)).rejects.toThrow(
+      /permission denied/i,
+    );
   });
 });
 
@@ -454,9 +456,7 @@ describe("BulkArchiveSchema (FEAT-14)", () => {
   });
 
   it("rejects an empty array (bulk actions must act on at least one row)", () => {
-    expect(
-      BulkArchiveSchema.safeParse({ workspaceId, contentItemIds: [] }).success,
-    ).toBe(false);
+    expect(BulkArchiveSchema.safeParse({ workspaceId, contentItemIds: [] }).success).toBe(false);
   });
 
   it("caps the array at 500 items so a runaway UI click can't 500 the request", () => {

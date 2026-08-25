@@ -150,10 +150,7 @@ export async function canAccessClientWorkspace(
  * `client_reviewer` must still be able to leave client-visible
  * comments per master prompt §9 / §11.
  */
-export async function canWriteToWorkspace(
-  actor: Actor,
-  workspaceId: string,
-): Promise<boolean> {
+export async function canWriteToWorkspace(actor: Actor, workspaceId: string): Promise<boolean> {
   return hasWorkspaceRole(actor, workspaceId, [...WRITE_CAPABLE_ROLES]);
 }
 

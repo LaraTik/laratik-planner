@@ -114,9 +114,9 @@ describe("buildZip", () => {
   });
 
   it("rejects entry names that try to escape the archive root", () => {
-    expect(() =>
-      buildZip([{ name: "../etc/passwd", data: Buffer.from("x", "utf8") }]),
-    ).toThrow(/invalid zip entry name/i);
+    expect(() => buildZip([{ name: "../etc/passwd", data: Buffer.from("x", "utf8") }])).toThrow(
+      /invalid zip entry name/i,
+    );
     expect(() => buildZip([{ name: "/abs/path", data: Buffer.from("x", "utf8") }])).toThrow();
   });
 });

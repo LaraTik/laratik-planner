@@ -82,10 +82,7 @@ describe("gatePlatformAdmin", () => {
     const principal = {
       actor: { id: "user-1" },
       role: "platform_owner" as const,
-      permissions: new Set([
-        "platform.console.read",
-        "platform.agency.read",
-      ] as const),
+      permissions: new Set(["platform.console.read", "platform.agency.read"] as const),
     };
     requirePlatformPermissionMock.mockResolvedValue(principal);
     const result = await gatePlatformAdmin();

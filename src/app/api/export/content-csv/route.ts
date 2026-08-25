@@ -32,20 +32,17 @@ export async function GET(req: NextRequest) {
   const monthStart = monthParam
     ? new Date(`${monthParam}-01T00:00:00Z`)
     : new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
-  const monthEnd = new Date(
-    Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1),
-  );
+  const monthEnd = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1));
 
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) {
     return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
   }
 
-  const csv = await exportContentItemsCsv(
-    { id: session.user.id },
-    workspace.id,
-    { monthStart, monthEnd },
-  );
+  const csv = await exportContentItemsCsv({ id: session.user.id }, workspace.id, {
+    monthStart,
+    monthEnd,
+  });
   const filename = `planning-${workspace.slug}-${monthParam ?? "current"}.csv`;
   return new NextResponse(csv, {
     status: 200,

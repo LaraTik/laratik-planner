@@ -79,7 +79,10 @@ export const HolidayCalendarSchema = z.object({
     .regex(/^[A-Z]{2}$/, "country must be a 2-letter ISO code")
     .optional(),
   /** Explicit holiday dates in `YYYY-MM-DD` form. */
-  explicitDates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).max(200).optional(),
+  explicitDates: z
+    .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
+    .max(200)
+    .optional(),
 });
 export type HolidayCalendar = z.infer<typeof HolidayCalendarSchema>;
 

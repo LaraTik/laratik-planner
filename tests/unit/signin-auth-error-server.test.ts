@@ -16,19 +16,23 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
  *    `@sentry/nextjs` (the OTHER-04 invariant).
  */
 
-const redirectMock = vi.fn(() => {
+let lastRedirectUrl = "";
+const redirectMock = vi.fn((url: string): never => {
   // The real `redirect()` throws a NEXT_REDIRECT signal so the
   // function has a `never` return type. The mock matches that
-  // contract so the SUT doesn't fall through.
+  // contract so the SUT doesn't fall through. We capture the
+  // url argument so the assertions below can read it back.
+  lastRedirectUrl = url;
   throw new Error("NEXT_REDIRECT");
 });
 vi.mock("next/navigation", () => ({
-  redirect: (...args: unknown[]) => redirectMock(...args),
+  redirect: (url: string) => redirectMock(url),
 }));
 
 const captureErrorMock = vi.fn();
 vi.mock("@/lib/observability/sentry", () => ({
-  captureError: (...args: unknown[]) => captureErrorMock(...args),
+  captureError: (scope: string, cause: unknown, ctx: Record<string, unknown>) =>
+    captureErrorMock(scope, cause, ctx),
 }));
 
 const { signInErrorRedirect, emailDomain } = await import("@/app/signin/auth-error-server");
@@ -67,10 +71,9 @@ describe("signInErrorRedirect", () => {
     expect(ctx.emailDomain).toBe("agency.com");
 
     expect(redirectMock).toHaveBeenCalledTimes(1);
-    const [url] = redirectMock.mock.calls[0]! as [string];
-    expect(url).toContain("error=Unknown");
-    expect(url).toContain("callbackUrl=%2Fapp");
-    expect(url).toMatch(/ref=[0-9a-f]{12}/);
+    expect(lastRedirectUrl).toContain("error=Unknown");
+    expect(lastRedirectUrl).toContain("callbackUrl=%2Fapp");
+    expect(lastRedirectUrl).toMatch(/ref=[0-9a-f]{12}/);
   });
 
   it("still redirects (no capture) when no cause is supplied", () => {

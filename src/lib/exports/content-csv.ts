@@ -1,7 +1,7 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { contentItemChannels, contentItems, socialChannels, users } from "@/lib/db/schema";
+import { contentItemChannels, socialChannels, users } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { rowsToCsv, type CsvColumn } from "@/lib/utils/csv";
 import { listWorkspaceContent } from "@/lib/content/service";
@@ -96,8 +96,8 @@ export async function exportContentItemsCsv(
     format: item.format,
     status: item.status,
     plannedPublishAt: item.plannedPublishAt,
-    ownerEmail: item.contentOwnerId ? userById.get(item.contentOwnerId) ?? null : null,
-    designerEmail: item.designerId ? userById.get(item.designerId) ?? null : null,
+    ownerEmail: item.contentOwnerId ? (userById.get(item.contentOwnerId) ?? null) : null,
+    designerEmail: item.designerId ? (userById.get(item.designerId) ?? null) : null,
     channelAccountNames: (channelsByItem.get(item.id) ?? []).sort().join("; "),
     brief: item.brief,
   }));

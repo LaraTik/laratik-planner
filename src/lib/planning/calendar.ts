@@ -72,7 +72,17 @@ export async function getCalendarView(
   monthEnd: Date,
   opts: GetCalendarViewOptions = {},
 ): Promise<CalendarOccurrence[]> {
-  await requirePolicy(hasWorkspaceRole(actor, workspaceId, ["workspace_manager", "content_planner", "designer", "internal_reviewer", "publisher", "viewer"]), "view_calendar");
+  await requirePolicy(
+    hasWorkspaceRole(actor, workspaceId, [
+      "workspace_manager",
+      "content_planner",
+      "designer",
+      "internal_reviewer",
+      "publisher",
+      "viewer",
+    ]),
+    "view_calendar",
+  );
 
   // Fetch the workspace's holiday calendar from settings if the
   // caller didn't supply an override. The settings column is added

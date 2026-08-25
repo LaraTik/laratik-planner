@@ -31,9 +31,9 @@ import { proxy } from "@/proxy";
 import { getRequestId } from "@/lib/observability/request-context";
 
 function callProxy(pathname: string, inboundHeaders?: Record<string, string>) {
-  const req = new NextRequest(`http://localhost${pathname}`, {
-    headers: inboundHeaders,
-  });
+  const init: { headers?: Record<string, string> } = {};
+  if (inboundHeaders) init.headers = inboundHeaders;
+  const req = new NextRequest(`http://localhost${pathname}`, init);
   return proxy(req);
 }
 
@@ -86,14 +86,13 @@ describe("proxy — x-request-id propagation", () => {
   });
 
   it("exposes the id via AsyncLocalStorage so downstream logError can read it", async () => {
-    let observed: string | undefined;
     // Wrap the proxy call in a function that reads the ALS scope
     // synchronously. The proxy's own internal `runWithRequestContext`
     // only spans the response-construction, so this test asserts
     // the public contract: the id is in the response header for
     // downstream log-correlation to pick up via header echo.
     const res = await callProxy("/api/health", { "x-request-id": "als-trace-2" });
-    observed = res.headers.get("x-request-id") ?? undefined;
+    const observed = res.headers.get("x-request-id") ?? undefined;
     expect(observed).toBe("als-trace-2");
     // And the request-context module is importable and returns
     // undefined outside a runWithRequestContext scope (i.e. when

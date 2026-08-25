@@ -67,9 +67,7 @@ export async function exportBrandAssetsZip(
       } catch (err) {
         if (err instanceof StorageNotFoundError) {
           missingFiles += 1;
-          manifestLines.push(
-            `${asset.kind}\t${asset.name}\tMISSING\t${asset.storagePath}`,
-          );
+          manifestLines.push(`${asset.kind}\t${asset.name}\tMISSING\t${asset.storagePath}`);
         } else {
           throw err;
         }
@@ -86,7 +84,10 @@ export async function exportBrandAssetsZip(
     }
   }
 
-  entries.push({ name: "MANIFEST.txt", data: Buffer.from(manifestLines.join("\n") + "\n", "utf8") });
+  entries.push({
+    name: "MANIFEST.txt",
+    data: Buffer.from(manifestLines.join("\n") + "\n", "utf8"),
+  });
 
   const buffer = buildZip(entries);
   const filename = `brand-assets-${new Date().toISOString().slice(0, 10)}.zip`;
@@ -103,8 +104,10 @@ function extFromPath(path: string): string {
 }
 
 function safeFilename(name: string): string {
-  return name
-    .trim()
-    .replace(/[^a-zA-Z0-9._-]+/g, "-")
-    .slice(0, 80) || "asset";
+  return (
+    name
+      .trim()
+      .replace(/[^a-zA-Z0-9._-]+/g, "-")
+      .slice(0, 80) || "asset"
+  );
 }

@@ -42,9 +42,6 @@ export function DesignQueueList({
   const allChecked = itemIds.length > 0 && itemIds.every((id) => selected.has(id));
   const someChecked = !allChecked && itemIds.some((id) => selected.has(id));
 
-  function toggleAll() {
-    setSelected(allChecked ? new Set() : new Set(itemIds));
-  }
   function toggleOne(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -81,10 +78,7 @@ export function DesignQueueList({
           onArchived={onArchived}
         />
       ) : null}
-      <div
-        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
-        data-testid="design-queue-grid"
-      >
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" data-testid="design-queue-grid">
         {items.map((item) => {
           const isSelected = selected.has(item.id);
           return (
@@ -97,7 +91,7 @@ export function DesignQueueList({
               {canBulkArchive ? (
                 <input
                   type="checkbox"
-                  className="absolute left-3 top-3 h-4 w-4 cursor-pointer accent-[var(--color-primary,#4f46e5)]"
+                  className="absolute top-3 left-3 h-4 w-4 cursor-pointer accent-[var(--color-primary,#4f46e5)]"
                   aria-label={`Select ${item.title}`}
                   data-testid="design-queue-row-checkbox"
                   checked={isSelected}
@@ -117,7 +111,7 @@ export function DesignQueueList({
                 </Link>
               </div>
               {canBulkArchive ? (
-                <span className="absolute right-3 top-3" aria-hidden="true">
+                <span className="absolute top-3 right-3" aria-hidden="true">
                   {isSelected ? (
                     <CheckSquare className="text-fg-muted h-4 w-4" />
                   ) : (

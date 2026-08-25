@@ -107,12 +107,7 @@ describe("recordUsage: floor / delta validation", () => {
     // InvalidUsageDeltaError.
     dbMock.setNextRows([]);
     await expect(
-      recordUsage(
-        dbMock as unknown as Parameters<typeof recordUsage>[0],
-        AGENCY_ID,
-        RESOURCE,
-        -1,
-      ),
+      recordUsage(dbMock as unknown as Parameters<typeof recordUsage>[0], AGENCY_ID, RESOURCE, -1),
     ).rejects.toBeInstanceOf(InvalidUsageDeltaError);
   });
 });
@@ -123,12 +118,7 @@ describe("recordUsage: insert path (no existing row)", () => {
   it("returns nextValue=5 when no existing row + delta=+5", async () => {
     dbMock.setNextRows([]);
     await expect(
-      recordUsage(
-        dbMock as unknown as Parameters<typeof recordUsage>[0],
-        AGENCY_ID,
-        RESOURCE,
-        5,
-      ),
+      recordUsage(dbMock as unknown as Parameters<typeof recordUsage>[0], AGENCY_ID, RESOURCE, 5),
     ).resolves.toBe(5);
     // The transaction was opened.
     expect(dbMock.transaction).toHaveBeenCalledTimes(1);
@@ -141,12 +131,7 @@ describe("recordUsage: update path (existing row)", () => {
   it("returns nextValue=13 when existing value=10 + delta=+3", async () => {
     dbMock.setNextRows([{ value: 10, lastRecordedAt: new Date() }]);
     await expect(
-      recordUsage(
-        dbMock as unknown as Parameters<typeof recordUsage>[0],
-        AGENCY_ID,
-        RESOURCE,
-        3,
-      ),
+      recordUsage(dbMock as unknown as Parameters<typeof recordUsage>[0], AGENCY_ID, RESOURCE, 3),
     ).resolves.toBe(13);
   });
 });

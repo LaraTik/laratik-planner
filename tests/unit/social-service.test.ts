@@ -79,8 +79,9 @@ vi.mock("@/lib/db", () => ({ db: dbMock }));
 // those here, so a no-op transaction shim is fine.
 const { db } = await import("@/lib/db");
 if (typeof (db as unknown as { transaction?: unknown }).transaction !== "function") {
-  (db as unknown as { transaction: (fn: (tx: typeof db) => unknown) => Promise<unknown> }).transaction =
-    async (fn) => fn(db);
+  (
+    db as unknown as { transaction: (fn: (tx: typeof db) => unknown) => Promise<unknown> }
+  ).transaction = async (fn) => fn(db);
 }
 
 const repository = await import("@/lib/social/repository");

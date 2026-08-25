@@ -34,11 +34,11 @@ function dosDateTime(d: Date): { date: number; time: number } {
   // DOS date: bits 0-4 = day-of-month, 5-8 = month, 9-15 = year-1980.
   // DOS time: bits 0-4 = seconds/2, 5-10 = minutes, 11-15 = hours.
   const date =
-    ((d.getUTCFullYear() - 1980) & 0x7f) << 9 |
-    ((d.getUTCMonth() + 1) & 0x0f) << 5 |
+    (((d.getUTCFullYear() - 1980) & 0x7f) << 9) |
+    (((d.getUTCMonth() + 1) & 0x0f) << 5) |
     (d.getUTCDate() & 0x1f);
   const time =
-    (d.getUTCHours() & 0x1f) << 11 |
+    ((d.getUTCHours() & 0x1f) << 11) |
     ((d.getUTCMinutes() & 0x3f) << 5) |
     (Math.floor(d.getUTCSeconds() / 2) & 0x1f);
   return { date, time };

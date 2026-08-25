@@ -405,9 +405,9 @@ describe("canWriteToWorkspace / requireWriteCapability (FEAT-16)", () => {
     dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
     dbMock.state.selectResults.push([{ isAdmin: false }]);
     dbMock.state.selectResults.push([{ role: "client_reviewer" }]);
-    await expect(policy.requireWriteCapability(actor, "ws-1", "upload_sign")).rejects.toBeInstanceOf(
-      policy.PermissionDeniedError,
-    );
+    await expect(
+      policy.requireWriteCapability(actor, "ws-1", "upload_sign"),
+    ).rejects.toBeInstanceOf(policy.PermissionDeniedError);
   });
 
   it("requireWriteCapability resolves for a writer", async () => {
