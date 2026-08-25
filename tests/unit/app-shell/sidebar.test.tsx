@@ -56,6 +56,19 @@ const baseProps = {
     options: [{ id: "agency-1", name: "Test Agency", slug: "test-agency", isAdmin: true }],
   },
   canCreateWorkspace: false,
+  platformAccess: {
+    canEnter: false,
+    canReadAgencies: false,
+    canReadSecurity: false,
+    canReadAccess: false,
+  },
+};
+
+const ownerAccess = {
+  canEnter: true,
+  canReadAgencies: true,
+  canReadSecurity: true,
+  canReadAccess: true,
 };
 
 describe("Sidebar (workspace-aware)", () => {
@@ -93,15 +106,34 @@ describe("Sidebar (workspace-aware)", () => {
   it("shows plan usage to agency admins and platform console only to platform admins", () => {
     usePathnameMock.mockReturnValue("/app/agency-settings/plan");
     const { rerender } = render(
-      <Sidebar {...baseProps} user={{ name: "Lara", isAdmin: true }} isPlatformAdmin={false} />,
+      <Sidebar {...baseProps} user={{ name: "Lara", isAdmin: true }} />,
     );
     expect(screen.getByRole("link", { name: /Plan and usage/i })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Platform overview/i })).toBeNull();
 
     usePathnameMock.mockReturnValue("/app");
-    rerender(<Sidebar {...baseProps} user={{ name: "Lara", isAdmin: false }} isPlatformAdmin />);
+    rerender(
+      <Sidebar
+        {...baseProps}
+        user={{ name: "Lara", isAdmin: false }}
+        platformAccess={ownerAccess}
+      />,
+    );
     expect(screen.getByRole("link", { name: /Platform overview/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^Agencies$/i })).toBeInTheDocument();
+  });
+
+  it.each([
+    ["Owner", ownerAccess, true, true, true],
+    ["Agency Operator", { ...ownerAccess, canReadSecurity: false, canReadAccess: false }, true, false, false],
+    ["Auditor", { ...ownerAccess, canReadSecurity: true, canReadAccess: true }, true, true, true],
+    ["Support", { ...ownerAccess, canReadSecurity: true, canReadAccess: false }, true, true, false],
+  ])("renders the %s platform navigation matrix", (_label, access, agencies, security, accessPage) => {
+    usePathnameMock.mockReturnValue("/app/platform/overview");
+    render(<Sidebar {...baseProps} platformAccess={access as typeof ownerAccess} />);
+    expect(!!screen.queryByRole("link", { name: /^Agencies$/i })).toBe(agencies);
+    expect(!!screen.queryByRole("link", { name: /Security & support/i })).toBe(security);
+    expect(!!screen.queryByRole("link", { name: /Platform access/i })).toBe(accessPage);
   });
 
   it("renders the workspace nav when the user is inside /app/w/[slug]/*", () => {
@@ -280,7 +312,11 @@ describe("Sidebar (agency switcher wiring — M1.5)", () => {
 
   it("renders a disabled 'No agency' trigger when the user has zero memberships", () => {
     render(
-      <Sidebar {...baseProps} agencySwitcher={{ active: null, options: [] }} isPlatformAdmin />,
+      <Sidebar
+        {...baseProps}
+        agencySwitcher={{ active: null, options: [] }}
+        platformAccess={ownerAccess}
+      />,
     );
     const trigger = screen.getByRole("button", { name: "No agencies" });
     expect(trigger).toBeDisabled();

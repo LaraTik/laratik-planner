@@ -8,6 +8,7 @@ import { UserMenu } from "./user-menu";
 import { MobileContextHeader } from "./mobile-context-header";
 import type { AgencyRow } from "./agency-switcher";
 import type { BuildInfo } from "@/lib/build-info";
+import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
 
 /**
  * App shell — sidebar (left, persistent on desktop) + topbar (right
@@ -38,7 +39,7 @@ export function AppShell({
   canCreateWorkspace,
   notifications,
   unreadCount,
-  isPlatformAdmin,
+  platformAccess,
   supportGrants = [],
   children,
 }: {
@@ -66,7 +67,7 @@ export function AppShell({
     createdAt: string;
   }[];
   unreadCount: number;
-  isPlatformAdmin: boolean;
+  platformAccess: PlatformNavigationAccess;
   supportGrants?: Array<{
     id: string;
     targetAgencyId: string;
@@ -104,7 +105,7 @@ export function AppShell({
           workspaceSwitcherOptions={workspaces}
           agencySwitcher={agencySwitcher}
           canCreateWorkspace={canCreateWorkspace}
-          isPlatformAdmin={isPlatformAdmin}
+          platformAccess={platformAccess}
         />
       </aside>
 
@@ -128,7 +129,10 @@ export function AppShell({
             badgeTestId="unread-badge-mobile"
           />
           <UserMenu
-            user={{ ...user, isPlatformAdmin: isPlatformAdmin || user.isPlatformAdmin || false }}
+            user={{
+              ...user,
+              isPlatformAdmin: platformAccess.canEnter || user.isPlatformAdmin || false,
+            }}
             buildInfo={buildInfo}
             variant="mobile"
           />
@@ -155,7 +159,7 @@ export function AppShell({
         workspaceCanCreateContent={workspaceCanCreateContent}
         agencySwitcher={agencySwitcher}
         canCreateWorkspace={canCreateWorkspace}
-        isPlatformAdmin={isPlatformAdmin}
+        platformAccess={platformAccess}
       />
     </div>
   );

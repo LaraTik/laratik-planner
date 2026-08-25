@@ -768,6 +768,37 @@ export async function listRecentAuditForActor(actor: Actor): Promise<
   return rows;
 }
 
+export async function listRecentSupportAuditAsPlatform(
+  actor: Actor,
+  limit = 50,
+): Promise<
+  Array<{
+    id: number;
+    targetAgencyId: string;
+    targetType: string;
+    targetId: string | null;
+    action: string;
+    outcome: string;
+    createdAt: Date;
+  }>
+> {
+  await requirePlatformPermission(actor, "platform.audit.read");
+  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 100);
+  return db
+    .select({
+      id: supportAccessAudit.id,
+      targetAgencyId: supportAccessAudit.targetAgencyId,
+      targetType: supportAccessAudit.targetType,
+      targetId: supportAccessAudit.targetId,
+      action: supportAccessAudit.action,
+      outcome: supportAccessAudit.outcome,
+      createdAt: supportAccessAudit.createdAt,
+    })
+    .from(supportAccessAudit)
+    .orderBy(desc(supportAccessAudit.createdAt))
+    .limit(safeLimit);
+}
+
 // ─── 8. IDOR guard for tenant views ─────────────────────────────────────
 
 /**

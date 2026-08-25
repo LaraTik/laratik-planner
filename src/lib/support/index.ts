@@ -32,6 +32,7 @@ export {
   listActiveGrantsForActor,
   listActiveAgencyIds,
   listRecentAuditForActor,
+  listRecentSupportAuditAsPlatform,
   authorizePlatformTenantView,
   authorizePlatformDownload,
   recordSupportAccessAudit,

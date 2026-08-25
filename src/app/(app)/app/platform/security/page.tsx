@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { currentActor } from "@/lib/auth/current-actor";
-import { isPlatformAdmin } from "@/lib/auth/platform-admin";
 import { PageHeader } from "@/components/workspace/page-header";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
@@ -8,6 +7,7 @@ import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { loadPlatformSecurityOverview } from "./actions";
+import { PermissionNotice } from "@/components/platform/permission-notice";
 
 /**
  * M3.4 — Platform · Security & support access.
@@ -72,17 +72,17 @@ export default async function PlatformSecurityPage() {
       </div>
     );
   }
-  const isPlatform = await isPlatformAdmin(actor);
-  if (!isPlatform) {
+  let overview;
+  try {
+    overview = await loadPlatformSecurityOverview(actor);
+  } catch {
     return (
-      <div className="p-8" data-testid="platform-security-forbidden">
-        <p className="text-body text-fg-muted">
-          You need platform administrator access to view this page.
-        </p>
-      </div>
+      <PermissionNotice
+        title="Security view unavailable"
+        description="Your platform role does not include audit oversight or support access."
+      />
     );
   }
-  const overview = await loadPlatformSecurityOverview(actor);
 
   const grantColumns: DataTableColumnDef<GrantRow>[] = [
     {
@@ -149,8 +149,9 @@ export default async function PlatformSecurityPage() {
         description="Ticketed, approved, time-limited access to tenant content. Every view through an active grant is audited."
       />
 
-      <Card>
-        <CardTitle>My active grants</CardTitle>
+      {overview.canRequestSupport ? (
+        <Card>
+          <CardTitle>My active grants</CardTitle>
         <CardDescription>
           The time-bound grants you currently hold. A grant unlocks tenant content for the listed
           scope; the audit log records every view.
@@ -170,13 +171,15 @@ export default async function PlatformSecurityPage() {
             />
           )}
         </div>
-      </Card>
+        </Card>
+      ) : null}
 
       <Card>
-        <CardTitle>My recent views</CardTitle>
+        <CardTitle>{overview.canAudit ? "Recent support activity" : "My recent views"}</CardTitle>
         <CardDescription>
-          The last 50 audit rows where you are the viewer. Only action + target type + outcome are
-          shown — never tenant content.
+          {overview.canAudit
+            ? "The latest platform-wide support audit summaries. Tenant content is never included."
+            : "The last 50 audit rows where you are the viewer. Only action, target type, and outcome are shown."}
         </CardDescription>
         <div className="mt-4">
           {overview.recentAudit.length === 0 ? (
@@ -195,8 +198,9 @@ export default async function PlatformSecurityPage() {
         </div>
       </Card>
 
-      <Card>
-        <CardTitle>Open requests</CardTitle>
+      {overview.canRequestSupport ? (
+        <Card>
+          <CardTitle>Open requests</CardTitle>
         <CardDescription>
           Pending support access requests across every agency. Agency admins decide from the agency
           detail page.
@@ -250,7 +254,8 @@ export default async function PlatformSecurityPage() {
             ))
           )}
         </div>
-      </Card>
+        </Card>
+      ) : null}
     </div>
   );
 }

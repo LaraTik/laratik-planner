@@ -14,8 +14,19 @@ import { getEffectiveEntitlement } from "@/lib/entitlements";
 import { ALL_AI_CAPABILITIES, ALL_PLATFORM_KEYS, OverrideShapeSchema } from "@/lib/entitlements";
 import { getUsage } from "@/lib/usage";
 import { changeLifecycleAction, changePlanAction } from "../actions";
+import { PermissionNotice } from "@/components/platform/permission-notice";
 
-export async function PlanAiSections({ agencyId }: { agencyId: string }) {
+export async function PlanAiSections({
+  agencyId,
+  canManagePlan,
+  canManageLifecycle,
+  canArchive,
+}: {
+  agencyId: string;
+  canManagePlan: boolean;
+  canManageLifecycle: boolean;
+  canArchive: boolean;
+}) {
   const monthStart = new Date();
   monthStart.setUTCDate(1);
   monthStart.setUTCHours(0, 0, 0, 0);
@@ -89,7 +100,8 @@ export async function PlanAiSections({ agencyId }: { agencyId: string }) {
           </div>
           <Badge variant={lifecycle === "Active" ? "success" : "warning"}>{lifecycle}</Badge>
         </div>
-        <form action={changePlanAction} className="grid gap-4">
+        {canManagePlan ? (
+          <form action={changePlanAction} className="grid gap-4">
           <input type="hidden" name="agencyId" value={agencyId} />
           <input type="hidden" name="overrideForm" value="1" />
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
@@ -198,9 +210,19 @@ export async function PlanAiSections({ agencyId }: { agencyId: string }) {
               ))}
             </fieldset>
           </details>
-        </form>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {(["suspend", "restore", "archive"] as const).map((action) => (
+          </form>
+        ) : (
+          <PermissionNotice
+            title="Plan settings are read-only"
+            description="Your platform role can inspect plan and usage data but cannot change entitlements."
+          />
+        )}
+        {canManageLifecycle || canArchive ? (
+          <div className="grid gap-3 sm:grid-cols-3">
+            {([
+              ...(canManageLifecycle ? (["suspend", "restore"] as const) : []),
+              ...(canArchive ? ([agency.archivedAt ? "unarchive" : "archive"] as const) : []),
+            ] as const).map((action) => (
             <form
               key={action}
               action={changeLifecycleAction}
@@ -219,8 +241,9 @@ export async function PlanAiSections({ agencyId }: { agencyId: string }) {
                 {action.charAt(0).toUpperCase() + action.slice(1)}
               </Button>
             </form>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : null}
       </Card>
 
       <Card id="usage" padding="lg" className="space-y-4">

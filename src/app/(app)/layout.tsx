@@ -10,7 +10,8 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { countUnreadNotifications, listNotificationsForUser } from "@/lib/notifications/service";
 import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
-import { isPlatformAdmin as checkPlatformAdmin } from "@/lib/auth/platform-admin";
+import { getPlatformPrincipal } from "@/lib/auth/platform-access";
+import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
 import { listActiveGrantsForActor } from "@/lib/support";
 import { db } from "@/lib/db";
 import {
@@ -48,7 +49,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
-  const platformAdmin = await checkPlatformAdmin(actor);
+  const platformPrincipal = await getPlatformPrincipal(actor);
+  const platformAccess: PlatformNavigationAccess = {
+    canEnter: platformPrincipal?.permissions.has("platform.console.read") === true,
+    canReadAgencies: platformPrincipal?.permissions.has("platform.agency.read") === true,
+    canReadSecurity:
+      platformPrincipal?.permissions.has("platform.audit.read") === true ||
+      platformPrincipal?.permissions.has("platform.support.request") === true,
+    canReadAccess: platformPrincipal?.permissions.has("platform.access.read") === true,
+  };
+  const platformAdmin = platformAccess.canEnter;
   if (!agencyId && !platformAdmin) {
     const [inactiveMembership] = await db
       .select({ id: agencies.id })
@@ -185,7 +195,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         createdAt: n.createdAt.toISOString(),
       }))}
       unreadCount={unreadCount}
-      isPlatformAdmin={platformAdmin}
+      platformAccess={platformAccess}
       supportGrants={supportGrants}
     >
       {children}

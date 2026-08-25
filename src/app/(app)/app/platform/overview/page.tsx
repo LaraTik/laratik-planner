@@ -6,6 +6,9 @@ import { agencyMemberships, agencies, aiUsageEvents, workspaces } from "@/lib/db
 import { PageHeader } from "@/components/workspace/page-header";
 import { KpiTile } from "@/components/workspace/kpi-tile";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { currentActor } from "@/lib/auth/current-actor";
+import { requirePlatformPermission } from "@/lib/auth/platform-access";
+import { PermissionNotice } from "@/components/platform/permission-notice";
 
 /**
  * Platform overview (Milestone 1.8) — Stitch screen `46cf5746bbd14e67aac6565fc53530f8`.
@@ -84,6 +87,22 @@ async function loadRecentAgencies(limit = 5) {
 }
 
 export default async function PlatformOverviewPage() {
+  const actor = await currentActor();
+  if (!actor) {
+    return (
+      <PermissionNotice title="Sign in required" description="Sign in to view platform health." />
+    );
+  }
+  try {
+    await requirePlatformPermission(actor, "platform.agency.read");
+  } catch {
+    return (
+      <PermissionNotice
+        title="Platform overview unavailable"
+        description="Your platform role does not include agency oversight."
+      />
+    );
+  }
   const [kpis, recent] = await Promise.all([loadOverviewKpis(), loadRecentAgencies(5)]);
 
   return (
