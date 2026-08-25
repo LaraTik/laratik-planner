@@ -280,13 +280,60 @@ export default async function PlatformAccessPage() {
             data-testid="platform-access-empty"
           />
         ) : (
-          <DataTable
-            columns={assignmentColumns}
-            rows={assignments}
-            getRowKey={(row) => row.userId}
-            getRowTestId={(row) => `platform-access-row-${row.userId}`}
-            data-testid="platform-access-table"
-          />
+          <>
+            <div className="grid gap-3 lg:hidden" data-testid="platform-access-mobile-list">
+              {assignments.map((row) => (
+                <article
+                  key={row.userId}
+                  className="border-border rounded-[var(--radius-control)] border p-4"
+                  data-testid={`platform-access-card-${row.userId}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-body text-fg-primary truncate font-semibold">
+                        {row.displayName || row.email}
+                      </p>
+                      <p className="text-label text-fg-muted truncate">{row.email}</p>
+                    </div>
+                    <Badge variant={ROLE_BADGE_VARIANT[row.role]} className="shrink-0">
+                      {PLATFORM_ROLE_DETAILS[row.role].label}
+                    </Badge>
+                  </div>
+                  <p className="text-label text-fg-secondary mt-3">
+                    {PLATFORM_ROLE_DETAILS[row.role].description}
+                  </p>
+                  <div className="mt-3 flex min-h-11 items-center justify-between gap-3">
+                    <span className="text-label text-fg-muted">
+                      Changed {formatRelativeDate(row.updatedAt)}
+                    </span>
+                    {canManage ? (
+                      <div className="flex shrink-0 gap-1">
+                        <ChangePlatformRoleDialog
+                          userId={row.userId}
+                          email={row.email}
+                          currentRole={row.role}
+                        />
+                        <RevokePlatformAccessDialog
+                          userId={row.userId}
+                          email={row.email}
+                          role={row.role}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className="hidden lg:block">
+              <DataTable
+                columns={assignmentColumns}
+                rows={assignments}
+                getRowKey={(row) => row.userId}
+                getRowTestId={(row) => `platform-access-row-${row.userId}`}
+                data-testid="platform-access-table"
+              />
+            </div>
+          </>
         )}
       </Card>
 

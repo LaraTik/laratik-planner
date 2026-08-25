@@ -5,12 +5,7 @@ import { auth } from "@/lib/auth/config";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
-import {
-  updateAgency,
-  UpdateAgencySchema,
-  AgencyUpdateError,
-  AGENCY_UPDATE_ERROR_CODES,
-} from "@/lib/agencies/command";
+import { updateAgency, UpdateAgencySchema, AgencyUpdateError } from "@/lib/agencies/command";
 
 /**
  * Server action for editing the agency identity.
@@ -77,7 +72,3 @@ export async function editAgencyAction(
     return { error: "Could not save the agency settings." };
   }
 }
-
-// Re-export the canonical error code so the client form can branch
-// on "slug-conflict" (the form renders the inline error either way).
-export { AGENCY_UPDATE_ERROR_CODES };

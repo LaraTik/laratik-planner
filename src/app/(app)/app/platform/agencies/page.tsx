@@ -175,7 +175,7 @@ export default async function PlatformAgenciesPage() {
               />
             </div>
           </div>
-          <AgenciesTable rows={rows} />
+          <AgenciesTable rows={rows} relativeNow={new Date().toISOString()} />
         </Card>
       )}
 

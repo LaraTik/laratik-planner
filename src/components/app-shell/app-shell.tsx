@@ -143,7 +143,7 @@ export function AppShell({
       <main
         id="main-content"
         tabIndex={-1}
-        className="pb-[calc(5.25rem+env(safe-area-inset-bottom))] focus:outline-none md:ml-[72px] md:pb-0 xl:ml-[248px]"
+        className="min-w-0 overflow-x-clip pb-[calc(5.25rem+env(safe-area-inset-bottom))] focus:outline-none md:ml-[72px] md:pb-0 xl:ml-[248px]"
       >
         <div className="mx-auto w-full max-w-7xl px-4 py-5 md:px-6 md:py-6 xl:px-8 xl:py-8">
           <SupportSessionBanner grants={supportGrants} />
