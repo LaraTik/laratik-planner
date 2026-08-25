@@ -2,6 +2,35 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+/**
+ * @regression-guard  — REGRESSION GUARD, not a behaviour test.
+ *
+ * TEST-13 (GAP-FULL-REVIEW-2026-08-25): the assertions below read
+ * `.dockerignore`, `.github/workflows/ci.yml`,
+ * `.github/workflows/deploy.yml`, `Dockerfile`, `docker-compose.yml`,
+ * and `scripts/vps/health-check.sh` as strings and match specific
+ * tokens. This is intentionally a brittle source-shape guard, not
+ * a behaviour test.
+ *
+ * Three historical incidents drove this file into existence:
+ *
+ *   1. `.DS_Store` (a macOS metadata file) ended up baked into the
+ *      Drizzle migration context, which broke `drizzle-kit generate`
+ *      on a fresh checkout from a developer's home directory.
+ *   2. The `build-smoke` job was missing the
+ *      `AGENCY_COOKIE_SECRET` env var, so the production container
+ *      crashed on first request with "missing secret" — the unit
+ *      test would have caught it if the env had been declared
+ *      anywhere in the CI flow.
+ *   3. `APP_VERSION` was being set to the mutable image tag instead
+ *      of the immutable Git SHA, so a re-tagged image would pass
+ *      the version check despite shipping a different build.
+ *
+ * If you are refactoring the CI / Docker files and this test fails:
+ * update BOTH the source AND the assertions below. The test is the
+ * contract; the source must follow. Do not "fix" the test by
+ * loosening the regex — that erases the regression guard.
+ */
 describe("CI production-image smoke environment", () => {
   it("excludes nested macOS metadata from the Drizzle migration context", () => {
     const dockerIgnore = readFileSync(resolve(process.cwd(), ".dockerignore"), "utf8");

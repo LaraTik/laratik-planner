@@ -3,6 +3,14 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 /**
+ * @regression-guard  — REGRESSION GUARD, not a behaviour test.
+ *
+ * TEST-13 (GAP-FULL-REVIEW-2026-08-25): the assertions below read
+ * `src/lib/auth/config.ts` as a string and regex-match the
+ * `pages.<name>` values. This is intentionally a brittle source-
+ * shape guard, not a behaviour test — see the audit note for why
+ * the brittleness is the point.
+ *
  * Structural guard for src/lib/auth/config.ts → src/app/ routing.
  *
  * NextAuth v5 honors a `pages` map that points at our own Next.js routes
@@ -18,6 +26,11 @@ import { join } from "node:path";
  *   404 with `Back to My Work`. Fix: pages.newUser = "/setup" (the actual
  *   first-time-admin bootstrap page; /setup itself redirects to /app
  *   once an agency exists, so this is also safe for invited users).
+ *
+ * If you are refactoring `src/lib/auth/config.ts` and this test
+ * fails: update BOTH the config AND the regex below. The test is
+ * the contract; the source must follow. Do not "fix" the test by
+ * loosening the regex — that erases the regression guard.
  */
 describe("auth config pages map routes that exist", () => {
   // We import the config via a tiny shim that strips the side effects
