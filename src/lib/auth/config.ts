@@ -216,6 +216,13 @@ export const authConfig: NextAuthConfig = {
         // "Invalid invitation" error if this silently failed.
         // Surface the failure to Sentry (when configured) so the
         // on-call sees a sustained stamp failure.
+        //
+        // OTHER-14 audit (GAP-FULL-REVIEW-2026-08-25): the previous
+        // implementation used `console.error(...)` here, which never
+        // reached Sentry in any environment. The structured
+        // `captureError(scope, err, ctx)` wrapper fans out to BOTH
+        // the JSON log stream AND Sentry (when configured) so this
+        // security-relevant event is now visible to on-call.
         captureError("auth.events.signIn.email_verified_stamp_failed", err, {
           userId: user.id,
         });
