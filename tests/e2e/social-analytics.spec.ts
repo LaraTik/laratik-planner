@@ -10,6 +10,9 @@ import { bootstrapRoleSession } from "./_helpers";
  *   2. The 7/30/90 window links navigate to the right URL.
  *   3. Client reviewer gets 404 (the page calls `notFound()` for
  *      `client_reviewer`).
+ *   4. Agency admin gets 200 (regression for the
+ *      `hasWorkspaceRole` admin-shortcut bug that incorrectly denied
+ *      admins from the analytics surface).
  */
 
 test.describe("M4 — social analytics dashboard", () => {
@@ -41,5 +44,21 @@ test.describe("M4 — social analytics dashboard", () => {
     const response = await page.goto("/app/w/acme/analytics/social");
     // The page calls `notFound()` which renders the 404 surface.
     expect(response?.status()).toBe(404);
+  });
+
+  // Regression: an agency admin (no workspace role row, full access
+  // via the agency_admin shortcut on `hasWorkspaceRole`) used to be
+  // 404'd by the page because the deny check asked
+  // `hasWorkspaceRole(actor, ws, ["client_reviewer"])` — the admin
+  // shortcut short-circuited to true and the page read that as "user
+  // is a client_reviewer". The page now checks for internal access
+  // instead, so an agency admin must render the surface normally.
+  test("agency_admin gets 200, not 404 (regression for admin-shortcut deny bug)", async ({
+    page,
+  }) => {
+    await bootstrapRoleSession(page, "agency_admin");
+    const response = await page.goto("/app/w/acme/analytics/social");
+    expect(response?.status()).toBe(200);
+    await expect(page.getByTestId("social-analytics-page")).toBeVisible();
   });
 });

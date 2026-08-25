@@ -1,11 +1,11 @@
 import { redirect, notFound } from "next/navigation";
-import { and, desc, eq, gte, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull } from "drizzle-orm";
 import { Activity, BarChart3 } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { socialChannels, socialProfileDailyMetrics } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
-import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { hasWorkspaceRole, INTERNAL_WORKSPACE_ROLES } from "@/lib/auth/policy";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -61,11 +61,22 @@ export default async function SocialAnalyticsPage({
   if (!workspace) notFound();
 
   // Deny client reviewers. They can browse /app/w/[slug]/client/* but
-  // not the analytics surface. Other non-manager roles may view.
-  const isClient = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
-    "client_reviewer",
+  // not the analytics surface. Agency admins and other internal users
+  // (any non-client role) may view.
+  //
+  // The previous form of this check was `hasWorkspaceRole(actor, ws,
+  // ["client_reviewer"])` and was wrong: `hasWorkspaceRole` has an
+  // agency-admin shortcut that returns `true` for any admin regardless
+  // of the role list, so the page 404'd every agency admin (the admin
+  // shortcut short-circuited them into the deny set). Flip to a
+  // positive "requires internal access" predicate — admins pass via
+  // the same shortcut on the internal-roles list, pure `client_reviewer`
+  // users return `false`, and users with mixed memberships pass because
+  // they hold at least one internal role.
+  const hasInternalAccess = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
+    ...INTERNAL_WORKSPACE_ROLES,
   ]);
-  if (isClient) notFound();
+  if (!hasInternalAccess) notFound();
 
   // Fetch connected channels (not manual) and the last 90 days of metrics.
   const channels = await db
@@ -82,14 +93,25 @@ export default async function SocialAnalyticsPage({
 
   const lookbackIso = new Date();
   lookbackIso.setDate(lookbackIso.getDate() - MAX_LOOKBACK_DAYS);
+  // Scope the metric pull to THIS workspace's connected channels. The
+  // previous form filtered by date only and loaded every metric row
+  // for every workspace in the database into memory before grouping in
+  // JS — both a cross-tenant data leak and a hot-path performance bug.
+  // The empty-channel short-circuit avoids a needless query when the
+  // workspace has nothing connected yet (the page renders an empty
+  // state in that case).
+  const channelIds = channels.map((c) => c.id);
   const metricRows =
-    channels.length === 0
+    channelIds.length === 0
       ? []
       : await db
           .select()
           .from(socialProfileDailyMetrics)
           .where(
-            and(gte(socialProfileDailyMetrics.metricDate, lookbackIso.toISOString().slice(0, 10))),
+            and(
+              inArray(socialProfileDailyMetrics.socialChannelId, channelIds),
+              gte(socialProfileDailyMetrics.metricDate, lookbackIso.toISOString().slice(0, 10)),
+            ),
           )
           .orderBy(socialProfileDailyMetrics.metricDate);
 
