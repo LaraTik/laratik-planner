@@ -107,13 +107,22 @@ const serverSchema = z.object({
 
   // AI provider secret encryption (M3.4 — AI in-DB secret).
   // Server-only AES-256-GCM key. The env var is optional at module
-  // load — the secrets module throws `MissingEncryptionKeyError`
-  // at runtime if a managed-secret operation is attempted without
-  // it. This keeps the boot path alive on deployments that have
-  // not yet enabled the AI feature. A future rotation can carry
+  // load — when it is missing AND the agency tries to set a managed
+  // AI secret, the secrets module auto-generates a KEK, writes it
+  // to `<LARATIK_DATA_DIR>/kek.json` (atomic write, 0600 perms),
+  // and uses that. Set the env var explicitly to take priority
+  // over the auto-managed file. A future rotation can carry
   // multiple keys in the shape `k1:<base64> | k2:<base64>` (see
   // secrets.ts). Length is validated at runtime in secrets.ts.
   AI_SECRET_ENCRYPTION_KEY: stringOrEmpty,
+
+  // Directory the AI KEK file is auto-persisted to when
+  // AI_SECRET_ENCRYPTION_KEY is not set. MUST be a persistent
+  // volume in production (the file holds the master key for
+  // every stored AI provider secret — losing it locks out the
+  // DB). Defaults to `<cwd>/.laratik-planner/` for local dev
+  // (acceptable for ephemeral workflows; back the file up).
+  LARATIK_DATA_DIR: stringOrEmpty,
 
   // Sentry (Goal 13)
   SENTRY_DSN: stringOrEmpty,

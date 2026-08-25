@@ -1,5 +1,8 @@
 import "server-only";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { readFile as readFileAsync } from "node:fs/promises";
+import path from "node:path";
 import { serverEnv } from "@/lib/validation/env";
 import { deriveDevKey } from "./dev-key";
 
@@ -17,17 +20,27 @@ import { deriveDevKey } from "./dev-key";
  * of the buffer; `crypto.createDecipheriv` reads the tag from the
  * final 16 bytes.
  *
- * Key resolution:
- *   - In production, `AI_SECRET_ENCRYPTION_KEY` must be set; the
- *     helper throws on the first call when it is missing. The
- *     validation in src/lib/validation/env.ts enforces the
- *     min-length invariant (≥ 32 ASCII chars).
- *   - In dev / test, a derived dev key is used (same posture as
- *     `src/lib/auth/agency-context.ts` for `AGENCY_COOKIE_SECRET`).
- *     The dev key is **not** constant: it is scrypt-derived from
- *     a fixed string so an accidental dump of the env file does
- *     not yield a working encryption key. The derivation salt is
- *     constant for the process lifetime.
+ * Key resolution (priority order):
+ *   1. `AI_SECRET_ENCRYPTION_KEY` env var (operator-set). If it is
+ *      set but malformed, the helper throws — the operator made a
+ *      misconfiguration and we should fail loudly.
+ *   2. Auto-managed KEK file at `<LARATIK_DATA_DIR>/kek.json`
+ *      (default `<cwd>/.laratik-planner/kek.json`). The file is
+ *      read on first call, cached for the process lifetime, and
+ *      written with `0600` perms via an atomic write (`.tmp` +
+ *      rename). In production, a missing file is auto-generated
+ *      and persisted; in dev/test, a missing file falls through
+ *      to the dev-key derivation so tests are hermetic.
+ *   3. Dev / test fallback: a scrypt-derived dev key (same posture
+ *      as `src/lib/auth/agency-context.ts` for `AGENCY_COOKIE_SECRET`).
+ *      The dev key is **not** constant: it is scrypt-derived from
+ *      a fixed string so an accidental dump of the env file does
+ *      not yield a working encryption key.
+ *
+ * A corrupt KEK file (invalid JSON, wrong version, missing/short
+ * `key` field) throws `MissingEncryptionKeyError` rather than
+ * silently regenerating — a regenerated key would orphan every
+ * ciphertext written under the old one.
  *
  * Key versioning: the env var may carry multiple keys in the
  * shape `k1:<base64> | k2:<base64>` (separated by `|`). The
@@ -73,49 +86,215 @@ export class EncryptedSecretError extends Error {
 }
 
 export class MissingEncryptionKeyError extends Error {
-  constructor(envVar: string) {
+  constructor(message?: string) {
     super(
-      `${envVar} is not set or is too short (need ≥ 32 ASCII bytes). ` +
-        `Generate one with: openssl rand -base64 32`,
+      message ??
+        `AI_SECRET_ENCRYPTION_KEY is not set or is too short (need ≥ 32 ASCII bytes). ` +
+          `Generate one with: openssl rand -base64 32`,
     );
     this.name = "MissingEncryptionKeyError";
   }
 }
 
+// ─── Auto-managed KEK file ────────────────────────────────────────────────
+//
+// When AI_SECRET_ENCRYPTION_KEY is not set in the environment, the
+// encryption layer auto-generates a 32-byte KEK on first use and
+// persists it to a file with restrictive perms. This keeps the
+// managed-secret form working out of the box on a fresh deployment
+// without forcing the operator to SSH in and edit env vars, while
+// preserving the security property that the KEK is a *real* key
+// (not a derived/dev fallback) in production.
+//
+// The file lives in LARATIK_DATA_DIR (default `<cwd>/.laratik-planner/`),
+// which in production MUST be a persistent volume — losing the file
+// orphans every ciphertext in `ai_provider_secret`. The page UI
+// surfaces the file path so the operator can back it up.
+
+const KEK_FILENAME = "kek.json";
+const KEK_FORMAT_VERSION = 1;
+const KEK_FILE_MODE = 0o600;
+const KEK_DIR_MODE = 0o700;
+
+let fileKeyCache: Buffer | null | undefined = undefined; // undefined = not yet read
+let loggedFileFallback = false;
 let loggedDevFallback = false;
 
-function readKey(version: number = CURRENT_KEY_VERSION): Buffer {
-  const raw = serverEnv.AI_SECRET_ENCRYPTION_KEY;
-  if (raw && raw.length >= 32) {
-    // Today: single key, no prefix. A future migration can switch
-    // to `k1:<base64> | k2:<base64>` for rotation. The parser is
-    // forward-compatible: if the value contains a pipe we treat
-    // each pipe-delimited segment as `<version>:<key>` and pick
-    // the requested version, defaulting to the last segment if
-    // the version is not found.
-    if (raw.includes("|")) {
-      const segments = raw
-        .split("|")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      const wanted = segments.find((s) => s.startsWith(`${version}:`));
-      const fallback = segments[segments.length - 1];
-      const chosen = (wanted ?? fallback ?? "").replace(/^\d+:/, "");
-      if (chosen.length >= 32) {
-        return Buffer.from(chosen, "utf8").subarray(0, 32);
-      }
+function getDataDir(): string {
+  // The Zod schema's `stringOrEmpty` transform turns a missing
+  // env var into `""`, so an empty trim() is the "not set" signal.
+  const env = serverEnv.LARATIK_DATA_DIR?.trim();
+  if (env) return env;
+  return path.join(process.cwd(), ".laratik-planner");
+}
+
+function getKekFilePath(): string {
+  return path.join(getDataDir(), KEK_FILENAME);
+}
+
+export type KekSource = "env" | "auto-file" | "dev-fallback";
+
+export type KekStatus = {
+  source: KekSource;
+  /** Resolved path of the KEK file (always set when source is "auto-file"). */
+  path?: string;
+  /** ISO-8601 creation timestamp from the on-disk file, if present. */
+  createdAt?: string;
+  /** Operator-facing message (e.g. "will be auto-generated on next save"). */
+  warning?: string;
+};
+
+type FileKeyResult =
+  { ok: true; key: Buffer; createdAt?: string } | { ok: false; reason: "missing" | "corrupt" };
+
+/**
+ * Read the auto-managed KEK file. Returns `{ ok: true }` only when
+ * the file exists, parses, has the right version, and the `key`
+ * field is ≥ 32 bytes. A missing file is `reason: "missing"`; any
+ * other failure is `reason: "corrupt"` so the caller can refuse
+ * to silently regenerate (which would orphan existing ciphertexts).
+ */
+function readFileKeyStrictSync(): FileKeyResult {
+  if (fileKeyCache !== undefined) {
+    if (fileKeyCache) {
+      return { ok: true, key: fileKeyCache };
     }
-    return Buffer.from(raw, "utf8").subarray(0, 32);
+    return { ok: false, reason: "missing" };
+  }
+  const filePath = getKekFilePath();
+  let raw: string;
+  try {
+    raw = readFileSync(filePath, "utf8");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") {
+      fileKeyCache = null;
+      return { ok: false, reason: "missing" };
+    }
+    fileKeyCache = null;
+    return { ok: false, reason: "corrupt" };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    fileKeyCache = null;
+    return { ok: false, reason: "corrupt" };
+  }
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    (parsed as Record<string, unknown>).v !== KEK_FORMAT_VERSION ||
+    typeof (parsed as Record<string, unknown>).key !== "string" ||
+    ((parsed as Record<string, unknown>).key as string).length < 32
+  ) {
+    fileKeyCache = null;
+    return { ok: false, reason: "corrupt" };
+  }
+  const keyStr = (parsed as Record<string, unknown>).key as string;
+  const createdAt =
+    typeof (parsed as Record<string, unknown>).createdAt === "string"
+      ? ((parsed as Record<string, unknown>).createdAt as string)
+      : undefined;
+  const buf = Buffer.from(keyStr, "utf8").subarray(0, 32);
+  fileKeyCache = buf;
+  // exactOptionalPropertyTypes: only spread the field when defined.
+  return createdAt ? { ok: true, key: buf, createdAt } : { ok: true, key: buf };
+}
+
+/**
+ * Atomically write a new KEK file. The .tmp + rename pattern
+ * guarantees a half-written file is never visible to readers.
+ * chmod is applied *after* rename because the rename can be
+ * affected by the process umask on some platforms.
+ */
+function writeKekFileSync(keyB64: string): string {
+  const dir = getDataDir();
+  mkdirSync(dir, { recursive: true, mode: KEK_DIR_MODE });
+  const filePath = getKekFilePath();
+  const payload = JSON.stringify(
+    { v: KEK_FORMAT_VERSION, key: keyB64, createdAt: new Date().toISOString() },
+    null,
+    2,
+  );
+  const tmpPath = `${filePath}.tmp`;
+  writeFileSync(tmpPath, payload, { mode: KEK_FILE_MODE });
+  renameSync(tmpPath, filePath);
+  chmodSync(filePath, KEK_FILE_MODE);
+  return filePath;
+}
+
+function decodeEnvKey(raw: string, version: number): Buffer | null {
+  if (!raw || raw.length < 32) return null;
+  if (raw.includes("|")) {
+    const segments = raw
+      .split("|")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const wanted = segments.find((s) => s.startsWith(`${version}:`));
+    const fallback = segments[segments.length - 1];
+    const chosen = (wanted ?? fallback ?? "").replace(/^\d+:/, "");
+    if (chosen.length >= 32) {
+      return Buffer.from(chosen, "utf8").subarray(0, 32);
+    }
+  }
+  return Buffer.from(raw, "utf8").subarray(0, 32);
+}
+
+function readKey(version: number = CURRENT_KEY_VERSION): Buffer {
+  // 1. Env var (operator-set, takes priority — must be valid).
+  const raw = serverEnv.AI_SECRET_ENCRYPTION_KEY;
+  if (raw) {
+    const envKey = decodeEnvKey(raw, version);
+    if (!envKey) {
+      throw new MissingEncryptionKeyError(
+        `AI_SECRET_ENCRYPTION_KEY is set but invalid (need ≥ 32 ASCII bytes, or a ` +
+          `k1:<base64> | k2:<base64> rotation chain). Generate one with: ` +
+          `openssl rand -base64 32`,
+      );
+    }
+    return envKey;
   }
 
+  // 2. Auto-managed KEK file. A corrupt file refuses to silently
+  //    regenerate — that would orphan every existing ciphertext.
+  const fileResult = readFileKeyStrictSync();
+  if (fileResult.ok) return fileResult.key;
+  if (fileResult.reason === "corrupt") {
+    throw new MissingEncryptionKeyError(
+      `AI_SECRET_ENCRYPTION_KEY is not set, and the auto-managed KEK file at ` +
+        `${getKekFilePath()} is unreadable or corrupt. Set AI_SECRET_ENCRYPTION_KEY ` +
+        `in the environment to recover. Generate one with: openssl rand -base64 32`,
+    );
+  }
+
+  // 3. File missing — auto-generate in production, fall back in dev/test.
   if (serverEnv.NODE_ENV === "production") {
-    throw new MissingEncryptionKeyError("AI_SECRET_ENCRYPTION_KEY");
+    const newKey = randomBytes(32);
+    try {
+      const filePath = writeKekFileSync(newKey.toString("base64"));
+      fileKeyCache = newKey;
+      if (!loggedFileFallback) {
+        console.warn(
+          `[security.secrets] AI_SECRET_ENCRYPTION_KEY not set in environment. ` +
+            `Auto-generated KEK and persisted to ${filePath} (mode 0600). ` +
+            `BACK THIS FILE UP — losing it locks out all stored AI provider keys. ` +
+            `To override, set AI_SECRET_ENCRYPTION_KEY in the environment.`,
+        );
+        loggedFileFallback = true;
+      }
+      return newKey;
+    } catch (writeErr) {
+      throw new MissingEncryptionKeyError(
+        `AI_SECRET_ENCRYPTION_KEY is not set, and the auto-managed KEK file at ` +
+          `${getKekFilePath()} could not be written: ${(writeErr as Error).message}. ` +
+          `Set AI_SECRET_ENCRYPTION_KEY in the environment. Generate one with: ` +
+          `openssl rand -base64 32`,
+      );
+    }
   }
 
-  // Dev / test fallback. Use the shared dev-key derivation so the
-  // fallback is not a hard-coded constant in the source tree. The
-  // first call in the process logs a single line so the developer
-  // notices the misconfiguration.
+  // 4. Dev / test fallback (preserved from prior behavior so tests
+  //    remain hermetic — no leftover KEK file in test sandboxes).
   if (!loggedDevFallback) {
     console.error(
       "[security.secrets] AI_SECRET_ENCRYPTION_KEY is not set; using a derived dev key. " +
@@ -124,6 +303,103 @@ function readKey(version: number = CURRENT_KEY_VERSION): Buffer {
     loggedDevFallback = true;
   }
   return deriveDevKey();
+}
+
+/**
+ * Async status of the KEK source for the agency-settings UI.
+ * Non-throwing: returns a structured `KekStatus` so the page can
+ * render a "back this up" banner without catching exceptions.
+ *
+ * - `env` — `AI_SECRET_ENCRYPTION_KEY` is set; no action needed.
+ * - `auto-file` + `path` — the file is the active source. The
+ *   `warning` field is set when the file is missing/corrupt
+ *   (will be regenerated / won't be regenerated respectively).
+ * - `dev-fallback` — only reachable in dev/test; the file is not
+ *   consulted and a derived key is used.
+ */
+export async function getKekStatus(): Promise<KekStatus> {
+  if (serverEnv.AI_SECRET_ENCRYPTION_KEY && serverEnv.AI_SECRET_ENCRYPTION_KEY.length >= 32) {
+    return { source: "env" };
+  }
+  const filePath = getKekFilePath();
+
+  // Distinguish IO errors (read permission, disk error) from
+  // shape errors (invalid JSON, wrong version, missing key). IO
+  // errors are recoverable by the operator (chmod, fix the disk);
+  // shape errors are data corruption that we will not silently
+  // overwrite (a regenerated KEK would orphan every existing
+  // ciphertext in `ai_provider_secret`).
+  let raw: string;
+  try {
+    raw = await readFileAsync(filePath, "utf8");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") {
+      return {
+        source: "auto-file",
+        path: filePath,
+        warning:
+          serverEnv.NODE_ENV === "production"
+            ? "Will be auto-generated on the first save — back the file up afterwards."
+            : "Will fall back to a derived dev key in dev/test (no file will be written).",
+      };
+    }
+    return {
+      source: "auto-file",
+      path: filePath,
+      warning: `Unreadable: ${(e as Error).message}`,
+    };
+  }
+
+  let parsed: { v?: number; key?: string; createdAt?: string };
+  try {
+    parsed = JSON.parse(raw) as { v?: number; key?: string; createdAt?: string };
+  } catch {
+    return {
+      source: "auto-file",
+      path: filePath,
+      warning:
+        "File exists but is corrupt (invalid JSON) — it will NOT be auto-regenerated to avoid orphaning existing ciphertexts. Set AI_SECRET_ENCRYPTION_KEY to recover.",
+    };
+  }
+
+  if (
+    parsed.v === KEK_FORMAT_VERSION &&
+    typeof parsed.key === "string" &&
+    parsed.key.length >= 32
+  ) {
+    const createdAt = typeof parsed.createdAt === "string" ? parsed.createdAt : undefined;
+    return createdAt
+      ? { source: "auto-file", path: filePath, createdAt }
+      : { source: "auto-file", path: filePath };
+  }
+  return {
+    source: "auto-file",
+    path: filePath,
+    warning:
+      "File exists but is corrupt (wrong version or shape) — it will NOT be auto-regenerated to avoid orphaning existing ciphertexts. Set AI_SECRET_ENCRYPTION_KEY to recover.",
+  };
+}
+
+/**
+ * Test-only helper: clears the in-process file key cache so the
+ * next `readKey()` re-reads from disk. Exported only via the
+ * `__resetKekFileCacheForTests` symbol to keep it out of the
+ * public API. Use `vi.resetModules()` or pass a fresh envMock
+ * in tests; this exists for the rare test that exercises the
+ * file-write + read cycle in a single test.
+ */
+export function __resetKekFileCacheForTests(): void {
+  fileKeyCache = undefined;
+}
+
+/** Test-only helper: returns the path the auto-managed KEK file would use. */
+export function __getKekFilePathForTests(): string {
+  return getKekFilePath();
+}
+
+/** Test-only helper: returns true if the KEK file currently exists on disk. */
+export function __kekFileExistsForTests(): boolean {
+  return existsSync(getKekFilePath());
 }
 
 export type EncryptedSecret = {

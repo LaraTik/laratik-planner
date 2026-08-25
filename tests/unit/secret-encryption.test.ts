@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
 /**
  * Unit tests for `src/lib/security/secrets.ts` (M3.4 — AI in-DB secret).
@@ -13,15 +16,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  *
  * The env is mocked at the `serverEnv` shape so the test can
  * exercise the production / dev branches without leaking into the
- * real `.env` file. The `NODE_ENV = "production"` branch throws
- * `MissingEncryptionKeyError`; the `test` branch falls back to a
- * derived dev key.
+ * real `.env` file. The `NODE_ENV = "production"` branch
+ * auto-generates a KEK file (the file path is controlled by
+ * `LARATIK_DATA_DIR`, mocked to a per-test temp dir so no real
+ * file is written); the `test` branch falls back to a derived
+ * dev key.
  */
 
 vi.mock("server-only", () => ({}));
 
 const envMock = vi.hoisted(() => ({
   AI_SECRET_ENCRYPTION_KEY: undefined as string | undefined,
+  LARATIK_DATA_DIR: undefined as string | undefined,
   NODE_ENV: "test" as "development" | "production" | "test",
   MINIMAX_API_KEY: "sk-test",
   MINIMAX_BASE_URL: "https://api.example.com",
@@ -48,17 +54,46 @@ const {
   EncryptedSecretError,
   EncryptedSecretErrorCode,
   MissingEncryptionKeyError,
+  getKekStatus,
+  __resetKekFileCacheForTests,
+  __getKekFilePathForTests,
+  __kekFileExistsForTests,
 } = await import("@/lib/security/secrets");
+
+let tmpDir: string | null = null;
+
+function setupTmpDataDir(): string {
+  const dir = mkdtempSync(path.join(tmpdir(), "kek-test-"));
+  envMock.LARATIK_DATA_DIR = dir;
+  tmpDir = dir;
+  return dir;
+}
+
+function teardownTmpDataDir(): void {
+  if (tmpDir) {
+    try {
+      rmSync(tmpDir, { recursive: true, force: true });
+    } catch {
+      // best-effort cleanup
+    }
+    envMock.LARATIK_DATA_DIR = undefined;
+    tmpDir = null;
+  }
+}
 
 beforeEach(() => {
   // A 32-byte test key. The mocks are process-wide; the key is
   // re-read on every call so beforeEach can flip the value.
   envMock.AI_SECRET_ENCRYPTION_KEY = "x".repeat(32);
   envMock.NODE_ENV = "test";
+  envMock.LARATIK_DATA_DIR = undefined;
+  tmpDir = null;
+  __resetKekFileCacheForTests();
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  teardownTmpDataDir();
 });
 
 describe("encryptForAgency + decryptForAgency (round trip)", () => {
@@ -173,10 +208,20 @@ describe("decryptForAgency error paths", () => {
   });
 });
 
-describe("MissingEncryptionKeyError (production branch)", () => {
-  it("throws when the env is missing in production", () => {
-    envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
-    envMock.NODE_ENV = "production";
+describe("MissingEncryptionKeyError (env malformed branch)", () => {
+  it("throws when the env is set but too short in any env", () => {
+    envMock.AI_SECRET_ENCRYPTION_KEY = "too-short";
+    try {
+      encryptForAgency("sk-test");
+      throw new Error("should have thrown");
+    } catch (e) {
+      expect(e).toBeInstanceOf(MissingEncryptionKeyError);
+      expect((e as Error).message).toMatch(/invalid/i);
+    }
+  });
+
+  it("throws when the env is set but the rotation chain has no valid segment", () => {
+    envMock.AI_SECRET_ENCRYPTION_KEY = "1:short | 2:alsoshort";
     try {
       encryptForAgency("sk-test");
       throw new Error("should have thrown");
@@ -184,24 +229,203 @@ describe("MissingEncryptionKeyError (production branch)", () => {
       expect(e).toBeInstanceOf(MissingEncryptionKeyError);
     }
   });
+});
 
+describe("dev fallback (test/dev branch, no env, no file)", () => {
   it("falls back to a derived dev key when the env is missing in test", () => {
     envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
     envMock.NODE_ENV = "test";
+    // No temp dir / file is consulted in dev/test, so the default
+    // project-local path is also bypassed.
     const a = encryptForAgency("sk-test-fallback");
     const b = decryptForAgency(a.ciphertext, a.keyVersion);
     expect(b).toBe("sk-test-fallback");
   });
+});
 
-  it("throws when the env is shorter than 32 bytes in production", () => {
-    envMock.AI_SECRET_ENCRYPTION_KEY = "too-short";
+describe("auto-managed KEK file (production branch)", () => {
+  it("auto-generates a KEK file on first encrypt when env is missing in production", () => {
+    const dir = setupTmpDataDir();
+    envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
     envMock.NODE_ENV = "production";
+
+    const a = encryptForAgency("sk-test-autogen");
+    const filePath = path.join(dir, "kek.json");
+
+    // File should now exist
+    expect(__kekFileExistsForTests()).toBe(true);
+    expect(__getKekFilePathForTests()).toBe(filePath);
+
+    // The persisted key should be a parseable JSON object with
+    // the expected shape and a 32-byte key.
+    const persisted = JSON.parse(readFileSync(filePath, "utf8")) as {
+      v: number;
+      key: string;
+      createdAt: string;
+    };
+    expect(persisted.v).toBe(1);
+    expect(typeof persisted.key).toBe("string");
+    expect(persisted.key.length).toBeGreaterThanOrEqual(32);
+    expect(typeof persisted.createdAt).toBe("string");
+
+    // The temp file from the atomic write should be gone.
+    expect(existsSync(`${filePath}.tmp`)).toBe(false);
+
+    // The auto-generated key should successfully round-trip.
+    const decrypted = decryptForAgency(a.ciphertext, a.keyVersion);
+    expect(decrypted).toBe("sk-test-autogen");
+  });
+
+  it("uses the same persisted KEK across encrypt calls within a process", () => {
+    const dir = setupTmpDataDir();
+    envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
+    envMock.NODE_ENV = "production";
+
+    encryptForAgency("sk-first");
+    const firstPersisted = readFileSync(path.join(dir, "kek.json"), "utf8");
+
+    encryptForAgency("sk-second");
+    const secondPersisted = readFileSync(path.join(dir, "kek.json"), "utf8");
+
+    // File should not be rewritten — first call wrote it, second
+    // call reuses the in-process cache.
+    expect(secondPersisted).toBe(firstPersisted);
+  });
+
+  it("uses the file's KEK if env is missing and file already exists", () => {
+    const dir = setupTmpDataDir();
+    const existingKey = "a".repeat(32);
+    writeFileSync(
+      path.join(dir, "kek.json"),
+      JSON.stringify({ v: 1, key: existingKey, createdAt: "2026-01-01T00:00:00.000Z" }),
+      { mode: 0o600 },
+    );
+    envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
+    envMock.NODE_ENV = "production";
+
+    const a = encryptForAgency("sk-from-file");
+    // Switch the env to the file's key and decrypt — should succeed.
+    envMock.AI_SECRET_ENCRYPTION_KEY = existingKey;
+    __resetKekFileCacheForTests();
+    const decrypted = decryptForAgency(a.ciphertext, a.keyVersion);
+    expect(decrypted).toBe("sk-from-file");
+  });
+
+  it("env wins over file when both are present (env encrypts, file cannot decrypt)", () => {
+    const dir = setupTmpDataDir();
+    const fileKey = "f".repeat(32);
+    writeFileSync(
+      path.join(dir, "kek.json"),
+      JSON.stringify({ v: 1, key: fileKey, createdAt: "2026-01-01T00:00:00.000Z" }),
+      { mode: 0o600 },
+    );
+    const envKey = "e".repeat(32);
+    envMock.AI_SECRET_ENCRYPTION_KEY = envKey;
+    envMock.NODE_ENV = "production";
+
+    const a = encryptForAgency("sk-env-wins");
+    // Switch to file key, try to decrypt — auth tag should fail.
+    envMock.AI_SECRET_ENCRYPTION_KEY = fileKey;
+    __resetKekFileCacheForTests();
     try {
-      encryptForAgency("sk-test");
-      throw new Error("should have thrown");
+      decryptForAgency(a.ciphertext, a.keyVersion);
+      throw new Error("should have failed with wrong key");
     } catch (e) {
-      expect(e).toBeInstanceOf(MissingEncryptionKeyError);
+      expect(e).toBeInstanceOf(EncryptedSecretError);
+      expect((e as InstanceType<typeof EncryptedSecretError>).code).toBe(
+        EncryptedSecretErrorCode.AuthFailed,
+      );
     }
+  });
+
+  it("throws when the KEK file is corrupt (invalid JSON)", () => {
+    const dir = setupTmpDataDir();
+    writeFileSync(path.join(dir, "kek.json"), "not-json{", { mode: 0o600 });
+    envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
+    envMock.NODE_ENV = "production";
+    expect(() => encryptForAgency("sk-test")).toThrow(MissingEncryptionKeyError);
+  });
+
+  it("throws when the KEK file has the wrong version", () => {
+    const dir = setupTmpDataDir();
+    writeFileSync(
+      path.join(dir, "kek.json"),
+      JSON.stringify({ v: 999, key: "x".repeat(32), createdAt: "2026-01-01T00:00:00.000Z" }),
+      { mode: 0o600 },
+    );
+    envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
+    envMock.NODE_ENV = "production";
+    expect(() => encryptForAgency("sk-test")).toThrow(MissingEncryptionKeyError);
+  });
+
+  it("writes the KEK file with 0600 perms", () => {
+    const dir = setupTmpDataDir();
+    envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
+    envMock.NODE_ENV = "production";
+    encryptForAgency("sk-test");
+    const filePath = path.join(dir, "kek.json");
+    const stats = statSync(filePath);
+    // 0o600 = owner read/write only. Mask out type bits.
+    expect(stats.mode & 0o777).toBe(0o600);
+  });
+
+  it("creates the data directory if it does not exist", () => {
+    // setupTmpDataDir creates the parent — use a deeper subdir
+    // that does not exist yet to verify mkdir behavior.
+    const parent = setupTmpDataDir();
+    const nestedDir = path.join(parent, "nested", "data");
+    envMock.LARATIK_DATA_DIR = nestedDir;
+    envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
+    envMock.NODE_ENV = "production";
+    __resetKekFileCacheForTests();
+
+    expect(() => encryptForAgency("sk-test")).not.toThrow();
+    expect(__kekFileExistsForTests()).toBe(true);
+  });
+});
+
+describe("getKekStatus (UI helper)", () => {
+  it("returns source=env when the env var is set", async () => {
+    envMock.AI_SECRET_ENCRYPTION_KEY = "x".repeat(32);
+    const status = await getKekStatus();
+    expect(status.source).toBe("env");
+    expect(status.path).toBeUndefined();
+  });
+
+  it("returns source=auto-file with the file path when the file exists", async () => {
+    const dir = setupTmpDataDir();
+    writeFileSync(
+      path.join(dir, "kek.json"),
+      JSON.stringify({ v: 1, key: "x".repeat(32), createdAt: "2026-08-25T12:00:00.000Z" }),
+      { mode: 0o600 },
+    );
+    envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
+    envMock.NODE_ENV = "production";
+    const status = await getKekStatus();
+    expect(status.source).toBe("auto-file");
+    expect(status.path).toBe(path.join(dir, "kek.json"));
+    expect(status.createdAt).toBe("2026-08-25T12:00:00.000Z");
+    expect(status.warning).toBeUndefined();
+  });
+
+  it("returns source=auto-file with a 'will be generated' warning when the file is missing in production", async () => {
+    const dir = setupTmpDataDir();
+    envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
+    envMock.NODE_ENV = "production";
+    const status = await getKekStatus();
+    expect(status.source).toBe("auto-file");
+    expect(status.path).toBe(path.join(dir, "kek.json"));
+    expect(status.warning).toMatch(/will be auto-generated/i);
+  });
+
+  it("returns source=auto-file with a 'will NOT be regenerated' warning when the file is corrupt", async () => {
+    const dir = setupTmpDataDir();
+    writeFileSync(path.join(dir, "kek.json"), "{ not valid json", { mode: 0o600 });
+    envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
+    envMock.NODE_ENV = "production";
+    const status = await getKekStatus();
+    expect(status.source).toBe("auto-file");
+    expect(status.warning).toMatch(/will NOT be auto-regenerated/i);
   });
 });
 

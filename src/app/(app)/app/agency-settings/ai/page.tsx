@@ -11,6 +11,7 @@ import { AiSettingsForm } from "./ai-settings-form";
 import { ManagedSecretForm } from "./managed-secret-form";
 import { getAiFeatureSettings, getMonthlyUsage } from "@/lib/ai/feature-settings";
 import { getManagedSecretStatus } from "@/lib/ai/provider-secret";
+import { getKekStatus } from "@/lib/security/secrets";
 
 export const metadata = { title: "AI configuration" };
 
@@ -54,10 +55,11 @@ export default async function AgencyAiSettingsPage() {
     );
   }
 
-  const [feature, usage, secretStatus] = await Promise.all([
+  const [feature, usage, secretStatus, kekStatus] = await Promise.all([
     getAiFeatureSettings(),
     getMonthlyUsage(30),
     getManagedSecretStatus(agencyId),
+    getKekStatus(),
   ]);
   const envEnabled = serverEnv.AI_FEATURE_ENABLED && !!serverEnv.MINIMAX_API_KEY;
   const envModel = serverEnv.MINIMAX_MODEL || "MiniMax-M3";
@@ -91,6 +93,7 @@ export default async function AgencyAiSettingsPage() {
         enabled={secretStatus.keySource === "missing" ? true : secretStatus.enabled}
         envHasKey={envHasKey}
         envEnabled={envEnabled}
+        kekStatus={kekStatus}
       />
 
       <div className="border-border bg-surface-subtle text-body text-fg-secondary flex flex-wrap items-start gap-2 rounded-[var(--radius-control)] border p-3">

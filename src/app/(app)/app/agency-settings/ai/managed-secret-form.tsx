@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { KeyRound, Server, ShieldCheck } from "lucide-react";
+import { AlertTriangle, KeyRound, Server, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import {
   clearManagedAiSecretAction,
   type ManagedSecretActionState,
 } from "./actions";
+import type { KekStatus } from "@/lib/security/secrets";
 
 const initial: ManagedSecretActionState = {};
 
@@ -30,6 +31,12 @@ const initial: ManagedSecretActionState = {};
  *      with an additional warning that AI features will be
  *      disabled until a key is provided.
  *
+ * When the KEK is auto-managed (no env var, file in data dir),
+ * a yellow "back this up" banner is rendered above the form
+ * action. The banner is non-blocking — the form still works —
+ * but tells the operator where the file lives and that losing
+ * it locks out every stored AI provider key.
+ *
  * The "Save" action runs `setManagedAiSecretAction` and
  * revalidates the page on success. The action state surfaces
  * success / error inline.
@@ -40,12 +47,14 @@ export function ManagedSecretForm({
   enabled,
   envHasKey,
   envEnabled,
+  kekStatus,
 }: {
   keySource: "managed_secret" | "environment" | "missing";
   lastFour: string | null;
   enabled: boolean;
   envHasKey: boolean;
   envEnabled: boolean;
+  kekStatus: KekStatus;
 }) {
   const [mode, setMode] = React.useState<"idle" | "set" | "replace" | "remove">("idle");
   const [state, action, pending] = useActionState(setManagedAiSecretAction, initial);
@@ -84,6 +93,61 @@ export function ManagedSecretForm({
           The active key for this agency. A managed secret in the database takes priority; the
           environment key is the fallback. Master switch status: {enabled ? "On" : "Off"}.
         </CardDescription>
+
+        {kekStatus.source === "auto-file" ? (
+          <div
+            className="border-border bg-warning-soft text-body text-fg-primary mt-4 flex items-start gap-2 rounded-[var(--radius-control)] border p-3"
+            data-testid="ai-kek-backup-banner"
+            role="alert"
+          >
+            <AlertTriangle className="text-warning mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">
+                {kekStatus.warning?.includes("Will be") || kekStatus.warning?.includes("unreadable")
+                  ? "Encryption key: auto-managed file"
+                  : "Back up the AI encryption key"}
+              </p>
+              <p className="text-fg-secondary mt-1">
+                No <code>AI_SECRET_ENCRYPTION_KEY</code> is set in the environment, so the system
+                auto-generated a 32-byte encryption key and stored it at{" "}
+                <code className="bg-surface rounded px-1.5 py-0.5 break-all">{kekStatus.path}</code>
+                . This file is the master key for every AI provider key stored in the database.
+              </p>
+              <p className="text-fg-secondary mt-1">
+                {kekStatus.warning ?? "Back it up — losing it locks out all stored AI keys."}
+                {kekStatus.createdAt ? (
+                  <>
+                    {" "}
+                    Created at <code>{kekStatus.createdAt}</code>.
+                  </>
+                ) : null}
+              </p>
+              <p className="text-fg-muted mt-1">
+                To take explicit control, set <code>AI_SECRET_ENCRYPTION_KEY</code> in the
+                deployment environment and restart the app. The env var takes priority over the
+                file.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        {kekStatus.source === "dev-fallback" ? (
+          <div
+            className="border-border bg-warning-soft text-body text-fg-primary mt-4 flex items-start gap-2 rounded-[var(--radius-control)] border p-3"
+            data-testid="ai-kek-dev-fallback-banner"
+            role="alert"
+          >
+            <AlertTriangle className="text-warning mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <div>
+              <p className="font-semibold">Encryption key: derived dev fallback</p>
+              <p className="text-fg-secondary mt-1">
+                The encryption key is being derived from a constant in the source tree. This is fine
+                for local dev, but the key is recoverable from the repo. Do not deploy this
+                configuration — set <code>AI_SECRET_ENCRYPTION_KEY</code> in production.
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         {!isManaged && mode === "idle" ? (
           <div className="mt-4 flex flex-wrap items-center gap-2">
