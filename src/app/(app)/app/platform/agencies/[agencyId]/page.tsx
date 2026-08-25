@@ -16,6 +16,7 @@ import { PlatformEditAgencyForm } from "./edit-agency-form";
 import { currentActor } from "@/lib/auth/current-actor";
 import { requirePlatformPermission } from "@/lib/auth/platform-access";
 import { PermissionNotice } from "@/components/platform/permission-notice";
+import { deriveAgencyDetailCapabilities } from "@/lib/auth/platform-agency-capabilities";
 
 /**
  * Platform · Agency detail — Stitch screen
@@ -126,6 +127,7 @@ export default async function PlatformAgencyDetailPage({
   const { agencyId } = await params;
   const detail = await loadAgencyDetail(agencyId);
   if (!detail) notFound();
+  const capabilities = deriveAgencyDetailCapabilities(principal.permissions);
 
   return (
     <>
@@ -219,7 +221,7 @@ export default async function PlatformAgencyDetailPage({
       </nav>
 
       <div data-testid="platform-agency-identity-section" id="identity">
-        {principal.permissions.has("platform.agency.update") ? (
+        {capabilities.canUpdate ? (
           <PlatformEditAgencyForm
             agencyId={detail.id}
             initialName={detail.name}
@@ -270,15 +272,20 @@ export default async function PlatformAgencyDetailPage({
 
       <PlanAiSections
         agencyId={detail.id}
-        canManagePlan={principal.permissions.has("platform.agency.plan.manage")}
-        canManageLifecycle={principal.permissions.has("platform.agency.lifecycle.manage")}
-        canArchive={principal.permissions.has("platform.agency.archive")}
+        agencyName={detail.name}
+        canManagePlan={capabilities.canManagePlan}
+        canManageLifecycle={capabilities.canManageLifecycle}
+        canArchive={capabilities.canArchive}
       />
 
-      {principal.permissions.has("platform.support.request") ||
-      principal.permissions.has("platform.audit.read") ? (
+      {capabilities.canRequestSupport || capabilities.canAuditSupport ? (
         <div id="security">
-          <SupportAccessSection agencyId={detail.id} />
+          <SupportAccessSection
+            agencyId={detail.id}
+            agencyName={detail.name}
+            workspaces={detail.recentWorkspaces.map(({ id, name }) => ({ id, name }))}
+            canRequestSupport={capabilities.canRequestSupport}
+          />
         </div>
       ) : null}
     </>

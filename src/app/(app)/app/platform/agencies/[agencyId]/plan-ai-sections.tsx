@@ -13,16 +13,19 @@ import {
 import { getEffectiveEntitlement } from "@/lib/entitlements";
 import { ALL_AI_CAPABILITIES, ALL_PLATFORM_KEYS, OverrideShapeSchema } from "@/lib/entitlements";
 import { getUsage } from "@/lib/usage";
-import { changeLifecycleAction, changePlanAction } from "../actions";
+import { changePlanAction } from "../actions";
 import { PermissionNotice } from "@/components/platform/permission-notice";
+import { AgencyLifecycleControls } from "./agency-lifecycle-controls";
 
 export async function PlanAiSections({
   agencyId,
+  agencyName,
   canManagePlan,
   canManageLifecycle,
   canArchive,
 }: {
   agencyId: string;
+  agencyName: string;
   canManagePlan: boolean;
   canManageLifecycle: boolean;
   canArchive: boolean;
@@ -102,114 +105,114 @@ export async function PlanAiSections({
         </div>
         {canManagePlan ? (
           <form action={changePlanAction} className="grid gap-4">
-          <input type="hidden" name="agencyId" value={agencyId} />
-          <input type="hidden" name="overrideForm" value="1" />
-          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-            <select
-              aria-label="Plan template"
-              name="planTemplateId"
-              defaultValue={entitlement.planTemplateId}
-              className="border-border bg-surface rounded-[var(--radius-control)] border px-3 py-2"
-            >
-              {plans.map((plan) => (
-                <option key={plan.id} value={plan.id}>
-                  {plan.name}
-                </option>
-              ))}
-            </select>
-            <input
-              aria-label="Reason for plan change"
-              name="reason"
-              required
-              minLength={3}
-              placeholder="Reason for plan change"
-              className="border-border bg-surface rounded-[var(--radius-control)] border px-3 py-2"
-            />
-            <Button type="submit">Save plan</Button>
-          </div>
-          <details className="border-border rounded-[var(--radius-control)] border p-4">
-            <summary className="text-body text-fg-primary cursor-pointer font-semibold">
-              Agency-specific overrides
-            </summary>
-            <p className="text-label text-fg-muted mt-2">
-              Leave a value blank to inherit the selected plan. Saving replaces the previous
-              override set.
-            </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <LimitInput label="Workspaces" field="workspaces" value={overrides.workspaces} />
-              <LimitInput label="Users" field="users" value={overrides.users} />
-              <LimitInput
-                label="Social profiles total"
-                field="total_social_profiles"
-                value={overrides.total_social_profiles}
+            <input type="hidden" name="agencyId" value={agencyId} />
+            <input type="hidden" name="overrideForm" value="1" />
+            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+              <select
+                aria-label="Plan template"
+                name="planTemplateId"
+                defaultValue={entitlement.planTemplateId}
+                className="border-border bg-surface rounded-[var(--radius-control)] border px-3 py-2"
+              >
+                {plans.map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                aria-label="Reason for plan change"
+                name="reason"
+                required
+                minLength={3}
+                placeholder="Reason for plan change"
+                className="border-border bg-surface rounded-[var(--radius-control)] border px-3 py-2"
               />
-              <LimitInput
-                label="Storage bytes"
-                field="storage_bytes"
-                value={overrides.storage_bytes}
-              />
-              <LimitInput
-                label="AI requests / month"
-                field="monthly_ai_requests"
-                value={overrides.monthly_ai_requests}
-              />
-              <LimitInput
-                label="AI input tokens / month"
-                field="monthly_ai_input_tokens"
-                value={overrides.monthly_ai_input_tokens}
-              />
-              <LimitInput
-                label="AI output tokens / month"
-                field="monthly_ai_output_tokens"
-                value={overrides.monthly_ai_output_tokens}
-              />
-              <LimitInput
-                label="AI requests / user / day"
-                field="daily_ai_requests_per_user"
-                value={overrides.daily_ai_requests_per_user}
-              />
-              <LimitInput
-                label="Output tokens / request"
-                field="max_output_tokens_per_request"
-                value={overrides.max_output_tokens_per_request}
-              />
+              <Button type="submit">Save plan</Button>
             </div>
-            <fieldset className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <legend className="text-label text-fg-secondary mb-2 font-semibold">
-                Social profiles by network
-              </legend>
-              {ALL_PLATFORM_KEYS.map((platform) => (
+            <details className="border-border rounded-[var(--radius-control)] border p-4">
+              <summary className="text-body text-fg-primary cursor-pointer font-semibold">
+                Agency-specific overrides
+              </summary>
+              <p className="text-label text-fg-muted mt-2">
+                Leave a value blank to inherit the selected plan. Saving replaces the previous
+                override set.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <LimitInput label="Workspaces" field="workspaces" value={overrides.workspaces} />
+                <LimitInput label="Users" field="users" value={overrides.users} />
                 <LimitInput
-                  key={platform}
-                  label={platform}
-                  socialPlatform={platform}
-                  value={overrides.social_profiles_by_platform?.[platform]}
+                  label="Social profiles total"
+                  field="total_social_profiles"
+                  value={overrides.total_social_profiles}
                 />
-              ))}
-            </fieldset>
-            <fieldset className="mt-4 flex flex-wrap gap-3">
-              <legend className="text-label text-fg-secondary mb-2 font-semibold">
-                AI capability ceiling
-              </legend>
-              {ALL_AI_CAPABILITIES.map((capability) => (
-                <label
-                  key={capability}
-                  className="text-label text-fg-secondary inline-flex items-center gap-2"
-                >
-                  <input
-                    type="checkbox"
-                    name="override_enabled_capabilities"
-                    value={capability}
-                    defaultChecked={
-                      overrides.enabled_capabilities?.includes(capability) ??
-                      effective.enabledAiCapabilities.has(capability)
-                    }
+                <LimitInput
+                  label="Storage bytes"
+                  field="storage_bytes"
+                  value={overrides.storage_bytes}
+                />
+                <LimitInput
+                  label="AI requests / month"
+                  field="monthly_ai_requests"
+                  value={overrides.monthly_ai_requests}
+                />
+                <LimitInput
+                  label="AI input tokens / month"
+                  field="monthly_ai_input_tokens"
+                  value={overrides.monthly_ai_input_tokens}
+                />
+                <LimitInput
+                  label="AI output tokens / month"
+                  field="monthly_ai_output_tokens"
+                  value={overrides.monthly_ai_output_tokens}
+                />
+                <LimitInput
+                  label="AI requests / user / day"
+                  field="daily_ai_requests_per_user"
+                  value={overrides.daily_ai_requests_per_user}
+                />
+                <LimitInput
+                  label="Output tokens / request"
+                  field="max_output_tokens_per_request"
+                  value={overrides.max_output_tokens_per_request}
+                />
+              </div>
+              <fieldset className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <legend className="text-label text-fg-secondary mb-2 font-semibold">
+                  Social profiles by network
+                </legend>
+                {ALL_PLATFORM_KEYS.map((platform) => (
+                  <LimitInput
+                    key={platform}
+                    label={platform}
+                    socialPlatform={platform}
+                    value={overrides.social_profiles_by_platform?.[platform]}
                   />
-                  {capability.replaceAll("_", " ")}
-                </label>
-              ))}
-            </fieldset>
-          </details>
+                ))}
+              </fieldset>
+              <fieldset className="mt-4 flex flex-wrap gap-3">
+                <legend className="text-label text-fg-secondary mb-2 font-semibold">
+                  AI capability ceiling
+                </legend>
+                {ALL_AI_CAPABILITIES.map((capability) => (
+                  <label
+                    key={capability}
+                    className="text-label text-fg-secondary inline-flex items-center gap-2"
+                  >
+                    <input
+                      type="checkbox"
+                      name="override_enabled_capabilities"
+                      value={capability}
+                      defaultChecked={
+                        overrides.enabled_capabilities?.includes(capability) ??
+                        effective.enabledAiCapabilities.has(capability)
+                      }
+                    />
+                    {capability.replaceAll("_", " ")}
+                  </label>
+                ))}
+              </fieldset>
+            </details>
           </form>
         ) : (
           <PermissionNotice
@@ -217,33 +220,13 @@ export async function PlanAiSections({
             description="Your platform role can inspect plan and usage data but cannot change entitlements."
           />
         )}
-        {canManageLifecycle || canArchive ? (
-          <div className="grid gap-3 sm:grid-cols-3">
-            {([
-              ...(canManageLifecycle ? (["suspend", "restore"] as const) : []),
-              ...(canArchive ? ([agency.archivedAt ? "unarchive" : "archive"] as const) : []),
-            ] as const).map((action) => (
-            <form
-              key={action}
-              action={changeLifecycleAction}
-              className="border-border grid gap-2 rounded-[var(--radius-control)] border p-3"
-            >
-              <input type="hidden" name="agencyId" value={agencyId} />
-              <input type="hidden" name="action" value={action} />
-              <input
-                name="reason"
-                required
-                minLength={3}
-                placeholder={`Reason to ${action}`}
-                className="border-border bg-surface rounded-[var(--radius-control)] border px-3 py-2"
-              />
-              <Button type="submit" variant={action === "archive" ? "destructive" : "outline"}>
-                {action.charAt(0).toUpperCase() + action.slice(1)}
-              </Button>
-            </form>
-            ))}
-          </div>
-        ) : null}
+        <AgencyLifecycleControls
+          agencyId={agencyId}
+          agencyName={agencyName}
+          lifecycle={agency.archivedAt ? "archived" : agency.suspendedAt ? "suspended" : "active"}
+          canManageLifecycle={canManageLifecycle}
+          canArchive={canArchive}
+        />
       </Card>
 
       <Card id="usage" padding="lg" className="space-y-4">

@@ -61,27 +61,55 @@ const CreateSupportAccessRequestFormSchema = z.object({
 export async function createSupportAccessRequestAction(
   input: z.input<typeof CreateSupportAccessRequestFormSchema>,
 ) {
-  const { actor } = await requirePlatformActor();
-  const parsed = CreateSupportAccessRequestFormSchema.parse(input);
-  const limit = await enforceRateLimit({
-    scope: "support_access_request",
-    subject: actor.id,
-    actorId: actor.id,
-  });
-  if (!limit.allowed) {
-    return { ok: false as const, error: "Too many requests. Try again shortly." };
-  }
   try {
+    const { actor } = await requirePlatformActor();
+    const parsed = CreateSupportAccessRequestFormSchema.parse(input);
+    const limit = await enforceRateLimit({
+      scope: "support_access_request",
+      subject: actor.id,
+      actorId: actor.id,
+    });
+    if (!limit.allowed) {
+      return { ok: false as const, error: "Too many requests. Try again shortly." };
+    }
     const request = await createSupportAccessRequest(actor, {
       ...parsed,
       scopeWorkspaceId: parsed.scopeWorkspaceId ?? null,
     });
     revalidatePath("/app/platform/security");
+    revalidatePath(`/app/platform/agencies/${parsed.targetAgencyId}`);
     revalidatePath("/app/agency-settings/plan");
-    return { ok: true as const, request };
+    return { ok: true as const, requestId: request.id };
   } catch (e) {
     return translateSupportError(e);
   }
+}
+
+export type SupportAccessRequestActionState = Readonly<{
+  ok?: boolean;
+  error?: string;
+  code?: string;
+  requestId?: string;
+}>;
+
+export async function createSupportAccessRequestFormAction(
+  _previous: SupportAccessRequestActionState,
+  formData: FormData,
+): Promise<SupportAccessRequestActionState> {
+  const stringValue = (key: string) => {
+    const value = formData.get(key);
+    return typeof value === "string" ? value : "";
+  };
+  const workspace = formData.get("scopeWorkspaceId");
+  return createSupportAccessRequestAction({
+    ticketReference: stringValue("ticketReference"),
+    reason: stringValue("reason"),
+    targetAgencyId: stringValue("targetAgencyId"),
+    scopeWorkspaceId: typeof workspace === "string" && workspace ? workspace : null,
+    scopeMetadataOnly: formData.get("scopeMetadataOnly") === "on",
+    requestedDurationHours: Number(stringValue("requestedDurationHours")),
+    downloadsRequested: formData.get("downloadsRequested") === "on",
+  });
 }
 
 const DecideFormSchema = z.object({
