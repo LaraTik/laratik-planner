@@ -42,12 +42,14 @@ async function requestResetAction(formData: FormData) {
 
   // Throttle per (email, source IP) — same composite as the
   // sign-in rate limit so an attacker can't rotate IPs to spam
-  // resets for one email.
+  // resets for one email. `password_reset_request` is its own
+  // scope (FEAT-11) so the audit log distinguishes reset abuse
+  // from sign-in magic-link abuse.
   const h = await headers();
   const requestId = h.get("x-request-id");
   const subject = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? email;
   const limit = await enforceRateLimit({
-    scope: "magic_link_request",
+    scope: "password_reset_request",
     subject: `forgot::${email}::${subject}`,
     ...(requestId ? { requestId } : {}),
   });

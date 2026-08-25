@@ -11,6 +11,8 @@ export type RateLimitScope =
   | "invitation_resend"
   | "ai_generation"
   | "magic_link_request"
+  | "password_reset_request"
+  | "upload_sign"
   | "support_access_request"
   | "support_access_decision";
 
@@ -25,6 +27,19 @@ const RULES: Record<RateLimitScope, { limit: number; windowSeconds: number }> = 
   // email) and IP-rotation spam (limit per IP). Defense against the
   // "request a sign-in link for arbitrary laratik.com addresses" vector.
   magic_link_request: { limit: 5, windowSeconds: 60 * 60 },
+  // Password-reset request: dedicated scope for /signin/forgot-password.
+  // Distinct from magic_link_request in the audit log so abuse on the
+  // reset surface is visible independently of sign-in attempts. Same
+  // (email, IP) composite subject gives equivalent brute-force
+  // resistance; the limit is per (email, source IP) at 5/hour.
+  password_reset_request: { limit: 5, windowSeconds: 60 * 60 },
+  // Upload-sign request: 60 per 10 minutes per signed-in user. A single
+  // multi-file upload can ask for several sign URLs in quick succession
+  // (logo + color swatch + font file + document = 4 in one click), so
+  // the budget is generous; the threat is an authenticated user or
+  // leaked session token farm-running the route to exhaust the storage
+  // quota or harvest signed PUT URLs.
+  upload_sign: { limit: 60, windowSeconds: 10 * 60 },
   // M3 — platform admins can file a support access request up to
   // 10 times per hour; the agency admin can decide up to 30 times
   // per hour. Both are tunable in production if abuse appears.

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getSignedUploadUrl, UPLOAD_SIZE_LIMITS, type UploadKind } from "@/lib/storage";
 
 /**
@@ -37,6 +38,23 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+
+  // Per-user rate limit on the sign route. A single multi-file
+  // upload (logo + color swatch + font + document) asks for 4 sign
+  // URLs in one click, so 60/10min is generous; the threat is a
+  // leaked session token farm-running the route to exhaust storage
+  // quota or harvest signed PUT URLs.
+  const rate = await enforceRateLimit({
+    scope: "upload_sign",
+    subject: session.user.id,
+    actorId: session.user.id,
+  });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Too many upload requests; try again later." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
+    );
   }
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
