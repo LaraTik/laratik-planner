@@ -10,6 +10,14 @@ import type { PlatformRole } from "../../src/lib/auth/platform-access-types";
  * unchanged.
  */
 
+// Mirror the cookie name used by `src/lib/auth/dev-sign-in.ts`
+// (the source of truth). We don't import the module because it
+// pulls in `server-only` and the Drizzle pool, neither of which
+// the e2e helper needs. If the source cookie name ever changes,
+// the dev-sign-in contract test (e2e/auth-gate) will surface it
+// before this constant drifts.
+const DEV_SESSION_COOKIE_NAME = "authjs.session-token";
+
 const DEFAULT_EMAIL = "test@laratik.local";
 const DEFAULT_NAME = "Test User";
 
@@ -193,6 +201,81 @@ export async function bootstrapTestSession(
   const result = await devSeed(page.request, options);
   await devSignIn(page.request, options.email ? { email: options.email } : {});
   return result;
+}
+
+/**
+ * TEST-18 (GAP-FULL-REVIEW-2026-08-25) — pre-seeded session cookie
+ * helper.
+ *
+ * The pre-existing `devSignIn` and `bootstrapTestSession` helpers
+ * hit the dev sign-in endpoint on every test. If that endpoint
+ * flakes (the documented history is a 500 from the Next.js 16.3.1
+ * manifest race; see `_helpers.ts:withRetry`), every e2e spec
+ * fails.
+ *
+ * `setAuthCookie` decouples the cookie setting from the endpoint
+ * for tests that don't need a freshly-minted session. The helper:
+ *   1. calls `devSignIn` once to mint a JWT (this is the only
+ *      network call to the dev endpoint),
+ *   2. extracts the `authjs.session-token` cookie from the
+ *      request context's storage state, and
+ *   3. applies that cookie to the `page`'s browser context so
+ *      subsequent `page.goto()` calls authenticate.
+ *
+ * Once the cookie is on the page context, no further dev-endpoint
+ * calls are needed for the lifetime of the test. A `beforeAll` that
+ * calls `setAuthCookie` for a shared `email` lets every test in a
+ * file skip the per-test `devSignIn` call.
+ */
+export async function setAuthCookie(
+  page: Page,
+  request: APIRequestContext,
+  options: { email?: string; name?: string; role?: "agency_admin" | "user" } = {},
+): Promise<{
+  userId: string;
+  email: string;
+  role: string;
+  cookie: { name: string; value: string };
+}> {
+  // Step 1 — sign in via the dev endpoint. The endpoint sets
+  // `authjs.session-token` on the response, which Playwright
+  // automatically stores on the request context.
+  const user = await devSignIn(request, options);
+
+  // Step 2 — read the cookie value out of the request context.
+  const storage = await request.storageState();
+  const sessionCookie = storage.cookies.find((c) => c.name === DEV_SESSION_COOKIE_NAME);
+  if (!sessionCookie) {
+    throw new Error(`setAuthCookie: dev endpoint did not set a ${DEV_SESSION_COOKIE_NAME} cookie`);
+  }
+
+  // Step 3 — apply the cookie to the page's browser context. The
+  // `page` and `request` may live on different contexts in some
+  // Playwright configurations, so we apply the cookie explicitly
+  // rather than relying on the request-context propagation that
+  // `bootstrapTestSession` leans on.
+  await page.context().addCookies([
+    {
+      name: sessionCookie.name,
+      value: sessionCookie.value,
+      // The dev endpoint is reached on localhost; mirror the
+      // same domain so the cookie is actually accepted by the
+      // browser context.
+      domain: sessionCookie.domain || "localhost",
+      path: sessionCookie.path || "/",
+      httpOnly: sessionCookie.httpOnly,
+      secure: sessionCookie.secure,
+      sameSite: sessionCookie.sameSite || "Lax",
+      expires: sessionCookie.expires && sessionCookie.expires > 0 ? sessionCookie.expires : -1,
+    },
+  ]);
+
+  return {
+    userId: user.userId,
+    email: user.email,
+    role: user.role,
+    cookie: { name: sessionCookie.name, value: sessionCookie.value },
+  };
 }
 
 export type FixtureRole =
