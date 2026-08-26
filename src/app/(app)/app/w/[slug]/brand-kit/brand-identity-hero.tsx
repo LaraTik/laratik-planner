@@ -1,9 +1,10 @@
 import * as React from "react";
-import { Clock, Sparkles } from "lucide-react";
+import { Clock, History, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
+import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { cn } from "@/lib/utils";
 
 /**
@@ -41,6 +42,8 @@ export interface BrandIdentityHeroProps {
   assetCount: number;
   /** Number of logo assets in the workspace; gates the "Latest logo" badge. */
   logoCount: number;
+  /** Most recent brand-kit update timestamp; null when the workspace has no activity. */
+  lastUpdatedAt?: Date | null;
   /** Callback fired when the empty-state CTA is clicked. */
   onAddFirstAsset?: () => void;
 }
@@ -61,6 +64,7 @@ export function BrandIdentityHero({
   logoAlt,
   assetCount,
   logoCount,
+  lastUpdatedAt,
   onAddFirstAsset,
 }: BrandIdentityHeroProps) {
   return (
@@ -146,6 +150,30 @@ export function BrandIdentityHero({
                 <Clock className="text-fg-muted h-4 w-4" aria-hidden="true" />
                 {workspace.timezone}
               </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-label text-fg-muted font-semibold tracking-wider uppercase">
+                Last updated
+              </span>
+              {lastUpdatedAt ? (
+                <span
+                  className="text-body text-fg-primary inline-flex items-center gap-1 font-semibold"
+                  data-testid="brand-kit-hero-last-updated"
+                >
+                  <History className="text-fg-muted h-4 w-4" aria-hidden="true" />
+                  <time dateTime={lastUpdatedAt.toISOString()}>
+                    {formatRelativeDate(lastUpdatedAt)}
+                  </time>
+                </span>
+              ) : (
+                <span
+                  className="text-body text-fg-muted inline-flex items-center gap-1 font-semibold"
+                  data-testid="brand-kit-hero-last-updated-empty"
+                >
+                  <History className="text-fg-muted h-4 w-4" aria-hidden="true" />
+                  No activity yet
+                </span>
+              )}
             </div>
           </div>
         </div>
