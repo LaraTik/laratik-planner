@@ -80,6 +80,12 @@ console.log(`[visual] capture mode: ${isCaptureMode ? "WRITE" : "ASSERT"}`);
 const SNAPSHOT_DIR = "tests/e2e/visual-regression.spec.ts-snapshots";
 
 const A11Y_TAGS = ["wcag2a", "wcag2aa", "wcag22aa"] as const;
+const PUBLIC_VISUAL_SEED: SeedResultLike = { contentItemId: "public-route" };
+
+/** Public auth screens must be captured without the dev session cookie. */
+function isUnauthenticatedVisualRoute(route: string): boolean {
+  return route === "/signin" || route.startsWith("/signin/");
+}
 
 /**
  * Inner `waitForStableDom` timeout in capture mode. The dev-sign-in
@@ -332,11 +338,11 @@ test.describe("visual regression (exact reference)", () => {
       // failures so a single broken route (dev-sign-in 500, route
       // 404, page error, etc.) does not kill the suite. In compare
       // mode, propagate the error so the build fails loudly.
-      let seed: SeedResult;
       let resolved: string;
       try {
-        seed = await bootstrapTestSession(page);
-        const seedLike: SeedResultLike = seed;
+        const seedLike: SeedResultLike = isUnauthenticatedVisualRoute(entry.route!)
+          ? PUBLIC_VISUAL_SEED
+          : await bootstrapTestSession(page);
         const setup = SETUP_FUNCTIONS[entry.state];
         resolved = resolveStitchRoute(entry.route!, seedLike);
         await setup(page, seedLike);
@@ -374,12 +380,11 @@ test.describe("visual regression (exact reference)", () => {
       } else {
         // Compare mode: strict a11y + strict baseline comparison.
         await assertNoCriticalA11y(page, `${entry.screenId} ${resolved}`);
-        // The compare path keeps the existing contract:
-        // `testInfo.snapshotPath(safeName)` resolves the portable
-        // `reference/...png` name through the
-        // `snapshotPathTemplate` declared in playwright.config.ts.
-        const referencePath = testInfo.snapshotPath(safeName);
-        await expect(page).toHaveScreenshot(referencePath, {
+        // The array form preserves the reference/ subdirectory. A string with
+        // slashes is flattened by Playwright, while an absolute path is
+        // slugified twice.
+        await expect(page).toHaveScreenshot(safeName.split("/"), {
+          fullPage: true,
           maxDiffPixelRatio: 0.01,
         });
       }
@@ -405,6 +410,7 @@ test.describe("visual regression (exact reference)", () => {
 test.describe("visual regression (responsive matrix)", () => {
   for (const surface of CANONICAL_SURFACES) {
     test.describe(`surface ${surface}`, () => {
+      const publicSurface = isUnauthenticatedVisualRoute(surface);
       if (isCaptureMode) {
         // Force sequential execution per-surface in capture mode so
         // the dev server is not being hammered by parallel tests
@@ -421,7 +427,7 @@ test.describe("visual regression (responsive matrix)", () => {
       // per-page-context), but the expensive `devSeed` is paid once.
       let sharedSeed: SeedResult | undefined;
 
-      if (isCaptureMode) {
+      if (isCaptureMode && !publicSurface) {
         test.beforeAll(async ({ request }) => {
           // The dev seed is idempotent, so re-seeding across
           // surfaces is fine; we just want one seed per surface
@@ -442,20 +448,21 @@ test.describe("visual regression (responsive matrix)", () => {
           const responsiveName = responsiveScreenshotName(surface, viewport);
           const screenshotPath = path.join(SNAPSHOT_DIR, responsiveName);
 
-          let seed: SeedResult;
           let resolved: string;
           try {
-            if (isCaptureMode && sharedSeed) {
+            let seedLike: SeedResultLike;
+            if (publicSurface) {
+              seedLike = PUBLIC_VISUAL_SEED;
+            } else if (isCaptureMode && sharedSeed) {
               // Reuse the surface's shared seed and only re-do the
               // (cheap) sign-in so the page context has the auth
               // cookie. This is the bulk of the capture-mode
               // time saving.
               await devSignIn(page.request);
-              seed = sharedSeed;
+              seedLike = sharedSeed;
             } else {
-              seed = await bootstrapTestSession(page);
+              seedLike = await bootstrapTestSession(page);
             }
-            const seedLike: SeedResultLike = seed;
             resolved = resolveStitchRoute(surface, seedLike);
             await page.goto(resolved);
             await page.waitForLoadState("domcontentloaded");
@@ -481,12 +488,8 @@ test.describe("visual regression (responsive matrix)", () => {
             }
           } else {
             await assertNoCriticalA11y(page, `responsive ${surface} @ ${viewport.name}`);
-            // The compare path keeps the existing contract:
-            // `testInfo.snapshotPath(responsiveName)` resolves the
-            // portable `responsive/...png` name through the
-            // `snapshotPathTemplate` declared in playwright.config.ts.
-            const responsivePath = testInfo.snapshotPath(responsiveName);
-            await expect(page).toHaveScreenshot(responsivePath, {
+            await expect(page).toHaveScreenshot(responsiveName.split("/"), {
+              fullPage: true,
               maxDiffPixelRatio: 0.01,
             });
           }

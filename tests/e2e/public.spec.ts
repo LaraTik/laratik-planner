@@ -12,22 +12,24 @@ test.describe("GET /", () => {
   test("renders the landing page", async ({ page }) => {
     const res = await page.goto("/");
     expect(res?.status()).toBe(200);
-    await expect(page.getByRole("heading", { name: "laratik-planner" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Plan, review, and publish with clarity/i }),
+    ).toBeVisible();
   });
 
-  test("has a primary sign-in CTA", async ({ page }) => {
+  test("shows one contextual entry action", async ({ page }) => {
+    const statusResponse = await page.request.get("/api/bootstrap/status");
+    const status = (await statusResponse.json()) as { configured: boolean };
     await page.goto("/");
-    const cta = page.getByRole("link", { name: /^sign in$/i }).first();
-    await expect(cta).toBeVisible();
-    await expect(cta).toHaveAttribute("href", "/signin");
-  });
 
-  test("offers the first-admin setup without public signup", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("link", { name: /first admin setup/i })).toHaveAttribute(
+    const cta = page.getByRole("link", {
+      name: status.configured ? /sign in to studioflow/i : /set up studioflow/i,
+    });
+    await expect(cta).toHaveAttribute(
       "href",
-      "/setup",
+      status.configured ? "/signin" : "/signin?callbackUrl=%2Fsetup&method=magic",
     );
+    await expect(page.getByRole("main").getByRole("link")).toHaveCount(1);
     await expect(page.getByRole("link", { name: /sign up|register/i })).toHaveCount(0);
   });
 });
@@ -37,13 +39,10 @@ test.describe("GET /signin", () => {
     const res = await page.goto("/signin");
     expect(res?.status()).toBe(200);
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
-    const providerControls = page.getByRole("button", {
-      name: /Continue with Google|Email me a sign-in link/i,
-    });
-    const configurationAlert = page.getByRole("alert");
-    expect((await providerControls.count()) + (await configurationAlert.count())).toBeGreaterThan(
-      0,
-    );
+    await expect(page.getByRole("textbox", { name: /email address/i })).toBeVisible();
+    await expect(page.getByLabel(/^password$/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^sign in$/i })).toBeVisible();
+    await expect(page.locator('input[type="email"]')).toHaveCount(1);
   });
 
   test("preserves callbackUrl in the form", async ({ page }) => {

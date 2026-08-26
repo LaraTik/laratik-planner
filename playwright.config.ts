@@ -49,14 +49,12 @@ export default defineConfig({
   // which makes baselines captured on macOS non-portable to the Linux
   // CI runner (see commit f406fbc).
   //
-  // Playwright's `snapshotDir` is already `tests/e2e/<relative-test-file-path>-snapshots`
-  // (the per-file snapshot directory), so the template only needs to
-  // append `{arg}{ext}`. The capture path used by `page.screenshot({ path })`
-  // in tests/e2e/visual-regression.spec.ts is constructed by joining
-  // the same per-file directory (SNAPSHOT_DIR) with the helper-computed
-  // `{arg}` — so the two paths stay in lockstep without any host or
-  // absolute-path tokens.
-  snapshotPathTemplate: "{snapshotDir}/{arg}{ext}",
+  // `snapshotDir` is the project test directory, not the per-file
+  // snapshot directory. Recreate Playwright's conventional
+  // `<test-file>-snapshots/` segment explicitly, then append the portable
+  // `reference/...` or `responsive/...` name supplied by the visual spec.
+  // This keeps assert mode aligned with capture mode on every host.
+  snapshotPathTemplate: "{snapshotDir}/{testFilePath}-snapshots/{arg}{ext}",
 
   use: {
     baseURL: BASE_URL,

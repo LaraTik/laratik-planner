@@ -70,17 +70,14 @@ test.describe("auth gate: signed-in users skip /signin", () => {
   });
 });
 
-test.describe("auth gate: public routes still work while authed", () => {
-  test("GET / and /api/health remain reachable", async ({ page }) => {
+test.describe("auth gate: authenticated entry", () => {
+  test("GET / sends a signed-in user directly to /app", async ({ page }) => {
     const { devSignIn } = await import("./_helpers");
     await devSignIn(page.request);
     const home = await page.goto("/", { waitUntil: "domcontentloaded" });
-    // The landing page is a public route — it must serve 200 even
-    // for authed visitors. (A 307 would silently send the user to
-    // /app and is the bug this assertion guards against.)
-    expect(home?.status()).toBe(200);
-    // The home page must NOT redirect to /app — it's a public landing.
-    expect(home?.url()).toMatch(/\/$|laratik\.com|\/laratik-planner/);
+    expect([200, 307]).toContain(home?.status() ?? 0);
+    await expect(page).toHaveURL(/\/app(?:$|\?)/);
+    await expect(page.getByTestId("landing-page")).toHaveCount(0);
   });
 });
 

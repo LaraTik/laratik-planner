@@ -26,7 +26,7 @@ import { defineConfig, type PlaywrightTestConfig } from "@playwright/test";
  * the same `testDir` and `snapshotPathTemplate` values that
  * Playwright would use at runtime, and substitutes them with the
  * same placeholders Playwright substitutes (`{snapshotDir}`,
- * `{arg}`, `{ext}`). If the template syntax changes, the test will
+ * `{testFilePath}`, `{arg}`, `{ext}`). If the template syntax changes, the test will
  * fail with a clear "token not found" message instead of silently
  * matching the new shape.
  */
@@ -34,15 +34,14 @@ import { defineConfig, type PlaywrightTestConfig } from "@playwright/test";
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const CONFIG_PATH = path.join(REPO_ROOT, "playwright.config.ts");
 const SPEC_RELATIVE = "visual-regression.spec.ts";
-const SPEC_DIR = path.join(REPO_ROOT, "tests", "e2e");
-
 /**
  * Resolve a snapshot path the same way Playwright does at runtime.
  *
  *   - `testDir` defaults to `./tests/e2e` (relative to the config).
- *   - `snapshotDir` defaults to `<testDir>/<specFileName>-snapshots`.
- *   - `snapshotPathTemplate` is `{snapshotDir}/{arg}{ext}` per the
- *     portable contract.
+ *   - The configured `snapshotDir` defaults to `testDir`.
+ *   - `{testFilePath}` is the spec path relative to `testDir`.
+ *   - The portable template recreates Playwright's conventional
+ *     `<specFileName>-snapshots` directory before appending the argument.
  *
  * We resolve `testDir` against the config file's directory so a
  * future move of `playwright.config.ts` is still covered.
@@ -60,10 +59,12 @@ function resolveSnapshotPath(
   // otherwise the assertion that the resolved path doesn't embed
   // `/Users/...` becomes a tautology.
   const testDirRel = configTestDir.replace(/^\.\//, "");
-  const snapshotDir = path.posix.join(testDirRel, `${path.basename(specFile)}-snapshots`);
+  const snapshotDir = testDirRel;
+  const testFilePath = path.posix.relative(testDirRel, specFile.replace(REPO_ROOT + path.sep, ""));
   const template = (config.snapshotPathTemplate ?? "{snapshotDir}/{arg}{ext}").toString();
   return template
     .replace(/\{snapshotDir\}/g, snapshotDir)
+    .replace(/\{testFilePath\}/g, testFilePath)
     .replace(/\{arg\}/g, arg)
     .replace(/\{ext\}/g, ext);
 }
@@ -91,7 +92,7 @@ describe("playwright snapshot path contract (Task 8) — behaviour", () => {
   it("resolves the snapshot directory under tests/e2e/<spec>-snapshots", () => {
     const resolved = resolveSnapshotPath(
       liveConfig,
-      path.join(SPEC_DIR, SPEC_RELATIVE),
+      path.posix.join("tests", "e2e", SPEC_RELATIVE),
       "canonical-01aa8faf-stitch",
       ".png",
     );
@@ -104,7 +105,7 @@ describe("playwright snapshot path contract (Task 8) — behaviour", () => {
   it("the resolved snapshot path does not embed the absolute test file path or the host OS", () => {
     const resolved = resolveSnapshotPath(
       liveConfig,
-      path.join(SPEC_DIR, SPEC_RELATIVE),
+      path.posix.join("tests", "e2e", SPEC_RELATIVE),
       "canonical-218f259a-stitch",
       ".png",
     );
@@ -115,14 +116,13 @@ describe("playwright snapshot path contract (Task 8) — behaviour", () => {
     expect(resolved).not.toMatch(/darwin|linux|win32/);
   });
 
-  it("the template uses portable {arg}{ext} placeholders (no test-file-path, no platform tokens)", () => {
+  it("the template uses only portable path tokens", () => {
     // We assert on the *template shape* rather than the source
     // string. Reading the file as text is fine — the assertion is
     // that the resolved path is portable, which is the actual
     // behaviour we want to lock. A refactor that uses a different
     // (still portable) token would still produce a portable path.
     const template = (liveConfig.snapshotPathTemplate ?? "").toString();
-    expect(template).not.toMatch(/\{testFilePath\}/);
     expect(template).not.toMatch(/\{testFileDir\}/);
     expect(template).not.toMatch(/\{platform\}/);
     expect(template).not.toMatch(/\{-?projectName\}/);
@@ -136,7 +136,7 @@ describe("playwright snapshot path contract (Task 8) — behaviour", () => {
     // relative so the same baselines work on macOS, Linux, and CI.
     const resolved = resolveSnapshotPath(
       liveConfig,
-      path.join(SPEC_DIR, SPEC_RELATIVE),
+      path.posix.join("tests", "e2e", SPEC_RELATIVE),
       "probe",
       ".png",
     );
