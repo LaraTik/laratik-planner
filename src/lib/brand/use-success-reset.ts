@@ -30,8 +30,8 @@ import * as React from "react";
  * recommends (no React state in effects).
  */
 export function useSuccessReset(
-  state: { success?: boolean } | undefined,
-  ref: React.RefObject<HTMLFormElement>,
+  state: { success?: boolean; error?: unknown } | undefined,
+  ref: React.RefObject<HTMLFormElement | null>,
 ): void {
   const wasSuccess = React.useRef(false);
   React.useEffect(() => {

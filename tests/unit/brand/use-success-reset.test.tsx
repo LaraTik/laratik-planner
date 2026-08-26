@@ -4,8 +4,10 @@ import * as React from "react";
 import { useSuccessReset } from "@/lib/brand/use-success-reset";
 
 function makeRef(current: HTMLFormElement | null): React.RefObject<HTMLFormElement> {
-  return { current };
+  return { current } as React.RefObject<HTMLFormElement>;
 }
+
+type FormState = { success?: boolean; error?: string } | undefined;
 
 describe("useSuccessReset", () => {
   it("resets the form when state.success flips to true", () => {
@@ -14,7 +16,7 @@ describe("useSuccessReset", () => {
     const ref = makeRef(form);
     const reset = vi.spyOn(form, "reset");
     const { rerender } = renderHook(({ s }) => useSuccessReset(s, ref), {
-      initialProps: { s: undefined as { success?: boolean } | undefined },
+      initialProps: { s: undefined as FormState },
     });
     rerender({ s: { success: true } });
     expect(reset).toHaveBeenCalledTimes(1);
@@ -27,7 +29,7 @@ describe("useSuccessReset", () => {
     const ref = makeRef(form);
     const reset = vi.spyOn(form, "reset");
     const { rerender } = renderHook(({ s }) => useSuccessReset(s, ref), {
-      initialProps: { s: undefined as { success?: boolean } | undefined },
+      initialProps: { s: undefined as FormState },
     });
     rerender({ s: { error: "Boom" } });
     expect(reset).not.toHaveBeenCalled();
@@ -40,7 +42,7 @@ describe("useSuccessReset", () => {
     const ref = makeRef(form);
     const reset = vi.spyOn(form, "reset");
     const { rerender } = renderHook(({ s }) => useSuccessReset(s, ref), {
-      initialProps: { s: undefined as { success?: boolean } | undefined },
+      initialProps: { s: undefined as FormState },
     });
     rerender({ s: { success: true } });
     rerender({ s: { success: true } });
@@ -54,7 +56,7 @@ describe("useSuccessReset", () => {
     const ref = makeRef(form);
     const reset = vi.spyOn(form, "reset");
     const { rerender } = renderHook(({ s }) => useSuccessReset(s, ref), {
-      initialProps: { s: undefined as { success?: boolean } | undefined },
+      initialProps: { s: undefined as FormState },
     });
     rerender({ s: { success: true } });
     rerender({ s: { error: "Boom" } });

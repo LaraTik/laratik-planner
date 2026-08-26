@@ -245,11 +245,14 @@ describe("BrandKitPage layout (Round 3 / commit G)", () => {
     expect(screen.queryByTestId("mock-voice-form")).toBeNull();
   });
 
-  it("renders the Add asset dropdown menu in the PageHeader", async () => {
+  it("renders the Add to brand kit dropdown menu in the PageHeader", async () => {
     await renderPageForManager();
     const add = screen.getByTestId("brand-kit-add-asset");
     expect(add).toBeInTheDocument();
-    expect(add).toHaveTextContent(/add asset/i);
+    // Round 5 (rebuild): the button label is "Add to brand kit" — the
+    // previous "Add asset" was misleading because the menu contains
+    // voice rules, publishing rules, and linked resources too.
+    expect(add).toHaveTextContent(/add to brand kit/i);
   });
 
   it("renders publishing rules and linked resources from the service", async () => {
