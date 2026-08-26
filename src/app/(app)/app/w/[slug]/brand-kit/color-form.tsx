@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { createColorAssetAction } from "./actions";
 import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { Card } from "@/components/ui/card";
+import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
 
@@ -59,14 +60,20 @@ export function ColorForm({ slug }: { slug: string }) {
   return (
     <Card padding="md" className="mb-3">
       <form ref={formRef} action={action} className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
-        <label className="text-label font-semibold">
-          Color name
-          <Input className="mt-1" name="name" required maxLength={80} placeholder="Brand blue" />
-        </label>
-        <label className="text-label font-semibold">
-          Hex
+        <FormField id="color-name" label="Color name" required>
           <Input
-            className="mt-1 font-mono"
+            id="color-name"
+            name="name"
+            required
+            maxLength={80}
+            placeholder="Brand blue"
+            className="mt-0"
+          />
+        </FormField>
+        <FormField id="color-hex" label="Hex" required>
+          <Input
+            id="color-hex"
+            className="mt-0 font-mono"
             name="hex"
             required
             // Permissive pattern so the browser does not block mid-typing.
@@ -79,17 +86,17 @@ export function ColorForm({ slug }: { slug: string }) {
             placeholder="#3B82F6"
             maxLength={7}
           />
-        </label>
-        <label className="text-label font-semibold">
-          Pick
+        </FormField>
+        <FormField id="color-pick" label="Pick">
           <input
+            id="color-pick"
             type="color"
             value={hex}
             onChange={(e) => setHex(e.target.value.toUpperCase())}
-            className="border-border bg-surface mt-1 h-10 w-16 cursor-pointer rounded-[var(--radius-control)] border p-1"
+            className="border-border bg-surface h-10 w-16 cursor-pointer rounded-[var(--radius-control)] border p-1"
             aria-label="Pick a color"
           />
-        </label>
+        </FormField>
         <div className="flex items-end sm:col-span-3 sm:justify-end">
           <FormSubmitButton label="Add color" pendingLabel="Adding…" />
         </div>

@@ -22,6 +22,7 @@ import {
 import { createFontAssetAction } from "./actions";
 import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { Card } from "@/components/ui/card";
+import { FormField } from "@/components/forms/form-field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -143,22 +144,22 @@ export function TypographyForm({ slug }: { slug: string }) {
   return (
     <Card padding="md" className="mb-3">
       <form ref={formRef} action={action} className="grid gap-3">
-        <label className="text-label font-semibold">
-          Name
+        <FormField id="typography-name" label="Name" required>
           <Input
-            className="mt-1"
+            id="typography-name"
+            className="mt-0"
             name="name"
             required
             maxLength={80}
             placeholder="Heading, Body, Mono caption…"
           />
-        </label>
+        </FormField>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <label className="text-label font-semibold">
-            Family
+          <FormField id="typography-family" label="Family" required>
             <Input
-              className="mt-1"
+              id="typography-family"
+              className="mt-0"
               name="family"
               required
               maxLength={120}
@@ -167,16 +168,16 @@ export function TypographyForm({ slug }: { slug: string }) {
               list="typography-known-families"
               data-testid="typography-family-input"
             />
-            <datalist id="typography-known-families">
-              {KNOWN_FAMILIES.map((f) => (
-                <option key={f} value={f} />
-              ))}
-            </datalist>
-          </label>
+          </FormField>
+          <datalist id="typography-known-families">
+            {KNOWN_FAMILIES.map((f) => (
+              <option key={f} value={f} />
+            ))}
+          </datalist>
 
-          <label className="text-label font-semibold">
-            Weight
+          <FormField id="typography-weight" label="Weight" required>
             <input
+              id="typography-weight"
               type="number"
               name="weight"
               min={100}
@@ -186,19 +187,19 @@ export function TypographyForm({ slug }: { slug: string }) {
               value={weight}
               onChange={(e) => setWeight(Number(e.target.value))}
               data-testid="typography-weight-input"
-              className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring mt-1 h-10 w-full [appearance:textfield] rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-10 w-full [appearance:textfield] rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
-          </label>
+          </FormField>
 
-          <label className="text-label font-semibold">
-            Role
+          <FormField id="typography-role" label="Role" required>
             <select
+              id="typography-role"
               name="role"
               required
               value={role}
               onChange={(e) => setRole(e.target.value as FontRole)}
               data-testid="typography-role-input"
-              className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring mt-1 h-10 w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+              className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-10 w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
             >
               {ROLES.map((r) => (
                 <option key={r.value} value={r.value}>
@@ -206,7 +207,7 @@ export function TypographyForm({ slug }: { slug: string }) {
                 </option>
               ))}
             </select>
-          </label>
+          </FormField>
         </div>
 
         <div

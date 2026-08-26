@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { createVoiceRuleAction } from "./actions";
 import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { Card } from "@/components/ui/card";
+import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
 
@@ -49,11 +50,16 @@ function RuleSubForm({ slug, ruleType }: { slug: string; ruleType: RuleType }) {
   return (
     <form ref={formRef} action={action} className="grid gap-2">
       <input type="hidden" name="ruleType" value={ruleType} />
-      <label className="text-label font-semibold">
-        {ruleType === "tone" ? "Tone" : ruleType === "do" ? "Do" : "Don't"}
+      <FormField
+        id={`voice-rule-${ruleType}-content`}
+        label={ruleType === "tone" ? "Tone" : ruleType === "do" ? "Do" : "Don't"}
+        hint={`${max} chars max`}
+        required
+      >
         {useTextarea ? (
           <textarea
-            className="border-border bg-surface text-body text-fg-primary mt-1 block w-full rounded-[var(--radius-control)] border px-3 py-2"
+            id={`voice-rule-${ruleType}-content`}
+            className="border-border bg-surface text-body text-fg-primary mt-0 block w-full rounded-[var(--radius-control)] border px-3 py-2"
             name="content"
             required
             maxLength={max}
@@ -62,16 +68,16 @@ function RuleSubForm({ slug, ruleType }: { slug: string; ruleType: RuleType }) {
           />
         ) : (
           <Input
-            className="mt-1"
+            id={`voice-rule-${ruleType}-content`}
+            className="mt-0"
             name="content"
             required
             maxLength={max}
             placeholder={PLACEHOLDER[ruleType]}
           />
         )}
-      </label>
-      <div className="flex items-center justify-between">
-        <span className="text-label text-fg-muted">{max} chars max</span>
+      </FormField>
+      <div className="flex items-center justify-end">
         <FormSubmitButton size="sm" label={LABEL[ruleType]} pendingLabel="Adding…" />
       </div>
       {state?.error ? (

@@ -28,7 +28,9 @@ describe("ColorForm", () => {
     mockedUseFormStatus.mockReturnValue({ pending: false } as ReturnType<typeof useFormStatus>);
     render(<ColorForm slug="test-slug" />);
     expect(screen.getByLabelText(/color name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^hex$/i)).toBeInTheDocument();
+    // FormField renders the required marker as a trailing '*', so the
+    // label text is "Hex *" — match loosely.
+    expect(screen.getByLabelText(/hex/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/pick a color/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /add color/i })).toBeInTheDocument();
   });

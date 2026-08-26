@@ -55,7 +55,9 @@ function renderForm() {
 describe("TypographyForm", () => {
   it("renders the name, family, weight, role inputs and the submit button", () => {
     renderForm();
-    expect(screen.getByLabelText(/^name$/i)).toBeInTheDocument();
+    // FormField renders the required marker as a trailing '*', so the
+    // label text is "Name *" — match loosely.
+    expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByTestId("typography-family-input")).toBeInTheDocument();
     expect(screen.getByTestId("typography-weight-input")).toBeInTheDocument();
     expect(screen.getByTestId("typography-role-input")).toBeInTheDocument();

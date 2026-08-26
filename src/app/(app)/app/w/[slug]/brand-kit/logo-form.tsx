@@ -6,6 +6,7 @@ import { Trash2, Upload, Link as LinkIcon, Image as ImageIcon } from "lucide-rea
 import { createLogoAssetAction } from "./actions";
 import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { Card } from "@/components/ui/card";
+import { FormField } from "@/components/forms/form-field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -160,11 +161,13 @@ export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: str
 
         {mode === "upload" ? (
           <div className="grid gap-2">
-            <label htmlFor="logo-file" className="text-label font-semibold">
-              Logo file
-            </label>
-            <div className="border-border bg-surface-subtle flex items-center gap-3 rounded-[var(--radius-control)] border-2 border-dashed p-3">
-              <ImageIcon className="text-fg-muted h-6 w-6 shrink-0" aria-hidden="true" />
+            <FormField
+              id="logo-file"
+              label="Logo file"
+              hint="PNG, JPG, SVG, WebP, or GIF up to 10 MB."
+              required
+              className="border-border bg-surface-subtle rounded-[var(--radius-control)] border-2 border-dashed p-3"
+            >
               <input
                 ref={fileInputRef}
                 id="logo-file"
@@ -176,7 +179,7 @@ export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: str
                 disabled={uploading}
                 aria-describedby="logo-file-status"
               />
-            </div>
+            </FormField>
             <div id="logo-file-status" className="text-label text-fg-muted" aria-live="polite">
               {uploading ? (
                 <span>Uploading…</span>
@@ -213,10 +216,10 @@ export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: str
             />
           </div>
         ) : (
-          <label className="text-label font-semibold">
-            HTTPS URL
+          <FormField id="logo-external-url" label="HTTPS URL" required>
             <Input
-              className="mt-1"
+              id="logo-external-url"
+              className="mt-0"
               type="url"
               name="externalUrl"
               value={urlValue}
@@ -231,19 +234,19 @@ export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: str
               required
               maxLength={500}
             />
-          </label>
+          </FormField>
         )}
 
-        <label className="text-label font-semibold">
-          Logo name
+        <FormField id="logo-name" label="Logo name" required>
           <Input
-            className="mt-1"
+            id="logo-name"
+            className="mt-0"
             name="name"
             required
             maxLength={120}
             placeholder="Wordmark, Icon, Dark variant…"
           />
-        </label>
+        </FormField>
 
         <div className="flex items-center justify-end">
           <SubmitButton mode={mode} uploaded={!!uploadedPath} uploading={uploading} />
