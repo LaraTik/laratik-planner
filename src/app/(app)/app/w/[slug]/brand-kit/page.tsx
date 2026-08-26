@@ -14,10 +14,9 @@ import {
 } from "@/lib/brand/service";
 import { BRAND_KIT_SECTIONS } from "@/lib/brand/sections";
 import { getSignedDownloadUrl } from "@/lib/storage";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
+import { SectionCard } from "@/components/workspace/section-card";
 import { WorkspaceTopTabs } from "@/components/workspace/top-tabs";
 import { AddAssetMenu } from "./add-asset-menu";
 import { BrandIdentityHero } from "./brand-identity-hero";
@@ -226,85 +225,69 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
         />
 
         {/* Row 2 — Logo (8) + Color (4) */}
-        <Card
+        <SectionCard
           id="logo"
-          className="scroll-mt-20 lg:col-span-8"
+          title="Logo Assets"
+          count={assetsByKind.logo.length}
+          className="lg:col-span-8"
           aria-label="Logo assets"
           data-testid="brand-kit-section-logo"
         >
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <CardTitle>Logo Assets</CardTitle>
-            <Badge variant="outline" data-testid="brand-kit-logo-count">
-              {assetsByKind.logo.length}
-            </Badge>
-          </div>
           {canManage ? <LogoForm slug={slug} workspaceId={workspace.id} /> : null}
           <LogoGrid slug={slug} canManage={canManage} assets={assetsByKind.logo} />
-        </Card>
+        </SectionCard>
 
-        <Card
+        <SectionCard
           id="color"
-          className="scroll-mt-20 lg:col-span-4"
+          title="Color Palette"
+          count={assetsByKind.color.length}
+          className="lg:col-span-4"
           aria-label="Color palette"
           data-testid="brand-kit-section-color"
         >
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <CardTitle>Color Palette</CardTitle>
-            <Badge variant="outline" data-testid="brand-kit-color-count">
-              {assetsByKind.color.length}
-            </Badge>
-          </div>
           {canManage ? <ColorForm slug={slug} /> : null}
           <ColorSwatchGrid slug={slug} canManage={canManage} assets={assetsByKind.color} />
-        </Card>
+        </SectionCard>
 
         {/* Row 3 — Typography (12) */}
-        <Card
+        <SectionCard
           id="guidelines"
-          className="scroll-mt-20 lg:col-span-12"
+          title="Typography"
+          count={assetsByKind.font.length}
+          fullWidth
           aria-label="Typography"
           data-testid="brand-kit-section-typography"
         >
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <CardTitle>Typography</CardTitle>
-            <Badge variant="outline" data-testid="brand-kit-font-count">
-              {assetsByKind.font.length}
-            </Badge>
-          </div>
           {canManage ? <TypographyForm slug={slug} /> : null}
           <TypographyCards slug={slug} canManage={canManage} assets={assetsByKind.font} />
-        </Card>
+        </SectionCard>
 
         {/* Row 4 — Voice (6) + Pillars (6) */}
-        <Card
+        <SectionCard
           id="voice"
-          className="scroll-mt-20 lg:col-span-6"
+          title="Voice & Tone"
+          count={rules.length}
+          className="lg:col-span-6"
           aria-label="Voice and tone"
           data-testid="brand-kit-section-voice"
         >
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <CardTitle>Voice &amp; Tone</CardTitle>
-            <Badge variant="outline" data-testid="brand-kit-voice-count">
-              {rules.length}
-            </Badge>
-          </div>
           {canManage ? <VoiceForm slug={slug} /> : null}
           <VoiceRuleList slug={slug} canManage={canManage} rules={rules} />
-        </Card>
+        </SectionCard>
 
-        <Card
+        <SectionCard
           id="pillars"
-          className="scroll-mt-20 lg:col-span-6"
+          title={
+            <>
+              <Tag className="text-fg-secondary h-4 w-4" aria-hidden="true" />
+              Content Pillars
+            </>
+          }
+          count={pillars.length}
+          className="lg:col-span-6"
           aria-label="Content pillars"
           data-testid="brand-kit-section-pillars"
         >
-          <CardTitle className="mb-3 inline-flex items-center gap-2">
-            <Tag className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-            Content Pillars
-            <Badge variant="outline" className="ml-1">
-              {pillars.length}
-            </Badge>
-          </CardTitle>
           {pillars.length ? (
             <ul className="divide-border divide-y">
               {pillars.map((pillar) => (
@@ -334,56 +317,44 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
           ) : (
             <p className="text-body text-fg-muted py-4">No content pillars yet.</p>
           )}
-        </Card>
+        </SectionCard>
 
         {/* Row 5 — Publishing (4) + Linked (4) */}
-        <Card
+        <SectionCard
           id="publishing"
-          className="scroll-mt-20 lg:col-span-4"
+          title="Publishing Rules"
+          count={publishingRules.length}
+          className="lg:col-span-4"
           aria-label="Publishing rules"
           data-testid="brand-kit-section-publishing"
         >
-          <CardTitle className="mb-3 inline-flex items-center gap-2">
-            Publishing Rules
-            <Badge variant="outline" className="ml-1">
-              {publishingRules.length}
-            </Badge>
-          </CardTitle>
           {canEditBrand ? <PublishingRuleForm slug={slug} /> : null}
           <PublishingRuleList slug={slug} canManage={canEditBrand} rules={publishingRules} />
-        </Card>
+        </SectionCard>
 
-        <Card
+        <SectionCard
           id="linked"
-          className="scroll-mt-20 lg:col-span-4"
+          title="Linked Resources"
+          count={linkedResources.length}
+          className="lg:col-span-4"
           aria-label="Linked resources"
           data-testid="brand-kit-section-linked"
         >
-          <CardTitle className="mb-3 inline-flex items-center gap-2">
-            Linked Resources
-            <Badge variant="outline" className="ml-1">
-              {linkedResources.length}
-            </Badge>
-          </CardTitle>
           {canEditBrand ? <LinkedResourceForm slug={slug} /> : null}
           <LinkedResourceList slug={slug} canManage={canEditBrand} resources={linkedResources} />
-        </Card>
+        </SectionCard>
 
         {/* Row 6 — Recent Updates (12) */}
-        <Card
+        <SectionCard
           id="recent"
-          className="scroll-mt-20 lg:col-span-12"
+          title="Recent Updates"
+          count={recent.length}
+          fullWidth
           aria-label="Recent updates"
           data-testid="brand-kit-section-recent"
         >
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <CardTitle>Recent Updates</CardTitle>
-            <Badge variant="outline" data-testid="brand-kit-recent-count">
-              {recent.length}
-            </Badge>
-          </div>
           <RecentUpdatesTable rows={recent} />
-        </Card>
+        </SectionCard>
       </div>
     </div>
   );
