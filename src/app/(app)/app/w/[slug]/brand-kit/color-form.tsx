@@ -12,14 +12,44 @@ import { Input } from "@/components/ui/input";
  * The form takes a name + a hex color. The hex is editable in two
  * ways: a native `<input type="color">` swatch picker and a plain
  * text field. Both stay in sync via a single `useState`; submitting
- * sends the trimmed uppercase hex.
+ * sends the trimmed uppercase 6-char hex.
+ *
+ * Round 5 (rebuild, 2026-08-26):
+ *   - Accept shorthand hex (`#fff`, `#000`) — common in design
+ *     tools. The form expands it to 6 chars on blur. The Zod schema
+ *     still requires 6 chars at the server; the expansion happens
+ *     client-side before submission.
+ *   - Uppercase the hex on blur so the saved value is always
+ *     `#RRGGBB`. The picker already emits uppercase; the text
+ *     field is normalised to match.
+ *   - The pattern attribute is intentionally permissive (#abc or
+ *     #abcdef) so the browser does not block the user mid-typing;
+ *     the schema + the blur-expansion catch the rest.
  */
+const SHORT_HEX = /^#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])$/;
+const LONG_HEX = /^#[0-9a-fA-F]{6}$/;
+
+function expandHex(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  if (LONG_HEX.test(trimmed)) return trimmed.toUpperCase();
+  const m = SHORT_HEX.exec(trimmed);
+  if (m && m[1] && m[2] && m[3]) {
+    return `#${m[1]}${m[1]}${m[2]}${m[2]}${m[3]}${m[3]}`.toUpperCase();
+  }
+  return trimmed.toUpperCase();
+}
+
 export function ColorForm({ slug }: { slug: string }) {
   const [state, action] = useActionState(
     createColorAssetAction.bind(null, slug),
     {} as { error?: string; success?: boolean },
   );
   const [hex, setHex] = React.useState("#3B82F6");
+
+  function onHexBlur() {
+    setHex(expandHex(hex));
+  }
 
   return (
     <Card padding="md" className="mb-3">
@@ -34,10 +64,15 @@ export function ColorForm({ slug }: { slug: string }) {
             className="mt-1 font-mono"
             name="hex"
             required
-            pattern="^#[0-9a-fA-F]{6}$"
+            // Permissive pattern so the browser does not block mid-typing.
+            // The server-side Zod schema (and the on-blur expansion) are
+            // the source of truth.
+            pattern="#?[0-9a-fA-F]{3}([0-9a-fA-F]{3})?"
             value={hex}
             onChange={(e) => setHex(e.target.value)}
+            onBlur={onHexBlur}
             placeholder="#3B82F6"
+            maxLength={7}
           />
         </label>
         <label className="text-label font-semibold">
