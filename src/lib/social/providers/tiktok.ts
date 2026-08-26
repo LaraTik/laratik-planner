@@ -15,6 +15,7 @@ import type {
 } from "../types";
 import type { SocialCredentials } from "../crypto";
 import { newRequestId } from "../http";
+import { captureError } from "@/lib/observability/sentry";
 
 /**
  * M4 — TikTok provider.
@@ -302,9 +303,10 @@ export const tiktokAdapter: SocialProviderAdapter = {
       });
     } catch (err) {
       if (!isSocialProviderError(err)) {
-        // Best-effort: surface in logs but do not throw, the local
-        // state transition is the source of truth.
-        console.error("[tiktok] revoke failed", err);
+        // Best-effort: surface in logs + Sentry (when configured) but
+        // do not throw, the local state transition is the source of
+        // truth.
+        captureError("social.tiktok.revoke", err);
       }
     }
   },

@@ -129,12 +129,15 @@ vi.mock("@auth/drizzle-adapter", () => ({
   DrizzleAdapter: vi.fn(() => ({ id: "adapter" })),
 }));
 
-// captureError is a no-op in this environment (SENTRY_DSN is empty
-// above) but we still mock it so the catch branch can be asserted
-// cleanly without it reaching the structured log stream.
+// captureError + setUser are no-ops in this environment (SENTRY_DSN
+// is empty above) but we still mock them so the catch branch can be
+// asserted cleanly without reaching the structured log stream, and
+// the new signIn → setUser wiring can be asserted with a spy.
 const captureErrorMock = vi.fn();
+const setUserMock = vi.fn();
 vi.mock("@/lib/observability/sentry", () => ({
   captureError: captureErrorMock,
+  setUser: setUserMock,
 }));
 
 const { authConfig } = await import("@/lib/auth/config");
@@ -143,6 +146,7 @@ beforeEach(() => {
   dbState.updateCalls.length = 0;
   lastSet = undefined;
   captureErrorMock.mockReset();
+  setUserMock.mockReset();
 });
 
 describe("events.signIn stamps emailVerified for unverified users", () => {
@@ -222,5 +226,32 @@ describe("events.signIn stamps emailVerified for unverified users", () => {
     expect(captureErrorMock.mock.calls[0]?.[0]).toBe(
       "auth.events.signIn.email_verified_stamp_failed",
     );
+  });
+});
+
+describe("events.signIn tags the Sentry user context", () => {
+  it("calls setUser with the user id + email + username on every successful sign-in", async () => {
+    const handler = authConfig.events?.signIn;
+    expect(handler).toBeDefined();
+    await handler!({
+      user: {
+        id: "user-1",
+        email: "u1@laratik.com",
+        name: "U One",
+      },
+    } as never);
+    expect(setUserMock).toHaveBeenCalledTimes(1);
+    expect(setUserMock).toHaveBeenCalledWith({
+      id: "user-1",
+      email: "u1@laratik.com",
+      username: "U One",
+    });
+  });
+
+  it("skips setUser when the user has no id (NextAuth's pre-user-lookup path)", async () => {
+    const handler = authConfig.events?.signIn;
+    expect(handler).toBeDefined();
+    await handler!({ user: {} } as never);
+    expect(setUserMock).not.toHaveBeenCalled();
   });
 });

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { currentActor } from "@/lib/auth/current-actor";
 import { changeAgencyPlanAsPlatform, OverrideShapeSchema } from "@/lib/entitlements";
+import { captureError } from "@/lib/observability/sentry";
 import {
   AgencyLifecycleActionSchema,
   changeAgencyLifecycle,
@@ -100,7 +101,7 @@ export async function createAgencyAction(
         : { warning: "Agency created, but the administrator email could not be sent." }),
     };
   } catch (error) {
-    console.error("[createAgencyAction] failed", error);
+    captureError("platform.createAgency", error);
     return {
       error:
         error instanceof z.ZodError

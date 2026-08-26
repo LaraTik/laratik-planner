@@ -18,7 +18,7 @@ import { OverrideShapeSchema } from "@/lib/entitlements";
 import { requirePlatformPermission } from "@/lib/auth/platform-access";
 import type { Actor } from "@/lib/auth/policy";
 import { clientEnv, serverEnv } from "@/lib/validation/env";
-import { logError } from "@/lib/observability/logger";
+import { captureError } from "@/lib/observability/sentry";
 
 export const CreateAgencySchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -143,8 +143,7 @@ export async function createAgency(actor: Actor, raw: CreateAgencyInput) {
     });
   } catch (cause) {
     emailSent = false;
-    logError("platform.agency_admin_email_failed", {
-      cause,
+    captureError("platform.agency_admin_email_failed", cause, {
       agencyId: result.id,
       invitationId: result.invitationId,
     });

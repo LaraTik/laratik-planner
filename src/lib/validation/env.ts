@@ -137,6 +137,10 @@ const serverSchema = z.object({
   SENTRY_AUTH_TOKEN: stringOrEmpty,
   SENTRY_ORG: stringOrEmpty,
   SENTRY_PROJECT: stringOrEmpty,
+  // Guard token for the /api/sentry-probe route. The install script
+  // sets it alongside the other Sentry keys; the route 503s if
+  // missing so an unconfigured env can't expose the probe publicly.
+  SENTRY_PROBE_TOKEN: stringOrEmpty,
 
   // Cron + bootstrap
   CRON_SECRET: stringOrEmpty,
