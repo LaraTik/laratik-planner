@@ -69,7 +69,10 @@ jobs:
       # the §23 journey fails at step 6 (invite 5 members). The
       # mirror of the service in `docker-compose.dev.yml`.
       mailpit:
-        image: axllent/mailpit:latest
+        # Pinned to v1.27.4 (latest stable). zizmor rejects `latest` and
+        # floating minor tags (e.g. v1.27) per its unpinned-images
+        # audit. Keep the comment in `docker-compose.dev.yml` in sync.
+        image: axllent/mailpit:v1.27.4
         ports:
           - 1025:1025
           - 8025:8025

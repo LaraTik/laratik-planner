@@ -36,7 +36,9 @@ services:
   # shows them in a web UI. Use this to test the magic-link sign-in flow
   # locally without a real mailbox. See docs/operations/local-dev.md.
   mailpit:
-    image: axllent/mailpit:latest
+    # Pinned to v1.27.4 to match .github/workflows/ci.yml (zizmor requires
+    # a specific version, not `latest` or a floating minor tag).
+    image: axllent/mailpit:v1.27.4
     container_name: laratik-planner-mailpit-dev
     restart: unless-stopped
     ports:
