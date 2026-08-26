@@ -72,7 +72,7 @@ export function ArchiveWithUndo({
     startTransition(async () => {
       try {
         await archiveAction(slug, id);
-        const toastId = toast.success(`Archived ${label.toLowerCase()}: ${name}`, {
+        toast.success(`Archived ${label.toLowerCase()}: ${name}`, {
           // Round 5 (rebuild) — the previous "removed permanently after
           // 30 days" copy was dishonest: there is no purge job, and
           // the row stays in the database until manually removed. The
@@ -98,15 +98,11 @@ export function ArchiveWithUndo({
           },
           actionButtonStyle: { gap: "0.5rem" },
         });
-        // Tidy: keep the toast id reachable for tests.
-        if (typeof window !== "undefined" && dataTestId) {
-          window.setTimeout(() => {
-            const el = document.querySelector(
-              `[data-testid="${dataTestId}"]`,
-            ) as HTMLElement | null;
-            el?.setAttribute("data-toast-id", String(toastId));
-          }, 0);
-        }
+        // Round 5 (rebuild): the previous setTimeout DOM hook that
+        // mirrored toastId onto the archive button is gone. Tests pin
+        // the toast via getByRole('status') on the Sonner region
+        // instead, so the production code no longer needs the
+        // test-only side effect.
       } catch (err) {
         toast.error(`Couldn't archive ${label.toLowerCase()}`, {
           description: getErrorMessage(err),
