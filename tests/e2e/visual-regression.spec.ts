@@ -7,6 +7,7 @@ import {
   REGRESSION_VIEWPORTS,
   SETUP_FUNCTIONS,
   STITCH_CASES,
+  collectPreWarmRoutes,
   responsiveScreenshotName,
   resolveStitchRoute,
   screenshotNameFor,
@@ -294,25 +295,41 @@ test.beforeAll(async ({ browser }, testInfo) => {
   // fast if the dev server is stuck.
   testInfo.setTimeout(10 * 60 * 1000);
 
-  // Union of every route the suite will visit: the responsive matrix
-  // (CANONICAL_SURFACES) plus the exact-reference cases (STITCH_CASES
-  // that have a `route` and are not historical/superseded). Deduping
-  // avoids paying the compile cost twice for a route that appears in
-  // both lists.
-  const routes = new Set<string>(CANONICAL_SURFACES);
-  for (const entry of STITCH_CASES) {
-    if (entry.classification === "historical" || entry.classification === "superseded") continue;
-    if (entry.route) routes.add(entry.route);
-  }
-  const routeList = [...routes].sort();
-  console.log(
-    `[visual] pre-warming ${routeList.length} routes to pay the dev compile cost upfront`,
-  );
-
   const context = await browser.newContext();
   const page = await context.newPage();
   try {
+    // Seed BEFORE collecting routes: the responsive-matrix and the
+    // exact-reference cases both reference `/app/w/acme/planning/
+    // {contentItemId}`, where `{contentItemId}` is a template
+    // placeholder. `resolveStitchRoute` substitutes the real UUID
+    // from the seed, so the page server receives a valid id and the
+    // dev compilation succeeds (otherwise the SSR data fetch throws
+    // `invalid input syntax for type uuid` and the route stalls for
+    // ~1 min on every request — see CI run 32941456850). `devSignIn`
+    // comes first because the dev seed endpoint does not require an
+    // auth cookie, but the dev sign-in endpoint does require the
+    // test user to exist; seeding then signing in matches the order
+    // the per-test `bootstrapTestSession` already uses.
     await devSignIn(page.request);
+    const seed = await devSeed(page.request);
+
+    // Union of every route the suite will visit: the responsive matrix
+    // (CANONICAL_SURFACES) plus the exact-reference cases (STITCH_CASES
+    // that have a `route` and are not historical/superseded). Deduping
+    // avoids paying the compile cost twice for a route that appears in
+    // both lists. Each route is run through `resolveStitchRoute` so a
+    // future template placeholder (e.g. `{campaignId}`) cannot silently
+    // slip into the pre-warm — the unit test
+    // `tests/unit/visual-prewarm-routes.test.ts` enforces the same
+    // invariant against `collectPreWarmRoutes()` from
+    // `stitch-cases.ts`, the single source of truth for the route set.
+    const routeList = collectPreWarmRoutes()
+      .map((route) => resolveStitchRoute(route, seed))
+      .sort();
+    console.log(
+      `[visual] pre-warming ${routeList.length} routes to pay the dev compile cost upfront`,
+    );
+
     for (const route of routeList) {
       try {
         await page.goto(route, { waitUntil: "domcontentloaded", timeout: 60_000 });
@@ -328,7 +345,7 @@ test.beforeAll(async ({ browser }, testInfo) => {
     await context.close();
   }
 
-  console.log(`[visual] pre-warm complete (${routeList.length} routes)`);
+  console.log(`[visual] pre-warm complete`);
 });
 
 // ─── Phase 1: exact reference (one capture per active case) ─────────────

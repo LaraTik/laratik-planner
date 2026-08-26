@@ -508,6 +508,34 @@ export const CANONICAL_SURFACES: readonly string[] = (() => {
 })();
 
 /**
+ * Union of every route the visual-regression pre-warm visits, in
+ * `stitch-cases.ts` so the spec and the test guard share a single
+ * source of truth.
+ *
+ * Pre-warm visits the responsive matrix (`CANONICAL_SURFACES`) plus
+ * every exact-reference case that has a `route` field and is not
+ * excluded as historical or superseded. Deduping avoids paying the
+ * dev compile cost twice for a route that appears in both lists.
+ *
+ * The pre-warm runs each entry through `resolveStitchRoute` before
+ * navigating, so a future template placeholder (e.g. `{campaignId}`)
+ * cannot silently slip into `page.goto` and stall on a server-side
+ * UUID parse error (CI run 32941456850). The invariant
+ * "every entry, after resolution, has no `{...}` placeholder" is
+ * enforced by `tests/unit/visual-prewarm-routes.test.ts`.
+ */
+export function collectPreWarmRoutes(): readonly string[] {
+  const routes = new Set<string>(CANONICAL_SURFACES);
+  for (const entry of STITCH_CASES) {
+    if (entry.classification === "historical" || entry.classification === "superseded") {
+      continue;
+    }
+    if (entry.route) routes.add(entry.route);
+  }
+  return [...routes].sort();
+}
+
+/**
  * Setup function contract: a Playwright page operation that puts the
  * browser into the case's declared `state` (empty list, failed
  * delivery, approved decision, etc.) before the harness takes a
