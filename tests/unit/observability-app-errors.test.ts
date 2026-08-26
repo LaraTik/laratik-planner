@@ -298,6 +298,181 @@ describe("captureAppError (OBS-002 write path)", () => {
     const row = insertValues.mock.calls[0]![0];
     expect("stack" in row).toBe(false);
   });
+
+  // ── cause chain (2026-08-27) ───────────────────────────────────────────
+
+  it("persists the chained cause message when the cause is an Error", async () => {
+    // Drizzle's "Failed query: …" wrapper hides the real Postgres
+    // reason on .cause. The platform-errors page renders
+    // cause_message in its own column, so we drill one level deep
+    // and store the underlying message.
+    const cause = new Error("record 'new' has no field 'updated_at'");
+    const err = new Error("Failed query: insert into …");
+    (err as { cause?: unknown }).cause = cause;
+    const insertValues = vi.fn().mockResolvedValue(undefined);
+    dbMock.db.insert.mockReturnValue({ values: insertValues });
+
+    await captureAppError({
+      digest: "d",
+      route: "/app/users",
+      method: "POST",
+      source: "app.error",
+      error: err,
+    });
+
+    const row = insertValues.mock.calls[0]![0];
+    expect(row.causeMessage).toBe("record 'new' has no field 'updated_at'");
+  });
+
+  it("persists a string cause (rare, but allowed by the JS spec)", async () => {
+    const err = new Error("wrapper");
+    (err as { cause?: unknown }).cause = "underlying reason";
+    const insertValues = vi.fn().mockResolvedValue(undefined);
+    dbMock.db.insert.mockReturnValue({ values: insertValues });
+
+    await captureAppError({
+      digest: "d",
+      route: "/r",
+      method: "GET",
+      source: "app.error",
+      error: err,
+    });
+
+    const row = insertValues.mock.calls[0]![0];
+    expect(row.causeMessage).toBe("underlying reason");
+  });
+
+  it("falls back to the cause's name when its message is empty", async () => {
+    class EmptyCause extends Error {
+      override name = "TriggerError";
+      constructor() {
+        super("");
+      }
+    }
+    const err = new Error("wrapper");
+    (err as { cause?: unknown }).cause = new EmptyCause();
+    const insertValues = vi.fn().mockResolvedValue(undefined);
+    dbMock.db.insert.mockReturnValue({ values: insertValues });
+
+    await captureAppError({
+      digest: "d",
+      route: "/r",
+      method: "GET",
+      source: "app.error",
+      error: err,
+    });
+
+    const row = insertValues.mock.calls[0]![0];
+    expect(row.causeMessage).toBe("TriggerError");
+  });
+
+  it("omits cause_message when the cause is a non-Error / non-string", async () => {
+    const err = new Error("wrapper");
+    (err as { cause?: unknown }).cause = { not: "an error" };
+    const insertValues = vi.fn().mockResolvedValue(undefined);
+    dbMock.db.insert.mockReturnValue({ values: insertValues });
+
+    await captureAppError({
+      digest: "d",
+      route: "/r",
+      method: "GET",
+      source: "app.error",
+      error: err,
+    });
+
+    const row = insertValues.mock.calls[0]![0];
+    expect("causeMessage" in row).toBe(false);
+  });
+
+  it("omits cause_message when there is no cause at all", async () => {
+    const err = new Error("plain error");
+    const insertValues = vi.fn().mockResolvedValue(undefined);
+    dbMock.db.insert.mockReturnValue({ values: insertValues });
+
+    await captureAppError({
+      digest: "d",
+      route: "/r",
+      method: "GET",
+      source: "app.error",
+      error: err,
+    });
+
+    const row = insertValues.mock.calls[0]![0];
+    expect("causeMessage" in row).toBe(false);
+  });
+
+  // ── error_name + component_stack (2026-08-27) ────────────────────────
+
+  it("persists the error class name (Error.name)", async () => {
+    class PostgresError extends Error {
+      override name = "PostgresError";
+    }
+    const insertValues = vi.fn().mockResolvedValue(undefined);
+    dbMock.db.insert.mockReturnValue({ values: insertValues });
+
+    await captureAppError({
+      digest: "d",
+      route: "/r",
+      method: "GET",
+      source: "app.error",
+      error: new PostgresError("duplicate key value"),
+    });
+
+    const row = insertValues.mock.calls[0]![0];
+    expect(row.errorName).toBe("PostgresError");
+  });
+
+  it("persists a component stack as-is when it fits in the budget", async () => {
+    const insertValues = vi.fn().mockResolvedValue(undefined);
+    dbMock.db.insert.mockReturnValue({ values: insertValues });
+
+    await captureAppError({
+      digest: "d",
+      route: "/r",
+      method: "GET",
+      source: "app.error",
+      error: new Error("client render failed"),
+      componentStack: "\n    at Page\n    at Layout\n",
+    });
+
+    const row = insertValues.mock.calls[0]![0];
+    expect(row.componentStack).toBe("\n    at Page\n    at Layout\n");
+  });
+
+  it("truncates a long component stack and appends a marker", async () => {
+    const long = "x".repeat(8 * 1024);
+    const insertValues = vi.fn().mockResolvedValue(undefined);
+    dbMock.db.insert.mockReturnValue({ values: insertValues });
+
+    await captureAppError({
+      digest: "d",
+      route: "/r",
+      method: "GET",
+      source: "app.error",
+      error: new Error("oops"),
+      componentStack: long,
+    });
+
+    const row = insertValues.mock.calls[0]![0];
+    expect(row.componentStack.length).toBeLessThanOrEqual(4 * 1024 + 20);
+    expect(row.componentStack).toMatch(/truncated/);
+  });
+
+  it("omits component_stack when the field is undefined", async () => {
+    const insertValues = vi.fn().mockResolvedValue(undefined);
+    dbMock.db.insert.mockReturnValue({ values: insertValues });
+
+    await captureAppError({
+      digest: "d",
+      route: "/r",
+      method: "GET",
+      source: "app.error",
+      error: new Error("no component stack"),
+    });
+
+    const row = insertValues.mock.calls[0]![0];
+    expect("componentStack" in row).toBe(false);
+  });
 });
 
 // ── listAppErrors ────────────────────────────────────────────────────────

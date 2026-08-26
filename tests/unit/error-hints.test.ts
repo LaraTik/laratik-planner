@@ -126,4 +126,112 @@ describe("formatErrorReport", () => {
     expect(md).toContain("## Cause");
     expect(md).toContain('record "new" has no field "updated_at"');
   });
+
+  it("includes the runbook hint line when the pattern provides one", () => {
+    // The React #441 pattern is the one with a runbookHint in the
+    // fixture list. Assert the report includes the link line.
+    const hint = matchErrorHint({ message: "Rendered more hooks than during the previous render" });
+    const md = formatErrorReport({
+      reference: "r",
+      route: "/",
+      message: "Rendered more hooks than during the previous render",
+      occurredAt: "now",
+      hint,
+    });
+    expect(md).toContain("Search the runbook for");
+  });
+
+  it("includes the stack + component stack blocks when provided", () => {
+    const hint = matchErrorHint({ message: "Minified React error #441" });
+    const md = formatErrorReport({
+      reference: "r",
+      route: "/",
+      message: "Minified React error #441",
+      occurredAt: "now",
+      hint,
+      stack: "Error: minified\n    at X\n    at Y",
+      componentStack: "\n    at App\n    at Page",
+    });
+    expect(md).toContain("## Stack trace (truncated to 4 KB)");
+    expect(md).toContain("## Component stack (truncated to 4 KB)");
+    expect(md).toContain("at X");
+    expect(md).toContain("at App");
+  });
+
+  it("truncates a huge message before writing it into the report", () => {
+    // Defensive path: a runaway 50 KB message would explode the
+    // clipboard payload. The report caps the message at 2 KB.
+    const huge = "x".repeat(50_000);
+    const hint = matchErrorHint({ message: huge });
+    const md = formatErrorReport({
+      reference: "r",
+      route: "/",
+      message: huge,
+      occurredAt: "now",
+      hint,
+    });
+    // The message block carries the truncated form; the line itself
+    // remains in the report (we don't drop the field, we trim it).
+    expect(md.length).toBeLessThan(5_000);
+  });
+});
+
+describe("matchErrorHint — coverage of all 8 patterns + fallback", () => {
+  it("'has no field' is detected via causeMessage, not just message", () => {
+    // The pattern matches `has no field` in causeMessage too — Drizzle
+    // hides the real Postgres reason on .cause.
+    const h = matchErrorHint({
+      message: "Failed query: …",
+      causeMessage: 'record "new" has no field "updated_at"',
+    });
+    expect(h.id).toBe("pg-missing-column-or-trigger");
+  });
+
+  it("'does not exist' + 'column' in message is detected", () => {
+    // The other branch of the trigger pattern: message has both
+    // 'does not exist' and 'column'.
+    const h = matchErrorHint({
+      message: "column updated_at does not exist on table workspace_membership",
+    });
+    expect(h.id).toBe("pg-missing-column-or-trigger");
+  });
+
+  it("'Only plain objects' message is detected as the RSC function-prop pattern", () => {
+    const h = matchErrorHint({
+      message:
+        "Only plain objects can be passed to Client Components from Server Components. Classes or other objects with methods are not supported.",
+    });
+    expect(h.id).toBe("rsc-function-prop");
+  });
+
+  it("'server rendered HTML didn't match' is the hydration-mismatch pattern", () => {
+    const h = matchErrorHint({
+      message: "server rendered HTML didn't match. Text content does not match.",
+    });
+    expect(h.id).toBe("hydration-mismatch");
+  });
+
+  it("'Text content does not match' is the hydration-mismatch pattern", () => {
+    const h = matchErrorHint({
+      message: "Text content does not match server-rendered HTML.",
+    });
+    expect(h.id).toBe("hydration-mismatch");
+  });
+
+  it("'Not Implemented' (capitalised) still hits the not-implemented pattern", () => {
+    const h = matchErrorHint({
+      message: "This capability is Not Implemented.",
+    });
+    expect(h.id).toBe("not-implemented");
+  });
+
+  it("generic Zod error path matches via the errorName fallback", () => {
+    // Some ZodErrors are constructed without a recognisable
+    // substring; we fall back to the errorName test.
+    const h = matchErrorHint({
+      errorName: "ZodError",
+      message: "Some other message we don't match on text.",
+    });
+    expect(h.id).toBe("zod-validation");
+  });
 });
