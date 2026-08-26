@@ -41,6 +41,29 @@ See §5.1.1 for the canonical 12-col Bento layout, and §5.1.2 for
 the `<WorkspaceTopTabs />` component used just below the page
 header.
 
+**2026-08-26 (Round 5 — full rebuild):** the page migrated to
+4 new shared primitives + 1 new config. See the new §5.1.3 for
+the `SectionCard` / `SectionEmptyState` / `useSuccessReset` /
+`CharacterCountInput` contracts, and §5.1.4 for the
+`BRAND_KIT_SECTIONS` config.
+
+The page is no longer hand-rolled: the 9 Bento section cards
+are all `<SectionCard id=… title=… count=…>` and the 7 list
+files all use `<SectionEmptyState>`. The AddAssetMenu reads
+from `BRAND_KIT_SECTIONS` so the menu and the top tabs cannot
+drift apart again.
+
+The destructive action is `<Trash2 />` everywhere. The previous
+mix (Trash2 for logo / publishing / linked, Archive for color /
+voice) was inconsistent; the new convention is one icon, one
+semantics. The `variant` prop on `ArchiveWithUndo` was removed.
+
+The hero no longer renders fake stats. The "Primary Brand" badge
+(no underlying field) is gone, replaced by a "Latest logo" badge
+that mirrors the actual selection logic. The "Last updated" stat
+is now a real `<time dateTime={ISO} title={absolute}>` sourced
+from `listRecentBrandUpdates(workspaceId)[0]?.updatedAt`.
+
 ### 2.2 Planning Library (`/app/w/[slug]/library`)
 
 Read-only reference surface. Uses a 3-column grid of asset cards
@@ -230,6 +253,144 @@ const tabs = [
   observerRootMargin="-80px 0px -50% 0px"
 />;
 ```
+
+#### 5.1.3 New primitives (Round 5 — 2026-08-26 rebuild)
+
+The brand-kit rebuild introduced 4 new shared primitives and 1
+shared hook. They live in `components/workspace/` (not
+`components/brand/`) so future surfaces (Channels, Library,
+Settings) can adopt the same pattern.
+
+**`<SectionCard>`** — Bento section wrapper.
+
+```tsx
+interface SectionCardProps {
+  id: string; // for scroll-mt anchor
+  title: React.ReactNode;
+  count?: number;
+  countMuted?: boolean; // archived-view mode
+  managerActions?: React.ReactNode;
+  previewMode?: boolean; // hides manager controls
+  fullWidth?: boolean; // lg:col-span-12
+  className?: string;
+  "data-testid"?: string; // pass-through
+  "aria-label"?: string; // pass-through
+}
+```
+
+- Sets `scroll-mt-20` automatically (sticky top-tab strip never
+  covers the heading on click).
+- Renders title + count badge consistently.
+- Reserves a manager-only actions slot.
+- Use for every Bento section card on the brand-kit page; 9
+  call sites in `page.tsx`.
+
+**`<SectionEmptyState>`** — uniform "no rows yet" placeholder.
+
+```tsx
+interface SectionEmptyStateProps {
+  icon: LucideIcon; // Lucide component, not JSX
+  title: string;
+  description: string;
+  action?: React.ReactNode;
+  compact?: boolean; // inlined, no border
+  testId?: string;
+}
+```
+
+- Standard variant wraps the existing `<EmptyState>`; compact
+  variant drops the dashed border.
+- Use in every list file (logo, color, typography, voice,
+  publishing, linked, recent).
+
+**`useSuccessReset(state, ref)`** — drop-in hook for inline forms
+that should clear their inputs after a successful server-action
+submission.
+
+```tsx
+const [state, action] = useActionState(myAction, {});
+const formRef = React.useRef<HTMLFormElement>(null);
+useSuccessReset(state, formRef);
+
+<form ref={formRef} action={action}>
+  ...
+</form>;
+```
+
+- Resets on the success transition (not on every render).
+- No-op on error.
+- Re-arms on error-then-success.
+- Use in every brand-kit form (6 call sites).
+
+**`<CharacterCountInput>`** — Input/Textarea with live character
+counter.
+
+```tsx
+interface CharacterCountInputProps {
+  as?: "input" | "textarea";
+  name: string;
+  maxLength: number;
+  value?: string;
+  defaultValue?: string;
+  onChange?: (e) => void;
+  placeholder?: string;
+  required?: boolean;
+  rows?: number; // textarea only
+  className?: string; // applied to the input/textarea
+  id?: string;
+  "aria-describedby"?: string;
+}
+```
+
+- Counter is `aria-live=polite` and `aria-describedby`-linked.
+- Switches to warning color at 90% of the cap.
+- Switches to danger color when over the cap.
+- Always sets `min-h-[44px]` (touch-target compliance).
+- Use in any form with a `maxLength` (6 brand-kit forms today).
+
+#### 5.1.4 `BRAND_KIT_SECTIONS` config
+
+The single source of truth for every section on the brand-kit
+page. `page.tsx`, the top tabs, the AddAssetMenu, and the
+keyboard-shortcut handler all read from this list. Adding a new
+section is a one-line change here, not a 5-file change.
+
+```ts
+// src/lib/brand/sections.ts
+export const BRAND_KIT_SECTIONS: readonly BrandKitSection[] = [
+  {
+    id: "overview",
+    label: "Overview",
+    icon: Sparkles,
+    managerOnlyAdd: false,
+    supportsEdit: false,
+    supportsArchive: false,
+  },
+  {
+    id: "logo",
+    label: "Logos",
+    icon: ImageIcon,
+    addMenuLabel: "Logo",
+    addMenuDescription: "…",
+    managerOnlyAdd: true,
+    supportsEdit: true,
+    supportsArchive: true,
+  },
+  // … 7 more …
+];
+```
+
+The `addMenuLabel` / `addMenuDescription` are both set or both
+unset (read-only sections like `overview` and `recent` omit
+both and never appear in `ADD_MENU_SECTIONS`).
+
+#### 5.1.5 Archive-icon convention
+
+Every destructive action on the brand-kit surface uses the
+`<Trash2 />` icon. The previous mix (Trash2 for some sections,
+Archive for others) was inconsistent; the rebuild locked the
+icon to Trash2 across all 5 entity types. The `variant` prop on
+`ArchiveWithUndo` was removed.
 
 ## 6. Open questions
 
