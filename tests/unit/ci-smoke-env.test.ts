@@ -69,6 +69,13 @@ describe("CI production-image smoke environment", () => {
     expect(dockerfile).toContain("ENV APP_VERSION=$APP_VERSION");
     expect(compose).not.toContain("APP_VERSION: ${IMAGE_TAG:-latest}");
     expect(healthCheck).toContain('EXPECTED_APP_VERSION="${EXPECTED_APP_VERSION:-}"');
-    expect(healthCheck).toContain('[ "$version" = "$EXPECTED_APP_VERSION" ]');
+    // The health endpoint returns a 7-char short SHA (commit 721afbe
+    // moved from the full 40-char SHA). The deploy script still passes
+    // the full SHA as EXPECTED_APP_VERSION, so the script compares on
+    // a length-aware prefix. The exact-match assertion from the
+    // original test was wrong once that change landed; commit
+    // 883d4bf updated the script but never updated this guard.
+    expect(healthCheck).toContain('expected_prefix="${EXPECTED_APP_VERSION:0:${#version}}"');
+    expect(healthCheck).toContain('[ "$version" = "$expected_prefix" ]');
   });
 });
