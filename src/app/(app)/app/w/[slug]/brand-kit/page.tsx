@@ -212,7 +212,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
       <WorkspaceTopTabs tabs={tabs} ariaLabel="Brand kit sections" />
 
       <div
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:gap-6"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:gap-4"
         data-testid="brand-kit-bento"
       >
         {/* Row 1 — Brand identity hero (12) */}
