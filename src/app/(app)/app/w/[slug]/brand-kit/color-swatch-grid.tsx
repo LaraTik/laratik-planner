@@ -4,7 +4,7 @@ import { ArchiveWithUndo } from "./archive-with-undo";
 import { archiveColorAssetAction, restoreColorAssetAction } from "./actions";
 import { CopyHexButton } from "./copy-hex-button";
 import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/feedback/empty-state";
+import { SectionEmptyState } from "@/components/workspace/section-empty-state";
 import { Palette } from "lucide-react";
 
 /**
@@ -45,10 +45,11 @@ function readHex(asset: BrandAssetRow): string {
 export function ColorSwatchGrid({ slug, canManage, assets }: ColorSwatchGridProps) {
   if (assets.length === 0) {
     return (
-      <EmptyState
-        icon={<Palette className="h-7 w-7" aria-hidden="true" />}
+      <SectionEmptyState
+        icon={Palette}
         title="No color tokens yet"
         description="Add the brand's primary, secondary, and accent hexes. Designers and copywriters can grab the hex with one click."
+        testId="brand-kit-empty-color"
       />
     );
   }

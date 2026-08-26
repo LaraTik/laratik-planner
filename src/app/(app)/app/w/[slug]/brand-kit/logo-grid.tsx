@@ -5,7 +5,7 @@ import { ArchiveWithUndo } from "./archive-with-undo";
 import { archiveLogoAssetAction, restoreLogoAssetAction } from "./actions";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/feedback/empty-state";
+import { SectionEmptyState } from "@/components/workspace/section-empty-state";
 import { ImageIcon } from "lucide-react";
 
 /**
@@ -46,10 +46,11 @@ function sourceLabel(asset: BrandAssetRow): string {
 export function LogoGrid({ slug, canManage, assets }: LogoGridProps) {
   if (assets.length === 0) {
     return (
-      <EmptyState
-        icon={<ImageIcon className="h-7 w-7" aria-hidden="true" />}
+      <SectionEmptyState
+        icon={ImageIcon}
         title="No logo assets yet"
         description="Upload a PNG, JPG, or SVG — or paste an external URL — so every planner, designer, and reviewer has the same starting point."
+        testId="brand-kit-empty-logo"
       />
     );
   }

@@ -4,7 +4,7 @@ import type { BrandLinkedResourceRow } from "@/lib/brand/service";
 import { safeHref } from "@/lib/utils/safe-href";
 import { ArchiveWithUndo } from "./archive-with-undo";
 import { archiveLinkedResourceAction, restoreLinkedResourceAction } from "./actions";
-import { EmptyState } from "@/components/feedback/empty-state";
+import { SectionEmptyState } from "@/components/workspace/section-empty-state";
 
 /**
  * LinkedResourceList — the row-5 "Linked Resources" section.
@@ -37,10 +37,11 @@ const PROVIDER_LABEL: Record<string, string> = {
 export function LinkedResourceList({ slug, canManage, resources }: LinkedResourceListProps) {
   if (resources.length === 0) {
     return (
-      <EmptyState
-        icon={<Folder className="h-7 w-7" aria-hidden="true" />}
+      <SectionEmptyState
+        icon={Folder}
         title="No linked resources yet"
         description="Link a Google Drive, Figma, Canva, or Dropbox library so the team knows where to source on-brand material."
+        testId="brand-kit-empty-linked"
       />
     );
   }

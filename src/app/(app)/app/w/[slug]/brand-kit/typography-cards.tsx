@@ -4,7 +4,7 @@ import { ArchiveWithUndo } from "./archive-with-undo";
 import { archiveFontAssetAction, restoreFontAssetAction } from "./actions";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/feedback/empty-state";
+import { SectionEmptyState } from "@/components/workspace/section-empty-state";
 import { Type } from "lucide-react";
 
 /**
@@ -64,10 +64,11 @@ const SAMPLE_TEXT_NUMERIC = "0123456789  $1,234.56  100%";
 export function TypographyCards({ slug, canManage, assets }: TypographyCardsProps) {
   if (assets.length === 0) {
     return (
-      <EmptyState
-        icon={<Type className="h-7 w-7" aria-hidden="true" />}
+      <SectionEmptyState
+        icon={Type}
         title="No fonts catalogued yet"
         description="Document the headline, body, and accent faces so designers ship in one voice. Each entry gets a live sample."
+        testId="brand-kit-empty-typography"
       />
     );
   }

@@ -3,7 +3,7 @@ import type { BrandPublishingRuleRow } from "@/lib/brand/service";
 import { ArchiveWithUndo } from "./archive-with-undo";
 import { archivePublishingRuleAction, restorePublishingRuleAction } from "./actions";
 import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/feedback/empty-state";
+import { SectionEmptyState } from "@/components/workspace/section-empty-state";
 import { Link as LinkIcon } from "lucide-react";
 
 /**
@@ -41,10 +41,11 @@ const RULE_TYPE_LABEL: Record<string, string> = {
 export function PublishingRuleList({ slug, canManage, rules }: PublishingRuleListProps) {
   if (rules.length === 0) {
     return (
-      <EmptyState
-        icon={<LinkIcon className="h-7 w-7" aria-hidden="true" />}
+      <SectionEmptyState
+        icon={LinkIcon}
         title="No publishing rules yet"
         description="Add the first one to set editorial guardrails — alt text, hashtag norms, compliance reminders — for the team."
+        testId="brand-kit-empty-publishing"
       />
     );
   }

@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { BrandRecentUpdate } from "@/lib/brand/service";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
-import { EmptyState } from "@/components/feedback/empty-state";
+import { SectionEmptyState } from "@/components/workspace/section-empty-state";
 import { History } from "lucide-react";
 import { UserAvatar } from "./user-avatar";
 
@@ -48,10 +48,11 @@ function absoluteDateLabel(d: Date): string {
 export function RecentUpdatesTable({ rows }: RecentUpdatesTableProps) {
   if (rows.length === 0) {
     return (
-      <EmptyState
-        icon={<History className="h-7 w-7" aria-hidden="true" />}
+      <SectionEmptyState
+        icon={History}
         title="No recent updates yet"
         description="As the team adds logos, colors, fonts, voice rules, and publishing guidelines, the latest changes will appear here."
+        testId="brand-kit-empty-recent"
       />
     );
   }

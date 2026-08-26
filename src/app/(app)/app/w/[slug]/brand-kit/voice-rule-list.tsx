@@ -3,7 +3,7 @@ import type { BrandVoiceRuleRow } from "@/lib/brand/service";
 import { ArchiveWithUndo } from "./archive-with-undo";
 import { archiveVoiceRuleAction, restoreVoiceRuleAction } from "./actions";
 import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/feedback/empty-state";
+import { SectionEmptyState } from "@/components/workspace/section-empty-state";
 import { Sparkles } from "lucide-react";
 
 /**
@@ -38,10 +38,11 @@ const RULE_TYPE_LABEL: Record<string, string> = {
 export function VoiceRuleList({ slug, canManage, rules }: VoiceRuleListProps) {
   if (rules.length === 0) {
     return (
-      <EmptyState
-        icon={<Sparkles className="h-7 w-7" aria-hidden="true" />}
+      <SectionEmptyState
+        icon={Sparkles}
         title="No voice guidance"
         description="Add do/don't/tone rules so the team writes in one voice. The rules surface in the editor's draft-time hints."
+        testId="brand-kit-empty-voice"
       />
     );
   }
