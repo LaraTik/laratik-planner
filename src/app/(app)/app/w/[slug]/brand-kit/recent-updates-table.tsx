@@ -77,7 +77,10 @@ export function RecentUpdatesTable({ rows }: RecentUpdatesTableProps) {
             return (
               <tr key={key} data-testid="brand-recent-row">
                 <td className="text-fg-secondary py-2 pr-3">
-                  <time dateTime={row.updatedAt.toISOString()} title={absoluteDateLabel(row.updatedAt)}>
+                  <time
+                    dateTime={row.updatedAt.toISOString()}
+                    title={absoluteDateLabel(row.updatedAt)}
+                  >
                     {formatRelativeDate(row.updatedAt)}
                   </time>
                 </td>
