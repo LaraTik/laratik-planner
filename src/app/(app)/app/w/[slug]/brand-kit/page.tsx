@@ -177,16 +177,32 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
                 a plain <a download> so the browser handles the
                 save dialog natively; the server endpoint
                 enforces the role gate. Visible to every internal
-                workspace member, not just managers. */}
-            <Button variant="outline" asChild>
-              <a
-                href={`/api/export/brand-assets-zip?slug=${encodeURIComponent(slug)}`}
-                data-testid="brand-kit-export-zip"
-                download
-              >
-                <Download className="h-4 w-4" aria-hidden="true" />
-                Download ZIP
-              </a>
+                workspace member, not just managers.
+                Round 5: disabled when there are no assets to
+                bundle (a 0-asset workspace used to download a
+                ZIP containing only a MANIFEST.txt — surprising). */}
+            <Button
+              variant="outline"
+              asChild={totalAssetCount > 0}
+              disabled={totalAssetCount === 0}
+              title={
+                totalAssetCount === 0
+                  ? "Add at least one logo, color, or font before downloading."
+                  : undefined
+              }
+              data-testid="brand-kit-export-zip"
+            >
+              {totalAssetCount > 0 ? (
+                <a href={`/api/export/brand-assets-zip?slug=${encodeURIComponent(slug)}`} download>
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  Download ZIP
+                </a>
+              ) : (
+                <span aria-disabled="true">
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  Download ZIP
+                </span>
+              )}
             </Button>
             {canManage ? <AddAssetMenu /> : null}
           </div>
