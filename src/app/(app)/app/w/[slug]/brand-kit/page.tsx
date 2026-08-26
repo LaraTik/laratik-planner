@@ -110,11 +110,20 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
 
   // First logo (by createdAt desc) feeds the Brand Identity hero.
   const firstLogo = assetsByKind.logo[0];
-  const firstLogoSrc = firstLogo
+  // Resolve the candidate src and route it through `safeHref` so a
+  // corrupted `storage_path` (or a non-https `external_url` from an
+  // older row pre-dating the Zod HTTPS constraint) cannot render an
+  // attacker-controlled URL in the row-1 hero. If `safeHref` rejects
+  // the URL it returns "#"; the hero's monogram fallback handles
+  // a falsy `logoSrc`, so we collapse the rejected URL back to
+  // `null` and let the monogram render.
+  const firstLogoRawSrc = firstLogo
     ? firstLogo.storagePath
       ? getSignedDownloadUrl(firstLogo.storagePath)
       : firstLogo.externalUrl
     : null;
+  const firstLogoSafe = firstLogoRawSrc ? safeHref(firstLogoRawSrc) : null;
+  const firstLogoSrc = firstLogoSafe && firstLogoSafe.href !== "#" ? firstLogoSafe.href : null;
 
   const totalAssetCount =
     assetsByKind.logo.length +
