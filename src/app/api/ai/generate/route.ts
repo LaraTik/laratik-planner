@@ -16,8 +16,10 @@ import {
   isAiEnabled,
   platformAdapt,
   relatedFormatIdeas,
+  splitVariants,
   type ChatResult,
 } from "@/lib/ai";
+import { loadAiContext, isContextMeaningful } from "@/lib/ai/context";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { publicProviderError } from "@/lib/security/public-error";
@@ -207,6 +209,19 @@ export async function POST(req: NextRequest) {
       { status: 404, headers: mutatingApiHeaders() },
     );
 
+  // FEAT-09 — load the AI context (brand voice, active campaign,
+  // pillars, channels, approved-content samples) per the
+  // planner's selection. The loader respects each boolean so a
+  // planner who ticks only "Brand Kit" pays for only that query.
+  // The returned object always has the same shape (empty arrays
+  // / nulls for the unselected branches) so the builder can
+  // render the same template regardless of selection.
+  const context = await loadAiContext({
+    workspaceId: ws.id,
+    contentItemId: item.id,
+    selection: parsed.data.contextSelection,
+  });
+
   if (
     !(await hasWorkspaceRole({ id: session.user.id }, ws.id, [
       "workspace_manager",
@@ -286,17 +301,25 @@ export async function POST(req: NextRequest) {
       audience: ws.name,
       maxTokens: outputReservation,
       apiKey,
+      context,
       onUsage: (usage: ChatResult) => {
         providerUsage = usage;
       },
     };
     let text: string | null = null;
+    // `brief_improvement` returns THREE variants delimited by
+    // `VARIANT_SEPARATOR` in the builder; the route splits the
+    // response and exposes the list alongside the first
+    // variant in the `text` field for backward compat. The
+    // planner surface renders all three side-by-side.
+    let variants: string[] | null = null;
     switch (parsed.data.capability) {
       case "caption_drafts":
         text = await draftCaption(baseInput);
         break;
       case "brief_improvement":
         text = await improveBrief(baseInput);
+        if (text) variants = splitVariants(text);
         break;
       case "completeness_check":
         text = await checkCompleteness(baseInput);
@@ -343,19 +366,41 @@ export async function POST(req: NextRequest) {
     });
     reservedTokens = { input: actualInput, output: actualOutput };
     // Build the actual context manifest from the user's selection.
-    // The basic fields are always included; the optional toggles are
-    // additive. The server independently rebuilds the actual context
-    // (per master prompt §15) — the client selection is a hint, not a
-    // trust boundary; for now the route only logs the categories and
-    // trusts the selection. A follow-up (FEAT-05b) will load the
-    // selected entities server-side.
+    // FEAT-09 — we now log which categories actually had data, not
+    // just which the planner ticked. A workspace with zero Brand
+    // Kit rows will report `brand_kit: { selected: true, used:
+    // false }` so the audit doesn't claim context was included
+    // when it wasn't. Categories the planner didn't tick are
+    // simply omitted from the manifest.
     const usedCategories: string[] = ["title", "brief", "format", "workspace_name"];
     const sel = parsed.data.contextSelection;
-    if (sel.brandKit) usedCategories.push("brand_kit");
-    if (sel.campaign) usedCategories.push("campaign");
-    if (sel.pillars) usedCategories.push("content_pillars");
-    if (sel.channels) usedCategories.push("active_channels");
-    if (sel.approvedContent) usedCategories.push("approved_content");
+    if (sel.brandKit) {
+      usedCategories.push(
+        isContextMeaningful(context) &&
+          context.brandVoice.tone.length +
+            context.brandVoice.do.length +
+            context.brandVoice.dont.length >
+            0
+          ? "brand_kit:used"
+          : "brand_kit:empty",
+      );
+    }
+    if (sel.campaign) {
+      usedCategories.push(context.campaign ? "campaign:used" : "campaign:empty");
+    }
+    if (sel.pillars) {
+      usedCategories.push(context.pillars.length > 0 ? "pillars:used" : "pillars:empty");
+    }
+    if (sel.channels) {
+      usedCategories.push(context.channels.length > 0 ? "channels:used" : "channels:empty");
+    }
+    if (sel.approvedContent) {
+      usedCategories.push(
+        context.approvedContentSamples.length > 0
+          ? "approved_content:used"
+          : "approved_content:empty",
+      );
+    }
 
     await db.insert(aiUsageEvents).values({
       agencyId,
@@ -371,7 +416,11 @@ export async function POST(req: NextRequest) {
       contextManifest: { categories: usedCategories },
     });
     return NextResponse.json(
-      { text, capability: parsed.data.capability },
+      {
+        text,
+        capability: parsed.data.capability,
+        ...(variants ? { variants } : {}),
+      },
       { headers: mutatingApiHeaders() },
     );
   } catch (e) {

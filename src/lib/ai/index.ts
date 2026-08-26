@@ -1,6 +1,8 @@
 import "server-only";
 import { serverEnv } from "@/lib/validation/env";
 import { loadManagedAiSecret, hasManagedAiSecret } from "./provider-secret";
+import type { AiContext } from "./context";
+export type { AiContext, AiContextSelection } from "./context";
 
 // Re-export the M3.3 governance surface so callers can import
 // from a single entry point. The governance module is the
@@ -39,6 +41,144 @@ export const isAiEnabled = (): boolean =>
   serverEnv.AI_FEATURE_ENABLED && !!serverEnv.MINIMAX_API_KEY;
 
 const MODEL = serverEnv.MINIMAX_MODEL;
+
+/**
+ * Literal marker the model is told to insert between
+ * `improveBrief` variants. The client parses on this exact
+ * string (whitespace-trimmed). Three dashes alone on a line is
+ * unlikely to appear in a real brief or rewrite, so the parse
+ * is safe in practice; we still defensive-trim each side and
+ * drop empty pieces.
+ */
+export const VARIANT_SEPARATOR = "---";
+
+/**
+ * Split a model response into N variants. Returns a single-
+ * element array when the separator is absent (the model didn't
+ * follow instructions, or the response is for a non-multi-
+ * variant capability).
+ */
+export function splitVariants(text: string): string[] {
+  return text
+    .split(/\n\s*---\s*\n/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+/**
+ * Render the optional context the planner selected into a
+ * prompt block. Returns an empty string when no branch has
+ * data, so the builder can append unconditionally without
+ * producing "Context: (none)" artifacts.
+ */
+function buildContextBlock(ctx: AiContext | null | undefined): string {
+  if (!ctx) return "";
+  const lines: string[] = [];
+  const { brandVoice, campaign, pillars, channels, approvedContentSamples } = ctx;
+
+  if (brandVoice.tone.length || brandVoice.do.length || brandVoice.dont.length) {
+    lines.push("Brand voice (apply these rules):");
+    for (const t of brandVoice.tone) lines.push(`- tone: ${t}`);
+    for (const d of brandVoice.do) lines.push(`- do: ${d}`);
+    for (const d of brandVoice.dont) lines.push(`- don't: ${d}`);
+  }
+
+  if (campaign) {
+    lines.push(`Active campaign: ${campaign.name}`);
+    if (campaign.objective) lines.push(`Campaign objective: ${campaign.objective}`);
+    if (campaign.description) lines.push(`Campaign description: ${campaign.description}`);
+  }
+
+  if (pillars.length) {
+    lines.push("Content pillars (the brief should ladder up to one of these):");
+    for (const p of pillars) {
+      const desc = p.description ? ` — ${p.description}` : "";
+      lines.push(`- ${p.name}${desc}`);
+    }
+  }
+
+  if (channels.length) {
+    const platforms = Array.from(new Set(channels.map((c) => c.platform))).join(", ");
+    lines.push(`Targeting platforms: ${platforms}.`);
+  }
+
+  if (approvedContentSamples.length) {
+    lines.push("Recently approved content (mirror this tone and density):");
+    for (const s of approvedContentSamples) {
+      const brief = s.brief ? ` — ${s.brief}` : "";
+      lines.push(`- ${s.title}${brief}`);
+    }
+  }
+
+  if (lines.length === 0) return "";
+  return ["", "Context:", ...lines].join("\n");
+}
+
+/**
+ * Per-format system prompts for `improveBrief`. The §15 spec
+ * assumes a static-post shape (Hook → Main message → CTA) but
+ * carousels, reels, and articles all want a different structure.
+ * Picking the right shape per format is the difference between
+ * a rewrite the planner can paste and a rewrite they have to
+ * redo by hand.
+ */
+function buildImproveBriefSystemPrompt(format: string): string {
+  const base =
+    "You are a senior social media strategist. Output exactly 3 distinct rewrites of the brief. " +
+    "Each rewrite is its own block. Separate the blocks with a line containing only '---' (three dashes). " +
+    "Use plain text — no markdown, no preamble, no closing remarks, no labels other than the per-block lines. " +
+    "Each variant should be plausibly different in tone or hook (e.g. one punchy, one warm, one data-led) so the planner can pick. " +
+    "If the brief is empty, return a placeholder version of each block so the user can fill it in.";
+
+  const byFormat: Record<string, string> = {
+    static_post:
+      "For each variant, produce exactly three lines, each on its own line, prefixed with the label: " +
+      "'Hook: ...' (one sentence that earns the scroll-stop), 'Main message: ...' (the single thing the audience should remember), " +
+      "'CTA: ...' (the next action you want them to take). " +
+      "A static post is the canonical Hook/Main/CTA shape — keep each line under 120 characters.",
+    story:
+      "For each variant, produce exactly three lines, each on its own line, prefixed with the label: " +
+      "'Frame 1: ...' (the opening shot or first-second visual), 'Reveal: ...' (the moment the brand or message lands), " +
+      "'CTA: ...' (swipe-up / link-sticker / DM). " +
+      "Stories are visual-first; the Reveal is the load-bearing line.",
+    carousel:
+      "For each variant, produce a short block in this exact shape (no extra lines): " +
+      "'Slide 1 — <opening hook line>' on its own line, " +
+      "'Slides 2–N — <one-sentence summary of the payload>' on its own line, " +
+      "'Final slide — <CTA>' on its own line. " +
+      "Carousels reward a strong slide 1; the body summary should be terse.",
+    short_form_video:
+      "For each variant, produce a short block in this exact shape (no extra lines): " +
+      "'Hook (0-3s) — <spoken line or on-screen text that earns the watch>' on its own line, " +
+      "'Beats — <2-4 visual beats, comma-separated>' on its own line, " +
+      "'CTA — <spoken or on-screen close>' on its own line. " +
+      "Short-form video lives or dies on the Hook; spend the most precision there.",
+    long_form_video:
+      "For each variant, produce a short block in this exact shape (no extra lines): " +
+      "'Cold open — <first 15 seconds, the hook that earns the watch>' on its own line, " +
+      "'Chapters — <3-5 chapter titles, comma-separated>' on its own line, " +
+      "'CTA — <subscribe / watch-next / link-in-description>' on its own line.",
+    live_content:
+      "For each variant, produce a short block in this exact shape (no extra lines): " +
+      "'Topic — <one-sentence framing of what this live is about>' on its own line, " +
+      "'Talking points — <3-5 bullet points, comma-separated>' on its own line, " +
+      "'CTA — <the action you want viewers to take during or after>' on its own line.",
+    article:
+      "For each variant, produce a short block in this exact shape (no extra lines): " +
+      "'Headline — <the title that earns the click>' on its own line, " +
+      "'Lede — <first paragraph that sets the stakes>' on its own line, " +
+      "'Takeaways — <2-3 numbered points, comma-separated>' on its own line, " +
+      "'CTA — <the next step you want the reader to take>' on its own line. " +
+      "Articles compete on the headline and lede; keep takeaways concrete.",
+    other:
+      "For each variant, produce three short lines that a planner can paste into a brief: " +
+      "'Hook: ...', 'Main message: ...', 'CTA: ...'. " +
+      "When the format is 'other' the planner usually knows what they want — keep the lines tight and let them edit.",
+  };
+
+  const formatSpecific = byFormat[format] ?? byFormat.other;
+  return `${base} ${formatSpecific}`;
+}
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -145,8 +285,10 @@ export async function draftCaption(input: {
   apiKey?: string | undefined;
   onUsage?: (result: ChatResult) => void;
   maxTokens?: number | undefined;
+  context?: AiContext | null | undefined;
 }): Promise<string | null> {
   if (!isAiEnabled() && !input.apiKey) return null;
+  const contextBlock = buildContextBlock(input.context);
   const result = await chat({
     temperature: 0.8,
     maxTokens: input.maxTokens ?? 600,
@@ -165,6 +307,7 @@ export async function draftCaption(input: {
           input.platform ? `Platform: ${input.platform}` : null,
           input.audience ? `Audience: ${input.audience}` : null,
           `Brief: ${input.brief || "(none)"}`,
+          contextBlock,
         ]
           .filter(Boolean)
           .join("\n"),
@@ -176,10 +319,22 @@ export async function draftCaption(input: {
 }
 
 /**
- * Tighten a brief into a Hook → Main message → CTA structure.
- * Returns a multi-line rewrite the user can copy into the brief
- * field. Same "draft only — no DB write" rule as the rest of the
- * AI surface.
+ * Tighten a brief into a format-specific structure. Returns a
+ * single string that contains THREE variants separated by the
+ * `VARIANT_SEPARATOR` marker. Callers that want a single draft
+ * (e.g. the platform_adaptation flow) can use `splitVariants()`
+ * and take the first element; the planner surface renders all
+ * three side-by-side.
+ *
+ * Each variant is intentionally distinct in tone or hook so the
+ * planner can pick instead of having to "Try again" until the
+ * model produces something they like. The system prompt is
+ * format-aware — a Reel brief is structured very differently
+ * from a carousel brief, and a single static-post-shaped
+ * template produces poor output for non-static formats.
+ *
+ * The "drafts only — never write to the DB" rule from §15 still
+ * holds: this function returns text; saving is the caller's job.
  */
 export async function improveBrief(input: {
   title: string;
@@ -189,20 +344,18 @@ export async function improveBrief(input: {
   apiKey?: string | undefined;
   onUsage?: (result: ChatResult) => void;
   maxTokens?: number | undefined;
+  context?: AiContext | null | undefined;
 }): Promise<string | null> {
   if (!isAiEnabled() && !input.apiKey) return null;
+  const contextBlock = buildContextBlock(input.context);
   const result = await chat({
-    temperature: 0.6,
-    maxTokens: input.maxTokens ?? 600,
+    temperature: 0.7,
+    maxTokens: input.maxTokens ?? 900,
     apiKey: input.apiKey,
     messages: [
       {
         role: "system",
-        content:
-          "You are a senior social media strategist. Rewrite the brief into three clear lines: " +
-          "'Hook: ...' (one sentence that earns the scroll-stop), 'Main message: ...' (the single thing the audience should remember), " +
-          "'CTA: ...' (the next action you want them to take). Use plain text — no markdown, no preamble, no labels other than the three line prefixes. " +
-          "If the brief is empty, return a placeholder line for each so the user can fill them in.",
+        content: buildImproveBriefSystemPrompt(input.format),
       },
       {
         role: "user",
@@ -211,6 +364,7 @@ export async function improveBrief(input: {
           `Format: ${input.format}`,
           input.audience ? `Audience: ${input.audience}` : null,
           `Brief: ${input.brief || "(empty)"}`,
+          contextBlock,
         ]
           .filter(Boolean)
           .join("\n"),
@@ -235,8 +389,10 @@ export async function checkCompleteness(input: {
   apiKey?: string | undefined;
   onUsage?: (result: ChatResult) => void;
   maxTokens?: number | undefined;
+  context?: AiContext | null | undefined;
 }): Promise<string | null> {
   if (!isAiEnabled() && !input.apiKey) return null;
+  const contextBlock = buildContextBlock(input.context);
   const result = await chat({
     temperature: 0.3,
     maxTokens: input.maxTokens ?? 500,
@@ -257,6 +413,7 @@ export async function checkCompleteness(input: {
           `Format: ${input.format}`,
           input.audience ? `Audience: ${input.audience}` : null,
           `Brief: ${input.brief || "(empty)"}`,
+          contextBlock,
         ]
           .filter(Boolean)
           .join("\n"),
@@ -293,8 +450,10 @@ export async function platformAdapt(input: {
   apiKey?: string | undefined;
   onUsage?: (result: ChatResult) => void;
   maxTokens?: number | undefined;
+  context?: AiContext | null | undefined;
 }): Promise<string | null> {
   if (!isAiEnabled() && !input.apiKey) return null;
+  const contextBlock = buildContextBlock(input.context);
   const result = await chat({
     temperature: 0.7,
     maxTokens: input.maxTokens ?? 600,
@@ -319,6 +478,7 @@ export async function platformAdapt(input: {
           `Brief: ${input.brief || "(none)"}`,
           `Target platform: ${input.targetPlatform}`,
           `Source caption:\n${input.sourceText || "(empty)"}`,
+          contextBlock,
         ]
           .filter(Boolean)
           .join("\n"),
@@ -342,8 +502,10 @@ export async function campaignIdeas(input: {
   apiKey?: string | undefined;
   onUsage?: (result: ChatResult) => void;
   maxTokens?: number | undefined;
+  context?: AiContext | null | undefined;
 }): Promise<string | null> {
   if (!isAiEnabled() && !input.apiKey) return null;
+  const contextBlock = buildContextBlock(input.context);
   const result = await chat({
     temperature: 0.8,
     maxTokens: input.maxTokens ?? 600,
@@ -364,6 +526,7 @@ export async function campaignIdeas(input: {
           `Format: ${input.format}`,
           input.audience ? `Audience: ${input.audience}` : null,
           `Brief: ${input.brief || "(none)"}`,
+          contextBlock,
         ]
           .filter(Boolean)
           .join("\n"),
@@ -389,8 +552,10 @@ export async function relatedFormatIdeas(input: {
   apiKey?: string | undefined;
   onUsage?: (result: ChatResult) => void;
   maxTokens?: number | undefined;
+  context?: AiContext | null | undefined;
 }): Promise<string | null> {
   if (!isAiEnabled() && !input.apiKey) return null;
+  const contextBlock = buildContextBlock(input.context);
   const result = await chat({
     temperature: 0.7,
     maxTokens: input.maxTokens ?? 500,
@@ -411,6 +576,7 @@ export async function relatedFormatIdeas(input: {
           `Current format: ${input.format}`,
           input.audience ? `Audience: ${input.audience}` : null,
           `Brief: ${input.brief || "(none)"}`,
+          contextBlock,
         ]
           .filter(Boolean)
           .join("\n"),

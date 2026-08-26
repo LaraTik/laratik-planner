@@ -13,28 +13,31 @@ import {
   Globe2,
   Link2,
   AlertTriangle,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { applyAiDraftAction } from "../actions";
 import { AI_CAPABILITY_METADATA, type AiCapabilityMetadata } from "@/lib/ai/capabilities";
+import { DiffPreview } from "@/components/ai/diff-preview";
 
 /**
  * AI assistance entry points on the content detail page.
  *
- * Surfaces the capabilities defined in STUDIOFLOW_MASTER_PROMPT.md §15
- * and lets the user invoke them where the work actually happens. After
- * FEAT-03 the route handles all six capabilities; the section used to
- * hard-code a 3-tile subset, which left `campaign_ideas`,
- * `platform_adaptation`, and `related_format_ideas` reachable in the
- * agency config but invisible on the planner surface. We now drive the
- * tile list from `@/lib/ai/capabilities` so the planner surface
- * matches the backend and the agency form in one place.
+ * FEAT-09 — the section was previously a thin wrapper around
+ * three hard-coded action buttons. The route now loads brand
+ * voice / campaign / pillars / channels / approved-content
+ * context per the planner's selection, and `brief_improvement`
+ * returns three variants the planner can pick from. The
+ * Replace action is gated by an explicit DiffPreview confirm
+ * because the old brief was previously overwritten silently.
  *
- * Every draft is shown in a copy-able block — the user stays in
- * control of "Insert / Replace / Copy / Try Again" per §15. We
- * never auto-write to the database.
+ * Insert is hidden for `brief_improvement` — appending a 3-line
+ * "Hook: / Main: / CTA:" block below an existing brief makes
+ * no sense; the whole point of the capability is replacement.
+ * Insert is still the right action for `caption_drafts`
+ * (append a caption below a brief).
  */
 
 const ICON_BY_ID = {
@@ -58,11 +61,7 @@ function offReasonFor(
   enabledCapabilities: ReadonlyArray<string>,
   hasKey: boolean,
 ): OffReason | null {
-  // The master switch on the agency form is the loudest signal — if
-  // it's off, every capability is off for the same reason.
   if (!agencyEnabled) return "agency-disabled";
-  // No API key at all (env or managed secret) is a separate bucket so
-  // the user can tell "agency says off" from "platform has no key".
   if (!hasKey) return "no-key";
   if (!enabledCapabilities.includes(cap.id)) return "capability-off";
   return null;
@@ -74,6 +73,65 @@ const OFF_REASON_LABEL: Record<OffReason, string> = {
   "capability-off": "Agency disabled this capability",
 };
 
+/**
+ * The categories a planner can include with their request.
+ * Mirrors the `AiContextSelection` shape in `lib/ai/context.ts`
+ * but kept inline (server-only modules can't be imported into
+ * a client component) so the route's `loadAiContext` receives
+ * the same keys.
+ */
+const CONTEXT_TOGGLES: ReadonlyArray<{
+  key: "brandKit" | "campaign" | "pillars" | "channels" | "approvedContent";
+  label: string;
+  description: string;
+}> = [
+  {
+    key: "brandKit",
+    label: "Brand voice",
+    description: "Apply the workspace's tone / do / don't rules.",
+  },
+  {
+    key: "campaign",
+    label: "Active campaign",
+    description: "Tie the rewrite to the current campaign objective.",
+  },
+  {
+    key: "pillars",
+    label: "Content pillars",
+    description: "Reference the workspace's content pillars.",
+  },
+  {
+    key: "channels",
+    label: "Target channels",
+    description: "Mention the platforms this will publish to.",
+  },
+  {
+    key: "approvedContent",
+    label: "Approved content samples",
+    description: "Mirror the tone of recently shipped content.",
+  },
+];
+
+const DEFAULT_CONTEXT_SELECTION: Record<string, boolean> = {
+  brandKit: true,
+  campaign: true,
+  pillars: true,
+  channels: false,
+  approvedContent: false,
+};
+
+interface DraftVariant {
+  /** The variant text exactly as the model returned it. */
+  text: string;
+  /** Stable client-side id for React keys. */
+  id: string;
+}
+
+interface DraftState {
+  capabilityId: string;
+  variants: DraftVariant[];
+}
+
 export function AiAssistanceSection({
   workspaceSlug,
   contentItemId,
@@ -83,62 +141,57 @@ export function AiAssistanceSection({
   enabledCapabilities,
   agencyEnabled,
   hasKey,
+  currentBrief,
 }: {
   workspaceSlug: string;
   contentItemId: string;
-  /**
-   * Current workflow status of the content item. Insert/Replace are
-   * only enabled for `draft` and `changes_requested` — same guard the
-   * `updateContentItem` service uses — so the UI never offers a write
-   * that the server would reject.
-   */
   contentStatus: string;
   isManager: boolean;
   isPlanner: boolean;
-  /**
-   * Plain string array (not Set) — the page is a Server Component and
-   * must serialise everything it passes across the RSC boundary. A
-   * `Set` here would throw "An error occurred in the Server Components
-   * render" (minified to React #441) when AI is enabled in prod.
-   */
   enabledCapabilities: string[];
-  /**
-   * Master switch from `ai_feature_setting.enabled`. Drives the
-   * "agency switch is off" off-reason so the user can tell at a
-   * glance whether the agency disabled AI or just this capability.
-   */
   agencyEnabled: boolean;
-  /**
-   * True when the agency has a working API key (env or managed
-   * secret). Mirrors the `effectiveEnabled` computation on the
-   * workspace status page.
-   */
   hasKey: boolean;
+  /**
+   * The current brief text. The route already has this; the
+   * server passes it down so the DiffPreview can render the
+   * "before" side without an extra round-trip.
+   */
+  currentBrief: string;
 }) {
-  const [draft, setDraft] = React.useState<{
-    capabilityId: string;
-    text: string;
-  } | null>(null);
+  const [draft, setDraft] = React.useState<DraftState | null>(null);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [applyError, setApplyError] = React.useState<string | null>(null);
   const [applied, setApplied] = React.useState<null | "insert" | "replace">(null);
   const [applying, setApplying] = React.useState(false);
+  const [selectedVariantId, setSelectedVariantId] = React.useState<string | null>(null);
+  const [replaceConfirmed, setReplaceConfirmed] = React.useState(false);
+  const [contextSelection, setContextSelection] =
+    React.useState<Record<string, boolean>>(DEFAULT_CONTEXT_SELECTION);
   const [platformTarget, setPlatformTarget] = React.useState<
     "instagram" | "tiktok" | "linkedin" | "x"
   >("instagram");
 
   const canUse = isManager || isPlanner;
-  // Mirrors UPDATEABLE_STATUSES in the content service. Kept inline
-  // (the service module is "server-only" and can't be imported into a
-  // client component).
   const canEditBrief = contentStatus === "draft" || contentStatus === "changes_requested";
+
+  // Wrap the variant-selection setter so the diff confirm is
+  // reset on every pick. This avoids a useEffect (React 19
+  // discourages setState in effects for this case — the new
+  // confirmation context is meaningful only at the moment the
+  // pick happens, not on a later render).
+  const pickVariant = React.useCallback((id: string) => {
+    setSelectedVariantId(id);
+    setReplaceConfirmed(false);
+  }, []);
 
   const onInvoke = async (capabilityId: string) => {
     setError(null);
     setPendingId(capabilityId);
     setDraft(null);
     setApplied(null);
+    setSelectedVariantId(null);
+    setReplaceConfirmed(false);
     try {
       const res = await fetch("/api/ai/generate", {
         method: "POST",
@@ -146,8 +199,9 @@ export function AiAssistanceSection({
         body: JSON.stringify({
           contentItemId,
           capability: capabilityId,
+          contextSelection,
           ...(capabilityId === "platform_adaptation"
-            ? { targetPlatform: platformTarget, sourceText: draft?.text ?? "" }
+            ? { targetPlatform: platformTarget, sourceText: draft?.variants[0]?.text ?? "" }
             : {}),
         }),
       });
@@ -156,9 +210,31 @@ export function AiAssistanceSection({
         setError(body.error ?? `Request failed (${res.status})`);
         return;
       }
-      const body = (await res.json()) as { text?: string; caption?: string };
+      const body = (await res.json()) as {
+        text?: string;
+        caption?: string;
+        variants?: string[];
+      };
+      // `brief_improvement` returns `variants: string[]`; every
+      // other capability returns a single `text`. Fall back to
+      // splitting on `---` for older servers that don't include
+      // the `variants` field.
       const text = body.text ?? body.caption ?? "";
-      setDraft({ capabilityId, text });
+      const rawVariants =
+        body.variants && body.variants.length > 0
+          ? body.variants
+          : text.includes("---")
+            ? text
+                .split(/\n\s*---\s*\n/)
+                .map((s) => s.trim())
+                .filter((s) => s.length > 0)
+            : [text];
+      const variants: DraftVariant[] = rawVariants.map((v, i) => ({
+        id: `${capabilityId}-${Date.now()}-${i}`,
+        text: v,
+      }));
+      setDraft({ capabilityId, variants });
+      setSelectedVariantId(variants[0]?.id ?? null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -175,7 +251,10 @@ export function AiAssistanceSection({
   };
 
   const onApply = async (mode: "insert" | "replace") => {
-    if (!draft) return;
+    if (!draft || !selectedVariantId) return;
+    const variant = draft.variants.find((v) => v.id === selectedVariantId);
+    if (!variant) return;
+    if (mode === "replace" && !replaceConfirmed) return;
     setApplyError(null);
     setApplied(null);
     setApplying(true);
@@ -183,7 +262,7 @@ export function AiAssistanceSection({
       const res = await applyAiDraftAction({
         workspaceSlug,
         contentItemId,
-        draftText: draft.text,
+        draftText: variant.text,
         mode,
       });
       if (res.error) {
@@ -203,6 +282,13 @@ export function AiAssistanceSection({
   const usableCount = PLANNER_CAPABILITIES.filter(
     (cap) => agencyEnabled && hasKey && enabledCapabilities.includes(cap.id),
   ).length;
+
+  const selectedVariant =
+    draft && selectedVariantId
+      ? (draft.variants.find((v) => v.id === selectedVariantId) ?? null)
+      : null;
+
+  const isBriefImprovement = draft?.capabilityId === "brief_improvement";
 
   return (
     <Card data-testid="ai-assistance-section">
@@ -254,6 +340,46 @@ export function AiAssistanceSection({
           </div>
         </div>
       ) : null}
+
+      <details
+        className="border-border bg-surface-subtle mt-4 rounded-[var(--radius-control)] border p-3"
+        data-testid="ai-context-selection"
+      >
+        <summary className="text-label text-fg-primary cursor-pointer font-semibold">
+          Send with context ({Object.values(contextSelection).filter(Boolean).length} of{" "}
+          {CONTEXT_TOGGLES.length} on)
+        </summary>
+        <p className="text-label text-fg-muted mt-2">
+          Each toggle adds a slice of workspace data (brand voice, campaign, etc.) to the prompt.
+          Turn these on for on-brand rewrites; turn them off for a clean-room draft.
+        </p>
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+          {CONTEXT_TOGGLES.map((toggle) => (
+            <li
+              key={toggle.key}
+              className="border-border bg-surface flex items-start gap-2 rounded-[var(--radius-control)] border p-2"
+            >
+              <input
+                id={`ai-context-${toggle.key}`}
+                type="checkbox"
+                checked={Boolean(contextSelection[toggle.key])}
+                onChange={(e) =>
+                  setContextSelection((s) => ({ ...s, [toggle.key]: e.target.checked }))
+                }
+                className="mt-0.5 h-4 w-4 shrink-0"
+                data-testid={`ai-context-toggle-${toggle.key}`}
+              />
+              <label
+                htmlFor={`ai-context-${toggle.key}`}
+                className="text-label text-fg-primary flex min-w-0 flex-1 flex-col gap-0.5"
+              >
+                <span className="font-semibold">{toggle.label}</span>
+                <span className="text-fg-muted">{toggle.description}</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      </details>
 
       <ul
         className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
@@ -345,24 +471,146 @@ export function AiAssistanceSection({
 
       {draft ? (
         <div
-          className="border-border bg-surface mt-4 space-y-2 rounded-[var(--radius-control)] border p-3"
+          className="border-border bg-surface mt-4 space-y-3 rounded-[var(--radius-control)] border p-3"
           data-testid="ai-assistance-draft"
         >
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-label text-fg-muted font-semibold">
-              Draft from {AI_CAPABILITY_METADATA.find((c) => c.id === draft.capabilityId)?.label}
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => onCopy(draft.text)}
-              data-testid="ai-assistance-copy"
+          <p className="text-label text-fg-muted font-semibold">
+            {draft.variants.length > 1
+              ? `${draft.variants.length} ${AI_CAPABILITY_METADATA.find((c) => c.id === draft.capabilityId)?.label ?? ""} drafts — pick one`
+              : `Draft from ${AI_CAPABILITY_METADATA.find((c) => c.id === draft.capabilityId)?.label ?? ""}`}
+          </p>
+
+          {draft.variants.length > 1 ? (
+            <ul
+              className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
+              data-testid="ai-assistance-variants"
             >
-              Copy
-            </Button>
-          </div>
-          <p className="text-body text-fg-primary whitespace-pre-wrap">{draft.text}</p>
+              {draft.variants.map((variant, idx) => {
+                const isSelected = variant.id === selectedVariantId;
+                return (
+                  <li
+                    key={variant.id}
+                    className={`flex flex-col gap-2 rounded-[var(--radius-control)] border p-3 ${
+                      isSelected
+                        ? "border-primary bg-primary-subtle/40"
+                        : "border-border bg-surface-subtle"
+                    }`}
+                    data-testid={`ai-assistance-variant-${idx}`}
+                  >
+                    <p className="text-label text-fg-muted flex items-center justify-between font-semibold">
+                      Variant {idx + 1}
+                      {isSelected ? (
+                        <Check className="text-primary h-3.5 w-3.5" aria-hidden="true" />
+                      ) : null}
+                    </p>
+                    <p className="text-body text-fg-primary whitespace-pre-wrap">{variant.text}</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={isSelected ? "default" : "outline"}
+                      onClick={() => pickVariant(variant.id)}
+                      data-testid={`ai-assistance-variant-${idx}-select`}
+                    >
+                      {isSelected ? "Selected" : "Use this"}
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : selectedVariant ? (
+            <div
+              className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+              data-testid="ai-assistance-single-draft"
+            >
+              <p className="text-body text-fg-primary whitespace-pre-wrap">
+                {selectedVariant.text}
+              </p>
+            </div>
+          ) : null}
+
+          {selectedVariant ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Insert is hidden for brief_improvement — the whole
+                  point of "improve brief" is replacement, and
+                  appending a 3-line structured rewrite below an
+                  existing brief is a worse outcome than no action. */}
+              {!isBriefImprovement ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="default"
+                  onClick={() => onApply("insert")}
+                  disabled={applying || !canEditBrief}
+                  title={
+                    canEditBrief
+                      ? "Append this draft below the current brief"
+                      : "Insert is only available while the item is in draft or changes requested"
+                  }
+                  data-testid="ai-assistance-insert"
+                >
+                  <CornerDownLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                  {applying ? "Working…" : "Insert (append below)"}
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => onApply("replace")}
+                disabled={applying || !canEditBrief || (isBriefImprovement && !replaceConfirmed)}
+                title={
+                  isBriefImprovement && !replaceConfirmed
+                    ? "Confirm the diff below to enable Replace"
+                    : canEditBrief
+                      ? "Overwrite the current brief with this draft"
+                      : "Replace is only available while the item is in draft or changes requested"
+                }
+                data-testid="ai-assistance-replace"
+              >
+                <Replace className="h-3.5 w-3.5" aria-hidden="true" />
+                {applying ? "Working…" : "Replace brief"}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => onCopy(selectedVariant.text)}
+                data-testid="ai-assistance-copy"
+              >
+                Copy
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => onInvoke(draft.capabilityId)}
+                disabled={pendingId === draft.capabilityId}
+                data-testid="ai-assistance-try-again"
+              >
+                <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                {pendingId === draft.capabilityId ? "Working…" : "Re-roll"}
+              </Button>
+            </div>
+          ) : null}
+
+          {/* FEAT-09 — the diff gate. Only rendered for
+              brief_improvement (the capability where Replace
+              silently overwrites a possibly-large brief). For
+              caption_drafts and the others, Replace targets
+              format-specific fields, not the brief, and the
+              existing one-click affordance is fine. */}
+          {isBriefImprovement && selectedVariant ? (
+            <DiffPreview
+              before={currentBrief}
+              after={selectedVariant.text}
+              beforeLabel="Current brief"
+              afterLabel="AI draft"
+              confirmed={replaceConfirmed}
+              onConfirmedChange={setReplaceConfirmed}
+              testIdPrefix="ai-diff"
+            />
+          ) : null}
+
           {applyError ? (
             <p
               role="alert"
@@ -382,55 +630,10 @@ export function AiAssistanceSection({
                 : "Replaced the brief with this draft."}
             </p>
           ) : null}
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="default"
-              onClick={() => onApply("insert")}
-              disabled={applying || !canEditBrief}
-              title={
-                canEditBrief
-                  ? "Append this draft below the current brief"
-                  : "Insert is only available while the item is in draft or changes requested"
-              }
-              data-testid="ai-assistance-insert"
-            >
-              <CornerDownLeft className="h-3.5 w-3.5" aria-hidden="true" />
-              {applying ? "Working…" : "Insert (append below)"}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => onApply("replace")}
-              disabled={applying || !canEditBrief}
-              title={
-                canEditBrief
-                  ? "Overwrite the current brief with this draft"
-                  : "Replace is only available while the item is in draft or changes requested"
-              }
-              data-testid="ai-assistance-replace"
-            >
-              <Replace className="h-3.5 w-3.5" aria-hidden="true" />
-              {applying ? "Working…" : "Replace brief"}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => onInvoke(draft.capabilityId)}
-              disabled={pendingId === draft.capabilityId}
-              data-testid="ai-assistance-try-again"
-            >
-              <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
-              {pendingId === draft.capabilityId ? "Working…" : "Try again"}
-            </Button>
-          </div>
           {!canEditBrief ? (
             <p className="text-label text-fg-muted">
               Item is in {contentStatus.replaceAll("_", " ")} — the brief is frozen for review. Use
-              &ldquo;Try again&rdquo; for a fresh draft, or copy the text manually.
+              &ldquo;Re-roll&rdquo; for a fresh draft, or copy the text manually.
             </p>
           ) : null}
         </div>

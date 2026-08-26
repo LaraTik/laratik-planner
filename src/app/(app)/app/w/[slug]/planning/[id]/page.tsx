@@ -181,6 +181,7 @@ export default async function ContentDetailPage({
           enabledCapabilities={enabledCapabilities}
           agencyEnabled={agencyEnabled}
           hasKey={hasKey}
+          currentBrief={item.brief ?? ""}
         />
       ) : null}
 
