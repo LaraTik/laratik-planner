@@ -6,6 +6,7 @@ import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
+import { CharacterCountInput } from "@/components/workspace/character-count-input";
 
 /**
  * LinkedResourceForm — inline create form for the brand-kit Linked
@@ -70,13 +71,12 @@ export function LinkedResourceForm({ slug }: { slug: string }) {
       </FormField>
 
       <FormField id="linked-resource-name" label="Name" required>
-        <Input
+        <CharacterCountInput
           id="linked-resource-name"
           name="name"
           required
           maxLength={120}
           placeholder="e.g. Brand library"
-          className="min-h-[44px]"
         />
       </FormField>
 
@@ -98,13 +98,13 @@ export function LinkedResourceForm({ slug }: { slug: string }) {
       </FormField>
 
       <FormField id="linked-resource-description" label="Description">
-        <textarea
+        <CharacterCountInput
           id="linked-resource-description"
+          as="textarea"
           name="description"
           maxLength={280}
           rows={3}
           placeholder="Optional. What's in this library?"
-          className={controlClass}
         />
       </FormField>
 

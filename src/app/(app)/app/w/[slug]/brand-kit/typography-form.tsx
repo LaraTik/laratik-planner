@@ -24,6 +24,7 @@ import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
 import { Input } from "@/components/ui/input";
+import { CharacterCountInput } from "@/components/workspace/character-count-input";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -145,11 +146,10 @@ export function TypographyForm({ slug }: { slug: string }) {
     <Card padding="md" className="mb-3">
       <form ref={formRef} action={action} className="grid gap-3">
         <FormField id="typography-name" label="Name" required>
-          <Input
+          <CharacterCountInput
             id="typography-name"
             className="mt-0"
             name="name"
-            required
             maxLength={80}
             placeholder="Heading, Body, Mono caption…"
           />

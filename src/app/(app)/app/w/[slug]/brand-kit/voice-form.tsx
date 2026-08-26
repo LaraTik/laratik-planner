@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
+import { CharacterCountInput } from "@/components/workspace/character-count-input";
 
 /**
  * VoiceForm — three inline sub-forms (Tone / Do / Don't) that all
@@ -53,13 +54,12 @@ function RuleSubForm({ slug, ruleType }: { slug: string; ruleType: RuleType }) {
       <FormField
         id={`voice-rule-${ruleType}-content`}
         label={ruleType === "tone" ? "Tone" : ruleType === "do" ? "Do" : "Don't"}
-        hint={`${max} chars max`}
         required
       >
         {useTextarea ? (
-          <textarea
+          <CharacterCountInput
             id={`voice-rule-${ruleType}-content`}
-            className="border-border bg-surface text-body text-fg-primary mt-0 block w-full rounded-[var(--radius-control)] border px-3 py-2"
+            as="textarea"
             name="content"
             required
             maxLength={max}
@@ -67,9 +67,8 @@ function RuleSubForm({ slug, ruleType }: { slug: string; ruleType: RuleType }) {
             placeholder={PLACEHOLDER[ruleType]}
           />
         ) : (
-          <Input
+          <CharacterCountInput
             id={`voice-rule-${ruleType}-content`}
-            className="mt-0"
             name="content"
             required
             maxLength={max}

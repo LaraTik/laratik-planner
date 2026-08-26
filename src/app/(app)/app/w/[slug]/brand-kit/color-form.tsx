@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
+import { CharacterCountInput } from "@/components/workspace/character-count-input";
 
 /**
  * ColorForm — inline create form for the brand-kit color palette.
@@ -61,10 +62,9 @@ export function ColorForm({ slug }: { slug: string }) {
     <Card padding="md" className="mb-3">
       <form ref={formRef} action={action} className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
         <FormField id="color-name" label="Color name" required>
-          <Input
+          <CharacterCountInput
             id="color-name"
             name="name"
-            required
             maxLength={80}
             placeholder="Brand blue"
             className="mt-0"

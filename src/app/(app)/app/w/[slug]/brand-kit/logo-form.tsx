@@ -8,6 +8,7 @@ import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
 import { Input } from "@/components/ui/input";
+import { CharacterCountInput } from "@/components/workspace/character-count-input";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -238,11 +239,10 @@ export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: str
         )}
 
         <FormField id="logo-name" label="Logo name" required>
-          <Input
+          <CharacterCountInput
             id="logo-name"
             className="mt-0"
             name="name"
-            required
             maxLength={120}
             placeholder="Wordmark, Icon, Dark variant…"
           />

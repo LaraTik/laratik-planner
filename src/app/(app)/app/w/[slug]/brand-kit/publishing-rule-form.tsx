@@ -6,6 +6,7 @@ import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
+import { CharacterCountInput } from "@/components/workspace/character-count-input";
 
 /**
  * PublishingRuleForm — inline create form for the brand-kit
@@ -72,25 +73,24 @@ export function PublishingRuleForm({ slug }: { slug: string }) {
       </FormField>
 
       <FormField id="publishing-rule-title" label="Title" required>
-        <Input
+        <CharacterCountInput
           id="publishing-rule-title"
           name="title"
           required
           maxLength={80}
           placeholder="e.g. Alt text standard"
-          className="min-h-[44px]"
         />
       </FormField>
 
       <FormField id="publishing-rule-content" label="Rule" required>
-        <textarea
+        <CharacterCountInput
           id="publishing-rule-content"
+          as="textarea"
           name="content"
           required
           maxLength={1000}
           rows={4}
           placeholder="Describe the rule in plain language."
-          className={controlClass}
         />
       </FormField>
 
