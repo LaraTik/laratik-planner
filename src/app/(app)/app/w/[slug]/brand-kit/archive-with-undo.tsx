@@ -5,6 +5,7 @@ import { useTransition } from "react";
 import { Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { getErrorMessage } from "@/lib/utils/error";
 
 /**
  * ArchiveWithUndo — drop-in replacement for the per-row archive
@@ -89,7 +90,7 @@ export function ArchiveWithUndo({
                   });
                 } catch (err) {
                   toast.error(`Couldn't restore ${label.toLowerCase()}`, {
-                    description: err instanceof Error ? err.message : "Unknown error",
+                    description: getErrorMessage(err),
                   });
                 }
               });
@@ -108,7 +109,7 @@ export function ArchiveWithUndo({
         }
       } catch (err) {
         toast.error(`Couldn't archive ${label.toLowerCase()}`, {
-          description: err instanceof Error ? err.message : "Unknown error",
+          description: getErrorMessage(err),
         });
       }
     });

@@ -4,6 +4,7 @@ import * as React from "react";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/utils/error";
 
 /**
  * CopyHexButton — single-line swatch + hex value with a click-to-copy
@@ -47,7 +48,7 @@ export function CopyHexButton({ hex, label, className }: CopyHexButtonProps) {
       window.setTimeout(() => setCopied(false), 1500);
     } catch (err) {
       toast.error("Couldn't copy to clipboard", {
-        description: err instanceof Error ? err.message : "Check your browser permissions.",
+        description: getErrorMessage(err, "Check your browser permissions."),
       });
     }
   }
