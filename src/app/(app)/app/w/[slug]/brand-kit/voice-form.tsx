@@ -6,7 +6,6 @@ import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
-import { Input } from "@/components/ui/input";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
 
 /**

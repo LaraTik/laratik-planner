@@ -5,7 +5,6 @@ import { createPublishingRuleAction } from "./actions";
 import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
-import { Input } from "@/components/ui/input";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
 
 /**

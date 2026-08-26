@@ -2,7 +2,7 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { Trash2, Upload, Link as LinkIcon, Image as ImageIcon } from "lucide-react";
+import { Trash2, Upload, Link as LinkIcon } from "lucide-react";
 import { createLogoAssetAction } from "./actions";
 import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { Card } from "@/components/ui/card";
