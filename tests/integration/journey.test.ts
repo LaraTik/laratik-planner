@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 if (!process.env.TEST_DATABASE_URL) {
   throw new Error("TEST_DATABASE_URL is required for integration tests");
@@ -597,11 +597,19 @@ describe("primary acceptance journey (§23, service-level)", () => {
     // The V1 submit creates a creative_internal request. Filter by
     // gate + status so we get the V1 pending one deterministically
     // (no orderBy needed because the unique index guarantees only one
-    // pending creative_internal row for the item).
+    // pending creative_internal row for the item). Without the gate
+    // filter, the LIMIT 1 race picks up the leftover `content`
+    // request (status='approved') left behind by seedItemInCreativeReview.
     const [creativeRequest] = await db
       .select()
       .from(approvalRequests)
-      .where(eq(approvalRequests.contentItemId, itemId));
+      .where(
+        and(
+          eq(approvalRequests.contentItemId, itemId),
+          eq(approvalRequests.gate, "creative_internal"),
+          eq(approvalRequests.status, "pending"),
+        ),
+      );
     if (!creativeRequest) throw new Error("Expected V1 creative_internal request to exist");
     expect(creativeRequest.status).toBe("pending");
     expect(creativeRequest.gate).toBe("creative_internal");
@@ -644,13 +652,23 @@ describe("primary acceptance journey (§23, service-level)", () => {
       },
     );
     const { approvalRequests } = await import("@/lib/db/schema");
+    // Same gate+status filter as step 19: the item has a leftover
+    // `content` request (status='approved') from seedItemInCreativeReview
+    // that would otherwise be picked up first.
     const [creativeRequest] = await db
       .select()
       .from(approvalRequests)
-      .where(eq(approvalRequests.contentItemId, itemId));
+      .where(
+        and(
+          eq(approvalRequests.contentItemId, itemId),
+          eq(approvalRequests.gate, "creative_internal"),
+          eq(approvalRequests.status, "pending"),
+        ),
+      );
+    if (!creativeRequest) throw new Error("Expected creative_internal request to exist");
     await deliveries.decideApproval(
       { id: jon.id },
-      { approvalRequestId: creativeRequest!.id, decision: "approved" },
+      { approvalRequestId: creativeRequest.id, decision: "approved" },
     );
     // In internal_then_client mode, internal approval does NOT mark the
     // item ready_to_publish — it creates a creative_client request and
