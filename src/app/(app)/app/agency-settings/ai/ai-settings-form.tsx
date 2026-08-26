@@ -76,6 +76,7 @@ export function AiSettingsForm({
   envEnabled,
   envModel,
   envHasKey,
+  featureIsEnabled,
   lastTestAt,
   lastTestOk,
   usage,
@@ -86,6 +87,10 @@ export function AiSettingsForm({
   envEnabled: boolean;
   envModel: string;
   envHasKey: boolean;
+  // True when AI can run: the env kill-switch is on AND a key exists
+  // (env or managed). The form uses this to enable the master switch
+  // and the Test connection button.
+  featureIsEnabled: boolean;
   lastTestAt: string | null;
   lastTestOk: boolean | null;
   usage: MonthlyUsage;
@@ -149,20 +154,21 @@ export function AiSettingsForm({
               <div>
                 <p className="text-body text-fg-primary font-semibold">Enable AI assistance</p>
                 <p className="text-label text-fg-muted">
-                  Master switch for the entire agency. Requires the environment key.
+                  Master switch for the entire agency. Requires a configured provider key (env or
+                  managed secret).
                 </p>
               </div>
               <label className="inline-flex items-center gap-2">
                 <input
                   type="checkbox"
                   name="enabled"
-                  defaultChecked={initialEnabled && envEnabled}
-                  disabled={!envEnabled}
+                  defaultChecked={initialEnabled && featureIsEnabled}
+                  disabled={!featureIsEnabled}
                   className="h-4 w-4"
                   data-testid="ai-enabled-toggle"
                 />
                 <span className="text-label text-fg-primary font-semibold">
-                  {initialEnabled && envEnabled ? "On" : "Off"}
+                  {initialEnabled && featureIsEnabled ? "On" : "Off"}
                 </span>
               </label>
             </div>
@@ -281,7 +287,7 @@ export function AiSettingsForm({
             variant="outline"
             size="sm"
             onClick={onTest}
-            disabled={testing || !envEnabled}
+            disabled={testing || !featureIsEnabled}
             data-testid="ai-test-connection"
           >
             <RefreshCw

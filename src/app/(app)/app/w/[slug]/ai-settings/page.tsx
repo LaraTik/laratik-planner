@@ -87,8 +87,11 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
     isAgencyAdmin(actor, agencyId),
   ]);
 
-  const envEnabled = serverEnv.AI_FEATURE_ENABLED && !!serverEnv.MINIMAX_API_KEY;
-  const effectiveEnabled = envEnabled && (feature?.enabled ?? true);
+  // M3.4 — the workspace status card reflects the effective runtime
+  // state, which counts a managed secret as a key source.
+  const hasManagedSecret = feature?.keySource === "managed_secret" && !!feature.maskedKeySuffix;
+  const hasAnyKey = !!serverEnv.MINIMAX_API_KEY || hasManagedSecret;
+  const effectiveEnabled = serverEnv.AI_FEATURE_ENABLED && hasAnyKey && (feature?.enabled ?? true);
   const enabledCapabilities = new Set(feature?.enabledCapabilities ?? []);
   const requestCount = usage?.value ?? 0;
 
