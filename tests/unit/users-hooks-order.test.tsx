@@ -205,6 +205,61 @@ describe("/app/users components — hooks order guard", () => {
     }
   });
 
+  it("MemberList: open drawer, then empty/populated re-render keeps hook count stable", () => {
+    // Most aggressive production path: the user opens the drawer for
+    // a member, the page revalidates (e.g. a concurrent toggleDeactivation
+    // committed server-side before the user's revalidate fired, or a
+    // second tab deactivated the same member), `members` flips to
+    // empty, the empty-state early return fires, the drawer + form
+    // unmount. Then the page revalidates again (reactivation), the
+    // early return no longer fires, the drawer remounts, the form
+    // remounts (key=editing.id, fresh lazy-init seed). Across the
+    // unmount/remount cycle the parent must keep calling its 3 hooks
+    // on every render; the form is a fresh child fiber, so its 7
+    // hooks start from zero, not from the previous mount's count.
+    const cap = captureConsoleError();
+    try {
+      const { getByTestId, rerender } = render(
+        <MemberList
+          actorId="actor-other"
+          workspaces={baseWorkspaces}
+          rolesByUser={{ "user-1": { "ws-1": "designer" } }}
+          members={[baseMember]}
+        />,
+      );
+      // Open the drawer (mounts MemberEditForm, 7 hooks).
+      fireEvent.click(getByTestId("users-member-edit-user-1"));
+      // Concurrent deactivation: members goes to [].
+      const err1 = runWithoutThrowing(() =>
+        rerender(
+          <MemberList
+            actorId="actor-other"
+            workspaces={baseWorkspaces}
+            rolesByUser={{ "user-1": { "ws-1": "designer" } }}
+            members={[]}
+          />,
+        ),
+      );
+      // Reactivation: members is back. The early-return branch flipped
+      // off and the drawer/form remount.
+      const err2 = runWithoutThrowing(() =>
+        rerender(
+          <MemberList
+            actorId="actor-other"
+            workspaces={baseWorkspaces}
+            rolesByUser={{ "user-1": { "ws-1": "designer" } }}
+            members={[baseMember]}
+          />,
+        ),
+      );
+      cap.assertNoHooksOrderError();
+      expect(err1, err1 ? String(err1) : "first rerender threw").toBeNull();
+      expect(err2, err2 ? String(err2) : "second rerender threw").toBeNull();
+    } finally {
+      cap.restore();
+    }
+  });
+
   it("SendInviteForm: same instance, empty/populated workspaces keeps hook count stable", () => {
     // Empty workspaces hides the <fieldset> that hosts WorkspaceRoleGrid
     // (a separate child component with 1 hook). The parent

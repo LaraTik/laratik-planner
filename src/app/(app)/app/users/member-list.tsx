@@ -32,12 +32,13 @@ export function MemberList({
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<MemberRow | null>(null);
 
-  if (members.length === 0) {
-    return <p className="text-body text-fg-muted">No members yet.</p>;
-  }
-
   // The drawer's per-workspace role pre-fill — the page pre-computed the
   // per-user map so the drawer can seed its initial state on open.
+  // Computed unconditionally (above the empty-state branch) so the
+  // empty/populated transition is a *single* render path and any
+  // future refactor that adds a hook here cannot accidentally move
+  // it past an early return (the bug class the 2026-08-26
+  // `users-hooks-order` regression guard was added to catch).
   const editingWorkspaces: MemberEditWorkspace[] = editing
     ? workspaces.map((w) => ({
         id: w.id,
@@ -45,6 +46,21 @@ export function MemberList({
         currentRole: rolesByUser[editing.id]?.[w.id] ?? "",
       }))
     : [];
+
+  // Drawer is mounted from the first render so an open-drawer
+  // → empty-members → re-populated sequence does not unmount and
+  // remount the Radix portal mid-edit. The form inside the drawer
+  // remains key={subject.id} so a different member still remounts
+  // it (clean state, fresh `seedGrants`).
+  const editingSubject = editing
+    ? {
+        id: editing.id,
+        name: editing.name,
+        email: editing.email,
+        status: editing.status === "active" ? ("active" as const) : ("deactivated" as const),
+        isAgencyAdmin: editing.isAgencyAdmin,
+      }
+    : null;
 
   return (
     <>
@@ -56,77 +72,73 @@ export function MemberList({
           {error}
         </p>
       ) : null}
-      <ul className="divide-border divide-y" data-testid="users-member-list">
-        {members.map((m) => {
-          const active = m.status === "active";
-          const canEdit = active; // deactivated members are not editable here
-          return (
-            <li key={m.id} className="text-body flex items-center gap-3 py-3">
-              <div className="bg-surface-subtle text-fg-primary text-label flex h-8 w-8 items-center justify-center rounded-full font-semibold">
-                {m.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-fg-primary truncate font-semibold">{m.name}</p>
-                <p className="text-label text-fg-muted truncate">
-                  {m.email} · joined {m.joinedAt}
-                </p>
-              </div>
-              {m.isAgencyAdmin ? <Badge variant="primary">Admin</Badge> : null}
-              <Badge variant={active ? "success" : "default"}>
-                {active ? "Active" : "Deactivated"}
-              </Badge>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={pending || !canEdit}
-                onClick={() => setEditing(m)}
-                aria-label={`Edit ${m.name}`}
-                data-testid={`users-member-edit-${m.id}`}
-              >
-                <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                Edit
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={pending}
-                onClick={() => {
-                  start(async () => {
-                    setError(null);
-                    const result = await toggleDeactivationAction(m.id, active);
-                    if ("error" in result && result.error) setError(result.error);
-                  });
-                }}
-                aria-label={active ? `Deactivate ${m.name}` : `Reactivate ${m.name}`}
-              >
-                {active ? (
-                  <>
-                    <UserX className="h-3.5 w-3.5" aria-hidden="true" />
-                    Deactivate
-                  </>
-                ) : (
-                  <>
-                    <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                    Reactivate
-                  </>
-                )}
-              </Button>
-            </li>
-          );
-        })}
-      </ul>
+      {members.length === 0 ? (
+        <p className="text-body text-fg-muted" data-testid="users-empty-state">
+          No members yet.
+        </p>
+      ) : (
+        <ul className="divide-border divide-y" data-testid="users-member-list">
+          {members.map((m) => {
+            const active = m.status === "active";
+            const canEdit = active; // deactivated members are not editable here
+            return (
+              <li key={m.id} className="text-body flex items-center gap-3 py-3">
+                <div className="bg-surface-subtle text-fg-primary text-label flex h-8 w-8 items-center justify-center rounded-full font-semibold">
+                  {m.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-fg-primary truncate font-semibold">{m.name}</p>
+                  <p className="text-label text-fg-muted truncate">
+                    {m.email} · joined {m.joinedAt}
+                  </p>
+                </div>
+                {m.isAgencyAdmin ? <Badge variant="primary">Admin</Badge> : null}
+                <Badge variant={active ? "success" : "default"}>
+                  {active ? "Active" : "Deactivated"}
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={pending || !canEdit}
+                  onClick={() => setEditing(m)}
+                  aria-label={`Edit ${m.name}`}
+                  data-testid={`users-member-edit-${m.id}`}
+                >
+                  <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                  Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={() => {
+                    start(async () => {
+                      setError(null);
+                      const result = await toggleDeactivationAction(m.id, active);
+                      if ("error" in result && result.error) setError(result.error);
+                    });
+                  }}
+                  aria-label={active ? `Deactivate ${m.name}` : `Reactivate ${m.name}`}
+                >
+                  {active ? (
+                    <>
+                      <UserX className="h-3.5 w-3.5" aria-hidden="true" />
+                      Deactivate
+                    </>
+                  ) : (
+                    <>
+                      <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                      Reactivate
+                    </>
+                  )}
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       <MemberEditDrawer
-        subject={
-          editing
-            ? {
-                id: editing.id,
-                name: editing.name,
-                email: editing.email,
-                status: editing.status === "active" ? "active" : "deactivated",
-                isAgencyAdmin: editing.isAgencyAdmin,
-              }
-            : null
-        }
+        subject={editingSubject}
         actorIsAgencyAdmin
         actorUserId={actorId}
         workspaces={editingWorkspaces}
