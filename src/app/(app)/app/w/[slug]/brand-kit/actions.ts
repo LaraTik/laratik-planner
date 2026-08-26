@@ -13,6 +13,7 @@ import {
 } from "@/lib/brand/command";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import {
+  createColorAsset,
   createFontAsset,
   createLogoAsset,
   archiveBrandLinkedResource,
@@ -66,13 +67,11 @@ export async function createColorAssetAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form." };
   if (parsed.data.kind !== "color") return { error: "Check the form." };
 
-  await db.insert(brandAssets).values({
-    workspaceId: workspace.id,
-    createdBy: session.user.id,
-    kind: "color",
-    name: parsed.data.name,
-    value: parsed.data.value,
-  });
+  // Round 5 (rebuild): route through the typed service wrapper so
+  // the action does not call db.insert directly. Keeps the authz
+  // check in one place and lets tests stub the service.
+  const hex = parsed.data.value.hex;
+  await createColorAsset({ id: session.user.id }, workspace.id, { name: parsed.data.name, hex });
   revalidatePath(`/app/w/${slug}/brand-kit`);
   return { success: true };
 }

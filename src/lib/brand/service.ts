@@ -93,6 +93,36 @@ export async function createBrandAsset(
 }
 
 /**
+ * Round 5 (rebuild) — typed wrapper for the color variant. Mirrors
+ * `createLogoAsset` / `createFontAsset` so the action layer does not
+ * have to call `db.insert(brandAssets)` directly (the previous
+ * `createColorAssetAction` did, which made authz duplicated and
+ * tests brittle). The action now calls this service fn; tests can
+ * stub it.
+ */
+export type ColorAssetInput = {
+  name: string;
+  hex: string;
+};
+
+export async function createColorAsset(
+  actor: Actor,
+  workspaceId: string,
+  input: ColorAssetInput,
+): Promise<void> {
+  await requireManager(actor, workspaceId, "create color asset");
+  await db.insert(brandAssets).values({
+    workspaceId,
+    createdBy: actor.id,
+    kind: "color",
+    name: input.name,
+    externalUrl: null,
+    storagePath: null,
+    value: { hex: input.hex },
+  });
+}
+
+/**
  * Round 2 typed wrappers for the logo variant. These are the public
  * service entry points used by the brand-kit logo form action —
  * the generic `createBrandAsset` still works for any kind, but
