@@ -77,7 +77,6 @@ export function ColorSwatchGrid({ slug, canManage, assets }: ColorSwatchGridProp
                     name={asset.name}
                     archiveAction={archiveColorAssetAction}
                     restoreAction={restoreColorAssetAction}
-                    variant="archive"
                     data-testid={`brand-color-archive-${asset.id}`}
                   />
                 ) : null}
