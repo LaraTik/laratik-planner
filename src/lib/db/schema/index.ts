@@ -28,5 +28,8 @@ export * from "./support";
 // (agencies, users) and after social-dek (the envelope is sealed
 // with the same per-agency DEK).
 export * from "./social-analytics";
+// OBS-002 — in-app mirror of error events surfaced at /app/platform/errors.
+// Imported after identity (users) for the actor FK.
+export * from "./app-errors";
 export * from "./social-dek";
 export * from "./provider-config";

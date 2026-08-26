@@ -42,11 +42,19 @@ const stringOrEmpty = z
 const clientSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
   NEXT_PUBLIC_SENTRY_DSN: stringOrEmpty,
+  // OBS-002 — support address mirrored to the client for the
+  // "Report this" mailto on every error boundary. Must agree with
+  // the server-side `SUPPORT_EMAIL` (which the server action uses
+  // for the canonical record); we keep them as two env vars so a
+  // server-only change (e.g. a mailcow alias) does not require a
+  // build-time bake. Falls back to the same default.
+  NEXT_PUBLIC_SUPPORT_EMAIL: z.string().email().optional().default("support@laratik.com"),
 });
 
 const _clientParsed = clientSchema.safeParse({
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
 });
 
 if (!_clientParsed.success) {
@@ -133,6 +141,12 @@ const serverSchema = z.object({
   // Cron + bootstrap
   CRON_SECRET: stringOrEmpty,
   BOOTSTRAP_SETUP_TOKEN: stringOrEmpty,
+
+  // OBS-002 — support contact surfaced in the app-router error
+  // boundaries. The "Report this" link on every error page builds a
+  // `mailto:` URL to this address. Falls back to a generic address
+  // when unset so the page never 500s on a missing config.
+  SUPPORT_EMAIL: z.string().email().optional().default("support@laratik.com"),
 
   // M4.5 — social profile analytics. The encryption key is
   // OPTIONAL at boot: the platform can deploy without it and

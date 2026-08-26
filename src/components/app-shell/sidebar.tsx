@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  AlertOctagon,
   ArrowLeftRight,
   BarChart3,
   Bot,
@@ -373,6 +374,16 @@ export function Sidebar({
                     active={isActivePath("/app/platform/access", pathname)}
                   >
                     Platform access
+                  </SidebarLink>
+                ) : null}
+                {platformAccess.canEnter ? (
+                  <SidebarLink
+                    href="/app/platform/errors"
+                    icon={<AlertOctagon className="h-4 w-4" />}
+                    active={isActivePath("/app/platform/errors", pathname)}
+                    data-testid="sidebar-platform-errors"
+                  >
+                    App errors
                   </SidebarLink>
                 ) : null}
               </>
