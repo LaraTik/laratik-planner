@@ -72,7 +72,11 @@ export function ArchiveWithUndo({
       try {
         await archiveAction(slug, id);
         const toastId = toast.success(`Archived ${label.toLowerCase()}: ${name}`, {
-          description: "This will be removed permanently after 30 days.",
+          // Round 5 (rebuild) — the previous "removed permanently after
+          // 30 days" copy was dishonest: there is no purge job, and
+          // the row stays in the database until manually removed. The
+          // honest copy mirrors the actual soft-delete semantics.
+          description: "Hidden from the section. Click Undo to bring it back.",
           duration: 5000,
           action: {
             label: "Undo",
