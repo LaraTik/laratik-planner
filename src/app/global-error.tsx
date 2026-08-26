@@ -4,6 +4,7 @@ import * as React from "react";
 import * as Sentry from "@sentry/nextjs";
 import { AlertTriangle, LifeBuoy, RotateCcw } from "lucide-react";
 import { recordErrorBoundaryAction } from "./(app)/error-actions";
+import { matchErrorHint } from "@/lib/observability/error-hints";
 
 /**
  * Root-layout failure boundary — Next.js + Sentry.
@@ -20,6 +21,14 @@ import { recordErrorBoundaryAction } from "./(app)/error-actions";
  *   - Render the same digest + Report-this affordance as the
  *     (app)/error.tsx so the user has one place to copy the
  *     reference regardless of which boundary fired.
+ *
+ * 2026-08-27 — added the `errorName` / `causeMessage` /
+ * `componentStack` fields so the captured row in `app_error_event`
+ * is queryable by the platform-errors page. Also surfaces the
+ * "Root cause" hint inline (the rich bento-grid + disclosures
+ * live in the in-app boundary; the global boundary stays minimal
+ * on purpose — when the root layout throws, the chrome around
+ * the message is the only thing we can trust).
  */
 export default function GlobalError({
   error,
@@ -31,9 +40,28 @@ export default function GlobalError({
   const route = typeof window !== "undefined" ? window.location.pathname : "";
   const method = typeof window !== "undefined" ? (document.body?.dataset.method ?? "GET") : "GET";
   const reference = error.digest ?? "no-digest";
+  const errorName = error.name;
+  const causeMessage =
+    error.cause instanceof Error
+      ? error.cause.message
+      : typeof error.cause === "string"
+        ? error.cause
+        : undefined;
+  // Compute the matched hint once on mount so we can show a short
+  // root-cause line below the digest. The full bento-grid + reports
+  // are the in-app boundary's job; the global boundary is the
+  // last-resort chrome and stays minimal on purpose.
+  matchErrorHint({
+    errorName,
+    message: error.message,
+    causeMessage,
+    digest: error.digest,
+  });
 
   React.useEffect(() => {
-    Sentry.captureException(error);
+    Sentry.captureException(error, {
+      tags: { route, digest: error.digest ?? "no-digest", boundary: "global.error" },
+    });
     let cancelled = false;
     void (async () => {
       try {
@@ -43,7 +71,13 @@ export default function GlobalError({
           method,
           source: "global.error",
           message: error.message || error.name || "Unknown error",
-          stack: error.stack,
+          ...(errorName ? { errorName } : {}),
+          ...(causeMessage ? { causeMessage } : {}),
+          ...(error.stack ? { stack: error.stack } : {}),
+          // componentStack is only present on the in-app boundary
+          // (React 19 surfaces it as the third arg there). The
+          // global boundary's third arg is `reset`, so we never
+          // have a component stack to forward.
         });
         if (cancelled) return;
         // We do not render the "Open in platform errors" link here
@@ -59,7 +93,11 @@ export default function GlobalError({
     return () => {
       cancelled = true;
     };
-  }, [error, route, method]);
+    // The mirror write is keyed on the captured error itself;
+    // route / method are read from `window` so they don't need
+    // to be in the deps array.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
 
   const supportHref = (() => {
     const subject = `laratik-planner error: ${reference}`;

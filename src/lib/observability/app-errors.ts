@@ -47,13 +47,16 @@ export type CaptureAppErrorInput = {
   method: string | undefined;
   /** Which boundary fired: `app.error`, `global.error`, `server_action`, `client.unhandled`. */
   source: "app.error" | "global.error" | "server_action" | "client.unhandled";
-  /** The thrown value. We only read `name` and `message`; no raw payload. */
+  /** The thrown value. We only read `name`, `message`, and `cause`; no raw payload. */
   error: unknown;
+  /** React component stack on client boundaries; undefined on server boundaries. */
+  componentStack?: string | undefined;
   /** Session user id when the actor is authenticated. */
   actorId?: string | undefined;
 };
 
 const STACK_MAX_BYTES = 4 * 1024;
+const COMPONENT_STACK_MAX_BYTES = 4 * 1024;
 
 function safeMessage(err: unknown): string {
   if (err instanceof Error) {
@@ -64,6 +67,30 @@ function safeMessage(err: unknown): string {
   return "Unknown error";
 }
 
+function safeName(err: unknown): string | undefined {
+  if (err instanceof Error) return err.name;
+  return undefined;
+}
+
+/**
+ * `Error.cause` (Node ≥ 16.9 / modern browsers) is the real reason
+ * behind a wrapped error. Drizzle's "Failed query: …" wrapper keeps
+ * the original Postgres error on `.cause.message` — without
+ * surfacing it on the row, the platform-errors table only shows
+ * "Failed query: …" for every DB issue. The boundary surfaces this
+ * one level deep; deeper chains are still in Sentry.
+ */
+function safeCauseMessage(err: unknown): string | undefined {
+  if (!(err instanceof Error)) return undefined;
+  // Node's `Error.cause` is typed as `unknown`. Drill in carefully.
+  const cause = (err as { cause?: unknown }).cause;
+  if (cause instanceof Error) {
+    return cause.message.slice(0, 2_000) || cause.name || undefined;
+  }
+  if (typeof cause === "string") return cause.slice(0, 2_000);
+  return undefined;
+}
+
 function safeStack(err: unknown): string | undefined {
   if (!(err instanceof Error)) return undefined;
   const stack = err.stack ?? "";
@@ -71,6 +98,19 @@ function safeStack(err: unknown): string | undefined {
   return stack.length > STACK_MAX_BYTES
     ? stack.slice(0, STACK_MAX_BYTES) + "\n…(truncated)"
     : stack;
+}
+
+/**
+ * React 19 surfaces a component stack on the boundary error via the
+ * third arg of the boundary (the second arg is `reset`, the third is
+ * the component stack string). Client boundaries receive it; server
+ * boundaries don't. The client-boundary code passes it through the
+ * server action as a plain string.
+ */
+function truncateComponentStack(s: string | undefined): string | undefined {
+  if (!s) return undefined;
+  if (s.length <= COMPONENT_STACK_MAX_BYTES) return s;
+  return s.slice(0, COMPONENT_STACK_MAX_BYTES) + "\n…(truncated)";
 }
 
 export async function captureAppError(input: CaptureAppErrorInput): Promise<void> {
@@ -84,13 +124,20 @@ export async function captureAppError(input: CaptureAppErrorInput): Promise<void
     // column null so the row doesn't carry "local" / "unavailable"
     // values that would be misleading in /app/platform/errors.
     const buildVersion = build.shortSha ?? null;
+    const errorName = safeName(input.error);
+    const causeMessage = safeCauseMessage(input.error);
+    const stack = safeStack(input.error);
+    const componentStack = truncateComponentStack(input.componentStack);
     await db.insert(appErrorEvents).values({
       ...(input.digest ? { digest: input.digest } : {}),
       route: input.route,
       ...(input.method ? { method: input.method } : {}),
       source: input.source,
+      ...(errorName ? { errorName } : {}),
       message: safeMessage(input.error),
-      ...(safeStack(input.error) ? { stack: safeStack(input.error) } : {}),
+      ...(causeMessage ? { causeMessage } : {}),
+      ...(stack ? { stack } : {}),
+      ...(componentStack ? { componentStack } : {}),
       ...(requestId ? { requestId } : {}),
       ...(input.actorId ? { actorId: input.actorId } : {}),
       ...(buildVersion ? { buildVersion } : {}),

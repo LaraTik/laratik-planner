@@ -49,12 +49,21 @@ const clientSchema = z.object({
   // server-only change (e.g. a mailcow alias) does not require a
   // build-time bake. Falls back to the same default.
   NEXT_PUBLIC_SUPPORT_EMAIL: z.string().email().optional().default("support@laratik.com"),
+  // 2026-08-27 — the error boundary reads the build SHA so the
+  // "Copy full report" can include a one-line correlation between
+  // the user's screen and the deployed commit. `APP_VERSION` is
+  // server-only (and may be a real 40-char SHA at build time);
+  // mirroring it as `NEXT_PUBLIC_` means the client can read it
+  // without a round-trip. Empty when the server env is empty
+  // (the report falls back to "local build" in that case).
+  NEXT_PUBLIC_APP_VERSION: stringOrEmpty,
 });
 
 const _clientParsed = clientSchema.safeParse({
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
   NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
+  NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
 });
 
 if (!_clientParsed.success) {

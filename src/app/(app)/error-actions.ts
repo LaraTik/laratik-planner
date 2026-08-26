@@ -33,6 +33,11 @@ import {
  * The `route` and `method` are read from the live request headers so
  * the row matches what the user actually saw (the client component
  * only has `window.location`, which can be stale after a redirect).
+ *
+ * 2026-08-27 — the input gained `errorName` and `causeMessage` so
+ * the boundary can show the chained cause (e.g. the real Postgres
+ * reason behind a Drizzle "Failed query" wrapper) and so the
+ * platform-errors page can match on `error_name`.
  */
 export type RecordErrorBoundaryInput = {
   digest: string | undefined;
@@ -40,7 +45,15 @@ export type RecordErrorBoundaryInput = {
   method: string;
   source: "app.error" | "global.error" | "server_action";
   message: string;
-  stack: string | undefined;
+  /** Error class name (Error.name); helps the pattern-hint matcher. */
+  errorName?: string | undefined;
+  /** Chained cause message (one level), if the boundary saw one. */
+  causeMessage?: string | undefined;
+  /** Truncated stack trace. Optional — production boundaries may
+   *  strip this in dev. */
+  stack?: string | undefined;
+  /** React component stack on client boundaries. */
+  componentStack?: string | undefined;
 };
 
 export type RecordErrorBoundaryResult = {
@@ -72,8 +85,16 @@ export async function recordErrorBoundaryAction(
     method: liveMethod,
     source: input.source,
     // The client component only sent a sanitized summary; rebuild
-    // an Error-shaped payload so the helper can extract a stack.
-    error: { name: "AppRouterError", message: input.message, stack: input.stack },
+    // an Error-shaped payload so the helper can extract a stack +
+    // name + cause. `cause` is read by `safeCauseMessage` inside
+    // the helper.
+    error: {
+      name: input.errorName ?? "AppRouterError",
+      message: input.message,
+      stack: input.stack,
+      cause: input.causeMessage ? { name: "Cause", message: input.causeMessage } : undefined,
+    },
+    ...(input.componentStack ? { componentStack: input.componentStack } : {}),
     ...(actorId ? { actorId } : {}),
   });
 

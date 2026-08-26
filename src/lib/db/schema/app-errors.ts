@@ -44,10 +44,23 @@ export const appErrorEvents = pgTable(
     method: text("method"),
     /** "server" | "client" | "unknown" — which boundary raised the error. */
     source: text("source").notNull(),
+    /** Error class name (e.g. "PostgresError", "TypeError", "ZodError"). */
+    errorName: text("error_name"),
     /** Sanitized error message; full message lives in Sentry. */
     message: text("message").notNull(),
+    /**
+     * Chained cause message, one level deep.
+     * For a `db.transaction(...)` failure the surface message is
+     * usually a generic Drizzle wrapper ("Failed query: …") and the
+     * real reason lives on `error.cause` (Postgres "record new has no
+     * field updated_at" etc.). Surfacing it on the row makes the
+     * `app/platform/errors` table queryable for the real reason.
+     */
+    causeMessage: text("cause_message"),
     /** Truncated stack trace (first 4 KB). */
     stack: text("stack"),
+    /** React component stack on client boundaries, first 4 KB. */
+    componentStack: text("component_stack"),
     /** `AsyncLocalStorage` request id when available. */
     requestId: text("request_id"),
     /** Session user id when the actor was authenticated. */

@@ -88,6 +88,17 @@ export const workspaceSettings = pgTable("workspace_settings", {
 });
 
 // ─── workspace_memberships ────────────────────────────────────────────────
+//
+// `updated_at` is REQUIRED on this table because the
+// `touch_updated_at` trigger installed by migration 0004 is wired to
+// `workspace_membership` (along with the other high-traffic membership
+// tables). The trigger fires on every UPDATE and assigns
+// `NEW.updated_at = now()` — without the column, every membership
+// mutation raised `record "new" has no field "updated_at"` and aborted
+// the surrounding transaction. That bug was the actual cause of the
+// 2026-08-26 "user cannot be assigned to a workspace" failure (Sentry
+// 347888499 et al.) — the previous test-only guard (62e643e) only
+// papered over the symptom.
 export const workspaceMemberships = pgTable(
   "workspace_membership",
   {
@@ -100,6 +111,12 @@ export const workspaceMemberships = pgTable(
       .references(() => users.id, { onDelete: "restrict" }),
     status: agencyMemberStatusEnum("status").notNull().default("active"),
     joinedAt: timestamp("joined_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    // Added by migration 0021 to satisfy the `touch_updated_at` trigger
+    // installed in 0004. The trigger is the single source of truth for
+    // this column — application code does not need to set it.
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
       .notNull()
       .default(sql`now()`),
     deactivatedAt: timestamp("deactivated_at", { withTimezone: true, mode: "date" }),

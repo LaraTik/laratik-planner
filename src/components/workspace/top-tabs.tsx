@@ -1,6 +1,17 @@
 "use client";
 import * as React from "react";
-import type { LucideIcon } from "lucide-react";
+import {
+  BookOpen,
+  History,
+  Image as ImageIcon,
+  Link as LinkIcon,
+  type LucideIcon,
+  MessageCircle,
+  Palette,
+  Sparkles,
+  Tag,
+  Type,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -35,11 +46,38 @@ import { cn } from "@/lib/utils";
  *   - The `IntersectionObserver` fallback only attaches when the
  *     `observerRootMargin` prop is supplied (we don't need it on
  *     the brand-kit page; the scroll listener is plenty).
+ *
+ * **Icon contract (2026-08-27 fix):** tabs accept an `iconName`
+ * (string) instead of an `icon` (React component). React Server
+ * Components cannot serialise functions across the server→client
+ * boundary; passing `LucideIcon` from a Server Component page to this
+ * client component previously threw "Functions cannot be passed
+ * directly to Client Components" and the whole page rendered as
+ * the error boundary ("We hit an error rendering Brand Kit"). The
+ * server passes a stable string from
+ * `src/lib/brand/sections.ts`; this component looks up the real
+ * icon in `WORKSPACE_TAB_ICONS`. Adding a new icon is a one-line
+ * change in both places; the literal-type union in
+ * `BrandKitIconName` is the source of truth for what's allowed.
  */
+export const WORKSPACE_TAB_ICONS = {
+  sparkles: Sparkles,
+  image: ImageIcon,
+  palette: Palette,
+  type: Type,
+  messageCircle: MessageCircle,
+  tag: Tag,
+  bookOpen: BookOpen,
+  link: LinkIcon,
+  history: History,
+} as const satisfies Record<string, LucideIcon>;
+
+export type WorkspaceTabIconName = keyof typeof WORKSPACE_TAB_ICONS;
+
 export interface WorkspaceTopTab {
   id: string;
   label: string;
-  icon?: LucideIcon;
+  iconName?: WorkspaceTabIconName;
   count?: number;
 }
 
@@ -149,7 +187,14 @@ export function WorkspaceTopTabs({
     >
       <ul className="flex flex-wrap items-stretch gap-1 overflow-x-auto">
         {tabs.map((tab) => {
-          const Icon = tab.icon;
+          // iconName is a serialised string from the server; resolve
+          // it to a real LucideIcon *here* (client) so the function
+          // never crosses the RSC boundary. Unknown names render
+          // without an icon — the literal-type union on the prop
+          // means that can only happen if the source file and the
+          // `WORKSPACE_TAB_ICONS` map are out of sync, which the
+          // build (`pnpm typecheck`) catches.
+          const Icon = tab.iconName ? WORKSPACE_TAB_ICONS[tab.iconName] : null;
           const isActive = tab.id === activeId;
           return (
             <li key={tab.id} className="shrink-0">

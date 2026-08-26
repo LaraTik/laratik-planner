@@ -1,18 +1,21 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { Sparkles, Tag, Type } from "lucide-react";
 import { WorkspaceTopTabs, type WorkspaceTopTab } from "@/components/workspace/top-tabs";
 
 // jsdom does not implement scrollIntoView / IntersectionObserver
 // for anchor navigation. The strip is a thin presentational
 // component — we only need to assert the markup, the active-state
 // affordances, and the count badge.
+//
+// `iconName` is a string identifier (not a LucideIcon component) so
+// this prop can cross the Server→Client RSC boundary. The icon
+// lookup happens inside `WorkspaceTopTabs` via `WORKSPACE_TAB_ICONS`.
 
 const tabs: WorkspaceTopTab[] = [
   { id: "overview", label: "Overview" },
-  { id: "assets", label: "Assets", icon: Sparkles, count: 3 },
-  { id: "voice", label: "Voice & tone", icon: Type },
-  { id: "publishing", label: "Publishing rules", icon: Tag, count: 0 },
+  { id: "assets", label: "Assets", iconName: "sparkles", count: 3 },
+  { id: "voice", label: "Voice & tone", iconName: "type" },
+  { id: "publishing", label: "Publishing rules", iconName: "tag", count: 0 },
 ];
 
 beforeEach(() => {

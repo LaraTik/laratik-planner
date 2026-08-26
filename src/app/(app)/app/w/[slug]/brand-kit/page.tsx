@@ -149,7 +149,12 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
     return {
       id: section.id,
       label: section.label,
-      icon: section.icon,
+      // `icon` is a `BrandKitIconName` string, NOT a LucideIcon
+      // component. RSC can't serialise functions across the
+      // server→client boundary; `<WorkspaceTopTabs>` resolves the
+      // name to a real icon locally. See `top-tabs.tsx` for the
+      // icon map and the rationale (2026-08-27 brand-kit outage).
+      iconName: section.icon,
       ...(typeof count === "number" ? { count } : {}),
     };
   });

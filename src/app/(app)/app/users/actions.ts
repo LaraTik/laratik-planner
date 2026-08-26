@@ -360,43 +360,63 @@ export async function updateMemberRolesAction(
     }
   }
 
-  await db.transaction(async (tx) => {
-    for (const workspaceId of validWorkspaceIds) {
-      const newRole = grantByWorkspace.get(workspaceId) ?? "";
+  try {
+    await db.transaction(async (tx) => {
+      for (const workspaceId of validWorkspaceIds) {
+        const newRole = grantByWorkspace.get(workspaceId) ?? "";
 
-      // Upsert the membership row so the user can hold a role here
-      const [membership] = await tx
-        .insert(workspaceMemberships)
-        .values({ workspaceId, userId, status: "active" })
-        .onConflictDoUpdate({
-          target: [workspaceMemberships.workspaceId, workspaceMemberships.userId],
-          set: { status: "active", deactivatedAt: null },
-        })
-        .returning({ id: workspaceMemberships.id });
-      if (!membership) continue;
+        // Upsert the membership row so the user can hold a role here.
+        // The `onConflictDoUpdate` SET clause intentionally does NOT
+        // touch `joinedAt` (preserves the original membership date) and
+        // does NOT set `updatedAt` (the `touch_updated_at` trigger
+        // installed by migration 0004 + column added in 0021 is the
+        // single source of truth for that column).
+        const [membership] = await tx
+          .insert(workspaceMemberships)
+          .values({ workspaceId, userId, status: "active" })
+          .onConflictDoUpdate({
+            target: [workspaceMemberships.workspaceId, workspaceMemberships.userId],
+            set: { status: "active", deactivatedAt: null },
+          })
+          .returning({ id: workspaceMemberships.id });
+        if (!membership) continue;
 
-      // Wipe existing roles for this membership, then insert the new one
-      // if one was provided. Empty string == "no access" == no role rows.
-      await tx
-        .delete(workspaceMembershipRoles)
-        .where(eq(workspaceMembershipRoles.workspaceMembershipId, membership.id));
-      if (newRole !== "") {
-        await tx.insert(workspaceMembershipRoles).values({
-          workspaceMembershipId: membership.id,
-          role: newRole as never,
-        });
+        // Wipe existing roles for this membership, then insert the new one
+        // if one was provided. Empty string == "no access" == no role rows.
+        await tx
+          .delete(workspaceMembershipRoles)
+          .where(eq(workspaceMembershipRoles.workspaceMembershipId, membership.id));
+        if (newRole !== "") {
+          await tx.insert(workspaceMembershipRoles).values({
+            workspaceMembershipId: membership.id,
+            role: newRole as never,
+          });
+        }
       }
-    }
 
-    await tx.insert(securityAuditEvents).values({
-      actorId: session.user.id,
-      action: "member_roles_update",
-      targetType: "user",
-      targetId: userId,
-      outcome: "success",
-      metadata: { workspaceCount: grantByWorkspace.size },
+      await tx.insert(securityAuditEvents).values({
+        actorId: session.user.id,
+        action: "member_roles_update",
+        targetType: "user",
+        targetId: userId,
+        outcome: "success",
+        metadata: { workspaceCount: grantByWorkspace.size },
+      });
     });
-  });
+  } catch (err) {
+    // A DB error (FK violation, trigger failure, connection drop, etc.)
+    // MUST surface as an inline form state — never throw. Throwing
+    // here would re-render the whole page through the error boundary
+    // and replace the user's in-progress edit with a "We hit a snag"
+    // page. The user would lose their selections and have to start
+    // over. The captureError call still ships the event to Sentry
+    // and the local `app_error_event` mirror for on-call to triage.
+    captureError("users.updateMemberRoles", err);
+    return {
+      error:
+        "We couldn't save the role assignments. The change has been recorded and the team will look at it shortly. Please try again.",
+    };
+  }
 
   revalidatePath("/app/users");
   // The team page on any workspace slug for this agency needs to refresh

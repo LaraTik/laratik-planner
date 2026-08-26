@@ -7,6 +7,7 @@ import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { serverEnv } from "@/lib/validation/env";
 import { PageHeader } from "@/components/workspace/page-header";
+import { AiDiagnosticPanel } from "@/components/ai/ai-diagnostic-panel";
 import { AiSettingsForm } from "./ai-settings-form";
 import { ManagedSecretForm } from "./managed-secret-form";
 import { getAiFeatureSettings, getMonthlyUsage } from "@/lib/ai/feature-settings";
@@ -79,6 +80,17 @@ export default async function AgencyAiSettingsPage() {
   // gate on the feature.
   const hasManagedSecret = secretStatus.keySource === "managed_secret";
   const featureIsEnabled = envHasKey || hasManagedSecret;
+  // 2026-08-27 — added the diagnostic panel so the admin can see,
+  // at a glance, *which* of the 3 prerequisites is blocking AI
+  // when the in-DB toggle reads "On" but the runtime is blocked.
+  // `effectiveLive` is the union of all 3 prerequisites + the
+  // agency master switch (the toggle in the form) + at least one
+  // capability. If the user has toggled no capability on, AI is
+  // technically reachable but no button renders; we still report
+  // "live" so they don't get a false alarm, and the capability
+  // list below is the actual surface.
+  const anyCapabilityOn = (feature?.enabledCapabilities ?? []).length > 0;
+  const effectiveLive = featureIsEnabled && (feature?.enabled ?? true) && anyCapabilityOn;
 
   return (
     <div className="space-y-6" data-testid="agency-ai-settings">
@@ -127,6 +139,18 @@ export default async function AgencyAiSettingsPage() {
           ). Change it via the deployment environment (<code>{AI_PROVIDER.baseUrlEnv}</code>).
         </p>
       </div>
+
+      <AiDiagnosticPanel
+        envKillSwitch={serverEnv.AI_FEATURE_ENABLED}
+        envHasKey={envHasKey}
+        hasManagedSecret={hasManagedSecret}
+        managedSecretSuffix={secretStatus.keySource === "missing" ? null : secretStatus.lastFour}
+        masterSwitch={feature?.enabled ?? true}
+        anyCapabilityOn={anyCapabilityOn}
+        effectiveLive={effectiveLive}
+        runbookHref="/docs/operations/runbook.md#ai"
+        aiEntryHref="/app"
+      />
 
       <AiSettingsForm
         initialEnabled={feature?.enabled ?? true}

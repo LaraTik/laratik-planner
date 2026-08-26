@@ -313,31 +313,35 @@ export function AiAssistanceSection({
 
       {!agencyEnabled || !hasKey ? (
         <div
-          className="border-border bg-warning-soft text-body text-fg-primary mt-4 flex items-start gap-2 rounded-[var(--radius-control)] border p-3"
+          className="border-border bg-warning-soft text-body text-fg-primary mt-4 space-y-2 rounded-[var(--radius-control)] border p-3"
           data-testid="ai-assistance-disabled-banner"
           role="status"
         >
-          <AlertTriangle className="text-warning mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold">AI assistance is currently off</p>
-            <p className="text-fg-secondary mt-1">
-              {!agencyEnabled
-                ? "An agency admin needs to enable the AI master switch before any capability button can run."
-                : "No AI API key is configured. An agency admin can set one at Agency Settings → AI configuration."}
-              {isManager ? (
-                <>
-                  {" "}
-                  <a
-                    href="/app/agency-settings/ai"
-                    className="text-primary underline-offset-4 hover:underline"
-                    data-testid="ai-open-agency-config-from-banner"
-                  >
-                    Open AI configuration
-                  </a>
-                </>
-              ) : null}
-            </p>
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="text-warning mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">AI assistance is currently off</p>
+              <p className="text-fg-secondary mt-1">
+                {!agencyEnabled
+                  ? "An agency admin needs to enable the AI master switch before any capability button can run."
+                  : "No AI API key is configured. The agency admin can paste one at Agency Settings → AI configuration."}
+              </p>
+            </div>
           </div>
+          {isManager ? (
+            <div className="border-border bg-surface-subtle text-label ml-6 flex flex-wrap items-center gap-2 rounded-[var(--radius-control)] border p-2">
+              <span className="text-fg-secondary">
+                Need to know <em>why</em> it&apos;s off?
+              </span>
+              <a
+                href="/app/agency-settings/ai"
+                className="text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+                data-testid="ai-open-agency-config-from-banner"
+              >
+                Open the AI diagnostic panel
+              </a>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

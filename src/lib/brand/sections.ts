@@ -1,16 +1,3 @@
-import type { LucideIcon } from "lucide-react";
-import {
-  BookOpen,
-  History,
-  Image as ImageIcon,
-  Link as LinkIcon,
-  MessageCircle,
-  Palette,
-  Sparkles,
-  Tag,
-  Type,
-} from "lucide-react";
-
 /**
  * BRAND_KIT_SECTIONS — the single source of truth for every section
  * on `/app/w/[slug]/brand-kit`.
@@ -27,6 +14,17 @@ import {
  *     forces the read-only sections (`overview`, `recent`) to opt out
  *     of the Add menu by leaving it undefined.
  *
+ * **The `icon` field is a stable string name, NOT a LucideIcon
+ * component.** LucideIcon is a function/React element and cannot
+ * cross the Server → Client component boundary (RSC serialisation
+ * throws "Functions cannot be passed directly to Client Components").
+ * The 2026-08-27 brand-kit outage was caused by exactly that
+ * pattern: the page mapped `BRAND_KIT_SECTIONS.map(s => ({ ...s.icon }))
+ * and forwarded it to `<WorkspaceTopTabs>` (a client component),
+ * which React then rejected. The icon name is resolved to a real
+ * LucideIcon *inside* the client component via
+ * `WORKSPACE_TAB_ICONS[iconName]` (see `top-tabs.tsx`).
+ *
  * Locked in the brand-kit rebuild plan (`docs/design/BRAND_KIT_AUDIT_2026-08-26.md`).
  */
 
@@ -41,12 +39,33 @@ export type BrandKitSectionId =
   | "linked"
   | "recent";
 
+/**
+ * Stable identifiers for the small set of Lucide icons used in the
+ * brand-kit section strip. Adding a new section is a two-step change:
+ *   1. Add the name to this union.
+ *   2. Add the matching `LucideIcon` to `WORKSPACE_TAB_ICONS` in
+ *      `top-tabs.tsx`.
+ * The literal-type union gives us a compile error at the call site
+ * if either step is missed — TypeScript will say
+ * "Type 'foo' is not assignable to type 'BrandKitIconName'".
+ */
+export type BrandKitIconName =
+  | "sparkles"
+  | "image"
+  | "palette"
+  | "type"
+  | "messageCircle"
+  | "tag"
+  | "bookOpen"
+  | "link"
+  | "history";
+
 export interface BrandKitSection {
   id: BrandKitSectionId;
   /** Tab label and SectionCard title. */
   label: string;
-  /** Lucide icon for the top tab and the Add menu row. */
-  icon: LucideIcon;
+  /** Lucide icon *name* for the top tab and the Add menu row. */
+  icon: BrandKitIconName;
   /** When set, the section shows up in the Add menu with this label. */
   addMenuLabel?: string;
   /** When set, the Add menu row shows this 1-line description. */
@@ -63,7 +82,7 @@ export const BRAND_KIT_SECTIONS: readonly BrandKitSection[] = [
   {
     id: "overview",
     label: "Overview",
-    icon: Sparkles,
+    icon: "sparkles",
     managerOnlyAdd: false,
     supportsEdit: false,
     supportsArchive: false,
@@ -71,7 +90,7 @@ export const BRAND_KIT_SECTIONS: readonly BrandKitSection[] = [
   {
     id: "logo",
     label: "Logos",
-    icon: ImageIcon,
+    icon: "image",
     addMenuLabel: "Logo",
     addMenuDescription: "Upload a file or paste an external URL",
     managerOnlyAdd: true,
@@ -81,7 +100,7 @@ export const BRAND_KIT_SECTIONS: readonly BrandKitSection[] = [
   {
     id: "color",
     label: "Colors",
-    icon: Palette,
+    icon: "palette",
     addMenuLabel: "Color",
     addMenuDescription: "Add a hex token to the palette",
     managerOnlyAdd: true,
@@ -91,7 +110,7 @@ export const BRAND_KIT_SECTIONS: readonly BrandKitSection[] = [
   {
     id: "guidelines",
     label: "Typography",
-    icon: Type,
+    icon: "type",
     addMenuLabel: "Typography",
     addMenuDescription: "Catalogue a font with role + weight",
     managerOnlyAdd: true,
@@ -101,7 +120,7 @@ export const BRAND_KIT_SECTIONS: readonly BrandKitSection[] = [
   {
     id: "voice",
     label: "Voice",
-    icon: MessageCircle,
+    icon: "messageCircle",
     addMenuLabel: "Voice rule",
     addMenuDescription: "Document tone, do's, or don'ts",
     managerOnlyAdd: true,
@@ -111,7 +130,7 @@ export const BRAND_KIT_SECTIONS: readonly BrandKitSection[] = [
   {
     id: "pillars",
     label: "Pillars",
-    icon: Tag,
+    icon: "tag",
     addMenuLabel: "Content pillar",
     addMenuDescription: "Add a topic pillar with color + blurb",
     managerOnlyAdd: true,
@@ -121,7 +140,7 @@ export const BRAND_KIT_SECTIONS: readonly BrandKitSection[] = [
   {
     id: "publishing",
     label: "Publishing",
-    icon: BookOpen,
+    icon: "bookOpen",
     addMenuLabel: "Publishing rule",
     addMenuDescription: "Editorial guardrail for the team",
     managerOnlyAdd: true,
@@ -131,7 +150,7 @@ export const BRAND_KIT_SECTIONS: readonly BrandKitSection[] = [
   {
     id: "linked",
     label: "Linked",
-    icon: LinkIcon,
+    icon: "link",
     addMenuLabel: "Linked resource",
     addMenuDescription: "Figma, Drive, Canva, or Dropbox link",
     managerOnlyAdd: true,
@@ -141,7 +160,7 @@ export const BRAND_KIT_SECTIONS: readonly BrandKitSection[] = [
   {
     id: "recent",
     label: "Activity",
-    icon: History,
+    icon: "history",
     managerOnlyAdd: false,
     supportsEdit: false,
     supportsArchive: false,
