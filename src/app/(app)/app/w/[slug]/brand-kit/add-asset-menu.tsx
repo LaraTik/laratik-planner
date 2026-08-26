@@ -114,10 +114,10 @@ export function AddAssetMenu() {
           variant="default"
           size="default"
           data-testid="brand-kit-add-asset"
-          aria-label="Add an asset or rule to the brand kit"
+          aria-label="Add to the brand kit"
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
-          Add asset
+          Add to brand kit
           <ChevronDown className="h-4 w-4" aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
