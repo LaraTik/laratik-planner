@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
-import { getContentItem, UPDATEABLE_STATUSES } from "@/lib/content/service";
+import { getContentItem, listWorkspaceDesigners, UPDATEABLE_STATUSES } from "@/lib/content/service";
 import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
 import { listPublicationsForItem } from "@/lib/publishing/service";
 import { listCommentsForItem } from "@/lib/discussions/service";
@@ -64,13 +64,19 @@ export default async function ContentDetailPage({
     isPublisher: roles.has("publisher"),
   };
 
-  const [approvals, publications, discussionComments, deliveries] = await Promise.all([
+  const [approvals, publications, discussionComments, deliveries, designers] = await Promise.all([
     listApprovalsForItem(actor, id),
     listPublicationsForItem(actor, id).catch(() => []),
     listCommentsForItem(actor, id).catch(() => []),
     listDeliveryVersionsForItem(actor, id, {
       isClientReviewer: actorRoles.isClientReviewer,
     }).catch(() => []),
+    // FEAT-FULL-REVIEW-2026-08-26 — the assign-designer picker
+    // dialog needs a roster. The query is role-gated to internal
+    // workspace members; an empty list disables the trigger
+    // gracefully (the manager invites via Settings or waits for a
+    // designer to self-claim).
+    listWorkspaceDesigners(actor, ws.id).catch(() => []),
   ]);
 
   // AI capability allowlist for the section on this page. Read the
@@ -183,6 +189,7 @@ export default async function ContentDetailPage({
           requestedAt: a.requestedAt.toISOString(),
           deliveryVersionId: a.deliveryVersionId,
         }))}
+        designers={designers}
       />
 
       <DeliverySection

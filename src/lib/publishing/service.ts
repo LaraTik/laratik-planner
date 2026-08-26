@@ -77,7 +77,19 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
   );
 
   await db.transaction(async (tx) => {
+    // FEAT-FULL-REVIEW-2026-08-26 — lock the parent content item
+    // AND the target channel row. The item lock alone allowed a
+    // concurrent `savePlatformPayload` (which writes the
+    // `content_item_channel.platform_payload` jsonb mid-transaction)
+    // to interleave with this `recordPublication`, so the readiness
+    // check that runs on the next render would see a stale
+    // aggregate against a freshly-edited payload. Locking the
+    // channel row too matches the pattern already used in
+    // `setFinalCopyApproval` (platform-payload-service.ts).
     await tx.execute(sql`SELECT id FROM content_item WHERE id = ${chan.contentItemId} FOR UPDATE`);
+    await tx.execute(
+      sql`SELECT id FROM content_item_channel WHERE id = ${input.contentItemChannelId} FOR UPDATE`,
+    );
     const [lockedItem] = await tx
       .select({ status: contentItems.status })
       .from(contentItems)
@@ -90,6 +102,17 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
       )
     ) {
       throw new Error("Content is no longer ready for publication updates");
+    }
+    // Defensive: confirm the locked channel row still belongs to the
+    // same content item. A `content_item_channel` reparenting race
+    // would otherwise let us publish against a stale parent.
+    const [lockedChannel] = await tx
+      .select({ contentItemId: contentItemChannels.contentItemId })
+      .from(contentItemChannels)
+      .where(eq(contentItemChannels.id, input.contentItemChannelId))
+      .limit(1);
+    if (!lockedChannel || lockedChannel.contentItemId !== chan.contentItemId) {
+      throw new Error("Channel link moved to a different content item mid-write");
     }
 
     // Upsert publication record for this channel
@@ -138,6 +161,19 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
       all.map((record) => record.status),
     );
 
+    // FEAT-FULL-REVIEW-2026-08-26 — when the aggregate regresses to
+    // `ready_to_publish` because every recorded channel is `failed`,
+    // emit an explicit `retry_publication` activity event so the
+    // team has a paper trail. Without this, demoting a published
+    // item by re-recording all channels as `failed` would silently
+    // walk the content status back to `ready_to_publish` with no
+    // visible event for the rollback.
+    const recordedCount = all.length;
+    const closedCount = all.filter(
+      (r) => r.status === "published" || r.status === "skipped",
+    ).length;
+    const allFailed = recordedCount > 0 && closedCount === 0;
+
     await tx
       .update(contentItems)
       .set({ status: newStatus, updatedAt: new Date() })
@@ -153,6 +189,31 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
       afterData: { status: newStatus, channelStatus: input.status },
       metadata: { contentItemChannelId: input.contentItemChannelId },
     });
+
+    if (
+      allFailed &&
+      (lockedItem.status === "published" || lockedItem.status === "partially_published")
+    ) {
+      await tx.insert(activityEvents).values({
+        workspaceId: item.workspaceId,
+        contentItemId: chan.contentItemId,
+        actorId: actor.id,
+        // TODO(adr-publishing-states): when we add an explicit
+        // `publish_failed` aggregate status, this becomes the
+        // primary state-transition event. For now it is a sibling
+        // publication event with a distinct summary + metadata tag
+        // that surfaces the silent demotion in the activity feed.
+        kind: "publication",
+        summary: `All publication attempts failed; item is ready to retry.`,
+        beforeData: { status: lockedItem.status },
+        afterData: { status: newStatus },
+        metadata: {
+          contentItemChannelId: input.contentItemChannelId,
+          resource: "retry_publication",
+          recordedCount,
+        },
+      });
+    }
 
     revalidatePath(`/app/w/`);
   });

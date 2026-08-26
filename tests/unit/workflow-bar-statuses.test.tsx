@@ -52,6 +52,7 @@ describe("WorkflowBar status ladder (React #441 regression guard)", () => {
           cancellationReason={null}
           roles={baseRoles}
           approvals={[]}
+          designers={[]}
         />,
       );
 

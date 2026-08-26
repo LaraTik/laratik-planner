@@ -143,6 +143,9 @@ const {
   BulkArchiveSchema,
   transitionContent,
   claimAsDesigner,
+  assignDesigner,
+  AssignDesignerSchema,
+  listWorkspaceDesigners,
   UPDATEABLE_STATUSES,
 } = await import("@/lib/content/service");
 
@@ -699,5 +702,87 @@ describe("claimAsDesigner", () => {
       (c) => (c.set as Record<string, unknown>)["designerId"] === actor.id,
     );
     expect(update).toBeDefined();
+  });
+});
+
+describe("AssignDesignerSchema (FEAT-FULL-REVIEW-2026-08-26)", () => {
+  it("accepts a valid contentItemId + designerId pair", () => {
+    expect(
+      AssignDesignerSchema.safeParse({
+        contentItemId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        designerId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects malformed uuids", () => {
+    expect(
+      AssignDesignerSchema.safeParse({
+        contentItemId: "not-a-uuid",
+        designerId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("assignDesigner (FEAT-FULL-REVIEW-2026-08-26)", () => {
+  const designerId = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+  const otherDesignerId = "cccccccc-cccc-cccc-cccc-cccccccccccc";
+
+  it("throws when the content item is missing", async () => {
+    dbMock.state.selectResults.push([]);
+    await expect(assignDesigner(actor, { contentItemId, designerId })).rejects.toThrow(
+      /not found/i,
+    );
+  });
+
+  it("is idempotent when the requested designer is already assigned", async () => {
+    dbMock.state.selectResults.push([{ workspaceId, designerId, title: "Spring teaser" }]);
+    await assignDesigner(actor, { contentItemId, designerId });
+    // No new assignment insert.
+    const assignmentInsert = dbMock.state.insertCalls.find(
+      (c) =>
+        (c.values as Record<string, unknown>)["assignmentType"] === "designer" &&
+        (c.values as Record<string, unknown>)["userId"] === designerId,
+    );
+    expect(assignmentInsert).toBeUndefined();
+  });
+
+  it("assigns a new designer, writes the assignment history, and emits an activity event", async () => {
+    dbMock.state.selectResults.push([
+      { workspaceId, designerId: otherDesignerId, title: "Spring teaser" },
+    ]);
+    await assignDesigner(actor, { contentItemId, designerId });
+
+    const update = dbMock.state.updateCalls.find(
+      (c) => (c.set as Record<string, unknown>)["designerId"] === designerId,
+    );
+    expect(update).toBeDefined();
+
+    const assignmentInsert = dbMock.state.insertCalls.find(
+      (c) =>
+        (c.values as Record<string, unknown>)["assignmentType"] === "designer" &&
+        (c.values as Record<string, unknown>)["userId"] === designerId,
+    );
+    expect(assignmentInsert).toBeDefined();
+
+    const activityInsert = dbMock.state.insertCalls.find(
+      (c) => (c.values as Record<string, unknown>)["kind"] === "assignment",
+    );
+    expect(activityInsert).toBeDefined();
+  });
+});
+
+describe("listWorkspaceDesigners (FEAT-FULL-REVIEW-2026-08-26)", () => {
+  it("returns designers with a display-name label", async () => {
+    dbMock.state.selectResults.push([
+      { id: "des-1", displayName: "Dana Designer", name: "Dana D" },
+      { id: "des-2", displayName: null, name: "Eli Engineer" },
+    ]);
+    const list = await listWorkspaceDesigners(actor, workspaceId);
+    expect(list).toEqual([
+      { id: "des-1", label: "Dana Designer" },
+      { id: "des-2", label: "Eli Engineer" },
+    ]);
   });
 });

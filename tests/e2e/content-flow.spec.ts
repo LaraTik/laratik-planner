@@ -162,16 +162,51 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         timeout: 10_000,
       });
 
-      // ─── 4. Workspace manager: assign designer → in_design ───
+      // ─── 3b. Seed a designer in the workspace BEFORE the manager
+      // picks. The dev seed (`/api/dev/seed`) is idempotent on the
+      // workspace slug, so this gives the workspace at least one
+      // designer candidate for the manager's picker. The previous
+      // E2E assertion (`/in design/i` text) was a false-positive —
+      // the workflow bar always renders every status as a badge, so
+      // the test "passed" even when the action had failed silently.
+      // The strengthened assertion below queries the data-testid that
+      // marks the actual current status badge, and exercises the new
+      // designer-picker dialog end-to-end. ───
+      const designerSeedContext = await context.browser()!.newContext();
+      const designerSeedPage = await designerSeedContext.newPage();
+      try {
+        await bootstrapRoleSession(designerSeedPage, "designer");
+      } finally {
+        await designerSeedContext.close();
+      }
+
+      // ─── 4. Workspace manager: assign designer via picker → in_design ───
       const managerContext = await context.browser()!.newContext();
       const managerPage = await managerContext.newPage();
       try {
         await bootstrapRoleSession(managerPage, "workspace_manager");
         await managerPage.goto(detailUrl);
-        const assignBtn = managerPage.getByRole("button", { name: /assign designer/i }).first();
+        // The picker trigger is the only "Assign designer" button
+        // on the page (the old direct-call button was removed). It
+        // is disabled when the workspace has no designers; the seed
+        // above guarantees at least one.
+        const assignBtn = managerPage.getByTestId("assign-designer-trigger");
         await expect(assignBtn).toBeVisible({ timeout: 10_000 });
+        await expect(assignBtn).toBeEnabled();
         await assignBtn.click();
-        await expect(managerPage.getByText(/in design/i).first()).toBeVisible({ timeout: 10_000 });
+        // The dialog opens; the select is auto-populated from the
+        // designer roster. The first designer is the default
+        // selection, so we can confirm without picking.
+        const confirmBtn = managerPage.getByTestId("assign-designer-confirm");
+        await expect(confirmBtn).toBeVisible({ timeout: 10_000 });
+        await confirmBtn.click();
+        // Real status assertion: the workflow bar's "current" badge
+        // (the only element with `data-testid="status-current"`)
+        // must now carry the `in_design` status. This is the test
+        // the original version skipped.
+        const currentBadge = managerPage.getByTestId("status-current");
+        await expect(currentBadge).toBeVisible({ timeout: 10_000 });
+        await expect(currentBadge).toHaveAttribute("data-status", "in_design");
       } finally {
         await managerContext.close();
       }

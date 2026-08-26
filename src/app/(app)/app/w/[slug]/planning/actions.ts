@@ -12,6 +12,8 @@ import { contentItems } from "@/lib/db/schema";
 import {
   QuickCreateSchema,
   UpdateContentSchema,
+  assignDesigner,
+  AssignDesignerSchema,
   quickCreateContentItem,
   transitionContent,
   claimAsDesigner,
@@ -212,6 +214,58 @@ export async function claimAction(input: {
     await claimAsDesigner(actor, input.contentItemId);
   } catch (error) {
     return { error: error instanceof Error ? error.message : "The claim action failed." };
+  }
+  revalidatePath(`/app/w/${input.workspaceSlug}/planning/${input.contentItemId}`);
+  return {};
+}
+
+/**
+ * FEAT-FULL-REVIEW-2026-08-26 — manager assigns a specific designer to
+ * an item in `approved_for_design`, then transitions the item to
+ * `in_design`. The two calls are sequenced in a single round-trip so
+ * the UI can show one "Assign designer" affordance and the user sees a
+ * single end-state.
+ *
+ * We don't compose them in a single DB transaction: the workflow state
+ * machine treats designer assignment as an idempotent side effect and
+ * the status transition as an event-sourced state change. A rollback
+ * in the middle would leave the user with no clear retry path.
+ * Sequencing and surfacing the second action's error keeps the
+ * designer assignment in place even if the transition fails — the
+ * planner can re-click the "Move to design" button without losing the
+ * pick.
+ */
+const AssignDesignerActionSchema = AssignDesignerSchema;
+
+export async function assignDesignerAction(input: {
+  workspaceSlug: string;
+  contentItemId: string;
+  designerId: string;
+}): Promise<{ error?: string }> {
+  const parsed = AssignDesignerActionSchema.safeParse({
+    contentItemId: input.contentItemId,
+    designerId: input.designerId,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues.map((i) => i.message).join("; ") };
+  }
+  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  try {
+    await assignDesigner(actor, parsed.data);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "The assign action failed." };
+  }
+  // Now move the item to `in_design`. The workflow transition does
+  // its own role gate; the design row was set in the previous call
+  // so the "Assign a designer before moving…" guard inside
+  // `transitionContent` is satisfied.
+  try {
+    await transitionContent(actor, {
+      contentItemId: parsed.data.contentItemId,
+      action: "assign_designer",
+    });
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "The assign action failed." };
   }
   revalidatePath(`/app/w/${input.workspaceSlug}/planning/${input.contentItemId}`);
   return {};

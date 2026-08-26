@@ -1,10 +1,25 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
-import { transitionAction, decideApprovalAction, claimAction } from "../actions";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  transitionAction,
+  decideApprovalAction,
+  claimAction,
+  assignDesignerAction,
+} from "../actions";
 import { humanize } from "@/lib/content/status";
 import { CheckCircle, XCircle, ArrowRight, Ban, Play } from "lucide-react";
 import { ApprovalTimeline } from "@/components/workspace/approval-timeline";
@@ -51,6 +66,7 @@ export function WorkflowBar({
   cancellationReason,
   roles,
   approvals,
+  designers,
 }: {
   workspaceSlug: string;
   contentItemId: string;
@@ -65,6 +81,15 @@ export function WorkflowBar({
     requestedAt: string;
     deliveryVersionId: string | null;
   }[];
+  /**
+   * Active designers in the workspace. Populated by the planning detail
+   * page from `listWorkspaceDesigners`. The picker dialog is only
+   * rendered when this list is non-empty; if the workspace has no
+   * designers, the manager can either (a) wait for a designer to
+   * self-claim via the "Claim as designer" button on the same bar, or
+   * (b) invite a designer from the workspace settings page.
+   */
+  designers: { id: string; label: string }[];
 }) {
   const [pending, start] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -115,7 +140,12 @@ export function WorkflowBar({
             const past = idx >= 0 && sIdx >= 0 && sIdx < idx;
             const current = s === status;
             return (
-              <Badge key={s} variant={current ? "primary" : past ? "success" : "outline"}>
+              <Badge
+                key={s}
+                variant={current ? "primary" : past ? "success" : "outline"}
+                data-testid={current ? "status-current" : undefined}
+                data-status={s}
+              >
                 {humanize(s)}
               </Badge>
             );
@@ -191,9 +221,19 @@ export function WorkflowBar({
           </Button>
         ) : null}
         {status === "approved_for_design" && roles.isManager ? (
-          <Button size="sm" onClick={() => run("assign_designer")}>
-            Assign designer
-          </Button>
+          <AssignDesignerDialog
+            designers={designers}
+            disabled={pending}
+            onConfirm={async (designerId) => {
+              setActionError(null);
+              const result = await assignDesignerAction({
+                workspaceSlug,
+                contentItemId,
+                designerId,
+              });
+              if (result?.error) setActionError(result.error);
+            }}
+          />
         ) : null}
         {status === "blocked" && roles.isManager ? (
           <Button size="sm" onClick={() => run("unblock")}>
@@ -282,5 +322,141 @@ export function WorkflowBar({
         />
       ) : null}
     </Card>
+  );
+}
+
+/**
+ * Manager-driven designer assignment. Opens a Radix dialog with a
+ * `<select>` of active designers in the workspace, calls the
+ * `assignDesignerAction` server action on confirm, and surfaces the
+ * action's error string in the parent bar.
+ *
+ * Accessibility:
+ *  - `<label>` is bound to the `<select>` via `htmlFor`/`id` (useId).
+ *  - The dialog body is keyboard-navigable; the confirm button is the
+ *    form's submit target.
+ *  - When the workspace has no designers, the trigger button is
+ *    disabled and the dialog is hidden — the user must invite a
+ *    designer (workspace settings) or wait for a self-claim.
+ */
+function AssignDesignerDialog({
+  designers,
+  disabled,
+  onConfirm,
+}: {
+  designers: { id: string; label: string }[];
+  disabled: boolean;
+  onConfirm: (designerId: string) => Promise<void> | void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string>(designers[0]?.id ?? "");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const selectId = useId();
+  const errorId = `${selectId}-error`;
+  const hasDesigners = designers.length > 0;
+
+  async function submit() {
+    if (!selectedId) {
+      setError("Pick a designer to assign.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      await onConfirm(selectedId);
+      setOpen(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "The assign action failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setError(null);
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button
+          size="sm"
+          disabled={disabled || !hasDesigners}
+          data-testid="assign-designer-trigger"
+        >
+          Assign designer
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Assign a designer</DialogTitle>
+          <DialogDescription>
+            Pick the designer who will own this design task. They&apos;ll be notified and the item
+            will move into the &quot;in design&quot; state.
+          </DialogDescription>
+        </DialogHeader>
+        {hasDesigners ? (
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submit();
+            }}
+          >
+            <div>
+              <label
+                htmlFor={selectId}
+                className="text-body text-fg-primary mb-1 block font-semibold"
+              >
+                Designer
+              </label>
+              <select
+                id={selectId}
+                value={selectedId}
+                onChange={(event) => setSelectedId(event.target.value)}
+                className="border-border bg-surface text-body min-h-11 w-full rounded-[var(--radius-control)] border px-2 py-1"
+                data-testid="assign-designer-select"
+                autoFocus
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? errorId : undefined}
+              >
+                {designers.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+              {error ? (
+                <p id={errorId} role="alert" className="text-label text-danger mt-1">
+                  {error}
+                </p>
+              ) : null}
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="secondary" disabled={submitting}>
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button
+                type="submit"
+                disabled={submitting || !selectedId}
+                data-testid="assign-designer-confirm"
+              >
+                {submitting ? "Assigning…" : "Assign"}
+              </Button>
+            </DialogFooter>
+          </form>
+        ) : (
+          <p className="text-body text-fg-secondary">
+            No designers in this workspace yet. Invite one from Settings, or wait for a designer to
+            claim the item themselves.
+          </p>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

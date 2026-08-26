@@ -90,6 +90,7 @@ describe("planning detail components — hooks order guard", () => {
             isPublisher: false,
           }}
           approvals={[]}
+          designers={[]}
         />,
       );
       // Same instance, different prop state.
@@ -118,6 +119,7 @@ describe("planning detail components — hooks order guard", () => {
                 deliveryVersionId: null,
               },
             ]}
+            designers={[]}
           />,
         ),
       );

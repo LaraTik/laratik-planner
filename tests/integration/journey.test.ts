@@ -497,6 +497,109 @@ describe("primary acceptance journey (§23, service-level)", () => {
     expect(assigned.to).toBe("in_design");
   });
 
+  // FEAT-FULL-REVIEW-2026-08-26 — manager-driven designer assignment
+  // through the new `assignDesigner` service. The previous E2E test
+  // never exercised this surface; only the self-claim path was
+  // covered end-to-end. The test seeds an item with no designer,
+  // takes it to `approved_for_design`, calls `assignDesigner` to
+  // pick a specific designer, then asserts both the `designer_id`
+  // was set and the `assign_designer` transition moves the item
+  // to `in_design` (the §14 contract that the workflow bar's
+  // picker relies on).
+  it("FEAT-FULL-REVIEW-2026-08-26 §14: assignDesigner sets the designer, then transitionContent moves the item to in_design", async () => {
+    const itemId = await content.quickCreateContentItem(
+      { id: omar.id },
+      {
+        workspaceId,
+        title: "Manager-pick flow",
+        format: "static_post",
+        brief: "x",
+        plannedPublishAt: new Date(),
+        channelIds,
+      },
+    );
+    await content.transitionContent(
+      { id: omar.id },
+      { contentItemId: itemId, action: "submit_content_review" },
+    );
+    await content.transitionContent(
+      { id: jon.id },
+      { contentItemId: itemId, action: "approve_content" },
+    );
+
+    // Manager picks elena (a designer in the workspace).
+    await content.assignDesigner(
+      { id: maya.id },
+      {
+        contentItemId: itemId,
+        designerId: elena.id,
+      },
+    );
+
+    // The designerId must be set on the item before the transition
+    // can succeed — the workflow service hard-checks this and would
+    // otherwise throw "Assign a designer before moving the item
+    // into design".
+    const intermediate = await content.getContentItem({ id: maya.id }, itemId);
+    expect(intermediate).not.toBeNull();
+    expect(intermediate!.designerId).toBe(elena.id);
+    expect(intermediate!.status).toBe("approved_for_design");
+
+    // Now the status transition is safe.
+    const moved = await content.transitionContent(
+      { id: maya.id },
+      { contentItemId: itemId, action: "assign_designer" },
+    );
+    expect(moved.to).toBe("in_design");
+
+    const after = await content.getContentItem({ id: maya.id }, itemId);
+    expect(after).not.toBeNull();
+    expect(after!.designerId).toBe(elena.id);
+    expect(after!.status).toBe("in_design");
+  });
+
+  // Regression guard for the broken-UI bug the user reported: a
+  // bare `transitionContent({ action: "assign_designer" })` with no
+  // preceding `assignDesigner` must still throw the descriptive
+  // error. The picker dialog is the only sanctioned path; calling
+  // the transition directly is a programming error.
+  it("FEAT-FULL-REVIEW-2026-08-26: bare assign_designer transition without a designerId still throws", async () => {
+    const itemId = await content.quickCreateContentItem(
+      { id: omar.id },
+      {
+        workspaceId,
+        title: "Bare transition guard",
+        format: "static_post",
+        brief: "x",
+        plannedPublishAt: new Date(),
+        channelIds,
+      },
+    );
+    // The fixture's workspaceSettings.defaultDesignerId auto-fills
+    // the item's designer_id at create time. Clear it to simulate
+    // the production path where a manager has not yet picked a
+    // designer.
+    const { contentItems } = await import("@/lib/db/schema");
+    await db
+      .update(contentItems)
+      .set({ designerId: null, updatedAt: new Date() })
+      .where(eq(contentItems.id, itemId));
+    await content.transitionContent(
+      { id: omar.id },
+      { contentItemId: itemId, action: "submit_content_review" },
+    );
+    await content.transitionContent(
+      { id: jon.id },
+      { contentItemId: itemId, action: "approve_content" },
+    );
+    await expect(
+      content.transitionContent(
+        { id: maya.id },
+        { contentItemId: itemId, action: "assign_designer" },
+      ),
+    ).rejects.toThrow(/Assign a designer before moving the item into design/i);
+  });
+
   // ── §23 step 16: Elena adds a client-visible clarification ───────────
   it("§23 step 16: client-visible clarification is visible to Sophie and invisible in internal-only views", async () => {
     const itemId = await seedItemInCreativeReview(omar, "Clarification test");

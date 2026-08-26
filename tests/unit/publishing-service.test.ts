@@ -261,8 +261,9 @@ describe("recordPublication", () => {
   it("records a published publication, updates the content item, and writes the activity event", async () => {
     dbMock.state.selectResults.push([{ contentItemId }]); // channel lookup
     dbMock.state.selectResults.push([{ workspaceId: "ws-1", status: "ready_to_publish" }]); // item
-    // inside tx: lockedItem, existing record, all, allChannelCount
+    // inside tx: lockedItem, lockedChannel, existing record, all, allChannelCount
     dbMock.state.selectResults.push([{ status: "ready_to_publish" }]);
+    dbMock.state.selectResults.push([{ contentItemId }]); // channel re-fetch after row lock
     dbMock.state.selectResults.push([]); // no existing publication record
     dbMock.state.selectResults.push([{ status: "published" }]); // all records
     dbMock.state.selectResults.push([{ id: contentItemChannelId }]); // allChannelCount
@@ -285,6 +286,7 @@ describe("recordPublication", () => {
     dbMock.state.selectResults.push([{ contentItemId }]);
     dbMock.state.selectResults.push([{ workspaceId: "ws-1", status: "ready_to_publish" }]);
     dbMock.state.selectResults.push([{ status: "ready_to_publish" }]);
+    dbMock.state.selectResults.push([{ contentItemId }]); // channel re-fetch after row lock
     dbMock.state.selectResults.push([]);
     dbMock.state.selectResults.push([{ status: "skipped" }]);
     dbMock.state.selectResults.push([{ id: contentItemChannelId }]);
@@ -305,6 +307,7 @@ describe("recordPublication", () => {
     dbMock.state.selectResults.push([{ contentItemId }]);
     dbMock.state.selectResults.push([{ workspaceId: "ws-1", status: "ready_to_publish" }]);
     dbMock.state.selectResults.push([{ status: "ready_to_publish" }]);
+    dbMock.state.selectResults.push([{ contentItemId }]); // channel re-fetch after row lock
     dbMock.state.selectResults.push([]);
     dbMock.state.selectResults.push([{ status: "failed" }]);
     dbMock.state.selectResults.push([{ id: contentItemChannelId }]);
@@ -327,6 +330,7 @@ describe("recordPublication", () => {
     dbMock.state.selectResults.push([{ contentItemId }]);
     dbMock.state.selectResults.push([{ workspaceId: "ws-1", status: "ready_to_publish" }]);
     dbMock.state.selectResults.push([{ status: "ready_to_publish" }]);
+    dbMock.state.selectResults.push([{ contentItemId }]); // channel re-fetch after row lock
     dbMock.state.selectResults.push([{ id: "pr-existing" }]); // existing
     dbMock.state.selectResults.push([{ status: "published" }]);
     dbMock.state.selectResults.push([{ id: contentItemChannelId }]);
@@ -341,6 +345,57 @@ describe("recordPublication", () => {
       (c) => (c.set as Record<string, unknown>)["status"] === "published",
     );
     expect(pubUpdate).toBeDefined();
+  });
+
+  it("rejects when the channel row moved to a different content item mid-write", async () => {
+    dbMock.state.selectResults.push([{ contentItemId }]);
+    dbMock.state.selectResults.push([{ workspaceId: "ws-1", status: "ready_to_publish" }]);
+    dbMock.state.selectResults.push([{ status: "ready_to_publish" }]);
+    // Channel re-fetch after the FOR UPDATE row lock returns a
+    // different contentItemId — the reparenting race we are guarding
+    // against. The service must throw rather than write a
+    // publication record against the now-stale parent.
+    dbMock.state.selectResults.push([{ contentItemId: "other-item" }]);
+
+    await expect(
+      recordPublication(actor, {
+        contentItemChannelId,
+        status: "published",
+        publishedUrl: "https://x.example.com/post-3",
+      }),
+    ).rejects.toThrow(/moved to a different content item/i);
+  });
+
+  it("emits a retry_publication activity event when all recorded channels are failed and the previous status was published", async () => {
+    dbMock.state.selectResults.push([{ contentItemId }]);
+    // Previous status was "published" so the demotion is interesting
+    // enough to surface.
+    dbMock.state.selectResults.push([{ workspaceId: "ws-1", status: "published" }]);
+    dbMock.state.selectResults.push([{ status: "published" }]); // lockedItem
+    dbMock.state.selectResults.push([{ contentItemId }]); // channel re-fetch
+    dbMock.state.selectResults.push([{ id: "pr-existing" }]); // existing record
+    // All recorded channels are failed.
+    dbMock.state.selectResults.push([{ status: "failed" }]);
+    dbMock.state.selectResults.push([{ id: contentItemChannelId }]);
+
+    await recordPublication(actor, {
+      contentItemChannelId,
+      status: "failed",
+      failureReason: "API rate-limited",
+    });
+
+    // The retry_publication event is the second activity event
+    // (the first is the standard "Publication marked failed" entry).
+    // The mock doesn't differentiate tables, so we match on the
+    // metadata tag and summary that uniquely identify the retry
+    // entry.
+    const retryInsert = dbMock.state.insertCalls.find(
+      (c) =>
+        (c.values as Record<string, unknown>)["kind"] === "publication" &&
+        (c.values as Record<string, unknown>)["summary"] ===
+          "All publication attempts failed; item is ready to retry.",
+    );
+    expect(retryInsert).toBeDefined();
   });
 });
 

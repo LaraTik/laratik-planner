@@ -637,6 +637,52 @@ export async function bulkArchiveContentItems(actor: Actor, input: BulkArchiveIn
   });
 }
 
+// ─── Designer roster (FEAT-FULL-REVIEW-2026-08-26) ─────────────────────
+//
+// `assignDesigner` (the §14 manager-driven path) needs to know which
+// designers exist in a workspace so the picker can offer real
+// candidates. We pull active memberships with the `designer` role
+// and join `users` for the human label.
+//
+// The same query is reusable from the publish / design-queue pages
+// if they ever need a "task owner" picker. Returns `displayName`
+// when set, otherwise `name`, otherwise a short id slice — same
+// precedence the planning list owner dropdown uses
+// (`src/app/(app)/app/w/[slug]/planning/page.tsx`).
+
+import { users, workspaceMemberships as wsMemberships } from "@/lib/db/schema";
+
+export async function listWorkspaceDesigners(
+  actor: Actor,
+  workspaceId: string,
+): Promise<{ id: string; label: string }[]> {
+  await requirePolicy(
+    hasWorkspaceRole(actor, workspaceId, [...INTERNAL_WORKSPACE_ROLES]),
+    "list_designers",
+  );
+  const rows = await db
+    .select({
+      id: users.id,
+      displayName: users.displayName,
+      name: users.name,
+    })
+    .from(workspaceMembershipRoles)
+    .innerJoin(wsMemberships, eq(wsMemberships.id, workspaceMembershipRoles.workspaceMembershipId))
+    .innerJoin(users, eq(users.id, wsMemberships.userId))
+    .where(
+      and(
+        eq(wsMemberships.workspaceId, workspaceId),
+        eq(wsMemberships.status, "active"),
+        eq(workspaceMembershipRoles.role, "designer"),
+      ),
+    )
+    .orderBy(asc(users.displayName), asc(users.name));
+  return rows.map((r) => ({
+    id: r.id,
+    label: r.displayName ?? r.name ?? r.id.slice(0, 8),
+  }));
+}
+
 // ─── Workflow transitions (master prompt §10) ──────────────────────────
 export type { WorkflowAction } from "@/lib/content/workflow";
 
