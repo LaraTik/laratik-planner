@@ -13,6 +13,13 @@ import { UserAvatar } from "./user-avatar";
  * `actor` join). The row layout, columns, and empty state are
  * otherwise unchanged.
  *
+ * Round 5 (rebuild, 2026-08-26) — wrap the relative timestamp in a
+ * `<time dateTime={ISO} title={absoluteDate}>` so:
+ *   1. Screen readers announce the full ISO date.
+ *   2. Hovering reveals the absolute date (Oct 12, 2024, 14:32) which
+ *      is more useful than the relative string for older rows.
+ *   3. Copy-paste yields a parseable date.
+ *
  * Accessibility:
  *   - The `<table>` uses semantic `<thead>` / `<tbody>` markup so a
  *     screen reader can announce column headers when reading each
@@ -26,6 +33,16 @@ import { UserAvatar } from "./user-avatar";
  */
 export interface RecentUpdatesTableProps {
   rows: BrandRecentUpdate[];
+}
+
+function absoluteDateLabel(d: Date): string {
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export function RecentUpdatesTable({ rows }: RecentUpdatesTableProps) {
@@ -59,7 +76,11 @@ export function RecentUpdatesTable({ rows }: RecentUpdatesTableProps) {
             const key = `${row.kind}-${row.updatedAt.toString()}-${index}`;
             return (
               <tr key={key} data-testid="brand-recent-row">
-                <td className="text-fg-secondary py-2 pr-3">{formatRelativeDate(row.updatedAt)}</td>
+                <td className="text-fg-secondary py-2 pr-3">
+                  <time dateTime={row.updatedAt.toISOString()} title={absoluteDateLabel(row.updatedAt)}>
+                    {formatRelativeDate(row.updatedAt)}
+                  </time>
+                </td>
                 <td className="text-fg-primary py-2 pr-3">{row.description}</td>
                 <td className="py-2">
                   {row.actor ? (
