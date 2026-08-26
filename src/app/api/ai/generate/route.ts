@@ -23,7 +23,7 @@ import { mutatingApiHeaders } from "@/lib/security/headers";
 import { publicProviderError } from "@/lib/security/public-error";
 import { randomUUID } from "node:crypto";
 import { serverEnv } from "@/lib/validation/env";
-import { logError } from "@/lib/observability/logger";
+import { captureError } from "@/lib/observability/sentry";
 import { getEffectiveEntitlement, LimitExceededError } from "@/lib/entitlements";
 import { recordUsage } from "@/lib/usage";
 import { enforceAiBudget, reconcileAiBudget } from "@/lib/ai/governance";
@@ -416,8 +416,7 @@ export async function POST(req: NextRequest) {
         contextManifest: { categories: failedCategories },
       })
       .catch(() => undefined);
-    logError("ai.provider_failed", {
-      cause: e,
+    captureError("ai.provider_failed", e, {
       requestId,
       userId: session.user.id,
       workspaceId: ws.id,

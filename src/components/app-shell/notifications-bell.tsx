@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import * as Sentry from "@sentry/nextjs";
 import { Bell, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { markAllReadAction, markReadAction } from "@/app/(app)/actions";
@@ -94,7 +95,7 @@ export function NotificationsBell({
     try {
       await markAllReadAction();
     } catch (err) {
-      console.error("[notifications] markAllRead failed", err);
+      Sentry.captureException(err, { tags: { scope: "notifications.markAllRead" } });
       setItems(prevItems);
       setUnread(prevUnread);
     }
@@ -119,7 +120,7 @@ export function NotificationsBell({
     try {
       await markReadAction({ ids: [id] });
     } catch (err) {
-      console.error("[notifications] markRead failed", err);
+      Sentry.captureException(err, { tags: { scope: "notifications.markRead" } });
       setItems(prevItems);
       setUnread(prevUnread);
     }

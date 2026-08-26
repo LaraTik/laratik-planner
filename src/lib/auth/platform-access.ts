@@ -4,7 +4,8 @@ import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { platformAdministrators } from "@/lib/db/schema";
-import { logError, logWarn } from "@/lib/observability/logger";
+import { logWarn } from "@/lib/observability/logger";
+import { captureError } from "@/lib/observability/sentry";
 import { PermissionDeniedError, type Actor } from "@/lib/auth/policy";
 import { PLATFORM_ROLE_VALUES, type PlatformRole } from "@/lib/auth/platform-access-types";
 
@@ -77,7 +78,7 @@ export async function getPlatformPrincipal(actor: Actor): Promise<PlatformPrinci
       permissions: permissionsForPlatformRole(role),
     };
   } catch (error) {
-    logError("platform_access.lookup_failed", { actorId: actor.id, error });
+    captureError("platform_access.lookup_failed", error, { actorId: actor.id });
     return null;
   }
 }

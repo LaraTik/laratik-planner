@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { accounts, sessions, users, verificationTokens } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/validation/env";
 import { findUserByEmailAndPassword } from "@/lib/auth/password";
-import { captureError } from "@/lib/observability/sentry";
+import { captureError, setUser } from "@/lib/observability/sentry";
 import { sendVerificationEmail } from "@/lib/email";
 
 /**
@@ -205,6 +205,16 @@ export const authConfig: NextAuthConfig = {
      */
     async signIn({ user }) {
       if (!user?.id) return;
+      // Tag the Sentry context with this user so every event from
+      // here on is attributable in the UI. No-op when Sentry is
+      // not configured (the wrapper guards the call site). We
+      // spread the optional fields so undefined values don't get
+      // sent (exactOptionalPropertyTypes).
+      setUser({
+        id: user.id,
+        ...(user.email ? { email: user.email } : {}),
+        ...(user.name ? { username: user.name } : {}),
+      });
       try {
         await db
           .update(users)

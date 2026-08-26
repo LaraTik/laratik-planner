@@ -9,6 +9,7 @@ import {
   type Locale,
 } from "@/lib/auth/profile";
 import { setNotificationPreferencesForUser } from "@/lib/notifications/service";
+import { setUser } from "@/lib/observability/sentry";
 
 /**
  * Own-profile server actions. All three:
@@ -99,6 +100,10 @@ export async function changePasswordAction(
 }
 
 export async function signOutAction(): Promise<void> {
+  // Clear the Sentry user context BEFORE the redirect so subsequent
+  // errors from the sign-in page (or any background work in the
+  // same process) aren't attributed to the user who just left.
+  setUser(null);
   // signOut throws NEXT_REDIRECT, which is what we want — Next.js
   // turns it into a 307 to /signin. The throw is type `never`, so the
   // function is typed as Promise<void> for callers.

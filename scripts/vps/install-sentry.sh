@@ -1,28 +1,36 @@
 #!/usr/bin/env bash
 # scripts/vps/install-sentry.sh
 #
-# M4 follow-up — OBS-001 (Sentry DSN + alert rules). Idempotent.
+# M4 follow-up — OBS-001 (Sentry DSN + source-map upload + probe). Idempotent.
 #
 # What it does, in order:
 #   1. Backs up /opt/laratik-planner/.env to .env.bak.<timestamp>
-#   2. Writes SENTRY_DSN, NEXT_PUBLIC_SENTRY_DSN, SENTRY_AUTH_TOKEN
-#      to .env (idempotent — replaces existing values if present)
+#   2. Writes SENTRY_DSN, NEXT_PUBLIC_SENTRY_DSN, SENTRY_AUTH_TOKEN,
+#      SENTRY_ORG, SENTRY_PROJECT, SENTRY_PROBE_TOKEN to .env
+#      (idempotent — replaces existing values if present).
+#      SENTRY_ORG + SENTRY_PROJECT are required for the build-time
+#      source-map upload to actually fire in next.config.ts →
+#      withSentryConfig; without them, events still flow but every
+#      stack trace is minified. SENTRY_PROBE_TOKEN gates the
+#      /api/sentry-probe route used in step 6.
 #   3. Locks the .env to root:600
 #   4. Pulls + restarts the app so the new env is read
 #   5. Verifies the SDK booted by grepping the container log
-#   6. Force-sends a sample Sentry event via a server-rendered 500
-#      (we cannot call /api/dev/sentry-test from inside this script
-#      — that route is unauthenticated and only meaningful in dev.
-#      Instead we POST to a known 500-prone route guarded by a
-#      bearer token, OR fall back to a curl-based log probe.)
-#   7. Prints the exact `printenv` shape for the operator to confirm
-#      in the Sentry UI.
+#   6. Fires a real probe event via the guarded /api/sentry-probe
+#      route so the operator can confirm ingest in the Sentry UI
+#      before declaring the install done. (Earlier versions asked
+#      the operator to trigger an error manually; that made it easy
+#      to mistake "no events arrived" for "Sentry is broken".)
+#   7. Prints the exact `printenv` shape for the operator to confirm.
 #
 # Usage (on the VPS, with the new values in your shell or 1Password):
 #
 #   SENTRY_DSN='https://...' \
 #   NEXT_PUBLIC_SENTRY_DSN='https://...' \
 #   SENTRY_AUTH_TOKEN='sntryu_...' \
+#   SENTRY_ORG='laratik' \
+#   SENTRY_PROJECT='laratik-planner' \
+#   SENTRY_PROBE_TOKEN="$(openssl rand -hex 32)" \
 #   sudo -E bash scripts/vps/install-sentry.sh
 #
 # Required env vars (passed by the caller, NOT stored anywhere by
@@ -30,7 +38,13 @@
 #   SENTRY_DSN              — ingest URL
 #   NEXT_PUBLIC_SENTRY_DSN  — same value, exposed to the browser
 #   SENTRY_AUTH_TOKEN       — source-map upload token (project:releases,
-#                             project:debug-files)
+#                             project:debug-files, project:write)
+#   SENTRY_ORG              — org slug from sentry.io (Settings → General)
+#   SENTRY_PROJECT          — project slug from sentry.io (project page)
+#   SENTRY_PROBE_TOKEN      — shared secret for /api/sentry-probe; the
+#                             install script posts to that route with
+#                             this token to confirm ingest. Generate
+#                             with: openssl rand -hex 32
 #
 # The script never logs the values, never writes them to a file
 # other than .env, and never includes them in error output.
@@ -42,10 +56,11 @@ if [[ $EUID -ne 0 ]]; then
   exit 2
 fi
 
-for var in SENTRY_DSN NEXT_PUBLIC_SENTRY_DSN SENTRY_AUTH_TOKEN; do
+for var in SENTRY_DSN NEXT_PUBLIC_SENTRY_DSN SENTRY_AUTH_TOKEN SENTRY_ORG SENTRY_PROJECT SENTRY_PROBE_TOKEN; do
   if [[ -z "${!var:-}" ]]; then
     echo "✗ missing required env var: $var" >&2
     echo "  usage: SENTRY_DSN=... NEXT_PUBLIC_SENTRY_DSN=... SENTRY_AUTH_TOKEN=... \\" >&2
+    echo "         SENTRY_ORG=... SENTRY_PROJECT=... SENTRY_PROBE_TOKEN=... \\" >&2
     echo "         sudo -E bash $0" >&2
     exit 3
   fi
@@ -67,7 +82,7 @@ chmod 600 "$BACKUP"
 chown root:root "$BACKUP"
 echo "✓ backed up $ENV_FILE → $BACKUP"
 
-# 2. Idempotent write of the 3 vars. We use a python heredoc so we
+# 2. Idempotent write of the 6 vars. We use a python heredoc so we
 #    can match the exact key, replace in place, and preserve all
 #    other lines and quoting. This avoids the line-ending and
 #    quoting pitfalls of `sed -i` (which has been the source of more
@@ -79,6 +94,9 @@ keys = {
     "SENTRY_DSN": os.environ["SENTRY_DSN"],
     "NEXT_PUBLIC_SENTRY_DSN": os.environ["NEXT_PUBLIC_SENTRY_DSN"],
     "SENTRY_AUTH_TOKEN": os.environ["SENTRY_AUTH_TOKEN"],
+    "SENTRY_ORG": os.environ["SENTRY_ORG"],
+    "SENTRY_PROJECT": os.environ["SENTRY_PROJECT"],
+    "SENTRY_PROBE_TOKEN": os.environ["SENTRY_PROBE_TOKEN"],
 }
 with open(path, "r", encoding="utf-8") as f:
     lines = f.read().splitlines()
@@ -98,7 +116,7 @@ for k, v in keys.items():
 with open(path, "w", encoding="utf-8") as f:
     f.write("\n".join(out) + "\n")
 PY
-echo "✓ wrote 3 Sentry keys to $ENV_FILE"
+echo "✓ wrote 6 Sentry keys to $ENV_FILE"
 
 # 3. Lock the file.
 chmod 600 "$ENV_FILE"
@@ -130,34 +148,53 @@ fi
 #    user can copy-paste without leaking the DSN.
 LOADED=$(docker exec laratik-planner-app-1 printenv 2>/dev/null \
   | grep -E '^SENTRY_' | cut -d= -f1 | sort)
-EXPECTED=$'NEXT_PUBLIC_SENTRY_DSN\nSENTRY_AUTH_TOKEN\nSENTRY_DSN'
+EXPECTED=$'NEXT_PUBLIC_SENTRY_DSN\nSENTRY_AUTH_TOKEN\nSENTRY_DSN\nSENTRY_ORG\nSENTRY_PROJECT\nSENTRY_PROBE_TOKEN'
 if [[ "$LOADED" == "$EXPECTED" ]]; then
-  echo "✓ all 3 Sentry env vars present inside the running container"
+  echo "✓ all 6 Sentry env vars present inside the running container"
 else
   echo "✗ env mismatch — container has:"
   echo "$LOADED" | sed 's/^/    /'
   exit 5
 fi
 
-# 7. Final report. The user checks the Sentry UI to confirm a
-#    sample event lands.
+# 7. Fire a real probe event. The /api/sentry-probe route is a
+#    guarded endpoint that calls Sentry.captureMessage("install-probe").
+#    This is the difference between "the SDK booted" and "Sentry is
+#    actually receiving events" — earlier versions left the operator
+#    to trigger an error manually, which made it easy to mistake
+#    "no events arrived" for "Sentry is broken".
+#
+#    We POST from the host (loopback) so the route sees a normal
+#    request. The route itself enforces:
+#      - a shared secret (set in .env as SENTRY_PROBE_TOKEN, also
+#        sent in the x-sentry-probe header below)
+#    so a leaked URL is not enough to spam the Sentry project.
+#    SENTRY_PROBE_TOKEN is now required by the validation loop above,
+#    so this step always runs.
+PROBE_HTTP=$(curl -s -o /tmp/sentry-probe.out -w "%{http_code}" \
+  -X POST -H "x-sentry-probe: $SENTRY_PROBE_TOKEN" \
+  "${NEXT_PUBLIC_APP_URL:-http://localhost:3000}/api/sentry-probe" \
+  --max-time 10 || echo "000")
+if [[ "$PROBE_HTTP" == "200" ]]; then
+  echo "✓ probe event sent (HTTP 200 — confirm in Sentry UI)"
+else
+  echo "  probe returned HTTP $PROBE_HTTP — open /tmp/sentry-probe.out to debug"
+fi
+
+# 8. Final report. The user checks the Sentry UI to confirm the
+#    probe event lands.
 cat <<'OUT'
 
 ────────────────────────────────────────────────────────────
-✓ Sentry wired. Next: confirm a sample event in the UI.
+✓ Sentry wired. Next: confirm the probe event in the UI.
 
   1. Open https://laratik.sentry.io/issues/?environment=production
      in your browser.
-  2. The Sentry test endpoint (/api/dev/sentry-test) only works in
-     development. In production, trigger any server error from an
-     authenticated page (e.g. open DevTools, paste:
-       fetch("/api/health/force-error", {method:"POST"})
-     if such a route exists; otherwise sign out and request any
-     unauthenticated 500-prone route).
-  3. Within 60 seconds, the new event should appear with the tag
+  2. Within 60 seconds of this script finishing, the
+     `install-probe` event should appear with the tag
      environment:production and the release SHA matching this
      deploy.
-  4. If no event: re-check the DSN. The most common cause is a
+  3. If no event: re-check the DSN. The most common cause is a
      copy-paste typo. Rotate the DSN in Sentry, re-paste via
      `sudo -e`, and re-run this script.
 

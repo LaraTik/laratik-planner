@@ -24,6 +24,7 @@ import {
 } from "@/lib/auth/invitations";
 import { invitationCommandSchema, workspaceRoleSchema } from "@/lib/auth/invitation-command";
 import { enforceRateLimit, rateLimitRuleFor } from "@/lib/security/rate-limit";
+import { captureError } from "@/lib/observability/sentry";
 
 export type InviteActionState = {
   error?: string;
@@ -133,8 +134,9 @@ export async function sendInviteAction(
     // validation (e.g. "Invalid workspace access selection") or an
     // unexpected infrastructure failure (DB / SMTP). Surface a
     // friendly message to the user; the underlying error is logged
-    // via Next.js's default error reporter.
-    console.error("[sendInviteAction] failed to create invitation", e);
+    // AND reported to Sentry (when configured) so on-call sees
+    // sustained failures.
+    captureError("users.sendInvite", e);
     return {
       error: "We couldn't send that invitation. The error has been logged. Please try again.",
     };
@@ -178,8 +180,10 @@ export async function resendInviteAction(invitationId: string): Promise<Invitati
     // pending (revoked / expired / accepted). Either way, the row the
     // user clicked against is stale and the next render will refresh
     // the list — surface the literal message verbatim so the user
-    // understands why the click didn't take effect.
-    console.error("[resendInviteAction] failed", e);
+    // understands why the click didn't take effect. Sentry (when
+    // configured) still sees the error so an infrastructure failure
+    // (DB, SMTP) is distinguishable from the expected business outcomes.
+    captureError("users.resendInvite", e);
     return {
       error: e instanceof Error && e.message ? e.message : "The invitation could not be resent.",
     };
@@ -202,7 +206,7 @@ export async function revokeInviteAction(invitationId: string): Promise<Invitati
   try {
     await revokeInvitation({ invitationId, agencyId });
   } catch (e) {
-    console.error("[revokeInviteAction] failed", e);
+    captureError("users.revokeInvite", e);
     return {
       error: e instanceof Error && e.message ? e.message : "The invitation could not be revoked.",
     };
