@@ -4,25 +4,42 @@ name: CI
 # when this workflow is green on `main`, so every required release
 # contract must run here:
 #
-#   1. format / lint / typecheck
-#   2. unit + target coverage thresholds
-#   3. integration + migration drill
-#   4. production build + Docker smoke
-#   5. zero critical/high production audit findings
-#   6. visual regression gate (TEST-03, GAP-FULL-REVIEW-2026-08-25)
+#   1. integration + migration drill
+#   2. coverage thresholds (runs the unit suite instrumented)
+#   3. production build + Docker smoke
+#   4. zero critical/high production audit findings
+#   5. SMTP cert probe (deploy-blocker)
+#   6. workflow / Dockerfile / shell linters (deploy-blocker)
 #
-# Contract (2026-08-22, updated 2026-08-25): the 5-browser E2E matrix
-# moved to `.github/workflows/e2e.yml` under `workflow_dispatch` only.
-# Visual regression moved back into the gating pipeline as the
-# `visual-regression` job (3-viewport matrix) — this is the TEST-03
-# fix from the 2026-08-25 gap audit. Developers run the full
-# Playwright suite + 5-browser matrix locally before pushing/merging.
-# See `docs/testing/strategy.md` (Release gates) for the contract.
+# Contract (2026-08-26, CI-minimization plan): the following checks
+# moved OUT of CI to the local dev loop and to the release-candidate
+# `e2e.yml` dispatch:
+#   - format / lint     → pre-commit (lint-staged)
+#   - typecheck         → pre-commit (sentinel-driven)
+#   - full unit suite   → pre-push  (`.husky/pre-push`)
+#   - visual regression → release-candidate dispatch only
+#     (`.github/workflows/e2e.yml`; `deploy.yml` now requires a
+#      recent successful E2E before deploying)
+# See `docs/testing/strategy.md` (Release gates) and the
+# 2026-08-26 plan for the full rationale.
 on:
   push:
     branches: [main]
+    # `paths-ignore` is OR-based: a workflow run is triggered as
+    # long as ANY changed file does NOT match a pattern. So a PR
+    # that touches `docs/foo.md` AND `.github/workflows/ci.yml`
+    # still runs (the workflow change overrides the docs ignore).
+    # This saves the full ~30 min CI budget on docs-only changes
+    # while keeping the deploy-gate contract intact for code, dep,
+    # workflow, and Docker changes.
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
   # Schedule removed 2026-08-23: was a daily 06:00 UTC CI run that also
   # auto-deployed via the deploy.yml workflow_run chain. The SMTP cert
   # check is still exercised on every push to main; if the cert approaches
@@ -30,9 +47,16 @@ on:
   # should be re-enabled on a host-level cron if a daily safety net is
   # required again.
 
-# Cancel in-flight runs of the same branch / PR
+# Cancel in-flight runs. The group is per-PR for pull_request events
+# (so a force-push on PR #123 only cancels other runs of PR #123) and
+# per-ref for main pushes (so a `main` push does not cancel a still
+# running `main` deploy). Falls back to the workflow name only when
+# no PR number is available (e.g. on a tag push, which is not a
+# trigger today but is a safe default).
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: >-
+    ${{ github.workflow }}-
+    ${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || github.ref }}
   cancel-in-progress: true
 
 # Default deny: every job must opt-in to the GitHub token scopes it
@@ -43,9 +67,14 @@ permissions:
 
 jobs:
   unit-quality:
-    name: Lint, typecheck, unit, integration, coverage, audit
+    # 2026-08-26 (CI-minimization plan): format / lint / typecheck /
+    # full unit suite moved out of this job — pre-commit handles
+    # format + lint, pre-commit (sentinel) handles typecheck, and
+    # pre-push handles the full unit suite. CI's authoritative
+    # remaining job is the integration + coverage + audit gate.
+    name: Integration, coverage, audit
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
 
     services:
       postgres:
@@ -126,31 +155,25 @@ jobs:
         run: pnpm install --frozen-lockfile
         timeout-minutes: 15
 
-      - name: Format check
-        run: pnpm format:check
-        timeout-minutes: 10
-
-      - name: Lint
-        run: pnpm lint
-        timeout-minutes: 10
-
-      - name: Typecheck
-        run: pnpm typecheck
-        timeout-minutes: 10
+      # 2026-08-26: Format / Lint / Typecheck / Unit tests steps
+      # removed (see .husky/pre-commit + .husky/pre-push). The
+      # coverage step below still runs the unit suite under v8
+      # instrumentation, so the suite's correctness is still
+      # asserted in CI — just under the coverage-threshold gate.
 
       - name: Apply migrations
         run: pnpm db:migrate
         timeout-minutes: 10
-
-      - name: Unit tests
-        run: pnpm test:unit -- --reporter=verbose
-        timeout-minutes: 20
 
       - name: Integration tests
         run: pnpm test:integration
         timeout-minutes: 20
 
       - name: Coverage
+        # Runs the full vitest suite under v8 coverage with the
+        # module-threshold gates from vitest.config.ts. This is
+        # the authoritative coverage check; pre-push only asserts
+        # pass/fail, not the threshold.
         run: pnpm test:coverage
         timeout-minutes: 20
 
@@ -167,137 +190,21 @@ jobs:
         run: pnpm audit --prod
         timeout-minutes: 10
 
-  visual-regression:
-    # TEST-03 (GAP-FULL-REVIEW-2026-08-25) — the visual-regression
-    # gate. Previously the spec was PENDING on committed baselines and
-    # lived only in `.github/workflows/e2e.yml` as a manual
-    # `workflow_dispatch` step. This job moves visual regression into
-    # the automatic CI pipeline as a required check on push to main.
-    #
-    # The responsive matrix is reduced to 3 viewports (mobile-s, tablet,
-    # wide) per the audit's first suggestion, so the 25-min job budget
-    # is sustainable. Baselines are captured by running `pnpm
-    # test:visual:update` locally and committing the new PNGs in
-    # `tests/e2e/visual-regression.spec.ts-snapshots/{reference,responsive}/`.
-    # This job runs in ASSERT mode (no PW_VISUAL_CAPTURE) so a non-zero
-    # diff fails the build. The first push after the TEST-03 reduction
-    # must include the freshly-captured baselines; without them, the
-    # `expect(page).toHaveScreenshot(...)` calls fail on missing
-    # reference PNGs. Use the e2e.yml `Run workflow` button to seed
-    # the baselines if a clean re-capture is needed.
-    name: Visual regression (3-viewport gate)
-    runs-on: ubuntu-latest
-    needs: [unit-quality]
-    # Bumped from 25 → 35 min to absorb the per-test dev compile cost
-    # after the file-scope pre-warm was removed (see
-    # `Run visual regression (assert mode)` below). The action
-    # itself uses 30 min; the extra 5 min is for the surrounding
-    # setup (containers, migrations, browser install).
-    timeout-minutes: 35
-    permissions:
-      contents: read
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: planner
-          POSTGRES_PASSWORD: planner_ci
-          POSTGRES_DB: planner_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U planner -d planner_test"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-
-    env:
-      DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
-      AUTH_SECRET: ci_secret_only_not_for_production_xxxxxxxxxxxxxxxx
-      AUTH_URL: http://localhost:3000
-      AUTH_TRUST_HOST: "true"
-      SMTP_HOST: localhost
-      SMTP_PORT: 1025
-      SMTP_USER: ci
-      SMTP_PASSWORD: ci-only
-      SMTP_FROM: "ci <ci@planner.test>"
-      TEST_DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-        timeout-minutes: 5
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.10.0
-        timeout-minutes: 5
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-        timeout-minutes: 5
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        timeout-minutes: 15
-
-      - name: Apply migrations
-        run: pnpm db:migrate
-        timeout-minutes: 10
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-        timeout-minutes: 3
-
-      - name: Install Playwright Chromium
-        # Only the chromium binary is required — the visual-regression
-        # spec runs in the `visual-chromium` project (see
-        # playwright.config.ts).
-        run: pnpm exec playwright install --with-deps chromium
-        timeout-minutes: 10
-
-      - name: Run visual regression (assert mode)
-        # No PW_VISUAL_CAPTURE flag — the spec compares every captured
-        # screenshot against the committed baseline and fails the build
-        # on any non-zero diff.
-        #
-        # The previous spec had a file-scope `test.beforeAll` pre-warm
-        # that visited every route in a hidden page context to pay the
-        # dev compile cost upfront. It was removed in commit 46c97a2 →
-        # bfb6db7 because Playwright re-evaluates the spec per worker,
-        # which re-ran the pre-warm 3-7× per CI run and blew the
-        # 20-min action timeout. The pre-warm's per-test compile
-        # saving is now paid by each test directly; the 24 canonical
-        # routes × 3 viewports × ~5-10s per cold compile comfortably
-        # fits in 30 min, with headroom for the actual screenshot
-        # captures.
-        run: pnpm test:visual
-        timeout-minutes: 30
-
-      - name: Upload visual diffs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: visual-regression-diffs
-          path: |
-            tests/e2e/visual-regression.spec.ts-snapshots/reference/
-            tests/e2e/visual-regression.spec.ts-snapshots/responsive/
-            test-results/
-            playwright-report/
-          retention-days: 7
-        timeout-minutes: 5
+  # 2026-08-26 (CI-minimization plan): the `visual-regression` job
+  # was removed from this workflow. Visual regression is no longer
+  # on the per-push deploy-gate path. The full visual matrix lives
+  # in `.github/workflows/e2e.yml` under `workflow_dispatch`, and
+  # `deploy.yml` now requires a recent successful E2E dispatch
+  # before firing. Run `pnpm test:visual` locally to verify visual
+  # diffs before pushing a release candidate; dispatch `e2e.yml`
+  # from the Actions tab to register a green E2E for the SHA.
+  #
+  # Rationale: this job burned ~30 min of the 2,000 min/month free
+  # tier on every push. The 3-viewport responsive matrix is
+  # deterministic enough to run on a dev laptop with the committed
+  # baselines in `tests/e2e/visual-regression.spec.ts-snapshots/`.
+  # See `docs/testing/strategy.md` (Release gates) and the
+  # 2026-08-26 plan for the full rationale.
 
   build-smoke:
     name: Build, Docker image, health smoke

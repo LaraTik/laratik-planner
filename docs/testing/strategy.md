@@ -3,30 +3,48 @@
 ## Release gates
 
 A merge to `main` is production-eligible only when every gate in the
-authoritative `CI` workflow passes. The deploy workflow triggers on
-successful `CI` (`workflow_run`) and never on a partial run, so any
-missing or skipped gate is a deploy-blocker.
+authoritative `CI` workflow passes, AND a recent successful `E2E`
+dispatch exists for the same SHA. The deploy workflow triggers on
+successful `CI` (`workflow_run`) and never on a partial run, and the
+`gate` job in `deploy.yml` refuses to fire if the E2E dispatch is
+missing or stale. Any missing or skipped gate is a deploy-blocker.
 
-| Gate                                                               | Workflow / step                                                   | Required for deploy         | Release-candidate |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------- | --------------------------- | ----------------- |
-| Format (`pnpm format:check`)                                       | `ci.yml` → `unit-quality` → `Format check`                        | ✅                          | ✅                |
-| Lint (`pnpm lint`)                                                 | `ci.yml` → `unit-quality` → `Lint`                                | ✅                          | ✅                |
-| Typecheck (`pnpm typecheck`)                                       | `ci.yml` → `unit-quality` → `Typecheck`                           | ✅                          | ✅                |
-| Unit tests (`pnpm test:unit`)                                      | `ci.yml` → `unit-quality` → `Unit tests`                          | ✅                          | ✅                |
-| Target coverage (95/90 critical, 85/80 services)                   | `ci.yml` → `unit-quality` → `Coverage`                            | ✅                          | ✅                |
-| Integration + migration drill (`pnpm test:integration`)            | `ci.yml` → `unit-quality` → `Integration tests`                   | ✅                          | ✅                |
-| Production audit (`pnpm audit --prod`)                             | `ci.yml` → `unit-quality` → `Dependency audit`                    | ✅ (zero critical/high)     | ✅                |
-| Chromium critical E2E + visual baseline (`pnpm test:e2e:critical`) | `ci.yml` → `browser-verify` → `Critical browser and visual tests` | ✅                          | ✅                |
-| Production build (`pnpm build`)                                    | `ci.yml` → `build-smoke` → `Build`                                | ✅                          | ✅                |
-| Docker image build + `/api/health` smoke                           | `ci.yml` → `build-smoke` → `Smoke e2e (health)`                   | ✅                          | ✅                |
-| Full 5-browser functional matrix (`pnpm test:e2e:isolated`)        | `e2e.yml` → `Run functional Playwright matrix`                    | ❌ (release-candidate only) | ✅                |
-| Full visual matrix (`pnpm test:visual`)                            | `e2e.yml` → `Run visual regression`                               | ❌ (release-candidate only) | ✅                |
+| Gate                                                        | Workflow / step                                      | Required for deploy         | Release-candidate |
+| ----------------------------------------------------------- | ---------------------------------------------------- | --------------------------- | ----------------- |
+| Format (`pnpm format:check`)                                | `.husky/pre-commit` (lint-staged → prettier --write) | ✅ (pre-commit)             | ✅                |
+| Lint (`pnpm lint`)                                          | `.husky/pre-commit` (lint-staged → eslint --fix)     | ✅ (pre-commit)             | ✅                |
+| Typecheck (`pnpm typecheck`)                                | `.husky/pre-commit` (sentinel-driven)                | ✅ (pre-commit)             | ✅                |
+| Full unit suite (`pnpm test:unit`)                          | `.husky/pre-push`                                    | ✅ (pre-push)               | ✅                |
+| Vitest `related` on staged TS files                         | `.husky/pre-commit`                                  | ✅ (pre-commit)             | ✅                |
+| Target coverage (95/90 critical, 85/80 services)            | `ci.yml` → `unit-quality` → `Coverage`               | ✅                          | ✅                |
+| Integration + migration drill (`pnpm test:integration`)     | `ci.yml` → `unit-quality` → `Integration tests`      | ✅                          | ✅                |
+| Production audit (`pnpm audit --prod`)                      | `ci.yml` → `unit-quality` → `Dependency audit`       | ✅ (zero critical/high)     | ✅                |
+| Production build (`pnpm build`)                             | `ci.yml` → `build-smoke` → `Build`                   | ✅                          | ✅                |
+| Docker image build + `/api/health` smoke                    | `ci.yml` → `build-smoke` → `Smoke e2e (health)`      | ✅                          | ✅                |
+| SMTP cert probe (deploy-blocker)                            | `ci.yml` → `check-smtp-cert`                         | ✅                          | ✅                |
+| Workflow / Dockerfile / shell linters                       | `ci.yml` → `lint-meta`                               | ✅                          | ✅                |
+| Full 5-browser functional matrix (`pnpm test:e2e:isolated`) | `e2e.yml` → `Run functional Playwright matrix`       | ❌ (release-candidate only) | ✅                |
+| Full visual matrix (`pnpm test:visual`)                     | `e2e.yml` → `Run visual regression`                  | ❌ (release-candidate only) | ✅                |
 
-`CI` enforces the deploy-critical subset. The full 5-browser E2E and
-visual matrix in `.github/workflows/e2e.yml` remains a required
-release-candidate check on every PR and push to `main` and is
-documented as such, but production deploy waits only for the critical
-CI subset above.
+`CI` enforces the deploy-critical subset that genuinely cannot be
+reproduced on a dev laptop: integration tests + coverage thresholds
+(needs a disposable PostgreSQL), production build + Docker image
+(platform-specific), audit (needs the full dep graph), SMTP cert
+probe (talks to a real production endpoint), and the workflow +
+Dockerfile + shell linters (cheap but the only place that catches
+template-injection / unpinned action refs). Format, lint, typecheck,
+and the full unit suite are run in `.husky/pre-commit` /
+`.husky/pre-push` so a regression is caught before CI minutes are
+spent.
+
+The full 5-browser E2E and visual matrix in `.github/workflows/e2e.yml`
+remains a required release-candidate check on every PR and push to
+`main` and is documented as such, but production deploy waits for
+both the critical CI subset above AND a recent successful E2E
+dispatch (within the last 24 h) for the same SHA. The `gate` job in
+`.github/workflows/deploy.yml` enforces the E2E freshness check; a
+`workflow_dispatch` deploy bypasses the E2E gate as the documented
+hotfix escape hatch.
 
 `CI` and `e2e.yml` upload `playwright-report`, `test-results`, and
 visual diffs as artifacts on failure, plus a `coverage-report`

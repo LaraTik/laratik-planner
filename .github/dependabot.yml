@@ -61,10 +61,17 @@ updates:
   # commit SHAs as upstream tags move; once we re-enable the
   # unpinned-uses finding in zizmor.yml, this is the loop that
   # keeps it green.
+  #
+  # 2026-08-26 (CI-minimization plan): cadence dropped from weekly
+  # to monthly. The weekly cadence generated ~4 PRs/month, each
+  # of which triggers a full CI run on the free tier. zizmor's
+  # authoritative action audit runs on every push to main via the
+  # `lint-meta` job in `.github/workflows/ci.yml`, so the monthly
+  # cadence is enough to keep floating tags in check.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
       day: "monday"
       time: "06:00"
       timezone: "Europe/Berlin"

@@ -1,0 +1,41 @@
+#!/usr/bin/env sh
+# Pre-push hook — full local unit-test gate before a push reaches CI.
+#
+# Scope: catches regressions in the full unit suite that the
+# pre-commit `vitest related --run` (which only walks the import
+# graph from staged .ts/.tsx files) cannot catch. This is the
+# second-tier of the 2026-08-26 CI-minimization plan: the full
+# `pnpm test:unit` run moved out of `.github/workflows/ci.yml`
+# (free-tier minutes) and into this hook so a failed unit run
+# blocks the push instead of waiting for CI.
+#
+# Skip when you know what you're doing:
+#   git push --no-verify
+#   SKIP_PREPUSH=1 git push
+#   SKIP_PRECOMMIT=1 git push   (legacy alias)
+#
+# What runs:
+#   1. pnpm test:unit  — the full vitest suite, no coverage.
+#
+# What does NOT run (intentionally — kept for CI):
+#   • tsc --noEmit       (runs in pre-commit, on the staged surface)
+#   • pnpm build         (production build, platform-specific)
+#   • pnpm test:integration (needs a disposable Postgres)
+#   • pnpm test:coverage (v8 instrumentation, slow — kept in CI)
+#   • pnpm test:visual   (Playwright + 3-viewport matrix — keep in
+#                        release-candidate `e2e.yml` dispatch)
+#   • visual-regression  (moved out of ci.yml per the 2026-08-26 plan)
+
+set -e
+
+# Skip in non-interactive contexts (CI, scripted release runs) and via flag.
+if [ -n "$SKIP_PREPUSH" ] || [ -n "$SKIP_PRECOMMIT" ] || [ -n "$CI" ]; then
+  echo "⏭  pre-push skipped (SKIP_PREPUSH=$SKIP_PREPUSH, SKIP_PRECOMMIT=$SKIP_PRECOMMIT, CI=$CI)"
+  exit 0
+fi
+
+# 1) Full unit suite. This is the exact command CI used to run; it now
+# runs here so a failure is caught before a CI minute is spent.
+# `--reporter=verbose` matches the ci.yml removal for parity.
+printf '\n▶ pnpm test:unit — full suite before push:\n\n'
+pnpm test:unit -- --reporter=verbose
