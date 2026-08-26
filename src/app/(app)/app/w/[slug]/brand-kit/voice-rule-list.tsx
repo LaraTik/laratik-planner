@@ -68,7 +68,6 @@ export function VoiceRuleList({ slug, canManage, rules }: VoiceRuleListProps) {
                 name={rule.content.slice(0, 40)}
                 archiveAction={archiveVoiceRuleAction}
                 restoreAction={restoreVoiceRuleAction}
-                variant="archive"
                 data-testid={`brand-voice-rule-archive-${rule.id}`}
               />
             ) : null}

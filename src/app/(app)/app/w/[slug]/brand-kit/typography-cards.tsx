@@ -77,8 +77,8 @@ export function TypographyCards({ slug, canManage, assets }: TypographyCardsProp
         const { family, weight, role } = readTypography(asset);
         const sampleSize = role === "headline" ? 32 : role === "accent" ? 24 : 18;
         return (
-          <li key={asset.id} data-testid={`brand-font-${asset.id}`} className="contents">
-            <Card padding="md" className="bg-surface-subtle flex flex-col gap-3">
+          <li key={asset.id} data-testid={`brand-font-${asset.id}`} className="flex">
+            <Card padding="md" className="bg-surface-subtle flex w-full flex-col gap-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex min-w-0 flex-col">
                   <p className="text-body text-fg-primary truncate font-semibold">{asset.name}</p>

@@ -57,8 +57,8 @@ export function ColorSwatchGrid({ slug, canManage, assets }: ColorSwatchGridProp
       {assets.map((asset) => {
         const hex = readHex(asset);
         return (
-          <li key={asset.id} data-testid={`brand-color-${asset.id}`} className="contents">
-            <Card padding="sm" className="bg-surface-subtle flex flex-col gap-2">
+          <li key={asset.id} data-testid={`brand-color-${asset.id}`} className="flex">
+            <Card padding="sm" className="bg-surface-subtle flex w-full flex-col gap-2">
               <div
                 className="border-border h-16 w-full rounded-[var(--radius-control)] border"
                 style={{ backgroundColor: hex }}
@@ -77,7 +77,6 @@ export function ColorSwatchGrid({ slug, canManage, assets }: ColorSwatchGridProp
                     name={asset.name}
                     archiveAction={archiveColorAssetAction}
                     restoreAction={restoreColorAssetAction}
-                    variant="archive"
                     data-testid={`brand-color-archive-${asset.id}`}
                   />
                 ) : null}

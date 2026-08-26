@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTransition } from "react";
-import { Archive, Trash2, Undo2 } from "lucide-react";
+import { Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +24,12 @@ import { Button } from "@/components/ui/button";
  * though the row hasn't visually disappeared from the section yet —
  * `revalidatePath` will refresh the page within ~1s.
  *
+ * Round 5 (rebuild): the destructive action now uses the `<Trash2 />`
+ * icon everywhere (locked by the brand-kit rebuild plan, 2026-08-26).
+ * The previous `variant` prop (trash/archive) was inconsistent across
+ * sections — three different icons for the same semantic action.
+ * Locking to Trash2 simplifies the mental model and the a11y tree.
+ *
  * Accessibility:
  *   - The icon button carries a descriptive `aria-label`.
  *   - The undo toast is keyboard-reachable (Sonner renders a button
@@ -39,13 +45,7 @@ import { Button } from "@/components/ui/button";
  *   - `name`           — the row's name; shown in the toast
  *   - `archiveAction`  — server action that flips `archived_at` to now
  *   - `restoreAction`  — server action that flips `archived_at` to null
- *   - `variant`        — `"trash"` (Trash2 icon, ghost) or
- *                        `"archive"` (Archive icon, ghost) for visual
- *                        consistency with the existing per-section
- *                        archive buttons.
  */
-type Variant = "trash" | "archive";
-
 export interface ArchiveWithUndoProps {
   slug: string;
   id: string;
@@ -53,7 +53,6 @@ export interface ArchiveWithUndoProps {
   name: string;
   archiveAction: (slug: string, id: string) => Promise<void>;
   restoreAction: (slug: string, id: string) => Promise<void>;
-  variant?: Variant;
   "data-testid"?: string;
 }
 
@@ -64,7 +63,6 @@ export function ArchiveWithUndo({
   name,
   archiveAction,
   restoreAction,
-  variant = "trash",
   "data-testid": dataTestId,
 }: ArchiveWithUndoProps) {
   const [isPending, startTransition] = useTransition();
@@ -74,7 +72,11 @@ export function ArchiveWithUndo({
       try {
         await archiveAction(slug, id);
         const toastId = toast.success(`Archived ${label.toLowerCase()}: ${name}`, {
-          description: "This will be removed permanently after 30 days.",
+          // Round 5 (rebuild) — the previous "removed permanently after
+          // 30 days" copy was dishonest: there is no purge job, and
+          // the row stays in the database until manually removed. The
+          // honest copy mirrors the actual soft-delete semantics.
+          description: "Hidden from the section. Click Undo to bring it back.",
           duration: 5000,
           action: {
             label: "Undo",
@@ -112,7 +114,6 @@ export function ArchiveWithUndo({
     });
   }
 
-  const Icon = variant === "archive" ? Archive : Trash2;
   return (
     <Button
       type="button"
@@ -123,7 +124,7 @@ export function ArchiveWithUndo({
       onClick={handleClick}
       data-testid={dataTestId}
     >
-      <Icon className="h-4 w-4" aria-hidden="true" />
+      <Trash2 className="h-4 w-4" aria-hidden="true" />
     </Button>
   );
 }

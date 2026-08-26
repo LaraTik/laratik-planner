@@ -12,6 +12,7 @@ import {
   listContentPillars,
   listRecentBrandUpdates,
 } from "@/lib/brand/service";
+import { BRAND_KIT_SECTIONS } from "@/lib/brand/sections";
 import { getSignedDownloadUrl } from "@/lib/storage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,11 +110,20 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
 
   // First logo (by createdAt desc) feeds the Brand Identity hero.
   const firstLogo = assetsByKind.logo[0];
-  const firstLogoSrc = firstLogo
+  // Resolve the candidate src and route it through `safeHref` so a
+  // corrupted `storage_path` (or a non-https `external_url` from an
+  // older row pre-dating the Zod HTTPS constraint) cannot render an
+  // attacker-controlled URL in the row-1 hero. If `safeHref` rejects
+  // the URL it returns "#"; the hero's monogram fallback handles
+  // a falsy `logoSrc`, so we collapse the rejected URL back to
+  // `null` and let the monogram render.
+  const firstLogoRawSrc = firstLogo
     ? firstLogo.storagePath
       ? getSignedDownloadUrl(firstLogo.storagePath)
       : firstLogo.externalUrl
     : null;
+  const firstLogoSafe = firstLogoRawSrc ? safeHref(firstLogoRawSrc) : null;
+  const firstLogoSrc = firstLogoSafe && firstLogoSafe.href !== "#" ? firstLogoSafe.href : null;
 
   const totalAssetCount =
     assetsByKind.logo.length +
@@ -123,18 +133,27 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
 
   // Top tabs now cover every section in the page so the strip
   // matches the actual anchor set. Counts on each tab reflect
-  // the live section listers.
-  const tabs: { id: string; label: string; count?: number }[] = [
-    { id: "overview", label: "Overview" },
-    { id: "logo", label: "Logos", count: assetsByKind.logo.length },
-    { id: "color", label: "Colors", count: assetsByKind.color.length },
-    { id: "guidelines", label: "Typography", count: assetsByKind.font.length },
-    { id: "voice", label: "Voice", count: rules.length },
-    { id: "pillars", label: "Pillars", count: pillars.length },
-    { id: "publishing", label: "Publishing", count: publishingRules.length },
-    { id: "linked", label: "Linked", count: linkedResources.length },
-    { id: "recent", label: "Activity" },
-  ];
+  // the live section listers. The source of truth for the order,
+  // label, and icon is `BRAND_KIT_SECTIONS`; the count is added
+  // here from the lister results.
+  const sectionCountById: Record<string, number> = {
+    logo: assetsByKind.logo.length,
+    color: assetsByKind.color.length,
+    guidelines: assetsByKind.font.length,
+    voice: rules.length,
+    pillars: pillars.length,
+    publishing: publishingRules.length,
+    linked: linkedResources.length,
+  };
+  const tabs = BRAND_KIT_SECTIONS.map((section) => {
+    const count = sectionCountById[section.id];
+    return {
+      id: section.id,
+      label: section.label,
+      icon: section.icon,
+      ...(typeof count === "number" ? { count } : {}),
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -158,16 +177,32 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
                 a plain <a download> so the browser handles the
                 save dialog natively; the server endpoint
                 enforces the role gate. Visible to every internal
-                workspace member, not just managers. */}
-            <Button variant="outline" asChild>
-              <a
-                href={`/api/export/brand-assets-zip?slug=${encodeURIComponent(slug)}`}
-                data-testid="brand-kit-export-zip"
-                download
-              >
-                <Download className="h-4 w-4" aria-hidden="true" />
-                Download ZIP
-              </a>
+                workspace member, not just managers.
+                Round 5: disabled when there are no assets to
+                bundle (a 0-asset workspace used to download a
+                ZIP containing only a MANIFEST.txt — surprising). */}
+            <Button
+              variant="outline"
+              asChild={totalAssetCount > 0}
+              disabled={totalAssetCount === 0}
+              title={
+                totalAssetCount === 0
+                  ? "Add at least one logo, color, or font before downloading."
+                  : undefined
+              }
+              data-testid="brand-kit-export-zip"
+            >
+              {totalAssetCount > 0 ? (
+                <a href={`/api/export/brand-assets-zip?slug=${encodeURIComponent(slug)}`} download>
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  Download ZIP
+                </a>
+              ) : (
+                <span aria-disabled="true">
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  Download ZIP
+                </span>
+              )}
             </Button>
             {canManage ? <AddAssetMenu /> : null}
           </div>
@@ -177,7 +212,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
       <WorkspaceTopTabs tabs={tabs} ariaLabel="Brand kit sections" />
 
       <div
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:gap-6"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:gap-4"
         data-testid="brand-kit-bento"
       >
         {/* Row 1 — Brand identity hero (12) */}
@@ -186,6 +221,8 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
           logoSrc={firstLogoSrc ? safeHref(firstLogoSrc).href : null}
           logoAlt={firstLogo?.name}
           assetCount={totalAssetCount}
+          logoCount={assetsByKind.logo.length}
+          lastUpdatedAt={recent[0]?.updatedAt ?? null}
         />
 
         {/* Row 2 — Logo (8) + Color (4) */}

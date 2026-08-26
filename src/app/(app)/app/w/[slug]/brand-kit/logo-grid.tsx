@@ -60,8 +60,8 @@ export function LogoGrid({ slug, canManage, assets }: LogoGridProps) {
           ? getSignedDownloadUrl(asset.storagePath)
           : asset.externalUrl;
         return (
-          <li key={asset.id} data-testid={`brand-asset-${asset.id}`} className="contents">
-            <Card padding="sm" className="bg-surface-subtle relative flex flex-col gap-2">
+          <li key={asset.id} data-testid={`brand-asset-${asset.id}`} className="flex">
+            <Card padding="sm" className="bg-surface-subtle relative flex w-full flex-col gap-2">
               <div className="border-border bg-surface flex aspect-square w-full items-center justify-center overflow-hidden rounded-[var(--radius-control)] border">
                 {previewSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
