@@ -126,6 +126,15 @@ body {
   border-radius: 4px;
 }
 
+/* Touch targets — prevent 300ms double-tap zoom delay on legacy
+ * mobile browsers (iOS Safari < 13). The app targets iOS 16+ so the
+ * impact is small, but the cost is one rule. */
+a,
+button,
+[role="button"] {
+  touch-action: manipulation;
+}
+
 /* Reduced motion — respect OS preference */
 @media (prefers-reduced-motion: reduce) {
   *,
