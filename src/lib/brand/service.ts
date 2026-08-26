@@ -42,15 +42,13 @@ export type BrandLinkedResourceProvider = BrandLinkedResourceRow["provider"];
 
 export async function listBrandAssets(
   workspaceId: string,
-  opts?: { kind?: BrandAssetKind },
+  opts?: { kind?: BrandAssetKind; includeArchived?: boolean },
 ): Promise<BrandAssetRow[]> {
+  const includeArchived = opts?.includeArchived ?? false;
+  const archivedCond = includeArchived ? undefined : isNull(brandAssets.archivedAt);
   const where = opts?.kind
-    ? and(
-        eq(brandAssets.workspaceId, workspaceId),
-        isNull(brandAssets.archivedAt),
-        eq(brandAssets.kind, opts.kind),
-      )
-    : and(eq(brandAssets.workspaceId, workspaceId), isNull(brandAssets.archivedAt));
+    ? and(eq(brandAssets.workspaceId, workspaceId), archivedCond, eq(brandAssets.kind, opts.kind))
+    : and(eq(brandAssets.workspaceId, workspaceId), archivedCond);
   return db.select().from(brandAssets).where(where).orderBy(desc(brandAssets.createdAt));
 }
 
@@ -338,31 +336,39 @@ async function requireBrandManager(
 
 export async function listBrandPublishingRules(
   workspaceId: string,
+  opts?: { includeArchived?: boolean },
 ): Promise<BrandPublishingRuleRow[]> {
+  const includeArchived = opts?.includeArchived ?? false;
+  const archivedCond = includeArchived ? undefined : isNull(brandPublishingRules.archivedAt);
+  const where = includeArchived
+    ? eq(brandPublishingRules.workspaceId, workspaceId)
+    : and(
+        eq(brandPublishingRules.workspaceId, workspaceId),
+        archivedCond as ReturnType<typeof isNull>,
+      );
   return db
     .select()
     .from(brandPublishingRules)
-    .where(
-      and(
-        eq(brandPublishingRules.workspaceId, workspaceId),
-        isNull(brandPublishingRules.archivedAt),
-      ),
-    )
+    .where(where)
     .orderBy(asc(brandPublishingRules.sortOrder), asc(brandPublishingRules.createdAt));
 }
 
 export async function listBrandLinkedResources(
   workspaceId: string,
+  opts?: { includeArchived?: boolean },
 ): Promise<BrandLinkedResourceRow[]> {
+  const includeArchived = opts?.includeArchived ?? false;
+  const archivedCond = includeArchived ? undefined : isNull(brandLinkedResources.archivedAt);
+  const where = includeArchived
+    ? eq(brandLinkedResources.workspaceId, workspaceId)
+    : and(
+        eq(brandLinkedResources.workspaceId, workspaceId),
+        archivedCond as ReturnType<typeof isNull>,
+      );
   return db
     .select()
     .from(brandLinkedResources)
-    .where(
-      and(
-        eq(brandLinkedResources.workspaceId, workspaceId),
-        isNull(brandLinkedResources.archivedAt),
-      ),
-    )
+    .where(where)
     .orderBy(asc(brandLinkedResources.name));
 }
 
