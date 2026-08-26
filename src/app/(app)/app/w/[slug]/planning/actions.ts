@@ -181,20 +181,40 @@ export async function transitionAction(input: {
   action: WorkflowAction;
   reason?: string;
   returnTarget?: string;
-}) {
+}): Promise<{ error?: string; from?: string; to?: string }> {
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
-  return transitionContent(actor, {
-    contentItemId: input.contentItemId,
-    action: input.action,
-    ...(input.reason ? { reason: input.reason } : {}),
-    ...(input.returnTarget ? { returnTarget: input.returnTarget } : {}),
-  });
+  try {
+    return await transitionContent(actor, {
+      contentItemId: input.contentItemId,
+      action: input.action,
+      ...(input.reason ? { reason: input.reason } : {}),
+      ...(input.returnTarget ? { returnTarget: input.returnTarget } : {}),
+    });
+  } catch (error) {
+    // Return the error as a value rather than re-throwing. Next.js 16
+    // encodes thrown server-action errors as a hashed digest in the RSC
+    // response (content-type: text/x-component, `1:E{"digest":"…"}`),
+    // dropping the original message — the client then surfaces a generic
+    // minified React error instead of the action's real text. Returning
+    // a value keeps the message in the RSC payload. Matches the
+    // pattern already used by `applyAiDraftAction`, `submitDeliveryAction`,
+    // and `decideApprovalAction` in this file.
+    return { error: error instanceof Error ? error.message : "The workflow action failed." };
+  }
 }
 
-export async function claimAction(input: { workspaceSlug: string; contentItemId: string }) {
+export async function claimAction(input: {
+  workspaceSlug: string;
+  contentItemId: string;
+}): Promise<{ error?: string }> {
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
-  await claimAsDesigner(actor, input.contentItemId);
+  try {
+    await claimAsDesigner(actor, input.contentItemId);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "The claim action failed." };
+  }
   revalidatePath(`/app/w/${input.workspaceSlug}/planning/${input.contentItemId}`);
+  return {};
 }
 
 export async function submitDeliveryAction(
@@ -238,7 +258,7 @@ export async function decideApprovalAction(input: {
   approvalRequestId: string;
   decision: "approved" | "changes_requested";
   feedback?: string;
-}) {
+}): Promise<{ error?: string }> {
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
   const parsed = DecideApprovalSchema.safeParse({
     approvalRequestId: input.approvalRequestId,
@@ -248,8 +268,13 @@ export async function decideApprovalAction(input: {
   if (!parsed.success) {
     return { error: parsed.error.issues.map((i) => i.message).join("; ") };
   }
-  await decideApproval(actor, parsed.data);
+  try {
+    await decideApproval(actor, parsed.data);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "The approval action failed." };
+  }
   revalidatePath(`/app/w/${input.workspaceSlug}/planning`);
+  return {};
 }
 
 export async function recordPublicationAction(input: {
@@ -259,7 +284,7 @@ export async function recordPublicationAction(input: {
   publishedUrl?: string;
   note?: string;
   failureReason?: string;
-}) {
+}): Promise<{ error?: string }> {
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
   const parsed = RecordPublicationSchema.safeParse({
     contentItemChannelId: input.contentItemChannelId,
@@ -271,8 +296,15 @@ export async function recordPublicationAction(input: {
   if (!parsed.success) {
     return { error: parsed.error.issues.map((i) => i.message).join("; ") };
   }
-  await recordPublication(actor, parsed.data);
+  try {
+    await recordPublication(actor, parsed.data);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "The publication action failed.",
+    };
+  }
   revalidatePath(`/app/w/${input.workspaceSlug}/planning`);
+  return {};
 }
 
 // ─── Discussion actions (Goal 8) ────────────────────────────────────────

@@ -123,18 +123,22 @@ export function PublishingSection({
                     const failureReason = (fd.get("failureReason") as string) || undefined;
                     start(async () => {
                       setFormError(null);
-                      try {
-                        await recordPublicationAction({
-                          workspaceSlug,
-                          contentItemChannelId: ch.id,
-                          status: fd.get("status") as "published" | "skipped" | "failed",
-                          ...(publishedUrl ? { publishedUrl } : {}),
-                          ...(note ? { note } : {}),
-                          ...(failureReason ? { failureReason } : {}),
-                        });
+                      // Read the action's `{ error?: string }` return value
+                      // rather than relying on a thrown error — Next.js 16
+                      // hashes thrown action errors into a digest in the
+                      // RSC response and drops the original message.
+                      const result = await recordPublicationAction({
+                        workspaceSlug,
+                        contentItemChannelId: ch.id,
+                        status: fd.get("status") as "published" | "skipped" | "failed",
+                        ...(publishedUrl ? { publishedUrl } : {}),
+                        ...(note ? { note } : {}),
+                        ...(failureReason ? { failureReason } : {}),
+                      });
+                      if (result?.error) {
+                        setFormError(result.error);
+                      } else {
                         setOpenChannel(null);
-                      } catch (e) {
-                        setFormError((e as Error).message);
                       }
                     });
                   }}

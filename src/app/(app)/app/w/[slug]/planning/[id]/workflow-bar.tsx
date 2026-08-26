@@ -74,22 +74,19 @@ export function WorkflowBar({
     reason?: string,
   ) => {
     setActionError(null);
-    try {
-      await transitionAction({
-        workspaceSlug,
-        contentItemId,
-        action,
-        ...(reason ? { reason } : {}),
-      });
-    } catch (error) {
-      // Set the error state and let the transition resolve normally.
-      // Re-throwing here (the previous behaviour) made React 19 surface
-      // "Rendered fewer hooks than expected" (production #441) on the
-      // post-failure re-render — `setActionError` is sufficient to
-      // surface the message and `run()`'s outer `.catch` already
-      // absorbs the rejected promise.
-      const message = error instanceof Error ? error.message : "The workflow action failed.";
-      setActionError(message);
+    // Read the action's return value (an `{ error?: string }` shape) rather
+    // than relying on a rejected promise. Next.js 16 encodes thrown action
+    // errors as a hashed digest in the RSC response, dropping the original
+    // message — the client would otherwise see a generic minified React
+    // error instead of the action's real text.
+    const result = await transitionAction({
+      workspaceSlug,
+      contentItemId,
+      action,
+      ...(reason ? { reason } : {}),
+    });
+    if (result?.error) {
+      setActionError(result.error);
     }
   };
 
@@ -181,10 +178,11 @@ export function WorkflowBar({
             onClick={() =>
               start(async () => {
                 setActionError(null);
-                try {
-                  await claimAction({ workspaceSlug, contentItemId });
-                } catch (e) {
-                  setActionError((e as Error).message);
+                // Same rationale as `executeTransition` above — read the
+                // return value rather than relying on a thrown error.
+                const result = await claimAction({ workspaceSlug, contentItemId });
+                if (result?.error) {
+                  setActionError(result.error);
                 }
               })
             }
@@ -259,32 +257,26 @@ export function WorkflowBar({
           onApprove={(approvalRequestId) =>
             start(async () => {
               setActionError(null);
-              try {
-                await decideApprovalAction({
-                  workspaceSlug,
-                  approvalRequestId,
-                  decision: "approved",
-                });
-              } catch (e) {
-                setActionError((e as Error).message);
+              const result = await decideApprovalAction({
+                workspaceSlug,
+                approvalRequestId,
+                decision: "approved",
+              });
+              if (result?.error) {
+                setActionError(result.error);
               }
             })
           }
           onRequestChanges={async (approvalRequestId, feedback) => {
             setActionError(null);
-            try {
-              await decideApprovalAction({
-                workspaceSlug,
-                approvalRequestId,
-                decision: "changes_requested",
-                feedback,
-              });
-            } catch (error) {
-              // Same rationale as `executeTransition` above — do not
-              // re-throw inside the transition; surface via state.
-              const message =
-                error instanceof Error ? error.message : "The approval action failed.";
-              setActionError(message);
+            const result = await decideApprovalAction({
+              workspaceSlug,
+              approvalRequestId,
+              decision: "changes_requested",
+              feedback,
+            });
+            if (result?.error) {
+              setActionError(result.error);
             }
           }}
         />
