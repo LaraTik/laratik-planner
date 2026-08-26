@@ -287,12 +287,12 @@ pnpm test:e2e:isolated   # the exact CI command
 PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e:smoke
 ```
 
-### CI vs. E2E workflow split
+### CI vs. local E2E
 
 The authoritative deploy-gate workflow is `.github/workflows/ci.yml`
-(2026-08-26 contract, post CI-minimization plan). It runs the
-irreducible release contract that genuinely cannot be reproduced on a
-dev laptop:
+(2026-08-26 contract, post CI-minimization plan + the "E2E moves
+local" follow-up). It runs the irreducible release contract that
+genuinely cannot be reproduced on a dev laptop:
 
 - integration + migration drill (`pnpm test:integration`);
 - target coverage (95/90 critical modules, 85/80 application
@@ -304,42 +304,46 @@ dev laptop:
 - workflow / Dockerfile / shell linters (actionlint + zizmor +
   hadolint + shellcheck).
 
-Format, lint, typecheck, and the full unit suite moved out of CI to
+Format, lint, typecheck, the full unit suite, and the critical E2E
+subset (chromium + visual-chromium) moved out of CI to
 `.husky/pre-commit` and `.husky/pre-push` so a regression is caught
-before CI minutes are spent. The 3-viewport visual-regression matrix
-moved out of CI to `.github/workflows/e2e.yml` under
-`workflow_dispatch`. The deploy workflow (`deploy.yml`) now requires
-a recent successful `E2E` dispatch (within the last 24 h) for the
-same SHA, enforced by the `gate` job.
+before CI minutes are spent.
 
-The full Playwright matrix lives in `.github/workflows/e2e.yml` and
-runs the 5-browser functional suite (chromium, firefox, webkit,
-mobile-chrome, mobile-safari) plus the dedicated `visual-chromium`
-project. It is **release-candidate-only** under `workflow_dispatch`,
-but production deploy waits for **both** the critical CI subset above
-**and** a recent successful E2E dispatch. If a release candidate
-fails the E2E workflow, the deploy-gate `gate` job refuses to fire;
-re-dispatch `e2e.yml` against the same SHA, then re-trigger the
-deploy.
+The 5-browser E2E matrix and the full visual matrix also moved out
+of CI. They are run **locally** as a manual pre-merge step (the
+critical subset is the pre-push signal, the full 5-browser matrix is
+the pre-merge signal). The `e2e.yml` GitHub workflow was deleted in
+the 2026-08-26 "E2E moves local" commit. Production deploy fires on
+CI green alone — no E2E gate.
 
-#### Pre-merge release-candidate check
+#### Local E2E recipes
 
-For any non-docs change before merging to `main`:
+```bash
+# One-time setup (Mac + Linux). Postgres + dev server + Playwright.
+docker compose -f docker-compose.dev.yml up -d postgres
+pnpm install --frozen-lockfile
+pnpm db:migrate
+pnpm exec playwright install --with-deps chromium firefox webkit
 
-1. Push the release-candidate branch to GitHub.
-2. Open the Actions tab → **E2E** → **Run workflow** → select the
-   release-candidate branch → **Run**.
-3. Wait for the E2E run to turn green (the `playwright-report` and
-   `visual-diffs` artifacts surface any regression).
-4. Merge to `main`. The deploy workflow will see the recent
-   successful E2E in its `gate` job and proceed.
+# Pre-push: critical subset (chromium + visual-chromium). Runs in
+# .husky/pre-push automatically; ~10 min on a Mac.
+pnpm test:e2e:critical
 
-For docs-only changes, the E2E dispatch is optional — the
-`paths-ignore` filter on `ci.yml` already skips the full CI run on
-docs/** and **.md.
+# Pre-merge: full 5-browser matrix. ~45 min on Linux CI, ~30-60 min
+# on a Mac. Run on the release-candidate branch before merging to
+# main.
+pnpm test:e2e:isolated
 
-For hotfixes, the `workflow_dispatch` escape hatch on `deploy.yml`
-bypasses the E2E gate; use sparingly.
+# Pre-merge: full visual matrix (assert mode against committed
+# baselines). ~10 min. Use `pnpm test:visual:update` to refresh
+# baselines after a deliberate UI change.
+pnpm test:visual
+```
+
+If a dev's pre-push `pnpm test:e2e:critical` is taking too long on
+trivial pushes, set `SKIP_E2E=1` in the env (or `git push --no-verify`
+to skip both the unit suite and E2E). Both are escape hatches, not
+the default.
 
 ### Dev-only API helpers
 
@@ -354,11 +358,8 @@ bypasses the E2E gate; use sparingly.
 
 ### Running on CI
 
-One workflow runs browser tests on every push and PR to `main` —
-**only the unit + integration + coverage + audit + build + smoke
-
-- cert + linters** in `ci.yml`. The full 5-browser matrix lives
-  entirely in the `e2e.yml` workflow under `workflow_dispatch`:
+`ci.yml` is the only workflow that runs on every push and PR to
+`main`. The 5-browser matrix and the visual run are local-only:
 
 ```yaml
 # .github/workflows/ci.yml  (deploy-gate, post 2026-08-26 plan)
@@ -373,19 +374,22 @@ One workflow runs browser tests on every push and PR to `main` —
 - run: actionlint / zizmor / hadolint / shellcheck
 ```
 
-```yaml
-# .github/workflows/e2e.yml  (release-candidate, workflow_dispatch)
-- run: pnpm test:e2e:isolated # full 5-browser functional matrix
-- run: pnpm test:visual # visual-chromium only (if functional matrix green)
+```bash
+# Local pre-push (automatic via .husky/pre-push)
+pnpm test:unit
+pnpm test:e2e:critical
+
+# Local pre-merge (manual checklist on the release-candidate branch)
+pnpm test:e2e:isolated
+pnpm test:visual
 ```
 
-The deploy workflow (`deploy.yml`) listens on
-`workflow_run: [CI, E2E]` and refuses to fire unless its `gate` job
-confirms both CI and E2E were green for the same SHA within the last
-24 h. See the **CI vs. E2E workflow split** section above and
+The deploy workflow (`deploy.yml`) fires on `workflow_run: CI success`
+and SSHes to the VPS for the production rollout. The deploy
+workflow does not re-run any test against the VPS. See the **CI vs.
+local E2E** section above and
 [`../testing/strategy.md`](../testing/strategy.md) (Release gates)
-for the full contract. The deploy workflow does not re-run e2e
-against the VPS.
+for the full contract.
 
 ## Troubleshooting
 

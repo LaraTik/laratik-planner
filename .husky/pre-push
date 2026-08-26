@@ -1,30 +1,46 @@
 #!/usr/bin/env sh
-# Pre-push hook — full local unit-test gate before a push reaches CI.
+# Pre-push hook — full local unit + critical E2E gate before a push
+# reaches CI.
 #
-# Scope: catches regressions in the full unit suite that the
-# pre-commit `vitest related --run` (which only walks the import
-# graph from staged .ts/.tsx files) cannot catch. This is the
-# second-tier of the 2026-08-26 CI-minimization plan: the full
-# `pnpm test:unit` run moved out of `.github/workflows/ci.yml`
-# (free-tier minutes) and into this hook so a failed unit run
-# blocks the push instead of waiting for CI.
+# Scope: catches regressions that the pre-commit `vitest related
+# --run` (which only walks the import graph from staged .ts/.tsx
+# files) and the lint-staged format/lint pass cannot catch:
+#   1. full unit suite  (catches cross-module regressions)
+#   2. critical E2E     (chromium functional + visual-chromium —
+#                        the subset that used to be the
+#                        `visual-regression` job in `ci.yml` per
+#                        TEST-03 / GAP-FULL-REVIEW-2026-08-25)
+#
+# This is the second-tier of the 2026-08-26 CI-minimization plan
+# + the 2026-08-26 "E2E moves local" follow-up. Both the full unit
+# suite and the critical E2E moved out of `.github/workflows/ci.yml`
+# (free-tier minutes) and into this hook so a failed run blocks the
+# push instead of waiting for CI.
 #
 # Skip when you know what you're doing:
 #   git push --no-verify
 #   SKIP_PREPUSH=1 git push
-#   SKIP_PRECOMMIT=1 git push   (legacy alias)
+#   SKIP_E2E=1     git push  (skip only the E2E step)
 #
 # What runs:
-#   1. pnpm test:unit  — the full vitest suite, no coverage.
+#   1. pnpm test:unit       — the full vitest suite, no coverage.
+#   2. pnpm test:e2e:critical — chromium + visual-chromium subset
+#                              (skipped if no .ts/.tsx staged, see
+#                              below). Requires a local dev env
+#                              (see docs/operations/runbook.md
+#                              § "Running on CI" → local recipes).
 #
-# What does NOT run (intentionally — kept for CI):
-#   • tsc --noEmit       (runs in pre-commit, on the staged surface)
-#   • pnpm build         (production build, platform-specific)
+# What does NOT run (intentionally — kept for CI or out of the
+# deploy-gate contract):
+#   • tsc --noEmit          (runs in pre-commit, on the staged surface)
+#   • pnpm build            (production build, platform-specific)
 #   • pnpm test:integration (needs a disposable Postgres)
-#   • pnpm test:coverage (v8 instrumentation, slow — kept in CI)
-#   • pnpm test:visual   (Playwright + 3-viewport matrix — keep in
-#                        release-candidate `e2e.yml` dispatch)
-#   • visual-regression  (moved out of ci.yml per the 2026-08-26 plan)
+#   • pnpm test:coverage    (v8 instrumentation, slow — kept in CI)
+#   • full 5-browser matrix (`pnpm test:e2e:isolated`, ~45 min on
+#     Linux CI / ~30-60 min on a Mac) — keep as a manual pre-merge
+#     step per the runbook. The critical subset is the
+#     pre-push gate; the full matrix is the release-candidate
+#     gate. Per 2026-08-26 "E2E moves local" decision.
 
 set -e
 
@@ -34,8 +50,41 @@ if [ -n "$SKIP_PREPUSH" ] || [ -n "$SKIP_PRECOMMIT" ] || [ -n "$CI" ]; then
   exit 0
 fi
 
-# 1) Full unit suite. This is the exact command CI used to run; it now
-# runs here so a failure is caught before a CI minute is spent.
-# `--reporter=verbose` matches the ci.yml removal for parity.
-printf '\n▶ pnpm test:unit — full suite before push:\n\n'
-pnpm test:unit -- --reporter=verbose
+STAGED_TS_FILES=$(git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx' 2>/dev/null || true)
+
+# 1) Full unit suite. This is the exact command CI used to run; it
+#    now runs here so a failure is caught before a CI minute is
+#    spent. Skipped if no TS surface is staged (e.g. a docs-only
+#    or config-only commit).
+if [ -n "$STAGED_TS_FILES" ]; then
+  printf '\n▶ pnpm test:unit — full suite before push:\n\n'
+  pnpm test:unit -- --reporter=verbose
+else
+  echo "⏭  pnpm test:unit skipped (no .ts/.tsx staged)"
+fi
+
+# 2) Critical E2E (chromium functional + visual-chromium). Per the
+#    2026-08-26 "E2E moves local" decision, this used to be the
+#    `visual-regression` job in `ci.yml` (3-viewport, ~30 min on
+#    CI). Moving it local saves the free-tier minutes and gives
+#    the dev a faster signal than waiting on CI.
+#
+#    Same staging gate as unit: skip on a docs-only / config-only
+#    commit. SKIP_E2E=1 escapes the gate for trivial pushes where
+#    the dev has already validated the change via `pnpm test:e2e`
+#    (or has a follow-up plan).
+#
+#    Local pre-reqs (one-time): `docker compose -f
+#    docker-compose.dev.yml up -d postgres`, `pnpm db:migrate`,
+#    `pnpm exec playwright install --with-deps chromium`. See
+#    `docs/operations/runbook.md` § "Local E2E recipes" for the
+#    full setup.
+if [ -n "$SKIP_E2E" ]; then
+  echo "⏭  pnpm test:e2e:critical skipped (SKIP_E2E=1)"
+elif [ -n "$STAGED_TS_FILES" ]; then
+  printf '\n▶ pnpm test:e2e:critical — chromium + visual-chromium before push:\n'
+  printf '  (SKIP_E2E=1 to skip; full local pre-reqs in docs/operations/runbook.md)\n\n'
+  pnpm test:e2e:critical
+else
+  echo "⏭  pnpm test:e2e:critical skipped (no .ts/.tsx staged)"
+fi

@@ -2,29 +2,26 @@ name: Deploy
 
 # Deploy fires when the authoritative `CI` workflow completes
 # successfully on `main`. As of the 2026-08-26 CI-minimization
-# plan, CI no longer runs the visual-regression matrix or the
-# full 5-browser E2E matrix — those live in `.github/workflows/e2e.yml`
-# under `workflow_dispatch`. This workflow therefore requires a
-# recent successful `E2E` dispatch for the same SHA (within the
-# last 24h) in addition to the existing `CI` success, so the
-# deploy-gate contract is preserved: code-level checks (CI) AND
-# browser-level checks (E2E) both green before production deploy.
+# plan, CI runs the irreducible deploy-gate (integration,
+# coverage, audit, build, Docker smoke, SMTP-cert probe, workflow
+# linters). As of the 2026-08-26 "E2E moves local" follow-up, E2E
+# runs locally in `.husky/pre-push` (critical subset) and as a
+# manual pre-merge step (full 5-browser matrix) — no GitHub
+# workflow. The deploy therefore fires on CI green alone; the
+# critical E2E is the dev's pre-push signal, the full E2E is the
+# dev's pre-merge signal, and `pnpm verify` covers the rest.
 #
 # The `workflow_dispatch` escape hatch is preserved: a hotfix can
-# still dispatch this workflow manually and bypass the E2E gate.
-# Use sparingly — it bypasses the unit + integration + visual gate.
+# still dispatch this workflow manually without waiting for CI.
+# Use sparingly.
 #
 # See `docs/testing/strategy.md` (Release gates) and
-# `docs/operations/runbook.md` (CI vs. E2E workflow split) for
-# the full contract.
+# `docs/operations/runbook.md` (CI vs. local E2E) for the full
+# contract.
 
 on:
   workflow_run:
-    # E2E added 2026-08-26: the deploy gate now requires both CI
-    # and a recent successful E2E dispatch for the same SHA. The
-    # `gate` job below enforces this via `gh api` so the deploy
-    # can be safely gated on either upstream workflow completion.
-    workflows: [CI, E2E]
+    workflows: [CI]
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -39,133 +36,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  gate:
-    # Deploy-gate enforcer. Required when this workflow is triggered
-    # by an upstream `workflow_run` event (CI or E2E success). For
-    # `workflow_dispatch` (manual hotfix), the gate is bypassed.
-    #
-    # When triggered by CI success: checks that a recent successful
-    # E2E run exists for the same SHA (within the last 24h).
-    # When triggered by E2E success: checks that a successful CI run
-    # exists for the same SHA (any time on the same SHA).
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
-    name: Verify CI + E2E both green for this SHA
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      actions: read
-      contents: read
-    steps:
-      - name: Verify CI + E2E both green
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPOSITORY: ${{ github.repository }}
-          # Forward workflow_run values as plain env vars; the
-          # script reads them via $VAR instead of `${{ ... }}` to
-          # avoid template-injection into the run body.
-          # (zizmor `template-injection` rule.)
-          EVENT_NAME: ${{ github.event_name }}
-          TRIGGER_WORKFLOW: ${{ github.event.workflow_run.name }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-        run: |
-          set -euo pipefail
-          # workflow_dispatch hotfix path: bypass the E2E gate.
-          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
-            echo "Manual dispatch: bypassing E2E gate (hotfix escape hatch)."
-            exit 0
-          fi
-
-          echo "Deploy triggered by upstream workflow: ${TRIGGER_WORKFLOW}"
-          echo "Verifying CI + E2E both green for SHA ${HEAD_SHA}..."
-
-          # 1) The triggering workflow itself is green (we already
-          #    know its conclusion is 'success' from the job's
-          #    `if:`, but be explicit for the run summary).
-          echo "Triggering workflow (${TRIGGER_WORKFLOW}) is green: OK"
-
-          # 2) The OTHER workflow must also be green for the same
-          #    SHA. If we were triggered by CI, look for a recent
-          #    successful E2E (within 24h). If we were triggered by
-          #    E2E, look for any successful CI on this SHA (CI
-          #    runs on every push to main, so the most recent
-          #    successful CI for this SHA is the one to trust).
-          if [[ "${TRIGGER_WORKFLOW}" == "CI" ]]; then
-            OTHER_WORKFLOW="E2E"
-            # GitHub's `actions/runs?workflow_id=` filter requires
-            # the numeric workflow ID, NOT the file name. The file
-            # name is silently ignored and the API returns runs
-            # from all workflows, which produced a false-positive
-            # on the first deploy after this gate was added (the
-            # CI run was returned as the "E2E" match). The numeric
-            # IDs come from `gh api repos/<owner>/<repo>/actions/workflows`:
-            #   ci.yml    = 337306850
-            #   e2e.yml   = 338172364
-            #   deploy.yml  = 337306851
-            #   release.yml = 340997206
-            # If a workflow is ever added/renamed, re-run that
-            # command and update the constants below.
-            E2E_WFID=338172364
-            echo "Looking for a recent successful ${OTHER_WORKFLOW} run for ${HEAD_SHA} (within 24h)..."
-            # Per-page=1 because we only need to know that AT LEAST
-            # ONE such run exists; the API returns the most recent
-            # first, so the first match is the freshest.
-            OTHER_RUN=$(gh api \
-              "repos/${REPOSITORY}/actions/runs?workflow_id=${E2E_WFID}&head_sha=${HEAD_SHA}&status=success&per_page=1" \
-              --jq '.workflow_runs[0] // empty')
-            if [[ -z "${OTHER_RUN}" ]]; then
-              echo "::error::No successful E2E run for SHA ${HEAD_SHA}." >&2
-              echo "::error::Dispatch .github/workflows/e2e.yml against this SHA, then re-run the failed deploy." >&2
-              exit 1
-            fi
-            OTHER_CREATED=$(echo "${OTHER_RUN}" | jq -r '.created_at')
-            OTHER_RUN_ID=$(echo "${OTHER_RUN}" | jq -r '.id')
-            OTHER_RUN_URL=$(echo "${OTHER_RUN}" | jq -r '.html_url')
-            # 24h freshness window. GitHub's API does not filter
-            # by `created` natively, so we filter in the shell.
-            CUTOFF=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
-            if [[ "${OTHER_CREATED}" < "${CUTOFF}" ]]; then
-              echo "::error::Most recent successful E2E run for SHA ${HEAD_SHA} is too old:" >&2
-              echo "  run id:  ${OTHER_RUN_ID}" >&2
-              echo "  created: ${OTHER_CREATED}" >&2
-              echo "  cutoff:  ${CUTOFF} (24h ago)" >&2
-              echo "::error::Re-dispatch .github/workflows/e2e.yml against this SHA, then re-run the failed deploy." >&2
-              exit 1
-            fi
-            echo "E2E green: run ${OTHER_RUN_ID} (${OTHER_CREATED}) within last 24h."
-            echo "  ${OTHER_RUN_URL}"
-          else
-            OTHER_WORKFLOW="CI"
-            CI_WFID=337306850
-            echo "Looking for a successful ${OTHER_WORKFLOW} run for ${HEAD_SHA} (no time window)..."
-            OTHER_RUN=$(gh api \
-              "repos/${REPOSITORY}/actions/runs?workflow_id=${CI_WFID}&head_sha=${HEAD_SHA}&status=success&per_page=1" \
-              --jq '.workflow_runs[0] // empty')
-            if [[ -z "${OTHER_RUN}" ]]; then
-              echo "::error::No successful CI run for SHA ${HEAD_SHA}." >&2
-              echo "::error::Wait for the CI workflow to turn green on ${HEAD_SHA}, then re-run the failed deploy." >&2
-              exit 1
-            fi
-            OTHER_RUN_ID=$(echo "${OTHER_RUN}" | jq -r '.id')
-            OTHER_RUN_URL=$(echo "${OTHER_RUN}" | jq -r '.html_url')
-            echo "CI green: run ${OTHER_RUN_ID}."
-            echo "  ${OTHER_RUN_URL}"
-          fi
-
-          echo "Deploy gate passed: CI + E2E both green for ${HEAD_SHA}."
-        timeout-minutes: 3
-
   build:
     name: Build + push image
-    # The build job is the release-gate funnel: it runs when CI or
-    # E2E (the workflow_run triggers) reports success AND the
-    # `gate` job confirms the other is also green, OR when an
+    # The build job is the release-gate funnel: it runs when CI
+    # (the workflow_run trigger) reports success, OR when an
     # operator explicitly dispatches this workflow. The
     # `workflow_dispatch` escape hatch exists so a hotfix to a
-    # release-blocker can ship without waiting for CI / E2E to
-    # turn green (e.g. §23 step 19/20 integration flakes, or a
-    # zizmor rule upgrade). Use sparingly — it bypasses the
-    # unit + integration + visual gate.
-    needs: [gate]
+    # release-blocker can ship without waiting for CI to turn
+    # green (e.g. §23 step 19/20 integration flakes, or a zizmor
+    # rule upgrade). Use sparingly — it bypasses the CI gate.
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:

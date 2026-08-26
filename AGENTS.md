@@ -98,9 +98,9 @@ laratik-planner/
 ├── docker-compose.dev.yml          # local: postgres only (app runs native)
 ├── .github/workflows/
 │   ├── ci.yml                      # deploy-gate: integration/coverage/audit/build/smoke/smtp-cert/lint-meta
-│   ├── e2e.yml                     # workflow_dispatch: 5-browser + visual-chromium (release-candidate only)
-│   └── deploy.yml                  # workflow_run: CI/E2E success → gate (CI+E2E both green) → build+push GHCR → ssh deploy
+│   └── deploy.yml                  # workflow_run: CI success → build+push GHCR → ssh deploy
 #                                    # Release-gate contract: docs/testing/strategy.md (Release gates)
+#                                    # Local E2E recipes: docs/operations/runbook.md (Local E2E)
 ├── src/
 │   ├── app/                        # App Router
 │   │   ├── layout.tsx              # Inter + StudioFlow tokens
@@ -164,8 +164,9 @@ laratik-planner/
 - ❌ Never expose `MINIMAX_API_KEY`, `AUTH_SECRET`, `SMTP_PASSWORD`, or `SENTRY_AUTH_TOKEN` in client code (the split env schema enforces this structurally)
 - ✅ Always backup before upgrading — `./scripts/project.sh backup` (or `scripts/vps/backup.sh` on VPS)
 - ✅ Always run `pnpm verify` before pushing
-- ✅ Pre-commit hook catches lint/format/unit-test issues early — keep it fast by keeping its scope tight (lint-staged on staged files, `vitest related` on staged sources). Skip with `git commit --no-verify` for WIP / hotfixes.
-- ✅ Always merge finished work to `main` — review, commit, push as soon as `pnpm verify` is green. No half-finished work sitting in the local working tree or on a stale local branch. The deploy workflow fires on `workflow_run: CI/E2E success` (and the `gate` job confirms a recent successful E2E dispatch for the same SHA), so the change is live on production the moment the deploy job finishes. For non-docs changes, dispatch `.github/workflows/e2e.yml` against the release-candidate SHA before pushing to `main` so the deploy-gate contract is intact.
+- ✅ Pre-commit hook catches lint/format/typecheck/unit-test issues early — keep it fast by keeping its scope tight (lint-staged on staged files, `vitest related` on staged sources, sentinel-driven `tsc --noEmit`). Skip with `git commit --no-verify` or `SKIP_TYPECHECK=1` for WIP / hotfixes.
+- ✅ Pre-push hook runs the full unit suite and the critical E2E subset (`pnpm test:e2e:critical` = chromium + visual-chromium). Skip with `git push --no-verify`, `SKIP_PREPUSH=1`, or `SKIP_E2E=1` for trivial pushes.
+- ✅ Always merge finished work to `main` — review, commit, push as soon as `pnpm verify` is green and the local pre-merge E2E checklist (full 5-browser matrix + visual) is complete on the release-candidate branch. No half-finished work sitting in the local working tree or on a stale local branch. The deploy workflow fires on `workflow_run: CI success`, so the change is live on production the moment the deploy job finishes.
 - ✅ CI is authoritative — local git hooks are optional and never replace CI
 - ✅ Staging before production: not yet (single-environment for v1, see Goal 14)
 - ✅ Disk hygiene before deploy: ensure VPS `/` is < 70% (use the vps-ops `disk-cleanup.sh apply` if needed)
@@ -228,7 +229,7 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 30-step §23 journey and the owner checks in
 `docs/production-readiness/EXTERNAL_SERVICES_UAT.md` are signed.
 
-> Workflow contract — see `docs/testing/strategy.md` (Release gates). `ci.yml` is the **deploy-gate** (integration, coverage, audit, build, Docker smoke, SMTP-cert probe, workflow linters). Format / lint / typecheck / unit suite run locally in `.husky/pre-commit` and `.husky/pre-push` so a regression is caught before CI minutes are spent. `e2e.yml` is **release-candidate-only** under `workflow_dispatch` (5-browser + visual-chromium); before merging to `main`, dispatch `e2e.yml` and confirm green — `deploy.yml` requires a recent successful E2E dispatch for the same SHA before firing. `deploy.yml` fires on `workflow_run: CI/E2E success` and only deploys the exact `head_sha` (no `:latest`-only deploys).
+> Workflow contract — see `docs/testing/strategy.md` (Release gates). `ci.yml` is the **deploy-gate** (integration, coverage, audit, build, Docker smoke, SMTP-cert probe, workflow linters). Format / lint / typecheck / full unit suite / critical E2E (chromium + visual-chromium) run locally in `.husky/pre-commit` and `.husky/pre-push` so a regression is caught before CI minutes are spent. The full 5-browser E2E matrix and the visual matrix run **locally** as a manual pre-merge step (no GitHub workflow). `deploy.yml` fires on `workflow_run: CI success` and only deploys the exact `head_sha` (no `:latest`-only deploys).
 
 ## Conventions
 
@@ -236,7 +237,7 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 - **Branches:** `main` is production. `feat/*` for features, `fix/*` for hotfixes, `chore/*` for chores. Squash-merge.
 - **PRs:** must pass CI (`pnpm verify` + build + smoke e2e). Reference the goal number in the PR title.
 - **ADRs:** material deviations from the master prompt go in `docs/decisions/`. The first one (`docs/decisions/0001-vps-port.md`) records the choice to self-host on the LaraTik VPS instead of Supabase + Vercel.
-- **Merge on completion:** when a change is finished and `pnpm verify` is green, commit it with a `<type>(<scope>): <description>` message and push to `main`. The deploy workflow fires on `workflow_run: CI/E2E success` (and the `gate` job confirms a recent successful E2E dispatch for the same SHA), so the change is live on production the moment the deploy job finishes. For non-docs changes, dispatch `.github/workflows/e2e.yml` against the release-candidate SHA before pushing to `main` so the deploy-gate contract is intact. No finished work sits in the local working tree or on a stale local branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space.
+- **Merge on completion:** when a change is finished and `pnpm verify` is green AND the local pre-merge E2E checklist (`pnpm test:e2e:isolated` + `pnpm test:visual` on the release-candidate branch) is complete, commit it with a `<type>(<scope>): <description>` message and push to `main`. The deploy workflow fires on `workflow_run: CI success`, so the change is live on production the moment the deploy job finishes. No finished work sits in the local working tree or on a stale local branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space.
 
 ## Cross-references
 

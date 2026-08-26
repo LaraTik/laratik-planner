@@ -3,28 +3,31 @@
 ## Release gates
 
 A merge to `main` is production-eligible only when every gate in the
-authoritative `CI` workflow passes, AND a recent successful `E2E`
-dispatch exists for the same SHA. The deploy workflow triggers on
-successful `CI` (`workflow_run`) and never on a partial run, and the
-`gate` job in `deploy.yml` refuses to fire if the E2E dispatch is
-missing or stale. Any missing or skipped gate is a deploy-blocker.
+authoritative `CI` workflow passes. The deploy workflow triggers on
+successful `CI` (`workflow_run`) and never on a partial run, so any
+missing or skipped gate is a deploy-blocker. E2E moved to the local
+dev loop in 2026-08-26 (the "E2E moves local" follow-up to the
+CI-minimization plan) — the critical subset is the pre-push signal
+and the full 5-browser matrix is the pre-merge signal; no GitHub
+workflow.
 
-| Gate                                                        | Workflow / step                                      | Required for deploy         | Release-candidate |
-| ----------------------------------------------------------- | ---------------------------------------------------- | --------------------------- | ----------------- |
-| Format (`pnpm format:check`)                                | `.husky/pre-commit` (lint-staged → prettier --write) | ✅ (pre-commit)             | ✅                |
-| Lint (`pnpm lint`)                                          | `.husky/pre-commit` (lint-staged → eslint --fix)     | ✅ (pre-commit)             | ✅                |
-| Typecheck (`pnpm typecheck`)                                | `.husky/pre-commit` (sentinel-driven)                | ✅ (pre-commit)             | ✅                |
-| Full unit suite (`pnpm test:unit`)                          | `.husky/pre-push`                                    | ✅ (pre-push)               | ✅                |
-| Vitest `related` on staged TS files                         | `.husky/pre-commit`                                  | ✅ (pre-commit)             | ✅                |
-| Target coverage (95/90 critical, 85/80 services)            | `ci.yml` → `unit-quality` → `Coverage`               | ✅                          | ✅                |
-| Integration + migration drill (`pnpm test:integration`)     | `ci.yml` → `unit-quality` → `Integration tests`      | ✅                          | ✅                |
-| Production audit (`pnpm audit --prod`)                      | `ci.yml` → `unit-quality` → `Dependency audit`       | ✅ (zero critical/high)     | ✅                |
-| Production build (`pnpm build`)                             | `ci.yml` → `build-smoke` → `Build`                   | ✅                          | ✅                |
-| Docker image build + `/api/health` smoke                    | `ci.yml` → `build-smoke` → `Smoke e2e (health)`      | ✅                          | ✅                |
-| SMTP cert probe (deploy-blocker)                            | `ci.yml` → `check-smtp-cert`                         | ✅                          | ✅                |
-| Workflow / Dockerfile / shell linters                       | `ci.yml` → `lint-meta`                               | ✅                          | ✅                |
-| Full 5-browser functional matrix (`pnpm test:e2e:isolated`) | `e2e.yml` → `Run functional Playwright matrix`       | ❌ (release-candidate only) | ✅                |
-| Full visual matrix (`pnpm test:visual`)                     | `e2e.yml` → `Run visual regression`                  | ❌ (release-candidate only) | ✅                |
+| Gate                                                                | Where                                                | Required for deploy     | Release-candidate |
+| ------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------- | ----------------- |
+| Format (`pnpm format:check`)                                        | `.husky/pre-commit` (lint-staged → prettier --write) | ✅ (pre-commit)         | ✅                |
+| Lint (`pnpm lint`)                                                  | `.husky/pre-commit` (lint-staged → eslint --fix)     | ✅ (pre-commit)         | ✅                |
+| Typecheck (`pnpm typecheck`)                                        | `.husky/pre-commit` (sentinel-driven)                | ✅ (pre-commit)         | ✅                |
+| Full unit suite (`pnpm test:unit`)                                  | `.husky/pre-push`                                    | ✅ (pre-push)           | ✅                |
+| Vitest `related` on staged TS files                                 | `.husky/pre-commit`                                  | ✅ (pre-commit)         | ✅                |
+| Critical E2E (chromium + visual-chromium, `pnpm test:e2e:critical`) | `.husky/pre-push`                                    | ✅ (pre-push)           | ✅                |
+| Full 5-browser matrix (`pnpm test:e2e:isolated`)                    | Local (manual pre-merge step)                        | ❌ (manual pre-merge)   | ✅                |
+| Visual matrix (`pnpm test:visual`)                                  | Local (manual pre-merge step)                        | ❌ (manual pre-merge)   | ✅                |
+| Target coverage (95/90 critical, 85/80 services)                    | `ci.yml` → `unit-quality` → `Coverage`               | ✅                      | ✅                |
+| Integration + migration drill (`pnpm test:integration`)             | `ci.yml` → `unit-quality` → `Integration tests`      | ✅                      | ✅                |
+| Production audit (`pnpm audit --prod`)                              | `ci.yml` → `unit-quality` → `Dependency audit`       | ✅ (zero critical/high) | ✅                |
+| Production build (`pnpm build`)                                     | `ci.yml` → `build-smoke` → `Build`                   | ✅                      | ✅                |
+| Docker image build + `/api/health` smoke                            | `ci.yml` → `build-smoke` → `Smoke e2e (health)`      | ✅                      | ✅                |
+| SMTP cert probe (deploy-blocker)                                    | `ci.yml` → `check-smtp-cert`                         | ✅                      | ✅                |
+| Workflow / Dockerfile / shell linters                               | `ci.yml` → `lint-meta`                               | ✅                      | ✅                |
 
 `CI` enforces the deploy-critical subset that genuinely cannot be
 reproduced on a dev laptop: integration tests + coverage thresholds
@@ -32,24 +35,18 @@ reproduced on a dev laptop: integration tests + coverage thresholds
 (platform-specific), audit (needs the full dep graph), SMTP cert
 probe (talks to a real production endpoint), and the workflow +
 Dockerfile + shell linters (cheap but the only place that catches
-template-injection / unpinned action refs). Format, lint, typecheck,
-and the full unit suite are run in `.husky/pre-commit` /
-`.husky/pre-push` so a regression is caught before CI minutes are
-spent.
+template-injection / unpinned action refs).
 
-The full 5-browser E2E and visual matrix in `.github/workflows/e2e.yml`
-remains a required release-candidate check on every PR and push to
-`main` and is documented as such, but production deploy waits for
-both the critical CI subset above AND a recent successful E2E
-dispatch (within the last 24 h) for the same SHA. The `gate` job in
-`.github/workflows/deploy.yml` enforces the E2E freshness check; a
-`workflow_dispatch` deploy bypasses the E2E gate as the documented
-hotfix escape hatch.
+Format, lint, typecheck, the full unit suite, and the critical E2E
+subset run in `.husky/pre-commit` / `.husky/pre-push` so a
+regression is caught before CI minutes are spent. The full 5-browser
+E2E matrix and the visual matrix are run locally as a manual
+pre-merge step (see the runbook for recipes); they are not on the
+deploy critical path.
 
-`CI` and `e2e.yml` upload `playwright-report`, `test-results`, and
-visual diffs as artifacts on failure, plus a `coverage-report`
-artifact, so any regression can be diagnosed from the run page without
-a local repro.
+`CI` uploads `playwright-report`, `test-results`, and visual diffs
+as artifacts on failure, plus a `coverage-report` artifact, so any
+regression can be diagnosed from the run page without a local repro.
 
 ## Test layers
 
