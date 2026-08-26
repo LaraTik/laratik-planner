@@ -66,10 +66,18 @@ export default async function AgencyAiSettingsPage() {
   const envHasKey = !!serverEnv.MINIMAX_API_KEY;
   // The master switch + test connection should be available whenever the
   // agency has ANY working key source (M3.4 — managed secret counts).
-  // `envEnabled` stays env-only for the "Provider environment" badge, but
-  // `featureIsEnabled` is the one the form gates on.
+  // The backend already allows a managed secret to bypass the env
+  // kill-switch (`/api/ai/generate`, `testAiConnection`, `chat` all
+  // short-circuit on "no env key AND no managed secret" rather than
+  // on `AI_FEATURE_ENABLED` alone), so the form must match. Dropping
+  // `serverEnv.AI_FEATURE_ENABLED` here lets an agency admin enable
+  // AI from the UI on a deployment where the operator left the env
+  // kill-switch off — the managed secret IS the operator's
+  // permission. `envEnabled` stays env-only because it is a display
+  // of the env state for the "Provider environment" badge, not a
+  // gate on the feature.
   const hasManagedSecret = secretStatus.keySource === "managed_secret";
-  const featureIsEnabled = serverEnv.AI_FEATURE_ENABLED && (envHasKey || hasManagedSecret);
+  const featureIsEnabled = envHasKey || hasManagedSecret;
 
   return (
     <div className="space-y-6" data-testid="agency-ai-settings">

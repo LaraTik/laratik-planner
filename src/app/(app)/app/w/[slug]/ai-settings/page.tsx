@@ -88,10 +88,15 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
   ]);
 
   // M3.4 — the workspace status card reflects the effective runtime
-  // state, which counts a managed secret as a key source.
+  // state, which counts a managed secret as a key source. The
+  // backend (`/api/ai/generate`, `testAiConnection`, `chat`) allows
+  // a managed secret to bypass `AI_FEATURE_ENABLED`, so the UI
+  // gate must match: any working key source + the agency's
+  // master switch = the workspace is live. `AI_FEATURE_ENABLED`
+  // only matters for the env path (no key at all).
   const hasManagedSecret = feature?.keySource === "managed_secret" && !!feature.maskedKeySuffix;
   const hasAnyKey = !!serverEnv.MINIMAX_API_KEY || hasManagedSecret;
-  const effectiveEnabled = serverEnv.AI_FEATURE_ENABLED && hasAnyKey && (feature?.enabled ?? true);
+  const effectiveEnabled = hasAnyKey && (feature?.enabled ?? true);
   const enabledCapabilities = new Set(feature?.enabledCapabilities ?? []);
   const requestCount = usage?.value ?? 0;
 
