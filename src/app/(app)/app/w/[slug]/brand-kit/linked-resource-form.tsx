@@ -86,7 +86,12 @@ export function LinkedResourceForm({ slug }: { slug: string }) {
           name="url"
           type="url"
           required
-          pattern="https://.*"
+          // Tighter pattern (Round 5): the old https://.* matched
+          // 'https:// ' (whitespace) and 'https://-invalid'. The
+          // new pattern enforces https:// + a domain-like host.
+          // The server-side Zod schema (.url().refine(...)) is
+          // the real source of truth; the pattern is a UX hint.
+          pattern="https://[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}.*"
           placeholder="https://figma.com/file/…"
           className="min-h-[44px]"
         />
