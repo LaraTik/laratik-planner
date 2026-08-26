@@ -7,7 +7,6 @@ import {
   REGRESSION_VIEWPORTS,
   SETUP_FUNCTIONS,
   STITCH_CASES,
-  collectPreWarmRoutes,
   responsiveScreenshotName,
   resolveStitchRoute,
   screenshotNameFor,
@@ -270,83 +269,29 @@ const formatBootstrapError = (error: unknown): string => {
 };
 
 /**
- * Pre-warm every route once before any test runs.
+ * Note on pre-warming: a previous version of this spec had a file-scope
+ * `test.beforeAll` that pre-warmed all routes in a hidden page context
+ * before any test ran (commit f2800f6, "fix(visual): pre-warm all
+ * routes in file-level beforeAll to eliminate cold compile"). It was
+ * removed in this commit because Playwright re-evaluates the spec file
+ * per worker / per test group, which re-ran the pre-warm 3-7 times per
+ * CI run. Each re-run paid the full ~3 min of dev compile cost
+ * (compounded by the dev server's memory-threshold restart killing
+ * in-flight requests), burning the 20-min action timeout before the
+ * actual visual captures could start (CI run 32945846242).
  *
- * In dev mode the Next.js server compiles each route on first request;
- * that cost is paid inside the per-test budget in capture mode, and the
- * cumulative cost across 23+ mobile surfaces blows the 25-min
- * capture-step job budget. We pay it ONCE here, in a hidden page
- * context, before any test runs. The hidden context is closed before
- * the tests start so it does not pollute the tests' own contexts (each
- * test still creates its own page).
+ * With the pre-warm removed, each test pays its own dev compile cost.
+ * Per-test compile on the 24 routes × 3 viewports matrix is ~5-10s
+ * each, so the cumulative cost stays under the 30-min action timeout
+ * the workflow now uses. The exact-reference phase reuses
+ * `bootstrapTestSession` per test, which already only pays the dev
+ * compile cost once per test (each test navigates to a single route).
  *
- * The hook is declared at file scope so it runs once per worker before
- * any test in the file. A module-scope `warmedUp` flag is a defense-
- * in-depth guard in case the runner re-evaluates the hook.
+ * The `collectPreWarmRoutes()` helper in `stitch-cases.ts` is kept
+ * because the unit test `tests/unit/visual-prewarm-routes.test.ts`
+ * uses it as the single source of truth for the pre-warm invariant
+ * (no `{...}` placeholders after `resolveStitchRoute`).
  */
-let warmedUp = false;
-test.beforeAll(async ({ browser }, testInfo) => {
-  if (warmedUp) return;
-  warmedUp = true;
-
-  // The default `test.beforeAll` timeout is 30s; the pre-warm visits
-  // ~30 routes and pays the dev compile cost on each, so 10 minutes
-  // gives comfortable headroom for the cold case while still failing
-  // fast if the dev server is stuck.
-  testInfo.setTimeout(10 * 60 * 1000);
-
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  try {
-    // Seed BEFORE collecting routes: the responsive-matrix and the
-    // exact-reference cases both reference `/app/w/acme/planning/
-    // {contentItemId}`, where `{contentItemId}` is a template
-    // placeholder. `resolveStitchRoute` substitutes the real UUID
-    // from the seed, so the page server receives a valid id and the
-    // dev compilation succeeds (otherwise the SSR data fetch throws
-    // `invalid input syntax for type uuid` and the route stalls for
-    // ~1 min on every request — see CI run 32941456850). `devSignIn`
-    // comes first because the dev seed endpoint does not require an
-    // auth cookie, but the dev sign-in endpoint does require the
-    // test user to exist; seeding then signing in matches the order
-    // the per-test `bootstrapTestSession` already uses.
-    await devSignIn(page.request);
-    const seed = await devSeed(page.request);
-
-    // Union of every route the suite will visit: the responsive matrix
-    // (CANONICAL_SURFACES) plus the exact-reference cases (STITCH_CASES
-    // that have a `route` and are not historical/superseded). Deduping
-    // avoids paying the compile cost twice for a route that appears in
-    // both lists. Each route is run through `resolveStitchRoute` so a
-    // future template placeholder (e.g. `{campaignId}`) cannot silently
-    // slip into the pre-warm — the unit test
-    // `tests/unit/visual-prewarm-routes.test.ts` enforces the same
-    // invariant against `collectPreWarmRoutes()` from
-    // `stitch-cases.ts`, the single source of truth for the route set.
-    const routeList = collectPreWarmRoutes()
-      .map((route) => resolveStitchRoute(route, seed))
-      .sort();
-    console.log(
-      `[visual] pre-warming ${routeList.length} routes to pay the dev compile cost upfront`,
-    );
-
-    for (const route of routeList) {
-      try {
-        await page.goto(route, { waitUntil: "domcontentloaded", timeout: 60_000 });
-      } catch (error) {
-        // Best-effort: a broken route is still a broken route, but
-        // failing the whole pre-warm on one stuck route would defeat
-        // the purpose. The actual tests will log the broken route
-        // again with more context.
-        console.warn(`[visual] pre-warm ${route} failed: ${formatBootstrapError(error)}`);
-      }
-    }
-  } finally {
-    await context.close();
-  }
-
-  console.log(`[visual] pre-warm complete`);
-});
 
 // ─── Phase 1: exact reference (one capture per active case) ─────────────
 

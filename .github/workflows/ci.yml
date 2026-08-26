@@ -188,7 +188,12 @@ jobs:
     name: Visual regression (3-viewport gate)
     runs-on: ubuntu-latest
     needs: [unit-quality]
-    timeout-minutes: 25
+    # Bumped from 25 → 35 min to absorb the per-test dev compile cost
+    # after the file-scope pre-warm was removed (see
+    # `Run visual regression (assert mode)` below). The action
+    # itself uses 30 min; the extra 5 min is for the surrounding
+    # setup (containers, migrations, browser install).
+    timeout-minutes: 35
     permissions:
       contents: read
 
@@ -266,10 +271,20 @@ jobs:
       - name: Run visual regression (assert mode)
         # No PW_VISUAL_CAPTURE flag — the spec compares every captured
         # screenshot against the committed baseline and fails the build
-        # on any non-zero diff. The reduced 3-viewport matrix keeps the
-        # cold-boot cost inside the 25-min job budget.
+        # on any non-zero diff.
+        #
+        # The previous spec had a file-scope `test.beforeAll` pre-warm
+        # that visited every route in a hidden page context to pay the
+        # dev compile cost upfront. It was removed in commit 46c97a2 →
+        # bfb6db7 because Playwright re-evaluates the spec per worker,
+        # which re-ran the pre-warm 3-7× per CI run and blew the
+        # 20-min action timeout. The pre-warm's per-test compile
+        # saving is now paid by each test directly; the 24 canonical
+        # routes × 3 viewports × ~5-10s per cold compile comfortably
+        # fits in 30 min, with headroom for the actual screenshot
+        # captures.
         run: pnpm test:visual
-        timeout-minutes: 20
+        timeout-minutes: 30
 
       - name: Upload visual diffs on failure
         if: failure()
