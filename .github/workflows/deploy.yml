@@ -91,12 +91,26 @@ jobs:
           #    successful CI for this SHA is the one to trust).
           if [[ "${TRIGGER_WORKFLOW}" == "CI" ]]; then
             OTHER_WORKFLOW="E2E"
+            # GitHub's `actions/runs?workflow_id=` filter requires
+            # the numeric workflow ID, NOT the file name. The file
+            # name is silently ignored and the API returns runs
+            # from all workflows, which produced a false-positive
+            # on the first deploy after this gate was added (the
+            # CI run was returned as the "E2E" match). The numeric
+            # IDs come from `gh api repos/<owner>/<repo>/actions/workflows`:
+            #   ci.yml    = 337306850
+            #   e2e.yml   = 338172364
+            #   deploy.yml  = 337306851
+            #   release.yml = 340997206
+            # If a workflow is ever added/renamed, re-run that
+            # command and update the constants below.
+            E2E_WFID=338172364
             echo "Looking for a recent successful ${OTHER_WORKFLOW} run for ${HEAD_SHA} (within 24h)..."
             # Per-page=1 because we only need to know that AT LEAST
             # ONE such run exists; the API returns the most recent
             # first, so the first match is the freshest.
             OTHER_RUN=$(gh api \
-              "repos/${REPOSITORY}/actions/runs?workflow_id=e2e.yml&head_sha=${HEAD_SHA}&status=success&per_page=1" \
+              "repos/${REPOSITORY}/actions/runs?workflow_id=${E2E_WFID}&head_sha=${HEAD_SHA}&status=success&per_page=1" \
               --jq '.workflow_runs[0] // empty')
             if [[ -z "${OTHER_RUN}" ]]; then
               echo "::error::No successful E2E run for SHA ${HEAD_SHA}." >&2
@@ -121,9 +135,10 @@ jobs:
             echo "  ${OTHER_RUN_URL}"
           else
             OTHER_WORKFLOW="CI"
+            CI_WFID=337306850
             echo "Looking for a successful ${OTHER_WORKFLOW} run for ${HEAD_SHA} (no time window)..."
             OTHER_RUN=$(gh api \
-              "repos/${REPOSITORY}/actions/runs?workflow_id=ci.yml&head_sha=${HEAD_SHA}&status=success&per_page=1" \
+              "repos/${REPOSITORY}/actions/runs?workflow_id=${CI_WFID}&head_sha=${HEAD_SHA}&status=success&per_page=1" \
               --jq '.workflow_runs[0] // empty')
             if [[ -z "${OTHER_RUN}" ]]; then
               echo "::error::No successful CI run for SHA ${HEAD_SHA}." >&2
