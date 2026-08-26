@@ -25,6 +25,7 @@ import { db } from "@/lib/db";
 import { aiFeatureSettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { isAiEnabled } from "@/lib/ai";
+import { AI_CAPABILITY_METADATA } from "@/lib/ai/capabilities";
 
 export async function generateMetadata({
   params,
@@ -98,10 +99,16 @@ export default async function ContentDetailPage({
         .where(eq(aiFeatureSettings.agencyId, agencyId))
         .limit(1)
     : [];
+  // GAP-AI-UX-2026-08-26 — the planner surface used to assume three
+  // capabilities were on; we now let the agency form be the single
+  // source of truth and only default to "all on" when the row is
+  // missing (the same behaviour the workspace status card uses).
   const enabledCapabilities: string[] =
     feature?.enabledCapabilities && feature.enabledCapabilities.length > 0
       ? feature.enabledCapabilities
-      : ["caption_drafts", "brief_improvement", "completeness_check"];
+      : AI_CAPABILITY_METADATA.map((c) => c.id);
+  const agencyEnabled = feature?.enabled ?? true;
+  const hasKey = aiLive || feature?.keySource === "managed_secret";
 
   return (
     <div className="space-y-6" data-testid="workspace-content-detail">
@@ -172,6 +179,8 @@ export default async function ContentDetailPage({
           isManager={actorRoles.isManager}
           isPlanner={actorRoles.isPlanner}
           enabledCapabilities={enabledCapabilities}
+          agencyEnabled={agencyEnabled}
+          hasKey={hasKey}
         />
       ) : null}
 

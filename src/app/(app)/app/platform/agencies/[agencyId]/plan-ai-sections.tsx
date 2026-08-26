@@ -16,6 +16,7 @@ import { getUsage } from "@/lib/usage";
 import { changePlanAction } from "../actions";
 import { PermissionNotice } from "@/components/platform/permission-notice";
 import { AgencyLifecycleControls } from "./agency-lifecycle-controls";
+import { AI_PROVIDER, getAiCapabilityMetadata } from "@/lib/ai/capabilities";
 
 export async function PlanAiSections({
   agencyId,
@@ -275,23 +276,26 @@ export async function PlanAiSections({
           <Metric label="Output tokens" value={ai.outputTokens} />
         </div>
         <p className="text-body text-fg-secondary">
-          Model: {aiSettings?.model ?? "Not configured"} · reset:{" "}
-          {resetAt.toISOString().slice(0, 10)} UTC · estimated cost: unavailable until provider
-          pricing is configured.
+          {AI_PROVIDER.vendor} · model: {aiSettings?.model ?? "Not configured"} · compat:{" "}
+          {AI_PROVIDER.compat} · reset: {resetAt.toISOString().slice(0, 10)} UTC · estimated cost:
+          unavailable until provider pricing is configured.
         </p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {capabilityRows.length > 0 ? (
-            capabilityRows.map((row) => (
-              <div
-                key={row.capability}
-                className="border-border flex items-center justify-between rounded-[var(--radius-control)] border px-3 py-2"
-              >
-                <span className="text-label text-fg-secondary">
-                  {row.capability.replaceAll("_", " ")}
-                </span>
-                <span className="text-body text-fg-primary font-semibold">{row.requests}</span>
-              </div>
-            ))
+            capabilityRows.map((row) => {
+              const meta = getAiCapabilityMetadata(row.capability);
+              return (
+                <div
+                  key={row.capability}
+                  className="border-border flex items-center justify-between rounded-[var(--radius-control)] border px-3 py-2"
+                >
+                  <span className="text-label text-fg-secondary">
+                    {meta?.label ?? row.capability.replaceAll("_", " ")}
+                  </span>
+                  <span className="text-body text-fg-primary font-semibold">{row.requests}</span>
+                </div>
+              );
+            })
           ) : (
             <p className="text-body text-fg-muted">No AI requests this month.</p>
           )}

@@ -77,7 +77,7 @@ it before re-capturing. Key reminders:
 | ORM       | Drizzle                                         | Type-safe, no codegen daemon, SQL-flavored migrations      |
 | Auth      | NextAuth v5 (Auth.js) + Drizzle adapter         | Google OAuth + email magic link, JWT sessions              |
 | Email     | Nodemailer → Mailcow SMTP                       | No new vendor, free, `mail.laratik.com` already running    |
-| AI        | MiniMax (`MiniMax-M3`, OpenAI-compat)           | Goal 11 only, optional, `AI_FEATURE_ENABLED=false` default |
+| AI        | MiniMax (`MiniMax-M3`, Anthropic-compat)        | Goal 11 only, optional, `AI_FEATURE_ENABLED=false` default |
 | Tests     | Vitest (unit) + Playwright (E2E + a11y)         | Per master prompt §4, §20                                  |
 | CI        | GitHub Actions → GHCR                           | Free, public-image-friendly                                |
 | Deploy    | GHCR → `docker compose pull` on VPS via Traefik | Matches `mavis-trader` / `laratik-social-platform` pattern |

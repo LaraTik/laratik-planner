@@ -12,7 +12,7 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
-import { humanize } from "@/lib/content/status";
+import { AI_PROVIDER, PLANNER_FACING_CAPABILITIES } from "@/lib/ai/capabilities";
 
 export const metadata = { title: "AI settings" };
 
@@ -30,38 +30,6 @@ export const metadata = { title: "AI settings" };
  * The editable surface lives at `/app/agency-settings/ai` for admins.
  * Workspace managers and planners can read this card and see the link.
  */
-const ALL_CAPABILITIES = [
-  {
-    id: "campaign_ideas",
-    label: "Campaign ideas",
-    description: "Generate content ideas tied to the active campaign and pillars.",
-  },
-  {
-    id: "brief_improvement",
-    label: "Brief improvement",
-    description: "Tighten a vague brief into a clear Hook → Main message → CTA structure.",
-  },
-  {
-    id: "caption_drafts",
-    label: "Caption / hook / CTA drafts",
-    description: "Draft a caption with platform-aware tone; editable before save.",
-  },
-  {
-    id: "platform_adaptation",
-    label: "Platform adaptation",
-    description: "Adapt a caption to a different channel (Instagram, TikTok, LinkedIn, …).",
-  },
-  {
-    id: "related_format_ideas",
-    label: "Related format ideas",
-    description: "Suggest adjacent formats for a piece of content (carousel ↔ reel ↔ story).",
-  },
-  {
-    id: "completeness_check",
-    label: "Brief completeness check",
-    description: "Score how ready a brief is for creative handoff and flag the missing pieces.",
-  },
-] as const;
 
 export default async function AiSettingsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -146,9 +114,16 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
           <dl className="mt-5 space-y-3">
             <Row
               label="Provider"
-              value={effectiveEnabled ? "MiniMax (Anthropic-compatible)" : "Not configured"}
+              value={
+                effectiveEnabled
+                  ? `${AI_PROVIDER.vendor} · ${serverEnv.MINIMAX_MODEL || AI_PROVIDER.defaultModel} (${AI_PROVIDER.compat})`
+                  : "Not configured"
+              }
             />
-            <Row label="Model" value={serverEnv.MINIMAX_MODEL || "default"} />
+            <Row
+              label="API base"
+              value={serverEnv.MINIMAX_BASE_URL || AI_PROVIDER.defaultBaseUrl}
+            />
             <Row
               label="Key source"
               value={
@@ -171,7 +146,7 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
             hidden in the UI.
           </CardDescription>
           <ul className="mt-4 space-y-2" data-testid="ai-capability-list">
-            {ALL_CAPABILITIES.map((cap) => {
+            {PLANNER_FACING_CAPABILITIES.map((cap) => {
               const isOn = effectiveEnabled && enabledCapabilities.has(cap.id);
               return (
                 <li
@@ -202,10 +177,6 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
           <li>· Usage logs record categories and token counts, never full prompts.</li>
           <li>· Rate limits protect users and provider spend; one retry on transient errors.</li>
         </ul>
-        <p className="text-label text-fg-muted mt-4">
-          Status flag value:{" "}
-          <span className="font-semibold">{humanize(feature?.keySource ?? "environment")}</span>
-        </p>
       </Card>
     </div>
   );

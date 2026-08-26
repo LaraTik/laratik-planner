@@ -1,0 +1,83 @@
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
+
+import {
+  AI_CAPABILITY_METADATA,
+  AI_PROVIDER,
+  ADMIN_FACING_CAPABILITIES,
+  PLANNER_FACING_CAPABILITIES,
+  getAiCapabilityMetadata,
+} from "@/lib/ai/capabilities";
+
+/**
+ * GAP-AI-UX-2026-08-26 — the capabilities metadata is now the
+ * single source of truth for the agency form, the workspace status
+ * card, and the content detail AI section. Three of the six
+ * capabilities (`campaign_ideas`, `platform_adaptation`,
+ * `related_format_ideas`) were previously advertised in the
+ * agency form but had no entry point on the planner surface
+ * because the content page hard-coded a 3-tile subset. This test
+ * pins the invariants that close that gap so a future refactor
+ * can't quietly re-introduce it.
+ */
+describe("AI capabilities metadata (single source of truth)", () => {
+  it("lists exactly the six §15 capabilities", () => {
+    expect(AI_CAPABILITY_METADATA.map((c) => c.id)).toEqual([
+      "campaign_ideas",
+      "brief_improvement",
+      "caption_drafts",
+      "platform_adaptation",
+      "related_format_ideas",
+      "completeness_check",
+    ]);
+  });
+
+  it("has a unique id per entry", () => {
+    const ids = AI_CAPABILITY_METADATA.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("has a non-empty label, adminLabel, and description for every entry", () => {
+    for (const cap of AI_CAPABILITY_METADATA) {
+      expect(cap.label.length).toBeGreaterThan(0);
+      expect(cap.adminLabel.length).toBeGreaterThan(0);
+      expect(cap.description.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("enables every capability on the content detail page (FEAT-03)", () => {
+    // FEAT-03 wired up campaign_ideas, platform_adaptation, and
+    // related_format_ideas; if a future capability is added but
+    // is not yet reached on the planner surface, the test should
+    // call that out explicitly by flipping this expectation (the
+    // page is no longer the place to hide unwired work).
+    for (const cap of AI_CAPABILITY_METADATA) {
+      expect(cap.enabledOnContentDetail).toBe(true);
+    }
+  });
+
+  it("exposes both planner and admin lists with the same shape", () => {
+    expect(PLANNER_FACING_CAPABILITIES).toHaveLength(AI_CAPABILITY_METADATA.length);
+    expect(ADMIN_FACING_CAPABILITIES).toHaveLength(AI_CAPABILITY_METADATA.length);
+  });
+
+  it("getAiCapabilityMetadata resolves a known id", () => {
+    const cap = getAiCapabilityMetadata("brief_improvement");
+    expect(cap?.label).toBe("Improve brief");
+    expect(cap?.adminLabel).toBe("Brief improvement");
+  });
+
+  it("getAiCapabilityMetadata returns null for an unknown id", () => {
+    expect(getAiCapabilityMetadata("not_a_capability")).toBeNull();
+  });
+});
+
+describe("AI provider metadata (compat is Anthropic, not OpenAI)", () => {
+  it("advertises Anthropic-compat at the canonical base URL", () => {
+    expect(AI_PROVIDER.vendor).toBe("MiniMax");
+    expect(AI_PROVIDER.compat).toBe("Anthropic-compat");
+    expect(AI_PROVIDER.defaultBaseUrl).toBe("https://api.minimax.io/anthropic");
+    expect(AI_PROVIDER.defaultModel).toBe("MiniMax-M3");
+  });
+});

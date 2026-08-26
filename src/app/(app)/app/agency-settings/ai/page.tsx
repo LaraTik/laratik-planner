@@ -12,6 +12,7 @@ import { ManagedSecretForm } from "./managed-secret-form";
 import { getAiFeatureSettings, getMonthlyUsage } from "@/lib/ai/feature-settings";
 import { getManagedSecretStatus } from "@/lib/ai/provider-secret";
 import { getKekStatus } from "@/lib/security/secrets";
+import { AI_PROVIDER } from "@/lib/ai/capabilities";
 
 export const metadata = { title: "AI configuration" };
 
@@ -86,8 +87,8 @@ export default async function AgencyAiSettingsPage() {
         title="AI configuration"
         description={
           <>
-            Control MiniMax access, capability toggles, and usage visibility for every workspace in
-            this agency.
+            Control {AI_PROVIDER.vendor} access, capability toggles, and usage visibility for every
+            workspace in this agency.
           </>
         }
         action={
@@ -121,9 +122,9 @@ export default async function AgencyAiSettingsPage() {
       <div className="border-border bg-surface-subtle text-body text-fg-secondary flex flex-wrap items-start gap-2 rounded-[var(--radius-control)] border p-3">
         <Server className="text-fg-muted mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <p>
-          The current provider base is{" "}
-          <span className="font-semibold">{serverEnv.MINIMAX_BASE_URL}</span>. Change it via the
-          deployment environment (<code>MINIMAX_BASE_URL</code>).
+          The current {AI_PROVIDER.vendor} base is{" "}
+          <span className="font-semibold">{serverEnv.MINIMAX_BASE_URL}</span> ({AI_PROVIDER.compat}
+          ). Change it via the deployment environment (<code>{AI_PROVIDER.baseUrlEnv}</code>).
         </p>
       </div>
 

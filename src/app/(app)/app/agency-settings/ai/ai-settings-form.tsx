@@ -14,45 +14,7 @@ import {
   type AiSettingsActionState,
 } from "./actions";
 import type { MonthlyUsage } from "@/lib/ai/feature-settings";
-
-const CAPABILITIES = [
-  {
-    id: "campaign_ideas",
-    label: "Campaign ideas",
-    description: "Generate content ideas tied to the active campaign and pillars.",
-    wired: false,
-  },
-  {
-    id: "brief_improvement",
-    label: "Brief improvement",
-    description: "Tighten a vague brief into a clear Hook → Main message → CTA structure.",
-    wired: true,
-  },
-  {
-    id: "caption_drafts",
-    label: "Caption / hook / CTA drafts",
-    description: "Draft a caption with platform-aware tone; editable before save.",
-    wired: true,
-  },
-  {
-    id: "platform_adaptation",
-    label: "Platform adaptation",
-    description: "Adapt a caption to a different channel (Instagram, TikTok, LinkedIn, …).",
-    wired: false,
-  },
-  {
-    id: "related_format_ideas",
-    label: "Related format ideas",
-    description: "Suggest adjacent formats for a piece of content (carousel ↔ reel ↔ story).",
-    wired: false,
-  },
-  {
-    id: "completeness_check",
-    label: "Brief completeness check",
-    description: "Score how ready a brief is for creative handoff and flag the missing pieces.",
-    wired: true,
-  },
-] as const;
+import { ADMIN_FACING_CAPABILITIES, AI_PROVIDER } from "@/lib/ai/capabilities";
 
 const initial: AiSettingsActionState = {};
 
@@ -127,13 +89,16 @@ export function AiSettingsForm({
           </Badge>
         </div>
         <CardDescription className="mt-2">
-          The provider key is read from the deployment environment. We never display or store the
-          full key in the database. If you later switch to a managed secret, the UI will show a
-          masked suffix only.
+          {AI_PROVIDER.vendor} provides the {AI_PROVIDER.compat} API at{" "}
+          <code className="bg-surface rounded px-1.5 py-0.5">{AI_PROVIDER.baseUrlEnv}</code>. The
+          provider key is read from the deployment environment; we never display or store the full
+          key in the database. If you later switch to a managed secret, the UI will show a masked
+          suffix only.
         </CardDescription>
         <dl className="mt-5 space-y-3">
-          <Row label="Base URL" value={process.env.NEXT_PUBLIC_AI_BASE_URL || "default"} />
-          <Row label="Default model (env)" value={envModel} />
+          <Row label="Provider" value={AI_PROVIDER.vendor} />
+          <Row label="API compat" value={AI_PROVIDER.compat} />
+          <Row label="Default model" value={envModel} />
           <Row
             label="Key source"
             value={envHasKey ? "Configured by environment" : "Missing in environment"}
@@ -200,21 +165,18 @@ export function AiSettingsForm({
                 in the UI.
               </p>
               <ul className="mt-3 space-y-2" data-testid="ai-capability-toggle-list">
-                {CAPABILITIES.map((cap) => (
+                {ADMIN_FACING_CAPABILITIES.map((cap) => (
                   <li
                     key={cap.id}
                     className="border-border bg-surface-subtle flex flex-wrap items-start justify-between gap-2 rounded-[var(--radius-control)] border p-3"
                     data-testid={`ai-capability-toggle-${cap.id}`}
                   >
                     <div className="min-w-0">
-                      <p className="text-body text-fg-primary flex items-center gap-2 font-semibold">
-                        {cap.label}
-                        <Badge
-                          variant={cap.wired ? "success" : "outline"}
-                          data-testid={`ai-capability-status-${cap.id}`}
-                        >
-                          {cap.wired ? "Wired up" : "Coming soon"}
-                        </Badge>
+                      <p
+                        className="text-body text-fg-primary font-semibold"
+                        data-testid={`ai-capability-label-${cap.id}`}
+                      >
+                        {cap.adminLabel}
                       </p>
                       <p className="text-label text-fg-muted mt-0.5">{cap.description}</p>
                     </div>
@@ -224,6 +186,7 @@ export function AiSettingsForm({
                         name={`cap_${cap.id}`}
                         defaultChecked={initialCapabilities.includes(cap.id)}
                         className="h-4 w-4"
+                        data-testid={`ai-capability-checkbox-${cap.id}`}
                       />
                       {initialCapabilities.includes(cap.id) ? "On" : "Off"}
                     </label>
@@ -253,27 +216,6 @@ export function AiSettingsForm({
           ) : null}
 
           <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={async () => {
-                // Run the save action via the form, then chain the
-                // test-connection probe. We dispatch the form
-                // submit (FormData) by reading the form element,
-                // which is the standard pattern for chained
-                // client actions in Next.js 15 / React 19.
-                const formEl = document.querySelector(
-                  '[data-testid="ai-settings-form"]',
-                ) as HTMLFormElement | null;
-                if (formEl) {
-                  formEl.requestSubmit();
-                }
-              }}
-              data-testid="ai-save-and-test"
-            >
-              <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-              Save &amp; Test
-            </Button>
             <FormSubmitButton label="Save AI settings" pendingLabel="Saving…" />
           </div>
         </Card>
