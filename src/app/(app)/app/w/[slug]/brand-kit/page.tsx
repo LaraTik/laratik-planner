@@ -12,6 +12,7 @@ import {
   listContentPillars,
   listRecentBrandUpdates,
 } from "@/lib/brand/service";
+import { BRAND_KIT_SECTIONS } from "@/lib/brand/sections";
 import { getSignedDownloadUrl } from "@/lib/storage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -123,18 +124,27 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
 
   // Top tabs now cover every section in the page so the strip
   // matches the actual anchor set. Counts on each tab reflect
-  // the live section listers.
-  const tabs: { id: string; label: string; count?: number }[] = [
-    { id: "overview", label: "Overview" },
-    { id: "logo", label: "Logos", count: assetsByKind.logo.length },
-    { id: "color", label: "Colors", count: assetsByKind.color.length },
-    { id: "guidelines", label: "Typography", count: assetsByKind.font.length },
-    { id: "voice", label: "Voice", count: rules.length },
-    { id: "pillars", label: "Pillars", count: pillars.length },
-    { id: "publishing", label: "Publishing", count: publishingRules.length },
-    { id: "linked", label: "Linked", count: linkedResources.length },
-    { id: "recent", label: "Activity" },
-  ];
+  // the live section listers. The source of truth for the order,
+  // label, and icon is `BRAND_KIT_SECTIONS`; the count is added
+  // here from the lister results.
+  const sectionCountById: Record<string, number> = {
+    logo: assetsByKind.logo.length,
+    color: assetsByKind.color.length,
+    guidelines: assetsByKind.font.length,
+    voice: rules.length,
+    pillars: pillars.length,
+    publishing: publishingRules.length,
+    linked: linkedResources.length,
+  };
+  const tabs = BRAND_KIT_SECTIONS.map((section) => {
+    const count = sectionCountById[section.id];
+    return {
+      id: section.id,
+      label: section.label,
+      icon: section.icon,
+      ...(typeof count === "number" ? { count } : {}),
+    };
+  });
 
   return (
     <div className="space-y-6">
