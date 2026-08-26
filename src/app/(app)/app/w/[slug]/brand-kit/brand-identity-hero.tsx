@@ -1,6 +1,7 @@
 import * as React from "react";
-import { Clock, Globe } from "lucide-react";
+import { Clock, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { cn } from "@/lib/utils";
@@ -13,13 +14,17 @@ import { cn } from "@/lib/utils";
  * most recent logo; otherwise it falls back to a 1-letter monogram
  * derived from the workspace name so the card never looks broken.
  *
- * Why a hero (not a section card): this is the first thing a user
- * sees on the brand kit. It needs to feel like a "cover" — the
- * workspace avatar, its display name, the timezone pill, and a
- * short positioning sentence. The previous implementation put a
- * `<Palette>` icon and the workspace name in a row with a "Primary
- * Brand" badge; the new version keeps that layout but elevates the
- * logo to the visual centre and tightens the spacing.
+ * Round 5 (rebuild, 2026-08-26) — honesty pass:
+ *   - Drops the meaningless "Primary Brand" badge. There is no
+ *     `isPrimary` field on `brand_assets`; the badge was always shown
+ *     and never gated. A "Latest logo" badge is shown when there is
+ *     at least one logo, mirroring the actual selection logic.
+ *   - Replaces the "Recently active" / "No activity yet" fake stat
+ *     with a real CTA when the workspace has no assets yet (so new
+ *     workspaces see a clear "Add your first asset" affordance).
+ *   - Monogram is now Unicode-aware (`Array.from(name)[0]`) so a
+ *     workspace called "Café" or "スタジオ" shows the correct letter
+ *     instead of `"?"` or the leading non-ASCII byte.
  *
  * Accessibility:
  *   - The logo image is decorative (`alt=""`) because the workspace
@@ -34,11 +39,20 @@ export interface BrandIdentityHeroProps {
   logoSrc?: string | null;
   logoAlt?: string | undefined;
   assetCount: number;
+  /** Number of logo assets in the workspace; gates the "Latest logo" badge. */
+  logoCount: number;
+  /** Callback fired when the empty-state CTA is clicked. */
+  onAddFirstAsset?: () => void;
 }
 
 function monogramOf(name: string): string {
-  const first = name.trim().charAt(0).toUpperCase();
-  return first || "?";
+  const trimmed = name.trim();
+  if (!trimmed) return "?";
+  // Array.from splits by code points, not UTF-16 code units, so
+  // a name like "Café" or "スタジオ" yields the first user-perceived
+  // character instead of a lone surrogate or `?`.
+  const first = Array.from(trimmed)[0] ?? "";
+  return first.toUpperCase() || "?";
 }
 
 export function BrandIdentityHero({
@@ -46,6 +60,8 @@ export function BrandIdentityHero({
   logoSrc,
   logoAlt,
   assetCount,
+  logoCount,
+  onAddFirstAsset,
 }: BrandIdentityHeroProps) {
   return (
     <Card
@@ -83,7 +99,11 @@ export function BrandIdentityHero({
           <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
             <CardTitle>{workspace.name}</CardTitle>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="primary">Primary Brand</Badge>
+              {logoCount > 0 ? (
+                <Badge variant="primary" data-testid="brand-kit-hero-latest-logo">
+                  Latest logo
+                </Badge>
+              ) : null}
               {assetCount > 0 ? (
                 <Badge variant="outline">
                   {assetCount} {assetCount === 1 ? "asset" : "assets"}
@@ -95,6 +115,28 @@ export function BrandIdentityHero({
             The shared source for visual assets and writing guidance. Update the logo, color
             palette, and typography so every planner, designer, and reviewer ships in one voice.
           </p>
+          {assetCount === 0 ? (
+            <div
+              className="border-border bg-surface-subtle mb-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-control)] border border-dashed p-4"
+              data-testid="brand-kit-hero-empty-cta"
+            >
+              <Sparkles className="text-primary h-5 w-5 shrink-0" aria-hidden="true" />
+              <div className="min-w-0 flex-1">
+                <p className="text-body text-fg-primary font-semibold">
+                  No assets yet — start with a logo
+                </p>
+                <p className="text-label text-fg-muted">
+                  The hero preview, the Add menu, and the brand identity card all show your first
+                  logo once it is uploaded.
+                </p>
+              </div>
+              {onAddFirstAsset ? (
+                <Button type="button" size="sm" onClick={onAddFirstAsset} variant="default">
+                  Add your first logo
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-6">
             <div className="flex flex-col gap-1">
               <span className="text-label text-fg-muted font-semibold tracking-wider uppercase">
@@ -103,15 +145,6 @@ export function BrandIdentityHero({
               <span className="text-body text-fg-primary inline-flex items-center gap-1 font-semibold">
                 <Clock className="text-fg-muted h-4 w-4" aria-hidden="true" />
                 {workspace.timezone}
-              </span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-label text-fg-muted font-semibold tracking-wider uppercase">
-                Last updated
-              </span>
-              <span className="text-body text-fg-primary inline-flex items-center gap-1 font-semibold">
-                <Globe className="text-fg-muted h-4 w-4" aria-hidden="true" />
-                {assetCount > 0 ? "Recently active" : "No activity yet"}
               </span>
             </div>
           </div>

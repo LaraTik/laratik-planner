@@ -196,6 +196,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
           logoSrc={firstLogoSrc ? safeHref(firstLogoSrc).href : null}
           logoAlt={firstLogo?.name}
           assetCount={totalAssetCount}
+          logoCount={assetsByKind.logo.length}
         />
 
         {/* Row 2 — Logo (8) + Color (4) */}
