@@ -2,6 +2,7 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { createVoiceRuleAction } from "./actions";
+import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { Card } from "@/components/ui/card";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
@@ -39,10 +40,14 @@ function RuleSubForm({ slug, ruleType }: { slug: string; ruleType: RuleType }) {
     createVoiceRuleAction.bind(null, slug),
     {} as { error?: string; success?: boolean },
   );
+  const formRef = React.useRef<HTMLFormElement>(null);
+  // Round 5: reset each sub-form on success so the user can add
+  // another tone/do/don't without manually clearing the input.
+  useSuccessReset(state, formRef);
   const max = MAX_LENGTH[ruleType];
   const useTextarea = ruleType !== "tone";
   return (
-    <form action={action} className="grid gap-2">
+    <form ref={formRef} action={action} className="grid gap-2">
       <input type="hidden" name="ruleType" value={ruleType} />
       <label className="text-label font-semibold">
         {ruleType === "tone" ? "Tone" : ruleType === "do" ? "Do" : "Don't"}

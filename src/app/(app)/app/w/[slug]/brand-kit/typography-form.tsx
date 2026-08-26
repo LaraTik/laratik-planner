@@ -20,6 +20,7 @@ import {
   IBM_Plex_Sans,
 } from "next/font/google";
 import { createFontAssetAction } from "./actions";
+import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -131,13 +132,17 @@ export function TypographyForm({ slug }: { slug: string }) {
   const [family, setFamily] = React.useState("Inter");
   const [weight, setWeight] = React.useState(400);
   const [role, setRole] = React.useState<FontRole>("headline");
+  const formRef = React.useRef<HTMLFormElement>(null);
+  // Round 5: reset the form on success so the user can add a
+  // second font without manually clearing the fields.
+  useSuccessReset(state, formRef);
 
   const fontClass = fontClassFor(family);
   const previewSize = role === "headline" ? 28 : role === "accent" ? 22 : 16;
 
   return (
     <Card padding="md" className="mb-3">
-      <form action={action} className="grid gap-3">
+      <form ref={formRef} action={action} className="grid gap-3">
         <label className="text-label font-semibold">
           Name
           <Input

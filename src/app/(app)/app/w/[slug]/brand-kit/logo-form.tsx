@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Trash2, Upload, Link as LinkIcon, Image as ImageIcon } from "lucide-react";
 import { createLogoAssetAction } from "./actions";
+import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -93,6 +94,10 @@ export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: str
   const [uploadedPath, setUploadedPath] = React.useState<string | null>(null);
   const [urlValue, setUrlValue] = React.useState("");
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const formRef = React.useRef<HTMLFormElement>(null);
+  // Round 5: reset the form on success so the user can add a
+  // second logo without manually clearing the name + URL.
+  useSuccessReset(state, formRef);
 
   // Reset upload state when the user switches mode.
   function onModeChange(next: Mode) {
@@ -134,7 +139,7 @@ export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: str
 
   return (
     <Card padding="md" className="mb-3">
-      <form action={action} className="grid gap-3">
+      <form ref={formRef} action={action} className="grid gap-3">
         <fieldset className="flex flex-wrap items-center gap-2" aria-label="Logo source">
           <legend className="sr-only">Logo source</legend>
           <ModeButton

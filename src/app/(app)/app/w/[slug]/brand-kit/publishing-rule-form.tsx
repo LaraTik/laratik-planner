@@ -2,6 +2,7 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { createPublishingRuleAction } from "./actions";
+import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
@@ -47,13 +48,10 @@ export function PublishingRuleForm({ slug }: { slug: string }) {
     {} as FormState,
   );
   const formRef = React.useRef<HTMLFormElement>(null);
-  // Reset the form on every successful submission. We use a ref +
-  // effect (not a state-in-effect) to keep the React 19 lint rule
-  // happy while still clearing the DOM after a server-action
-  // success.
-  React.useEffect(() => {
-    if (state?.success) formRef.current?.reset();
-  }, [state?.success]);
+  // Reset the form on every successful submission via the shared
+  // hook (Round 5 — replaces the per-form useEffect+formRef pattern
+  // that was duplicated across all 6 brand-kit forms).
+  useSuccessReset(state, formRef);
 
   return (
     <form ref={formRef} action={action} className="space-y-3" data-testid="publishing-rule-form">

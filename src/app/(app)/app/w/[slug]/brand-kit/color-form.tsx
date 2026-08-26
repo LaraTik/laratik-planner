@@ -2,6 +2,7 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { createColorAssetAction } from "./actions";
+import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { Card } from "@/components/ui/card";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,10 @@ export function ColorForm({ slug }: { slug: string }) {
     {} as { error?: string; success?: boolean },
   );
   const [hex, setHex] = React.useState("#3B82F6");
+  const formRef = React.useRef<HTMLFormElement>(null);
+  // Round 5: reset the form on success so the user can add a
+  // second color without manually clearing the name + hex.
+  useSuccessReset(state, formRef);
 
   function onHexBlur() {
     setHex(expandHex(hex));
@@ -53,7 +58,7 @@ export function ColorForm({ slug }: { slug: string }) {
 
   return (
     <Card padding="md" className="mb-3">
-      <form action={action} className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+      <form ref={formRef} action={action} className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
         <label className="text-label font-semibold">
           Color name
           <Input className="mt-1" name="name" required maxLength={80} placeholder="Brand blue" />
