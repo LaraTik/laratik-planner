@@ -488,3 +488,28 @@ document overflow at 360×800, 390×844, 768×1024, 820×1180, 1280×800, and
 1440×900. All primary actions retain at least a 44px target. The release verdict
 remains `READY FOR INDEPENDENT REVIEW`; manual assistive-technology, separated
 account UAT, and external-service owner sign-offs remain independent gates.
+
+## 2026-08-26 — Landing entry and sign-in refinement
+
+Implementation commit `caa349f` makes the public entry contextual and reduces
+the sign-in surface to one active method at a time. Authenticated visitors to
+`/` redirect to `/app`; configured deployments expose one sign-in CTA; an
+unconfigured deployment exposes one setup CTA that first verifies identity.
+Normal sign-in is password-first with Google as a secondary provider and a
+progressively disclosed magic-link alternative. First-time setup never offers
+password authentication because the initial administrator does not have a
+password yet. No schema, migration, or production-data change is involved.
+
+| Command / run                                                                               | SHA                       |                           Exit | Result                                                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------- | ------------------------- | -----------------------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Focused Vitest (`landing-entry`, `signin-options`, `signin-actions`, auth error/config)     | `caa349f` change snapshot |                              0 | 5 files / 30 tests pass. Covers authenticated root redirect, configured/setup CTA selection, one-email-field method switching, provider availability, password visibility, remember-session forwarding, and magic-link error continuity.                                                                           |
+| `pnpm verify` in a clean detached worktree                                                  | `ca31a24`                 |                              0 | Repository formatting, zero-warning lint, strict typecheck, 193 unit files / 2,110 passing tests (4 tracked todos), and the Next.js 16.3.1 webpack production build pass. `/`, `/signin`, and protected app routes are emitted as dynamic server routes.                                                           |
+| Focused Chromium entry checks                                                               | `caa349f` change snapshot |                              0 | 4/4 pass: public landing render, one contextual CTA, configured sign-in form, and authenticated `/` → `/app`.                                                                                                                                                                                                      |
+| `pnpm exec playwright test tests/e2e/a11y.spec.ts --project=chromium`                       | `caa349f` change snapshot |                              0 | 4/4 pass: `/`, `/signin`, `/signin/verify`, and protected-route focus/redirect have no critical WCAG 2.2 AA violations.                                                                                                                                                                                            |
+| Focused sign-in visual assertions                                                           | `caa349f`                 |                              0 | 4/4 pass: Stitch reference plus mobile-s, tablet, and wide responsive baselines. The visual harness now keeps unauthenticated routes public and resolves portable per-spec baseline paths consistently in capture and assert modes.                                                                                |
+| `TEST_DATABASE_URL=…/planner_test_auth_entry pnpm test:e2e:isolated` in a detached worktree | `caa349f`                 | 1 / stopped after gate failure | The disposable database migrated successfully and the new public/auth entry paths passed. The full gate became non-green in existing social-analytics accessibility and agency-switcher cases, so the 1,003-case repeat was stopped. The temporary worktree and database were removed.                             |
+| `pnpm test:visual` on disposable Postgres in a detached worktree                            | `caa349f`                 | 1 / stopped after gate failure | The redesigned `/signin` exact reference passed. Unrelated authenticated surfaces failed when parallel seed requests raced on the shared `test@laratik.local` unique key; the already-failed matrix was stopped. The focused `/signin` matrix remains 4/4 green. The temporary worktree and database were removed. |
+
+Status remains `READY FOR INDEPENDENT REVIEW`. This evidence does not validate
+real Google OAuth or SMTP delivery and does not promote the login row to
+`Verified`; those remain external/independent review responsibilities.

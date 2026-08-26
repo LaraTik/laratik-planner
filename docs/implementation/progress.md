@@ -11,6 +11,26 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-08-26 — Landing entry and sign-in refinement
+
+Status: **Implemented and focused suites Tested; independent verification is
+not claimed.**
+
+Authenticated visitors now enter `/app` directly from `/`. Public visitors see
+one contextual CTA: sign in on configured deployments, or identity-verified
+first-time setup when no agency exists. The sign-in page is password-first for
+returning users, keeps Google secondary, and replaces the password form with a
+magic-link form only when requested. Setup offers only Google or magic link.
+
+Implementation commit `caa349f` includes behavioral, accessibility, and real
+unauthenticated visual coverage. The focused sign-in matrix passes 4/4 across
+the canonical Stitch viewport plus mobile-s, tablet, and wide. The complete
+unit suite passes 2,110 tests and the production build passes. Full pre-merge
+browser gates were attempted on disposable databases but remain non-green due
+to existing social-analytics/agency-switcher failures and a parallel visual
+seed race outside this change; exact evidence is in
+[`../production-readiness/TEST_EVIDENCE.md`](../production-readiness/TEST_EVIDENCE.md).
+
 ## 2026-08-25 — Platform role permissions and render-error hardening
 
 Status: **Implemented and focused suites Tested; independent verification is

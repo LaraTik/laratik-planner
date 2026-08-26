@@ -104,35 +104,35 @@ The `Missing` and `Partial` statuses from the prior revision were pre-M3b and ar
 
 > **Screen ID format**: the table below uses the 8-character capture prefix that matches the on-disk filename in `designs/stitch/`. The full 32-character Stitch ID is recorded in the Google Stitch project and can be regenerated from `docs/visual-parity/MCP.md`; only the 8-character prefix is portable in the repo.
 
-| Area                | Screen ID  | Intended route/surface          | Milestone | Status      | Required proof for `Verified`               |
-| ------------------- | ---------- | ------------------------------- | --------- | ----------- | ------------------------------------------- |
-| Workspace Overview  | `f2bf40ae` | `/app/w/[slug]`                 | M2        | Implemented | KPI behavior + desktop/tablet/mobile visual |
-| Monthly Planning    | `96f0dd19` | `/app/w/[slug]/planning`        | M3b       | Implemented | filters/month/density + responsive visual   |
-| Workflow Board      | `f9e58e53` | `/app/w/[slug]/board`           | M3b       | Implemented | status consistency + desktop/mobile         |
-| Quick Create        | `9794f1aa` | `/app/w/[slug]/planning/new`    | M2        | Implemented | defaults/formats + desktop/mobile           |
-| Batch Add           | `43a166ed` | `/app/w/[slug]/planning/batch`  | M2        | Implemented | parser/validation + visual                  |
-| Content Detail      | `f7159c3e` | `/app/w/[slug]/planning/[id]`   | M2        | Implemented | full role journey + desktop/tablet/mobile   |
-| Delivery Review     | `879e7539` | `/app/w/[slug]/reviews`         | M2        | Implemented | V1/V2/approval + visual                     |
-| Calendar            | `8c0ec0b0` | `/app/w/[slug]/calendar`        | M3b       | Implemented | month/week/DST/move + responsive            |
-| Reviews             | `bb6ac00d` | `/app/w/[slug]/reviews`         | M3b       | Implemented | queue/roles + responsive                    |
-| Publishing          | `9cf65ebd` | `/app/w/[slug]/design-queue`    | M3b       | Implemented | per-channel flow + desktop/mobile           |
-| Publishing Recovery | `382b9405` | `/app/w/[slug]/design-queue`    | M3b       | Implemented | failed/retry flow                           |
-| Client Review       | `c7dd77e0` | `/app/w/[slug]/client`          | M3b       | Implemented | response-shape privacy + visual             |
-| Client Calendar     | `218f259a` | `/app/w/[slug]/client/calendar` | M3b       | Implemented | read-only/privacy + visual                  |
-| Login               | `2dafd80a` | `/signin`                       | M1        | Implemented | OAuth/magic-link/keyboard + visual          |
-| Forgot Password     | `793a08d8` | `/signin/forgot-password`       | M3b       | Implemented | request/reset/sent states + visual          |
-| First Administrator | `a3631dbf` | `/setup`                        | M1        | Implemented | concurrency/token + visual                  |
-| My Work             | `f4dc67d1` | `/app`                          | M3b       | Implemented | role categories + desktop/mobile            |
-| Workspaces          | `01aa8faf` | `/app/workspaces`               | M3b       | Implemented | setup/archive/restore + visual              |
-| User Management     | `89113980` | `/app/users`                    | M1        | Implemented | access editing + visual                     |
-| Planning Library    | `7493876f` | `/app/w/[slug]/library`         | M3b       | Implemented | campaigns/pillars/templates                 |
-| Design Queue        | `5ad5fffc` | `/app/w/[slug]/design-queue`    | M3b       | Implemented | atomic claim + visual                       |
-| Social Channels     | `45d945d7` | `/app/w/[slug]/channels`        | M3b       | Implemented | CRUD/archive + visual                       |
-| Team & Invitations  | `2db8ec6e` | `/app/w/[slug]/team`            | M3b       | Implemented | role/privacy + visual                       |
-| Workspace Settings  | `2f6acd26` | `/app/w/[slug]/settings`        | M3b       | Implemented | defaults/targets/approval mode              |
-| Agency AI Settings  | `cb0de669` | `/app/agency-settings`          | M3b       | Implemented | safe config/test/usage                      |
-| Brand Kit           | `16aaf0a9` | `/app/w/[slug]/brand-kit`       | M3b       | Implemented | fields/private assets + visual              |
-| Operational States  | `21068e5a` | shared states                   | M3b       | Implemented | loading/empty/error/denied/archived         |
+| Area                | Screen ID  | Intended route/surface          | Milestone | Status      | Required proof for `Verified`                      |
+| ------------------- | ---------- | ------------------------------- | --------- | ----------- | -------------------------------------------------- |
+| Workspace Overview  | `f2bf40ae` | `/app/w/[slug]`                 | M2        | Implemented | KPI behavior + desktop/tablet/mobile visual        |
+| Monthly Planning    | `96f0dd19` | `/app/w/[slug]/planning`        | M3b       | Implemented | filters/month/density + responsive visual          |
+| Workflow Board      | `f9e58e53` | `/app/w/[slug]/board`           | M3b       | Implemented | status consistency + desktop/mobile                |
+| Quick Create        | `9794f1aa` | `/app/w/[slug]/planning/new`    | M2        | Implemented | defaults/formats + desktop/mobile                  |
+| Batch Add           | `43a166ed` | `/app/w/[slug]/planning/batch`  | M2        | Implemented | parser/validation + visual                         |
+| Content Detail      | `f7159c3e` | `/app/w/[slug]/planning/[id]`   | M2        | Implemented | full role journey + desktop/tablet/mobile          |
+| Delivery Review     | `879e7539` | `/app/w/[slug]/reviews`         | M2        | Implemented | V1/V2/approval + visual                            |
+| Calendar            | `8c0ec0b0` | `/app/w/[slug]/calendar`        | M3b       | Implemented | month/week/DST/move + responsive                   |
+| Reviews             | `bb6ac00d` | `/app/w/[slug]/reviews`         | M3b       | Implemented | queue/roles + responsive                           |
+| Publishing          | `9cf65ebd` | `/app/w/[slug]/design-queue`    | M3b       | Implemented | per-channel flow + desktop/mobile                  |
+| Publishing Recovery | `382b9405` | `/app/w/[slug]/design-queue`    | M3b       | Implemented | failed/retry flow                                  |
+| Client Review       | `c7dd77e0` | `/app/w/[slug]/client`          | M3b       | Implemented | response-shape privacy + visual                    |
+| Client Calendar     | `218f259a` | `/app/w/[slug]/client/calendar` | M3b       | Implemented | read-only/privacy + visual                         |
+| Login               | `2dafd80a` | `/signin`                       | M1        | Implemented | progressive password/Google/magic + setup + visual |
+| Forgot Password     | `793a08d8` | `/signin/forgot-password`       | M3b       | Implemented | request/reset/sent states + visual                 |
+| First Administrator | `a3631dbf` | `/setup`                        | M1        | Implemented | concurrency/token + visual                         |
+| My Work             | `f4dc67d1` | `/app`                          | M3b       | Implemented | role categories + desktop/mobile                   |
+| Workspaces          | `01aa8faf` | `/app/workspaces`               | M3b       | Implemented | setup/archive/restore + visual                     |
+| User Management     | `89113980` | `/app/users`                    | M1        | Implemented | access editing + visual                            |
+| Planning Library    | `7493876f` | `/app/w/[slug]/library`         | M3b       | Implemented | campaigns/pillars/templates                        |
+| Design Queue        | `5ad5fffc` | `/app/w/[slug]/design-queue`    | M3b       | Implemented | atomic claim + visual                              |
+| Social Channels     | `45d945d7` | `/app/w/[slug]/channels`        | M3b       | Implemented | CRUD/archive + visual                              |
+| Team & Invitations  | `2db8ec6e` | `/app/w/[slug]/team`            | M3b       | Implemented | role/privacy + visual                              |
+| Workspace Settings  | `2f6acd26` | `/app/w/[slug]/settings`        | M3b       | Implemented | defaults/targets/approval mode                     |
+| Agency AI Settings  | `cb0de669` | `/app/agency-settings`          | M3b       | Implemented | safe config/test/usage                             |
+| Brand Kit           | `16aaf0a9` | `/app/w/[slug]/brand-kit`       | M3b       | Implemented | fields/private assets + visual                     |
+| Operational States  | `21068e5a` | shared states                   | M3b       | Implemented | loading/empty/error/denied/archived                |
 
 ## Why no row is `Tested` yet
 
