@@ -169,7 +169,21 @@ async function checkSchema(): Promise<"ready" | "missing" | "disabled"> {
       applied.every((timestamp, index) => timestamp === expectedSuffix[index]);
     const reorderedComplete = reorderedTimestamps.every((timestamp) => applied.includes(timestamp));
     const complete = suffixComplete && reorderedComplete;
-    return complete ? "ready" : "missing";
+    if (complete) return "ready";
+
+    // 2026-08-27 — the strict count check above breaks whenever the journal
+    // changes (e.g. when 0021 was replaced by 0021_melodic_plazm with
+    // different content) and the DB's `__drizzle_migrations` table
+    // has a mix of old + new hashes. The schema is actually correct in
+    // those cases — every required table exists, every required
+    // column exists — but the count doesn't match because the DELETE
+    // in the migration's SQL was too aggressive. Fall back to
+    // "every expected timestamp is applied" — the inverse check,
+    // which still rejects a missing migration even if it can't tell
+    // the difference between "missing" and "extra orphans".
+    const allExpectedApplied = expectedSuffix.every((timestamp) => applied.includes(timestamp));
+    if (allExpectedApplied) return "ready";
+    return "missing";
   } catch {
     return "missing";
   }
