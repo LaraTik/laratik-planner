@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
 import {
   buildProfileSummary,
+  calculateEngagementRate,
   chartSeries,
   parseSocialWindow,
   seriesInWindow,
@@ -21,6 +22,10 @@ import {
 import { SocialGrowthChart } from "./social-growth-chart";
 import { SocialMetricsTable, type SocialMetricsRow } from "./social-metrics-table";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import { SocialHealthBanner } from "./social-health-banner";
+import { SocialAggregateStrip, type AggregateChannel } from "./social-aggregate-strip";
+import { SocialSparkline, socialSparklineTestId } from "./social-sparkline";
+import { SocialEngagementRateCard } from "./social-engagement-rate";
 
 /**
  * M4 — social analytics dashboard.
@@ -139,6 +144,47 @@ export default async function SocialAnalyticsPage({
         }
       />
 
+      <SocialHealthBanner
+        channels={channels.map((c) => ({
+          id: c.id,
+          accountName: c.accountName,
+          platform: c.platform as "instagram" | "facebook" | "tiktok",
+          connectionStatus: c.connectionStatus as
+            "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected",
+          lastSyncedAt: c.lastSyncedAt,
+          lastSyncErrorCode: c.lastSyncErrorCode,
+        }))}
+        slug={slug}
+      />
+
+      <SocialAggregateStrip
+        channels={channels.map<AggregateChannel>((c) => {
+          const fullSeries: MetricSeriesPoint[] = (byChannel.get(c.id) ?? []).map((m) => ({
+            metricDate: m.metricDate,
+            followerCount: m.followerCount,
+            reach: m.reach,
+            views: m.views,
+            engagedAccounts: m.engagedAccounts,
+            interactions: m.interactions,
+            partial: (m.sourceMetadata as { partial?: boolean } | null)?.partial === true,
+          }));
+          const summary = buildProfileSummary({
+            fullSeries,
+            lastSyncedAt: c.lastSyncedAt,
+            connectionStatus: c.connectionStatus as
+              "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected",
+          });
+          return {
+            id: c.id,
+            accountName: c.accountName,
+            platform: c.platform as "instagram" | "facebook" | "tiktok",
+            fullSeries,
+            growth7Absolute: summary.growth7.absolute,
+          };
+        })}
+        windowDays={window}
+      />
+
       <nav
         aria-label="Window selector"
         className="flex items-center gap-2"
@@ -199,7 +245,7 @@ export default async function SocialAnalyticsPage({
             return (
               <Card key={channel.id} padding="lg" data-testid={`social-card-${channel.id}`}>
                 <div className="space-y-4">
-                  <header className="flex items-center justify-between gap-3">
+                  <header className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <PlatformIcon platform={channel.platform} tile />
                       <div>
@@ -212,10 +258,20 @@ export default async function SocialAnalyticsPage({
                         </p>
                       </div>
                     </div>
-                    <div className="text-label text-fg-muted inline-flex items-center gap-2">
-                      <Activity className="h-3 w-3" aria-hidden={true} />
-                      Last synced{" "}
-                      {channel.lastSyncedAt ? formatRelativeDate(channel.lastSyncedAt) : "—"}
+                    <div className="flex items-center gap-3">
+                      <SocialSparkline
+                        channelId={channel.id}
+                        series={fullSeries}
+                        ariaLabel={`${channel.accountName} follower trend, last 7 days`}
+                      />
+                      <div
+                        className="text-label text-fg-muted inline-flex items-center gap-2"
+                        data-testid={socialSparklineTestId(channel.id)}
+                      >
+                        <Activity className="h-3 w-3" aria-hidden={true} />
+                        Last synced{" "}
+                        {channel.lastSyncedAt ? formatRelativeDate(channel.lastSyncedAt) : "—"}
+                      </div>
                     </div>
                   </header>
 
@@ -241,9 +297,9 @@ export default async function SocialAnalyticsPage({
                           : `${summary[`growth${window}` as const].percent!.toFixed(1)}%`
                       }
                     />
-                    <SummaryCard
-                      label="Connection"
-                      value={summary.connectionStatus.replace("_", " ")}
+                    <SocialEngagementRateCard
+                      channelId={channel.id}
+                      rate={calculateEngagementRate(fullSeries)}
                     />
                   </div>
 

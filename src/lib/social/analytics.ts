@@ -64,6 +64,47 @@ export function calculateGrowth(
   return { absolute, percent, partial: series.some((p) => p.partial === true) };
 }
 
+/**
+ * Engagement rate = (accounts engaged) / (followers) * 100, computed
+ * for the most recent day where BOTH fields are present. The function
+ * mirrors the partial-data handling in `calculateGrowth`:
+ *
+ *   - null on either side -> percent: null, partial: true
+ *   - zero baseline -> percent: null (zero followers has no meaningful
+ *     engagement rate; mirrors the zero-baseline rule in
+ *     `calculateGrowth`)
+ *   - any partial day in the 7-day window -> partial: true on the
+ *     result, so the UI can show the "data is incomplete" pill
+ *
+ * The result is a percent rounded to 1 decimal place at render time.
+ * The function returns the raw ratio so the caller can format it
+ * (e.g. toFixed(1) in the component, or skip the percent sign if
+ * the surrounding context implies "per 100 followers").
+ */
+export type EngagementRate = { percent: number | null; partial: boolean };
+
+export function calculateEngagementRate(series: MetricSeriesPoint[]): EngagementRate {
+  // Walk the series from the most recent day backwards and find the
+  // first day where both followerCount and engagedAccounts are
+  // observed. If they come from different days (the IG API may
+  // observe engaged_accounts a day later than followers), use the
+  // latest of each. If neither side is observed, return null with
+  // the partial flag set if any day in the 7-day window was partial.
+  const latestFollower = [...series].reverse().find((p) => typeof p.followerCount === "number")
+    ?.followerCount as number | undefined;
+  const latestEngaged = [...series].reverse().find((p) => typeof p.engagedAccounts === "number")
+    ?.engagedAccounts as number | undefined;
+
+  if (latestFollower === undefined || latestEngaged === undefined) {
+    return { percent: null, partial: series.some((p) => p.partial === true) };
+  }
+  if (latestFollower === 0) {
+    return { percent: null, partial: series.some((p) => p.partial === true) };
+  }
+  const percent = (latestEngaged / latestFollower) * 100;
+  return { percent, partial: series.some((p) => p.partial === true) };
+}
+
 export function seriesInWindow(
   series: MetricSeriesPoint[],
   windowDays: number,

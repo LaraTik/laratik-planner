@@ -61,4 +61,29 @@ test.describe("M4 — social analytics dashboard", () => {
     expect(response?.status()).toBe(200);
     await expect(page.getByTestId("social-analytics-page")).toBeVisible();
   });
+
+  // M4 "feel" round (2026-08-27): the new banner / strip / sparkline /
+  // engagement-rate components must not render anything when no channels
+  // are connected. The empty state owns the page; the new components
+  // only surface when there's something to surface. The dev seed has
+  // no connected channel — the happy-path "4 channels with data" cases
+  // are covered by the unit + integration suites for the analytics
+  // functions and by the page-server render.
+  test("the new banner / strip / sparkline / engagement-rate are absent in the empty state", async ({
+    page,
+  }) => {
+    await bootstrapRoleSession(page, "workspace_manager");
+    await page.goto("/app/w/acme/analytics/social");
+    await expect(page.getByTestId("social-analytics-empty")).toBeVisible();
+    // The banner is intentionally quiet when everything is healthy,
+    // and there is no channel at all in the dev seed — so the
+    // container is NOT in the DOM (early-return `<></>`).
+    await expect(page.getByTestId("social-health-banner")).toHaveCount(0);
+    // The aggregate strip is gated on `channels.length > 0`.
+    await expect(page.getByTestId("social-aggregate-strip")).toHaveCount(0);
+    // Sparkline is per-channel; with no channels there are none.
+    await expect(page.locator('[data-testid="social-sparkline"]')).toHaveCount(0);
+    // Engagement rate is per-channel; with no channels there are none.
+    await expect(page.getByTestId("social-engagement-rate")).toHaveCount(0);
+  });
 });

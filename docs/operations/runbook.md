@@ -508,6 +508,35 @@ sudo CRON_SECRET=$(sudo cat /opt/laratik-planner/.env | grep ^CRON_SECRET= | cut
 
 The expected response shape is `{ "claimed": <int>, "succeeded": <int>, "failed": <int>, "needsReauth": <int> }`. A non-JSON response or an HTTP non-2xx indicates the secret rotated, the route is down, or `SOCIAL_SYNC_ENABLED` is `false`.
 
+### Onboarding a new social profile (Meta, post-M4.6)
+
+The Meta app config is **per-agency**, not platform-wide. Each agency that wants to use social analytics must add their own Meta app credentials at `/app/agency-settings/social/providers`. The agency admin pastes `app_id` + `app_secret` + `login_config_id`; the app secret is sealed with the per-agency DEK (the same key that protects the OAuth tokens) and re-fetched only when the cron or a Re-test needs it. After that, every workspace in the agency can run the OAuth flow.
+
+**Onboarding one workspace, step by step:**
+
+1. **Verify the agency config exists.** As an agency admin, open `/app/agency-settings/social/providers`. The Meta card should show "Configured" with the last-tested timestamp. If it says "Add", paste the app credentials first.
+2. **Open the workspace's channels page.** As a workspace manager, navigate to `/app/w/<slug>/channels`. The "Connect a Meta account" card has a **Connect Meta** button (enabled when the agency config exists).
+3. **Click Connect Meta.** The button POSTs to `/api/social/meta/connect` which redirects to the Facebook Login for Business dialog (`https://www.facebook.com/v25.0/dialog/oauth`). The OAuth flow requests only the read-only scopes: `pages_show_list`, `pages_read_engagement`, `read_insights`, `instagram_basic`, `instagram_manage_insights`. No publish / manage / ads scope is ever requested.
+4. **Pick the right Pages + linked Instagram accounts in the picker.** ⚠️ The actor's Meta account may have admin access to **many** Pages. The picker surfaces every Page the actor can admin that holds `PROFILE_PLUS_ANALYZE` (or a full-control task like `MANAGE`/`CREATE_CONTENT`). For a multi-brand agency this is often 20-30+ Pages; pick only the ones that belong to the workspace's brand. The Picker filters out Pages with only `ADVERTISE` because they cannot back a read-only analytics connection.
+5. **Finalize the selection.** Each selected Page becomes a `social_channel` row (`platform='facebook'`). If the Page has a linked Instagram business account, an additional `social_channel` row is created with `platform='instagram'` and `parent_provider_account_id` set to the Page ID. The Page access token is sealed and stored on the `social_connection` row.
+6. **Wait for the first sync.** The next cron tick (within 15 minutes) claims the profile with a 5-minute lease, calls `fetchSnapshot`, and writes the first `social_profile_daily_metric` row. The first daily snapshot lands within 24 hours.
+7. **Check the analytics page.** Within 24 hours, `/app/w/<slug>/analytics/social` shows the new channel with at least one row in the 7-day window. After 7 days, the 7-day window has 7 data points per channel. The cron never backfills historical data — the system starts from "today" of first connect. Meta retains 90 days of IG insights and 2 years of FB page insights, so a separate backfill task is possible but is not implemented.
+
+**Brand mapping cheatsheet (2026-08-27 reference):**
+
+The Meta app for this LaraTik instance connects to many brands. When onboarding, match the workspace to the right Facebook Page(s):
+
+- **Just Halal workspace:** The user manages **3 Pages** under the Just Halal brand:
+  - `Just Halal` (Page id `1197710403425500`, 56 fans) — main Page, **no linked Instagram**.
+  - `Just Halal tr` (Page id `782569201613932`, 29 fans) — linked IG `@justhalal_tr` (id `17841471791695605`).
+  - `Just Halal ar` (Page id `832243506634467`, 31 fans) — linked IG `@justhalal_ar` (id `17841471675852280`).
+  - The Just Halal Instagram business account the user shared (`https://www.instagram.com/justhalal_tr/`) maps to the `Just Halal tr` Page. Connect `Just Halal tr` + its linked IG to the Just Halal workspace. Optionally also `Just Halal ar`. The main `Just Halal` Page can be connected too, but its analytics will be Facebook-only (no IG to back it with insights; reach/views/engaged/interactions will be `null` for it).
+- **Food Game workspace:** Connect `Food Game` (Page id `939269935939946`, 69 fans) + its linked IG `@__foodgame` (id `17841480087235357`, 248 followers). The Food Game IG connection is presumed already set up (the existing `social_connection` row on the workspace).
+
+**Note on URL vs. Page ID:** the `profile.php?id=…` URLs the user shares map to the Page's canonical ID via a redirect. For example, `profile.php?id=61582202499500` is the same Page as canonical id `1197710403425500`. Either ID is accepted by the Graph API but the canonical form is the 15-digit one in the `me/accounts` listing.
+
+**Security reminder:** the user pasted a long-lived Meta user access token in chat during planning. That token is now considered **compromised** (it has been exposed in HTTP request URLs during verification, which means it appears in server logs at the Meta edge). Before any code is merged, the user must revoke it via `DELETE /{app-id}/me/permissions?access_token=…` in the Graph API Explorer, or rotate it via the Meta App Dashboard. The application never stores or echoes the token; the OAuth flow at `connect` time re-issues a fresh long-lived token with the app's `fb_exchange_token` grant.
+
 ### Forced one-profile sync
 
 Use the channel's `Sync now` button on `/app/w/[slug]/channels` to set `next_sync_at=now()` for a single profile. The actual provider call still happens inside the cron route; the worker is the only path that talks to Meta / TikTok. To bypass the queue entirely (e.g. when the cron is paused), do not call the provider directly — instead flip `SOCIAL_SYNC_ENABLED=true`, wait one cron tick, then disable again.
