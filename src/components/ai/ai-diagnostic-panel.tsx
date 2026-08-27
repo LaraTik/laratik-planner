@@ -47,8 +47,6 @@ export type AiDiagnosticPanelProps = {
   anyCapabilityOn: boolean;
   /** Whether the AI route will accept a request right now. */
   effectiveLive: boolean;
-  /** Runbook section to point non-engineers at. */
-  runbookHref?: string;
   /** Where the AI features live in the product (so admins can link planners). */
   aiEntryHref: string;
 };
@@ -202,19 +200,14 @@ export function AiDiagnosticPanel(props: AiDiagnosticPanelProps) {
               Open the AI section on a content page
             </Link>
           </p>
-          {props.runbookHref ? (
-            <p className="mt-2">
-              For operator-level help (rotate the key, switch the model, drain a stuck queue) see{" "}
-              <a
-                href={props.runbookHref}
-                className="text-primary underline-offset-4 hover:underline"
-                data-testid="ai-diagnostic-runbook-link"
-              >
-                the AI runbook
-              </a>
-              .
-            </p>
-          ) : null}
+          <p className="text-label text-fg-muted mt-2" data-testid="ai-diagnostic-runbook-note">
+            For operator-level help (rotate the key, switch the model, drain a stuck queue) see{" "}
+            <code className="bg-surface rounded px-1.5 py-0.5 font-mono">
+              docs/operations/ai-provider.md
+            </code>{" "}
+            in the repo. The <code>docs/</code> directory is not served by the app, so this is a
+            repo-link, not a clickable URL from here.
+          </p>
         </div>
       </div>
 

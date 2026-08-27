@@ -127,9 +127,10 @@ describe("formatErrorReport", () => {
     expect(md).toContain('record "new" has no field "updated_at"');
   });
 
-  it("includes the runbook hint line when the pattern provides one", () => {
-    // The React #441 pattern is the one with a runbookHint in the
-    // fixture list. Assert the report includes the link line.
+  it("does not include a runbook line in the report (runbook is repo-only, not in-app)", () => {
+    // 2026-08-27 — the runbook links were removed because docs/ is
+    // not served by the production app. The error report should now
+    // carry the actionable fixes but no broken runbook link.
     const hint = matchErrorHint({ message: "Rendered more hooks than during the previous render" });
     const md = formatErrorReport({
       reference: "r",
@@ -138,7 +139,9 @@ describe("formatErrorReport", () => {
       occurredAt: "now",
       hint,
     });
-    expect(md).toContain("Search the runbook for");
+    expect(md).toContain("## Fixes");
+    expect(md).not.toContain("Search the runbook");
+    expect(md).not.toContain("runbook.md");
   });
 
   it("includes the stack + component stack blocks when provided", () => {

@@ -21,10 +21,17 @@
  * be unit-tested in plain Node and shared between the error
  * boundary and the platform-errors table renderer.
  *
- * The list is deliberately small — the top 6 patterns cover
+ * The list is deliberately small — the top 8 patterns cover
  * ≈80% of the Sentry volume on a typical laratik-planner day.
  * Anything that doesn't match falls back to a generic "captured
  * but unknown" hint, so the UI never renders an empty box.
+ *
+ * 2026-08-27 — removed the previous `runbookHint` field. The
+ * `docs/operations/runbook.md` file lives in the repo but is NOT
+ * served by the production app, so the "search the runbook" line
+ * in the error report was a dead URL. The fix is to put the
+ * concrete action steps inline (already done in every hint) and
+ * mention the repo path as plain text, not as a clickable link.
  */
 
 export type ErrorHint = {
@@ -40,13 +47,6 @@ export type ErrorHint = {
    * the user can act without further investigation.
    */
   fixes: string[];
-  /**
-   * Optional docs link — the workspace runs `docs/operations/` and
-   * `docs/production-readiness/`; the runbook search is the canonical
-   * starting point. We don't hard-code paths because the docs tree
-   * moves; we point at the runbook index.
-   */
-  runbookHint?: string;
 };
 
 export type ErrorPatternInput = {
@@ -88,7 +88,6 @@ const PATTERNS: ReadonlyArray<{
         "Search the component (and any new conditional you recently added) for `return` statements that sit between hook calls.",
         "If the component is a Server Component passing a function prop (e.g. `onClick`) to a Client Component, switch the prop to a `useCallback` or to a `use server` action — function values cannot cross the RSC boundary.",
       ],
-      runbookHint: "docs/operations/runbook.md#react-441",
     },
   },
   {
@@ -109,7 +108,6 @@ const PATTERNS: ReadonlyArray<{
         "Add the missing column with an idempotent migration (`ALTER TABLE … ADD COLUMN IF NOT EXISTS`).",
         "If the column is intentional, run the migration; if the trigger is wrong, drop the trigger from that table's list.",
       ],
-      runbookHint: "docs/operations/runbook.md#pg-trigger-missing-column",
     },
   },
   {
@@ -222,15 +220,15 @@ export function matchErrorHint(input: ErrorPatternInput): ErrorHint {
     if (p.test(input)) return p.hint;
   }
   // Generic fallback. The user can still copy the full report and
-  // paste it into the runbook search.
+  // hand it to the team.
   return {
     id: "unknown",
     title: "Captured, but no specific pattern matched",
     why: "We caught the error, sent it to Sentry, and recorded a row in the in-app mirror. The on-call view in `/app/platform/errors` has the same row with the full stack and any chained `cause`.",
     fixes: [
-      "Copy the full report (button below) and paste it into the runbook search at docs/operations/runbook.md.",
+      "Copy the full report (button below) and paste it into a support ticket. The build SHA + reference lets the team find the matching event in Sentry / the in-app mirror.",
       "If the error reproduces, the most recent deploy is the prime suspect — check the build SHA above against `git log`.",
-      "If the action is the source, wrap it in `try / catch` that returns `{ error }` so the form shows an inline message.",
+      "If the action is the source, wrap it in `try / catch` that returns `{ error }` so the form shows an inline message instead of replacing the page.",
     ],
   };
 }
@@ -295,10 +293,6 @@ export function formatErrorReport(input: {
   lines.push("");
   lines.push("## Fixes");
   for (const f of input.hint.fixes) lines.push(`- ${f}`);
-  if (input.hint.runbookHint) {
-    lines.push("");
-    lines.push(`> Search the runbook for \`${input.hint.runbookHint}\`.`);
-  }
   if (input.stack) {
     lines.push("");
     lines.push("## Stack trace (truncated to 4 KB)");

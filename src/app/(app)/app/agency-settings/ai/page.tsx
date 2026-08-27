@@ -148,7 +148,6 @@ export default async function AgencyAiSettingsPage() {
         masterSwitch={feature?.enabled ?? true}
         anyCapabilityOn={anyCapabilityOn}
         effectiveLive={effectiveLive}
-        runbookHref="/docs/operations/runbook.md#ai"
         aiEntryHref="/app"
       />
 

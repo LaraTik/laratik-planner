@@ -38,6 +38,10 @@ describe("AiDiagnosticPanel", () => {
     // The "where AI lives" section points at the content pages.
     expect(html).toContain("ai-diagnostic-where-link");
     expect(html).toContain("/app");
+    // The deep-dive link to docs is now a non-clickable repo-path
+    // hint, not a broken /docs/ route.
+    expect(html).toContain("docs/operations/ai-provider.md");
+    expect(html).not.toContain('href="/docs/');
   });
 
   it("flips to 'AI is live' when the prerequisites + toggle + capabilities are all set", () => {
