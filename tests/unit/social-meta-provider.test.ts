@@ -4,6 +4,7 @@ import {
   exchangeMetaCodeForShortLivedToken,
   exchangeShortLivedForLongLivedToken,
   discoverMetaPages,
+  fetchMetaInstagramSnapshot,
   META_SCOPES,
   type MetaTokenResponse,
 } from "@/lib/social/providers/meta";
@@ -378,5 +379,68 @@ describe("error-surface safety", () => {
     const err = new SocialProviderError("not_found", false, null);
     expect(isSocialProviderError(err)).toBe(true);
     expect(isSocialProviderError(new Error("nope"))).toBe(false);
+  });
+});
+
+describe("fetchMetaInstagramSnapshot — IG insights metric_type", () => {
+  // Regression guard for the 2026-08-27 pre-flight finding: the IG
+  // insights endpoint requires `metric_type=total_value` for
+  // `profile_views`, `accounts_engaged`, and `total_interactions`.
+  // Without it, the API returns 400 and the function surfaces `null`
+  // for every metric on every IG account, which silently breaks the
+  // engagement-rate card and the portfolio aggregate strip.
+  const baseGraph = "https://graph.facebook.com/v25.0";
+  const igUserId = "17841480087235357";
+  const accessToken = "page-token";
+
+  it("sends metric_type=total_value on the IG insights call", async () => {
+    let capturedInsightsUrl: string | null = null;
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith(`${baseGraph}/${igUserId}/insights`)) {
+        capturedInsightsUrl = url;
+        return jsonResponse(200, {
+          data: [
+            { name: "reach", period: "day", values: [{ value: 2401 }] },
+            { name: "profile_views", period: "day", values: [{ value: 91 }] },
+            { name: "accounts_engaged", period: "day", values: [{ value: 15 }] },
+            { name: "total_interactions", period: "day", values: [{ value: 28 }] },
+          ],
+        });
+      }
+      if (url.startsWith(`${baseGraph}/${igUserId}?`)) {
+        return jsonResponse(200, {
+          id: igUserId,
+          username: "__foodgame",
+          name: "Food Game",
+          followers_count: 248,
+          media_count: 46,
+          follows_count: 0,
+        });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaInstagramSnapshot({
+      accessToken,
+      igUserId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+
+    expect(capturedInsightsUrl).not.toBeNull();
+    // The bug regression: the URL MUST include `metric_type=total_value`.
+    // If a future refactor drops this parameter, the test fails and the
+    // engagement-rate card silently goes to null.
+    const params = new URL(capturedInsightsUrl!).searchParams;
+    expect(params.get("metric_type")).toBe("total_value");
+    expect(params.get("period")).toBe("day");
+    // All four metrics are requested.
+    expect(params.get("metric")).toBe("reach,profile_views,accounts_engaged,total_interactions");
+    // And the snapshot actually populated the values (not null).
+    expect(snapshot.engagedAccounts).toBe(15);
+    expect(snapshot.interactions).toBe(28);
+    expect(snapshot.views).toBe(91);
+    expect(snapshot.reach).toBe(2401);
   });
 });

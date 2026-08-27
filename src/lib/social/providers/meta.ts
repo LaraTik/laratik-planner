@@ -577,8 +577,19 @@ async function fetchMetaIgAccountDailyInsights(args: {
   interactions: number | null;
 } | null> {
   const url = new URL(`${graphBaseUrl(args.apiVersion)}/${args.igUserId}/insights`);
+  // `metric_type=total_value` is required for `profile_views`,
+  // `accounts_engaged`, and `total_interactions` (these are daily
+  // total metrics, not time-series). Without it, the Graph API returns
+  // `(#100) The following metrics (...) should be specified with
+  // parameter metric_type=total_value`, and the function would surface
+  // `null` for every IG account. `reach` accepts either `metric_type`
+  // value, so setting it globally is safe and matches the API docs.
+  // Pre-flight verification 2026-08-27: this was a latent bug; the
+  // existing Food Game IG connection was silently missing
+  // `accounts_engaged` and `total_interactions` until this fix.
   url.searchParams.set("metric", "reach,profile_views,accounts_engaged,total_interactions");
   url.searchParams.set("period", "day");
+  url.searchParams.set("metric_type", "total_value");
   url.searchParams.set("access_token", args.accessToken);
   let parsed: PageInsightsResponse;
   try {
