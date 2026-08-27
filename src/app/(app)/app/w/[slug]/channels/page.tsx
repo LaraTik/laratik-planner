@@ -1,12 +1,13 @@
 import { redirect, notFound } from "next/navigation";
 import { and, desc, eq, isNull } from "drizzle-orm";
-import { Clock, ExternalLink, MoreHorizontal, PlugZap, Radio } from "lucide-react";
+import { AlertCircle, Clock, ExternalLink, MoreHorizontal, PlugZap, Radio } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { socialChannels } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { hasAgencyProviderConfig } from "@/lib/social/provider-config";
+import { findPendingConnectionForWorkspace } from "@/lib/social/repository";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
@@ -19,6 +20,7 @@ import { ConnectionActions } from "./connection-actions";
 import { AddChannelButton } from "./add-channel-button";
 import { ChannelForm } from "./channel-form";
 import { ChannelRowActions } from "./channel-edit-drawer";
+import { MetaAccountPicker } from "./meta-account-picker";
 
 type ChannelRow = typeof socialChannels.$inferSelect;
 
@@ -176,10 +178,20 @@ function channelsColumns(props: {
  * Auth/authz: same as v0 — `workspace_manager` is required to mutate;
  * viewers can browse.
  */
-export default async function ChannelsPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ChannelsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{
+    meta_error?: string | string[];
+    meta_error_description?: string | string[];
+  }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
+  const sp = await searchParams;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
   const canManage = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
@@ -216,6 +228,56 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
         platform: (r.platform as "instagram" | "facebook" | "tiktok") ?? "instagram",
       }));
   }
+  // M4 — pending-selection picker. When the OAuth callback creates a
+  // `pending_selection` connection (the user just clicked "Connect
+  // Meta", authorized, and got redirected back), the channels page
+  // renders the picker so the user can pick which Pages / IG
+  // accounts to link. Pre-2026-08-28 bug: the picker was dead code
+  // because the channels page never queried for the pending
+  // connection, and the profile list was lost after the callback.
+  // The fix on the callback side persists the profile list to
+  // `connection.metadata.discoveredProfiles`; this function reads
+  // it and renders the picker with a candidates list of existing
+  // channels whose `external_account_id` matches.
+  const pending = canManage ? await findPendingConnectionForWorkspace(db, workspace.id) : null;
+  const candidates = pending
+    ? rows
+        .filter(
+          (r) => r.socialConnectionId !== pending.connection.id && r.externalAccountId !== null,
+        )
+        .map((r) => ({
+          providerAccountId: r.externalAccountId as string,
+          channelId: r.id,
+          accountName: r.accountName,
+          alreadyConnected: r.socialConnectionId !== null,
+        }))
+    : [];
+  // Surface the OAuth error code set by the callback when the user
+  // is denied or Meta returns a non-2xx. Codes: `access_denied` (the
+  // user declined the dialog), `not_configured` (agency has no
+  // provider row), `missing_code` (Meta returned without a code),
+  // `provider_error` / `exchange_failed` (the code→token exchange
+  // failed). The `meta_error_description` is optional and capped at
+  // 200 chars by the callback.
+  const metaErrorRaw = sp.meta_error;
+  const metaError = Array.isArray(metaErrorRaw) ? metaErrorRaw[0] : metaErrorRaw;
+  const metaErrorDescRaw = sp.meta_error_description;
+  const metaErrorDescription = Array.isArray(metaErrorDescRaw)
+    ? metaErrorDescRaw[0]
+    : metaErrorDescRaw;
+  const META_ERROR_COPY: Record<string, string> = {
+    access_denied: "Meta authorization was cancelled. Click Connect Meta to try again.",
+    not_configured:
+      "This agency has no Meta provider configured. An admin must add Meta app credentials first.",
+    missing_code: "Meta returned without an authorization code. Try again.",
+    provider_error:
+      "The Meta authorization exchange failed. Check the app credentials and try again.",
+    exchange_failed: "The Meta authorization exchange failed. Try again.",
+    invalid_state: "The OAuth state token was missing or already used. Try again.",
+  };
+  const metaErrorMessage = metaError
+    ? (META_ERROR_COPY[metaError] ?? `Meta authorization failed (${metaError}).`)
+    : null;
   return (
     <div className="space-y-6">
       <PageHeader
@@ -233,6 +295,40 @@ export default async function ChannelsPage({ params }: { params: Promise<{ slug:
         }
         action={canManage ? <AddChannelButton formId="channel-add-card" /> : null}
       />
+
+      {metaErrorMessage ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          data-testid="meta-callback-error"
+          className="border-danger/40 bg-danger/5 text-danger flex items-start gap-3 rounded-md border px-3 py-2"
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden={true} />
+          <div className="min-w-0 flex-1">
+            <p className="text-body font-medium">{metaErrorMessage}</p>
+            {metaErrorDescription ? (
+              <p className="text-label text-fg-muted mt-0.5">{metaErrorDescription}</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {pending ? (
+        <MetaAccountPicker
+          connectionId={pending.connection.id}
+          profiles={pending.profiles.map((p) => ({
+            providerAccountId: p.providerAccountId,
+            platform: p.platform,
+            accountName: p.accountName,
+            handle: p.handle,
+            profileUrl: p.profileUrl,
+            avatarUrl: p.avatarUrl,
+            parentProviderAccountId: p.parentProviderAccountId,
+          }))}
+          candidates={candidates}
+          slug={slug}
+        />
+      ) : null}
 
       {canManage ? (
         hasMetaConfig ? (

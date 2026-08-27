@@ -1,4 +1,4 @@
-import { and, asc, eq, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import type { db as appDb } from "@/lib/db";
 import {
   socialChannels,
@@ -87,6 +87,28 @@ export type CreatePendingConnectionInput = {
   accessTokenExpiresAt: Date | null;
   refreshTokenExpiresAt: Date | null;
   connectedBy: string;
+  /**
+   * Provider-neutral discovered profile list to surface in the
+   * pending-selection picker. The callback writes this so the
+   * channels page can render the picker without re-discovering
+   * (and without round-tripping the credentials through the page
+   * server). Tokens are NEVER in this list — `profileAccessTokens`
+   * stay on the sealed credentials envelope.
+   *
+   * The shape mirrors `ConnectedProfile[]` (providerAccountId,
+   * platform, accountName, handle, profileUrl, avatarUrl,
+   * parentProviderAccountId). Persisted as a typed jsonb in
+   * `social_connection.metadata.discoveredProfiles`.
+   */
+  discoveredProfiles?: Array<{
+    providerAccountId: string;
+    platform: "instagram" | "facebook" | "tiktok";
+    accountName: string;
+    handle: string | null;
+    profileUrl: string | null;
+    avatarUrl: string | null;
+    parentProviderAccountId: string | null;
+  }>;
 };
 
 export async function createPendingConnection(
@@ -96,6 +118,15 @@ export async function createPendingConnection(
   const cache = shortLivedDekCache(db);
   const dek = await getDekForWorkspace(db, cache, input.workspaceId);
   const sealed = sealCredentialsWithDek(input.credentials, dek);
+  // The metadata jsonb is a free-form bag. We use the `discoveredProfiles`
+  // key as the contract between the callback (writer) and the channels
+  // page (reader). The type is loose on the schema side and tightened
+  // by `discoveredProfilesSchema` in `findPendingConnectionForWorkspace`
+  // below.
+  const metadata: Record<string, unknown> = {};
+  if (input.discoveredProfiles && input.discoveredProfiles.length > 0) {
+    metadata.discoveredProfiles = input.discoveredProfiles;
+  }
   const [row] = await db
     .insert(socialConnections)
     .values({
@@ -111,6 +142,7 @@ export async function createPendingConnection(
       accessTokenExpiresAt: input.accessTokenExpiresAt,
       refreshTokenExpiresAt: input.refreshTokenExpiresAt,
       connectedBy: input.connectedBy,
+      metadata,
     })
     .returning();
   if (!row) throw new Error("Failed to insert social_connection");
@@ -141,6 +173,80 @@ export async function findConnectionsByWorkspace(
     .from(socialConnections)
     .where(eq(socialConnections.workspaceId, workspaceId))
     .orderBy(asc(socialConnections.connectedAt));
+}
+
+/**
+ * Read the most recent `pending_selection` connection for a workspace
+ * and return its discovered profile list (parsed from
+ * `metadata.discoveredProfiles`). The picker on the channels page
+ * consumes this so the user can pick which Pages / IG accounts to
+ * link. Returns `null` if there is no pending connection (the channels
+ * page renders no picker in that case).
+ *
+ * `discoveredProfiles` is a typed jsonb in `social_connection.metadata`.
+ * The schema is loose; this function tightens it. A row whose
+ * `discoveredProfiles` is missing, malformed, or an empty array
+ * returns `null` so the picker doesn't render an empty state.
+ */
+export type DiscoveredProfile = {
+  providerAccountId: string;
+  platform: "instagram" | "facebook" | "tiktok";
+  accountName: string;
+  handle: string | null;
+  profileUrl: string | null;
+  avatarUrl: string | null;
+  parentProviderAccountId: string | null;
+};
+
+export type PendingConnectionForPicker = {
+  connection: SocialConnection;
+  profiles: DiscoveredProfile[];
+};
+
+export async function findPendingConnectionForWorkspace(
+  db: Db,
+  workspaceId: string,
+): Promise<PendingConnectionForPicker | null> {
+  const [row] = await db
+    .select()
+    .from(socialConnections)
+    .where(
+      and(
+        eq(socialConnections.workspaceId, workspaceId),
+        eq(socialConnections.status, "pending_selection"),
+      ),
+    )
+    .orderBy(desc(socialConnections.connectedAt))
+    .limit(1);
+  if (!row) return null;
+  const metadata = (row.metadata ?? {}) as { discoveredProfiles?: unknown };
+  const raw = metadata.discoveredProfiles;
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const profiles: DiscoveredProfile[] = [];
+  for (const p of raw) {
+    if (!p || typeof p !== "object") continue;
+    const candidate = p as Record<string, unknown>;
+    const providerAccountId = candidate.providerAccountId;
+    const platform = candidate.platform;
+    const accountName = candidate.accountName;
+    if (typeof providerAccountId !== "string" || providerAccountId.length === 0) continue;
+    if (platform !== "instagram" && platform !== "facebook" && platform !== "tiktok") continue;
+    if (typeof accountName !== "string" || accountName.length === 0) continue;
+    profiles.push({
+      providerAccountId,
+      platform,
+      accountName,
+      handle: typeof candidate.handle === "string" ? candidate.handle : null,
+      profileUrl: typeof candidate.profileUrl === "string" ? candidate.profileUrl : null,
+      avatarUrl: typeof candidate.avatarUrl === "string" ? candidate.avatarUrl : null,
+      parentProviderAccountId:
+        typeof candidate.parentProviderAccountId === "string"
+          ? candidate.parentProviderAccountId
+          : null,
+    });
+  }
+  if (profiles.length === 0) return null;
+  return { connection: row, profiles };
 }
 
 export function openConnectionCredentials(

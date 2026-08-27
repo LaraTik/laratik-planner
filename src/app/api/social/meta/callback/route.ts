@@ -151,6 +151,14 @@ export async function GET(req: NextRequest) {
     // "subject" in the OAuth response, and the long-lived token is
     // the canonical identity the Pages are anchored to. The
     // repository helper handles encryption under the hood.
+    //
+    // The discovered profile list is persisted to
+    // `metadata.discoveredProfiles` so the channels page can render
+    // the pending-selection picker without re-discovering from
+    // Meta. Tokens are NEVER in this list — they live on the sealed
+    // credentials envelope and are only used by the sync worker.
+    // Pre-2026-08-28 bug: the profile list was thrown away after the
+    // callback, leaving the picker with nothing to show.
     const subjectHash = createHash("sha256").update(long.accessToken).digest("hex").slice(0, 32);
     await createPendingConnection(db, {
       workspaceId: stateRow.workspaceId,
@@ -167,6 +175,7 @@ export async function GET(req: NextRequest) {
       accessTokenExpiresAt: long.accessTokenExpiresAt,
       refreshTokenExpiresAt: null,
       connectedBy: stateRow.actorId,
+      discoveredProfiles: discovered.profiles,
     });
     revalidatePath(returnPath);
     return NextResponse.redirect(new URL(returnPath, clientEnv.NEXT_PUBLIC_APP_URL));
