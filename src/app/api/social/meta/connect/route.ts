@@ -74,14 +74,28 @@ export async function POST(req: NextRequest) {
       { status: 403, headers: mutatingApiHeaders() },
     );
   }
-  const body = (await req.json().catch(() => ({}))) as { slug?: string };
-  if (typeof body.slug !== "string" || body.slug.length === 0) {
+  const contentType = req.headers.get("content-type") ?? "";
+  // The client (`/app/w/[slug]/channels` page) submits a native HTML
+  // form with a hidden `<input name="slug">`, which arrives as
+  // `application/x-www-form-urlencoded`. Future fetch-based clients
+  // may submit JSON. Accept BOTH shapes so the route works with
+  // the current form and any future programmatic caller.
+  // Pre-2026-08-28 bug: the route only read `req.json()` which fails
+  // silently on form-encoded bodies (the `.catch(() => ({}))` fallback
+  // returns `{}`), so `body.slug` was always undefined → 400
+  // "Missing workspace slug" every time the workspace manager clicked
+  // "Connect Meta". The /api/bootstrap/admin route already uses this
+  // same dispatch pattern; mirror it here.
+  const slug = contentType.includes("application/json")
+    ? ((await req.json().catch(() => ({}))) as { slug?: string }).slug
+    : String((await req.formData().catch(() => new FormData())).get("slug") ?? "");
+  if (typeof slug !== "string" || slug.length === 0) {
     return NextResponse.json(
       { error: "Missing workspace slug" },
       { status: 400, headers: mutatingApiHeaders() },
     );
   }
-  const workspace = await getAccessibleWorkspace(actor, body.slug, context.agencyId);
+  const workspace = await getAccessibleWorkspace(actor, slug, context.agencyId);
   if (!workspace) {
     return NextResponse.json(
       { error: "Workspace not found" },
