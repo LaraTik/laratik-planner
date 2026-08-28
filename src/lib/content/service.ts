@@ -31,6 +31,11 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { BatchCreateSchema, type BatchCreateInput } from "@/lib/content/batch";
 import {
+  parseFormatPayload,
+  FormatPayloadByFormat,
+  type ContentFormat,
+} from "@/lib/format-payload/schemas";
+import {
   enqueueApprovalNotification,
   enqueueAssignmentNotification,
   enqueueChangesRequestedNotification,
@@ -267,6 +272,118 @@ export async function updateContentItem(
 }
 
 /**
+ * Update only the `formatPayload` (jsonb) of a content item.
+ *
+ * Distinct from `updateContentItem` (which also changes title /
+ * format / brief / schedule) so the per-format "More details"
+ * editor can save structured creative fields without forcing
+ * the planner to round-trip the full edit form. The
+ * editability guard is the same as `updateContentItem`: only
+ * `draft` and `changes_requested` items are editable, per
+ * master prompt §10. Beyond that, the function is
+ * schema-driven: the per-format Zod schema is the source of
+ * truth, and unknown fields are silently dropped on parse
+ * (forward-compat — adding a key to the schema is a no-op
+ * for older rows).
+ *
+ * The stored `formatPayload` is the *parsed* value, not the
+ * raw form data. The service normalises the input (fills in
+ * the `schemaVersion` key, drops empty optional fields) so a
+ * quick re-save after a feature add doesn't leave stale
+ * `null` values in the JSONB.
+ *
+ * The activity event records only the field-set change (e.g.
+ * `format_payload_updated`), not the diff — JSONB diffs are
+ * noisy and not actionable in audit. The before/afterData
+ * records the key set so audit can answer "which fields did
+ * the planner touch this week" without re-parsing the row.
+ */
+export const UpdateFormatPayloadSchema = z.object({
+  contentItemId: z.string().uuid(),
+  format: z.enum([
+    "static_post",
+    "carousel",
+    "story",
+    "short_form_video",
+    "long_form_video",
+    "live_content",
+    "article",
+    "other",
+  ]) satisfies z.ZodType<ContentFormat>,
+  formatPayload: z.record(z.string(), z.unknown()),
+});
+export type UpdateFormatPayloadInput = z.infer<typeof UpdateFormatPayloadSchema>;
+
+export async function updateFormatPayload(actor: Actor, input: UpdateFormatPayloadInput) {
+  const parsed = UpdateFormatPayloadSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+  }
+  const [item] = await db
+    .select({
+      id: contentItems.id,
+      workspaceId: contentItems.workspaceId,
+      status: contentItems.status,
+      format: contentItems.format,
+    })
+    .from(contentItems)
+    .where(eq(contentItems.id, parsed.data.contentItemId))
+    .limit(1);
+  if (!item) throw new Error("Content item not found");
+
+  await requirePolicy(
+    hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),
+    "update_content",
+  );
+
+  if (!UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number])) {
+    throw new Error(
+      `This idea is in ${item.status.replaceAll("_", " ")} and can no longer be edited.`,
+    );
+  }
+
+  // The format of the *content item* is the source of truth
+  // for which per-format schema we apply. We accept the
+  // format in the input so the editor can pre-validate
+  // before save, but we re-read it from the DB so a stale
+  // form post (e.g. user changed format then changed
+  // formatPayload) doesn't write the wrong shape.
+  const stored = parseFormatPayload(item.format, parsed.data.formatPayload);
+
+  // Snapshot the previous key set for the activity event.
+  const beforeKeys = Object.keys(
+    (parsed.data.formatPayload as Record<string, unknown> | null) ?? {},
+  ).sort();
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(contentItems)
+      .set({ formatPayload: stored, updatedAt: new Date() })
+      .where(eq(contentItems.id, parsed.data.contentItemId));
+
+    await tx.insert(activityEvents).values({
+      workspaceId: item.workspaceId,
+      contentItemId: item.id,
+      actorId: actor.id,
+      kind: "content_updated",
+      summary: `Updated creative details: ${item.format}`,
+      beforeData: { formatPayloadKeys: beforeKeys },
+      afterData: { formatPayloadKeys: Object.keys(stored as object).sort() },
+    });
+  });
+
+  revalidatePath(`/app/w/`);
+  revalidatePath(`/app/w/`, "layout");
+}
+
+/**
+ * Re-export of the per-format schema map for the action layer.
+ * The service does not own the shape; the schemas module does;
+ * this re-export keeps the action's import surface narrow.
+ */
+export { FormatPayloadByFormat };
+
+/**
  * Pure helper for the AI Insert / Replace behaviour (FEAT-04).
  *
  *  - `replace` overwrites the existing brief with the AI draft.
@@ -351,6 +468,27 @@ export async function batchCreateContentItems(actor: Actor, input: BatchCreateIn
   return db.transaction(async (tx) => {
     const ids: string[] = [];
     for (const item of parsed.items) {
+      // Per-row extensions (caption / hashtags / location
+      // from the v2 batch format) → formatPayload. We
+      // run the value through the per-format Zod schema so
+      // a row that exceeds a per-format limit (e.g. a
+      // hashtag that is too long for a specific format)
+      // rolls back the whole batch — atomic, per master
+      // prompt §17. The result is always the canonical
+      // shape the editor + mapper expect.
+      let formatPayload: Record<string, unknown> = { schemaVersion: 1 };
+      if (item.extensions) {
+        try {
+          formatPayload = parseFormatPayload(item.format, {
+            ...formatPayload,
+            ...item.extensions,
+          }) as Record<string, unknown>;
+        } catch (err) {
+          throw new Error(
+            `Row "${item.title}" (${item.format}) has invalid extensions: ${(err as Error).message}`,
+          );
+        }
+      }
       const [created] = await tx
         .insert(contentItems)
         .values({
@@ -358,6 +496,7 @@ export async function batchCreateContentItems(actor: Actor, input: BatchCreateIn
           title: item.title,
           format: item.format,
           brief: item.brief,
+          formatPayload,
           plannedPublishAt: item.plannedPublishAt,
           contentOwnerId: actor.id,
           createdBy: actor.id,

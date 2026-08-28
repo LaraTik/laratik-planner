@@ -187,13 +187,124 @@ Settings is a **nested group in the main sidebar**, not an inline nav inside a s
 
 For native HTML form controls, use the shared primitives in `src/components/forms/` (FormField, FormSubmitButton, PasswordInput, PasswordStrengthMeter). For checkboxes, **use `<Checkbox>` from `src/components/ui/checkbox.tsx`** — never raw `<input type="checkbox">`. The Radix-powered primitive bakes in the `checkbox` role, `aria-checked` state, keyboard handling (space to toggle), and indeterminate state, which are easy to get wrong with a native input. Pair the checkbox with a `<label htmlFor={id}>` and a helper `<p id="${id}-help">` (linked via `aria-describedby`) when the affordance needs explanation — see `app/users/add-directly-form.tsx` for the canonical pattern.
 
+For bilingual (English + Arabic) text inputs, use the shared
+`DirAwareTextarea` / `DirAwareInput` from
+`src/components/forms/dir-aware-textarea.tsx`. They auto-switch
+the `dir` attribute based on the first non-whitespace char
+(Arabic Unicode blocks → `rtl`, otherwise `ltr`) and use
+`text-start` / `text-end` logical properties so the caret
+aligns correctly when the user types. The `locale` prop sets
+the fallback dir for empty fields. **Never** copy-paste the
+underlying `<textarea>` / `<input>` and add a hard-coded
+`dir="rtl"` — the per-field direction is content-driven, not
+locale-driven.
+
+For a per-field translation sidecar (the workspace's other
+language), wrap the field with `TranslationPanel` from
+`src/components/forms/translation-panel.tsx`. Translations
+live inside `formatPayload.translations[locale]` (see the
+`formatPayload` rule below).
+
 ## Content `formatPayload` rule
 
-Per StudioFlow §11/§17/§23: Quick Create has exactly 4 fields (title, format, planned date, short brief). Format-specific structured fields (Hook, Main message, CTA, scenes, captions, references, etc.) live in `content_item.format_payload` (jsonb) and are edited under a **More details** disclosure on the content detail page.
+Per StudioFlow §11/§17/§23: Quick Create has exactly 4 fields (title, format, planned date, short brief). Format-specific structured fields (Hook, Main message, CTA, scenes, captions, references, etc.) live in `content_item.format_payload` (jsonb) and are edited under a **More details** disclosure on the content detail page (`src/components/forms/format-payload-editor.tsx`).
 
 - Do NOT add columns to `content_item` for these fields. The schema is already jsonb-shaped (§8: "default `{ schemaVersion: 1 }` enforced in service"). Adding columns duplicates the JSONB, breaks the format-driven UX, and requires a backfill migration.
 - The per-format schemas are the source of truth: see `docs/content/format-payload-schemas.md`. Update that file when a format gains a field; the implementation derives from it.
 - The `brief` field is a one-line text intent. It is separate from `formatPayload` (the structured creative contract). Rewriting the brief for clarity does not reset creative's notes, and vice versa.
+
+### Save path
+
+The editor's save path is `updateFormatPayloadAction` →
+`updateFormatPayload` in `lib/content/service.ts`. The
+service re-applies the per-format Zod schema on every
+write; malformed input throws. The activity event records
+the key-set diff (not the JSONB body) — JSONB diffs are
+noisy and not actionable in audit. Editability is the same
+as `updateContentItem` (only `draft` and `changes_requested`
+items are editable per master prompt §10).
+
+### Per-field AI
+
+Every text field in the More details editor has a
+`Suggest with AI` button (`src/components/forms/per-field-ai-suggest.tsx`).
+The button POSTs to `/api/ai/generate` with
+`capability=caption_drafts` and a new `field` parameter that
+scopes the prompt to that one field. The route reuses the
+existing `caption_drafts` allowlist (no new entitlement) and
+returns `{ text, parsed? }` — `parsed` is the structured value
+for fields like `hashtags` (string[]). The preview shows
+Insert / Replace / Try again / Dismiss; the route never
+writes to the DB on the user's behalf (master prompt §0.13).
+The button is hidden when the agency's `caption_drafts`
+capability is off — there is no second `caption_drafts_per_field`
+gate to manage.
+
+### Translations
+
+Translaton sidecar (`src/components/forms/translation-panel.tsx`):
+each text field gets a per-locale sidecar (v1: English +
+Arabic from `src/lib/i18n/locales.ts`). The values are
+stored inside `formatPayload.translations[locale]` as a
+per-locale partial of the source payload shape. The publish
+form (`planning/[id]/publish`) reads the matching translation
+when the user sets `contentLanguage`; otherwise the source
+(default-locale) values flow through. The mapper
+(`src/lib/format-payload/mapper.ts`) is the only place the
+locale → field resolution lives — adding a new locale to
+the picker is a one-line change to `SUPPORTED_LOCALES`.
+
+### Publish pre-fill
+
+The publish form (`publish-package-form.tsx`) starts from a
+per-platform default and merges the planner's mapped
+`formatPayload` (caption / hashtags / firstComment /
+callToAction / description / location / contentLanguage) on
+top. Saved channel values always win. See
+`formatPayloadPreFill` in `publish-package-form.tsx` and
+`mapFormatPayloadToPlatform` in `lib/format-payload/mapper.ts`.
+
+### Batch add extensions
+
+Batch paste (`/planning/batch`) now supports an extended
+row format: `title | format | date | brief [| caption
+[| hashtags [| location]]]`. The location cell accepts
+`name` or `name|externalId` (internal `|`). Per-row
+extensions are written into `formatPayload` on insert via
+the per-format Zod schema; a row that exceeds a per-format
+limit rolls back the whole batch. v1 paste rows (4 fields)
+still parse.
+
+## Bilingual content (EN/AR) + RTL
+
+The layout is bilingual from v1. The agency's `locale`
+(`agencies.locale`) drives the document `lang` / `dir`
+attributes on the root `<html>` (`src/app/layout.tsx`).
+v1 supports `en` and `ar`; adding a locale is a one-line
+change in `src/lib/i18n/locales.ts` (`SUPPORTED_LOCALES`).
+`resolveLocale()` is total — unknown codes fall back to
+`en` so a stale `agencies.locale` row from a legacy agency
+can't crash the layout.
+
+- Per-field direction is _content_-driven, not
+  locale-driven. `DirAwareTextarea` / `DirAwareInput`
+  (`src/components/forms/dir-aware-textarea.tsx`) detect
+  the first non-whitespace char: Arabic Unicode blocks
+  → `rtl`, otherwise `ltr`. A user typing an English
+  hashtag inside an Arabic form gets LTR alignment
+  inside the field; the page chrome is whatever the
+  agency locale says.
+- All text uses Tailwind 4 logical properties
+  (`text-start` / `text-end`, `ps-*` / `pe-*`,
+  `ms-*` / `me-*`) so layouts mirror correctly when
+  the document `dir` flips. **Never** hard-code
+  `text-left` / `text-right` in a component that's
+  used in a workspace — use the logical property.
+- Translations live inside `formatPayload.translations[locale]`
+  (see the `formatPayload` rule below). The editor's
+  per-field sidecar (`TranslationPanel`) is the UI;
+  the mapper (`lib/format-payload/mapper.ts`) is the
+  read side that feeds the publish form.
 
 ## AI integration
 
@@ -204,6 +315,7 @@ Per StudioFlow §15:
 - **Drafts only.** The route returns a `text` field; the user is responsible for `Insert / Replace / Copy / Try Again`. The route never writes to the DB on the user's behalf. `ai_usage_event.capability` records which capability was used.
 - **Allowlist is server-enforced.** The agency's `enabled_capabilities` is the gate. The route returns `403` for a disabled capability. The UI hides the button but the server is the source of truth.
 - **Capability allowlist is the full set** (not the 3 working ones). Disabling `brief_improvement` in agency settings hides the button on the content detail page. The allowlist size is what the agency admin sees, not what is currently implemented.
+- **Per-field AI scope.** The More details editor's per-field "Suggest with AI" button (`src/components/forms/per-field-ai-suggest.tsx`) reuses the existing `caption_drafts` capability for allowlist + governance. The new `field` body parameter scopes the prompt to a single field (`caption`, `hook`, `hashtags`, `callToAction`, `description`, `visualDirection`, `additionalNotes`, etc.). An agency with `caption_drafts` on gets per-field AI for free — no new entitlement. The response shape is `{ text, parsed? }`; `parsed` is the structured value for fields like `hashtags` (string[]). Adding a field to the per-field surface is a one-line change to the `FIELD_PROMPTS` map in `src/lib/ai/index.ts` + the `FormatPayloadField` union.
 
 ## Goal progress (live)
 
@@ -238,7 +350,7 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 
 ## Conventions
 
-- **Commits:** `<type>(<scope>): <description>`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `upgrade`. Scopes: `db`, `auth`, `content`, `planning`, `workflow`, `discussions`, `deliveries`, `publishing`, `notifications`, `ai`, `infra`, `ci`, `deps`.
+- **Commits:** `<type>(<scope>): <description>`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `upgrade`. Scopes: `db`, `auth`, `content`, `planning`, `workflow`, `discussions`, `deliveries`, `publishing`, `notifications`, `ai`, `infra`, `ci`, `deps`, `i18n`, `format-payload`.
 - **Branches:** `main` is production. `feat/*` for features, `fix/*` for hotfixes, `chore/*` for chores. Squash-merge.
 - **PRs:** must pass CI (`pnpm verify` + build + smoke e2e). Reference the goal number in the PR title.
 - **ADRs:** material deviations from the master prompt go in `docs/decisions/`. The first one (`docs/decisions/0001-vps-port.md`) records the choice to self-host on the LaraTik VPS instead of Supabase + Vercel.

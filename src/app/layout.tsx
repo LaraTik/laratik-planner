@@ -3,6 +3,12 @@ import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/lib/auth/config";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { currentActor } from "@/lib/auth/current-actor";
+import { db } from "@/lib/db";
+import { agencies } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { resolveLocale } from "@/lib/i18n/locales";
 import "./globals.css";
 
 const inter = Inter({
@@ -37,8 +43,25 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // and Next.js would surface a generic "Something went wrong"
   // page from the global-error boundary.
   const session = await auth();
+  // Resolve the active agency locale once per request so the
+  // document `lang` / `dir` attributes reflect the user's
+  // working locale. Unknown / missing agency falls back to
+  // English / LTR — never throws. The (app) workspace
+  // layouts may also set per-page locale; the root value
+  // is the safe default for the marketing / signin pages
+  // that sit above the workspace context.
+  const actor = session?.user?.id ? await currentActor() : null;
+  const agencyId = actor ? ((await resolveActiveAgencyContext({ actor }))?.agencyId ?? null) : null;
+  const [agencyRow] = agencyId
+    ? await db
+        .select({ locale: agencies.locale })
+        .from(agencies)
+        .where(eq(agencies.id, agencyId))
+        .limit(1)
+    : [];
+  const activeLocale = resolveLocale(agencyRow?.locale);
   return (
-    <html lang="en" className={`${inter.variable} h-full`}>
+    <html lang={activeLocale.code} dir={activeLocale.dir} className={`${inter.variable} h-full`}>
       <body className="bg-canvas text-fg-primary min-h-full">
         <SessionProvider session={session}>{children}</SessionProvider>
         {/*

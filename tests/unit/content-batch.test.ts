@@ -6,10 +6,12 @@ describe("parseBatchRows", () => {
     const rows = parseBatchRows("Hello World | static_post | 2026-08-25 | a quick hello");
     expect(rows).toEqual([
       {
+        lineNumber: 1,
         title: "Hello World",
         format: "static_post",
         plannedPublishAt: "2026-08-25",
         brief: "a quick hello",
+        extensions: {},
       },
     ]);
   });
@@ -17,7 +19,14 @@ describe("parseBatchRows", () => {
   it("defaults format to static_post and brief to empty when omitted", () => {
     const rows = parseBatchRows("Just a title | story | 2026-09-01");
     expect(rows).toEqual([
-      { title: "Just a title", format: "story", plannedPublishAt: "2026-09-01", brief: "" },
+      {
+        lineNumber: 1,
+        title: "Just a title",
+        format: "story",
+        plannedPublishAt: "2026-09-01",
+        brief: "",
+        extensions: {},
+      },
     ]);
   });
 
@@ -25,7 +34,14 @@ describe("parseBatchRows", () => {
     // "Title only" with no '|' at all -> the destructure defaults fill in
     const rows = parseBatchRows("Title only");
     expect(rows).toEqual([
-      { title: "Title only", format: "static_post", plannedPublishAt: "", brief: "" },
+      {
+        lineNumber: 1,
+        title: "Title only",
+        format: "static_post",
+        plannedPublishAt: "",
+        brief: "",
+        extensions: {},
+      },
     ]);
   });
 
@@ -33,16 +49,41 @@ describe("parseBatchRows", () => {
     // When the user explicitly leaves cells empty, the destructuring defaults
     // don't fire (only undefined triggers them). The cells stay empty strings.
     const rows = parseBatchRows("Title only ||");
-    expect(rows).toEqual([{ title: "Title only", format: "", plannedPublishAt: "", brief: "" }]);
+    expect(rows).toEqual([
+      {
+        lineNumber: 1,
+        title: "Title only",
+        format: "",
+        plannedPublishAt: "",
+        brief: "",
+        extensions: {},
+      },
+    ]);
   });
 
   it("trims whitespace from each cell and skips empty lines", () => {
     const rows = parseBatchRows(
       "\n\n  Title  |  story  |  2026-08-30  \n\n   \nAnother | carousel | 2026-09-01\n",
     );
+    // `lineNumber` is the position among the *non-empty* rows
+    // (the parser drops blank lines before numbering).
     expect(rows).toEqual([
-      { title: "Title", format: "story", plannedPublishAt: "2026-08-30", brief: "" },
-      { title: "Another", format: "carousel", plannedPublishAt: "2026-09-01", brief: "" },
+      {
+        lineNumber: 1,
+        title: "Title",
+        format: "story",
+        plannedPublishAt: "2026-08-30",
+        brief: "",
+        extensions: {},
+      },
+      {
+        lineNumber: 2,
+        title: "Another",
+        format: "carousel",
+        plannedPublishAt: "2026-09-01",
+        brief: "",
+        extensions: {},
+      },
     ]);
   });
 
@@ -51,6 +92,25 @@ describe("parseBatchRows", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]?.title).toBe("Row A");
     expect(rows[1]?.title).toBe("Row B");
+  });
+
+  it("extracts the optional caption from the 5th field", () => {
+    const rows = parseBatchRows(
+      "Spring drop | static_post | 2026-09-05T09:00:00Z | The reveal | Pre-order now",
+    );
+    const first = rows[0];
+    expect(first?.extensions).toBeDefined();
+    expect((first?.extensions as { caption?: string }).caption).toBe("Pre-order now");
+  });
+
+  it("extracts the optional hashtags from the 6th field", () => {
+    const rows = parseBatchRows(
+      "Spring drop | static_post | 2026-09-05T09:00:00Z | The reveal | Pre-order | #spring #drop",
+    );
+    const first = rows[0];
+    expect(first?.extensions).toBeDefined();
+    expect((first?.extensions as { caption?: string }).caption).toBe("Pre-order");
+    expect((first?.extensions as { hashtags?: string[] }).hashtags).toEqual(["#spring", "#drop"]);
   });
 });
 
@@ -110,5 +170,26 @@ describe("BatchCreateSchema", () => {
     });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.items[0]?.brief).toBe("");
+  });
+
+  it("accepts an extensions bundle and re-validates per-format limits", () => {
+    const result = BatchCreateSchema.safeParse({
+      workspaceId: "95e9ea6d-8d71-4f7f-8fc8-7eef95c7a6fa",
+      items: [
+        {
+          title: "Spring drop",
+          format: "static_post",
+          plannedPublishAt: "2026-09-05T09:00:00Z",
+          extensions: { caption: "Pre-order now", hashtags: ["#spring"] },
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.items[0]?.extensions).toEqual({
+        caption: "Pre-order now",
+        hashtags: ["#spring"],
+      });
+    }
   });
 });

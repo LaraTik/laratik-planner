@@ -15,6 +15,7 @@ import {
   setFinalCopyApprovalAction,
 } from "./actions";
 import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
+import type { MappedPlatformFields } from "@/lib/format-payload/mapper";
 
 /**
  * M4 — Publish package form (client component).
@@ -182,6 +183,7 @@ export function PublishPackageForm({
   contentItemId,
   itemTitle,
   itemFormat,
+  formatPayloadPreFill,
   channels,
   deliveryVersions,
   readiness,
@@ -194,6 +196,15 @@ export function PublishPackageForm({
   contentItemId: string;
   itemTitle: string;
   itemFormat: string;
+  /**
+   * Pre-fill from the planner's `formatPayload` work (the
+   * "More details" editor on the content detail page).
+   * Applied on top of the per-platform default for channels
+   * that have no saved `platformPayload` yet. Existing saved
+   * values always win — the planner's structured fields
+   * never overwrite an already-published package.
+   */
+  formatPayloadPreFill?: MappedPlatformFields;
   channels: ChannelSummary[];
   deliveryVersions: DeliveryVersionSummary[];
   readiness: ReadinessReport;
@@ -205,7 +216,35 @@ export function PublishPackageForm({
   const [drafts, setDrafts] = useState<Record<string, PlatformPayload>>(() => {
     const initial: Record<string, PlatformPayload> = {};
     for (const ch of channels) {
-      initial[ch.id] = ch.payload ?? defaultPayloadFor(ch.platform);
+      // Pre-fill order: saved channel payload > per-platform
+      // default + formatPayload pre-fill. The pre-fill is
+      // merged into the default so a planner who filled in
+      // the More details editor sees their caption /
+      // hashtags / location in the publish form on first
+      // open, before any manual save.
+      const base = ch.payload ?? defaultPayloadFor(ch.platform);
+      if (ch.payload || !formatPayloadPreFill) {
+        initial[ch.id] = base;
+        continue;
+      }
+      initial[ch.id] = {
+        ...base,
+        ...(formatPayloadPreFill.caption ? { caption: formatPayloadPreFill.caption } : {}),
+        ...(formatPayloadPreFill.description
+          ? { description: formatPayloadPreFill.description }
+          : {}),
+        ...(formatPayloadPreFill.firstComment
+          ? { firstComment: formatPayloadPreFill.firstComment }
+          : {}),
+        ...(formatPayloadPreFill.hashtags ? { hashtags: formatPayloadPreFill.hashtags } : {}),
+        ...(formatPayloadPreFill.callToAction
+          ? { callToAction: formatPayloadPreFill.callToAction }
+          : {}),
+        ...(formatPayloadPreFill.location ? { location: formatPayloadPreFill.location } : {}),
+        ...(formatPayloadPreFill.contentLanguage
+          ? { contentLanguage: formatPayloadPreFill.contentLanguage }
+          : {}),
+      } as PlatformPayload;
     }
     return initial;
   });

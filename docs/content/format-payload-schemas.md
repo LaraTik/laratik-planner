@@ -173,10 +173,57 @@ columns on `content_item`:
 - Channel overrides (caption, CTA, hashtags) live on
   `content_item_channel` and are NOT mirrored into `formatPayload`.
 
+## Translations
+
+Every text field in every per-format schema also accepts a
+localised sibling under `formatPayload.translations[locale]`
+(v1 supports `en` and `ar`; see `src/lib/i18n/locales.ts`).
+The translation map is a per-locale partial of the source
+payload shape — only the fields the translator filled in
+need to be present. Unknown locale codes are rejected by
+Zod so a typo can't sneak untranslated content in.
+
+Example:
+
+```jsonc
+{
+  "schemaVersion": 1,
+  "caption": "Spring drop",
+  "hashtags": ["#spring", "#drop"],
+  "translations": {
+    "ar": {
+      "caption": "مجموعة ربيعية",
+      "hashtags": ["#ربيع"],
+    },
+  },
+}
+```
+
+The format-payload editor (`src/components/forms/format-payload-editor.tsx`)
+renders one TranslationPanel per text field; the publish
+form (`planning/[id]/publish`) reads the translation matching
+the user's `contentLanguage` choice.
+
 ## AI use
 
-The `improveBrief` capability (§15) writes a Hook → Main message → CTA
-block that the user can copy into the brief field. The
-`completeness_check` capability scores the brief on a 0-100 scale and
-lists the missing structured fields. Neither writes to `formatPayload`
-directly — the user must confirm by editing the More details form.
+Two AI surfaces work on `formatPayload`:
+
+1. **Whole-brief** — the existing
+   `brief_improvement` / `caption_drafts` / `completeness_check`
+   capabilities (per master prompt §15). The route still
+   returns text; the user pastes into the right field.
+
+2. **Per-field** — every text field in the More details
+   editor has a `Suggest with AI` button. The button POSTs
+   to `/api/ai/generate` with `capability=caption_drafts`
+   and the new `field` parameter. The route reuses the
+   existing `caption_drafts` allowlist (no new entitlement)
+   and scopes the prompt to the single field. The
+   response is `{ text, parsed? }` — `parsed` is the
+   structured value for fields like `hashtags` (string[]).
+
+   `AI never bypasses human control` (master prompt §0.13):
+   the route never writes to the DB; the user must click
+   Insert or Replace on the preview. The per-field button
+   is hidden when the agency's `caption_drafts` capability
+   is off.

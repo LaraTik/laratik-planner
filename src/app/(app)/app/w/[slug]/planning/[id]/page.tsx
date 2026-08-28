@@ -14,6 +14,7 @@ import { statusBadgeVariant, humanStatus, humanFormat } from "@/lib/content/stat
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
+import { FormatPayloadEditor } from "@/components/forms/format-payload-editor";
 import { WorkflowBar } from "./workflow-bar";
 import { DeliverySection } from "./delivery-section";
 import { PublishingSection } from "./publishing-section";
@@ -25,10 +26,11 @@ import { Button } from "@/components/ui/button";
 import { EditIdeaButton } from "./edit-button";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
-import { aiFeatureSettings } from "@/lib/db/schema";
+import { aiFeatureSettings, agencies } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { isAiEnabled } from "@/lib/ai";
 import { AI_CAPABILITY_METADATA } from "@/lib/ai/capabilities";
+import { parseFormatPayload } from "@/lib/format-payload/schemas";
 
 export async function generateMetadata({
   params,
@@ -104,7 +106,8 @@ export default async function ContentDetailPage({
   // passing one across the server→client boundary throws "An error
   // occurred in the Server Components render" (minified to React
   // error #441) in production builds.
-  const agencyId = (await resolveActiveAgencyContext({ actor }))?.agencyId ?? null;
+  const agencyContext = await resolveActiveAgencyContext({ actor });
+  const agencyId = agencyContext?.agencyId ?? null;
   const aiLive = isAiEnabled();
   const [feature] = agencyId
     ? await db
@@ -113,6 +116,27 @@ export default async function ContentDetailPage({
         .where(eq(aiFeatureSettings.agencyId, agencyId))
         .limit(1)
     : [];
+  // Resolve the active agency locale so the format-payload
+  // editor's per-field direction auto-detection has the right
+  // fallback. `resolveLocale` (in lib/i18n/locales) is total —
+  // unknown codes fall back to "en" — so a stale agencies.locale
+  // row from a legacy agency can't crash the page.
+  const [agencyRow] = agencyId
+    ? await db
+        .select({ locale: agencies.locale })
+        .from(agencies)
+        .where(eq(agencies.id, agencyId))
+        .limit(1)
+    : [];
+  const activeLocale = agencyRow?.locale ?? "en";
+  // The editor's per-field AI buttons reuse the
+  // `caption_drafts` capability (no new entitlement). The
+  // button is hidden when the capability is off.
+  const captionDraftsEnabled = Boolean(
+    feature?.enabled &&
+    (feature.enabledCapabilities.length === 0 ||
+      feature.enabledCapabilities.includes("caption_drafts")),
+  );
   // GAP-AI-UX-2026-08-26 — the planner surface used to assume three
   // capabilities were on; we now let the agency form be the single
   // source of truth and only default to "all on" when the row is
@@ -160,6 +184,33 @@ export default async function ContentDetailPage({
           <p className="text-body text-fg-muted">No brief yet.</p>
         )}
       </Card>
+
+      <FormatPayloadEditor
+        workspaceSlug={slug}
+        contentItemId={item.id}
+        format={item.format}
+        initial={(() => {
+          // The DB row stores `formatPayload` as a free-form
+          // jsonb. The editor expects the parsed shape, with
+          // the per-format Zod defaults applied. parseFormatPayload
+          // is total — malformed rows fall back to
+          // `{ schemaVersion: 1 }` rather than throwing.
+          try {
+            return parseFormatPayload(
+              item.format,
+              (item as { formatPayload?: unknown }).formatPayload,
+            ) as Record<string, unknown>;
+          } catch {
+            return { schemaVersion: 1 };
+          }
+        })()}
+        editable={
+          (actorRoles.isManager || actorRoles.isPlanner) &&
+          UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number])
+        }
+        locale={activeLocale}
+        aiEnabled={aiLive && captionDraftsEnabled}
+      />
 
       <Card>
         <CardTitle className="mb-3">Channels</CardTitle>

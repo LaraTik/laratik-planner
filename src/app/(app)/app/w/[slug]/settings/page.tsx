@@ -8,7 +8,6 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { humanize } from "@/lib/content/status";
 import { hasPlatformPermission } from "@/lib/auth/platform-access";
 import { getResetAllIdeasCounts, EMPTY_RESET_ALL_COUNTS } from "@/lib/content/reset-all-ideas";
-import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/workspace/page-header";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { BulkResetSection } from "./bulk-reset-section";
@@ -53,7 +52,7 @@ export default async function WorkspaceSettingsPage({
       ? getResetAllIdeasCounts(workspace.id, false).catch(() => EMPTY_RESET_ALL_COUNTS)
       : Promise.resolve(EMPTY_RESET_ALL_COUNTS),
   ]);
-  const [[settings], canManage] = await Promise.all([
+  const [[settings]] = await Promise.all([
     db
       .select()
       .from(workspaceSettingsTable)
@@ -209,44 +208,6 @@ export default async function WorkspaceSettingsPage({
         />
       </ul>
 
-      <section
-        className="border-border bg-surface rounded-[var(--radius-card)] border p-4 sm:p-6"
-        data-testid="settings-readonly"
-      >
-        <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-section-title text-fg-primary font-semibold">
-            Current configuration
-          </h2>
-          {canManage ? (
-            <Badge variant="info">Manager view — open a section to edit</Badge>
-          ) : (
-            <Badge variant="warning">Read-only</Badge>
-          )}
-        </header>
-        <dl className="grid gap-4 sm:grid-cols-2">
-          <Setting label="Timezone" value={workspace.timezone} />
-          <Setting
-            label="Monthly target"
-            value={values.monthlyTarget ? `${values.monthlyTarget} posts / month` : "Not set"}
-          />
-          <Setting
-            label="Lead time total"
-            value={`${leadTotal} business days`}
-            href={`${wsBase}/lead-times`}
-          />
-          <Setting
-            label="Approval mode"
-            value={humanize(values.approvalMode)}
-            href={`${wsBase}/approvals`}
-          />
-          <Setting
-            label="Default assignees"
-            value={`${defaultsCount} of 4 configured`}
-            href={`${wsBase}/defaults`}
-          />
-        </dl>
-      </section>
-
       {canBulkReset ? (
         <BulkResetSection workspaceSlug={slug} workspaceName={workspace.name} counts={bulkCounts} />
       ) : null}
@@ -291,25 +252,5 @@ function KpiCard({
         </span>
       </a>
     </li>
-  );
-}
-
-function Setting({ label, value, href }: { label: string; value: string; href?: string }) {
-  const inner = (
-    <>
-      <dt className="text-body text-fg-secondary">{label}</dt>
-      <dd className="text-body text-fg-primary font-semibold">{value}</dd>
-    </>
-  );
-  return (
-    <div className="bg-surface-subtle flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] p-3">
-      {href ? (
-        <a href={href} className="flex w-full flex-wrap items-center justify-between gap-3">
-          {inner}
-        </a>
-      ) : (
-        inner
-      )}
-    </div>
   );
 }
