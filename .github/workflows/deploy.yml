@@ -11,9 +11,25 @@ name: Deploy
 # critical E2E is the dev's pre-push signal, the full E2E is the
 # dev's pre-merge signal, and `pnpm verify` covers the rest.
 #
+# As of the 2026-08-28 single-build change, CI's `build-smoke`
+# job is the single source of the GHCR push — it builds the
+# production image (linux/amd64), smoke-tests it, then publishes
+# the same bytes to `ghcr.io/laratik/laratik-planner{<sha>,latest}`
+# and the matching `-migrator` image. This workflow no longer
+# rebuilds; the `build` job only runs on `workflow_dispatch`
+# (the hotfix escape hatch) so an operator can still ship a
+# ref without waiting for CI to turn green. On the normal
+# `workflow_run` path, the deploy job verifies the GHCR tag
+# exists and SSHes to the VPS to pull + run migrations + restart.
+# The duplication is gone: previously deploy.yml's `build` job
+# did a second full `next build` + `docker build` (~270s wall
+# per deploy); now the deploy job runs in ~60s.
+#
 # The `workflow_dispatch` escape hatch is preserved: a hotfix can
 # still dispatch this workflow manually without waiting for CI.
-# Use sparingly.
+# Use sparingly — it rebuilds the image locally on a GHA runner,
+# not on a Linux/amd64 build host, so the produced image is still
+# the correct platform.
 #
 # See `docs/testing/strategy.md` (Release gates) and
 # `docs/operations/runbook.md` (CI vs. local E2E) for the full
@@ -37,15 +53,16 @@ concurrency:
 
 jobs:
   build:
-    name: Build + push image
-    # The build job is the release-gate funnel: it runs when CI
-    # (the workflow_run trigger) reports success, OR when an
-    # operator explicitly dispatches this workflow. The
-    # `workflow_dispatch` escape hatch exists so a hotfix to a
-    # release-blocker can ship without waiting for CI to turn
-    # green (e.g. §23 step 19/20 integration flakes, or a zizmor
-    # rule upgrade). Use sparingly — it bypasses the CI gate.
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    name: Build + push image (dispatch only)
+    # Per the 2026-08-28 single-build change, this job ONLY runs when
+    # an operator dispatches the workflow manually. On the normal
+    # `workflow_run` path from CI, the production image is already
+    # in GHCR (pushed by CI's `build-smoke` job), so there is nothing
+    # to rebuild here. The dispatch path exists so a hotfix to a
+    # release-blocker can ship without waiting for CI to turn green
+    # (e.g. §23 step 19/20 integration flakes, or a zizmor rule
+    # upgrade). Use sparingly — it bypasses the CI gate.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -106,14 +123,41 @@ jobs:
     name: Deploy to laratik-vps
     runs-on: ubuntu-latest
     needs: build
+    # `if: always() && (...)` lets this job run whether or not the
+    # `build` job above actually executed:
+    #   - workflow_dispatch: build ran, must have succeeded
+    #   - workflow_run from CI: build was skipped (CI already pushed
+    #     the image), so we accept either 'success' or 'skipped'
+    # This is the standard GHA pattern for "optional dependency".
+    if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped')
     environment: production
-    # Least privilege: deploy only needs to read the image that build
-    # just pushed. The build job already wrote to GHCR (packages: write
-    # on the GITHUB_TOKEN). Deploy just verifies the tag exists.
+    # Least privilege: deploy only needs to read the image that CI's
+    # build-smoke (or the dispatch build job above) just pushed.
+    # `packages: read` lets the verify-image step call `docker
+    # buildx imagetools inspect` against the GHCR tag.
     permissions:
       contents: read
       packages: read
     steps:
+      - name: Verify image exists in GHCR
+        # Fast-fail in the Actions UI if the image is missing. On
+        # the normal path CI pushed it; on the dispatch path the
+        # build job above pushed it. If the tag isn't reachable
+        # from the GHA runner, `docker buildx imagetools inspect`
+        # exits non-zero and we never SSH to the VPS. Cheap
+        # (~2-3s) head request, no Docker daemon dependency.
+        env:
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          echo "Verifying ghcr.io/laratik/laratik-planner:${DEPLOY_SHA} is reachable…"
+          docker buildx imagetools inspect \
+            "ghcr.io/laratik/laratik-planner:${DEPLOY_SHA}"
+          docker buildx imagetools inspect \
+            "ghcr.io/laratik/laratik-planner-migrator:${DEPLOY_SHA}"
+          echo "✓ Both images present in GHCR"
+        timeout-minutes: 2
+
       - name: SSH + deploy
         uses: appleboy/ssh-action@v1
         env:

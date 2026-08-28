@@ -119,15 +119,20 @@ From your **local** machine:
 
 ```bash
 git push origin main
-# CI: lint, typecheck, unit, integration, coverage, audit, Chromium
-#      critical E2E + visual baseline, build, Docker smoke on the
-#      head_sha. Full release-gate contract — see
-#      docs/testing/strategy.md (Release gates).
-# E2E (separate workflow, release-candidate only): full 5-browser
-#      functional matrix + visual-chromium on the head_sha. Does NOT
-#      gate deploy.
-# On green CI: deploy workflow SSHes to the VPS and runs scripts/deploy.sh.
-# On red health check: the deploy script rolls back to the previous image automatically.
+# CI: lint, typecheck, unit, integration, coverage, audit, build,
+#      Docker image + health smoke + GHCR push, SMTP cert probe,
+#      workflow/Dockerfile/shell linters. Full release-gate contract —
+#      see docs/testing/strategy.md (Release gates).
+# On green CI: deploy workflow verifies the GHCR tag, SSHes to the
+#              VPS, and runs scripts/deploy.sh.
+# On red health check: the deploy script rolls back to the previous
+#                      image automatically.
+#
+# Expected wall-clock (measured 2026-08-28, post single-build change):
+#   CI green:           ~9 min  (4 jobs in parallel + build-smoke)
+#   workflow_run → deploy: ~2 s
+#   deploy (verify + ssh + deploy.sh): ~60 s
+#   Push → live:        ~10 min  (down from ~14-16 min pre-change)
 ```
 
 ```bash
@@ -290,24 +295,29 @@ PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e:smoke
 ### CI vs. local E2E
 
 The authoritative deploy-gate workflow is `.github/workflows/ci.yml`
-(2026-08-26 contract, post CI-minimization plan + the "E2E moves
-local" follow-up). It runs the irreducible release contract that
-genuinely cannot be reproduced on a dev laptop:
+(2026-08-28 contract, post CI-minimization plan + the "E2E moves
+local" follow-up + the "single-build-pipeline" change). It runs the
+irreducible release contract that genuinely cannot be reproduced on
+a dev laptop:
 
-- integration + migration drill (`pnpm test:integration`);
+- integration + migration drill (`pnpm test:integration`) — the
+  audit re-run; the dev's pre-push already ran it locally;
 - target coverage (95/90 critical modules, 85/80 application
   services) — runs the unit suite under v8 instrumentation;
 - `pnpm audit --prod` (zero critical/high production findings);
-- production build, Docker image build, and a `/api/health` smoke
-  against the built image;
+- production build, Docker image build, a `/api/health` smoke
+  against the built image, **and the GHCR push** (app + migrator
+  with the `<sha>` and `latest` tags) — the single source of
+  the production image as of the 2026-08-28 single-build change;
 - SMTP cert probe (deploy-blocker);
 - workflow / Dockerfile / shell linters (actionlint + zizmor +
   hadolint + shellcheck).
 
-Format, lint, typecheck, the full unit suite, and the critical E2E
-subset (chromium + visual-chromium) moved out of CI to
+Format, lint, typecheck, the full unit suite, integration, and the
+critical E2E subset (chromium + visual-chromium) moved out of CI to
 `.husky/pre-commit` and `.husky/pre-push` so a regression is caught
-before CI minutes are spent.
+before CI minutes are spent. CI re-runs integration as the deploy-gate
+audit, not as the first signal.
 
 The 5-browser E2E matrix and the full visual matrix also moved out
 of CI. They are run **locally** as a manual pre-merge step (the
@@ -315,6 +325,14 @@ critical subset is the pre-push signal, the full 5-browser matrix is
 the pre-merge signal). The `e2e.yml` GitHub workflow was deleted in
 the 2026-08-26 "E2E moves local" commit. Production deploy fires on
 CI green alone — no E2E gate.
+
+The 2026-08-28 single-build change also removed the duplicate
+`next build` + `docker build` from `.github/workflows/deploy.yml`:
+CI's `build-smoke` job is now the single source of the GHCR push,
+and the deploy job just verifies the tag exists in the registry
+before SSHing to the VPS to pull + run migrations + restart. This
+shaves ~270s off every deploy (deploy.yml's `Build + push image`
+job ran for 4.5 min on the previous 8 successful deploys).
 
 #### Local E2E recipes
 
@@ -344,6 +362,38 @@ If a dev's pre-push `pnpm test:e2e:critical` is taking too long on
 trivial pushes, set `SKIP_E2E=1` in the env (or `git push --no-verify`
 to skip both the unit suite and E2E). Both are escape hatches, not
 the default.
+
+#### Local integration setup
+
+Integration moved out of CI into `.husky/pre-push` on 2026-08-28
+(symmetric with the 2026-08-26 "E2E moves local" decision). CI still
+re-runs integration as the deploy-gate audit, so skipping it locally
+is safe — it just makes the dev's pre-push signal weaker than the
+CI signal again.
+
+The integration runner requires a disposable Postgres database that
+contains the substring `test` or `ci` in the URL
+(`scripts/run-integration-tests.ts` enforces this guard). The dev's
+local Postgres is fine; the only extra step is a second database:
+
+```bash
+# One-time: create a disposable test database on your dev Postgres.
+docker compose -f docker-compose.dev.yml up -d postgres
+psql -h localhost -U planner -d planner -c "CREATE DATABASE planner_test;"
+
+# Then set the test URL in your shell rc (or .env / direnv). The
+# .env.example template includes this line for reference.
+export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@localhost:5432/planner_test
+
+# Verify locally before relying on the pre-push gate:
+pnpm test:integration
+```
+
+If `TEST_DATABASE_URL` is not set, `.husky/pre-push` skips
+integration with a hint to set it up — it does not fail. This
+keeps the hook friendly to dev machines that haven't been
+provisioned yet. `SKIP_INTEGRATION=1` is the explicit escape
+hatch when you have a reason to skip.
 
 ### Dev-only API helpers
 
@@ -377,6 +427,7 @@ the default.
 ```bash
 # Local pre-push (automatic via .husky/pre-push)
 pnpm test:unit
+pnpm test:integration   # only if TEST_DATABASE_URL is set
 pnpm test:e2e:critical
 
 # Local pre-merge (manual checklist on the release-candidate branch)
