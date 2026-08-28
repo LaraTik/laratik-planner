@@ -11,11 +11,15 @@ import {
 } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { humanize } from "@/lib/content/status";
+import { hasPlatformPermission } from "@/lib/auth/platform-access";
+import { getResetAllIdeasCounts, EMPTY_RESET_ALL_COUNTS } from "@/lib/content/reset-all-ideas";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { SettingsForm } from "./settings-form";
+import { BulkResetSection } from "./bulk-reset-section";
+import { currentActor } from "@/lib/auth/current-actor";
 
 /**
  * Workspace settings overview.
@@ -41,6 +45,17 @@ export default async function WorkspaceSettingsPage({
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
+  // The bulk-reset danger zone is gated on the same
+  // `platform.destructive.execute` permission as the per-idea
+  // reset. The check is here (not in the section) so the
+  // conditional render matches the action's server-side gate.
+  const actor = await currentActor();
+  const [canBulkReset, bulkCounts] = await Promise.all([
+    actor ? hasPlatformPermission(actor, "platform.destructive.execute") : Promise.resolve(false),
+    actor
+      ? getResetAllIdeasCounts(workspace.id, false).catch(() => EMPTY_RESET_ALL_COUNTS)
+      : Promise.resolve(EMPTY_RESET_ALL_COUNTS),
+  ]);
   const [[settings], membershipRows, canManage] = await Promise.all([
     db
       .select()
@@ -210,6 +225,10 @@ export default async function WorkspaceSettingsPage({
           </Card>
         )}
       </div>
+
+      {canBulkReset ? (
+        <BulkResetSection workspaceSlug={slug} workspaceName={workspace.name} counts={bulkCounts} />
+      ) : null}
     </div>
   );
 }
