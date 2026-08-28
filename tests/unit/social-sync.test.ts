@@ -89,6 +89,7 @@ describe("humanizeTestError", () => {
     "rate_limited",
     "provider_unavailable",
     "not_found",
+    "invalid_response",
     "platform_kek_missing",
     "social_not_enabled",
     "no_connection",
@@ -104,6 +105,7 @@ describe("humanizeTestError", () => {
         "rate_limited",
         "provider_unavailable",
         "not_found",
+        "invalid_response",
         "platform_kek_missing",
         "social_not_enabled",
         "no_connection",
@@ -111,6 +113,20 @@ describe("humanizeTestError", () => {
         "unknown",
       ]),
     );
+  });
+
+  it("humanizes invalid_response distinctly from provider_unavailable", () => {
+    // 2026-08-28: invalid_response was added to the union so the
+    // Re-test path can surface "Meta returned an unrecognized
+    // response" instead of the generic "validation request failed".
+    // The copy must be distinct from provider_unavailable (which
+    // implies Meta is down) because invalid_response is a parse /
+    // schema mismatch, not an outage.
+    const inv = humanizeTestError("invalid_response");
+    const unavail = humanizeTestError("provider_unavailable");
+    expect(inv).not.toBe(unavail);
+    expect(inv.length).toBeGreaterThan(8);
+    expect(inv).not.toMatch(/^[a-z_]+$/);
   });
 
   it.each(codes)("returns a non-empty human string for %s", (code) => {

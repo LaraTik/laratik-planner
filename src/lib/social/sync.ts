@@ -199,6 +199,7 @@ type SyncErrorCode =
   | "rate_limited"
   | "provider_unavailable"
   | "not_found"
+  | "invalid_response"
   | "platform_kek_missing"
   | "social_not_enabled"
   | "not_configured"
@@ -413,9 +414,15 @@ async function runChannelSyncCore(
       syncErrorCodeFor(err),
       backoffAt(now, failureCount),
     );
+    // 2026-08-28: the in-memory errorCode must match the persisted
+    // code so the Re-test path surfaces the actual reason
+    // (not_found / invalid_response) instead of the generic
+    // "validation request failed" string. The pre-fix return was
+    // hard-coded to "unknown", which is correct only for genuinely
+    // untyped errors. For SPEs we now return the typed code.
     return {
       outcome: "failed",
-      errorCode: "unknown",
+      errorCode: isSocialProviderError(err) ? (err.code as SyncErrorCode) : "unknown",
       needsReauth: false,
       lastSyncedAt: null,
       latestUsage: null,
@@ -547,6 +554,14 @@ export function humanizeTestError(code: TestErrorCode): string {
       return "Meta is temporarily unavailable. Try again in a few minutes.";
     case "not_found":
       return "The connected account could not be found. It may have been deleted or renamed.";
+    case "invalid_response":
+      // 2026-08-28: the Meta endpoint returned a body we could not
+      // parse, or a non-error HTTP status we did not classify. The
+      // UI copy is intentionally distinct from "provider unavailable"
+      // (which implies Meta is down) — this is "Meta returned
+      // something we don't know how to read", which often means a
+      // temporary schema or version mismatch.
+      return "Meta returned an unrecognized response. The endpoint may be temporarily unavailable; try again in a few minutes.";
     case "platform_kek_missing":
       return "Platform credential envelope is not configured. Contact your agency admin.";
     case "social_not_enabled":
