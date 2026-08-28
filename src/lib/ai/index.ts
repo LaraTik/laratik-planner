@@ -771,3 +771,48 @@ export async function suggestLeadTimes(input: {
     readyToPublishLeadDays: clamp(numbers[3]!),
   };
 }
+
+/**
+ * Settings (Phase D) — suggest a monthly content target for a
+ * workspace. The model is anchored to the workspace timezone
+ * + lead-time total so a workspace with a 30-day cycle
+ * doesn't get a 5-posts-per-week target it cannot sustain.
+ */
+export async function suggestMonthlyTarget(input: {
+  timezone: string;
+  leadTimeTotal: number;
+  approvalMode: "simple" | "internal_then_client";
+  apiKey?: string | undefined;
+  onUsage?: (result: ChatResult) => void;
+  maxTokens?: number | undefined;
+}): Promise<number | null> {
+  if (!isAiEnabled() && !input.apiKey) return null;
+  const system = [
+    "You are a senior social media operations strategist.",
+    "Suggest a sensible monthly content target (an integer 1-200 posts per month) for a content team.",
+    "Constraints:",
+    "  - Total lead-time cycle (content + design + creative + publish) drives the upper bound",
+    "  - With a long cycle, fewer posts per month is realistic",
+    "  - 'simple' approval can sustain a higher target than 'internal_then_client'",
+    "Reply with exactly one line containing only an integer (no unit, no label, no markdown).",
+  ].join("\n");
+  const userLines = [
+    `Workspace timezone: ${input.timezone}`,
+    `Approval mode: ${input.approvalMode}`,
+    `Lead-time cycle: ${input.leadTimeTotal} business days`,
+  ];
+  const result = await chat({
+    temperature: 0.5,
+    maxTokens: input.maxTokens ?? 50,
+    apiKey: input.apiKey,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: userLines.join("\n") },
+    ],
+  });
+  if (!result?.content) return null;
+  input.onUsage?.(result);
+  const n = Number(result.content.trim().split(/\s+/)[0]);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(1, Math.min(200, Math.round(n)));
+}
