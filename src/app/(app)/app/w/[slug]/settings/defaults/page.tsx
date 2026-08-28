@@ -73,7 +73,18 @@ export default async function SettingsDefaultsPage({
         }
         description="The four people pre-filled on every new content item. Per-item overrides always win — the default is a shortcut, not a rule."
       />
-      <SettingsSectionNav slug={slug} current="defaults" />
+      <SettingsSectionNav
+        slug={slug}
+        current="defaults"
+        configured={{
+          defaults: !!(
+            settings?.defaultDesignerId &&
+            settings?.defaultContentReviewerId &&
+            settings?.defaultInternalCreativeReviewerId &&
+            settings?.defaultClientReviewerId
+          ),
+        }}
+      />
       <SettingsHealth
         slug={slug}
         section="defaults"

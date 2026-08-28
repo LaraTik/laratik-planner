@@ -54,7 +54,7 @@ export default async function SettingsApprovalsPage({
         }
         description="How many approval steps a piece of content needs before publish. Pick the mode that matches how the brand stakeholders actually work."
       />
-      <SettingsSectionNav slug={slug} current="approvals" />
+      <SettingsSectionNav slug={slug} current="approvals" configured={{ approvals: true }} />
       <SettingsHealth slug={slug} section="approvals" metrics={{ mode: currentMode }} />
       <SectionCard
         id="approvals"

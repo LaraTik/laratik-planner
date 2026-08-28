@@ -1,6 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -32,12 +32,26 @@ function hrefFor(slug: string, section: SettingsSectionId): string {
   return `/app/w/${slug}/settings/${section}`;
 }
 
+/**
+ * Per-section configuration status, computed at render time
+ * by the per-section page (which has the live values). The
+ * nav reads this map to decide which step is "done" (green
+ * check), which is the current step (primary pill), and
+ * which is still pending (muted circle). Without this map
+ * the step indicator is just a position counter; with it,
+ * the indicator becomes a real progress signal that
+ * matches the overview's `SettingsSetupChecklist`.
+ */
+export type SettingsConfiguredMap = Partial<Record<SettingsSectionId, boolean>>;
+
 export function SettingsSectionNav({
   slug,
   current,
+  configured,
 }: {
   slug: string;
   current: SettingsSectionId;
+  configured?: SettingsConfiguredMap;
 }) {
   const currentIndex = SETTINGS_SECTIONS.findIndex((s) => s.id === current);
   const prev = currentIndex > 0 ? SETTINGS_SECTIONS[currentIndex - 1] : null;
@@ -53,7 +67,8 @@ export function SettingsSectionNav({
     >
       <ol className="flex items-center gap-1" aria-label={`Step ${stepNumber} of ${totalSteps}`}>
         {SETTINGS_SECTIONS.map((s, i) => {
-          const done = i < currentIndex;
+          const isConfigured = configured?.[s.id] === true;
+          const done = isConfigured || i < currentIndex;
           const active = i === currentIndex;
           return (
             <li key={s.id} className="flex items-center gap-1">
@@ -62,6 +77,7 @@ export function SettingsSectionNav({
                 href={hrefFor(slug, s.id)}
                 aria-current={active ? "step" : undefined}
                 data-testid={`settings-section-nav-step-${s.id}`}
+                data-configured={isConfigured ? "true" : "false"}
                 className={cn(
                   "text-label inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold transition-colors",
                   active
@@ -71,7 +87,17 @@ export function SettingsSectionNav({
                       : "text-fg-muted hover:bg-surface",
                 )}
               >
-                <span aria-hidden="true">{done ? <Check className="h-3 w-3" /> : i + 1}</span>
+                <span aria-hidden="true">
+                  {isConfigured ? (
+                    <Check className="h-3 w-3" />
+                  ) : done ? (
+                    <Check className="h-3 w-3" />
+                  ) : i + 1 === currentIndex + 1 && i === currentIndex ? (
+                    <Circle className="h-2 w-2 fill-current" />
+                  ) : (
+                    <Circle className="h-2 w-2 fill-current opacity-40" />
+                  )}
+                </span>
                 <span>{s.label}</span>
               </Link>
             </li>

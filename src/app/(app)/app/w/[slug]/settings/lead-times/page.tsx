@@ -56,7 +56,11 @@ export default async function SettingsLeadTimesPage({
         }
         description="The buffer between each pair of workflow stages. These four numbers drive every 'auto-suggest a planned date' the planning surface shows."
       />
-      <SettingsSectionNav slug={slug} current="lead-times" />
+      <SettingsSectionNav
+        slug={slug}
+        current="lead-times"
+        configured={{ "lead-times": total !== 18 }}
+      />
       <SettingsHealth
         slug={slug}
         section="lead-times"

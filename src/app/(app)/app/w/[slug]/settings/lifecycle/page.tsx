@@ -48,7 +48,13 @@ export default async function SettingsLifecyclePage({
         }
         description="The workspace identity for scheduling. The timezone drives the calendar, lead-time math, and every 'X days from now' view; the monthly target is the planning KPI bar's reference."
       />
-      <SettingsSectionNav slug={slug} current="lifecycle" />
+      <SettingsSectionNav
+        slug={slug}
+        current="lifecycle"
+        configured={{
+          lifecycle: !!workspace.timezone && workspace.timezone !== "UTC" && monthlyTarget !== null,
+        }}
+      />
       <SettingsHealth
         slug={slug}
         section="lifecycle"
