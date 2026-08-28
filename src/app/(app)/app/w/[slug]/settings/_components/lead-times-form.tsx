@@ -1,10 +1,12 @@
 "use client";
 import * as React from "react";
 import { useActionState } from "react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { updateLeadTimesSettingsAction, type SettingsActionState } from "../actions";
+import { suggestLeadTimesAction } from "../ai-suggestions";
 import { LeadTimeTimeline } from "./lead-time-timeline";
 
 /**
@@ -34,12 +36,39 @@ export interface LeadTimeValues {
   readyToPublishLeadDays: number;
 }
 
-export function LeadTimesForm({ slug, values }: { slug: string; values: LeadTimeValues }) {
+export function LeadTimesForm({
+  slug,
+  values,
+  approvalMode,
+}: {
+  slug: string;
+  values: LeadTimeValues;
+  approvalMode: "simple" | "internal_then_client";
+}) {
   const action = updateLeadTimesSettingsAction.bind(null, slug);
   const [state, formAction] = useActionState<SettingsActionState, FormData>(action, {});
   const [draft, setDraft] = React.useState<LeadTimeValues>(values);
+  const [suggestStatus, setSuggestStatus] = React.useState<"idle" | "loading" | "error" | "ready">(
+    "idle",
+  );
+  const [suggestError, setSuggestError] = React.useState<string | null>(null);
 
   const total = Object.values(draft).reduce((sum, n) => sum + n, 0);
+
+  async function onSuggest() {
+    setSuggestStatus("loading");
+    setSuggestError(null);
+    const res = await suggestLeadTimesAction(slug, { approvalMode });
+    if (!res.ok) {
+      setSuggestStatus("error");
+      setSuggestError(res.error ?? "AI suggestion failed.");
+      return;
+    }
+    if (res.suggestion) {
+      setDraft(res.suggestion);
+    }
+    setSuggestStatus("ready");
+  }
 
   return (
     <Card padding="md" data-testid="lead-times-form-card">
@@ -50,6 +79,34 @@ export function LeadTimesForm({ slug, values }: { slug: string; values: LeadTime
           workflow stages.
         </p>
         <LeadTimeTimeline values={draft} />
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={onSuggest}
+            disabled={suggestStatus === "loading"}
+            data-testid="lead-times-ai-suggest"
+            className="text-label text-primary border-border hover:bg-primary-subtle focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {suggestStatus === "loading" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            Suggest lead times
+          </button>
+          {suggestStatus === "ready" ? (
+            <span className="text-label text-fg-muted">
+              Filled in from a sensible default for{" "}
+              {approvalMode === "internal_then_client" ? "internal + client" : "internal-only"}{" "}
+              approval. Edit any number before saving.
+            </span>
+          ) : null}
+          {suggestStatus === "error" && suggestError ? (
+            <span role="alert" className="text-label text-danger">
+              {suggestError}
+            </span>
+          ) : null}
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <LeadTimeField
             id="settings-lead-content"

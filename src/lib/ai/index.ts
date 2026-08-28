@@ -681,3 +681,93 @@ export async function suggestVoiceRules(input: {
     .map((s) => s.replace(/^[-*\d.)\s]+/, "").trim())
     .filter((s) => s.length > 0 && s.length <= maxChars);
 }
+
+/**
+ * Settings (Phase B) — suggest lead-time defaults for a
+ * workspace. Returns 4 integers (one per stage) in the same
+ * 0-90 range the form / DB schema accept. The model is told
+ * the workspace's current approval mode + monthly target so
+ * the suggestion is anchored to the actual workflow rather
+ * than a generic "fast / standard / relaxed" preset.
+ */
+export async function suggestLeadTimes(input: {
+  approvalMode: "simple" | "internal_then_client";
+  timezone: string;
+  monthlyTarget: number | null;
+  currentLeadTimes: {
+    contentApprovalLeadDays: number;
+    designCompleteLeadDays: number;
+    creativeApprovalLeadDays: number;
+    readyToPublishLeadDays: number;
+  };
+  apiKey?: string | undefined;
+  onUsage?: (result: ChatResult) => void;
+  maxTokens?: number | undefined;
+}): Promise<{
+  contentApprovalLeadDays: number;
+  designCompleteLeadDays: number;
+  creativeApprovalLeadDays: number;
+  readyToPublishLeadDays: number;
+} | null> {
+  if (!isAiEnabled() && !input.apiKey) return null;
+  const totalNow =
+    input.currentLeadTimes.contentApprovalLeadDays +
+    input.currentLeadTimes.designCompleteLeadDays +
+    input.currentLeadTimes.creativeApprovalLeadDays +
+    input.currentLeadTimes.readyToPublishLeadDays;
+  const system = [
+    "You are a senior social media operations strategist.",
+    "Suggest 4 lead-time defaults (in business days) for a content team.",
+    "Each integer is the buffer between an adjacent pair of workflow stages:",
+    "  - contentApprovalLeadDays     Brief → Content review",
+    "  - designCompleteLeadDays      Design → Creative review",
+    "  - creativeApprovalLeadDays    Creative → Client review (only meaningful when approvalMode = internal_then_client)",
+    "  - readyToPublishLeadDays      Client review → publish-ready",
+    "Reply with exactly 4 lines, no preamble, no labels, no markdown:",
+    "  line 1: an integer 0-90 for contentApprovalLeadDays",
+    "  line 2: an integer 0-90 for designCompleteLeadDays",
+    "  line 3: an integer 0-90 for creativeApprovalLeadDays",
+    "  line 4: an integer 0-90 for readyToPublishLeadDays",
+    "Constraints:",
+    "  - Total cycle time should be 8-18 business days for a typical agency",
+    "  - The longest single buffer should not exceed 50% of the total",
+    "  - readyToPublishLeadDays is usually 1-3 days",
+    "  - designCompleteLeadDays is usually 3-7 days",
+    "  - If approvalMode is 'simple', creativeApprovalLeadDays can be 0",
+  ].join("\n");
+  const userLines = [
+    `Workspace timezone: ${input.timezone}`,
+    `Approval mode: ${input.approvalMode}`,
+    `Monthly content target: ${input.monthlyTarget ?? "not set"}`,
+    `Current lead times (total ${totalNow} business days):`,
+    `  - contentApprovalLeadDays: ${input.currentLeadTimes.contentApprovalLeadDays}`,
+    `  - designCompleteLeadDays: ${input.currentLeadTimes.designCompleteLeadDays}`,
+    `  - creativeApprovalLeadDays: ${input.currentLeadTimes.creativeApprovalLeadDays}`,
+    `  - readyToPublishLeadDays: ${input.currentLeadTimes.readyToPublishLeadDays}`,
+    "Suggest 4 lead-time defaults for this workspace.",
+  ];
+  const result = await chat({
+    temperature: 0.5,
+    maxTokens: input.maxTokens ?? 200,
+    apiKey: input.apiKey,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: userLines.join("\n") },
+    ],
+  });
+  if (!result?.content) return null;
+  input.onUsage?.(result);
+  const numbers = result.content
+    .split("\n")
+    .map((s) => s.replace(/^[-*\d.)\s]+/, "").trim())
+    .map((s) => Number(s))
+    .filter((n) => Number.isFinite(n));
+  if (numbers.length < 4) return null;
+  const clamp = (n: number) => Math.max(0, Math.min(90, Math.round(n)));
+  return {
+    contentApprovalLeadDays: clamp(numbers[0]!),
+    designCompleteLeadDays: clamp(numbers[1]!),
+    creativeApprovalLeadDays: clamp(numbers[2]!),
+    readyToPublishLeadDays: clamp(numbers[3]!),
+  };
+}

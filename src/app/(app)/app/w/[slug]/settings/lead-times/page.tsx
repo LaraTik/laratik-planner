@@ -46,6 +46,7 @@ export default async function SettingsLeadTimesPage({
     creativeApprovalLeadDays: settings?.creativeApprovalLeadDays ?? 2,
     readyToPublishLeadDays: settings?.readyToPublishLeadDays ?? 1,
   };
+  const approvalMode = (settings?.approvalMode ?? "simple") as "simple" | "internal_then_client";
   const total = Object.values(values).reduce((sum, n) => sum + n, 0);
 
   return (
@@ -77,7 +78,7 @@ export default async function SettingsLeadTimesPage({
         data-testid="settings-section-lead-times"
       >
         {canManage ? (
-          <LeadTimesForm slug={slug} values={values} />
+          <LeadTimesForm slug={slug} values={values} approvalMode={approvalMode} />
         ) : (
           <p className="text-label text-fg-muted">
             Read-only. Workspace manager access is required to edit these settings.
