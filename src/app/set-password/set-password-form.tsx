@@ -42,13 +42,28 @@ export function SetPasswordForm() {
 
   // After a successful save, refresh the JWT (clears
   // `mustChangePassword` on the token) and navigate to /app. The
-  // middleware will no longer intercept subsequent requests.
+  // **order matters**: `updateSession` must complete BEFORE the
+  // navigation. `updateSession` POSTs to `/api/auth/session` which
+  // re-runs the `jwt` callback with `trigger === "update"`, re-reads
+  // the `users` row, signs a new token, and sets the new cookie in
+  // the response. The `await` ensures the cookie is set in the
+  // browser's cookie jar before the next request fires; if we
+  // navigated first, the proxy (src/proxy.ts) would still see the
+  // OLD `mustChangePassword: true` token and bounce the user back
+  // to `/set-password` — a loop until the user manually refreshed
+  // the page. The previous implementation's `void updateSession +
+  // router.push` was racy on slow networks.
   React.useEffect(() => {
-    if (state?.saved) {
-      void updateSession({ mustChangePassword: false });
+    if (!state?.saved) return;
+    let cancelled = false;
+    void (async () => {
+      await updateSession({ mustChangePassword: false });
+      if (cancelled) return;
       router.push("/app");
-      router.refresh();
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [state?.saved, updateSession, router]);
 
   const fieldErrors = state?.fieldErrors ?? {};
