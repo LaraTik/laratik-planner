@@ -146,4 +146,66 @@ test.describe("First-login redirect (mustChangePassword)", () => {
     await page.waitForURL((url) => !url.pathname.startsWith("/set-password"), { timeout: 10_000 });
     await expect(page).not.toHaveURL(/\/set-password/);
   });
+
+  test("/set-password 'Sign out instead' link is reachable and works", async ({ page }) => {
+    // Bootstrap admin, then create a user via the form so we can
+    // get to /set-password (mustChangePassword=true).
+    await bootstrapTestSession(page);
+
+    await page.goto("/app/users");
+    await page.getByTestId("users-tab-add").click();
+
+    const newEmail = `signout-${Date.now()}@laratik.local`;
+    await page.getByLabel("Email", { exact: true }).fill(newEmail);
+    await page.getByTestId("add-directly-generate").click();
+    await page.getByRole("button", { name: /Create user/i }).click();
+    await expect(page.getByTestId("add-directly-reveal")).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Sign in as the new user; middleware redirects to /set-password
+    await page.evaluate(() => {
+      document.cookie.split(";").forEach((c) => {
+        const eqPos = c.indexOf("=");
+        const name = eqPos > -1 ? c.substring(0, eqPos) : c;
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      });
+    });
+    await page.goto("/signin");
+    await page.request.post("/api/dev/sign-in", {
+      data: { email: newEmail, role: "user" },
+    });
+    await page.goto("/app");
+    await page.waitForURL(/\/set-password/, { timeout: 10_000 });
+
+    // The sign-out escape must be present and clickable.
+    const signOutLink = page.getByTestId("set-password-signout-link");
+    await expect(signOutLink).toBeVisible();
+    await signOutLink.click();
+
+    // /signout is a server action; the user lands back on /signin
+    // (via the NextAuth `pages.signOut` redirect).
+    await page.waitForURL(/\/signin/, { timeout: 10_000 });
+    await expect(page).not.toHaveURL(/\/set-password/);
+  });
+
+  test("the new form's 'Grant agency admin' checkbox carries a helper text", async ({ page }) => {
+    // P0/P1: the Send invitation form already had a partial
+    // explanation ("only your role allows this"); the Add directly
+    // form had no helper text at all. This test pins the new copy
+    // so a future refactor doesn't strip it.
+    await bootstrapTestSession(page);
+
+    await page.goto("/app/users");
+    await page.getByTestId("users-tab-add").click();
+
+    const checkbox = page.getByTestId("add-directly-grants-admin");
+    await expect(checkbox).toBeVisible();
+
+    // The associated helper <p> explains what agency admin grants.
+    // The text is referenced by id; testid is sufficient.
+    const helper = page.locator("#add-grants-admin-help");
+    await expect(helper).toBeVisible();
+    await expect(helper).toContainText(/agency admin/i);
+  });
 });
