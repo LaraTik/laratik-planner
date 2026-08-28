@@ -13,6 +13,7 @@ import {
   type ReadinessReport,
   type ReadinessIssue,
 } from "@/lib/publishing";
+import { mapFormatPayloadToPlatform } from "@/lib/format-payload/mapper";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -175,6 +176,10 @@ export default async function PublishPackagePage({
         contentItemId={id}
         itemTitle={item.title}
         itemFormat={item.format}
+        formatPayloadPreFill={mapFormatPayloadToPlatform({
+          format: item.format,
+          formatPayload: (item as { formatPayload?: unknown }).formatPayload,
+        })}
         channels={item.channels.map((c) => ({
           id: c.id,
           socialChannelId: c.socialChannelId,

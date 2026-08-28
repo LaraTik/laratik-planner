@@ -18,6 +18,7 @@ import {
   transitionContent,
   claimAsDesigner,
   updateContentItem,
+  updateFormatPayload,
   type WorkflowAction,
   type UpdateContentInput,
   batchCreateContentItems,
@@ -401,4 +402,73 @@ export async function resolveCommentAction(input: {
   }
   await resolveComment(actor, parsed.data);
   revalidatePath(`/app/w/${input.workspaceSlug}/planning/`);
+}
+
+/**
+ * Update only the `formatPayload` (jsonb) of a content item.
+ *
+ * Used by the "More details" editor on the content detail page.
+ * The full `updateContentItemAction` also writes the brief /
+ * title / format / schedule; this action touches only the
+ * structured creative contract, so the editor can save per-field
+ * changes without forcing the planner to round-trip the full
+ * edit form. The server-side validation re-applies the per-format
+ * Zod schema (see `lib/format-payload/schemas.ts`); unknown
+ * fields are silently dropped on parse, malformed input throws
+ * an error that the editor surfaces inline.
+ *
+ * The FormData shape is a single `formatPayload` field carrying
+ * the JSON-serialised object. The client encodes the editor's
+ * in-memory state on submit; the server re-parses, re-validates,
+ * and writes the canonical shape.
+ */
+const UpdateFormatPayloadFormSchema = z.object({
+  contentItemId: z.string().uuid(),
+  format: z.enum([
+    "static_post",
+    "carousel",
+    "story",
+    "short_form_video",
+    "long_form_video",
+    "live_content",
+    "article",
+    "other",
+  ]),
+  formatPayload: z.string().min(2).max(200_000),
+});
+
+export async function updateFormatPayloadAction(
+  workspaceSlug: string,
+  _prev: unknown,
+  formData: FormData,
+) {
+  const { actor } = await requireWorkspaceContext(workspaceSlug);
+  const rawPayload = String(formData.get("formatPayload") ?? "{}");
+  let formatPayload: unknown;
+  try {
+    formatPayload = JSON.parse(rawPayload);
+  } catch {
+    return { error: "Invalid formatPayload JSON" };
+  }
+  const parsed = UpdateFormatPayloadFormSchema.safeParse({
+    contentItemId: formData.get("contentItemId"),
+    format: formData.get("format"),
+    formatPayload: rawPayload,
+  });
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+    };
+  }
+  try {
+    await updateFormatPayload(actor, {
+      contentItemId: parsed.data.contentItemId,
+      format: parsed.data.format,
+      formatPayload: formatPayload as Record<string, unknown>,
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/app/w/${workspaceSlug}/planning/${parsed.data.contentItemId}`);
+  return { ok: true as const };
 }
