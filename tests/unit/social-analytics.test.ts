@@ -4,8 +4,12 @@ import {
   calculateEngagementRate,
   calculateGrowth,
   chartSeries,
+  metricLabel,
+  parseSocialMetric,
   parseSocialWindow,
+  priorSeriesInWindow,
   seriesInWindow,
+  SOCIAL_METRICS,
   type MetricSeriesPoint,
 } from "@/lib/social/analytics";
 
@@ -152,6 +156,109 @@ describe("chartSeries", () => {
       { date: s[2]!.metricDate, value: 105 },
     ]);
   });
+
+  it("works for every supported metric field", () => {
+    const s: MetricSeriesPoint[] = [
+      {
+        metricDate: "2026-08-01",
+        followerCount: 1,
+        reach: 10,
+        views: 100,
+        engagedAccounts: 5,
+        interactions: 7,
+      },
+      {
+        metricDate: "2026-08-02",
+        followerCount: 2,
+        reach: 20,
+        views: 200,
+        engagedAccounts: 6,
+        interactions: 8,
+      },
+    ];
+    expect(chartSeries(s, "followerCount").map((p) => p.value)).toEqual([1, 2]);
+    expect(chartSeries(s, "reach").map((p) => p.value)).toEqual([10, 20]);
+    expect(chartSeries(s, "views").map((p) => p.value)).toEqual([100, 200]);
+    expect(chartSeries(s, "engagedAccounts").map((p) => p.value)).toEqual([5, 6]);
+    expect(chartSeries(s, "interactions").map((p) => p.value)).toEqual([7, 8]);
+  });
+});
+
+describe("parseSocialMetric", () => {
+  it("accepts the five canonical metrics", () => {
+    expect(parseSocialMetric("followerCount")).toBe("followerCount");
+    expect(parseSocialMetric("reach")).toBe("reach");
+    expect(parseSocialMetric("views")).toBe("views");
+    expect(parseSocialMetric("engagedAccounts")).toBe("engagedAccounts");
+    expect(parseSocialMetric("interactions")).toBe("interactions");
+  });
+  it("defaults to followerCount for unknown / nullish values", () => {
+    expect(parseSocialMetric("xyz")).toBe("followerCount");
+    expect(parseSocialMetric("")).toBe("followerCount");
+    expect(parseSocialMetric(null)).toBe("followerCount");
+    expect(parseSocialMetric(undefined)).toBe("followerCount");
+  });
+});
+
+describe("metricLabel", () => {
+  it("returns a short label for every supported metric", () => {
+    expect(metricLabel("followerCount")).toBe("Followers");
+    expect(metricLabel("reach")).toBe("Reach");
+    expect(metricLabel("views")).toBe("Views");
+    expect(metricLabel("engagedAccounts")).toBe("Engaged accounts");
+    expect(metricLabel("interactions")).toBe("Interactions");
+  });
+});
+
+describe("SOCIAL_METRICS", () => {
+  it("is a closed set of exactly five", () => {
+    expect(SOCIAL_METRICS).toEqual([
+      "followerCount",
+      "reach",
+      "views",
+      "engagedAccounts",
+      "interactions",
+    ]);
+  });
+});
+
+describe("priorSeriesInWindow", () => {
+  it("returns the N days BEFORE the current N-day window", () => {
+    const s = series([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    // Current window = last 3 = [8, 9, 10]; prior window = [5, 6, 7]
+    expect(priorSeriesInWindow(s, 3).map((p) => p.followerCount)).toEqual([5, 6, 7]);
+  });
+
+  it("returns the full available series when the prior window doesn't fit", () => {
+    const s = series([1, 2, 3, 4, 5]);
+    // Current window = last 3 = [3, 4, 5]; prior window would be
+    // [0, 2] but we only have [1, 2] available → returns [1, 2].
+    expect(priorSeriesInWindow(s, 3).map((p) => p.followerCount)).toEqual([1, 2]);
+  });
+
+  it("returns an empty array when the series is empty", () => {
+    expect(priorSeriesInWindow([], 7)).toEqual([]);
+  });
+
+  it("returns an empty array when the series is shorter than the window", () => {
+    const s = series([1, 2, 3]);
+    expect(priorSeriesInWindow(s, 7)).toEqual([]);
+  });
+
+  it("supports a 30-day prior window (the M5 use case)", () => {
+    const s = series(Array.from({ length: 60 }, (_, i) => 100 + i));
+    const current = seriesInWindow(s, 30);
+    const prior = priorSeriesInWindow(s, 30);
+    expect(current).toHaveLength(30);
+    expect(prior).toHaveLength(30);
+    // Series is [100..159]. Current window = [130..159]
+    // (last 30, indices 30..59). Prior window = [100..129]
+    // (indices 0..29, the 30 days BEFORE the current window).
+    expect(current[0]!.followerCount).toBe(130);
+    expect(current[29]!.followerCount).toBe(159);
+    expect(prior[0]!.followerCount).toBe(100);
+    expect(prior[29]!.followerCount).toBe(129);
+  });
 });
 
 describe("buildProfileSummary", () => {
@@ -246,5 +353,96 @@ describe("calculateEngagementRate", () => {
   it("handles a single-day series", () => {
     const s = engagementSeries([200], [10]);
     expect(calculateEngagementRate(s)).toEqual({ percent: 5, partial: false });
+  });
+});
+
+import {
+  csvFilename,
+  escapeCsvCell,
+  toCsv,
+} from "@/app/(app)/app/w/[slug]/analytics/social/social-csv";
+
+describe("toCsv", () => {
+  it("produces a header row followed by one row per input", () => {
+    const csv = toCsv([
+      {
+        metricDate: "2026-08-22",
+        followerCount: 248,
+        reach: 1200,
+        views: 3400,
+        engagedAccounts: 15,
+        interactions: 42,
+      },
+    ]);
+    expect(csv.split("\n")).toEqual([
+      "Date,Followers,Reach,Views,Engaged,Interactions,Partial",
+      "2026-08-22,248,1200,3400,15,42,",
+    ]);
+  });
+
+  it("emits blank cells for null values (not 'null' or '0')", () => {
+    const csv = toCsv([
+      {
+        metricDate: "2026-08-22",
+        followerCount: 248,
+        reach: null,
+        views: null,
+        engagedAccounts: null,
+        interactions: null,
+      },
+    ]);
+    expect(csv).toContain("248,,,,,");
+  });
+
+  it("quotes values that contain a comma, quote, or newline", () => {
+    expect(escapeCsvCell("plain")).toBe("plain");
+    expect(escapeCsvCell("with,comma")).toBe('"with,comma"');
+    expect(escapeCsvCell('with"quote')).toBe('"with""quote"');
+    expect(escapeCsvCell("with\nnewline")).toBe('"with\nnewline"');
+  });
+
+  it("emits 'true' for partial rows and empty for non-partial", () => {
+    const csv = toCsv([
+      {
+        metricDate: "2026-08-22",
+        followerCount: 1,
+        reach: null,
+        views: null,
+        engagedAccounts: null,
+        interactions: null,
+        partial: true,
+      },
+      {
+        metricDate: "2026-08-23",
+        followerCount: 2,
+        reach: null,
+        views: null,
+        engagedAccounts: null,
+        interactions: null,
+      },
+    ]);
+    expect(csv.split("\n")[1]).toMatch(/,true$/);
+    expect(csv.split("\n")[2]).toMatch(/,$/);
+  });
+});
+
+describe("csvFilename", () => {
+  it("slugifies the channel name and uses the date range", () => {
+    expect(csvFilename("Food Game", "2026-08-22", "2026-08-28")).toBe(
+      "social-analytics-food-game-2026-08-22_to_2026-08-28.csv",
+    );
+  });
+
+  it("falls back to 'channel' when the name is empty after slugification", () => {
+    expect(csvFilename("!!!", "2026-08-22", "2026-08-28")).toBe(
+      "social-analytics-channel-2026-08-22_to_2026-08-28.csv",
+    );
+  });
+
+  it("caps the slug at 40 characters", () => {
+    const long = "a".repeat(60);
+    const filename = csvFilename(long, "2026-08-22", "2026-08-28");
+    // "social-analytics-" (17) + slug (40) + "-2026-08-22_to_2026-08-28.csv" (29)
+    expect(filename.length).toBeLessThanOrEqual(17 + 40 + 29);
   });
 });

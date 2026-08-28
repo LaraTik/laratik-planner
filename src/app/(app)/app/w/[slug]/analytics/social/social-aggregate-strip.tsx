@@ -45,6 +45,16 @@ export type AggregateChannel = {
   platform: "instagram" | "facebook" | "tiktok";
   fullSeries: MetricSeriesPoint[];
   growth7Absolute: number | null;
+  /**
+   * M5 — the 7d growth as a percent of the baseline. The M4
+   * aggregate strip picked the channel with the highest
+   * **absolute** 7d growth, which favours large accounts. M5
+   * surfaces both numbers in the same cell so the operator
+   * can see the context (e.g. "+50 (2.4%)" tells you the
+   * channel grew by 50 followers, which is 2.4% of the
+   * starting total).
+   */
+  growth7Percent: number | null;
 };
 
 function sumLatestFollowers(channels: AggregateChannel[]): number | null {
@@ -113,6 +123,15 @@ export function SocialAggregateStrip({
             <>
               <p className="text-title-section text-fg-primary mt-1 font-semibold">
                 +{best.growth7Absolute.toLocaleString()}
+                {typeof best.growth7Percent === "number" ? (
+                  <span
+                    className="text-label text-fg-secondary ml-1.5 font-medium"
+                    data-testid="social-aggregate-strip-best-growth-percent"
+                  >
+                    ({best.growth7Percent > 0 ? "+" : ""}
+                    {best.growth7Percent.toFixed(1)}%)
+                  </span>
+                ) : null}
               </p>
               <p className="text-label text-fg-muted mt-0.5 truncate">{best.accountName}</p>
             </>
