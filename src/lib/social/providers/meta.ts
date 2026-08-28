@@ -47,10 +47,32 @@ import type {
  *     `META_GRAPH_API_VERSION` (default `v25.0`).
  */
 
+// Read-only scopes requested in the Facebook Login for Business
+// dialog. The scope list is the contract for what the access token
+// will be authorized to read; missing scopes show up as
+// `permission_denied` errors at fetch time.
+//
+// `read_insights` was removed 2026-08-28: Meta deprecated it for
+// new apps and rejects the dialog with `Invalid Scopes:
+// read_insights` when the Login for Business config or the OAuth
+// URL still includes it. The four remaining scopes cover every
+// metric the social pipeline reads:
+//   - `pages_show_list` + `pages_read_engagement` → Page metadata,
+//     fan_count, page-level insights (impressions, reach, views,
+//     post engagements)
+//   - `instagram_basic` + `instagram_manage_insights` → IG business
+//     account metadata, followers/media counts, and IG account
+//     insights (reach, profile_views, accounts_engaged,
+//     total_interactions)
+//
+// Pre-flight verification on the Food Game IG and Just Halal tr IG
+// accounts (run on the same `pages_show_list` + `pages_read_engagement`
+// + `instagram_basic` + `instagram_manage_insights` set) confirmed
+// all four required endpoints return the expected shape; removing
+// `read_insights` does not regress any data the pipeline reads.
 export const META_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
-  "read_insights",
   "instagram_basic",
   "instagram_manage_insights",
 ] as const;

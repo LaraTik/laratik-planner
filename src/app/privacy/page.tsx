@@ -133,13 +133,8 @@ export default function PrivacyPage() {
                     <code className="bg-surface-subtle text-fg-primary text-label rounded px-1.5 py-0.5 font-mono">
                       pages_read_engagement
                     </code>{" "}
-                    — engagement metrics for content on those Pages.
-                  </li>
-                  <li>
-                    <code className="bg-surface-subtle text-fg-primary text-label rounded px-1.5 py-0.5 font-mono">
-                      read_insights
-                    </code>{" "}
-                    — aggregated Page-level insights (impressions, reach, post engagements).
+                    — engagement metrics for content on those Pages (impressions, reach, views, post
+                    engagements).
                   </li>
                   <li>
                     <code className="bg-surface-subtle text-fg-primary text-label rounded px-1.5 py-0.5 font-mono">

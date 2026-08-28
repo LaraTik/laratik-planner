@@ -66,14 +66,35 @@ function jsonResponse(status: number, body: unknown, headers: Record<string, str
 }
 
 describe("META_SCOPES", () => {
-  it("lists only the read scopes from the plan", () => {
+  // 2026-08-28: `read_insights` was removed. Meta deprecated it for
+  // new apps and rejects the OAuth dialog with `Invalid Scopes:
+  // read_insights` when the Login for Business config or the URL
+  // still includes it. The four remaining scopes cover every
+  // metric the social pipeline reads.
+  it("lists only the read scopes that are still valid for new Meta apps", () => {
     expect(META_SCOPES).toEqual([
       "pages_show_list",
       "pages_read_engagement",
-      "read_insights",
       "instagram_basic",
       "instagram_manage_insights",
     ]);
+  });
+  it("does not include the deprecated read_insights scope", () => {
+    expect(META_SCOPES).not.toContain("read_insights");
+  });
+  it("contains no publish / manage / ads scope", () => {
+    // Defensive: the project rule is "read-only analytics first;
+    // never request publish, manage, or ads scopes".
+    for (const forbidden of [
+      "publish_pages",
+      "publish_video",
+      "manage_pages",
+      "ads_management",
+      "ads_read",
+      "business_management",
+    ]) {
+      expect(META_SCOPES).not.toContain(forbidden);
+    }
   });
 });
 
