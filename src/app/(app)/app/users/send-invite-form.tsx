@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
@@ -106,10 +107,23 @@ export function SendInviteForm({ workspaces }: { workspaces: { id: string; name:
           </FormField>
         </div>
 
-        <label className="text-body text-fg-primary flex items-center gap-2">
-          <input type="checkbox" name="grantsAgencyAdmin" className="h-4 w-4" />
-          Grant agency admin (only your role allows this)
-        </label>
+        <div className="space-y-1">
+          <label
+            htmlFor="send-invite-grants-admin"
+            className="text-body text-fg-primary flex items-center gap-2"
+          >
+            <Checkbox
+              id="send-invite-grants-admin"
+              name="grantsAgencyAdmin"
+              data-testid="send-invite-grants-admin"
+            />
+            Grant agency admin
+          </label>
+          <p id="send-invite-grants-admin-help" className="text-fg-muted text-label pl-6">
+            Agency admins can manage members, workspaces, and all agency settings. Only grant to
+            people you trust with full access.
+          </p>
+        </div>
 
         {workspaces.length > 0 ? (
           <fieldset className="space-y-2">
