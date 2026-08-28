@@ -11,6 +11,7 @@ import {
   campaignIdeas,
   checkCompleteness,
   draftCaption,
+  generateFieldDraft,
   getActiveApiKey,
   improveBrief,
   isAiEnabled,
@@ -18,6 +19,7 @@ import {
   relatedFormatIdeas,
   splitVariants,
   type ChatResult,
+  type FormatPayloadField,
 } from "@/lib/ai";
 import { loadAiContext, isContextMeaningful } from "@/lib/ai/context";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -78,6 +80,47 @@ const Body = z.object({
    * when the caller doesn't supply one.
    */
   sourceText: z.string().max(4000).optional(),
+  /**
+   * Per-field scope for `caption_drafts`. When set, the route
+   * produces a draft for that single field only (e.g. just the
+   * `caption`, just the `hashtags`), reusing the existing
+   * `caption_drafts` allowlist. The agency's enabled
+   * capabilities list is unchanged — an agency with
+   * `caption_drafts` on gets per-field AI for free.
+   *
+   * Only honoured when `capability === "caption_drafts"`. For
+   * any other capability, this field is ignored.
+   */
+  field: z
+    .enum([
+      "caption",
+      "hook",
+      "mainMessage",
+      "callToAction",
+      "hashtags",
+      "firstComment",
+      "description",
+      "visualDirection",
+      "additionalNotes",
+      "notes",
+    ])
+    .optional(),
+  /**
+   * The current value of the field being drafted. Passed to
+   * the model as a tone-anchor ("extend / tighten / re-aim
+   * the existing draft, don't ignore it"). Empty string is
+   * the "fill this for the first time" path.
+   */
+  currentFieldValue: z.string().max(8000).optional(),
+  /**
+   * The locale the planner wants the draft written in
+   * (e.g. "ar" for Arabic, "en" for English). Honours the
+   * format-payload editor's translation flow so a per-field
+   * AI button can produce an Arabic caption inside an
+   * otherwise English form. Falls back to the model's
+   * default when unset.
+   */
+  contentLanguage: z.string().min(2).max(10).optional(),
   // Per master prompt §15, the user selects which context to include
   // before generation. The basic fields (title / brief / format /
   // workspace_name) are always included; the toggles below are
@@ -317,9 +360,44 @@ export async function POST(req: NextRequest) {
     // variant in the `text` field for backward compat. The
     // planner surface renders all three side-by-side.
     let variants: string[] | null = null;
+    // Per-field caption_drafts returns a structured value
+    // alongside the raw text (e.g. `hashtags` is a string[]).
+    // Exposed as `parsed` so the client doesn't re-split the
+    // text on the `#` boundary.
+    let parsedField: string[] | null = null;
     switch (parsed.data.capability) {
       case "caption_drafts":
-        text = await draftCaption(baseInput);
+        if (parsed.data.field) {
+          // Per-field path. Reuses the `caption_drafts` capability
+          // for allowlist + governance; the prompt is field-scoped
+          // (see `generateFieldDraft`). `currentFieldValue` is the
+          // tone anchor; `contentLanguage` is the locale the
+          // planner wants the draft in (the editor's translation
+          // flow). The baseInput is the *content item*'s brief
+          // — the model is told to write one field, not a full
+          // caption.
+          const out = await generateFieldDraft({
+            field: parsed.data.field as FormatPayloadField,
+            currentValue: parsed.data.currentFieldValue ?? "",
+            title: item.title,
+            brief: item.brief,
+            format: item.format,
+            ...(parsed.data.contentLanguage
+              ? { contentLanguage: parsed.data.contentLanguage }
+              : {}),
+            audience: ws.name,
+            maxTokens: outputReservation,
+            apiKey,
+            context,
+            onUsage: (usage: ChatResult) => {
+              providerUsage = usage;
+            },
+          });
+          text = out?.text ?? null;
+          parsedField = out?.parsed ?? null;
+        } else {
+          text = await draftCaption(baseInput);
+        }
         break;
       case "brief_improvement":
         text = await improveBrief(baseInput);
@@ -434,6 +512,8 @@ export async function POST(req: NextRequest) {
       {
         text,
         capability: parsed.data.capability,
+        ...(parsed.data.field ? { field: parsed.data.field } : {}),
+        ...(parsedField ? { parsed: parsedField } : {}),
         ...(variants ? { variants } : {}),
       },
       { headers: mutatingApiHeaders() },

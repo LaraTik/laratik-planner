@@ -681,3 +681,195 @@ export async function suggestVoiceRules(input: {
     .map((s) => s.replace(/^[-*\d.)\s]+/, "").trim())
     .filter((s) => s.length > 0 && s.length <= maxChars);
 }
+
+/**
+ * Per-field AI draft. Used by the format-payload editor to
+ * suggest a single field's value (e.g. just the `caption`, just
+ * the `hashtags`, just the `callToAction`) without rewriting
+ * the whole brief.
+ *
+ * The capability is `caption_drafts` for allowlist /
+ * governance purposes — the per-field prompt is a *scoped*
+ * variant of the caption draft, not a new capability. The
+ * agency's enabledCapabilities list is unchanged; an agency
+ * with `caption_drafts` on gets per-field AI for free.
+ *
+ * Returns `{ text, parsed? }`:
+ *   - `text` is the raw model output (used for the diff /
+ *     Insert / Replace UI).
+ *   - `parsed` is a structured value for fields with a known
+ *     shape — currently only `hashtags` (string[]). The client
+ *     uses `parsed` to populate array-shaped fields without
+ *     re-parsing the text.
+ *
+ * The field taxonomy is the same one the format-payload editor
+ * renders (see `lib/format-payload/schemas.ts ::
+ * translatableFieldKeys`). Adding a field here lights up the
+ * AI button in the editor — no separate config.
+ */
+export type FormatPayloadField =
+  | "caption"
+  | "hook"
+  | "mainMessage"
+  | "callToAction"
+  | "hashtags"
+  | "firstComment"
+  | "description"
+  | "visualDirection"
+  | "additionalNotes"
+  | "notes";
+
+export interface GenerateFieldDraftInput {
+  field: FormatPayloadField;
+  /**
+   * The current value of the field. Used as a "keep the tone
+   * the user has already chosen" hint — the prompt asks the
+   * model to extend / tighten / re-aim the existing draft, not
+   * to ignore it. Empty string is the "fill this for the first
+   * time" path.
+   */
+  currentValue: string;
+  title: string;
+  brief: string;
+  format: string;
+  /**
+   * The content-language the publish form is targeting. The
+   * AI is asked to write the draft in this language when set.
+   * The agency's `caption_drafts` capability is language-
+   * agnostic; the editor passes the user's choice in so the
+   * per-field button can produce an Arabic draft inside an
+   * otherwise English form (and vice versa).
+   */
+  contentLanguage?: string | undefined;
+  audience?: string | undefined;
+  apiKey?: string | undefined;
+  onUsage?: (result: ChatResult) => void;
+  maxTokens?: number | undefined;
+  context?: AiContext | null | undefined;
+}
+
+export interface GenerateFieldDraftResult {
+  text: string;
+  /**
+   * Structured parse when the field has a known shape.
+   * `hashtags` returns a string[]; every other field returns
+   * `null` (the text is the value).
+   */
+  parsed: string[] | null;
+}
+
+const FIELD_PROMPTS: Record<
+  FormatPayloadField,
+  { system: string; maxTokens: number; kind: "text" | "hashtags" }
+> = {
+  caption: {
+    system:
+      "You are a senior social media strategist. Draft a single Instagram/TikTok/LinkedIn-style caption (≤220 chars) that matches the planner's existing tone. Return ONLY the caption — no preamble, no labels, no quotes, no hashtags here (the hashtags go in a separate field).",
+    maxTokens: 280,
+    kind: "text",
+  },
+  hook: {
+    system:
+      "You are a senior copywriter. Write a single 1-line hook (≤100 chars) for a social post — the first line that stops the scroll. Return ONLY the hook line — no preamble, no labels, no quotes.",
+    maxTokens: 120,
+    kind: "text",
+  },
+  mainMessage: {
+    system:
+      "You are a senior copywriter. Write a single 1-line main message (≤100 chars) — the takeaway the planner wants the reader to remember. Return ONLY the line — no preamble, no labels, no quotes.",
+    maxTokens: 120,
+    kind: "text",
+  },
+  callToAction: {
+    system:
+      "You are a senior copywriter. Write a single 1-line call to action (≤40 chars) — the next action the reader should take. Return ONLY the line — no preamble, no labels, no quotes.",
+    maxTokens: 80,
+    kind: "text",
+  },
+  hashtags: {
+    system:
+      "You are a senior social media strategist. Suggest 3-8 hashtags for the planner's content. Return ONLY the hashtags, one per line, each starting with '#'. No preamble, no numbering, no explanation. Each hashtag ≤ 30 chars.",
+    maxTokens: 120,
+    kind: "hashtags",
+  },
+  firstComment: {
+    system:
+      "You are a senior social media strategist. Write a single first-comment line (≤200 chars) for the planner's post — the comment that lands right after publishing to seed engagement. Return ONLY the line — no preamble, no labels, no quotes.",
+    maxTokens: 240,
+    kind: "text",
+  },
+  description: {
+    system:
+      "You are a senior social media strategist. Write a single description (≤500 chars) for the planner's long-form post (YouTube / article / podcast). Return ONLY the description — no preamble, no labels, no quotes.",
+    maxTokens: 600,
+    kind: "text",
+  },
+  visualDirection: {
+    system:
+      "You are a senior art director. Write a single short paragraph (≤280 chars) describing the visual direction for the planner's post — the look, the composition, the colour story. Return ONLY the paragraph — no preamble, no labels, no bullet points.",
+    maxTokens: 320,
+    kind: "text",
+  },
+  additionalNotes: {
+    system:
+      "You are a senior creative producer. Write a single short paragraph (≤280 chars) of additional notes for the planner's post — context the designer or reviewer should know that doesn't fit the structured fields. Return ONLY the paragraph — no preamble, no labels.",
+    maxTokens: 320,
+    kind: "text",
+  },
+  notes: {
+    system:
+      "You are a senior creative producer. Write a single short paragraph (≤280 chars) of notes for the planner's post. Return ONLY the paragraph — no preamble, no labels.",
+    maxTokens: 320,
+    kind: "text",
+  },
+};
+
+export async function generateFieldDraft(
+  input: GenerateFieldDraftInput,
+): Promise<GenerateFieldDraftResult | null> {
+  if (!isAiEnabled() && !input.apiKey) return null;
+  const spec = FIELD_PROMPTS[input.field];
+  const contextBlock = buildContextBlock(input.context);
+
+  const languageLine = input.contentLanguage
+    ? `The user wants the draft written in the locale "${input.contentLanguage}". Match that locale's script and conventions.`
+    : null;
+
+  const user = [
+    `Field: ${input.field}`,
+    input.title ? `Title: ${input.title}` : null,
+    `Format: ${input.format}`,
+    input.audience ? `Audience: ${input.audience}` : null,
+    `Brief: ${input.brief || "(none)"}`,
+    `Current value of this field: ${input.currentValue || "(empty — write a fresh one)"}`,
+    languageLine,
+    contextBlock,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const result = await chat({
+    temperature: 0.7,
+    maxTokens: input.maxTokens ?? spec.maxTokens,
+    apiKey: input.apiKey,
+    messages: [
+      { role: "system", content: spec.system },
+      { role: "user", content: user },
+    ],
+  });
+  if (!result) return null;
+  input.onUsage?.(result);
+
+  const text = (result.content ?? "").trim();
+  if (!text) return { text: "", parsed: null };
+
+  if (spec.kind === "hashtags") {
+    const parsed = text
+      .split(/\r?\n/)
+      .map((s) => s.replace(/^[-*\d.)\s]+/, "").trim())
+      .filter((s) => s.startsWith("#") && s.length > 1 && s.length <= 31)
+      .map((s) => s.split(/\s/)[0] ?? s);
+    return { text, parsed: parsed.length > 0 ? parsed : null };
+  }
+  return { text, parsed: null };
+}
