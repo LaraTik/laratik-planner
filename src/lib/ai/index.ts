@@ -999,12 +999,29 @@ export async function generateFieldDraft(
   if (!text) return { text: "", parsed: null };
 
   if (spec.kind === "hashtags") {
-    const parsed = text
-      .split(/\r?\n/)
-      .map((s) => s.replace(/^[-*\d.)\s]+/, "").trim())
-      .filter((s) => s.startsWith("#") && s.length > 1 && s.length <= 31)
-      .map((s) => s.split(/\s/)[0] ?? s);
-    return { text, parsed: parsed.length > 0 ? parsed : null };
+    return { text, parsed: parseHashtagsFromDraft(text) };
   }
   return { text, parsed: null };
+}
+
+/**
+ * Parse a model draft into a clean list of hashtags.
+ * Exported separately so the unit test can exercise the
+ * parser without a network round-trip — the chat-mocked
+ * test path in `generateFieldDraft` is exercised by the
+ * route's integration test.
+ *
+ * The parser strips list markers (`-`, `*`, `1.`, `)`),
+ * trims whitespace, requires the `#` prefix, enforces
+ * the 1-31 char limit the per-format Zod schema accepts,
+ * and takes only the first whitespace-delimited token on
+ * each line (the model occasionally appends a count or a
+ * note to a line).
+ */
+export function parseHashtagsFromDraft(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((s) => s.replace(/^[-*\d.)\s]+/, "").trim())
+    .filter((s) => s.startsWith("#") && s.length > 1 && s.length <= 31)
+    .map((s) => s.split(/\s/)[0] ?? s);
 }
