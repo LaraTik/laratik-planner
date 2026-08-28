@@ -622,3 +622,248 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     expect(meta.providerErrorCode).toBe("permission_denied");
   });
 });
+
+/**
+ * 2026-08-28: rate-limit usage awareness. Meta returns
+ * `X-App-Usage` and `X-Business-Use-Case-Usage` on every 2xx
+ * response; we surface them on `sourceMetadata` so the cron
+ * worker can drive proactive backoff before the 429 cliff. The
+ * keys are flat (no nested JSON) so a SQL query can read them.
+ */
+describe("fetchMetaFacebookPageSnapshot — rate-limit usage on sourceMetadata", () => {
+  it("writes appUsageCallCount/Cpu/Time when X-App-Usage is returned", async () => {
+    const accessToken = "page-access-token";
+    const pageId = "12345";
+    const app = { call_count: 42, total_cputime: 10, total_time: 15 };
+    globalThis.fetch = (async (url: string) => {
+      if (url.includes(`/${pageId}?`)) {
+        return jsonResponse(
+          200,
+          { id: pageId, fan_count: 100 },
+          {
+            "x-app-usage": JSON.stringify(app),
+          },
+        );
+      }
+      if (url.includes(`/${pageId}/insights`)) {
+        return jsonResponse(200, { data: [] }, {});
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaFacebookPageSnapshot({
+      accessToken,
+      pageId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+    const meta = snapshot.sourceMetadata as Record<string, number | boolean | null>;
+    expect(meta.appUsageCallCount).toBe(42);
+    expect(meta.appUsageCpu).toBe(10);
+    expect(meta.appUsageTime).toBe(15);
+  });
+
+  it("writes businessUsageMaxCallCount as the max across businesses × asset types", async () => {
+    const accessToken = "page-access-token";
+    const pageId = "12345";
+    const business = {
+      "1": [{ type: "pages", call_count: 47, total_cputime: 5, total_time: 7 }],
+      "2": [{ type: "instagram", call_count: 88, total_cputime: 9, total_time: 12 }],
+    };
+    globalThis.fetch = (async (url: string) => {
+      if (url.includes(`/${pageId}?`)) {
+        return jsonResponse(200, { id: pageId, fan_count: 100 }, {});
+      }
+      if (url.includes(`/${pageId}/insights`)) {
+        return jsonResponse(
+          200,
+          { data: [] },
+          { "x-business-use-case-usage": JSON.stringify(business) },
+        );
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaFacebookPageSnapshot({
+      accessToken,
+      pageId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+    const meta = snapshot.sourceMetadata as Record<string, number | boolean | null>;
+    expect(meta.businessUsageMaxCallCount).toBe(88);
+  });
+
+  it("does NOT write usage keys when Meta omits the headers", async () => {
+    const accessToken = "page-access-token";
+    const pageId = "12345";
+    globalThis.fetch = (async (url: string) => {
+      if (url.includes(`/${pageId}?`)) {
+        return jsonResponse(200, { id: pageId, fan_count: 100 });
+      }
+      if (url.includes(`/${pageId}/insights`)) {
+        return jsonResponse(200, { data: [] });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaFacebookPageSnapshot({
+      accessToken,
+      pageId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+    const meta = snapshot.sourceMetadata as Record<string, number | boolean | null>;
+    expect(meta.appUsageCallCount).toBeUndefined();
+    expect(meta.appUsageCpu).toBeUndefined();
+    expect(meta.businessUsageMaxCallCount).toBeUndefined();
+  });
+});
+
+describe("fetchMetaInstagramSnapshot — rate-limit usage + field-expansion", () => {
+  it("requests media.limit(10){id,like_count,comments_count,permalink,timestamp} on the basic call", async () => {
+    const accessToken = "ig-access-token";
+    const igUserId = "17841234567890123";
+    let basicFieldsParam = "";
+    globalThis.fetch = (async (url: string) => {
+      if (url.includes(`/${igUserId}?`)) {
+        const u = new URL(url);
+        basicFieldsParam = u.searchParams.get("fields") ?? "";
+        return jsonResponse(200, {
+          id: igUserId,
+          followers_count: 248,
+          media_count: 46,
+          follows_count: 12,
+          username: "__foodgame",
+          name: "Food Game",
+          media: { data: [] },
+        });
+      }
+      if (url.includes(`/${igUserId}/insights`)) {
+        return jsonResponse(200, { data: [] });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    await fetchMetaInstagramSnapshot({
+      accessToken,
+      igUserId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+    // The field-expansion is purely future-proofing for per-post
+    // engagement; the basic call already ran. We just verify the
+    // fields= string contains the expected expansion.
+    expect(basicFieldsParam).toContain("media.limit(10)");
+    expect(basicFieldsParam).toContain("like_count");
+    expect(basicFieldsParam).toContain("comments_count");
+    expect(basicFieldsParam).toContain("permalink");
+    expect(basicFieldsParam).toContain("timestamp");
+  });
+
+  it("writes latestPostId + like/comment counts on sourceMetadata when the basic call returns media", async () => {
+    const accessToken = "ig-access-token";
+    const igUserId = "17841234567890123";
+    globalThis.fetch = (async (url: string) => {
+      if (url.includes(`/${igUserId}?`)) {
+        return jsonResponse(200, {
+          id: igUserId,
+          followers_count: 248,
+          media_count: 46,
+          follows_count: 12,
+          username: "__foodgame",
+          name: "Food Game",
+          media: {
+            data: [
+              {
+                id: "ig-post-1",
+                like_count: 21,
+                comments_count: 7,
+                permalink: "https://instagram.com/p/1",
+                timestamp: "2026-08-27T12:00:00+0000",
+              },
+              { id: "ig-post-2", like_count: 5, comments_count: 0 },
+            ],
+          },
+        });
+      }
+      if (url.includes(`/${igUserId}/insights`)) {
+        return jsonResponse(200, { data: [] });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaInstagramSnapshot({
+      accessToken,
+      igUserId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+    const meta = snapshot.sourceMetadata as Record<string, number | boolean | string | null>;
+    // Future-proofing: per-post engagement is out of scope for M4
+    // but the most recent post's id + counts land on the row so a
+    // future per-post job can read them without an extra call.
+    expect(meta.latestPostId).toBe("ig-post-1");
+    expect(meta.latestPostLikeCount).toBe(21);
+    expect(meta.latestPostCommentCount).toBe(7);
+  });
+
+  it("does not write latestPostId when the response has no media data (older Meta responses)", async () => {
+    const accessToken = "ig-access-token";
+    const igUserId = "17841234567890123";
+    globalThis.fetch = (async (url: string) => {
+      if (url.includes(`/${igUserId}?`)) {
+        return jsonResponse(200, {
+          id: igUserId,
+          followers_count: 248,
+          media_count: 46,
+          follows_count: 12,
+        });
+      }
+      if (url.includes(`/${igUserId}/insights`)) {
+        return jsonResponse(200, { data: [] });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaInstagramSnapshot({
+      accessToken,
+      igUserId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+    const meta = snapshot.sourceMetadata as Record<string, number | boolean | string | null>;
+    expect(meta.latestPostId).toBeUndefined();
+  });
+
+  it("writes appUsageCallCount when X-App-Usage is on the IG insights call", async () => {
+    const accessToken = "ig-access-token";
+    const igUserId = "17841234567890123";
+    const app = { call_count: 7, total_cputime: 1, total_time: 2 };
+    globalThis.fetch = (async (url: string) => {
+      if (url.includes(`/${igUserId}?`)) {
+        return jsonResponse(200, {
+          id: igUserId,
+          followers_count: 248,
+          media_count: 46,
+          follows_count: 12,
+        });
+      }
+      if (url.includes(`/${igUserId}/insights`)) {
+        return jsonResponse(200, { data: [] }, { "x-app-usage": JSON.stringify(app) });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaInstagramSnapshot({
+      accessToken,
+      igUserId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+    const meta = snapshot.sourceMetadata as Record<string, number | boolean | string | null>;
+    expect(meta.appUsageCallCount).toBe(7);
+    expect(meta.appUsageCpu).toBe(1);
+    expect(meta.appUsageTime).toBe(2);
+  });
+});

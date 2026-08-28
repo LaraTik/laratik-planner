@@ -93,6 +93,15 @@ const NEXT_DAY_HOUR = 3; // 03:15 in workspace tz
 const NEXT_DAY_MINUTE = 15;
 const RETENTION_OAUTH_HOURS = 24;
 const RETENTION_METRIC_MONTHS = 25;
+// 2026-08-28: proactive rate-limit backoff. The Meta Graph API
+// returns `X-App-Usage.call_count` and `X-Business-Use-Case-Usage`
+// as a 0–100 percentage of the per-app / per-business quota. When
+// any layer crosses 80% we add a 60-second pause before the next
+// channel's provider call in this tick, so the cumulative budget
+// does not get clobbered. 80% is the threshold Meta's own docs
+// recommend ("stay under ~80% to be safe").
+const RATE_LIMIT_USAGE_THRESHOLD = 80;
+const RATE_LIMIT_BACKOFF_MS = 60_000;
 
 export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResult> {
   const noop = (kekStatus: "ok" | "kek_missing" | null = null): SyncTickResult => ({
@@ -122,6 +131,18 @@ export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResul
   let needsReauth = 0;
   let skipped = 0;
 
+  // 2026-08-28: track the most recent rate-limit usage reported by
+  // any channel's snapshot in this tick. The Meta headers are
+  // per-app and reflect the post-call state, so channel N's
+  // snapshot is a faithful reading of "where the app's quota is
+  // right now" — by the time we're at channel K, the cumulative
+  // usage is what channel K's call observed. If any of the four
+  // persisted numbers (app call_count / cpu / time, business
+  // max call_count) hits 80%, we sleep 60s before the next
+  // channel's call. Bounded at N×60s (≤ 20 minutes per tick,
+  // well inside the 5-min lease when channels succeed because
+  // the lease rolls forward).
+  let lastSeenUsage: RateLimitUsageSnapshot | null = null;
   for (const profile of claimed) {
     const provider = profile.connection.provider as SocialProvider;
     const adapter = PROVIDER_ADAPTERS[provider];
@@ -137,7 +158,11 @@ export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResul
         .where(eq(socialChannels.id, profile.channel.id));
       continue;
     }
+    if (lastSeenUsage && shouldBackoff(lastSeenUsage)) {
+      await sleepMs(RATE_LIMIT_BACKOFF_MS);
+    }
     const result = await runOne(adapter, profile, now, dekCache);
+    if (result.latestUsage) lastSeenUsage = result.latestUsage;
     if (result.outcome === "ok") succeeded += 1;
     else if (result.outcome === "needs_reauth") needsReauth += 1;
     else if (result.outcome === "skipped") skipped += 1;
@@ -201,6 +226,16 @@ type SyncResult = {
    * "Validated X seconds ago" without re-reading the row.
    */
   lastSyncedAt: Date | null;
+  /**
+   * 2026-08-28: rate-limit usage reported by the most recent
+   * provider call for this channel (read from the snapshot's
+   * sourceMetadata). Null when no usage was reported (Meta
+   * sometimes omits the headers on certain endpoints) or when
+   * the call failed before any usage was returned. The cron
+   * loop reads this to drive proactive backoff before the next
+   * channel's call.
+   */
+  latestUsage: RateLimitUsageSnapshot | null;
 };
 
 /**
@@ -249,6 +284,7 @@ async function runChannelSyncCore(
             errorCode: refreshErr.code,
             needsReauth: true,
             lastSyncedAt: null,
+            latestUsage: null,
           };
         }
         throw refreshErr;
@@ -292,11 +328,14 @@ async function runChannelSyncCore(
 
     const next = nextSyncAt(now);
     await markSyncSuccess(db, channel.id, next);
+    // 2026-08-28: pass the snapshot's rate-limit usage up so the
+    // cron loop can drive proactive backoff before the next call.
     return {
       outcome: "ok",
       errorCode: null,
       needsReauth: false,
       lastSyncedAt: now,
+      latestUsage: readUsageFromSourceMetadata(snapshot.sourceMetadata),
     };
   } catch (err) {
     // Platform-level errors (KEK missing, agency not enabled) get a
@@ -307,7 +346,13 @@ async function runChannelSyncCore(
       const code: SyncErrorCode =
         err instanceof MissingKekError ? "platform_kek_missing" : "social_not_enabled";
       await markSyncFailure(db, channel.id, code, backoffDate, false);
-      return { outcome: "failed", errorCode: code, needsReauth: false, lastSyncedAt: null };
+      return {
+        outcome: "failed",
+        errorCode: code,
+        needsReauth: false,
+        lastSyncedAt: null,
+        latestUsage: null,
+      };
     }
     if (err instanceof SocialProviderError) {
       if (err.code === "auth_expired" || err.code === "permission_denied") {
@@ -320,6 +365,7 @@ async function runChannelSyncCore(
             errorCode: err.code,
             needsReauth: true,
             lastSyncedAt: null,
+            latestUsage: null,
           };
         }
         await markSyncFailure(db, channel.id, err.code, backoffAt(now, failureCount));
@@ -328,6 +374,7 @@ async function runChannelSyncCore(
           errorCode: err.code,
           needsReauth: false,
           lastSyncedAt: null,
+          latestUsage: null,
         };
       }
       if (err.retryable) {
@@ -339,7 +386,13 @@ async function runChannelSyncCore(
             : err.code === "not_found"
               ? "not_found"
               : "provider_unavailable";
-        return { outcome: "failed", errorCode: code, needsReauth: false, lastSyncedAt: null };
+        return {
+          outcome: "failed",
+          errorCode: code,
+          needsReauth: false,
+          lastSyncedAt: null,
+          latestUsage: null,
+        };
       }
     }
     const failureCount = (channel.syncFailureCount ?? 0) + 1;
@@ -349,7 +402,13 @@ async function runChannelSyncCore(
       err instanceof Error ? err.name : "unknown",
       backoffAt(now, failureCount),
     );
-    return { outcome: "failed", errorCode: "unknown", needsReauth: false, lastSyncedAt: null };
+    return {
+      outcome: "failed",
+      errorCode: "unknown",
+      needsReauth: false,
+      lastSyncedAt: null,
+      latestUsage: null,
+    };
   }
 }
 
@@ -372,7 +431,13 @@ async function runOne(
     .where(eq(workspaces.id, profile.channel.workspaceId))
     .limit(1);
   if (!workspaceRow) {
-    return { outcome: "failed", errorCode: "unknown", needsReauth: false, lastSyncedAt: null };
+    return {
+      outcome: "failed",
+      errorCode: "unknown",
+      needsReauth: false,
+      lastSyncedAt: null,
+      latestUsage: null,
+    };
   }
   const providerKey = profile.connection.provider as SocialProvider;
   const config = await getAgencyProviderConfig(db, workspaceRow.agencyId, providerKey);
@@ -386,6 +451,7 @@ async function runOne(
       errorCode: "not_configured",
       needsReauth: false,
       lastSyncedAt: null,
+      latestUsage: null,
     };
   }
   if (!config.enabled) {
@@ -398,6 +464,7 @@ async function runOne(
       errorCode: "not_configured",
       needsReauth: false,
       lastSyncedAt: null,
+      latestUsage: null,
     };
   }
   return runChannelSyncCore(
@@ -625,3 +692,72 @@ export async function runChannelTest(channelId: string): Promise<TestChannelResu
 // which is only used by the type-erased repository helpers.
 void socialProfileDailyMetrics;
 void sql;
+
+// ─── 2026-08-28: rate-limit awareness helpers ──────────────────────────────
+
+type RateLimitUsageSnapshot = {
+  appUsageCallCount: number | null;
+  appUsageCpu: number | null;
+  appUsageTime: number | null;
+  businessUsageMaxCallCount: number | null;
+};
+
+/**
+ * Extract the rate-limit usage numbers from a snapshot's
+ * `sourceMetadata`. The Meta provider writes four flat keys
+ * (`appUsageCallCount`, `appUsageCpu`, `appUsageTime`,
+ * `businessUsageMaxCallCount`) on the row. Returns `null` when
+ * none of the four are present (older snapshots, or snapshots
+ * from before this change).
+ */
+function readUsageFromSourceMetadata(
+  sourceMetadata: Record<string, string | number | boolean | null> | null | undefined,
+): RateLimitUsageSnapshot | null {
+  if (!sourceMetadata) return null;
+  const num = (k: string) =>
+    typeof sourceMetadata[k] === "number" ? (sourceMetadata[k] as number) : null;
+  const appCall = num("appUsageCallCount");
+  const appCpu = num("appUsageCpu");
+  const appTime = num("appUsageTime");
+  const bizMax = num("businessUsageMaxCallCount");
+  if (appCall === null && appCpu === null && appTime === null && bizMax === null) {
+    return null;
+  }
+  return {
+    appUsageCallCount: appCall,
+    appUsageCpu: appCpu,
+    appUsageTime: appTime,
+    businessUsageMaxCallCount: bizMax,
+  };
+}
+
+/**
+ * Pure decision: should this usage signal trigger a 60s backoff
+ * before the next call in the tick? Triggers when any of the four
+ * persisted usage numbers is at or above
+ * `RATE_LIMIT_USAGE_THRESHOLD` (80). Per Meta's docs that's the
+ * soft cap where the 429 cliff starts to bite.
+ */
+function shouldBackoff(usage: RateLimitUsageSnapshot): boolean {
+  return (
+    (usage.appUsageCallCount ?? 0) >= RATE_LIMIT_USAGE_THRESHOLD ||
+    (usage.appUsageCpu ?? 0) >= RATE_LIMIT_USAGE_THRESHOLD ||
+    (usage.appUsageTime ?? 0) >= RATE_LIMIT_USAGE_THRESHOLD ||
+    (usage.businessUsageMaxCallCount ?? 0) >= RATE_LIMIT_USAGE_THRESHOLD
+  );
+}
+
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+// Test seam: export the helpers so the unit test can verify the
+// backoff decision without spinning up the full DB.
+export const __test__ = {
+  readUsageFromSourceMetadata,
+  shouldBackoff,
+  RATE_LIMIT_USAGE_THRESHOLD,
+  RATE_LIMIT_BACKOFF_MS,
+};

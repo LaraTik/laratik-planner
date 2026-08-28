@@ -146,3 +146,120 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 void _ph;
+
+/**
+ * 2026-08-28: rate-limit awareness helpers. The cron worker
+ * reads each snapshot's `sourceMetadata` to drive a 60s
+ * pre-channel backoff when any usage layer is at or above 80%.
+ * The threshold and the four usage fields are documented in
+ * Meta's Graph API reference; 80% is the soft cap Meta's own
+ * docs recommend ("stay under ~80% to be safe").
+ */
+describe("rate-limit backoff helpers", () => {
+  it("imports the test seam", async () => {
+    const { __test__ } = await import("@/lib/social/sync");
+    expect(__test__.RATE_LIMIT_USAGE_THRESHOLD).toBe(80);
+    expect(__test__.RATE_LIMIT_BACKOFF_MS).toBe(60_000);
+  });
+
+  it("does not back off when no usage was reported", async () => {
+    const { __test__ } = await import("@/lib/social/sync");
+    expect(__test__.readUsageFromSourceMetadata(null)).toBeNull();
+    expect(__test__.readUsageFromSourceMetadata({})).toBeNull();
+    expect(__test__.readUsageFromSourceMetadata({ unrelated: "key" })).toBeNull();
+  });
+
+  it("extracts the four usage numbers from a populated sourceMetadata", async () => {
+    const { __test__ } = await import("@/lib/social/sync");
+    const md = {
+      partial: false,
+      appUsageCallCount: 42,
+      appUsageCpu: 10,
+      appUsageTime: 15,
+      businessUsageMaxCallCount: 88,
+    };
+    const got = __test__.readUsageFromSourceMetadata(md);
+    expect(got).toEqual({
+      appUsageCallCount: 42,
+      appUsageCpu: 10,
+      appUsageTime: 15,
+      businessUsageMaxCallCount: 88,
+    });
+  });
+
+  it("extracts a partial set of usage numbers (defensive against missing headers)", async () => {
+    const { __test__ } = await import("@/lib/social/sync");
+    // Realistic: Meta sometimes returns only the app header and
+    // omits the business one (or vice versa). The helper must
+    // surface whatever was returned and default the rest to null.
+    const md = { appUsageCallCount: 12 };
+    const got = __test__.readUsageFromSourceMetadata(md);
+    expect(got?.appUsageCallCount).toBe(12);
+    expect(got?.appUsageCpu).toBeNull();
+    expect(got?.appUsageTime).toBeNull();
+    expect(got?.businessUsageMaxCallCount).toBeNull();
+  });
+
+  it("triggers backoff at exactly 80% on any of the four layers", async () => {
+    const { __test__ } = await import("@/lib/social/sync");
+    expect(
+      __test__.shouldBackoff({
+        appUsageCallCount: 80,
+        appUsageCpu: 50,
+        appUsageTime: 50,
+        businessUsageMaxCallCount: 50,
+      }),
+    ).toBe(true);
+    expect(
+      __test__.shouldBackoff({
+        appUsageCallCount: 50,
+        appUsageCpu: 80,
+        appUsageTime: 50,
+        businessUsageMaxCallCount: 50,
+      }),
+    ).toBe(true);
+    expect(
+      __test__.shouldBackoff({
+        appUsageCallCount: 50,
+        appUsageCpu: 50,
+        appUsageTime: 80,
+        businessUsageMaxCallCount: 50,
+      }),
+    ).toBe(true);
+    expect(
+      __test__.shouldBackoff({
+        appUsageCallCount: 50,
+        appUsageCpu: 50,
+        appUsageTime: 50,
+        businessUsageMaxCallCount: 80,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not trigger backoff below 80% on every layer", async () => {
+    const { __test__ } = await import("@/lib/social/sync");
+    expect(
+      __test__.shouldBackoff({
+        appUsageCallCount: 79,
+        appUsageCpu: 60,
+        appUsageTime: 60,
+        businessUsageMaxCallCount: 70,
+      }),
+    ).toBe(false);
+  });
+
+  it("treats a null layer as 0 (no backoff triggered by a missing header)", async () => {
+    const { __test__ } = await import("@/lib/social/sync");
+    // Only the app layer is present (79%); business header was
+    // missing entirely. shouldBackoff must not treat null as
+    // 100 and falsely trigger.
+    expect(
+      __test__.shouldBackoff({
+        appUsageCallCount: 79,
+        appUsageCpu: 79,
+        appUsageTime: 79,
+        businessUsageMaxCallCount: null,
+      }),
+    ).toBe(false);
+  });
+});

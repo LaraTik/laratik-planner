@@ -49,6 +49,66 @@ export type ProviderRequestInit = {
   body?: string;
 };
 
+/**
+ * Meta Graph API rate-limit usage (4 layers; we surface the two
+ * most operationally useful: app-level and business use case).
+ * `call_count`, `total_cputime`, and `total_time` are all 0–100
+ * percentages of the per-app / per-business-id quota. Reading
+ * the headers after every call lets the cron worker do a
+ * proactive backoff when any layer is > 80% — preventing the
+ * rate-limit cliff at scale.
+ */
+export type MetaRateLimitUsage = {
+  app: { call_count: number; total_cputime: number; total_time: number } | null;
+  /**
+   * Keyed by business id; the array is per-asset-type usage
+   * (e.g. `pages`, `instagram`). Each value is the same shape
+   * as the app-level entry.
+   */
+  business: Record<
+    string,
+    { type: string; call_count: number; total_cputime: number; total_time: number }[]
+  > | null;
+};
+
+function readRateLimitUsage(headers: Headers): MetaRateLimitUsage {
+  const appRaw = headers.get("x-app-usage");
+  const businessRaw = headers.get("x-business-use-case-usage");
+  let app: MetaRateLimitUsage["app"] = null;
+  if (appRaw) {
+    try {
+      const parsed = JSON.parse(appRaw);
+      if (
+        typeof parsed === "object" &&
+        parsed !== null &&
+        typeof parsed.call_count === "number" &&
+        typeof parsed.total_cputime === "number" &&
+        typeof parsed.total_time === "number"
+      ) {
+        app = {
+          call_count: parsed.call_count,
+          total_cputime: parsed.total_cputime,
+          total_time: parsed.total_time,
+        };
+      }
+    } catch {
+      // Header is malformed JSON or non-JSON; treat as absent.
+    }
+  }
+  let business: MetaRateLimitUsage["business"] = null;
+  if (businessRaw) {
+    try {
+      const parsed = JSON.parse(businessRaw);
+      if (typeof parsed === "object" && parsed !== null) {
+        business = parsed as MetaRateLimitUsage["business"];
+      }
+    } catch {
+      // Malformed; treat as absent.
+    }
+  }
+  return { app, business };
+}
+
 function fullJitter(maxMs: number): number {
   return Math.floor(Math.random() * maxMs);
 }
@@ -149,7 +209,12 @@ async function readBody(response: Response): Promise<{ text: string; bytes: numb
 export async function providerRequest(
   url: string,
   init: ProviderRequestInit = {},
-): Promise<{ status: number; body: string; requestId: string | null }> {
+): Promise<{
+  status: number;
+  body: string;
+  requestId: string | null;
+  usage: MetaRateLimitUsage;
+}> {
   let lastError: SocialProviderError | null = null;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     if (attempt > 0) {
@@ -185,7 +250,14 @@ export async function providerRequest(
         }
         throw error;
       }
-      return { status: response.status, body: text, requestId };
+      // 2026-08-28: read the per-call rate-limit usage headers
+      // (X-App-Usage and X-Business-Use-Case-Usage) so the caller
+      // can log the cumulative usage per cron tick and proactively
+      // back off when any layer is > 80%. Both headers are
+      // present on most 2xx and 429 responses from Meta; missing
+      // or malformed values are silently ignored.
+      const usage = readRateLimitUsage(response.headers);
+      return { status: response.status, body: text, requestId, usage };
     } catch (err) {
       if (err instanceof SocialProviderError) {
         if (err.retryable && attempt < MAX_ATTEMPTS - 1) {

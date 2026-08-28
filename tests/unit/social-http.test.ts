@@ -116,3 +116,99 @@ describe("isSocialProviderError", () => {
     expect(isSocialProviderError("x")).toBe(false);
   });
 });
+
+/**
+ * 2026-08-28: rate-limit usage header parsing. Meta returns the
+ * per-app and per-business usage as JSON-encoded `X-App-Usage`
+ * and `X-Business-Use-Case-Usage` headers on every 2xx (and most
+ * 429) responses. The providerRequest function surfaces them on
+ * the success response so the cron worker can drive proactive
+ * backoff before the 429 cliff.
+ */
+describe("providerRequest — rate-limit usage", () => {
+  it("parses X-App-Usage on the success response", async () => {
+    const app = { call_count: 12, total_cputime: 3, total_time: 4 };
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        jsonResponse(200, { ok: true }, { "x-app-usage": JSON.stringify(app) }),
+      )) as typeof fetch;
+    const { usage } = await providerRequest("https://example.com/x");
+    expect(usage.app).toEqual(app);
+    expect(usage.business).toBeNull();
+  });
+
+  it("parses X-Business-Use-Case-Usage keyed by business id", async () => {
+    const business = {
+      "10209062998196500": [
+        { type: "pages", call_count: 47, total_cputime: 5, total_time: 7 },
+        { type: "instagram", call_count: 30, total_cputime: 3, total_time: 5 },
+      ],
+    };
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        jsonResponse(
+          200,
+          { ok: true },
+          {
+            "x-business-use-case-usage": JSON.stringify(business),
+          },
+        ),
+      )) as typeof fetch;
+    const { usage } = await providerRequest("https://example.com/x");
+    expect(usage.app).toBeNull();
+    expect(usage.business).toEqual(business);
+  });
+
+  it("parses both headers when both are present", async () => {
+    const app = { call_count: 17, total_cputime: 4, total_time: 6 };
+    const business = {
+      "1": [{ type: "pages", call_count: 1, total_cputime: 0, total_time: 0 }],
+    };
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        jsonResponse(
+          200,
+          { ok: true },
+          {
+            "x-app-usage": JSON.stringify(app),
+            "x-business-use-case-usage": JSON.stringify(business),
+          },
+        ),
+      )) as typeof fetch;
+    const { usage } = await providerRequest("https://example.com/x");
+    expect(usage.app).toEqual(app);
+    expect(usage.business).toEqual(business);
+  });
+
+  it("treats a malformed X-App-Usage header as absent (does not throw)", async () => {
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        jsonResponse(200, { ok: true }, { "x-app-usage": "not-json" }),
+      )) as typeof fetch;
+    const { usage } = await providerRequest("https://example.com/x");
+    expect(usage.app).toBeNull();
+    expect(usage.business).toBeNull();
+  });
+
+  it("treats a non-numeric X-App-Usage header as absent (defensive)", async () => {
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        jsonResponse(
+          200,
+          { ok: true },
+          {
+            "x-app-usage": JSON.stringify({ call_count: "high", total_cputime: 1, total_time: 1 }),
+          },
+        ),
+      )) as typeof fetch;
+    const { usage } = await providerRequest("https://example.com/x");
+    expect(usage.app).toBeNull();
+  });
+
+  it("returns null usage fields when the headers are missing entirely", async () => {
+    globalThis.fetch = (() => Promise.resolve(jsonResponse(200, { ok: true }))) as typeof fetch;
+    const { usage } = await providerRequest("https://example.com/x");
+    expect(usage.app).toBeNull();
+    expect(usage.business).toBeNull();
+  });
+});

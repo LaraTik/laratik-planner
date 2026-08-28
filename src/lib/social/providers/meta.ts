@@ -1,6 +1,11 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { isSocialProviderError, providerRequest, SocialProviderError } from "@/lib/social/http";
+import {
+  isSocialProviderError,
+  providerRequest,
+  SocialProviderError,
+  type MetaRateLimitUsage,
+} from "@/lib/social/http";
 import { captureError } from "@/lib/observability/sentry";
 import { logError } from "@/lib/observability/logger";
 import type { SocialCredentials } from "@/lib/social/crypto";
@@ -404,6 +409,51 @@ function hashSnapshot(parts: Array<string | number | null | undefined>): string 
   return h.digest("hex");
 }
 
+/**
+ * Write the most recent Meta rate-limit usage to the snapshot's
+ * sourceMetadata. The basic-fields call always runs; the insights
+ * call may have errored (permission_denied, etc.) and produced no
+ * usage. We prefer the insights usage (most recent) when both are
+ * present, and fall back to the basic-fields usage when only that
+ * one ran.
+ *
+ * The app-level and business-level usage are written as separate
+ * flat keys (`appUsageCallCount`, `appUsageCpu`, `appUsageTime`,
+ * `businessUsageMaxCallCount`) so a SQL query can read them
+ * without parsing nested JSON. The business usage is collapsed to
+ * the max call_count across all business ids × asset types — the
+ * cron worker only needs a single at-a-glance number to decide
+ * whether to throttle.
+ */
+function writeRateLimitUsage(
+  sourceMetadata: Record<string, string | number | boolean | null>,
+  latestUsage: MetaRateLimitUsage,
+  fallbackUsage: MetaRateLimitUsage,
+): void {
+  const pickUsage = (u: MetaRateLimitUsage) => {
+    if (u.app || u.business) return u;
+    return null;
+  };
+  const chosen = pickUsage(latestUsage) ?? pickUsage(fallbackUsage);
+  if (!chosen) return;
+  if (chosen.app) {
+    sourceMetadata.appUsageCallCount = chosen.app.call_count;
+    sourceMetadata.appUsageCpu = chosen.app.total_cputime;
+    sourceMetadata.appUsageTime = chosen.app.total_time;
+  }
+  if (chosen.business) {
+    let maxUsage = 0;
+    for (const business of Object.values(chosen.business)) {
+      for (const asset of business) {
+        if (asset.call_count > maxUsage) maxUsage = asset.call_count;
+      }
+    }
+    if (maxUsage > 0) {
+      sourceMetadata.businessUsageMaxCallCount = maxUsage;
+    }
+  }
+}
+
 type PageDetailsResponse = {
   id: string;
   fan_count?: number;
@@ -417,6 +467,25 @@ type IgBusinessResponse = {
   follows_count?: number;
   name?: string;
   username?: string;
+  /**
+   * Present when the request was field-expanded to include
+   * `media.limit(10){...}`. The IG profile exposes this as a
+   * nested `data` array of posts. The first element is the
+   * most recent post. Each post is intentionally narrow — we
+   * only need id + like/comment counts to seed a future
+   * per-post engagement feature. Deeper fields (caption,
+   * thumbnail, etc.) are fetched on demand from `/{media-id}`
+   * or `/{media-id}/insights`.
+   */
+  media?: {
+    data: Array<{
+      id: string;
+      like_count?: number;
+      comments_count?: number;
+      permalink?: string;
+      timestamp?: string;
+    }>;
+  };
 };
 
 type PageInsightsResponse = {
@@ -438,7 +507,7 @@ export async function fetchMetaFacebookPageSnapshot(args: {
   const url = new URL(`${graphBaseUrl()}/${pageId}`);
   url.searchParams.set("fields", fields);
   url.searchParams.set("access_token", accessToken);
-  const { body, requestId } = await providerRequest(url.toString());
+  const { body, requestId, usage: basicFieldsUsage } = await providerRequest(url.toString());
   let parsed: PageDetailsResponse;
   try {
     parsed = JSON.parse(body) as PageDetailsResponse;
@@ -464,15 +533,22 @@ export async function fetchMetaFacebookPageSnapshot(args: {
   // saved row's sourceMetadata (visible in the analytics page's
   // "partial" cell + any DB query). Operators without Sentry
   // access can grep the container log or query the row directly.
-  let insights: Awaited<ReturnType<typeof fetchMetaPageDailyInsights>> = null;
+  let insights: Awaited<ReturnType<typeof fetchMetaPageDailyInsights>>["insights"] = null;
   let insightsErrorCode: string | null = null;
   let insightsErrorRequestId: string | null = null;
+  // 2026-08-28: capture the per-call rate-limit usage from the most
+  // recent providerRequest. We surface it on the saved row so a DB
+  // query (or the future rate-limit dashboard) can see which
+  // channels contributed to the cumulative app/business quota.
+  let latestUsage: MetaRateLimitUsage = { app: null, business: null };
   try {
-    insights = await fetchMetaPageDailyInsights({
+    const insightsResult = await fetchMetaPageDailyInsights({
       accessToken,
       pageId,
       apiVersion,
     });
+    insights = insightsResult.insights;
+    latestUsage = insightsResult.usage;
   } catch (insightsErr) {
     const code = isSocialProviderError(insightsErr) ? insightsErr.code : "unknown";
     insightsErrorCode = code;
@@ -529,6 +605,13 @@ export async function fetchMetaFacebookPageSnapshot(args: {
       }
     }
   }
+  // 2026-08-28: surface rate-limit usage from the most recent
+  // successful call so the cron worker can drive proactive
+  // backoff and a future dashboard can show per-channel
+  // contributions. Prefer the insights call's usage (most
+  // recent) over the basic-fields call's usage; fall back to
+  // the basic-fields usage if insights never ran.
+  writeRateLimitUsage(sourceMetadata, latestUsage, basicFieldsUsage);
   const observedAt = new Date();
   const hash = hashSnapshot([
     apiVersion,
@@ -560,11 +643,14 @@ async function fetchMetaPageDailyInsights(args: {
   pageId: string;
   apiVersion: string;
 }): Promise<{
-  reach: number | null;
-  views: number | null;
-  engagedAccounts: number | null;
-  interactions: number | null;
-} | null> {
+  insights: {
+    reach: number | null;
+    views: number | null;
+    engagedAccounts: number | null;
+    interactions: number | null;
+  } | null;
+  usage: MetaRateLimitUsage;
+}> {
   const url = new URL(`${graphBaseUrl(args.apiVersion)}/${args.pageId}/insights`);
   // `page_impressions_unique` is a daily time-series metric. `page_views`
   // and `page_post_engagements` are daily total metrics. Meta requires
@@ -588,7 +674,7 @@ async function fetchMetaPageDailyInsights(args: {
   // returned null on permission_denied, which prevented the
   // outer catch from running — the operator had no way to know
   // the failure was a scope issue.
-  const { body } = await providerRequest(url.toString());
+  const { body, usage } = await providerRequest(url.toString());
   try {
     parsed = JSON.parse(body) as PageInsightsResponse;
   } catch {
@@ -596,16 +682,19 @@ async function fetchMetaPageDailyInsights(args: {
   }
   const find = (name: string) => parsed.data.find((m) => m.name === name)?.values?.[0]?.value;
   return {
-    reach:
-      typeof find("page_impressions_unique") === "number"
-        ? (find("page_impressions_unique") as number)
-        : null,
-    views: typeof find("page_views") === "number" ? (find("page_views") as number) : null,
-    engagedAccounts: null, // Page-level engagement is rarely available as a single number
-    interactions:
-      typeof find("page_post_engagements") === "number"
-        ? (find("page_post_engagements") as number)
-        : null,
+    insights: {
+      reach:
+        typeof find("page_impressions_unique") === "number"
+          ? (find("page_impressions_unique") as number)
+          : null,
+      views: typeof find("page_views") === "number" ? (find("page_views") as number) : null,
+      engagedAccounts: null, // Page-level engagement is rarely available as a single number
+      interactions:
+        typeof find("page_post_engagements") === "number"
+          ? (find("page_post_engagements") as number)
+          : null,
+    },
+    usage,
   };
 }
 
@@ -617,9 +706,23 @@ export async function fetchMetaInstagramSnapshot(args: {
 }): Promise<MetaPageSnapshot> {
   const { accessToken, igUserId, apiVersion, requestIdHint } = args;
   const url = new URL(`${graphBaseUrl(apiVersion)}/${igUserId}`);
-  url.searchParams.set("fields", "followers_count,media_count,follows_count,username,name");
+  // 2026-08-28: field-expand `media.limit(10){...}` onto the basic
+  // call so the response carries the 10 most recent posts. This is
+  // a future-proofing change — per-post engagement is out of scope
+  // for M4, but when it lands the basic call will already return
+  // the post list and we will only need a per-post
+  // `/{media-id}/insights` call for posts first seen in the last
+  // 24h. The Meta doc's "fan-out for new posts only" strategy
+  // requires this expansion today to be a zero-cost upgrade later.
+  // The expansion adds 0 calls now (we already call this endpoint);
+  // it just widens the response shape. `media_count` is a
+  // top-level field unaffected by the expansion.
+  url.searchParams.set(
+    "fields",
+    "followers_count,media_count,follows_count,username,name,media.limit(10){id,like_count,comments_count,permalink,timestamp}",
+  );
   url.searchParams.set("access_token", accessToken);
-  const { body, requestId } = await providerRequest(url.toString());
+  const { body, requestId, usage: basicFieldsUsage } = await providerRequest(url.toString());
   let parsed: IgBusinessResponse;
   try {
     parsed = JSON.parse(body) as IgBusinessResponse;
@@ -629,19 +732,31 @@ export async function fetchMetaInstagramSnapshot(args: {
   const follower = typeof parsed.followers_count === "number" ? parsed.followers_count : null;
   const media = typeof parsed.media_count === "number" ? parsed.media_count : null;
   const following = typeof parsed.follows_count === "number" ? parsed.follows_count : null;
+  // 2026-08-28: the most recent post (if any) is now available
+  // because of the field expansion. We surface the id + like/comment
+  // counts on sourceMetadata so a future per-post job can read
+  // them without an extra call. The snapshot's return shape is
+  // unchanged — per-post engagement is still out of scope for M4.
+  const latestPost = parsed.media?.data?.[0] ?? null;
   // Account-level daily insights: views, reach, engaged accounts,
   // interactions. Empty datasets are `null`, never `0`.
   // 2026-08-28: same triply-visible error handling as the Page
   // branch (Sentry + stdout JSON + sourceMetadata in the row).
-  let insights: Awaited<ReturnType<typeof fetchMetaIgAccountDailyInsights>> = null;
+  let insights: Awaited<ReturnType<typeof fetchMetaIgAccountDailyInsights>>["insights"] = null;
   let insightsErrorCode: string | null = null;
   let insightsErrorRequestId: string | null = null;
+  // 2026-08-28: capture the per-call rate-limit usage; same logic
+  // as the Page branch. The IG basic+insights pair runs at most
+  // 2 calls per snapshot.
+  let latestUsage: MetaRateLimitUsage = { app: null, business: null };
   try {
-    insights = await fetchMetaIgAccountDailyInsights({
+    const igResult = await fetchMetaIgAccountDailyInsights({
       accessToken,
       igUserId,
       apiVersion,
     });
+    insights = igResult.insights;
+    latestUsage = igResult.usage;
   } catch (insightsErr) {
     const code = isSocialProviderError(insightsErr) ? insightsErr.code : "unknown";
     insightsErrorCode = code;
@@ -689,6 +804,27 @@ export async function fetchMetaInstagramSnapshot(args: {
       }
     }
   }
+  // 2026-08-28: surface rate-limit usage from the most recent
+  // successful call so the cron worker can drive proactive
+  // backoff and a future dashboard can show per-channel
+  // contributions. Same logic as the Page branch: prefer the
+  // insights call's usage, fall back to the basic-fields usage
+  // if insights never ran.
+  writeRateLimitUsage(sourceMetadata, latestUsage, basicFieldsUsage);
+  if (latestPost) {
+    // Future-proofing: per-post engagement is out of scope for M4
+    // (locked in grill-me round 1), but the field-expanded basic
+    // call returns the most recent post. Surface its id + counts
+    // on the row so a future per-post job can read them without
+    // re-calling the API. Ignored by the analytics page for now.
+    sourceMetadata.latestPostId = latestPost.id;
+    if (typeof latestPost.like_count === "number") {
+      sourceMetadata.latestPostLikeCount = latestPost.like_count;
+    }
+    if (typeof latestPost.comments_count === "number") {
+      sourceMetadata.latestPostCommentCount = latestPost.comments_count;
+    }
+  }
   const observedAt = new Date();
   const hash = hashSnapshot([
     apiVersion,
@@ -724,11 +860,14 @@ async function fetchMetaIgAccountDailyInsights(args: {
   igUserId: string;
   apiVersion: string;
 }): Promise<{
-  reach: number | null;
-  views: number | null;
-  engagedAccounts: number | null;
-  interactions: number | null;
-} | null> {
+  insights: {
+    reach: number | null;
+    views: number | null;
+    engagedAccounts: number | null;
+    interactions: number | null;
+  } | null;
+  usage: MetaRateLimitUsage;
+}> {
   const url = new URL(`${graphBaseUrl(args.apiVersion)}/${args.igUserId}/insights`);
   // `metric_type=total_value` is required for `profile_views`,
   // `accounts_engaged`, and `total_interactions` (these are daily
@@ -753,7 +892,7 @@ async function fetchMetaIgAccountDailyInsights(args: {
   // returned null on permission_denied, which prevented the
   // outer catch from running — the operator had no way to know
   // the failure was a scope issue.
-  const { body } = await providerRequest(url.toString());
+  const { body, usage } = await providerRequest(url.toString());
   try {
     parsed = JSON.parse(body) as PageInsightsResponse;
   } catch {
@@ -761,14 +900,17 @@ async function fetchMetaIgAccountDailyInsights(args: {
   }
   const find = (name: string) => parsed.data.find((m) => m.name === name)?.values?.[0]?.value;
   return {
-    reach: typeof find("reach") === "number" ? (find("reach") as number) : null,
-    views: typeof find("profile_views") === "number" ? (find("profile_views") as number) : null,
-    engagedAccounts:
-      typeof find("accounts_engaged") === "number" ? (find("accounts_engaged") as number) : null,
-    interactions:
-      typeof find("total_interactions") === "number"
-        ? (find("total_interactions") as number)
-        : null,
+    insights: {
+      reach: typeof find("reach") === "number" ? (find("reach") as number) : null,
+      views: typeof find("profile_views") === "number" ? (find("profile_views") as number) : null,
+      engagedAccounts:
+        typeof find("accounts_engaged") === "number" ? (find("accounts_engaged") as number) : null,
+      interactions:
+        typeof find("total_interactions") === "number"
+          ? (find("total_interactions") as number)
+          : null,
+    },
+    usage,
   };
 }
 
