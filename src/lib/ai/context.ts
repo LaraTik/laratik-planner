@@ -140,6 +140,7 @@ export async function loadAiContext(input: {
         .select({
           name: brandAssets.name,
           value: brandAssets.value,
+          colorRole: brandAssets.colorRole,
         })
         .from(brandAssets)
         .where(
@@ -159,7 +160,12 @@ export async function loadAiContext(input: {
               (typeof v.value === "string" && v.value) ||
               "";
             if (!hex) continue;
+            // Prefer the column over the jsonb value so a future
+            // column-only update does not require a value rewrite.
+            // Legacy rows (pre-Phase-8) had role in the jsonb
+            // value; the fallback chain reads both shapes.
             const role =
+              (typeof r.colorRole === "string" && r.colorRole) ||
               (typeof v.role === "string" && v.role) ||
               (typeof v.colorRole === "string" && v.colorRole) ||
               null;

@@ -91,6 +91,9 @@ function suggestionsFor(
     body?: number;
     accent?: number;
     mono?: number;
+    primary?: number;
+    secondary?: number;
+    neutral?: number;
   },
 ): string[] {
   switch (section) {
@@ -106,15 +109,31 @@ function suggestionsFor(
           "Solid coverage. Consider an icon-only mark for small surfaces (favicons, app icons, avatars).",
         ];
       return ["Healthy library."];
-    case "colors":
+    case "colors": {
+      const b = breakdown ?? {};
+      const missing: string[] = [];
+      if ((b.primary ?? 0) === 0) missing.push("primary");
+      if ((b.secondary ?? 0) === 0) missing.push("secondary");
+      if ((b.accent ?? 0) === 0) missing.push("accent");
+      if ((b.neutral ?? 0) === 0) missing.push("neutral");
       if (count === 0)
         return [
-          "Add 5–7 colors — primary, secondary, accent, and 1–2 neutrals — so designers and copywriters stay on-brand.",
+          "Add a Primary colour first. The AI uses it as the default recommendation in caption drafts.",
         ];
-      if (count < 3) return ["Aim for 5–7 colors. The AI will only know what you tell it about."];
+      if (missing.length === 4)
+        return [
+          "Mark a role for each color (Primary / Secondary / Accent / Neutral) so the AI can group recommendations.",
+        ];
+      if (missing.length > 0)
+        return [
+          `Add a ${missing.join(" / ")} color to round out the palette — the AI leans on these in caption drafts.`,
+        ];
       if (count < 5)
-        return ["Decent start. Most palettes benefit from 1–2 neutrals (background + text gray)."];
-      return ["Healthy palette."];
+        return [
+          "Solid 4-role palette. Consider 1–2 more variants of each role for dark-mode and high-contrast use.",
+        ];
+      return ["Healthy palette with full role coverage."];
+    }
     case "typography": {
       const roles = breakdown ?? {};
       const headlineMissing = (roles.headline ?? 0) === 0;
@@ -211,7 +230,7 @@ export interface BrandKitHealthProps {
   section: Section;
   slug: string;
   count: number;
-  /** Per-role counts — only `voice` and `typography` read this today. */
+  /** Per-role counts — `voice`, `typography`, and `colors` read this today. */
   breakdown?: {
     tone?: number;
     do?: number;
@@ -220,6 +239,9 @@ export interface BrandKitHealthProps {
     body?: number;
     accent?: number;
     mono?: number;
+    primary?: number;
+    secondary?: number;
+    neutral?: number;
   };
 }
 

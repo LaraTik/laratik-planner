@@ -1,0 +1,34 @@
+-- Migration 0023 — `brand_asset.color_role`
+--
+-- Purpose: stamp each color asset with a role (primary / secondary /
+-- accent / neutral) so the colors page can group swatches by role
+-- and the AI generation route can include the role in the brand
+-- visuals payload. Set by the color form's Role select; cleared
+-- implicitly by the CHECK constraint when not supplied (NULL is
+-- allowed for `kind != 'color'` rows where the column is meaningless).
+--
+-- Forward: ADD COLUMN + CREATE INDEX + ADD CONSTRAINT. The column
+-- is nullable text with a CHECK that the value, when set, is one
+-- of the four roles. The partial index is on (workspace_id,
+-- color_role) WHERE kind = 'color' so the role-grouped colors page
+-- query is index-only; the index is small because most workspaces
+-- have fewer than 100 color assets and non-color rows are excluded
+-- by the WHERE clause.
+--
+-- Backwards compatibility: existing rows have NULL. The color form
+-- still accepts a no-role submission (renders in the "Uncategorised"
+-- group), the AI loader returns `role: null` for legacy rows, and
+-- the Brand Kit Health card reports the role coverage separately
+-- from the count. No data migration is required.
+--
+-- Backup: standard pg_dump before the deploy (see
+-- scripts/vps/backup.sh). The column is metadata-only on existing
+-- rows.
+--
+-- ROLLBACK:
+--   ALTER TABLE "brand_asset" DROP CONSTRAINT "brand_asset_color_role_valid";
+--   DROP INDEX "brand_asset_color_role_idx";
+--   ALTER TABLE "brand_asset" DROP COLUMN "color_role";
+ALTER TABLE "brand_asset" ADD COLUMN "color_role" text;--> statement-breakpoint
+CREATE INDEX "brand_asset_color_role_idx" ON "brand_asset" USING btree ("workspace_id","color_role") WHERE "brand_asset"."kind" = 'color';--> statement-breakpoint
+ALTER TABLE "brand_asset" ADD CONSTRAINT "brand_asset_color_role_valid" CHECK ("brand_asset"."color_role" IS NULL OR "brand_asset"."color_role" IN ('primary', 'secondary', 'accent', 'neutral'));

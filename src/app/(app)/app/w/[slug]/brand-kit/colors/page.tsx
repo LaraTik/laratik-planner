@@ -13,13 +13,27 @@ import { BrandKitBackLink } from "../_components/brand-kit-back-link";
 import { ColorForm } from "../color-form";
 import { ColorSwatchGrid } from "../color-swatch-grid";
 
+type ColorRole = "primary" | "secondary" | "accent" | "neutral";
+
+function readColorRole(asset: { colorRole?: unknown; value: unknown }): ColorRole | null {
+  const col = asset.colorRole;
+  if (col === "primary" || col === "secondary" || col === "accent" || col === "neutral") {
+    return col;
+  }
+  const v = (asset.value ?? {}) as Record<string, unknown>;
+  const jsonb = v.role ?? v.colorRole;
+  if (jsonb === "primary" || jsonb === "secondary" || jsonb === "accent" || jsonb === "neutral") {
+    return jsonb;
+  }
+  return null;
+}
+
 /**
  * /app/w/[slug]/brand-kit/colors — the Color Palette section,
- * broken out from the Bento grid (Phase 7). The form / grid /
- * archive / restore actions are unchanged from the previous
- * in-page section. Phase 8 will add a `color_role` column so
- * the grid can group swatches by primary / secondary / accent /
- * neutral.
+ * broken out from the Bento grid (Phase 7). Phase 8 adds a
+ * `color_role` column (primary / secondary / accent / neutral) so
+ * the grid can group swatches by role and the AI generation route
+ * can include the role in the brand visuals payload.
  */
 export default async function BrandKitColorsPage({
   params,
@@ -46,6 +60,18 @@ export default async function BrandKitColorsPage({
       ),
     );
 
+  // Per-role breakdown so the Brand Kit Health card can tell the
+  // user which palette slots are still empty. Reads from the new
+  // `color_role` column (Phase 8); legacy rows fall back to the
+  // jsonb `value.role` so the page renders sensibly for workspaces
+  // created before the migration.
+  const breakdown = {
+    primary: colors.filter((c) => readColorRole(c) === "primary").length,
+    secondary: colors.filter((c) => readColorRole(c) === "secondary").length,
+    accent: colors.filter((c) => readColorRole(c) === "accent").length,
+    neutral: colors.filter((c) => readColorRole(c) === "neutral").length,
+  };
+
   return (
     <div className="space-y-6">
       <BrandKitBackLink slug={slug} />
@@ -54,7 +80,7 @@ export default async function BrandKitColorsPage({
         title="Colors"
         description="Primary, secondary, accent, and neutral hexes. Designers and copywriters grab the hex with one click."
       />
-      <BrandKitHealth section="colors" slug={slug} count={colors.length} />
+      <BrandKitHealth section="colors" slug={slug} count={colors.length} breakdown={breakdown} />
 
       <SectionCard
         id="colors"

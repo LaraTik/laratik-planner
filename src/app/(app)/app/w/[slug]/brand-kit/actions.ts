@@ -62,6 +62,10 @@ export async function createColorAssetAction(
   const parsed = BrandAssetCommandSchema.safeParse({
     kind: "color",
     name: readString(formData, "name"),
+    // Phase 8 — optional color role. The form posts the raw
+    // string; the Zod command schema narrows it to the enum and
+    // a malformed value is rejected with a user-friendly error.
+    colorRole: readString(formData, "colorRole") || undefined,
     value: { hex: readString(formData, "hex") },
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form." };
@@ -71,7 +75,11 @@ export async function createColorAssetAction(
   // the action does not call db.insert directly. Keeps the authz
   // check in one place and lets tests stub the service.
   const hex = parsed.data.value.hex;
-  await createColorAsset({ id: session.user.id }, workspace.id, { name: parsed.data.name, hex });
+  await createColorAsset({ id: session.user.id }, workspace.id, {
+    name: parsed.data.name,
+    hex,
+    colorRole: parsed.data.colorRole,
+  });
   revalidatePath(`/app/w/${slug}/brand-kit`);
   return { success: true };
 }

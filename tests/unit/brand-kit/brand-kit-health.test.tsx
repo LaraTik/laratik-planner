@@ -94,10 +94,36 @@ describe("BrandKitHealth", () => {
       expect(first).toHaveTextContent(/headline/i);
     });
 
-    it("colors: empty workspace is told to add 5-7 colors", () => {
+    it("colors: empty workspace is told to add a Primary color first", () => {
       render(<BrandKitHealth section="colors" slug={slug} count={0} />);
       const first = screen.getByTestId("brand-kit-health-colors-suggestion-0");
-      expect(first).toHaveTextContent(/5.{1,4}7 colors/i);
+      expect(first).toHaveTextContent(/primary/i);
+    });
+
+    it("colors: full role coverage with 5+ colors is healthy", () => {
+      render(
+        <BrandKitHealth
+          section="colors"
+          slug={slug}
+          count={6}
+          breakdown={{ primary: 2, secondary: 2, accent: 1, neutral: 1 }}
+        />,
+      );
+      const first = screen.getByTestId("brand-kit-health-colors-suggestion-0");
+      expect(first).toHaveTextContent(/healthy|full role coverage/i);
+    });
+
+    it("colors: missing roles are called out by name", () => {
+      render(
+        <BrandKitHealth
+          section="colors"
+          slug={slug}
+          count={2}
+          breakdown={{ primary: 1, secondary: 1, accent: 0, neutral: 0 }}
+        />,
+      );
+      const first = screen.getByTestId("brand-kit-health-colors-suggestion-0");
+      expect(first).toHaveTextContent(/accent.*neutral/i);
     });
 
     it("pillars: more than 5 is flagged as a dilution risk", () => {

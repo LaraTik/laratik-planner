@@ -88,6 +88,18 @@ export const socialChannels = pgTable(
 // that fragile. The application joins by the UUID column directly.
 
 // ─── brand_assets ──────────────────────────────────────────────────────────
+//
+// `color_role` is a workspace-scoped categorization of a color asset
+// (primary / secondary / accent / neutral). It is only meaningful
+// for `kind = 'color'`; other kinds leave it NULL. Phase 8 (this
+// commit) adds the column with a CHECK constraint that mirrors the
+// Zod enum. Legacy rows (created before the migration) default to
+// NULL; the form, grid, and AI loader all read the value
+// defensively and fall back to "no role" when missing.
+//
+// The column is on the base `brand_assets` table (not in the
+// `value` jsonb) so the AI loader can GROUP BY / filter by role
+// at the SQL layer without scanning the jsonb for every row.
 export const brandAssets = pgTable(
   "brand_asset",
   {
@@ -98,6 +110,15 @@ export const brandAssets = pgTable(
     kind: text("kind").notNull(), // 'logo' | 'color' | 'font' | 'guideline' | 'reference' | 'other'
     name: text("name").notNull(),
     value: jsonb("value"),
+    /**
+     * Phase 8 — color-role enum. NULL is allowed (the column is only
+     * meaningful for `kind = 'color'`; other kinds carry a row for
+     * their own data and the role is irrelevant). The CHECK below
+     * is the same one Zod enforces on the createColorAsset command
+     * — the DB is the source of truth, the schema is the structural
+     * gate.
+     */
+    colorRole: text("color_role"),
     storagePath: text("storage_path"),
     externalUrl: text("external_url"),
     archivedAt: archivedAt(),
@@ -108,9 +129,19 @@ export const brandAssets = pgTable(
   },
   (t) => [
     index("brand_asset_workspace_idx").on(t.workspaceId),
+    // Partial index on (workspace_id, color_role) for the colors page
+    // KPI breakdown and the "show me all neutrals" filter; only
+    // materialised for `kind = 'color'` rows so it stays small.
+    index("brand_asset_color_role_idx")
+      .on(t.workspaceId, t.colorRole)
+      .where(sql`${t.kind} = 'color'`),
     check(
       "brand_asset_kind_valid",
       sql`${t.kind} IN ('logo', 'color', 'font', 'guideline', 'reference', 'other')`,
+    ),
+    check(
+      "brand_asset_color_role_valid",
+      sql`${t.colorRole} IS NULL OR ${t.colorRole} IN ('primary', 'secondary', 'accent', 'neutral')`,
     ),
   ],
 );

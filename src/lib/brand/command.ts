@@ -52,6 +52,14 @@ const logoCommand = z.object({
 const colorCommand = z.object({
   kind: z.literal("color"),
   name: z.string().trim().min(1).max(80),
+  /**
+   * Phase 8 — color role. Drives the colors page grouping
+   * (primary / secondary / accent / neutral) and the AI context
+   * payload. The DB stores the same enum in `brand_asset.color_role`
+   * with a CHECK constraint that mirrors this Zod enum; the schema
+   * is the structural gate, the DB is the source of truth.
+   */
+  colorRole: z.enum(["primary", "secondary", "accent", "neutral"]).optional(),
   value: z.object({ hex: hexColor }),
 });
 

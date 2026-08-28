@@ -97,10 +97,17 @@ export async function createBrandAsset(
  * `createColorAssetAction` did, which made authz duplicated and
  * tests brittle). The action now calls this service fn; tests can
  * stub it.
+ *
+ * Phase 8: `colorRole` is persisted to the new `brand_asset.color_role`
+ * column. The role drives the colors page grouping and the AI
+ * context payload. Optional — a planner who doesn't pick a role
+ * still gets a usable color (the grid renders it in the "Uncategorised"
+ * group) and the AI loader returns `role: null`.
  */
 export type ColorAssetInput = {
   name: string;
   hex: string;
+  colorRole?: "primary" | "secondary" | "accent" | "neutral" | undefined;
 };
 
 export async function createColorAsset(
@@ -116,6 +123,7 @@ export async function createColorAsset(
     name: input.name,
     externalUrl: null,
     storagePath: null,
+    colorRole: input.colorRole ?? null,
     value: { hex: input.hex },
   });
 }
