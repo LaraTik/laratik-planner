@@ -1004,6 +1004,78 @@ async function fetchMetaIgAccountDailyInsights(args: {
 // ─── Adapter ──────────────────────────────────────────────────────────────
 
 /**
+ * Module-level cache of page access tokens acquired at sync time from
+ * the user access token. Page access tokens don't expire (the user
+ * can revoke them server-side, but the lifetime is effectively
+ * permanent for our use case). Caching avoids a 1-extra-Meta-API-call
+ * per page per cron tick.
+ *
+ * Key shape: `pageId → { token, expires }`. `expires` is set to
+ * `Number.MAX_SAFE_INTEGER` (effectively never) because page tokens
+ * don't have a known TTL. If Meta ever returns a TTL we can switch
+ * to honoring it; until then the cache only resets on process restart
+ * or on an auth_expired 401 from Meta.
+ */
+const pageAccessTokenCache = new Map<string, { token: string; expires: number }>();
+
+/**
+ * Acquire a Page access token from the user access token. The
+ * `/<page-id>?fields=access_token&access_token=<user_token>` endpoint
+ * returns a long-lived page access token when the user manages the
+ * page. This is the workaround for legacy Meta connections where
+ * the OAuth flow did not persist per-page access tokens in
+ * `credentials.profileAccessTokens` (pre-discoverMetaPages refactor
+ * or connections created via a different code path).
+ *
+ * 2026-08-28: Added because the Food Game Facebook channel was
+ * failing with `(#190) This method must be called with a Page
+ * Access Token` — the connection's `accessToken` is a long-lived
+ * user token, and the stored `profileAccessTokens[pageId]` was
+ * empty (legacy connection). Without this helper, every page
+ * snapshot call would either fail (current code) or require the
+ * user to disconnect + reconnect (the alternative, which loses
+ * historical metrics).
+ */
+async function acquirePageAccessToken(
+  credentials: SocialCredentials,
+  pageId: string,
+  apiVersion: string,
+): Promise<string> {
+  // 1. Honor the static map first (the modern OAuth path stores
+  //    per-page tokens here during the connect flow).
+  const stored = credentials.profileAccessTokens?.[pageId];
+  if (stored) return stored;
+
+  // 2. Honor the in-process cache to avoid the extra Meta call on
+  //    every snapshot.
+  const cached = pageAccessTokenCache.get(pageId);
+  if (cached && cached.expires > Date.now()) return cached.token;
+
+  // 3. Acquire a fresh page access token from the user token.
+  const url = new URL(`${graphBaseUrl(apiVersion)}/${pageId}`);
+  url.searchParams.set("fields", "access_token");
+  url.searchParams.set("access_token", credentials.accessToken);
+  const { body } = await providerRequest(url.toString());
+  let parsed: { access_token?: string };
+  try {
+    parsed = JSON.parse(body) as { access_token?: string };
+  } catch {
+    throw new SocialProviderError("invalid_response", false, null);
+  }
+  if (typeof parsed.access_token !== "string" || parsed.access_token.length === 0) {
+    // Meta returned 200 but no `access_token` — the user does not
+    // manage this page on this app. Treat as permission_denied so
+    // the outer code can write a clear `providerErrorCode`.
+    throw new SocialProviderError("permission_denied", false, null);
+  }
+  pageAccessTokenCache.set(pageId, {
+    token: parsed.access_token,
+    expires: Number.MAX_SAFE_INTEGER,
+  });
+  return parsed.access_token;
+}
+
+/**
  * The Meta adapter implements the `SocialProviderAdapter` contract
  * from `src/lib/social/types.ts`. The cron worker resolves this
  * adapter from the connection's `provider` column and calls these
@@ -1055,14 +1127,27 @@ export const metaAdapter: SocialProviderAdapter = {
     // per-connection SocialCredentials envelope). The Graph API
     // version comes from the per-agency app config; null falls
     // back to the compile-time default.
-    const accessToken =
-      credentials.profileAccessTokens?.[profile.providerAccountId] ?? credentials.accessToken;
+    //
+    // 2026-08-28: For Facebook Page channels, the user access token
+    // (the one stored in `credentials.accessToken`) is NOT enough
+    // for page-level calls — Meta returns `(#190) This method must
+    // be called with a Page Access Token`. We try the per-page
+    // token in `credentials.profileAccessTokens[pageId]` first
+    // (set by the modern OAuth flow), then fall back to acquiring
+    // one at call time from the user token (the legacy-connection
+    // workaround). For Instagram, the user token is enough — IG
+    // business-account calls accept the user's long-lived token.
     const apiVersion = resolveGraphVersion(appCredentials.graphApiVersion);
     const requestIdHint = createHash("sha256")
       .update(`${profile.providerAccountId}:${apiVersion}:${Date.now()}`)
       .digest("hex")
       .slice(0, 16);
     if (profile.platform === "facebook") {
+      const accessToken = await acquirePageAccessToken(
+        credentials,
+        profile.providerAccountId,
+        apiVersion,
+      );
       return fetchMetaFacebookPageSnapshot({
         accessToken,
         pageId: profile.providerAccountId,
@@ -1071,6 +1156,13 @@ export const metaAdapter: SocialProviderAdapter = {
       });
     }
     if (profile.platform === "instagram") {
+      // IG business-account endpoints accept the user long-lived
+      // token directly (no Page-token exchange needed). The
+      // profileAccessTokens map is still useful as a per-IG-account
+      // override (set by the OAuth picker when the user picks an
+      // IG account from a non-default Page).
+      const accessToken =
+        credentials.profileAccessTokens?.[profile.providerAccountId] ?? credentials.accessToken;
       return fetchMetaInstagramSnapshot({
         accessToken,
         igUserId: profile.providerAccountId,

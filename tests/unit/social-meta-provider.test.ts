@@ -7,6 +7,7 @@ import {
   fetchMetaFacebookPageSnapshot,
   fetchMetaInstagramSnapshot,
   META_SCOPES,
+  metaAdapter,
   type MetaTokenResponse,
 } from "@/lib/social/providers/meta";
 import { SocialProviderError, formatProviderError, isSocialProviderError } from "@/lib/social/http";
@@ -770,6 +771,168 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     expect(meta.partial).toBe(true);
     expect(meta.reason).toBe("page_insights_unavailable");
     expect(meta.providerErrorCode).toBe("permission_denied");
+  });
+});
+
+/**
+ * 2026-08-28 round 2: legacy Page connections have a long-lived
+ * user access token in `credentials.accessToken` but an EMPTY
+ * `profileAccessTokens` map (the per-page tokens were never
+ * persisted during the OAuth flow that created the connection).
+ * Page-level insights calls then fail with `(#190) This method
+ * must be called with a Page Access Token` because Meta rejects
+ * the user token on `/<page-id>/insights`.
+ *
+ * The fix: when the meta adapter snapshots a Facebook Page, it
+ * tries `profileAccessTokens[pageId]` first, then acquires a
+ * page access token from the user token at call time
+ * (`/<page-id>?fields=access_token&access_token=<user_token>`),
+ * caches the result in-process, and uses the page token for
+ * the subsequent `/insights` call.
+ */
+describe("metaAdapter.fetchSnapshot — Facebook Page token acquisition", () => {
+  const baseGraph = "https://graph.facebook.com/v25.0";
+  const pageId = "939269935939946";
+  const userToken = "long-lived-user-token";
+  const pageToken = "long-lived-page-token";
+
+  it("acquires a Page access token when profileAccessTokens is empty (legacy connection)", async () => {
+    const seenUrls: string[] = [];
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      seenUrls.push(url);
+      // Step 2: page insights — must use the PAGE token, not the user
+      if (url.startsWith(`${baseGraph}/${pageId}/insights`)) {
+        const used = new URL(url).searchParams.get("access_token");
+        expect(used).toBe(pageToken);
+        return jsonResponse(200, {
+          data: [
+            { name: "page_impressions_unique", period: "day", total_value: { value: 2401 } },
+            { name: "page_views", period: "day", total_value: { value: 91 } },
+            { name: "page_post_engagements", period: "day", total_value: { value: 28 } },
+          ],
+        });
+      }
+      // Step 3: basic call (`?fields=id,fan_count,followers_count`) — comes
+      // BEFORE token acquisition in the call order, so check it first.
+      // Distinguish from token acquisition by the `fields=id` substring
+      // (token acquisition only sets `fields=access_token`).
+      if (url.includes("fields=id")) {
+        return jsonResponse(200, { id: pageId, name: "Food Game", fan_count: 70 });
+      }
+      // Step 1: token acquisition — Meta returns the page token
+      if (url.startsWith(`${baseGraph}/${pageId}?`)) {
+        return jsonResponse(200, { access_token: pageToken, id: pageId });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await metaAdapter.fetchSnapshot(
+      {
+        providerAccountId: pageId,
+        platform: "facebook",
+        parentProviderAccountId: null,
+      },
+      // Legacy connection: empty profileAccessTokens, user token only
+      {
+        accessToken: userToken,
+        // profileAccessTokens intentionally empty
+      },
+      { appId: "app", appSecret: "secret", graphApiVersion: "v25.0" },
+    );
+
+    // The page access token was used, the user token was NOT.
+    const tokenAcquisition = seenUrls.find(
+      (u) => u.startsWith(`${baseGraph}/${pageId}?`) && u.includes("access_token=" + userToken),
+    );
+    expect(tokenAcquisition).toBeDefined();
+    // The insights call used the page token (verified by the mock
+    // expectation above — it would have thrown if the user token
+    // was used in the insights call).
+    expect(snapshot.followerCount).toBe(70);
+    expect(snapshot.reach).toBe(2401);
+    expect(snapshot.views).toBe(91);
+    expect(snapshot.interactions).toBe(28);
+    expect(snapshot.sourceMetadata.partial).toBe(false);
+  });
+
+  it("prefers the static profileAccessTokens entry when present (modern OAuth path)", async () => {
+    const storedPageToken = "stored-page-token";
+    let tokenAcquisitionCalled = false;
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      // If the token acquisition endpoint is called, FAIL the test
+      // (we should be using the stored token, not acquiring one)
+      if (url.startsWith(`${baseGraph}/${pageId}?`) && !url.includes("fields=id")) {
+        tokenAcquisitionCalled = true;
+        return jsonResponse(200, { access_token: "should-not-be-used", id: pageId });
+      }
+      if (url.startsWith(`${baseGraph}/${pageId}/insights`)) {
+        return jsonResponse(200, {
+          data: [
+            { name: "page_impressions_unique", period: "day", total_value: { value: 100 } },
+            { name: "page_views", period: "day", total_value: { value: 50 } },
+            { name: "page_post_engagements", period: "day", total_value: { value: 10 } },
+          ],
+        });
+      }
+      // Basic call (with fields=)
+      if (url.includes("fields=id")) {
+        return jsonResponse(200, { id: pageId, fan_count: 70 });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await metaAdapter.fetchSnapshot(
+      {
+        providerAccountId: pageId,
+        platform: "facebook",
+        parentProviderAccountId: null,
+      },
+      {
+        accessToken: userToken,
+        profileAccessTokens: { [pageId]: storedPageToken },
+      },
+      { appId: "app", appSecret: "secret", graphApiVersion: "v25.0" },
+    );
+
+    expect(tokenAcquisitionCalled).toBe(false);
+    expect(snapshot.reach).toBe(100);
+  });
+
+  it("throws permission_denied when Meta returns 200 without an access_token (user does not manage the page)", async () => {
+    // Use a different pageId from the previous tests so the
+    // module-level `pageAccessTokenCache` (keyed by pageId) doesn't
+    // return a previously-cached page token. Otherwise the basic
+    // call would use a cached page token, skip the token acquisition
+    // entirely, and the test would not actually exercise the
+    // "no access_token in body" path.
+    const isolatedPageId = "100000000000999";
+
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      // Token acquisition: `?fields=access_token&access_token=...`
+      // returns a body with no `access_token` field. The parser
+      // throws `permission_denied`, and we want this throw to
+      // bubble out of the adapter WITHOUT the code attempting the
+      // basic call.
+      if (url.includes("fields=access_token")) {
+        return jsonResponse(200, { id: isolatedPageId });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    await expect(
+      metaAdapter.fetchSnapshot(
+        {
+          providerAccountId: isolatedPageId,
+          platform: "facebook",
+          parentProviderAccountId: null,
+        },
+        { accessToken: userToken },
+        { appId: "app", appSecret: "secret", graphApiVersion: "v25.0" },
+      ),
+    ).rejects.toMatchObject({ code: "permission_denied" });
   });
 });
 
