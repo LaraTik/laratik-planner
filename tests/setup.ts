@@ -20,7 +20,5 @@ if (typeof globalThis.ResizeObserver === "undefined") {
     unobserve(): void {}
     disconnect(): void {}
   }
-  // @ts-expect-error — jsdom global augmentation; the polyfill shape
-  // is intentionally minimal.
-  globalThis.ResizeObserver = ResizeObserverPolyfill;
+  globalThis.ResizeObserver = ResizeObserverPolyfill as unknown as typeof ResizeObserver;
 }
