@@ -102,23 +102,11 @@ export async function createUserDirectly(
   const passwordHash = await hashPassword(tempPassword);
 
   const result = await db.transaction(async (tx) => {
-    // 1. Email must not already exist as a user. If it does, the
-    //    admin should use "Edit access" on the existing member
-    //    instead. (OAuth-then-add would be a v2 feature.)
-    const [existingUser] = await tx
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, normalizedEmail))
-      .limit(1);
-    if (existingUser) {
-      throw new UserAlreadyExistsError(normalizedEmail);
-    }
-
-    // 2. Defensive: also check for an active agency member with the
-    //    same email via the unique email index. Should be impossible
-    //    because step 1 already checked users, but if step 1 ever
-    //    stops being the gate (e.g. multi-email aliases), the
-    //    agency_membership unique index would still catch it.
+    // 1. Most specific check first: an active agency member with
+    //    this email. This is the more actionable error — the admin
+    //    should "Edit access" on the existing member rather than
+    //    create a duplicate. We check this BEFORE the global
+    //    user-exists check so the error message is specific.
     const [existingMember] = await tx
       .select({ userId: agencyMemberships.userId })
       .from(agencyMemberships)
@@ -133,6 +121,18 @@ export async function createUserDirectly(
       .limit(1);
     if (existingMember) {
       throw new ActiveAgencyMemberError(normalizedEmail);
+    }
+
+    // 2. Email must not already exist as a user. If it does, the
+    //    admin should use "Edit access" on the existing member
+    //    instead. (OAuth-then-add would be a v2 feature.)
+    const [existingUser] = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, normalizedEmail))
+      .limit(1);
+    if (existingUser) {
+      throw new UserAlreadyExistsError(normalizedEmail);
     }
 
     // 3. Revoke any pending invitation for this email in the same

@@ -2,11 +2,13 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { AlertCircle, CheckCircle2, Copy, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle2, Copy, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
+import { PasswordInput } from "@/components/forms/password-input";
+import { PasswordStrengthMeter } from "@/components/forms/password-strength-meter";
 import { WorkspaceRoleMatrix } from "./_components/workspace-role-matrix";
 import { passwordStrength, type PasswordStrength } from "@/lib/auth/user-create-command";
 import { createUserDirectlyAction, type AddDirectlyActionState } from "./actions";
@@ -50,12 +52,6 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
   const strength: PasswordStrength = passwordStrength(password);
-
-  // After success, the middleware still has the old mustChangePassword
-  // token cached. We don't need to refresh on THIS page (the new user
-  // is the one who needs /set-password, not the admin), but we DO
-  // want to remount the form cleanly. The formKey above handles that.
-  // The success strip below renders only when state.success is set.
 
   return (
     <div className="space-y-4" data-testid="add-directly-form-wrapper">
@@ -137,30 +133,19 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
         >
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Input
-                  type={showPassword ? "text" : "password"}
+              <div className="flex-1">
+                <PasswordInput
                   name="password"
                   required
                   autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   minLength={8}
-                  aria-describedby="add-password-strength"
+                  revealed={showPassword}
+                  onToggleRevealed={() => setShowPassword((s) => !s)}
+                  toggleTestId="add-directly-showhide"
                   data-testid="add-directly-password"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((s) => !s)}
-                  className="text-fg-muted hover:text-fg-primary absolute top-1/2 right-2 -translate-y-1/2"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" aria-hidden="true" />
-                  ) : (
-                    <Eye className="h-4 w-4" aria-hidden="true" />
-                  )}
-                </button>
               </div>
               <Button
                 type="button"
@@ -180,6 +165,10 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
                     out += alphabet[bytes[i]! % alphabet.length];
                   }
                   setPassword(out);
+                  // Show the generated value so the admin can verify
+                  // before submitting (the password will be revealed
+                  // to the new user via the success strip anyway).
+                  setShowPassword(true);
                 }}
                 aria-label="Generate a strong temporary password"
                 data-testid="add-directly-generate"
@@ -188,27 +177,44 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
                 <span className="ml-1">Generate</span>
               </Button>
             </div>
-            <PasswordStrengthBar strength={strength} inputId="add-password-strength" />
+            <PasswordStrengthMeter
+              score={strength.score}
+              tone={strength.tone}
+              label={strength.label}
+              testId="add-directly-strength-meter"
+            />
           </div>
         </FormField>
+
+        <div className="space-y-1">
+          <label
+            htmlFor="add-must-change"
+            className="text-body text-fg-primary flex items-center gap-2"
+          >
+            <input
+              id="add-must-change"
+              type="checkbox"
+              name="mustChangePassword"
+              defaultChecked
+              aria-describedby="add-must-change-help"
+              className="h-4 w-4 cursor-pointer"
+              data-testid="add-directly-must-change"
+            />
+            Force password change on first login
+          </label>
+          <p id="add-must-change-help" className="text-fg-muted text-label pl-6">
+            The user will be sent to a set-password screen the first time they sign in. Recommended
+            — keeps admin-supplied passwords from being a permanent backdoor.
+          </p>
+        </div>
 
         <label className="text-body text-fg-primary flex items-center gap-2">
           <input
             type="checkbox"
-            name="mustChangePassword"
-            defaultChecked
-            className="h-4 w-4"
-            data-testid="add-directly-must-change"
+            name="grantsAgencyAdmin"
+            className="h-4 w-4 cursor-pointer"
+            data-testid="add-directly-grants-admin"
           />
-          Force password change on first login
-        </label>
-        <p className="text-fg-muted text-body -mt-2">
-          The user will be sent to a set-password screen the first time they sign in. Recommended —
-          keeps admin-supplied passwords from being a permanent backdoor.
-        </p>
-
-        <label className="text-body text-fg-primary flex items-center gap-2">
-          <input type="checkbox" name="grantsAgencyAdmin" className="h-4 w-4" />
           Grant agency admin
         </label>
 
@@ -228,50 +234,6 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
 
         <FormSubmitButton label="Create user" pendingLabel="Creating…" />
       </form>
-    </div>
-  );
-}
-
-/**
- * 4-bar password strength meter (very weak / weak / fair / strong).
- * The bars are color-coded to give a quick visual signal but the
- * button-disabled state is keyed on `strength.accepted` (a
- * length+letter+digit boolean), not the qualitative bar.
- */
-function PasswordStrengthBar({
-  strength,
-  inputId,
-}: {
-  strength: PasswordStrength;
-  inputId: string;
-}) {
-  const bars = ["empty", "empty", "empty", "empty"] as const;
-  const filled = Math.min(4, strength.score);
-  const styled = bars.map((_, i) => (i < filled ? strength.tone : "empty"));
-  return (
-    <div
-      id={inputId}
-      className="flex items-center gap-2"
-      data-testid="add-directly-strength-meter"
-      data-strength={strength.label}
-    >
-      <div className="flex gap-1" aria-hidden="true">
-        {styled.map((tone, i) => (
-          <span
-            key={i}
-            className={[
-              "h-1 w-8 rounded-[var(--radius-control)]",
-              tone === "empty" ? "bg-border" : "",
-              tone === "danger" ? "bg-danger" : "",
-              tone === "warning" ? "bg-warning" : "",
-              tone === "success" ? "bg-success" : "",
-            ].join(" ")}
-          />
-        ))}
-      </div>
-      <span className="text-fg-muted text-label" aria-live="polite">
-        {strength.label}
-      </span>
     </div>
   );
 }
@@ -321,8 +283,3 @@ function RevealPassword({ password }: { password: string }) {
     </div>
   );
 }
-
-// Reference the type so unused-import lints don't fire — the schema
-// is used by tests and adjacent modules even if the form doesn't
-// import the type explicitly.
-void undefined;
