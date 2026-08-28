@@ -117,20 +117,42 @@ export default async function WorkspaceSettingsPage({
             />
           </Card>
         ) : (
-          <div className="space-y-4" data-testid="settings-readonly">
-            <Card id="lifecycle" data-testid="settings-readonly-lifecycle">
-              <CardTitle className="mb-4">Lifecycle</CardTitle>
-              <dl className="space-y-3">
+          <Card data-testid="settings-readonly">
+            <fieldset
+              id="lifecycle"
+              data-testid="settings-readonly-lifecycle"
+              className="grid scroll-mt-20 gap-4 md:grid-cols-2"
+            >
+              <legend className="text-title-card text-fg-primary mb-1 font-semibold">
+                Lifecycle
+              </legend>
+              <p className="text-body text-fg-muted mb-2 max-w-3xl">
+                Standard workflow stages. Status flags like Changes Requested, Blocked, Cancelled,
+                and Overdue are functional states applied to items within these stages, not distinct
+                columns.
+              </p>
+              <dl className="space-y-3 md:col-span-2">
                 <Setting label="Timezone" value={workspace.timezone} />
                 <Setting
                   label="Monthly target"
-                  value={values.monthlyTarget ? String(values.monthlyTarget) : "Not set"}
+                  value={
+                    values.monthlyTarget ? `${values.monthlyTarget} posts per month` : "Not set"
+                  }
                 />
               </dl>
-            </Card>
-            <Card id="lead-times" data-testid="settings-readonly-lead-times">
-              <CardTitle className="mb-4">Lead times</CardTitle>
-              <dl className="space-y-3">
+            </fieldset>
+            <fieldset
+              id="lead-times"
+              data-testid="settings-readonly-lead-times"
+              className="border-border scroll-mt-20 border-t pt-6"
+            >
+              <legend className="text-title-card text-fg-primary font-semibold">
+                Lead times (days)
+              </legend>
+              <p className="text-label text-fg-muted mt-1">
+                Buffer between each workflow stage. Larger buffers give the team more review time.
+              </p>
+              <dl className="mt-3 space-y-3">
                 <Setting
                   label="Content approval"
                   value={`${values.contentApprovalLeadDays} days`}
@@ -145,10 +167,19 @@ export default async function WorkspaceSettingsPage({
                   value={`${values.readyToPublishLeadDays} day${values.readyToPublishLeadDays === 1 ? "" : "s"}`}
                 />
               </dl>
-            </Card>
-            <Card id="defaults" data-testid="settings-readonly-defaults">
-              <CardTitle className="mb-4">Assignment defaults</CardTitle>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            </fieldset>
+            <fieldset
+              id="defaults"
+              data-testid="settings-readonly-defaults"
+              className="border-border scroll-mt-20 border-t pt-6"
+            >
+              <legend className="text-title-card text-fg-primary font-semibold">
+                Assignment defaults
+              </legend>
+              <p className="text-label text-fg-muted mt-1">
+                Pre-fill these people on every new idea. Override per idea at any time.
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <Assignment label="Designer" configured={!!values.defaultDesignerId} />
                 <Assignment
                   label="Content reviewer"
@@ -160,12 +191,23 @@ export default async function WorkspaceSettingsPage({
                 />
                 <Assignment label="Client reviewer" configured={!!values.defaultClientReviewerId} />
               </div>
-            </Card>
-            <Card id="approvals" data-testid="settings-readonly-approvals">
-              <CardTitle className="mb-4">Approval mode</CardTitle>
-              <Setting label="Mode" value={humanize(values.approvalMode)} />
-            </Card>
-          </div>
+            </fieldset>
+            <fieldset
+              id="approvals"
+              data-testid="settings-readonly-approvals"
+              className="border-border scroll-mt-20 border-t pt-6"
+            >
+              <legend className="text-title-card text-fg-primary font-semibold">
+                Approval mode
+              </legend>
+              <p className="text-label text-fg-muted mt-1">
+                Choose how many approval steps a piece of content needs before publish.
+              </p>
+              <dl className="mt-3 space-y-3">
+                <Setting label="Mode" value={humanize(values.approvalMode)} />
+              </dl>
+            </fieldset>
+          </Card>
         )}
       </div>
     </div>

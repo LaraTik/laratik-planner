@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
+import { TimezoneCombobox } from "@/components/forms/timezone-combobox";
 import { Label } from "@/components/ui/label";
 import { updateWorkspaceSettingsAction, type SettingsActionState } from "./actions";
 
@@ -51,6 +52,7 @@ export function SettingsForm({
 }) {
   const action = updateWorkspaceSettingsAction.bind(null, slug);
   const [state, formAction] = useActionState<SettingsActionState, FormData>(action, {});
+  const [timezone, setTimezone] = React.useState(values.timezone);
   return (
     <form action={formAction} className="space-y-6" data-testid="workspace-settings-form">
       <div className="grid scroll-mt-20 gap-4 md:grid-cols-2" id="lifecycle">
@@ -61,19 +63,23 @@ export function SettingsForm({
               *
             </span>
           </Label>
-          <input
+          <p id="settings-timezone-help" className="text-label text-fg-muted -mt-0.5">
+            Used for the calendar, lead-time math, and any “X days from now” view.
+          </p>
+          <TimezoneCombobox
             id="settings-timezone"
             name="timezone"
-            defaultValue={values.timezone}
+            value={timezone}
+            onChange={setTimezone}
             required
-            aria-required="true"
-            autoComplete="off"
-            className={controlClass}
+            helpId="settings-timezone-help"
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="settings-monthly-target">Monthly target</Label>
-          <p className="text-label text-fg-muted -mt-0.5">Optional · posts per month</p>
+          <Label htmlFor="settings-monthly-target">
+            Monthly target
+            <span className="text-label text-fg-muted ml-1.5 font-normal">(posts per month)</span>
+          </Label>
           <input
             id="settings-monthly-target"
             name="monthlyTarget"
