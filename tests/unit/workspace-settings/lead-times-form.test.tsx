@@ -37,7 +37,14 @@ const baseValues = {
 
 function renderForm() {
   mockedUseFormStatus.mockReturnValue({ pending: false } as ReturnType<typeof useFormStatus>);
-  return render(<LeadTimesForm slug="acme" values={baseValues} approvalMode="simple" />);
+  return render(
+    <LeadTimesForm
+      slug="acme"
+      values={baseValues}
+      approvalMode="simple"
+      timezone="Europe/Vienna"
+    />,
+  );
 }
 
 describe("LeadTimesForm (Phase D — AI preview)", () => {

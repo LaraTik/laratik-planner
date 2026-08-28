@@ -85,7 +85,12 @@ export default async function SettingsLeadTimesPage({
         data-testid="settings-section-lead-times"
       >
         {canManage ? (
-          <LeadTimesForm slug={slug} values={values} approvalMode={approvalMode} />
+          <LeadTimesForm
+            slug={slug}
+            values={values}
+            approvalMode={approvalMode}
+            timezone={workspace.timezone}
+          />
         ) : (
           <p className="text-label text-fg-muted">
             Read-only. Workspace manager access is required to edit these settings.

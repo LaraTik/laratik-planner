@@ -21,10 +21,17 @@ export function LeadTimeDeadline({
   totalDays,
   today,
   timezone,
+  live = false,
 }: {
   totalDays: number;
   today: Date;
   timezone: string;
+  /** When true, the line is rendered as a live preview that
+   *  updates as the form's draft changes. The wording flips
+   *  to a more conversational "with these buffers" so the
+   *  user knows the date is the live draft, not the saved
+   *  value. */
+  live?: boolean;
 }) {
   if (totalDays <= 0) {
     return (
@@ -50,7 +57,7 @@ export function LeadTimeDeadline({
     >
       <CalendarCheck2 className="h-3.5 w-3.5" aria-hidden="true" />
       <span>
-        If you start today, the deadline lands on{" "}
+        {live ? "With these buffers," : "If you start today,"} the deadline lands on{" "}
         <span
           className={cn("font-bold", isFarOut ? "text-warning" : "text-fg-primary")}
           data-testid="lead-times-deadline-date"

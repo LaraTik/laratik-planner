@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { updateLeadTimesSettingsAction, type SettingsActionState } from "../actions";
 import { suggestLeadTimesAction } from "../ai-suggestions";
 import { LeadTimeTimeline } from "./lead-time-timeline";
+import { LeadTimeDeadline } from "./lead-time-deadline";
 
 /**
  * LeadTimesForm — per-section form for the Settings → Lead
@@ -44,10 +45,12 @@ export function LeadTimesForm({
   slug,
   values,
   approvalMode,
+  timezone,
 }: {
   slug: string;
   values: LeadTimeValues;
   approvalMode: "simple" | "internal_then_client";
+  timezone: string;
 }) {
   const action = updateLeadTimesSettingsAction.bind(null, slug);
   const [state, formAction] = useActionState<SettingsActionState, FormData>(action, {});
@@ -105,6 +108,7 @@ export function LeadTimesForm({
           workflow stages.
         </p>
         <LeadTimeTimeline values={draft} />
+        <LeadTimeDeadline totalDays={total} today={new Date()} timezone={timezone} live />
 
         <div className="flex flex-wrap items-center gap-2">
           <button
