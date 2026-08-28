@@ -56,26 +56,35 @@ export default defineConfig({
       //                          getAppErrorById, findLatestAppErrorByDigest,
       //                          actorCanViewAppErrors)
       //   channels      85→80 — invite/grant flows new code paths
-      //   auth          95→85 — Goal 2.5 (Add directly):
-      //                          `lib/auth/user-creation.ts` (the
-      //                          service) is integration-test-covered
-      //                          (tests/integration/auth/user-creation
-      //                          .integration.test.ts) but not unit-
-      //                          test-covered. The integration suite
-      //                          runs against a real PG instance and
-      //                          does not run with `pnpm test:coverage`
-      //                          (unit config only). Unit tests cover
-      //                          the error classes, the password
-      //                          generator, and the zod schema; the
-      //                          service's transaction body is the gap.
-      //                          85% is the floor for application
-      //                          services; the integration coverage
-      //                          is the safety net. Re-tighten to
-      //                          95% once a unit test mocks the DB
-      //                          transaction (see auth-password-hash
-      //                          test for the Drizzle mock pattern).
+      //   auth          90   — Goal 2.5 (Add directly) is now
+      //                          dual-covered:
+      //                            * tests/integration/auth/user-creation
+      //                              .integration.test.ts — full PG
+      //                              transaction (4 cases, runs
+      //                              against TEST_DATABASE_URL)
+      //                            * tests/unit/auth/user-creation.test.ts
+      //                              — Drizzle-mocked transaction
+      //                              (6 cases, runs in the unit
+      //                              config; the mock pattern is
+      //                              documented inline)
+      //                          Floor at 90% (was 95%, temporarily
+      //                          dropped to 85% in 026301e when the
+      //                          service was 0% unit-covered). Path
+      //                          to 95%: the happy path is
+      //                          integration-covered; the mocked
+      //                          unit test covers the 3 error paths
+      //                          + the happy-path assertion surface.
+      //                          The remaining ~5% is the per-row
+      //                          happy-path transaction body (the
+      //                          mocks assert the call structure but
+      //                          don't actually run the row writes).
+      //                          Acceptable until either (a) the
+      //                          integration test adds more assertion
+      //                          granularity or (b) we add a
+      //                          pg-mem-backed integration test that
+      //                          runs in the unit config.
       thresholds: {
-        "src/lib/auth/**/*.ts": { statements: 85, branches: 85, functions: 90, lines: 85 },
+        "src/lib/auth/**/*.ts": { statements: 90, branches: 90, functions: 90, lines: 90 },
         "src/lib/security/**/*.ts": { statements: 93, branches: 85, functions: 95, lines: 93 },
         "src/lib/content/**/*.ts": { statements: 65, branches: 80, functions: 80, lines: 65 },
         "src/lib/deliveries/**/*.ts": { statements: 85, branches: 85, functions: 70, lines: 85 },
