@@ -118,57 +118,24 @@ describe("brand-kit page — does not pass LucideIcon across the RSC boundary", 
     // The class of bug we're guarding is unchanged: do not pass a
     // LucideIcon function across the RSC boundary. The new shape
     // of the guard:
-    //  - any `icon={...}` / `icon: ...` prop assignment in the
-    //    page must point at a local helper (KpiCard, etc.) defined
-    //    in the same module — i.e. NOT a named import from
-    //    `lucide-react` and NOT a component imported from a
-    //    client-only file.
-    //  - any LucideIcon component that appears in the page must be
-    //    rendered as JSX (e.g. `<Sparkles className="..." />`), never
-    //    passed as a prop to a client component.
+    //  - the page must remain a Server Component (no 'use client'
+    //    directive) so LucideIcon prop assignments stay inside the
+    //    server module.
+    //  - any 'use client' helper imported into the page must NOT
+    //    receive a LucideIcon as a prop (the narrower assertion is
+    //    in the next describe block below).
     //
-    // The simplest static check: there is no `import { ... } from
-    // '@/components/<client>'` in the page that receives a LucideIcon
-    // as a prop. A `client` helper would have a 'use client' directive;
-    // we grep for that and assert it's NOT paired with an icon prop
-    // in the same file.
+    // The page must be a Server Component (no 'use client' directive).
+    // The RSC boundary can only leak a LucideIcon if the page itself
+    // opens a client boundary, because LucideIcon prop assignments
+    // only become serialisation hazards when the receiving component
+    // is a 'use client' component from a different module.
     const hasClientDirective = /['"]use client['"]/.test(source);
-    if (hasClientDirective) {
-      // The page has a client boundary. Look for any JSX that passes
-      // a LucideIcon (capitalised identifier imported from
-      // `lucide-react`) as a prop named `icon` or `Icon`.
-      const clientComponentIconProp = /\b(icon|Icon)\s*=\s*\{?\s*([A-Z]\w*)\s*\}?/g;
-      // (If the page ever becomes a client component itself, the
-      // guard relaxes: passing icon functions inside the same module
-      // is fine — the RSC boundary is between server and client
-      // modules.)
-      expect.fail(
-        "brand-kit page must not pass LucideIcon components to a client boundary. " +
-          "Move the icon usage into a server-side render (JSX) or pass an iconName string.",
-      );
-    }
-    // Server-side page: the helpers (KpiCard, etc.) live in the same
-    // module so passing icon components between local functions is
-    // safe. We still assert that the page doesn't have a stray
-    // `LucideIcon`-typed prop on a JSX element that the dev might
-    // think is a client component (heuristic: any PascalCase
-    // identifier used as `icon={X}` must be either a local helper or
-    // appear in the same import block as the page).
-    const importsBlockMatch = source.match(/^import\s+\{([^}]+)\}\s+from\s+["']lucide-react["']/m);
-    const lucideImports = importsBlockMatch
-      ? importsBlockMatch[1]!.split(",").map((s) => s.trim()).filter(Boolean)
-      : [];
-    const iconPropRegex = /\b(icon|Icon)\s*=\s*\{?\s*([A-Z]\w*)\s*\}?/g;
-    for (const m of source.matchAll(iconPropRegex)) {
-      const identifier = m[2]!;
-      // The identifier can be a LucideIcon (uppercase, in the import
-      // block) or a local helper. The latter is fine; the former is
-      // fine too because the page is server-side and the local
-      // helper (KpiCard) is also server-side.
-      // We don't assert on this — the page is a server module, the
-      // RSC boundary guard is the next describe block below.
-    }
-    void lucideImports;
+    expect(
+      hasClientDirective,
+      "brand-kit/page.tsx must be a Server Component (no 'use client' directive). " +
+        "Passing LucideIcon components to a client boundary was the 2026-08-27 outage.",
+    ).toBe(false);
   });
 });
 
@@ -184,9 +151,10 @@ describe("brand-kit page — no 'use client' helper receives a LucideIcon as a p
   it("scans for client imports + icon props and asserts no LucideIcon crosses", () => {
     const source = readRepoFile("src/app/(app)/app/w/[slug]/brand-kit/page.tsx");
     // The page itself must not be 'use client' (it's a Server Component).
-    expect(source, "page.tsx must remain a Server Component (no 'use client' directive)").not.toMatch(
-      /['"]use client['"]/,
-    );
+    expect(
+      source,
+      "page.tsx must remain a Server Component (no 'use client' directive)",
+    ).not.toMatch(/['"]use client['"]/);
     // Any client helper that receives an icon prop would be a JSX
     // element. Scan for `icon={<UpperCase>}` patterns and assert the
     // UpperCase is NOT a lucide-react import. (If the helper takes
@@ -197,7 +165,10 @@ describe("brand-kit page — no 'use client' helper receives a LucideIcon as a p
     if (lucideImportMatch) {
       const importsBlock = source.match(/import\s+\{([^}]+)\}\s+from\s+["']lucide-react["']/);
       const lucideNames = importsBlock
-        ? importsBlock[1]!.split(",").map((s) => s.trim()).filter(Boolean)
+        ? importsBlock[1]!
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
         : [];
       const iconPropRegex = /\b(icon|Icon)\s*=\s*\{?\s*([A-Z]\w*)/g;
       for (const m of source.matchAll(iconPropRegex)) {
