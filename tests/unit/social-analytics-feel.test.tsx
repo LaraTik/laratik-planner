@@ -52,6 +52,7 @@ describe("SocialHealthBanner", () => {
         connectionStatus: "connected" as const,
         lastSyncedAt: now,
         lastSyncErrorCode: null,
+        latestProviderErrorCode: null,
       },
     ];
     const { container } = render(<SocialHealthBanner channels={channels} slug="acme" now={now} />);
@@ -67,6 +68,7 @@ describe("SocialHealthBanner", () => {
         connectionStatus: "needs_reauth" as const,
         lastSyncedAt: new Date("2026-08-26T03:15:00Z"),
         lastSyncErrorCode: null,
+        latestProviderErrorCode: null,
       },
     ];
     render(<SocialHealthBanner channels={channels} slug="acme" />);
@@ -89,6 +91,7 @@ describe("SocialHealthBanner", () => {
         // 30 hours ago — past the 25h stale threshold
         lastSyncedAt: new Date("2026-08-26T06:00:00Z"),
         lastSyncErrorCode: null,
+        latestProviderErrorCode: null,
       },
     ];
     render(<SocialHealthBanner channels={channels} slug="acme" now={now} />);
@@ -106,11 +109,37 @@ describe("SocialHealthBanner", () => {
         connectionStatus: "connected" as const,
         lastSyncedAt: new Date("2026-08-27T03:15:00Z"),
         lastSyncErrorCode: "rate_limited",
+        latestProviderErrorCode: null,
       },
     ];
     render(<SocialHealthBanner channels={channels} slug="acme" />);
     const err = screen.getByTestId("social-health-banner-error");
     expect(err.textContent).toContain("rate_limited");
+  });
+
+  // 2026-08-28: silent-failure path. The worker writes
+  // `sourceMetadata.providerErrorCode` when the insights call
+  // throws a code that the documented contract treats as silent
+  // (e.g. permission_denied). The channel row's
+  // `lastSyncErrorCode` is NOT set in that case (the worker kept
+  // going). The banner surfaces the error here so the operator
+  // sees the actual provider code without needing Sentry access.
+  it("surfaces an error pill when latestProviderErrorCode is set", () => {
+    const channels = [
+      {
+        id: "c1",
+        accountName: "Just Halal tr",
+        platform: "facebook" as const,
+        connectionStatus: "connected" as const,
+        lastSyncedAt: new Date("2026-08-28T03:15:00Z"),
+        lastSyncErrorCode: null,
+        latestProviderErrorCode: "permission_denied",
+      },
+    ];
+    render(<SocialHealthBanner channels={channels} slug="acme" />);
+    const err = screen.getByTestId("social-health-banner-error");
+    expect(err.textContent).toContain("Just Halal tr");
+    expect(err.textContent).toContain("permission_denied");
   });
 });
 

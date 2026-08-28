@@ -5,7 +5,18 @@ import { type socialChannels } from "@/lib/db/schema/channels";
 type ChannelLike = Pick<
   typeof socialChannels.$inferSelect,
   "id" | "accountName" | "platform" | "connectionStatus" | "lastSyncedAt" | "lastSyncErrorCode"
-> & { lastSyncedAt: Date | null };
+> & {
+  lastSyncedAt: Date | null;
+  /**
+   * Provider error code (e.g. `permission_denied`) from the
+   * most-recent daily-metric's `sourceMetadata.providerErrorCode`.
+   * The worker writes this when the insights call fails silently.
+   * 2026-08-28 — this is the Sentry-free diagnostic path: the
+   * operator sees the error in the analytics UI itself without
+   * needing Sentry access.
+   */
+  latestProviderErrorCode: string | null;
+};
 
 /**
  * M4 — social-analytics "feel" improvement.
@@ -71,6 +82,24 @@ function signalForChannel(channel: ChannelLike, now: Date): BannerSignal | null 
       kind: "error",
       message: `${channel.accountName} last sync failed: ${channel.lastSyncErrorCode}.`,
       detail: "The next sync tick will retry. If this persists, check the connection.",
+    };
+  }
+  // 2026-08-28: surface the silent provider error (the case the
+  // worker writes to `sourceMetadata.providerErrorCode` instead of
+  // throwing — see `src/lib/social/providers/meta.ts`). Without
+  // this row, the operator has no UI signal that the insights
+  // are missing because of a permission issue, only the "partial"
+  // pill on the cell. With this row, the channel card shows the
+  // exact provider error code (e.g. `permission_denied`) so the
+  // operator knows whether to re-authorize, file an App Review,
+  // or wait for Meta to lift a rate limit.
+  if (channel.latestProviderErrorCode) {
+    return {
+      channel,
+      kind: "error",
+      message: `${channel.accountName} last sync captured a provider error: ${channel.latestProviderErrorCode}.`,
+      detail:
+        "Some daily metrics (Reach / Views / Interactions) are missing because the provider call returned this error. Common causes: app needs advanced-access review for the requested scope, the access token has expired, or Meta is throttling. The next sync tick will retry.",
     };
   }
   if (channel.lastSyncedAt) {

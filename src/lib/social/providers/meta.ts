@@ -2,6 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { isSocialProviderError, providerRequest, SocialProviderError } from "@/lib/social/http";
 import { captureError } from "@/lib/observability/sentry";
+import { logError } from "@/lib/observability/logger";
 import type { SocialCredentials } from "@/lib/social/crypto";
 import type {
   ConnectedProfile,
@@ -458,10 +459,14 @@ export async function fetchMetaFacebookPageSnapshot(args: {
   // 2026-08-28: the previous shape was `.catch(() => null)` which
   // silently swallowed the real error code. The operator can no
   // longer diagnose why insights are missing (permission_denied vs
-  // invalid_response vs network). Capture every caught error to
-  // Sentry with the page id + error code + request id so future
-  // debugging is one Sentry search away.
+  // invalid_response vs network). The error is now triply visible:
+  // Sentry (captureError), stdout JSON line (logError), and the
+  // saved row's sourceMetadata (visible in the analytics page's
+  // "partial" cell + any DB query). Operators without Sentry
+  // access can grep the container log or query the row directly.
   let insights: Awaited<ReturnType<typeof fetchMetaPageDailyInsights>> = null;
+  let insightsErrorCode: string | null = null;
+  let insightsErrorRequestId: string | null = null;
   try {
     insights = await fetchMetaPageDailyInsights({
       accessToken,
@@ -469,13 +474,25 @@ export async function fetchMetaFacebookPageSnapshot(args: {
       apiVersion,
     });
   } catch (insightsErr) {
+    const code = isSocialProviderError(insightsErr) ? insightsErr.code : "unknown";
+    insightsErrorCode = code;
+    insightsErrorRequestId = isSocialProviderError(insightsErr) ? insightsErr.requestId : null;
+    logError("social.meta.page_insights_failed", {
+      pageId,
+      accessTokenLast4: accessToken.slice(-4),
+      errorCode: code,
+      requestId: insightsErrorRequestId,
+    });
     captureError("social.meta.page_insights_failed", insightsErr, {
       pageId,
       accessTokenLast4: accessToken.slice(-4),
-      errorCode: isSocialProviderError(insightsErr) ? insightsErr.code : "unknown",
-      requestId: isSocialProviderError(insightsErr) ? insightsErr.requestId : null,
+      errorCode: code,
+      requestId: insightsErrorRequestId,
     });
-    if (isSocialProviderError(insightsErr) && insightsErr.code === "permission_denied") {
+    if (code === "permission_denied") {
+      // Documented contract: permission_denied on the insights
+      // endpoint is silent (null insights). Other errors propagate
+      // to the outer worker handler so the channel marks failed.
       insights = null;
     } else {
       throw insightsErr;
@@ -501,6 +518,16 @@ export async function fetchMetaFacebookPageSnapshot(args: {
     sourceMetadata.reason = "fan_count_unavailable";
   } else if (insightsPartial) {
     sourceMetadata.reason = "page_insights_unavailable";
+    if (insightsErrorCode) {
+      // 2026-08-28: surface the actual error code in the saved
+      // row so a DB query shows why the insights are null. For
+      // Sentry-less operators, this is the fastest diagnostic —
+      // see tests/unit/social-analytics.test.ts for the contract.
+      sourceMetadata.providerErrorCode = insightsErrorCode;
+      if (insightsErrorRequestId) {
+        sourceMetadata.providerRequestId = insightsErrorRequestId;
+      }
+    }
   }
   const observedAt = new Date();
   const hash = hashSnapshot([
@@ -553,12 +580,19 @@ async function fetchMetaPageDailyInsights(args: {
   url.searchParams.set("metric_type", "total_value");
   url.searchParams.set("access_token", args.accessToken);
   let parsed: PageInsightsResponse;
+  // 2026-08-28: re-throw every error (including permission_denied).
+  // The outer caller `fetchMetaFacebookPageSnapshot` records the
+  // error in sourceMetadata + logError + captureError, then
+  // swallows permission_denied so the worker keeps going with
+  // null insights. Previously the inner function silently
+  // returned null on permission_denied, which prevented the
+  // outer catch from running — the operator had no way to know
+  // the failure was a scope issue.
+  const { body } = await providerRequest(url.toString());
   try {
-    const { body } = await providerRequest(url.toString());
     parsed = JSON.parse(body) as PageInsightsResponse;
-  } catch (err) {
-    if (isSocialProviderError(err) && err.code === "permission_denied") return null;
-    throw err;
+  } catch {
+    throw new SocialProviderError("invalid_response", false, null);
   }
   const find = (name: string) => parsed.data.find((m) => m.name === name)?.values?.[0]?.value;
   return {
@@ -597,12 +631,11 @@ export async function fetchMetaInstagramSnapshot(args: {
   const following = typeof parsed.follows_count === "number" ? parsed.follows_count : null;
   // Account-level daily insights: views, reach, engaged accounts,
   // interactions. Empty datasets are `null`, never `0`.
-  // 2026-08-28: same Sentry capture as the Page branch. The
-  // previous `.catch(() => null)` silently swallowed the actual
-  // error code; now we log the error code + request id so a
-  // future operator searching Sentry can see exactly why an IG
-  // account's insights are missing.
+  // 2026-08-28: same triply-visible error handling as the Page
+  // branch (Sentry + stdout JSON + sourceMetadata in the row).
   let insights: Awaited<ReturnType<typeof fetchMetaIgAccountDailyInsights>> = null;
+  let insightsErrorCode: string | null = null;
+  let insightsErrorRequestId: string | null = null;
   try {
     insights = await fetchMetaIgAccountDailyInsights({
       accessToken,
@@ -610,13 +643,22 @@ export async function fetchMetaInstagramSnapshot(args: {
       apiVersion,
     });
   } catch (insightsErr) {
+    const code = isSocialProviderError(insightsErr) ? insightsErr.code : "unknown";
+    insightsErrorCode = code;
+    insightsErrorRequestId = isSocialProviderError(insightsErr) ? insightsErr.requestId : null;
+    logError("social.meta.ig_insights_failed", {
+      igUserId,
+      accessTokenLast4: accessToken.slice(-4),
+      errorCode: code,
+      requestId: insightsErrorRequestId,
+    });
     captureError("social.meta.ig_insights_failed", insightsErr, {
       igUserId,
       accessTokenLast4: accessToken.slice(-4),
-      errorCode: isSocialProviderError(insightsErr) ? insightsErr.code : "unknown",
-      requestId: isSocialProviderError(insightsErr) ? insightsErr.requestId : null,
+      errorCode: code,
+      requestId: insightsErrorRequestId,
     });
-    if (isSocialProviderError(insightsErr) && insightsErr.code === "permission_denied") {
+    if (code === "permission_denied") {
       insights = null;
     } else {
       throw insightsErr;
@@ -637,6 +679,15 @@ export async function fetchMetaInstagramSnapshot(args: {
     sourceMetadata.reason = "below_provider_threshold";
   } else if (insightsPartial) {
     sourceMetadata.reason = "ig_insights_unavailable";
+    if (insightsErrorCode) {
+      // Mirror the Page branch: surface the actual provider error
+      // in the saved row so a DB query reveals why the IG
+      // insights are null without needing Sentry.
+      sourceMetadata.providerErrorCode = insightsErrorCode;
+      if (insightsErrorRequestId) {
+        sourceMetadata.providerRequestId = insightsErrorRequestId;
+      }
+    }
   }
   const observedAt = new Date();
   const hash = hashSnapshot([
@@ -694,12 +745,19 @@ async function fetchMetaIgAccountDailyInsights(args: {
   url.searchParams.set("metric_type", "total_value");
   url.searchParams.set("access_token", args.accessToken);
   let parsed: PageInsightsResponse;
+  // 2026-08-28: re-throw every error (including permission_denied).
+  // The outer caller `fetchMetaInstagramSnapshot` records the
+  // error in sourceMetadata + logError + captureError, then
+  // swallows permission_denied so the worker keeps going with
+  // null insights. Previously the inner function silently
+  // returned null on permission_denied, which prevented the
+  // outer catch from running — the operator had no way to know
+  // the failure was a scope issue.
+  const { body } = await providerRequest(url.toString());
   try {
-    const { body } = await providerRequest(url.toString());
     parsed = JSON.parse(body) as PageInsightsResponse;
-  } catch (err) {
-    if (isSocialProviderError(err) && err.code === "permission_denied") return null;
-    throw err;
+  } catch {
+    throw new SocialProviderError("invalid_response", false, null);
   }
   const find = (name: string) => parsed.data.find((m) => m.name === name)?.values?.[0]?.value;
   return {

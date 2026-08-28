@@ -145,15 +145,36 @@ export default async function SocialAnalyticsPage({
       />
 
       <SocialHealthBanner
-        channels={channels.map((c) => ({
-          id: c.id,
-          accountName: c.accountName,
-          platform: c.platform as "instagram" | "facebook" | "tiktok",
-          connectionStatus: c.connectionStatus as
-            "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected",
-          lastSyncedAt: c.lastSyncedAt,
-          lastSyncErrorCode: c.lastSyncErrorCode,
-        }))}
+        channels={channels.map((c) => {
+          // Pull the most-recent daily-metric's `providerErrorCode`
+          // from the row's sourceMetadata. The worker writes this
+          // when the insights call fails silently (e.g.
+          // permission_denied — the documented contract is to keep
+          // the snapshot going and surface the reason in
+          // sourceMetadata). The banner uses it to render a "last
+          // sync had a provider error" pill that points the
+          // operator at the actual error code without Sentry.
+          const latestMetric = (byChannel.get(c.id) ?? [])
+            .slice()
+            .sort((a, b) => (a.metricDate < b.metricDate ? 1 : -1))[0];
+          const latestProviderError = latestMetric
+            ? ((
+                latestMetric.sourceMetadata as {
+                  providerErrorCode?: string;
+                } | null
+              )?.providerErrorCode ?? null)
+            : null;
+          return {
+            id: c.id,
+            accountName: c.accountName,
+            platform: c.platform as "instagram" | "facebook" | "tiktok",
+            connectionStatus: c.connectionStatus as
+              "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected",
+            lastSyncedAt: c.lastSyncedAt,
+            lastSyncErrorCode: c.lastSyncErrorCode,
+            latestProviderErrorCode: latestProviderError,
+          };
+        })}
         slug={slug}
       />
 

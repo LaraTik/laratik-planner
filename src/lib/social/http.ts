@@ -59,15 +59,40 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
-function classifyStatus(status: number): {
+function classifyStatus(
+  status: number,
+  body?: string,
+): {
   code: SocialProviderError["code"];
   retryable: boolean;
 } {
-  if (status === 401 || status === 403) {
-    // 403 could be either auth-expired (token revoked) or
-    // permission-denied (missing scope). The provider-specific layer
-    // is responsible for the disambiguation; we surface a generic
-    // auth_expired here and let the caller refine.
+  if (status === 401) {
+    return { code: "auth_expired", retryable: false };
+  }
+  if (status === 403) {
+    // 403 is ambiguous on its own. Meta returns a `code` field in
+    // the body that distinguishes the two cases that matter:
+    //   - 190 → access token expired / revoked
+    //   - 200, 10, 100, 102 → permission denied (scope/app issue)
+    // The pre-2026-08-28 code mapped every 403 to `auth_expired`,
+    // which led operators to click Reconnect when the real cause
+    // was a missing scope or pending App Review. Disambiguate
+    // here so the snapshot's sourceMetadata.providerErrorCode
+    // (and the analytics health banner) shows the actual reason.
+    if (body) {
+      try {
+        const parsed = JSON.parse(body) as {
+          error?: { code?: number; type?: string };
+        };
+        const providerCode = parsed.error?.code;
+        if (typeof providerCode === "number" && providerCode !== 190) {
+          return { code: "permission_denied", retryable: false };
+        }
+      } catch {
+        // Body wasn't JSON; fall through to the auth_expired
+        // default so the operator at least gets a valid code.
+      }
+    }
     return { code: "auth_expired", retryable: false };
   }
   if (status === 404) return { code: "not_found", retryable: false };
@@ -140,8 +165,15 @@ export async function providerRequest(
         signal: controller.signal,
       });
       const requestId = response.headers.get("x-request-id");
+      // 2026-08-28: read the body ONCE whether the response is
+      // successful or not. On failure, the body is used to
+      // disambiguate 403 (Meta's `error.code` distinguishes 190 =
+      // auth_expired from 200 = permission_denied). The body is
+      // consumed here only and is never surfaced in logs or error
+      // messages. On success, the body is returned.
+      const { text } = await readBody(response);
       if (!response.ok) {
-        const classification = classifyStatus(response.status);
+        const classification = classifyStatus(response.status, text);
         const error = new SocialProviderError(
           classification.code,
           classification.retryable,
@@ -153,7 +185,6 @@ export async function providerRequest(
         }
         throw error;
       }
-      const { text } = await readBody(response);
       return { status: response.status, body: text, requestId };
     } catch (err) {
       if (err instanceof SocialProviderError) {

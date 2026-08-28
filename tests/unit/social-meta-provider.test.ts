@@ -569,4 +569,56 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
       "page_insights_unavailable",
     );
   });
+
+  it("writes the provider error code into sourceMetadata when the insights call returns 403 (permission_denied)", async () => {
+    // 2026-08-28: regression guard for the Sentry-free diagnostic
+    // path. The worker writes the provider error code into the
+    // row's sourceMetadata so a DB query (or the analytics
+    // health banner) reveals why the insights are missing.
+    // The pre-fix code returned null silently and the operator
+    // had no way to know it was a permission issue.
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith(`${baseGraph}/${pageId}/insights`)) {
+        return jsonResponse(403, {
+          error: {
+            code: 200,
+            message: "(#200) Requires business_management permission",
+          },
+        });
+      }
+      if (url.startsWith(`${baseGraph}/${pageId}?`)) {
+        return jsonResponse(200, {
+          id: pageId,
+          name: "Food Game",
+          fan_count: 69,
+          followers_count: 69,
+        });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaFacebookPageSnapshot({
+      accessToken,
+      pageId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+    expect(snapshot.followerCount).toBe(69);
+    // All insight fields are null because the call returned 403.
+    expect(snapshot.reach).toBeNull();
+    expect(snapshot.views).toBeNull();
+    expect(snapshot.interactions).toBeNull();
+    // The new diagnostic surface: providerErrorCode is in
+    // sourceMetadata so the analytics health banner can render
+    // the actual code without Sentry.
+    const meta = snapshot.sourceMetadata as {
+      partial?: boolean;
+      reason?: string;
+      providerErrorCode?: string;
+    };
+    expect(meta.partial).toBe(true);
+    expect(meta.reason).toBe("page_insights_unavailable");
+    expect(meta.providerErrorCode).toBe("permission_denied");
+  });
 });
