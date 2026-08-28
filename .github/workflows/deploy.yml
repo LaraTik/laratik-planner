@@ -133,12 +133,37 @@ jobs:
     environment: production
     # Least privilege: deploy only needs to read the image that CI's
     # build-smoke (or the dispatch build job above) just pushed.
-    # `packages: read` lets the verify-image step call `docker
-    # buildx imagetools inspect` against the GHCR tag.
+    # `packages: read` is the GITHUB_TOKEN scope that lets the
+    # `docker/login-action` below authenticate to ghcr.io, and
+    # that lets the verify-image step call `docker buildx
+    # imagetools inspect` against the GHCR tag.
     permissions:
       contents: read
       packages: read
     steps:
+      - name: Log in to GHCR
+        # 2026-08-28 fix: the verify step below calls `docker
+        # buildx imagetools inspect` against a private
+        # `ghcr.io/laratik/...` image, which requires the runner
+        # to be authenticated to GHCR. The earlier shape of this
+        # job (pre-single-build) inherited the login from the
+        # build job's docker config; the post-single-build shape
+        # made the build job conditional on `workflow_dispatch`,
+        # so the deploy job has no inherited creds. Without this
+        # step the GHA runner falls back to anonymous auth, which
+        # GHCR rejects with `401 Unauthorized` on
+        # `https://ghcr.io/token?scope=…`. GITHUB_TOKEN with
+        # `packages: read` is sufficient for the read-only inspect
+        # call. The full GHCR_PAT is forwarded to the VPS over
+        # SSH by the `SSH + deploy` step below — that one needs
+        # write-ish scopes that the GITHUB_TOKEN alone can't
+        # provide on every org config.
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Verify image exists in GHCR
         # Fast-fail in the Actions UI if the image is missing. On
         # the normal path CI pushed it; on the dispatch path the
