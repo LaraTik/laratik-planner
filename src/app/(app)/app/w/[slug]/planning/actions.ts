@@ -167,13 +167,54 @@ export async function applyAiDraftAction(input: {
 
 export async function batchCreateAction(workspaceSlug: string, _prev: unknown, formData: FormData) {
   const { actor, workspace } = await requireWorkspaceContext(workspaceSlug);
+  const rawRows = String(formData.get("rows") ?? "");
+  const rows = parseBatchRows(rawRows);
+  // Surface parse-time errors (over-length caption, unknown
+  // format, etc.) before the server tries to write the batch.
+  const bad = rows.filter((r) => "parseError" in r);
+  if (bad.length > 0) {
+    return {
+      error: `Row ${bad.map((b) => b.lineNumber).join(", ")}: ${bad
+        .map((b) => ("parseError" in b ? b.parseError : ""))
+        .join("; ")}`,
+    };
+  }
   const parsed = BatchCreateSchema.safeParse({
     workspaceId: workspace.id,
-    items: parseBatchRows(String(formData.get("rows") ?? "")),
+    items: rows.map((r) => ({
+      title: r.title,
+      format: r.format as
+        | "static_post"
+        | "carousel"
+        | "story"
+        | "short_form_video"
+        | "long_form_video"
+        | "live_content"
+        | "article"
+        | "other",
+      brief: r.brief,
+      plannedPublishAt: r.plannedPublishAt,
+    })),
   });
-  if (!parsed.success)
-    return { error: "Use 1–50 rows: Title | format | ISO date/time | optional brief." };
-  await batchCreateContentItems(actor, parsed.data);
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+    };
+  }
+  // The base `BatchCreateInput` doesn't carry per-row
+  // extensions (caption / hashtags / location). We pass them
+  // to the service as a side-channel; rows without
+  // extensions just contribute `undefined`. The service
+  // builds the `formatPayload` for each row from the
+  // extensions.
+  const itemsWithExtensions = parsed.data.items.map((item, idx) => {
+    const ext = rows[idx]?.extensions ?? {};
+    return { ...item, extensions: ext };
+  });
+  await batchCreateContentItems(actor, {
+    ...parsed.data,
+    items: itemsWithExtensions,
+  });
   revalidatePath(`/app/w/${workspaceSlug}/planning`);
   redirect(`/app/w/${workspaceSlug}/planning`);
 }

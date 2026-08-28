@@ -468,6 +468,27 @@ export async function batchCreateContentItems(actor: Actor, input: BatchCreateIn
   return db.transaction(async (tx) => {
     const ids: string[] = [];
     for (const item of parsed.items) {
+      // Per-row extensions (caption / hashtags / location
+      // from the v2 batch format) → formatPayload. We
+      // run the value through the per-format Zod schema so
+      // a row that exceeds a per-format limit (e.g. a
+      // hashtag that is too long for a specific format)
+      // rolls back the whole batch — atomic, per master
+      // prompt §17. The result is always the canonical
+      // shape the editor + mapper expect.
+      let formatPayload: Record<string, unknown> = { schemaVersion: 1 };
+      if (item.extensions) {
+        try {
+          formatPayload = parseFormatPayload(item.format, {
+            ...formatPayload,
+            ...item.extensions,
+          }) as Record<string, unknown>;
+        } catch (err) {
+          throw new Error(
+            `Row "${item.title}" (${item.format}) has invalid extensions: ${(err as Error).message}`,
+          );
+        }
+      }
       const [created] = await tx
         .insert(contentItems)
         .values({
@@ -475,6 +496,7 @@ export async function batchCreateContentItems(actor: Actor, input: BatchCreateIn
           title: item.title,
           format: item.format,
           brief: item.brief,
+          formatPayload,
           plannedPublishAt: item.plannedPublishAt,
           contentOwnerId: actor.id,
           createdBy: actor.id,
