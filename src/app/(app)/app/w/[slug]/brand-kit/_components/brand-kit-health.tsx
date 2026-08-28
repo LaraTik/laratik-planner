@@ -35,14 +35,14 @@ const AI_STATE: Record<Section, { state: AiState; description: string }> = {
       "Not fed to the AI. Logos are visual brand-mark context reserved for a future image-generation capability.",
   },
   colors: {
-    state: "queued",
+    state: "live",
     description:
-      "Phase 8 will feed color names, hex values, and roles to the AI so caption drafts can recommend on-brand palettes.",
+      "Fed to the AI when the Brand Visuals toggle is on. Color names, hex values, and roles surface in caption drafts so the model can recommend on-brand palettes.",
   },
   typography: {
-    state: "queued",
+    state: "live",
     description:
-      "Phase 8 will feed font families, weights, and roles so the AI can reference the workspace's type system.",
+      "Fed to the AI when the Brand Visuals toggle is on. Font families, weights, and roles help the model reference the workspace's type system.",
   },
   voice: {
     state: "live",
@@ -54,9 +54,9 @@ const AI_STATE: Record<Section, { state: AiState; description: string }> = {
     description: "Fed to the AI right now. Pillar names and blurbs keep caption drafts on-topic.",
   },
   publishing: {
-    state: "queued",
+    state: "live",
     description:
-      "Phase 8 will feed alt-text, hashtag, and compliance rules so the AI follows editorial guardrails.",
+      "Fed to the AI when the Brand Visuals toggle is on. Alt-text, hashtag, and compliance rules are appended to the prompt so the AI follows editorial guardrails.",
   },
   linked: {
     state: "no",
@@ -121,7 +121,7 @@ function suggestionsFor(
       const bodyMissing = (roles.body ?? 0) === 0;
       if (count === 0)
         return [
-          "Add a headline + body font. Phase 8 will feed these to the AI for visual context.",
+          "Add a headline + body font. Brand Visuals is on; the AI now uses these in caption drafts.",
         ];
       if (headlineMissing)
         return ["Add a Headline face first — it sets the tone for the entire type system."];
@@ -162,7 +162,9 @@ function suggestionsFor(
       return ["Six or more can dilute focus. Consider consolidating the least-active pillars."];
     case "publishing":
       if (count === 0)
-        return ["Add 1–2 alt-text rules + 1–2 hashtag norms. Phase 8 will feed these to the AI."];
+        return [
+          "Add 1–2 alt-text rules + 1–2 hashtag norms. Brand Visuals is on; the AI uses these in drafts.",
+        ];
       if (count < 3)
         return [
           "Add at least one compliance + one channel-specific rule for full editorial coverage.",

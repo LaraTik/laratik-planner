@@ -2,6 +2,8 @@ import "server-only";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
+  brandAssets,
+  brandPublishingRules,
   brandVoiceRules,
   campaigns,
   contentItems,
@@ -29,12 +31,22 @@ import {
  * to, and a small sample of recently-approved content so the
  * rewrite can mirror the agency's editorial style.
  *
+ * Phase 8 (2026-08-28) extends the loader with a `brandVisuals`
+ * toggle that pulls brand colors, fonts, and publishing rules
+ * into the prompt. The visual brand context lets the AI
+ * recommend on-brand palettes and type pairings in caption
+ * drafts, and the publishing rules let it follow the agency's
+ * editorial guardrails (alt-text conventions, hashtag norms,
+ * compliance reminders) at draft time.
+ *
  * Each branch is gated by its own `if` so a workspace with no
  * Brand Kit rows, no active campaign, etc. is graceful — the
  * prompt just omits the empty sections.
  */
 export interface AiContextSelection {
   brandKit?: boolean;
+  /** Phase 8 — load brand colors, fonts, and publishing rules. */
+  brandVisuals?: boolean;
   campaign?: boolean;
   pillars?: boolean;
   channels?: boolean;
@@ -43,6 +55,17 @@ export interface AiContextSelection {
 
 export interface AiContext {
   brandVoice: { tone: string[]; do: string[]; dont: string[] };
+  /**
+   * Phase 8 — workspace visual brand. Omitted (or `null`) when the
+   * planner did not tick the `brandVisuals` toggle. The shape is
+   * the same regardless of population; empty arrays are valid (the
+   * prompt just omits the empty sections).
+   */
+  brandVisuals?: {
+    colors: { name: string; hex: string; role: string | null }[];
+    fonts: { name: string; family: string; weight: number; role: string }[];
+    publishingRules: { ruleType: string; title: string; content: string }[];
+  } | null;
   campaign: { name: string; objective: string | null; description: string | null } | null;
   pillars: { name: string; description: string | null }[];
   channels: { platform: string; accountName: string }[];
@@ -51,6 +74,7 @@ export interface AiContext {
 
 export const EMPTY_CONTEXT: AiContext = {
   brandVoice: { tone: [], do: [], dont: [] },
+  brandVisuals: null,
   campaign: null,
   pillars: [],
   channels: [],
@@ -72,6 +96,7 @@ export async function loadAiContext(input: {
 }): Promise<AiContext> {
   const out: AiContext = {
     brandVoice: { tone: [], do: [], dont: [] },
+    brandVisuals: null,
     campaign: null,
     pillars: [],
     channels: [],
@@ -100,6 +125,101 @@ export async function loadAiContext(input: {
             if (r.ruleType === "tone") out.brandVoice.tone.push(r.content);
             else if (r.ruleType === "do") out.brandVoice.do.push(r.content);
             else if (r.ruleType === "dont") out.brandVoice.dont.push(r.content);
+          }
+        }),
+    );
+  }
+
+  // Phase 8 — load brand visuals (colors, fonts, publishing rules).
+  // The toggle is independent of `brandKit` so a planner who only
+  // wants visual context doesn't have to also pull voice rules.
+  if (input.selection.brandVisuals) {
+    out.brandVisuals = { colors: [], fonts: [], publishingRules: [] };
+    tasks.push(
+      db
+        .select({
+          name: brandAssets.name,
+          value: brandAssets.value,
+        })
+        .from(brandAssets)
+        .where(
+          and(
+            eq(brandAssets.workspaceId, input.workspaceId),
+            eq(brandAssets.kind, "color"),
+            isNull(brandAssets.archivedAt),
+          ),
+        )
+        .orderBy(brandAssets.createdAt)
+        .then((rows) => {
+          for (const r of rows) {
+            const v = (r.value ?? {}) as Record<string, unknown>;
+            const hex =
+              (typeof v.hex === "string" && v.hex) ||
+              (typeof v.color === "string" && v.color) ||
+              (typeof v.value === "string" && v.value) ||
+              "";
+            if (!hex) continue;
+            const role =
+              (typeof v.role === "string" && v.role) ||
+              (typeof v.colorRole === "string" && v.colorRole) ||
+              null;
+            out.brandVisuals?.colors.push({ name: r.name, hex, role });
+          }
+        }),
+    );
+    tasks.push(
+      db
+        .select({ name: brandAssets.name, value: brandAssets.value })
+        .from(brandAssets)
+        .where(
+          and(
+            eq(brandAssets.workspaceId, input.workspaceId),
+            eq(brandAssets.kind, "font"),
+            isNull(brandAssets.archivedAt),
+          ),
+        )
+        .orderBy(brandAssets.createdAt)
+        .then((rows) => {
+          for (const r of rows) {
+            const v = (r.value ?? {}) as Record<string, unknown>;
+            const family =
+              (typeof v.family === "string" && v.family) ||
+              (typeof v.name === "string" && v.name) ||
+              "";
+            const weight =
+              typeof v.weight === "number"
+                ? v.weight
+                : typeof v.weight === "string"
+                  ? Number(v.weight) || 400
+                  : 400;
+            const role = (typeof v.role === "string" && v.role) || "body";
+            if (!family) continue;
+            out.brandVisuals?.fonts.push({ name: r.name, family, weight, role });
+          }
+        }),
+    );
+    tasks.push(
+      db
+        .select({
+          ruleType: brandPublishingRules.ruleType,
+          title: brandPublishingRules.title,
+          content: brandPublishingRules.content,
+        })
+        .from(brandPublishingRules)
+        .where(
+          and(
+            eq(brandPublishingRules.workspaceId, input.workspaceId),
+            isNull(brandPublishingRules.archivedAt),
+          ),
+        )
+        .orderBy(brandPublishingRules.sortOrder, brandPublishingRules.createdAt)
+        .then((rows) => {
+          for (const r of rows) {
+            out.brandVisuals?.publishingRules.push({
+              ruleType: r.ruleType,
+              title: r.title,
+              content: r.content,
+            });
           }
         }),
     );
@@ -213,10 +333,23 @@ export async function loadAiContext(input: {
  * was included.
  */
 export function isContextMeaningful(ctx: AiContext): boolean {
-  return (
+  if (
     ctx.brandVoice.tone.length > 0 ||
     ctx.brandVoice.do.length > 0 ||
-    ctx.brandVoice.dont.length > 0 ||
+    ctx.brandVoice.dont.length > 0
+  ) {
+    return true;
+  }
+  if (ctx.brandVisuals) {
+    if (
+      ctx.brandVisuals.colors.length > 0 ||
+      ctx.brandVisuals.fonts.length > 0 ||
+      ctx.brandVisuals.publishingRules.length > 0
+    ) {
+      return true;
+    }
+  }
+  return (
     ctx.campaign !== null ||
     ctx.pillars.length > 0 ||
     ctx.channels.length > 0 ||

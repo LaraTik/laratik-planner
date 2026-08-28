@@ -70,6 +70,7 @@ describe("EMPTY_CONTEXT", () => {
   it("is a well-formed empty AiContext", () => {
     expect(EMPTY_CONTEXT).toEqual({
       brandVoice: { tone: [], do: [], dont: [] },
+      brandVisuals: null,
       campaign: null,
       pillars: [],
       channels: [],
@@ -154,6 +155,54 @@ describe("isContextMeaningful", () => {
         approvedContentSamples: [{ title: "Past win", brief: null }],
       }),
     ).toBe(true);
+  });
+
+  it("returns true when brandVisuals has colors", () => {
+    expect(
+      isContextMeaningful({
+        ...EMPTY_CONTEXT,
+        brandVisuals: {
+          colors: [{ name: "Brand blue", hex: "#1D4ED8", role: "primary" }],
+          fonts: [],
+          publishingRules: [],
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it("returns true when brandVisuals has fonts", () => {
+    expect(
+      isContextMeaningful({
+        ...EMPTY_CONTEXT,
+        brandVisuals: {
+          colors: [],
+          fonts: [{ name: "Headline", family: "Inter", weight: 700, role: "headline" }],
+          publishingRules: [],
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it("returns true when brandVisuals has publishing rules", () => {
+    expect(
+      isContextMeaningful({
+        ...EMPTY_CONTEXT,
+        brandVisuals: {
+          colors: [],
+          fonts: [],
+          publishingRules: [{ ruleType: "alt_text", title: "Describe visuals", content: "..." }],
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it("returns false when brandVisuals is non-null but every list is empty", () => {
+    expect(
+      isContextMeaningful({
+        ...EMPTY_CONTEXT,
+        brandVisuals: { colors: [], fonts: [], publishingRules: [] },
+      }),
+    ).toBe(false);
   });
 });
 
@@ -300,6 +349,9 @@ describe("loadAiContext — fully checked selection", () => {
   it("runs every branch in parallel and merges the results", async () => {
     state.selectResults.push(
       [{ ruleType: "tone", content: "warm" }], // brandKit
+      [{ name: "Brand blue", value: { hex: "#1D4ED8", role: "primary" } }], // brandVisuals.colors
+      [{ name: "Inter", value: { family: "Inter", weight: 700, role: "headline" } }], // brandVisuals.fonts
+      [{ ruleType: "alt_text", title: "Describe visuals", content: "..." }], // brandVisuals.publishingRules
       [{ name: "Spring", objective: "trials", description: null }], // campaign
       [{ name: "Education", description: null }], // pillars
       [{ platform: "instagram", accountName: "@main" }], // channels
@@ -310,17 +362,108 @@ describe("loadAiContext — fully checked selection", () => {
       contentItemId: "ci-1",
       selection: {
         brandKit: true,
+        brandVisuals: true,
         campaign: true,
         pillars: true,
         channels: true,
         approvedContent: true,
       },
     });
-    expect(state.selectCalls).toBe(5);
+    expect(state.selectCalls).toBe(8);
     expect(out.brandVoice.tone).toEqual(["warm"]);
+    expect(out.brandVisuals?.colors).toEqual([
+      { name: "Brand blue", hex: "#1D4ED8", role: "primary" },
+    ]);
+    expect(out.brandVisuals?.fonts).toEqual([
+      { name: "Inter", family: "Inter", weight: 700, role: "headline" },
+    ]);
+    expect(out.brandVisuals?.publishingRules).toEqual([
+      { ruleType: "alt_text", title: "Describe visuals", content: "..." },
+    ]);
     expect(out.campaign?.name).toBe("Spring");
     expect(out.pillars).toEqual([{ name: "Education", description: null }]);
     expect(out.channels).toEqual([{ platform: "instagram", accountName: "@main" }]);
     expect(out.approvedContentSamples).toEqual([{ title: "Past win", brief: "did well" }]);
+  });
+});
+
+describe("loadAiContext — brandVisuals branch", () => {
+  it("loads brand colors with hex + role from the jsonb value", async () => {
+    state.selectResults.push([
+      { name: "Brand blue", value: { hex: "#1D4ED8", role: "primary" } },
+      { name: "Accent", value: { hex: "#FBBF24" } },
+    ]);
+    state.selectResults.push([]); // fonts
+    state.selectResults.push([]); // publishingRules
+    const out = await loadAiContext({
+      workspaceId: "ws-1",
+      contentItemId: "ci-1",
+      selection: { brandVisuals: true },
+    });
+    expect(out.brandVisuals?.colors).toEqual([
+      { name: "Brand blue", hex: "#1D4ED8", role: "primary" },
+      { name: "Accent", hex: "#FBBF24", role: null },
+    ]);
+  });
+
+  it("drops color rows with no hex (corrupt jsonb)", async () => {
+    state.selectResults.push([
+      { name: "Bad", value: { hex: "" } },
+      { name: "Good", value: { hex: "#000000" } },
+    ]);
+    state.selectResults.push([]); // fonts
+    state.selectResults.push([]); // publishingRules
+    const out = await loadAiContext({
+      workspaceId: "ws-1",
+      contentItemId: "ci-1",
+      selection: { brandVisuals: true },
+    });
+    expect(out.brandVisuals?.colors).toEqual([{ name: "Good", hex: "#000000", role: null }]);
+  });
+
+  it("loads brand fonts and defaults weight to 400 / role to body when missing", async () => {
+    state.selectResults.push([]); // colors
+    state.selectResults.push([
+      { name: "Inter", value: { family: "Inter", weight: 700, role: "headline" } },
+      { name: "Mono", value: { family: "Fira Mono", weight: "500" } },
+    ]);
+    state.selectResults.push([]); // publishingRules
+    const out = await loadAiContext({
+      workspaceId: "ws-1",
+      contentItemId: "ci-1",
+      selection: { brandVisuals: true },
+    });
+    expect(out.brandVisuals?.fonts).toEqual([
+      { name: "Inter", family: "Inter", weight: 700, role: "headline" },
+      { name: "Mono", family: "Fira Mono", weight: 500, role: "body" },
+    ]);
+  });
+
+  it("loads publishing rules sorted by sortOrder, createdAt", async () => {
+    state.selectResults.push([]); // colors
+    state.selectResults.push([]); // fonts
+    state.selectResults.push([
+      { ruleType: "alt_text", title: "Describe visuals", content: "Use meaningful alt text." },
+      { ruleType: "hashtag", title: "5 max", content: "Don't exceed 5 hashtags." },
+    ]);
+    const out = await loadAiContext({
+      workspaceId: "ws-1",
+      contentItemId: "ci-1",
+      selection: { brandVisuals: true },
+    });
+    expect(out.brandVisuals?.publishingRules).toEqual([
+      { ruleType: "alt_text", title: "Describe visuals", content: "Use meaningful alt text." },
+      { ruleType: "hashtag", title: "5 max", content: "Don't exceed 5 hashtags." },
+    ]);
+  });
+
+  it("does not query the brand_assets / brand_publishing_rule tables when brandVisuals is off", async () => {
+    await loadAiContext({
+      workspaceId: "ws-1",
+      contentItemId: "ci-1",
+      selection: { brandKit: true },
+    });
+    // Only the brandKit branch should have run.
+    expect(state.selectCalls).toBe(1);
   });
 });

@@ -74,13 +74,38 @@ export function splitVariants(text: string): string[] {
 function buildContextBlock(ctx: AiContext | null | undefined): string {
   if (!ctx) return "";
   const lines: string[] = [];
-  const { brandVoice, campaign, pillars, channels, approvedContentSamples } = ctx;
+  const { brandVoice, brandVisuals, campaign, pillars, channels, approvedContentSamples } = ctx;
 
   if (brandVoice.tone.length || brandVoice.do.length || brandVoice.dont.length) {
     lines.push("Brand voice (apply these rules):");
     for (const t of brandVoice.tone) lines.push(`- tone: ${t}`);
     for (const d of brandVoice.do) lines.push(`- do: ${d}`);
     for (const d of brandVoice.dont) lines.push(`- don't: ${d}`);
+  }
+
+  // Phase 8 — visual brand context (colors, fonts, publishing rules).
+  // Empty arrays are valid; the prompt builder skips empty sections
+  // so a workspace with no colors still gets a clean prompt.
+  if (brandVisuals) {
+    if (brandVisuals.colors.length) {
+      lines.push("Brand colors (use these when the caption references visual style):");
+      for (const c of brandVisuals.colors) {
+        const role = c.role ? ` [${c.role}]` : "";
+        lines.push(`- ${c.name}${role}: ${c.hex}`);
+      }
+    }
+    if (brandVisuals.fonts.length) {
+      lines.push("Brand fonts (use these when the caption references typography):");
+      for (const f of brandVisuals.fonts) {
+        lines.push(`- ${f.name} (${f.family}, weight ${f.weight}, ${f.role})`);
+      }
+    }
+    if (brandVisuals.publishingRules.length) {
+      lines.push("Publishing rules (apply these to every draft):");
+      for (const r of brandVisuals.publishingRules) {
+        lines.push(`- [${r.ruleType}] ${r.title}: ${r.content}`);
+      }
+    }
   }
 
   if (campaign) {

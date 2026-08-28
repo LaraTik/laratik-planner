@@ -88,6 +88,10 @@ const Body = z.object({
   contextSelection: z
     .object({
       brandKit: z.boolean().optional().default(false),
+      // Phase 8 — load brand colors, fonts, and publishing rules into
+      // the prompt. Independent of `brandKit` so a planner who only
+      // wants visual context (or only wants voice) can pick one.
+      brandVisuals: z.boolean().optional().default(false),
       campaign: z.boolean().optional().default(false),
       pillars: z.boolean().optional().default(false),
       channels: z.boolean().optional().default(false),
@@ -385,6 +389,17 @@ export async function POST(req: NextRequest) {
           : "brand_kit:empty",
       );
     }
+    if (sel.brandVisuals) {
+      // Phase 8 — log whether the workspace actually has any visual
+      // brand data. A workspace that ticked the box but has no
+      // colors / fonts / rules will report `empty` so the audit
+      // doesn't claim visual context was included when it wasn't.
+      const has =
+        (context.brandVisuals?.colors.length ?? 0) > 0 ||
+        (context.brandVisuals?.fonts.length ?? 0) > 0 ||
+        (context.brandVisuals?.publishingRules.length ?? 0) > 0;
+      usedCategories.push(has ? "brand_visuals:used" : "brand_visuals:empty");
+    }
     if (sel.campaign) {
       usedCategories.push(context.campaign ? "campaign:used" : "campaign:empty");
     }
@@ -444,6 +459,7 @@ export async function POST(req: NextRequest) {
     const failedCategories: string[] = ["title", "brief", "format", "workspace_name"];
     if (sel) {
       if (sel.brandKit) failedCategories.push("brand_kit");
+      if (sel.brandVisuals) failedCategories.push("brand_visuals");
       if (sel.campaign) failedCategories.push("campaign");
       if (sel.pillars) failedCategories.push("content_pillars");
       if (sel.channels) failedCategories.push("active_channels");

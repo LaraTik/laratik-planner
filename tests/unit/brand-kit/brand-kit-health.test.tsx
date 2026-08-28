@@ -19,9 +19,19 @@ describe("BrandKitHealth", () => {
       );
     });
 
-    it("shows 'Phase 8' for colors, typography, and publishing (queued for AI context expansion)", () => {
+    it("shows 'AI uses this' for colors, typography, and publishing (Phase 8 expansion)", () => {
       render(<BrandKitHealth section="colors" slug={slug} count={0} />);
-      expect(screen.getByTestId("brand-kit-health-colors-ai-state")).toHaveTextContent(/phase 8/i);
+      expect(screen.getByTestId("brand-kit-health-colors-ai-state")).toHaveTextContent(
+        /ai uses this/i,
+      );
+      render(<BrandKitHealth section="typography" slug={slug} count={0} />);
+      expect(screen.getByTestId("brand-kit-health-typography-ai-state")).toHaveTextContent(
+        /ai uses this/i,
+      );
+      render(<BrandKitHealth section="publishing" slug={slug} count={0} />);
+      expect(screen.getByTestId("brand-kit-health-publishing-ai-state")).toHaveTextContent(
+        /ai uses this/i,
+      );
     });
 
     it("shows 'Not fed to AI' for logos and linked resources (intentionally not loaded)", () => {
