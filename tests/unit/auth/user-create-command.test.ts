@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { generateStrongPassword } from "@/lib/auth/password";
 import { passwordStrength, userCreateCommandSchema } from "@/lib/auth/user-create-command";
 
 /**
@@ -102,5 +103,36 @@ describe("userCreateCommandSchema", () => {
       ],
     });
     expect(parsed.success).toBe(false);
+  });
+});
+
+describe("generateStrongPassword", () => {
+  it("returns a 16-character string", () => {
+    const pw = generateStrongPassword();
+    expect(pw).toHaveLength(16);
+  });
+
+  it("always passes isPasswordStrong (length + letter + digit)", () => {
+    // Run 50x — the entropy (24 random bytes → 16 chars over a 70-char
+    // alphabet) is high enough that collisions are essentially
+    // impossible, but a 50-iteration smoke test catches any
+    // catastrophic regression in the alphabet or the modulo.
+    for (let i = 0; i < 50; i++) {
+      const pw = generateStrongPassword();
+      expect(pw).toMatch(/[A-Za-z]/);
+      expect(pw).toMatch(/[0-9]/);
+      expect(pw.length).toBeGreaterThanOrEqual(8);
+    }
+  });
+
+  it("returns different values on consecutive calls (entropy check)", () => {
+    const set = new Set<string>();
+    for (let i = 0; i < 100; i++) {
+      set.add(generateStrongPassword());
+    }
+    // 100 unique 16-char passwords over a 70-char alphabet — the
+    // expected collision count is effectively 0. Allow up to 1
+    // collision to absorb a single birthday-paradox edge.
+    expect(set.size).toBeGreaterThanOrEqual(99);
   });
 });
