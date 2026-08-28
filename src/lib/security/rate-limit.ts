@@ -9,6 +9,7 @@ export type RateLimitScope =
   | "invitation_create"
   | "invitation_accept"
   | "invitation_resend"
+  | "user_create"
   | "ai_generation"
   | "magic_link_request"
   | "password_reset_request"
@@ -21,6 +22,12 @@ const RULES: Record<RateLimitScope, { limit: number; windowSeconds: number }> = 
   invitation_create: { limit: 20, windowSeconds: 60 * 60 },
   invitation_accept: { limit: 10, windowSeconds: 15 * 60 },
   invitation_resend: { limit: 10, windowSeconds: 60 * 60 },
+  // Direct user creation ("Add directly" tab on /app/users). Same
+  // budget as invitation_create — both surface is "an admin adds a
+  // new human to the agency" and a sudden burst of either is the
+  // threat we're throttling. Subject is the actor's user id; an
+  // attacker would need a valid admin session to trip the limit.
+  user_create: { limit: 20, windowSeconds: 60 * 60 },
   ai_generation: { limit: 30, windowSeconds: 60 },
   // Magic-link request: throttles per (email, source IP) at 5/hour. The
   // (email, IP) composite prevents both targeted email-spam (limit per

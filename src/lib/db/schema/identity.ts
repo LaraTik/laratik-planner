@@ -53,6 +53,15 @@ export const users = pgTable(
     role: text("role").notNull().default("user"), // app-level role
     // For self-hosted magic-link auth (NextAuth Email provider)
     passwordHash: text("password_hash"), // null for OAuth-only users
+    // Set true by `createUserDirectly` (lib/auth/user-creation.ts) when an
+    // agency admin pre-creates a user with an admin-supplied password. The
+    // next-auth `jwt` callback reads this column and stamps it onto the
+    // session; the first-login redirect middleware (see `proxy.ts` /
+    // `src/middleware.ts`) routes the user to `/set-password` until the
+    // flag is cleared. Clear path: `setOwnPasswordAction` flips the
+    // column to false in the same transaction that writes the new hash.
+    // Migration 0022.
+    mustChangePassword: boolean("must_change_password").notNull().default(false),
     // Timestamps
     ...timestamps,
   },

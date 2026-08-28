@@ -9,26 +9,28 @@ import { workspaceMembershipRoles, workspaceMemberships, workspaces } from "@/li
 import { and, eq, inArray } from "drizzle-orm";
 import { listAgencyMembers, listInvitations } from "@/lib/auth/invitations";
 import { SendInviteForm } from "./send-invite-form";
+import { AddDirectlyForm } from "./add-directly-form";
 import { InvitationList } from "./invitation-list";
 import { MemberList } from "./member-list";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiTile } from "@/components/workspace/kpi-tile";
 import { PageHeader } from "@/components/workspace/page-header";
-import { Building2, Mail, UserCheck, UserX } from "lucide-react";
+import { Building2, Mail, UserCheck, UserPlus, UserX } from "lucide-react";
 
 /**
  * User Management (admin only) — Stitch-aligned dashboard.
  *
  * Stitch design (project 5403097764334458790, screen `89113980`):
  *   - 3 KPI tiles: Active / Pending / Deactivated
- *   - Tabbed table (All users / Pending / Deactivated)
- *   - Side drawer for "Edit access"
+ *   - Tabbed card with two modes: "Send invitation" and "Add directly"
+ *   - Pending invitations list
+ *   - Members list (with Edit access drawer)
  *
- * v1 ships the KPI tiles plus the existing three sections (send
- * invitation / pending invitations / members). The tabbed table is a
- * follow-up that re-uses the same MemberList + InvitationList with a
- * client-side filter.
+ * v1 (Goal 2.5) ships the tabbed "Add directly" variant of the
+ * original card. The KPI tiles + Pending + Members sections are
+ * unchanged from the prior release.
  */
 export const metadata = { title: "User Management" };
 
@@ -94,12 +96,13 @@ export default async function UsersPage() {
 
   const activeCount = members.filter((m) => m.status === "active").length;
   const deactivatedCount = members.length - activeCount;
+  const workspaceList = allWorkspaces.map((w) => ({ id: w.id, name: w.name }));
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="User Management"
-        description="Invite team members, assign workspace roles, deactivate departures."
+        description="Invite team members, pre-create accounts, assign workspace roles, deactivate departures."
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="users-kpi-row">
@@ -122,15 +125,32 @@ export default async function UsersPage() {
         />
       </div>
 
-      <Card>
+      <Card data-testid="users-add-card">
         <CardHeader>
           <CardTitle className="inline-flex items-center gap-2">
-            <Mail className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-            Send an invitation
+            <UserPlus className="text-fg-secondary h-4 w-4" aria-hidden="true" />
+            Add a user
           </CardTitle>
           <Badge variant="outline">Agency admin only</Badge>
         </CardHeader>
-        <SendInviteForm workspaces={allWorkspaces.map((w) => ({ id: w.id, name: w.name }))} />
+        <Tabs defaultValue="invite">
+          <TabsList aria-label="Add a user: send an invitation or pre-create an account">
+            <TabsTrigger value="invite" data-testid="users-tab-invite">
+              <Mail className="mr-1 h-4 w-4" aria-hidden="true" />
+              Send invitation
+            </TabsTrigger>
+            <TabsTrigger value="add" data-testid="users-tab-add">
+              <UserPlus className="mr-1 h-4 w-4" aria-hidden="true" />
+              Add directly
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="invite">
+            <SendInviteForm workspaces={workspaceList} />
+          </TabsContent>
+          <TabsContent value="add">
+            <AddDirectlyForm workspaces={workspaceList} />
+          </TabsContent>
+        </Tabs>
       </Card>
 
       <Card>
@@ -158,7 +178,7 @@ export default async function UsersPage() {
         </CardHeader>
         <MemberList
           actorId={session.user.id}
-          workspaces={allWorkspaces.map((w) => ({ id: w.id, name: w.name }))}
+          workspaces={workspaceList}
           rolesByUser={rolesByUser}
           members={members.map((m) => ({
             id: m.userId,

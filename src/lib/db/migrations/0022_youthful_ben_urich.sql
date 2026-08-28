@@ -1,0 +1,27 @@
+-- Migration 0022 — `user.must_change_password`
+--
+-- Purpose: stamp "admin created this account with a temporary password, the
+-- user must rotate it on first sign-in" so the first-login redirect
+-- middleware can route the user to `/set-password`. Set by
+-- `lib/auth/user-creation.ts:createUserDirectly`; cleared by
+-- `app/(app)/set-password/actions.ts:setOwnPasswordAction` in the same
+-- transaction that writes the new bcrypt hash.
+--
+-- Forward: ADD COLUMN … NOT NULL DEFAULT false. Default false is the
+-- pre-existing state for every row, so the migration is metadata-only
+-- and instant (no table rewrite, no row scan).
+--
+-- Backwards compatibility: existing rows are stamped false on ALTER. The
+-- `jwt` callback (src/lib/auth/config.ts) reads the column; the column
+-- is indexable later if a "users with mustChangePassword=true" query
+-- becomes a hot path.
+--
+-- Backup: column is metadata-only; the pre-migration row set is
+-- recoverable via the standard pg_dump taken before the deploy
+-- (see scripts/vps/backup.sh).
+--
+-- ROLLBACK:
+--   ALTER TABLE "user" DROP COLUMN "must_change_password";
+-- (no data loss — no row was carrying a non-default value before the
+-- migration was applied).
+ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "must_change_password" boolean DEFAULT false NOT NULL;

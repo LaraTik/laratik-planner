@@ -2,24 +2,23 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { AlertCircle, CheckCircle2, X } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { sendInviteAction, type InviteActionState } from "./actions";
+import { WorkspaceRoleMatrix } from "./_components/workspace-role-matrix";
 
 const initialState: InviteActionState = {};
 
 /**
- * Send-invite form for the User Management page.
+ * Send-invite form for the User Management page. Renders inside the
+ * "Send invitation" tab of the card. Mirrors the contract documented
+ * on the form's `data-testid` and the action's error strip.
  *
- * Errors surface in the standard danger-subtle card (per Stitch
- * design) with role="alert" so screen readers announce them. Field-
- * level zod issues are rendered next to the relevant input via the
- * shared FormField component. On success, the inner form is keyed
- * with the new invitation id so all local state (selected workspace
- * roles + uncontrolled inputs) is naturally reset, and a
- * confirmation strip renders above the form.
+ * The per-workspace role selector is a shared
+ * `<WorkspaceRoleMatrix>` (under `_components/`) so the "Add directly"
+ * tab can reuse the exact same UI without duplication.
  */
 export function SendInviteForm({ workspaces }: { workspaces: { id: string; name: string }[] }) {
   const [state, formAction] = useActionState(sendInviteAction, initialState);
@@ -122,76 +121,12 @@ export function SendInviteForm({ workspaces }: { workspaces: { id: string; name:
                 {fieldErrors.workspaceRoles.join("; ")}
               </p>
             ) : null}
-            <WorkspaceRoleGrid workspaces={workspaces} />
+            <WorkspaceRoleMatrix workspaces={workspaces} testId="send-invite" />
           </fieldset>
         ) : null}
 
         <FormSubmitButton label="Send invitation" pendingLabel="Sending…" />
       </form>
     </div>
-  );
-}
-
-/**
- * Owns the controlled workspace-role selection. When the parent form
- * remounts (because the form key changes after a successful invite),
- * this component remounts with it and its internal state is reset.
- */
-function WorkspaceRoleGrid({ workspaces }: { workspaces: { id: string; name: string }[] }) {
-  const [selectedRoles, setSelectedRoles] = React.useState<Record<string, string>>({});
-  return (
-    <>
-      {workspaces.map((w) => (
-        <div key={w.id} className="flex items-center gap-3">
-          <label
-            htmlFor={`invite-workspace-role-${w.id}`}
-            className="text-body text-fg-primary w-40 truncate"
-          >
-            {w.name}
-          </label>
-          <select
-            id={`invite-workspace-role-${w.id}`}
-            value={selectedRoles[w.id] ?? ""}
-            onChange={(e) => {
-              const next = { ...selectedRoles };
-              if (e.target.value) next[w.id] = e.target.value;
-              else delete next[w.id];
-              setSelectedRoles(next);
-            }}
-            className="border-border bg-surface text-fg-primary text-body rounded-[var(--radius-control)] border px-2 py-1"
-          >
-            <option value="">No access</option>
-            <option value="workspace_manager">Workspace Manager</option>
-            <option value="content_planner">Content Planner</option>
-            <option value="designer">Designer</option>
-            <option value="internal_reviewer">Internal Reviewer</option>
-            <option value="client_reviewer">Client Reviewer</option>
-            <option value="publisher">Publisher</option>
-            <option value="viewer">Viewer</option>
-          </select>
-          {selectedRoles[w.id] ? (
-            <button
-              type="button"
-              onClick={() => {
-                const next = { ...selectedRoles };
-                delete next[w.id];
-                setSelectedRoles(next);
-              }}
-              className="text-fg-muted hover:text-fg-primary"
-              aria-label={`Remove role from ${w.name}`}
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
-          ) : null}
-        </div>
-      ))}
-      <input
-        type="hidden"
-        name="workspaceRoles"
-        value={JSON.stringify(
-          Object.entries(selectedRoles).map(([workspaceId, role]) => ({ workspaceId, role })),
-        )}
-      />
-    </>
   );
 }

@@ -199,10 +199,23 @@ describe("findUserByEmailAndPassword", () => {
   it("returns the user on a correct match", async () => {
     const hash = await hashPassword("right!!1");
     dbMock.state.selectResults = [
-      [{ id: "u", email: "u@example.com", name: "U", passwordHash: hash }],
+      [
+        {
+          id: "u",
+          email: "u@example.com",
+          name: "U",
+          passwordHash: hash,
+          mustChangePassword: false,
+        },
+      ],
     ];
     const out = await findUserByEmailAndPassword("  U@Example.COM ", "right!!1");
-    expect(out).toEqual({ id: "u", email: "u@example.com", name: "U" });
+    expect(out).toEqual({
+      id: "u",
+      email: "u@example.com",
+      name: "U",
+      mustChangePassword: false,
+    });
   });
 });
 
