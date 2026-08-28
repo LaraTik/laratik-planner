@@ -1,40 +1,51 @@
 #!/usr/bin/env sh
-# Pre-push hook — full local unit + critical E2E gate before a push
-# reaches CI.
+# Pre-push hook — full local unit + integration + critical E2E gate
+# before a push reaches CI.
 #
 # Scope: catches regressions that the pre-commit `vitest related
 # --run` (which only walks the import graph from staged .ts/.tsx
 # files) and the lint-staged format/lint pass cannot catch:
 #   1. full unit suite  (catches cross-module regressions)
-#   2. critical E2E     (chromium functional + visual-chromium —
+#   2. integration      (catches DB / migration / authorization
+#                        regressions that need a real Postgres)
+#   3. critical E2E     (chromium functional + visual-chromium —
 #                        the subset that used to be the
 #                        `visual-regression` job in `ci.yml` per
 #                        TEST-03 / GAP-FULL-REVIEW-2026-08-25)
 #
 # This is the second-tier of the 2026-08-26 CI-minimization plan
-# + the 2026-08-26 "E2E moves local" follow-up. Both the full unit
-# suite and the critical E2E moved out of `.github/workflows/ci.yml`
-# (free-tier minutes) and into this hook so a failed run blocks the
-# push instead of waiting for CI.
+# + the 2026-08-26 "E2E moves local" follow-up + the 2026-08-28
+# "integration moves local" follow-up. The full unit suite, the
+# critical E2E, and (as of 2026-08-28) integration all live in
+# this hook so a failed run blocks the push instead of waiting
+# for CI. The benefit of the integration move is the dev sees
+# "I think I'm done" time converge with "actually shipped" time
+# — the CI deploy-gate then re-runs integration as the audit,
+# not the first signal.
 #
 # Skip when you know what you're doing:
 #   git push --no-verify
-#   SKIP_PREPUSH=1 git push
-#   SKIP_E2E=1     git push  (skip only the E2E step)
+#   SKIP_PREPUSH=1        git push
+#   SKIP_E2E=1            git push  (skip only the E2E step)
+#   SKIP_INTEGRATION=1    git push  (skip only the integration step)
 #
 # What runs:
-#   1. pnpm test:unit       — the full vitest suite, no coverage.
-#   2. pnpm test:e2e:critical — chromium + visual-chromium subset
-#                              (skipped if no .ts/.tsx staged, see
-#                              below). Requires a local dev env
-#                              (see docs/operations/runbook.md
-#                              § "Running on CI" → local recipes).
+#   1. pnpm test:unit         — the full vitest suite, no coverage.
+#   2. pnpm test:integration  — runs migrations + the disposable
+#                               postgres integration suite. Skipped
+#                               automatically if TEST_DATABASE_URL is
+#                               not set (with a hint to set it up).
+#                               Requires a local dev env (see
+#                               docs/operations/runbook.md
+#                               § "Local E2E recipes").
+#   3. pnpm test:e2e:critical — chromium + visual-chromium subset
+#                               (skipped if no .ts/.tsx staged, see
+#                               below). Requires a local dev env.
 #
 # What does NOT run (intentionally — kept for CI or out of the
 # deploy-gate contract):
 #   • tsc --noEmit          (runs in pre-commit, on the staged surface)
 #   • pnpm build            (production build, platform-specific)
-#   • pnpm test:integration (needs a disposable Postgres)
 #   • pnpm test:coverage    (v8 instrumentation, slow — kept in CI)
 #   • full 5-browser matrix (`pnpm test:e2e:isolated`, ~45 min on
 #     Linux CI / ~30-60 min on a Mac) — keep as a manual pre-merge
@@ -63,7 +74,49 @@ else
   echo "⏭  pnpm test:unit skipped (no .ts/.tsx staged)"
 fi
 
-# 2) Critical E2E (chromium functional + visual-chromium). Per the
+# 2) Integration suite (DB + migration + authorization).
+#    Moved out of CI on 2026-08-28 so the dev sees a real failure
+#    signal before pushing. CI still re-runs integration as the
+#    audit gate (the `unit-quality` job in ci.yml), so skipping
+#    this locally does NOT weaken the deploy contract — it just
+#    makes the dev's pre-push signal faster than the CI one
+#    again, which was the whole point of the 2026-08-26
+#    CI-minimization plan.
+#
+#    Same staging gate as unit: skip on a docs-only / config-only
+#    commit. SKIP_INTEGRATION=1 escapes the gate for trivial pushes
+#    where the dev has already validated the change locally.
+#
+#    If TEST_DATABASE_URL is not set, skip with a hint instead of
+#    failing — the dev's local Postgres may not have a `planner_test`
+#    database yet. The recipe is in docs/operations/runbook.md
+#    § "Local integration setup". This default-off behaviour keeps
+#    the hook friendly to dev machines that haven't been set up.
+#
+#    Local pre-reqs (one-time):
+#      docker compose -f docker-compose.dev.yml up -d postgres
+#      psql -h localhost -U planner -d planner -c "CREATE DATABASE planner_test;"
+#      export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@localhost:5432/planner_test
+#    Add the export to your shell rc / direnv so it persists.
+if [ -n "$SKIP_INTEGRATION" ]; then
+  echo "⏭  pnpm test:integration skipped (SKIP_INTEGRATION=1)"
+elif [ -n "$STAGED_TS_FILES" ]; then
+  if [ -z "$TEST_DATABASE_URL" ]; then
+    printf '\n⏭  pnpm test:integration skipped (TEST_DATABASE_URL not set)\n'
+    printf '  Set up a disposable test database to catch DB / migration / authz\n'
+    printf '  regressions before they hit CI. See docs/operations/runbook.md\n'
+    printf '  § "Local integration setup" for the one-time setup.\n'
+    printf '  Or skip: SKIP_INTEGRATION=1 git push (CI still runs it as the audit gate)\n'
+  else
+    printf '\n▶ pnpm test:integration — disposable Postgres + migration + authz:\n'
+    printf '  (SKIP_INTEGRATION=1 to skip; setup in docs/operations/runbook.md)\n\n'
+    pnpm test:integration
+  fi
+else
+  echo "⏭  pnpm test:integration skipped (no .ts/.tsx staged)"
+fi
+
+# 3) Critical E2E (chromium functional + visual-chromium). Per the
 #    2026-08-26 "E2E moves local" decision, this used to be the
 #    `visual-regression` job in `ci.yml` (3-viewport, ~30 min on
 #    CI). Moving it local saves the free-tier minutes and gives
