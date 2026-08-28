@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { SessionProvider } from "next-auth/react";
+import { auth } from "@/lib/auth/config";
 import "./globals.css";
 
 const inter = Inter({
@@ -26,11 +28,19 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Resolve the session server-side so the client `SessionProvider`
+  // has the initial value without a client-side fetch on mount.
+  // Without this, every client component that calls `useSession()`
+  // (e.g. `set-password-form.tsx` calling `update({ mustChangePassword: false })`)
+  // would throw "useSession must be used within a SessionProvider"
+  // and Next.js would surface a generic "Something went wrong"
+  // page from the global-error boundary.
+  const session = await auth();
   return (
     <html lang="en" className={`${inter.variable} h-full`}>
       <body className="bg-canvas text-fg-primary min-h-full">
-        {children}
+        <SessionProvider session={session}>{children}</SessionProvider>
         {/*
           Sonner toaster. Mounted once at the root so any client
           component (forms, archive buttons) can call `toast(...)`
