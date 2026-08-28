@@ -9,6 +9,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { DirAwareInput, DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
 import { PerFieldAiSuggest, type PerFieldAiField } from "@/components/forms/per-field-ai-suggest";
 import { TranslationPanel } from "@/components/forms/translation-panel";
+import { NavigableArrayField } from "@/components/forms/navigable-array-field";
 import { updateFormatPayloadAction } from "@/app/(app)/app/w/[slug]/planning/actions";
 import { getByCode, resolveLocale, type LocaleCode } from "@/lib/i18n/locales";
 import { type ContentFormat } from "@/lib/format-payload/schemas";
@@ -105,6 +106,24 @@ export function FormatPayloadEditor({
   const boundAction = updateFormatPayloadAction.bind(null, workspaceSlug);
   const [state, formAction, pending] = useActionState(boundAction, initial);
 
+  // "X / Y filled" badge for the disclosure header. Counts
+  // every non-translation leaf value the planner wrote.
+  // The total is the count of "creative" keys we render
+  // for the active format — the badge is a soft progress
+  // signal, not a hard requirement, and lives next to the
+  // Show / Hide toggle.
+  const completion = React.useMemo(() => {
+    const filled = Object.entries(payload).filter(([k, v]) => {
+      if (k === "schemaVersion" || k === "translations") return false;
+      if (v === null || v === undefined) return false;
+      if (typeof v === "string") return v.trim().length > 0;
+      if (Array.isArray(v)) return v.length > 0;
+      if (typeof v === "object") return Object.keys(v as object).length > 0;
+      return true;
+    }).length;
+    return filled;
+  }, [payload]);
+
   // Resolve the workspace locale once; the dir-aware
   // inputs read it from `locale` directly.
   resolveLocale(locale);
@@ -136,7 +155,16 @@ export function FormatPayloadEditor({
     <Card data-testid="format-payload-editor" data-format={format}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <CardTitle>More details</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle>More details</CardTitle>
+            <span
+              className="text-label text-fg-secondary border-border bg-surface-subtle inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-semibold"
+              data-testid="format-payload-completion"
+              aria-label={`${completion} fields filled`}
+            >
+              {completion} filled
+            </span>
+          </div>
           <CardDescription>
             Per-format creative contract — caption, hashtags, scenes, visual direction,
             translations. Everything is optional.
@@ -1538,7 +1566,7 @@ function ScenesField({
 }) {
   const scenes = Array.isArray(payload.scenes) ? (payload.scenes as unknown[]) : [];
   return (
-    <ArrayField
+    <NavigableArrayField
       fieldKey="scenes"
       label="Scenes"
       hint="Position · summary · duration (seconds)"
@@ -1550,6 +1578,8 @@ function ScenesField({
       ]}
       locale={locale}
       editable={editable}
+      layout="slider"
+      entity="Scene"
       onField={onField}
     />
   );
@@ -1565,7 +1595,7 @@ function SlideOutlineField(props: {
     ? (props.payload.slideOutline as unknown[])
     : [];
   return (
-    <ArrayField
+    <NavigableArrayField
       fieldKey="slideOutline"
       label="Slide outline"
       hint="Position · summary · visual direction"
@@ -1577,6 +1607,8 @@ function SlideOutlineField(props: {
       ]}
       locale={props.locale}
       editable={props.editable}
+      layout="slider"
+      entity="Slide"
       onField={props.onField}
     />
   );
@@ -1592,7 +1624,7 @@ function VisualSlidesField(props: {
     ? (props.payload.visualSlides as unknown[])
     : [];
   return (
-    <ArrayField
+    <NavigableArrayField
       fieldKey="visualSlides"
       label="Visual slides"
       hint="Per-slide visual direction (single-image posts)"
@@ -1604,6 +1636,8 @@ function VisualSlidesField(props: {
       ]}
       locale={props.locale}
       editable={props.editable}
+      layout="slider"
+      entity="Slide"
       onField={props.onField}
     />
   );
@@ -1617,7 +1651,7 @@ function ChaptersField(props: {
 }) {
   const rows = Array.isArray(props.payload.chapters) ? (props.payload.chapters as unknown[]) : [];
   return (
-    <ArrayField
+    <NavigableArrayField
       fieldKey="chapters"
       label="Chapters"
       hint="Position · title · starts at (seconds)"
@@ -1629,6 +1663,8 @@ function ChaptersField(props: {
       ]}
       locale={props.locale}
       editable={props.editable}
+      layout="slider"
+      entity="Chapter"
       onField={props.onField}
     />
   );
@@ -1642,7 +1678,7 @@ function OutlineField(props: {
 }) {
   const rows = Array.isArray(props.payload.outline) ? (props.payload.outline as unknown[]) : [];
   return (
-    <ArrayField
+    <NavigableArrayField
       fieldKey="outline"
       label="Outline"
       hint="Heading level · title"
@@ -1653,6 +1689,7 @@ function OutlineField(props: {
       ]}
       locale={props.locale}
       editable={props.editable}
+      layout="list"
       onField={props.onField}
     />
   );
@@ -1666,7 +1703,7 @@ function GuestsField(props: {
 }) {
   const rows = Array.isArray(props.payload.guests) ? (props.payload.guests as unknown[]) : [];
   return (
-    <ArrayField
+    <NavigableArrayField
       fieldKey="guests"
       label="Guests"
       hint="Name · role"
@@ -1677,6 +1714,8 @@ function GuestsField(props: {
       ]}
       locale={props.locale}
       editable={props.editable}
+      layout="list"
+      entity="Guest"
       onField={props.onField}
     />
   );
@@ -1690,7 +1729,7 @@ function RunOfShowField(props: {
 }) {
   const rows = Array.isArray(props.payload.runOfShow) ? (props.payload.runOfShow as unknown[]) : [];
   return (
-    <ArrayField
+    <NavigableArrayField
       fieldKey="runOfShow"
       label="Run of show"
       hint="Start (seconds) · topic"
@@ -1701,153 +1740,9 @@ function RunOfShowField(props: {
       ]}
       locale={props.locale}
       editable={props.editable}
+      layout="list"
       onField={props.onField}
     />
-  );
-}
-
-interface ArrayFieldProps {
-  fieldKey: string;
-  label: string;
-  hint?: string;
-  rows: unknown[];
-  columns: ReadonlyArray<{
-    key: string;
-    label: string;
-    kind: "text" | "number";
-    optional?: boolean;
-  }>;
-  locale: string;
-  editable: boolean;
-  onField: (key: string, value: unknown) => void;
-}
-
-function ArrayField({
-  fieldKey,
-  label,
-  hint,
-  rows,
-  columns,
-  locale,
-  editable,
-  onField,
-}: ArrayFieldProps) {
-  function update(next: unknown[]) {
-    onField(fieldKey, next.length > 0 ? next : undefined);
-  }
-  return (
-    <div className="space-y-1.5">
-      <LabeledField fieldKey={fieldKey} label={label} hint={hint} />
-      <div className="border-border bg-surface rounded-[var(--radius-control)] border p-2">
-        {rows.length === 0 ? <p className="text-label text-fg-muted">No entries yet.</p> : null}
-        <ul className="space-y-2">
-          {rows.map((row, idx) => {
-            const r =
-              row && typeof row === "object" && !Array.isArray(row)
-                ? (row as Record<string, unknown>)
-                : {};
-            return (
-              <li
-                key={idx}
-                className="border-border grid grid-cols-12 items-center gap-2 border-b pb-2 last:border-b-0"
-              >
-                {columns.map((c) => {
-                  const cellId = `${fieldKey}-${idx}-${c.key}`;
-                  const cellVal = r[c.key];
-                  return (
-                    <div
-                      key={c.key}
-                      className={
-                        c.kind === "number" && c.key === "position"
-                          ? "col-span-2"
-                          : c.kind === "text"
-                            ? "col-span-9"
-                            : "col-span-3"
-                      }
-                    >
-                      <label
-                        htmlFor={cellId}
-                        className="text-label text-fg-muted block font-semibold"
-                      >
-                        {c.label}
-                      </label>
-                      <DirAwareInput
-                        id={cellId}
-                        locale={locale}
-                        type={c.kind === "number" ? "number" : "text"}
-                        value={
-                          typeof cellVal === "number" || typeof cellVal === "string"
-                            ? String(cellVal)
-                            : ""
-                        }
-                        readOnly={!editable}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          const nextRow = { ...r };
-                          if (c.kind === "number") {
-                            const n = v ? Number(v) : undefined;
-                            if (n === undefined || !Number.isFinite(n)) {
-                              delete nextRow[c.key];
-                            } else {
-                              nextRow[c.key] = n;
-                            }
-                          } else {
-                            if (!v) {
-                              if (c.optional) delete nextRow[c.key];
-                              else delete nextRow[c.key];
-                            } else {
-                              nextRow[c.key] = v;
-                            }
-                          }
-                          const nextRows = rows.slice();
-                          nextRows[idx] = nextRow;
-                          update(nextRows);
-                        }}
-                      />
-                    </div>
-                  );
-                })}
-                {editable ? (
-                  <div className="col-span-1 flex justify-end">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => update(rows.filter((_, i) => i !== idx))}
-                      aria-label={`Remove row ${idx + 1}`}
-                      className="text-fg-muted hover:text-danger"
-                    >
-                      ×
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="col-span-1" />
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        {editable ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="mt-2"
-            onClick={() => {
-              const nextRow: Record<string, unknown> = {};
-              for (const c of columns) {
-                if (c.kind === "number") {
-                  nextRow[c.key] = rows.length + 1;
-                }
-              }
-              update([...rows, nextRow]);
-            }}
-          >
-            + Add row
-          </Button>
-        ) : null}
-      </div>
-    </div>
   );
 }
 
