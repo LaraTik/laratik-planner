@@ -4,6 +4,7 @@ import {
   exchangeMetaCodeForShortLivedToken,
   exchangeShortLivedForLongLivedToken,
   discoverMetaPages,
+  fetchMetaFacebookPageSnapshot,
   fetchMetaInstagramSnapshot,
   META_SCOPES,
   type MetaTokenResponse,
@@ -463,5 +464,109 @@ describe("fetchMetaInstagramSnapshot — IG insights metric_type", () => {
     expect(snapshot.interactions).toBe(28);
     expect(snapshot.views).toBe(91);
     expect(snapshot.reach).toBe(2401);
+  });
+});
+
+describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial flag", () => {
+  // Regression guard for the 2026-08-28 finding: the Page insights
+  // endpoint silently returned all-null values for `page_views` and
+  // `page_post_engagements` when the URL was missing
+  // `metric_type=total_value`. The IG fix (3dc7fa2) added this
+  // parameter for the IG path; the Page path was missed. The
+  // analytics page therefore showed `Followers: <n>` with the
+  // other four columns blank for every Page channel, and the
+  // `partial: false` flag in `sourceMetadata` hid the gap from
+  // the user.
+  const baseGraph = "https://graph.facebook.com/v25.0";
+  const pageId = "939269935939946";
+  const accessToken = "page-token";
+
+  it("sends metric_type=total_value on the Page insights call", async () => {
+    let capturedInsightsUrl: string | null = null;
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith(`${baseGraph}/${pageId}/insights`)) {
+        capturedInsightsUrl = url;
+        return jsonResponse(200, {
+          data: [
+            { name: "page_impressions_unique", period: "day", values: [{ value: 2401 }] },
+            { name: "page_views", period: "day", values: [{ value: 91 }] },
+            { name: "page_post_engagements", period: "day", values: [{ value: 28 }] },
+          ],
+        });
+      }
+      if (url.startsWith(`${baseGraph}/${pageId}?`)) {
+        return jsonResponse(200, {
+          id: pageId,
+          name: "Food Game",
+          fan_count: 69,
+          followers_count: 69,
+        });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaFacebookPageSnapshot({
+      accessToken,
+      pageId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+
+    expect(capturedInsightsUrl).not.toBeNull();
+    const params = new URL(capturedInsightsUrl!).searchParams;
+    // The bug regression: the URL MUST include `metric_type=total_value`.
+    // If a future refactor drops this parameter, the test fails and
+    // `page_views` + `page_post_engagements` silently go to null.
+    expect(params.get("metric_type")).toBe("total_value");
+    expect(params.get("period")).toBe("day");
+    expect(params.get("metric")).toBe("page_impressions_unique,page_views,page_post_engagements");
+    // And the snapshot actually populated the values (not null).
+    expect(snapshot.followerCount).toBe(69);
+    expect(snapshot.reach).toBe(2401);
+    expect(snapshot.views).toBe(91);
+    expect(snapshot.interactions).toBe(28);
+    // And the partial flag is FALSE because all fields are populated.
+    expect((snapshot.sourceMetadata as { partial?: boolean }).partial).toBe(false);
+  });
+
+  it("marks the snapshot as partial when the follower is captured but insights are null", async () => {
+    // Simulates the 2026-08-28 bug surface: the basic fields call
+    // succeeds (fan_count=69) but the insights call returns 200 with
+    // an empty `data` array (e.g. brand new page, no engagement
+    // yet). Pre-fix the partial flag was `false`; post-fix it must
+    // be `true` so the analytics page can show the "partial" pill
+    // and the operator can see that the row is incomplete.
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith(`${baseGraph}/${pageId}/insights`)) {
+        return jsonResponse(200, { data: [] });
+      }
+      if (url.startsWith(`${baseGraph}/${pageId}?`)) {
+        return jsonResponse(200, {
+          id: pageId,
+          name: "Food Game",
+          fan_count: 69,
+          followers_count: 69,
+        });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaFacebookPageSnapshot({
+      accessToken,
+      pageId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+    expect(snapshot.followerCount).toBe(69);
+    expect(snapshot.reach).toBeNull();
+    expect(snapshot.views).toBeNull();
+    expect(snapshot.interactions).toBeNull();
+    // The partial flag is TRUE because at least one insight is null.
+    expect((snapshot.sourceMetadata as { partial?: boolean }).partial).toBe(true);
+    expect((snapshot.sourceMetadata as { reason?: string }).reason).toBe(
+      "page_insights_unavailable",
+    );
   });
 });

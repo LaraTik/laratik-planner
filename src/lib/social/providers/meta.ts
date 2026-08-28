@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { isSocialProviderError, providerRequest, SocialProviderError } from "@/lib/social/http";
+import { captureError } from "@/lib/observability/sentry";
 import type { SocialCredentials } from "@/lib/social/crypto";
 import type {
   ConnectedProfile,
@@ -453,15 +454,54 @@ export async function fetchMetaFacebookPageSnapshot(args: {
   // endpoint. We attempt the call and treat empty datasets as `null`,
   // never `0` — the plan calls out "missing/empty insight datasets
   // become `null`, never zero".
-  const insights = await fetchMetaPageDailyInsights({
-    accessToken,
-    pageId,
-    apiVersion,
-  }).catch(() => null);
+  //
+  // 2026-08-28: the previous shape was `.catch(() => null)` which
+  // silently swallowed the real error code. The operator can no
+  // longer diagnose why insights are missing (permission_denied vs
+  // invalid_response vs network). Capture every caught error to
+  // Sentry with the page id + error code + request id so future
+  // debugging is one Sentry search away.
+  let insights: Awaited<ReturnType<typeof fetchMetaPageDailyInsights>> = null;
+  try {
+    insights = await fetchMetaPageDailyInsights({
+      accessToken,
+      pageId,
+      apiVersion,
+    });
+  } catch (insightsErr) {
+    captureError("social.meta.page_insights_failed", insightsErr, {
+      pageId,
+      accessTokenLast4: accessToken.slice(-4),
+      errorCode: isSocialProviderError(insightsErr) ? insightsErr.code : "unknown",
+      requestId: isSocialProviderError(insightsErr) ? insightsErr.requestId : null,
+    });
+    if (isSocialProviderError(insightsErr) && insightsErr.code === "permission_denied") {
+      insights = null;
+    } else {
+      throw insightsErr;
+    }
+  }
+  // The `partial` flag is set when ANY field the worker tried to
+  // capture is null. Pre-2026-08-28 the flag was set only when the
+  // follower was null, which made the analytics page's "partial"
+  // pill invisible in the common case where insights are missing
+  // but the follower is captured. The page-level insights call
+  // frequently returns null for brand-new pages or for pages whose
+  // access token is missing a scope, and the operator needs to see
+  // that.
+  const insightsPartial =
+    insights === null ||
+    insights.reach === null ||
+    insights.views === null ||
+    insights.interactions === null;
   const sourceMetadata: Record<string, string | number | boolean | null> = {
-    partial: follower === null,
+    partial: follower === null || insightsPartial,
   };
-  if (follower === null) sourceMetadata.reason = "fan_count_unavailable";
+  if (follower === null && !insightsPartial) {
+    sourceMetadata.reason = "fan_count_unavailable";
+  } else if (insightsPartial) {
+    sourceMetadata.reason = "page_insights_unavailable";
+  }
   const observedAt = new Date();
   const hash = hashSnapshot([
     apiVersion,
@@ -499,8 +539,18 @@ async function fetchMetaPageDailyInsights(args: {
   interactions: number | null;
 } | null> {
   const url = new URL(`${graphBaseUrl(args.apiVersion)}/${args.pageId}/insights`);
+  // `page_impressions_unique` is a daily time-series metric. `page_views`
+  // and `page_post_engagements` are daily total metrics. Meta requires
+  // `metric_type=total_value` for the total ones, parallel to the IG
+  // fix in 3dc7fa2. Without it, the Graph API returns either an error
+  // or only the time-series metric (silently dropping the total ones
+  // and producing all-null insights for `reach` / `views` /
+  // `interactions`). Pre-2026-08-28 this param was missing here and
+  // the analytics page showed only the follower count for Page
+  // channels.
   url.searchParams.set("metric", "page_impressions_unique,page_views,page_post_engagements");
   url.searchParams.set("period", "day");
+  url.searchParams.set("metric_type", "total_value");
   url.searchParams.set("access_token", args.accessToken);
   let parsed: PageInsightsResponse;
   try {
@@ -547,16 +597,46 @@ export async function fetchMetaInstagramSnapshot(args: {
   const following = typeof parsed.follows_count === "number" ? parsed.follows_count : null;
   // Account-level daily insights: views, reach, engaged accounts,
   // interactions. Empty datasets are `null`, never `0`.
-  const insights = await fetchMetaIgAccountDailyInsights({
-    accessToken,
-    igUserId,
-    apiVersion,
-  }).catch(() => null);
+  // 2026-08-28: same Sentry capture as the Page branch. The
+  // previous `.catch(() => null)` silently swallowed the actual
+  // error code; now we log the error code + request id so a
+  // future operator searching Sentry can see exactly why an IG
+  // account's insights are missing.
+  let insights: Awaited<ReturnType<typeof fetchMetaIgAccountDailyInsights>> = null;
+  try {
+    insights = await fetchMetaIgAccountDailyInsights({
+      accessToken,
+      igUserId,
+      apiVersion,
+    });
+  } catch (insightsErr) {
+    captureError("social.meta.ig_insights_failed", insightsErr, {
+      igUserId,
+      accessTokenLast4: accessToken.slice(-4),
+      errorCode: isSocialProviderError(insightsErr) ? insightsErr.code : "unknown",
+      requestId: isSocialProviderError(insightsErr) ? insightsErr.requestId : null,
+    });
+    if (isSocialProviderError(insightsErr) && insightsErr.code === "permission_denied") {
+      insights = null;
+    } else {
+      throw insightsErr;
+    }
+  }
+  // Same partial-flag rule as the Page branch: ANY null field
+  // makes the row partial, not just the follower.
+  const insightsPartial =
+    insights === null ||
+    insights.reach === null ||
+    insights.views === null ||
+    insights.engagedAccounts === null ||
+    insights.interactions === null;
   const sourceMetadata: Record<string, string | number | boolean | null> = {
-    partial: follower === null,
+    partial: follower === null || insightsPartial,
   };
-  if (follower === null) {
-    sourceMetadata.reason = sourceMetadata.reason ?? "below_provider_threshold";
+  if (follower === null && !insightsPartial) {
+    sourceMetadata.reason = "below_provider_threshold";
+  } else if (insightsPartial) {
+    sourceMetadata.reason = "ig_insights_unavailable";
   }
   const observedAt = new Date();
   const hash = hashSnapshot([
