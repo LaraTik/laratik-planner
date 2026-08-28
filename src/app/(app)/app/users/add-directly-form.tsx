@@ -4,6 +4,7 @@ import * as React from "react";
 import { useActionState } from "react";
 import { AlertCircle, CheckCircle2, Copy, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
@@ -191,13 +192,11 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
             htmlFor="add-must-change"
             className="text-body text-fg-primary flex items-center gap-2"
           >
-            <input
+            <Checkbox
               id="add-must-change"
-              type="checkbox"
               name="mustChangePassword"
               defaultChecked
               aria-describedby="add-must-change-help"
-              className="h-4 w-4 cursor-pointer"
               data-testid="add-directly-must-change"
             />
             Force password change on first login
@@ -208,15 +207,23 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
           </p>
         </div>
 
-        <label className="text-body text-fg-primary flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="grantsAgencyAdmin"
-            className="h-4 w-4 cursor-pointer"
-            data-testid="add-directly-grants-admin"
-          />
-          Grant agency admin
-        </label>
+        <div className="space-y-1">
+          <label
+            htmlFor="add-grants-admin"
+            className="text-body text-fg-primary flex items-center gap-2"
+          >
+            <Checkbox
+              id="add-grants-admin"
+              name="grantsAgencyAdmin"
+              data-testid="add-directly-grants-admin"
+            />
+            Grant agency admin
+          </label>
+          <p id="add-grants-admin-help" className="text-fg-muted text-label pl-6">
+            Agency admins can manage members, workspaces, and all agency settings. Only grant to
+            people you trust with full access.
+          </p>
+        </div>
 
         {workspaces.length > 0 ? (
           <fieldset className="space-y-2">

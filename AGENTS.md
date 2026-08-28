@@ -183,6 +183,10 @@ Settings is a **nested group in the main sidebar**, not an inline nav inside a s
 - **New section** = add a `SidebarSubLink` in `src/components/app-shell/sidebar.tsx`, an anchor `id` on a `<Card>` or `<fieldset>` in the page, and the corresponding `Section` shape in the page's data load. Don't add a route unless the section needs its own server-only auth path.
 - **Settings pages are not full-page replacements of the sidebar.** They are scrollable surfaces with the sidebar as the primary nav. The settings page may show a compact "overview strip" linking each section (the current implementation does this), but never a duplicate vertical nav.
 
+## Form controls
+
+For native HTML form controls, use the shared primitives in `src/components/forms/` (FormField, FormSubmitButton, PasswordInput, PasswordStrengthMeter). For checkboxes, **use `<Checkbox>` from `src/components/ui/checkbox.tsx`** — never raw `<input type="checkbox">`. The Radix-powered primitive bakes in the `checkbox` role, `aria-checked` state, keyboard handling (space to toggle), and indeterminate state, which are easy to get wrong with a native input. Pair the checkbox with a `<label htmlFor={id}>` and a helper `<p id="${id}-help">` (linked via `aria-describedby`) when the affordance needs explanation — see `app/users/add-directly-form.tsx` for the canonical pattern.
+
 ## Content `formatPayload` rule
 
 Per StudioFlow §11/§17/§23: Quick Create has exactly 4 fields (title, format, planned date, short brief). Format-specific structured fields (Hook, Main message, CTA, scenes, captions, references, etc.) live in `content_item.format_payload` (jsonb) and are edited under a **More details** disclosure on the content detail page.
