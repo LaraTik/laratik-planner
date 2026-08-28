@@ -11,6 +11,7 @@ import { SectionCard } from "@/components/workspace/section-card";
 import { SettingsHealth } from "../_components/settings-health";
 import { SettingsSectionNav } from "../_components/settings-section-nav";
 import { LastSaved } from "../_components/last-saved";
+import { LeadTimeDeadline } from "../_components/lead-time-deadline";
 import { LeadTimesForm } from "../_components/lead-times-form";
 
 /**
@@ -64,6 +65,18 @@ export default async function SettingsLeadTimesPage({
           ...values,
         }}
       />
+      <SectionCard
+        id="lead-times-context"
+        title="What this drives"
+        fullWidth
+        aria-label="What the lead times drive"
+        data-testid="settings-section-lead-times-context"
+      >
+        <p className="text-body text-fg-secondary mb-3 max-w-3xl">
+          With the current buffers, a post started today lands on the publish-ready stage on:
+        </p>
+        <LeadTimeDeadline totalDays={total} today={new Date()} timezone={workspace.timezone} />
+      </SectionCard>
       <SectionCard
         id="lead-times"
         title="Lead time buffers"
