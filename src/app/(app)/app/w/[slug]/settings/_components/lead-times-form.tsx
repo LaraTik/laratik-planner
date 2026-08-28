@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useActionState } from "react";
-import { Sparkles, Loader2, Check, X, RotateCcw } from "lucide-react";
+import { Sparkles, Loader2, Check, X, RotateCcw, CalendarCheck2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,14 @@ export function LeadTimesForm({
   approvalMode: "simple" | "internal_then_client";
   timezone: string;
 }) {
+  // `today` is captured once at component mount so the AI
+  // preview's deadline-impact line is stable while the user
+  // is interacting (and matches the page-level "What this
+  // drives" card). For long-running pages the date could
+  // drift past midnight; the planning surface re-renders
+  // with the live "today" at action time.
+  const today = React.useMemo(() => new Date(), []);
+
   const action = updateLeadTimesSettingsAction.bind(null, slug);
   const [state, formAction] = useActionState<SettingsActionState, FormData>(action, {});
   const [draft, setDraft] = React.useState<LeadTimeValues>(values);
@@ -187,6 +195,23 @@ export function LeadTimesForm({
               approval flow. Review the before/after per stage, then Apply to commit or Discard to
               ignore.
             </p>
+            {previewTotal !== total && previewTotal > 0 ? (
+              <p
+                className="text-label text-fg-secondary inline-flex items-center gap-1"
+                data-testid="lead-times-ai-preview-deadline-impact"
+              >
+                <CalendarCheck2 className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />
+                If applied, the deadline moves from{" "}
+                <span className="text-fg-primary line-through">
+                  {formatDeadlineLabel(addBusinessDaysInline(today, total), timezone)}
+                </span>{" "}
+                to{" "}
+                <span className="text-fg-primary font-bold">
+                  {formatDeadlineLabel(addBusinessDaysInline(today, previewTotal), timezone)}
+                </span>
+                {previewTotal < total ? " — earlier." : " — later."}
+              </p>
+            ) : null}
             <ul className="grid gap-2 sm:grid-cols-2">
               {STAGE_LABELS.map(({ key, label }) => {
                 const before = draft[key];
@@ -354,4 +379,38 @@ function LeadTimeField({
       </div>
     </div>
   );
+}
+
+/**
+ * Add N business days (Mon-Fri) to a start Date. Mirrors the
+ * helper in `lead-time-deadline.tsx` — duplicated here so the
+ * AI preview can compute the before/after deadline impact
+ * without re-implementing the math at the call site.
+ */
+function addBusinessDaysInline(start: Date, days: number): Date {
+  const d = new Date(start);
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) added++;
+  }
+  return d;
+}
+
+function formatDeadlineLabel(date: Date, timezone: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      timeZone: timezone,
+    }).format(date);
+  } catch {
+    return new Intl.DateTimeFormat("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    }).format(date);
+  }
 }
