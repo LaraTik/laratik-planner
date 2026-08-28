@@ -8,19 +8,14 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
-import { SettingsBackLink } from "../_components/settings-back-link";
 import { SettingsHealth } from "../_components/settings-health";
+import { SettingsSectionNav } from "../_components/settings-section-nav";
+import { LastSaved } from "../_components/last-saved";
 import { LeadTimesForm } from "../_components/lead-times-form";
 
 /**
  * /app/w/[slug]/settings/lead-times — the Lead times section
- * page (Settings refactor Phase A).
- *
- * The 4 lead times are the number of business days between an
- * adjacent pair of workflow stages. They drive every
- * "auto-suggest a planned date" the planning surface shows —
- * and they compound, so a 2-day buffer on every stage adds 8
- * business days to the post's total cycle time.
+ * page (Settings refactor Phase A + D).
  */
 export default async function SettingsLeadTimesPage({
   params,
@@ -50,10 +45,8 @@ export default async function SettingsLeadTimesPage({
   const total = Object.values(values).reduce((sum, n) => sum + n, 0);
 
   return (
-    <div className="space-y-6">
-      <SettingsBackLink slug={slug} />
+    <div className="space-y-4">
       <PageHeader
-        eyebrow="Settings"
         title={
           <span className="inline-flex items-center gap-2">
             <Clock className="text-fg-muted h-6 w-6" aria-hidden="true" />
@@ -62,6 +55,7 @@ export default async function SettingsLeadTimesPage({
         }
         description="The buffer between each pair of workflow stages. These four numbers drive every 'auto-suggest a planned date' the planning surface shows."
       />
+      <SettingsSectionNav slug={slug} current="lead-times" />
       <SettingsHealth
         slug={slug}
         section="lead-times"
@@ -84,6 +78,9 @@ export default async function SettingsLeadTimesPage({
             Read-only. Workspace manager access is required to edit these settings.
           </p>
         )}
+        <div className="border-border mt-6 border-t pt-4">
+          <LastSaved at={settings?.updatedAt ?? null} />
+        </div>
       </SectionCard>
     </div>
   );

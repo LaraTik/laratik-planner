@@ -209,38 +209,31 @@ export function SettingsHealth({ section, slug, metrics }: SettingsHealthProps) 
       aria-label={`${SECTION_LABEL[section]} health`}
       data-testid={`settings-health-${section}`}
     >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 flex-1">
-            <div className="mb-1 flex flex-wrap items-center gap-2">
-              <Sparkles className="text-primary h-4 w-4" aria-hidden="true" />
-              <CardTitle className="text-base">Settings Health</CardTitle>
-              <span
-                className={cn(
-                  "text-label inline-flex items-center gap-1 font-semibold",
-                  COVER_CLASS[status],
-                )}
-                data-testid={`settings-health-${section}-status`}
-              >
-                <CoverIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                {coverLabel}
-              </span>
-            </div>
-            <p className="text-body text-fg-secondary">{SECTION_BLURB[section]}</p>
-          </div>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Sparkles className="text-primary h-4 w-4" aria-hidden="true" />
+          <CardTitle className="text-base">Settings Health</CardTitle>
+          <span
+            className={cn(
+              "text-label inline-flex items-center gap-1 font-semibold",
+              COVER_CLASS[status],
+            )}
+            data-testid={`settings-health-${section}-status`}
+          >
+            <CoverIcon className="h-3.5 w-3.5" aria-hidden="true" />
+            {coverLabel}
+          </span>
           <Link
             href={`/app/w/${slug}/settings`}
-            className="text-label text-primary inline-flex items-center gap-1 font-semibold hover:underline"
+            className="text-label text-primary ml-auto inline-flex items-center gap-1 font-semibold hover:underline"
           >
             Settings overview
             <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         </div>
+        <p className="text-label text-fg-muted">{SECTION_BLURB[section]}</p>
         {suggestions.length > 0 ? (
-          <ul
-            className="border-border bg-surface space-y-1 rounded-[var(--radius-control)] border p-3"
-            data-testid={`settings-health-${section}-suggestions`}
-          >
+          <ul className="space-y-1" data-testid={`settings-health-${section}-suggestions`}>
             {suggestions.map((s, i) => (
               <li
                 key={i}

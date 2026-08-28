@@ -8,20 +8,14 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
-import { SettingsBackLink } from "../_components/settings-back-link";
 import { SettingsHealth } from "../_components/settings-health";
+import { SettingsSectionNav } from "../_components/settings-section-nav";
+import { LastSaved } from "../_components/last-saved";
 import { ApprovalsForm } from "../_components/approvals-form";
 
 /**
- * /app/w/[slug]/settings/approvals — the Approval mode section
- * page (Settings refactor Phase A).
- *
- * The mode is one of:
- *   - "simple"                Internal review only.
- *   - "internal_then_client"  Internal review, then client review.
- *
- * Changing this ripples into the workflow; the `creative_approval`
- * stage only appears in the second mode.
+ * /app/w/[slug]/settings/approvals — the Approval mode
+ * section page (Settings refactor Phase A + D).
  */
 export default async function SettingsApprovalsPage({
   params,
@@ -44,10 +38,8 @@ export default async function SettingsApprovalsPage({
   const currentMode = (settings?.approvalMode ?? "simple") as "simple" | "internal_then_client";
 
   return (
-    <div className="space-y-6">
-      <SettingsBackLink slug={slug} />
+    <div className="space-y-4">
       <PageHeader
-        eyebrow="Settings"
         title={
           <span className="inline-flex items-center gap-2">
             <CheckCircle2 className="text-fg-muted h-6 w-6" aria-hidden="true" />
@@ -56,6 +48,7 @@ export default async function SettingsApprovalsPage({
         }
         description="How many approval steps a piece of content needs before publish. Pick the mode that matches how the brand stakeholders actually work."
       />
+      <SettingsSectionNav slug={slug} current="approvals" />
       <SettingsHealth slug={slug} section="approvals" metrics={{ mode: currentMode }} />
       <SectionCard
         id="approvals"
@@ -71,6 +64,9 @@ export default async function SettingsApprovalsPage({
             Read-only. Workspace manager access is required to edit these settings.
           </p>
         )}
+        <div className="border-border mt-6 border-t pt-4">
+          <LastSaved at={settings?.updatedAt ?? null} />
+        </div>
       </SectionCard>
     </div>
   );

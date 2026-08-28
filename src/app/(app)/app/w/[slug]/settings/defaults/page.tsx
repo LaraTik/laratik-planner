@@ -13,18 +13,14 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
-import { SettingsBackLink } from "../_components/settings-back-link";
 import { SettingsHealth } from "../_components/settings-health";
+import { SettingsSectionNav } from "../_components/settings-section-nav";
+import { LastSaved } from "../_components/last-saved";
 import { DefaultsForm } from "../_components/defaults-form";
 
 /**
  * /app/w/[slug]/settings/defaults — the Default assignments
- * section page (Settings refactor Phase A).
- *
- * Pre-fills the matching role on every new content item;
- * per-item overrides always win. The dropdown options are
- * filtered by workspace role so a planner can't accidentally
- * pick a viewer as the default designer.
+ * section page (Settings refactor Phase A + D).
  */
 export default async function SettingsDefaultsPage({
   params,
@@ -67,10 +63,8 @@ export default async function SettingsDefaultsPage({
   ]);
 
   return (
-    <div className="space-y-6">
-      <SettingsBackLink slug={slug} />
+    <div className="space-y-4">
       <PageHeader
-        eyebrow="Settings"
         title={
           <span className="inline-flex items-center gap-2">
             <UserCog className="text-fg-muted h-6 w-6" aria-hidden="true" />
@@ -79,6 +73,7 @@ export default async function SettingsDefaultsPage({
         }
         description="The four people pre-filled on every new content item. Per-item overrides always win — the default is a shortcut, not a rule."
       />
+      <SettingsSectionNav slug={slug} current="defaults" />
       <SettingsHealth
         slug={slug}
         section="defaults"
@@ -116,6 +111,9 @@ export default async function SettingsDefaultsPage({
             Read-only. Workspace manager access is required to edit these settings.
           </p>
         )}
+        <div className="border-border mt-6 border-t pt-4">
+          <LastSaved at={settings?.updatedAt ?? null} />
+        </div>
       </SectionCard>
     </div>
   );
