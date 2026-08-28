@@ -3,44 +3,40 @@ import * as React from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Trash2, Type as TypeIcon } from "lucide-react";
-import {
-  Inter,
-  Roboto,
-  Open_Sans,
-  Lato,
-  Montserrat,
-  Poppins,
-  Playfair_Display,
-  Merriweather,
-  Source_Sans_3,
-  Raleway,
-  Nunito,
-  Work_Sans,
-  Fira_Sans,
-  IBM_Plex_Sans,
-} from "next/font/google";
 import { createFontAssetAction } from "./actions";
 import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { Card } from "@/components/ui/card";
+import { Combobox } from "@/components/ui/combobox";
 import { FormField } from "@/components/forms/form-field";
-import { Input } from "@/components/ui/input";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
 import { Button } from "@/components/ui/button";
+import {
+  TYPOGRAPHY_OPTIONS,
+  fontClassFor,
+  KNOWN_FAMILY_NAMES,
+} from "@/lib/brand/typography-families";
 
 /**
  * TypographyForm — create form for the brand-kit Typography section.
  *
- * Fields: name, family (text input with datalist of common Google
- * Fonts), weight (100-900 in steps of 100), role (Headline / Body /
- * Accent / Mono). A live preview card shows the sample text in the
- * currently-selected family + weight using the `next/font` loader so
- * the user gets an honest preview without FOUT.
+ * Phase 5 (2026-08-28) replaces the previous `<datalist>` family
+ * picker with a proper searchable Combobox (see
+ * `src/components/ui/combobox.tsx`). The dropdown groups families
+ * into Sans / Serif / Display / Mono, and each option row renders
+ * the family name in its actual font so the planner sees a live
+ * preview without leaving the dropdown.
  *
- * The 14 families in the datalist are pre-imported via
- * `next/font/google` at module load. Any other family name falls
- * back to a generic CSS `font-family` declaration (the page still
- * renders, but the user sees a system-font preview until they
- * pick a known family).
+ * The 14 families are pre-imported via `next/font/google` at
+ * module load (see `lib/brand/typography-families.ts`) so the
+ * preview is honest — no FOUT, no `@import` round-trip. Families
+ * outside the catalog are accepted as free-text (the form
+ * continues to allow custom family names like "Caveat" or a
+ * brand-paid license like "Söhne").
+ *
+ * Fields: name, family (Combobox), weight (100-900 step 100),
+ * role (Headline / Body / Accent / Mono). The live preview card
+ * below the form renders the sample text in the currently-selected
+ * family + weight.
  */
 
 type FontRole = "headline" | "body" | "accent" | "mono";
@@ -53,85 +49,12 @@ const ROLES: { value: FontRole; label: string }[] = [
 
 const SAMPLE_TEXT = "The quick brown fox jumps over the lazy dog";
 
-// Pre-load the 14 datalist families so the live preview can use
-// the real font. `next/font/google` resolves the font at build
-// time and serves it from the static asset pipeline (no FOUT, no
-// render-blocking CSS @import).
-const inter = Inter({ subsets: ["latin"], display: "swap" });
-const roboto = Roboto({ subsets: ["latin"], weight: ["400", "700"], display: "swap" });
-const openSans = Open_Sans({ subsets: ["latin"], display: "swap" });
-const lato = Lato({ subsets: ["latin"], weight: ["400", "700"], display: "swap" });
-const montserrat = Montserrat({ subsets: ["latin"], display: "swap" });
-const poppins = Poppins({ subsets: ["latin"], weight: ["400", "700"], display: "swap" });
-const playfair = Playfair_Display({ subsets: ["latin"], display: "swap" });
-const merriweather = Merriweather({ subsets: ["latin"], weight: ["400", "700"], display: "swap" });
-const sourceSans = Source_Sans_3({ subsets: ["latin"], display: "swap" });
-const raleway = Raleway({ subsets: ["latin"], display: "swap" });
-const nunito = Nunito({ subsets: ["latin"], display: "swap" });
-const workSans = Work_Sans({ subsets: ["latin"], display: "swap" });
-const firaSans = Fira_Sans({ subsets: ["latin"], weight: ["400", "700"], display: "swap" });
-const ibmPlexSans = IBM_Plex_Sans({ subsets: ["latin"], display: "swap" });
-
-const KNOWN_FAMILIES = [
-  "Inter",
-  "Roboto",
-  "Open Sans",
-  "Lato",
-  "Montserrat",
-  "Poppins",
-  "Playfair Display",
-  "Merriweather",
-  "Source Sans Pro",
-  "Raleway",
-  "Nunito",
-  "Work Sans",
-  "Fira Sans",
-  "IBM Plex Sans",
-] as const;
-
-type KnownFamily = (typeof KNOWN_FAMILIES)[number];
-
-function fontClassFor(family: string): string | null {
-  switch (family as KnownFamily) {
-    case "Inter":
-      return inter.className;
-    case "Roboto":
-      return roboto.className;
-    case "Open Sans":
-      return openSans.className;
-    case "Lato":
-      return lato.className;
-    case "Montserrat":
-      return montserrat.className;
-    case "Poppins":
-      return poppins.className;
-    case "Playfair Display":
-      return playfair.className;
-    case "Merriweather":
-      return merriweather.className;
-    case "Source Sans Pro":
-      return sourceSans.className;
-    case "Raleway":
-      return raleway.className;
-    case "Nunito":
-      return nunito.className;
-    case "Work Sans":
-      return workSans.className;
-    case "Fira Sans":
-      return firaSans.className;
-    case "IBM Plex Sans":
-      return ibmPlexSans.className;
-    default:
-      return null;
-  }
-}
-
 export function TypographyForm({ slug }: { slug: string }) {
   const [state, action] = useActionState(
     createFontAssetAction.bind(null, slug),
     {} as { error?: string; success?: boolean },
   );
-  const [family, setFamily] = React.useState("Inter");
+  const [family, setFamily] = React.useState<string>(KNOWN_FAMILY_NAMES[0] ?? "Inter");
   const [weight, setWeight] = React.useState(400);
   const [role, setRole] = React.useState<FontRole>("headline");
   const formRef = React.useRef<HTMLFormElement>(null);
@@ -156,24 +79,19 @@ export function TypographyForm({ slug }: { slug: string }) {
         </FormField>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <FormField id="typography-family" label="Family" required>
-            <Input
-              id="typography-family"
-              className="mt-0"
-              name="family"
-              required
-              maxLength={120}
+          <FormField id="typography-family" label="Family" required hint="Catalog + free-text">
+            <Combobox
               value={family}
-              onChange={(e) => setFamily(e.target.value)}
-              list="typography-known-families"
-              data-testid="typography-family-input"
+              onChange={setFamily}
+              name="family"
+              options={TYPOGRAPHY_OPTIONS}
+              placeholder="Pick a family…"
+              ariaLabel="Typography family"
+              triggerTestId="typography-family-input"
+              inputTestId="typography-family-search"
+              allowCustom
             />
           </FormField>
-          <datalist id="typography-known-families">
-            {KNOWN_FAMILIES.map((f) => (
-              <option key={f} value={f} />
-            ))}
-          </datalist>
 
           <FormField id="typography-weight" label="Weight" required>
             <input

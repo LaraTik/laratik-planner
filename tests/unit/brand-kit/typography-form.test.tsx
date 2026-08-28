@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // `useFormStatus` is a React 19 server-action hook. Mock it so
@@ -55,9 +55,9 @@ function renderForm() {
 describe("TypographyForm", () => {
   it("renders the name, family, weight, role inputs and the submit button", () => {
     renderForm();
-    // FormField renders the required marker as a trailing '*', so the
-    // label text is "Name *" — match loosely.
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
+    // The family field is now a Combobox trigger (a button, not
+    // an <input>) — assert by testid.
     expect(screen.getByTestId("typography-family-input")).toBeInTheDocument();
     expect(screen.getByTestId("typography-weight-input")).toBeInTheDocument();
     expect(screen.getByTestId("typography-role-input")).toBeInTheDocument();
@@ -79,14 +79,26 @@ describe("TypographyForm", () => {
     expect(weightInput.step).toBe("100");
   });
 
-  it("updates the live preview when the family input changes", async () => {
+  it("updates the live preview when a different family is picked from the Combobox", async () => {
     const user = userEvent.setup();
     renderForm();
-    const familyInput = screen.getByTestId("typography-family-input");
-    await user.clear(familyInput);
-    await user.type(familyInput, "Roboto");
+    const trigger = screen.getByTestId("typography-family-input");
+    await user.click(trigger);
+    await user.click(screen.getByTestId("typography-family-search-option-Roboto"));
     const preview = screen.getByTestId("typography-preview");
     expect(preview).toHaveTextContent(/Roboto 400/);
+  });
+
+  it("accepts a free-text family (e.g. a paid brand font) via the Combobox", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const trigger = screen.getByTestId("typography-family-input");
+    await user.click(trigger);
+    const search = screen.getByTestId("typography-family-search");
+    await user.type(search, "Söhne");
+    await user.keyboard("{Enter}");
+    const preview = screen.getByTestId("typography-preview");
+    expect(preview).toHaveTextContent(/Söhne 400/);
   });
 
   it("updates the live preview when the weight changes", async () => {
@@ -107,15 +119,50 @@ describe("TypographyForm", () => {
     expect(submit).toHaveTextContent(/adding/i);
   });
 
-  it("exposes the known Google Fonts in a datalist for autocomplete", () => {
+  it("exposes the 14 known Google Fonts in the Combobox catalog", async () => {
+    const user = userEvent.setup();
     renderForm();
-    const datalist = document.getElementById("typography-known-families");
-    expect(datalist).not.toBeNull();
-    const options = datalist?.querySelectorAll("option") ?? [];
-    const values = Array.from(options).map((o) => o.value);
-    expect(values).toContain("Inter");
-    expect(values).toContain("Roboto");
-    expect(values).toContain("Playfair Display");
-    expect(values).toContain("IBM Plex Sans");
+    const trigger = screen.getByTestId("typography-family-input");
+    await user.click(trigger);
+    // Every catalog family should be reachable as an option row.
+    for (const family of [
+      "Inter",
+      "Roboto",
+      "Lato",
+      "Montserrat",
+      "Poppins",
+      "Open Sans",
+      "Source Sans 3",
+      "Nunito",
+      "Work Sans",
+      "IBM Plex Sans",
+      "Playfair Display",
+      "Merriweather",
+      "Raleway",
+      "Fira Sans",
+    ]) {
+      expect(screen.getByTestId(`typography-family-search-option-${family}`)).toBeInTheDocument();
+    }
+  });
+
+  it("groups the catalog by Sans / Serif / Display / Mono", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const trigger = screen.getByTestId("typography-family-input");
+    await user.click(trigger);
+    // The category headers are aria-hidden on the Combobox listbox.
+    // The role <option value="mono"> is a separate element on the
+    // page, so use a query that scopes to the listbox.
+    const listbox = screen.getByRole("listbox");
+    for (const category of ["Sans", "Serif", "Display", "Mono"]) {
+      expect(within(listbox).getByText(category)).toBeInTheDocument();
+    }
+  });
+
+  it("emits a hidden form input carrying the current family value", () => {
+    const { container } = renderForm();
+    const hidden = container.querySelector('input[type="hidden"][name="family"]');
+    expect(hidden).not.toBeNull();
+    expect((hidden as HTMLInputElement).value).toBe("Inter");
   });
 });
