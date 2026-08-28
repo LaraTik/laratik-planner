@@ -9,6 +9,7 @@ import { listCommentsForItem } from "@/lib/discussions/service";
 import { getWorkspaceRoles } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
+import { hasPlatformPermission } from "@/lib/auth/platform-access";
 import { statusBadgeVariant, humanStatus, humanFormat } from "@/lib/content/status";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,8 @@ import { DeliverySection } from "./delivery-section";
 import { PublishingSection } from "./publishing-section";
 import { DiscussionSection } from "./discussion-section";
 import { AiAssistanceSection } from "./ai-assistance-section";
+import { ResetIdeaSection } from "./reset-idea-section";
+import { getResetIdeaCounts, EMPTY_RESET_IDEA_COUNTS } from "@/lib/content/reset-idea";
 import { Button } from "@/components/ui/button";
 import { EditIdeaButton } from "./edit-button";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -78,6 +81,17 @@ export default async function ContentDetailPage({
     // gracefully (the manager invites via Settings or waits for a
     // designer to self-claim).
     listWorkspaceDesigners(actor, ws.id).catch(() => []),
+  ]);
+
+  // Destructive permission gate. The reset-idea Danger zone is only
+  // rendered when the actor holds `platform.destructive.execute` —
+  // an owner-only kill switch. Agency operators / auditors / support
+  // do not see this section. We also pre-compute the per-bucket
+  // counts so the dialog can render immediately on click without
+  // a round-trip; the action re-validates server-side at submit.
+  const [canResetIdea, resetCounts] = await Promise.all([
+    hasPlatformPermission(actor, "platform.destructive.execute"),
+    getResetIdeaCounts(id).catch(() => EMPTY_RESET_IDEA_COUNTS),
   ]);
 
   // AI capability allowlist for the section on this page. Read the
@@ -273,6 +287,15 @@ export default async function ContentDetailPage({
           actorRoles.isPublisher
         }
       />
+
+      {canResetIdea ? (
+        <ResetIdeaSection
+          workspaceSlug={slug}
+          contentItemId={item.id}
+          ideaTitle={item.title}
+          counts={resetCounts}
+        />
+      ) : null}
     </div>
   );
 }

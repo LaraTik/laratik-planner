@@ -21,6 +21,12 @@ export const PLATFORM_PERMISSIONS = [
   "platform.access.read",
   "platform.access.manage",
   "platform.audit.read",
+  // Owner-only kill switch. Grants the holder the right to run
+  // irreversible operations (e.g. "reset idea" — hard delete of a
+  // content item + all cascade children) that produce no undo log.
+  // Any new destructive feature MUST go through this permission; do
+  // not introduce a parallel email-domain or per-feature gate.
+  "platform.destructive.execute",
 ] as const;
 
 export type PlatformPermission = (typeof PLATFORM_PERMISSIONS)[number];
