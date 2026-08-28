@@ -616,9 +616,15 @@ export async function fetchMetaFacebookPageSnapshot(args: {
       errorCode: code,
       requestId: insightsErrorRequestId,
     });
-    if (code === "permission_denied") {
-      // Documented contract: permission_denied on the insights
-      // endpoint is silent (null insights). Other errors propagate
+    if (code === "permission_denied" || code === "not_configured") {
+      // Documented contract: permission_denied AND not_configured
+      // on the insights endpoint are both "metrics not available
+      // right now" — permission_denied is a scope/App Review issue,
+      // not_configured is a metric-name-not-in-allowlist issue
+      // (`error.code: 100, "The value must be a valid insights
+      // metric"`). Both are silent (null insights, partial: true
+      // row) so the Re-test succeeds and the UI shows the partial
+      // pill instead of a red error chip. Other errors propagate
       // to the outer worker handler so the channel marks failed.
       insights = null;
     } else {
@@ -828,7 +834,7 @@ export async function fetchMetaInstagramSnapshot(args: {
       errorCode: code,
       requestId: insightsErrorRequestId,
     });
-    if (code === "permission_denied") {
+    if (code === "permission_denied" || code === "not_configured") {
       insights = null;
     } else {
       throw insightsErr;

@@ -772,6 +772,67 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     expect(meta.reason).toBe("page_insights_unavailable");
     expect(meta.providerErrorCode).toBe("permission_denied");
   });
+
+  it("silently writes partial row when insights returns 400 'metric not available' (not_configured, the App Review / dev-mode case)", async () => {
+    // 2026-08-28 round 3: when the Meta app doesn't have a specific
+    // insight metric in its allowlist (App Review pending, or
+    // Development mode without a role for the user), Meta returns
+    // 400 with `error.code: 100, "The value must be a valid
+    // insights metric"`. The pre-fix `classifyStatus` mapped this
+    // to `invalid_response` and the page branch's catch threw it,
+    // which surfaced as the "Meta returned an unrecognized
+    // response" error. The fix: `classifyStatus` now returns
+    // `not_configured` for the metric-not-available pattern, and
+    // the page branch's catch silently sets `insights = null`
+    // (same as `permission_denied`), so the row is `partial: true`
+    // with `providerErrorCode: "not_configured"` and the Re-test
+    // returns success.
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith(`${baseGraph}/${pageId}/insights`)) {
+        return jsonResponse(400, {
+          error: {
+            message: "(#100) The value must be a valid insights metric",
+            type: "OAuthException",
+            code: 100,
+            error_subcode: 1888399,
+            fbtrace_id: "Abc123",
+          },
+        });
+      }
+      if (url.startsWith(`${baseGraph}/${pageId}?`)) {
+        return jsonResponse(200, {
+          id: pageId,
+          name: "Food Game",
+          fan_count: 70,
+          followers_count: 70,
+        });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaFacebookPageSnapshot({
+      accessToken,
+      pageId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+    // Basic call succeeded → followerCount populated.
+    expect(snapshot.followerCount).toBe(70);
+    // Insights call returned not_configured → insights are null,
+    // partial: true, with a clear reason and providerErrorCode.
+    expect(snapshot.reach).toBeNull();
+    expect(snapshot.views).toBeNull();
+    expect(snapshot.interactions).toBeNull();
+    const meta = snapshot.sourceMetadata as {
+      partial?: boolean;
+      reason?: string;
+      providerErrorCode?: string;
+    };
+    expect(meta.partial).toBe(true);
+    expect(meta.reason).toBe("page_insights_unavailable");
+    expect(meta.providerErrorCode).toBe("not_configured");
+  });
 });
 
 /**

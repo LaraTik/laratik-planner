@@ -571,7 +571,16 @@ export function humanizeTestError(code: TestErrorCode): string {
     case "not_connected":
       return "This channel is not in a connected state. Reconnect to resume.";
     case "not_configured":
-      return "Your agency admin hasn't set up this provider yet. Ask them to add the app credentials in Agency Settings.";
+      // 2026-08-28: two distinct cases land here — (a) the agency
+      // admin hasn't configured the app credentials in Agency
+      // Settings (pre-M4.6 connections), and (b) the Meta app
+      // doesn't have a specific insight metric enabled (App Review
+      // allowlist / app mode). Both are "the data we need isn't
+      // reachable" — operator action required — and the next sync
+      // tick won't help. The analytics page surfaces the actual
+      // reason via `source_metadata.providerErrorCode` + the row's
+      // `partial: true` flag, so the operator can drill in.
+      return "This channel's analytics are not configured. Ask your agency admin to check the app credentials in Agency Settings, or ask Meta to enable the missing insights metric for the app.";
     case "unknown":
       return "The validation request failed. Try again, or check the system status.";
   }

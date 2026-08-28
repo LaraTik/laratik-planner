@@ -33,6 +33,7 @@ export class SocialProviderError extends Error {
       | "auth_expired"
       | "permission_denied"
       | "not_found"
+      | "not_configured"
       | "provider_unavailable"
       | "invalid_response",
     public readonly retryable: boolean,
@@ -161,6 +162,29 @@ function classifyStatus(
     return { code: "provider_unavailable", retryable: true };
   }
   if (status >= 500) return { code: "provider_unavailable", retryable: true };
+  // 2026-08-28: 400 with Meta `error.code: 100` and a "metric"-flavored
+  // message means the Meta app doesn't have that specific insight metric
+  // enabled (e.g. `page_views` not in the App Review allowlist, or the
+  // app is in Development mode without a role for the user). This is a
+  // CONFIGURATION issue, not a transient failure — classify it
+  // distinctly from the catch-all `invalid_response` so the page
+  // branch can write a clean `partial: true` row with a clear
+  // `providerErrorCode: "not_configured"` and not surface as a
+  // "Meta returned an unrecognized response" error to the operator.
+  if (status === 400 && body) {
+    try {
+      const parsed = JSON.parse(body) as {
+        error?: { code?: number; message?: string };
+      };
+      const providerCode = parsed.error?.code;
+      const providerMessage = parsed.error?.message ?? "";
+      if (providerCode === 100 && /metric|insights/i.test(providerMessage)) {
+        return { code: "not_configured", retryable: false };
+      }
+    } catch {
+      // Body wasn't JSON; fall through to the catch-all.
+    }
+  }
   return { code: "invalid_response", retryable: false };
 }
 

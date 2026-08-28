@@ -59,6 +59,55 @@ describe("providerRequest", () => {
     });
   });
 
+  it("surfaces 400 with Meta 'invalid insights metric' (error.code: 100) as not_configured", async () => {
+    // 2026-08-28: Meta returns HTTP 400 with body
+    //   { "error": { "code": 100, "message": "(#100) The value must
+    //   be a valid insights metric", ... } }
+    // when the app is missing a specific insight metric
+    // (App Review allowlist / app mode). The pre-fix classifyStatus
+    // mapped this to `invalid_response` and the page branch's
+    // catch threw it, surfacing as the misleading "Meta returned an
+    // unrecognized response" error. The fix: detect the metric-
+    // not-available pattern and return `not_configured` so the page
+    // branch silently writes a `partial: true` row instead of
+    // marking the channel failed.
+    const metaBody = JSON.stringify({
+      error: {
+        message: "(#100) The value must be a valid insights metric",
+        type: "OAuthException",
+        code: 100,
+        error_subcode: 1888399,
+        fbtrace_id: "Abc123def456",
+      },
+    });
+    globalThis.fetch = (() =>
+      Promise.resolve(new Response(metaBody, { status: 400 }))) as typeof fetch;
+    await expect(providerRequest("https://example.com/x")).rejects.toMatchObject({
+      code: "not_configured",
+      retryable: false,
+    });
+  });
+
+  it("surfaces 400 with non-metric error code as invalid_response (not_configured is opt-in)", async () => {
+    // 400 with `error.code: 100` but a NON-metric message (e.g.
+    // a generic parameter error) should still be `invalid_response` —
+    // the not_configured classification is gated on the message
+    // containing "metric" or "insights".
+    const metaBody = JSON.stringify({
+      error: {
+        message: "(#100) Missing required parameter: since",
+        type: "OAuthException",
+        code: 100,
+        fbtrace_id: "Xyz789",
+      },
+    });
+    globalThis.fetch = (() =>
+      Promise.resolve(new Response(metaBody, { status: 400 }))) as typeof fetch;
+    await expect(providerRequest("https://example.com/x")).rejects.toMatchObject({
+      code: "invalid_response",
+    });
+  });
+
   it("retries 429 then succeeds", async () => {
     let calls = 0;
     globalThis.fetch = (() => {
