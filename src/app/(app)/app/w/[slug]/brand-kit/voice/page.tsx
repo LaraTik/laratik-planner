@@ -37,6 +37,16 @@ export default async function BrandKitVoicePage({ params }: { params: Promise<{ 
     .where(and(eq(brandVoiceRules.workspaceId, workspace.id), isNull(brandVoiceRules.archivedAt)))
     .orderBy(brandVoiceRules.sortOrder, brandVoiceRules.createdAt);
 
+  // Per-rule-type breakdown so the Brand Kit Health card can show
+  // the user which rule types the AI has positive vs negative
+  // patterns for (Phase 7: surface the gap; Phase 8+: same data
+  // also goes to the AI prompt via `loadAiContext`).
+  const breakdown = {
+    tone: rules.filter((r) => r.ruleType === "tone").length,
+    do: rules.filter((r) => r.ruleType === "do").length,
+    dont: rules.filter((r) => r.ruleType === "dont").length,
+  };
+
   return (
     <div className="space-y-6">
       <BrandKitBackLink slug={slug} />
@@ -45,7 +55,7 @@ export default async function BrandKitVoicePage({ params }: { params: Promise<{ 
         title="Voice & tone"
         description="The tone, do's, and don'ts every planner and reviewer should follow. The rules surface in the editor's draft-time hints."
       />
-      <BrandKitHealth section="voice" slug={slug} count={rules.length} />
+      <BrandKitHealth section="voice" slug={slug} count={rules.length} breakdown={breakdown} />
 
       <SectionCard
         id="voice"

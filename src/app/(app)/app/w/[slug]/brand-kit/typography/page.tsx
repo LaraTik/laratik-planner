@@ -13,6 +13,17 @@ import { BrandKitBackLink } from "../_components/brand-kit-back-link";
 import { TypographyForm } from "../typography-form";
 import { TypographyCards } from "../typography-cards";
 
+type FontRole = "headline" | "body" | "accent" | "mono";
+
+function readFontRole(asset: { value: unknown }): FontRole {
+  const v = (asset.value ?? {}) as Record<string, unknown>;
+  const role = typeof v.role === "string" ? v.role.toLowerCase() : "body";
+  if (role === "headline" || role === "body" || role === "accent" || role === "mono") {
+    return role;
+  }
+  return "body";
+}
+
 /**
  * /app/w/[slug]/brand-kit/typography — the Typography section
  * (Phase 7). Phase 9 will replace the form's `<datalist>` with
@@ -43,6 +54,17 @@ export default async function BrandKitTypographyPage({
       ),
     );
 
+  // Per-role count for the Brand Kit Health card. The role is
+  // stored in the jsonb `value` column as `{family, weight, role}`;
+  // we read it defensively because the legacy row format may not
+  // have a `role` key (default to body).
+  const breakdown = {
+    headline: fonts.filter((f) => readFontRole(f) === "headline").length,
+    body: fonts.filter((f) => readFontRole(f) === "body").length,
+    accent: fonts.filter((f) => readFontRole(f) === "accent").length,
+    mono: fonts.filter((f) => readFontRole(f) === "mono").length,
+  };
+
   return (
     <div className="space-y-6">
       <BrandKitBackLink slug={slug} />
@@ -51,7 +73,7 @@ export default async function BrandKitTypographyPage({
         title="Typography"
         description="The headline, body, accent, and mono faces that every asset should ship in. Each entry renders a live sample."
       />
-      <BrandKitHealth section="typography" slug={slug} count={fonts.length} />
+      <BrandKitHealth section="typography" slug={slug} count={fonts.length} breakdown={breakdown} />
 
       <SectionCard
         id="typography"
