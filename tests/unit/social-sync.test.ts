@@ -263,3 +263,67 @@ describe("rate-limit backoff helpers", () => {
     ).toBe(false);
   });
 });
+
+/**
+ * 2026-08-28: error-code persistence. The catch block in
+ * `runChannelSyncCore` used to fall back to `err.name` for any
+ * `SocialProviderError` that wasn't `auth_expired`,
+ * `permission_denied`, or retryable. That meant a `not_found`
+ * or `invalid_response` SPE — both `retryable: false` — would
+ * persist the literal class name "SocialProviderError" to
+ * `lastSyncErrorCode`, which the analytics health banner then
+ * surfaced verbatim. The fix is to return `err.code` for any SPE
+ * regardless of retryability. These tests pin the contract.
+ */
+describe("syncErrorCodeFor", () => {
+  it("returns err.code for a SocialProviderError with a non-retryable, non-auth code (not_found)", async () => {
+    const { __test__ } = await import("@/lib/social/sync");
+    const { SocialProviderError } = await import("@/lib/social/http");
+    const err = new SocialProviderError("not_found", false, null);
+    // Must be the typed code, not the class name.
+    expect(__test__.syncErrorCodeFor(err)).toBe("not_found");
+    expect(__test__.syncErrorCodeFor(err)).not.toBe("SocialProviderError");
+  });
+
+  it("returns err.code for a SocialProviderError with invalid_response", async () => {
+    const { __test__ } = await import("@/lib/social/sync");
+    const { SocialProviderError } = await import("@/lib/social/http");
+    const err = new SocialProviderError("invalid_response", false, null);
+    expect(__test__.syncErrorCodeFor(err)).toBe("invalid_response");
+  });
+
+  it("returns err.code for an auth_expired SPE (existing happy path)", async () => {
+    const { __test__ } = await import("@/lib/social/sync");
+    const { SocialProviderError } = await import("@/lib/social/http");
+    expect(__test__.syncErrorCodeFor(new SocialProviderError("auth_expired", false, null))).toBe(
+      "auth_expired",
+    );
+  });
+
+  it("returns err.code for a retryable SPE (rate_limited)", async () => {
+    const { __test__ } = await import("@/lib/social/sync");
+    const { SocialProviderError } = await import("@/lib/social/http");
+    expect(__test__.syncErrorCodeFor(new SocialProviderError("rate_limited", true, null))).toBe(
+      "rate_limited",
+    );
+  });
+
+  it("returns err.name for a non-SPE Error (best-effort diagnostic)", async () => {
+    const { __test__ } = await import("@/lib/social/sync");
+    class MyWeirdError extends Error {
+      constructor() {
+        super("x");
+        this.name = "MyWeirdError";
+      }
+    }
+    expect(__test__.syncErrorCodeFor(new MyWeirdError())).toBe("MyWeirdError");
+  });
+
+  it('returns "unknown" for non-Error values', async () => {
+    const { __test__ } = await import("@/lib/social/sync");
+    expect(__test__.syncErrorCodeFor("a string")).toBe("unknown");
+    expect(__test__.syncErrorCodeFor(null)).toBe("unknown");
+    expect(__test__.syncErrorCodeFor(undefined)).toBe("unknown");
+    expect(__test__.syncErrorCodeFor({ code: "fake" })).toBe("unknown");
+  });
+});

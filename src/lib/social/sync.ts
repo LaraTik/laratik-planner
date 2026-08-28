@@ -399,7 +399,18 @@ async function runChannelSyncCore(
     await markSyncFailure(
       db,
       channel.id,
-      err instanceof Error ? err.name : "unknown",
+      // 2026-08-28: prefer the typed provider code over the class
+      // name. The previous `err.name` fallback persisted
+      // "SocialProviderError" for non-handled SPE cases (e.g.
+      // not_found, invalid_response), which surfaced on the
+      // analytics health banner as the literal class name. The
+      // outer `if (err instanceof SocialProviderError)` block
+      // already handles auth_expired / permission_denied and the
+      // retryable codes; this catch-all fires only when the SPE
+      // has a non-retryable, non-auth code (not_found,
+      // invalid_response) or when the error isn't an SPE at
+      // all (truly untyped — should be rare).
+      syncErrorCodeFor(err),
       backoffAt(now, failureCount),
     );
     return {
@@ -760,4 +771,26 @@ export const __test__ = {
   shouldBackoff,
   RATE_LIMIT_USAGE_THRESHOLD,
   RATE_LIMIT_BACKOFF_MS,
+  syncErrorCodeFor,
 };
+
+/**
+ * 2026-08-28: pick the right string to persist in
+ * `social_channels.lastSyncErrorCode` for a caught error.
+ *
+ *   - `SocialProviderError` → return the typed `err.code`
+ *     (e.g. "not_found", "invalid_response", "rate_limited").
+ *     This is the actual reason the call failed. The pre-fix
+ *     behavior was to return `err.name` ("SocialProviderError")
+ *     for non-auth, non-retryable SPE cases, which surfaced as
+ *     the literal class name on the analytics health banner.
+ *   - Any other `Error` → `err.name` (best-effort diagnostic).
+ *   - Anything else (string, number, plain object) → "unknown".
+ */
+function syncErrorCodeFor(err: unknown): string {
+  if (isSocialProviderError(err)) {
+    return err.code;
+  }
+  if (err instanceof Error) return err.name;
+  return "unknown";
+}

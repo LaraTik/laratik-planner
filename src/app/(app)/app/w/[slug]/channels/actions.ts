@@ -298,6 +298,15 @@ export async function testChannelConnectionAction(slug: string, channelId: strin
   const result = await runChannelTest(channelId);
   if (result.ok) {
     revalidatePath(`/app/w/${slug}/channels`);
+    // 2026-08-28: also revalidate the analytics path. The cron's
+    // markSyncSuccess clears `lastSyncErrorCode` to null on success
+    // — without this revalidation, the analytics page would keep
+    // showing the previous failure's error code in the health
+    // banner (the user sees "Last synced just now" on the card
+    // but "last sync failed: ..." on the banner, because the two
+    // fields live on the same row but the analytics page was
+    // serving a stale render).
+    revalidatePath(`/app/w/${slug}/analytics/social`);
     return { success: true, lastSyncedAt: result.lastSyncedAt.toISOString() } as const;
   }
   return { error: result.message, errorCode: result.errorCode } as const;
