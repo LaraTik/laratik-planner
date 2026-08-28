@@ -5,6 +5,28 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 /**
+ * "Not you? Sign out instead" — escape hatch rendered on every
+ * non-redirect state of the invitation-accept flow. If a hijacked
+ * cookie lands here, the legitimate user can leave without
+ * devtools. Mirrors the same escape added to /set-password
+ * (15f9f6d). The proxy allowlist (src/proxy.ts) already permits
+ * /signout.
+ */
+function SignOutLink() {
+  return (
+    <div className="mt-4">
+      <Link
+        href="/signout"
+        className="text-fg-muted text-label hover:text-fg-secondary focus-visible:ring-focus-ring inline-block rounded-sm focus:outline-none focus-visible:ring-2"
+        data-testid="accept-invitation-signout-link"
+      >
+        Not you? Sign out instead
+      </Link>
+    </div>
+  );
+}
+
+/**
  * Invitation accept page. Signed-out users get bounced through sign-in
  * (callbackUrl=/accept-invitation?token=...) and land back here.
  */
@@ -29,6 +51,7 @@ export default async function AcceptInvitationPage({
         <p className="text-body text-fg-secondary mt-2">
           The link is missing the invitation token. Please check the link in your email.
         </p>
+        <SignOutLink />
       </main>
     );
   }
@@ -49,6 +72,7 @@ export default async function AcceptInvitationPage({
         <p className="text-body text-fg-secondary mt-2">
           The link is invalid or has been revoked. Ask your admin to send a new one.
         </p>
+        <SignOutLink />
       </main>
     );
   }
@@ -60,6 +84,7 @@ export default async function AcceptInvitationPage({
         <p className="text-body text-fg-secondary mt-2">
           The link has expired. Ask your admin to resend.
         </p>
+        <SignOutLink />
       </main>
     );
   }
@@ -78,6 +103,7 @@ export default async function AcceptInvitationPage({
           <Link href="/app">Go to My Work</Link>
         </Button>
       </div>
+      <SignOutLink />
     </main>
   );
 }
