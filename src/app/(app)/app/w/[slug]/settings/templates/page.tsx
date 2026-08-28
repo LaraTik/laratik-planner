@@ -1,10 +1,12 @@
 import { redirect, notFound } from "next/navigation";
-import { Clock, CheckCircle2, Hash } from "lucide-react";
+import { eq } from "drizzle-orm";
+import { Clock, CheckCircle2, Hash, ArrowDown, ArrowUp, Equal, Sparkles } from "lucide-react";
 import { auth } from "@/lib/auth/config";
+import { db } from "@/lib/db";
+import { workspaceSettings as workspaceSettingsTable } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { PageHeader } from "@/components/workspace/page-header";
-import { SettingsBackLink } from "../_components/settings-back-link";
 import { SettingsTemplateCard } from "../_components/settings-template-card";
 import {
   approvalTemplates,
@@ -12,19 +14,22 @@ import {
   monthlyTargetTemplates,
   settingsTemplateSections,
 } from "@/lib/workspaces/settings-templates";
+import { cn } from "@/lib/utils";
 
 /**
  * /app/w/[slug]/settings/templates — the settings preset
- * library (Phase C). One-click "Apply preset" cards for the
- * 3 things that almost every new workspace has to set:
+ * library (Phase C + D).
  *
- *   - Lead time presets (Fast / Standard / Relaxed / Agency + client)
- *   - Approval mode presets (Internal only / Internal + client)
- *   - Monthly target presets (3/wk, 5/wk, daily, 2x/day)
+ * Phase D adds a "current vs preset" diff on every card so the
+ * user can see what changes before applying. Each card gets a
+ * small delta badge:
+ *   - lead times: −4 days from your current 18 / +6 days / same
+ *   - approval mode: 'Different from current' / 'Same as current'
+ *   - monthly target: '+12 from your current 12' / '−6 from …' /
+ *                     'Set for the first time' (when current is null)
  *
- * The lead-time presets respect the existing approvalMode
- * (e.g. applying the 'Agency + client' preset also flips the
- * approvalMode to `internal_then_client`).
+ * The diff is computed at render time from the live
+ * `workspace_settings` row. No additional round-trips.
  */
 export default async function SettingsTemplatesPage({
   params,
@@ -39,13 +44,26 @@ export default async function SettingsTemplatesPage({
   const canManage = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
     "workspace_manager",
   ]);
+  const [settings] = await db
+    .select()
+    .from(workspaceSettingsTable)
+    .where(eq(workspaceSettingsTable.workspaceId, workspace.id))
+    .limit(1);
+
+  const currentLeadTotal = settings
+    ? settings.contentApprovalLeadDays +
+      settings.designCompleteLeadDays +
+      settings.creativeApprovalLeadDays +
+      settings.readyToPublishLeadDays
+    : 18; // DB default
+  const currentApprovalMode = settings?.approvalMode ?? "simple";
+  const currentMonthlyTarget = settings?.monthlyTarget ?? null;
 
   return (
     <div className="space-y-8">
-      <SettingsBackLink slug={slug} />
       <PageHeader
         title="Settings presets"
-        description="Curated preset values for the four numbers every new workspace has to set. Pick a preset, apply it, edit any number before saving."
+        description="Curated preset values for the four numbers every new workspace has to set. Each card shows the delta against your current settings so you can see what changes before applying."
       />
 
       <TemplateSection
@@ -54,37 +72,47 @@ export default async function SettingsTemplatesPage({
         blurb="Curated 4-number presets for common agency cadences. Applying a lead-time preset also adjusts the approval mode when the preset is designed for a client-approval workflow."
         testId="settings-template-section-lead-times"
       >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {leadTimeTemplates.map((t) => {
             const total =
               t.values.contentApprovalLeadDays +
               t.values.designCompleteLeadDays +
               t.values.creativeApprovalLeadDays +
               t.values.readyToPublishLeadDays;
+            const delta = total - currentLeadTotal;
             return (
-              <SettingsTemplateCard
-                key={t.id}
-                kind="lead-times"
-                slug={slug}
-                templateId={t.id}
-                title={t.name}
-                blurb={t.blurb}
-                preview={
-                  <ul className="text-label text-fg-muted flex flex-wrap gap-x-3 gap-y-1">
-                    <li>Content {t.values.contentApprovalLeadDays}d</li>
-                    <li>Design {t.values.designCompleteLeadDays}d</li>
-                    <li>Creative {t.values.creativeApprovalLeadDays}d</li>
-                    <li>Publish {t.values.readyToPublishLeadDays}d</li>
-                  </ul>
-                }
-                meta={`${total} business days total`}
-                {...(t.forClientApproval
-                  ? { hint: "This preset flips approval mode to 'Internal, then client'." }
-                  : {})}
-              />
+              <li key={t.id}>
+                <SettingsTemplateCard
+                  kind="lead-times"
+                  slug={slug}
+                  templateId={t.id}
+                  title={t.name}
+                  blurb={t.blurb}
+                  preview={
+                    <ul className="text-label text-fg-muted flex flex-wrap gap-x-3 gap-y-1">
+                      <li>Content {t.values.contentApprovalLeadDays}d</li>
+                      <li>Design {t.values.designCompleteLeadDays}d</li>
+                      <li>Creative {t.values.creativeApprovalLeadDays}d</li>
+                      <li>Publish {t.values.readyToPublishLeadDays}d</li>
+                    </ul>
+                  }
+                  meta={`${total} business days total`}
+                  delta={
+                    <DeltaBadge
+                      delta={delta}
+                      label="days"
+                      currentTotal={currentLeadTotal}
+                      presetTotal={total}
+                    />
+                  }
+                  {...(t.forClientApproval
+                    ? { hint: "This preset flips approval mode to 'Internal, then client'." }
+                    : {})}
+                />
+              </li>
             );
           })}
-        </div>
+        </ul>
       </TemplateSection>
 
       <TemplateSection
@@ -93,18 +121,30 @@ export default async function SettingsTemplatesPage({
         blurb="The two approval flows the workspace supports."
         testId="settings-template-section-approvals"
       >
-        <div className="grid gap-3 sm:grid-cols-2">
+        <ul className="grid gap-3 sm:grid-cols-2">
           {approvalTemplates.map((t) => (
-            <SettingsTemplateCard
-              key={t.id}
-              kind="approvals"
-              slug={slug}
-              templateId={t.id}
-              title={t.label}
-              blurb={t.blurb}
-            />
+            <li key={t.id}>
+              <SettingsTemplateCard
+                kind="approvals"
+                slug={slug}
+                templateId={t.id}
+                title={t.label}
+                blurb={t.blurb}
+                delta={
+                  <DeltaBadge
+                    delta={t.id === currentApprovalMode ? 0 : 1}
+                    label={
+                      t.id === currentApprovalMode
+                        ? "Same as your current"
+                        : "Different from your current"
+                    }
+                    kind="badge"
+                  />
+                }
+              />
+            </li>
           ))}
-        </div>
+        </ul>
       </TemplateSection>
 
       <TemplateSection
@@ -113,23 +153,48 @@ export default async function SettingsTemplatesPage({
         blurb="Common post-per-month targets the planning KPI bar uses to colour on-track / at-risk / off-track."
         testId="settings-template-section-monthly-target"
       >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {monthlyTargetTemplates.map((t) => (
-            <SettingsTemplateCard
-              key={t.id}
-              kind="monthly-target"
-              slug={slug}
-              templateId={t.id}
-              title={t.name}
-              blurb={t.blurb}
-              preview={
-                <span className="border-border bg-primary-subtle text-primary text-label rounded-full border px-2.5 py-0.5 font-bold">
-                  {t.value} / month
-                </span>
-              }
-            />
-          ))}
-        </div>
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {monthlyTargetTemplates.map((t) => {
+            const delta = currentMonthlyTarget === null ? null : t.value - currentMonthlyTarget;
+            return (
+              <li key={t.id}>
+                <SettingsTemplateCard
+                  kind="monthly-target"
+                  slug={slug}
+                  templateId={t.id}
+                  title={t.name}
+                  blurb={t.blurb}
+                  preview={
+                    <span
+                      className={cn(
+                        "border-border text-label rounded-full border px-2.5 py-0.5 font-bold",
+                        currentMonthlyTarget === t.value
+                          ? "bg-success/15 text-success border-success/30"
+                          : "bg-primary-subtle text-primary",
+                      )}
+                    >
+                      {t.value} / month
+                    </span>
+                  }
+                  delta={
+                    delta === null ? (
+                      <DeltaBadge delta={1} kind="badge" label="Set for the first time" />
+                    ) : delta === 0 ? (
+                      <DeltaBadge delta={0} kind="badge" label="Same as your current" />
+                    ) : (
+                      <DeltaBadge
+                        delta={delta}
+                        label="posts / month"
+                        currentTotal={currentMonthlyTarget ?? 0}
+                        presetTotal={t.value}
+                      />
+                    )
+                  }
+                />
+              </li>
+            );
+          })}
+        </ul>
       </TemplateSection>
 
       {!canManage ? (
@@ -138,6 +203,58 @@ export default async function SettingsTemplatesPage({
         </p>
       ) : null}
     </div>
+  );
+}
+
+function DeltaBadge({
+  delta,
+  label,
+  currentTotal,
+  presetTotal,
+  kind,
+}: {
+  delta: number;
+  label?: string;
+  currentTotal?: number;
+  presetTotal?: number;
+  kind?: "badge";
+}) {
+  // Label-only badge (approval mode, "set for the first time").
+  if (kind === "badge" && label) {
+    return (
+      <span
+        className={cn(
+          "text-label inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-bold",
+          delta === 0 ? "bg-success/15 text-success" : "bg-warning/15 text-warning",
+        )}
+        data-testid="settings-template-delta"
+      >
+        {delta === 0 ? <Equal className="h-3 w-3" aria-hidden="true" /> : null}
+        {label}
+      </span>
+    );
+  }
+  // Numeric delta (lead time days, monthly target posts).
+  const Icon = delta < 0 ? ArrowDown : delta > 0 ? ArrowUp : Equal;
+  const tone =
+    delta < 0
+      ? "bg-success/15 text-success"
+      : delta > 0
+        ? "bg-warning/15 text-warning"
+        : "bg-surface text-fg-muted";
+  return (
+    <span
+      className={cn(
+        "text-label inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-bold",
+        tone,
+      )}
+      data-testid="settings-template-delta"
+    >
+      <Icon className="h-3 w-3" aria-hidden="true" />
+      {delta === 0
+        ? "Same as your current"
+        : `${delta > 0 ? "+" : ""}${delta} ${label ?? ""} (${presetTotal} from ${currentTotal})`}
+    </span>
   );
 }
 
@@ -180,3 +297,4 @@ function TemplateSection({
 }
 
 void settingsTemplateSections;
+void Sparkles;

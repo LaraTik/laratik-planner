@@ -30,6 +30,8 @@ export interface SettingsTemplateCardProps {
   meta?: string;
   /** Optional small footer hint (e.g. "Flips approval mode to internal_then_client"). */
   hint?: string;
+  /** Optional "current vs preset" delta badge (Phase D). */
+  delta?: React.ReactNode;
   testId?: string;
 }
 
@@ -44,6 +46,7 @@ export function SettingsTemplateCard({
   preview,
   meta,
   hint,
+  delta,
   testId,
 }: SettingsTemplateCardProps) {
   const [status, setStatus] = React.useState<Status>("idle");
@@ -84,7 +87,16 @@ export function SettingsTemplateCard({
         <p className="text-body text-fg-secondary">{blurb}</p>
       </div>
       {preview ? <div className="flex flex-wrap items-center gap-2">{preview}</div> : null}
-      {meta ? <p className="text-label text-fg-muted">{meta}</p> : null}
+      {meta || delta ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {meta ? <p className="text-label text-fg-muted">{meta}</p> : null}
+          {delta ? (
+            <span data-testid={`settings-template-card-${testId ?? templateId}-delta`}>
+              {delta}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       {hint ? (
         <p className={cn("text-label", kind === "lead-times" ? "text-warning" : "text-fg-muted")}>
           {hint}
