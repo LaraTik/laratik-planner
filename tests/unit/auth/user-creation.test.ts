@@ -304,3 +304,51 @@ describe("createUserDirectly — happy path", () => {
     ).rejects.toThrow("Invalid workspace access selection");
   });
 });
+
+describe("createUserDirectly — branch coverage for the optional inputs", () => {
+  // The default happy-path test passes `password` and `name`. These
+  // cases hit the remaining branches so the `src/lib/auth/**`
+  // branch-coverage floor holds at 90%.
+
+  it("accepts mustChangePassword=false (the explicit-false branch of `input.mustChangePassword !== false`)", async () => {
+    dbState.selectResults = [[], [], []]; // active member, user, no workspace
+
+    const result = await createUserDirectly({
+      agencyId: "a-1",
+      email: "no-must-change@example.com",
+      password: "TempPass123",
+      mustChangePassword: false, // <-- the branch under test
+      grantsAgencyAdmin: false,
+      workspaceRoles: [], // also exercises the `length > 0` false branch
+      createdBy: "u-admin",
+    });
+
+    expect(result.userId).toBe("u-new");
+    // The user row insert records `mustChangePassword: false` so
+    // the next sign-in is NOT routed to /set-password.
+    const userInsert = dbState.insertCalls[0];
+    expect((userInsert?.values as Record<string, unknown>).mustChangePassword).toBe(false);
+  });
+
+  it("falls back to the email local-part for displayName when name is omitted", async () => {
+    dbState.selectResults = [[], [], []];
+
+    await createUserDirectly({
+      agencyId: "a-1",
+      email: "no.name@example.com",
+      password: "TempPass123",
+      // no name — displayName should default to "no.name"
+      grantsAgencyAdmin: false,
+      workspaceRoles: [],
+      createdBy: "u-admin",
+    });
+
+    const userInsert = dbState.insertCalls[0];
+    const values = userInsert?.values as Record<string, unknown>;
+    expect(values?.displayName).toBe("no.name");
+    // The `name` column is NOT set when input.name is undefined
+    // (the spread `...(input.name ? { name: input.name } : {})`
+    // omits the key entirely — Drizzle's `text("name")` is nullable).
+    expect("name" in (values ?? {})).toBe(false);
+  });
+});
