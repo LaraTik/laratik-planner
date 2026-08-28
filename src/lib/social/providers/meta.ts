@@ -738,55 +738,109 @@ export async function fetchMetaInstagramSnapshot(args: {
   // them without an extra call. The snapshot's return shape is
   // unchanged — per-post engagement is still out of scope for M4.
   const latestPost = parsed.media?.data?.[0] ?? null;
-  // Account-level daily insights: views, reach, engaged accounts,
-  // interactions. Empty datasets are `null`, never `0`.
-  // 2026-08-28: same triply-visible error handling as the Page
-  // branch (Sentry + stdout JSON + sourceMetadata in the row).
-  let insights: Awaited<ReturnType<typeof fetchMetaIgAccountDailyInsights>>["insights"] = null;
-  let insightsErrorCode: string | null = null;
-  let insightsErrorRequestId: string | null = null;
-  // 2026-08-28: capture the per-call rate-limit usage; same logic
-  // as the Page branch. The IG basic+insights pair runs at most
-  // 2 calls per snapshot.
+  // Account-level insights. 2026-08-28: this is now TWO separate
+  // calls because Meta's `period` × `metric` × `metric_type` matrix
+  // is mutually incompatible for the four metrics the snapshot
+  // needs. Joining them in one call (the pre-fix shape) returned
+  // HTTP 400 + `error.code: 100 "period X incompatible with
+  // metric Y"` from Meta, and `classifyStatus(400, body)` in
+  // `src/lib/social/http.ts` maps that to `invalid_response`. The
+  // Re-test button then surfaced "Meta returned an unrecognized
+  // response. The endpoint may be temporarily unavailable; try
+  // again in a few minutes." even though the basic followers call
+  // had succeeded.
+  //
+  // Call A (`fetchMetaIgDailyReach`) is per-day `reach` only — a
+  // time series that does NOT accept `metric_type=total_value` or
+  // `period=days_28`. Call B (`fetchMetaIgAccount28dTotals`) is
+  // `profile_views` + `accounts_engaged` + `total_interactions` with
+  // `period=days_28&metric_type=total_value` — these three reject
+  // `period=day`. The 2-call cost is covered by the proactive
+  // rate-limit backoff added to `runSyncTick` on 2026-08-28 (60s
+  // pause when any layer hits 80%).
+  //
+  // Empty datasets are `null`, never `0`. Each call records its
+  // own error code on the row (Sentry + stdout JSON + the
+  // `providerErrorCode` field), so a SQL query can tell which of
+  // the two failed.
+  let reach: number | null = null;
+  let views: number | null = null;
+  let engagedAccounts: number | null = null;
+  let interactions: number | null = null;
+  let reachErrorCode: string | null = null;
+  let totalsErrorCode: string | null = null;
+  let reachErrorRequestId: string | null = null;
+  let totalsErrorRequestId: string | null = null;
+  // 2026-08-28: capture the per-call rate-limit usage. We run two
+  // insights calls in sequence; `latestUsage` ends up pointing at
+  // the most recent successful one, with the basic-fields usage
+  // as the ultimate fallback (writeRateLimitUsage picks the first
+  // non-null in the (latest, fallback) tuple).
   let latestUsage: MetaRateLimitUsage = { app: null, business: null };
+  // Call A: per-day reach.
   try {
-    const igResult = await fetchMetaIgAccountDailyInsights({
+    const reachResult = await fetchMetaIgDailyReach({
       accessToken,
       igUserId,
       apiVersion,
     });
-    insights = igResult.insights;
-    latestUsage = igResult.usage;
-  } catch (insightsErr) {
-    const code = isSocialProviderError(insightsErr) ? insightsErr.code : "unknown";
-    insightsErrorCode = code;
-    insightsErrorRequestId = isSocialProviderError(insightsErr) ? insightsErr.requestId : null;
-    logError("social.meta.ig_insights_failed", {
+    reach = reachResult.reach;
+    latestUsage = reachResult.usage;
+  } catch (reachErr) {
+    const code = isSocialProviderError(reachErr) ? reachErr.code : "unknown";
+    reachErrorCode = code;
+    reachErrorRequestId = isSocialProviderError(reachErr) ? reachErr.requestId : null;
+    logError("social.meta.ig_reach_failed", {
       igUserId,
       accessTokenLast4: accessToken.slice(-4),
       errorCode: code,
-      requestId: insightsErrorRequestId,
+      requestId: reachErrorRequestId,
     });
-    captureError("social.meta.ig_insights_failed", insightsErr, {
+    captureError("social.meta.ig_reach_failed", reachErr, {
       igUserId,
       accessTokenLast4: accessToken.slice(-4),
       errorCode: code,
-      requestId: insightsErrorRequestId,
+      requestId: reachErrorRequestId,
     });
-    if (code === "permission_denied") {
-      insights = null;
-    } else {
-      throw insightsErr;
-    }
+    if (code !== "permission_denied") throw reachErr;
+  }
+  // Call B: 28-day totals (profile_views, accounts_engaged,
+  // total_interactions). Failure of THIS call is the one the user
+  // most often sees on the Re-test button — it is the 28-day
+  // cumulative path that historically has the strictest App
+  // Review requirements.
+  try {
+    const totalsResult = await fetchMetaIgAccount28dTotals({
+      accessToken,
+      igUserId,
+      apiVersion,
+    });
+    views = totalsResult.views;
+    engagedAccounts = totalsResult.engagedAccounts;
+    interactions = totalsResult.interactions;
+    latestUsage = totalsResult.usage;
+  } catch (totalsErr) {
+    const code = isSocialProviderError(totalsErr) ? totalsErr.code : "unknown";
+    totalsErrorCode = code;
+    totalsErrorRequestId = isSocialProviderError(totalsErr) ? totalsErr.requestId : null;
+    logError("social.meta.ig_totals_failed", {
+      igUserId,
+      accessTokenLast4: accessToken.slice(-4),
+      errorCode: code,
+      requestId: totalsErrorRequestId,
+    });
+    captureError("social.meta.ig_totals_failed", totalsErr, {
+      igUserId,
+      accessTokenLast4: accessToken.slice(-4),
+      errorCode: code,
+      requestId: totalsErrorRequestId,
+    });
+    if (code !== "permission_denied") throw totalsErr;
   }
   // Same partial-flag rule as the Page branch: ANY null field
   // makes the row partial, not just the follower.
   const insightsPartial =
-    insights === null ||
-    insights.reach === null ||
-    insights.views === null ||
-    insights.engagedAccounts === null ||
-    insights.interactions === null;
+    reach === null || views === null || engagedAccounts === null || interactions === null;
   const sourceMetadata: Record<string, string | number | boolean | null> = {
     partial: follower === null || insightsPartial,
   };
@@ -794,13 +848,20 @@ export async function fetchMetaInstagramSnapshot(args: {
     sourceMetadata.reason = "below_provider_threshold";
   } else if (insightsPartial) {
     sourceMetadata.reason = "ig_insights_unavailable";
-    if (insightsErrorCode) {
-      // Mirror the Page branch: surface the actual provider error
-      // in the saved row so a DB query reveals why the IG
-      // insights are null without needing Sentry.
-      sourceMetadata.providerErrorCode = insightsErrorCode;
-      if (insightsErrorRequestId) {
-        sourceMetadata.providerRequestId = insightsErrorRequestId;
+    // Prefer the totals-side error code when both calls failed
+    // because the 28-day cumulative metrics are the path that
+    // has historically tripped App Review / scope checks. If only
+    // one failed, surface that one. A null `failedCode` here means
+    // the partial row is empty-data (e.g., sub-100-follower
+    // account, where Meta returns `{"data":[]}` and we read nulls
+    // without an error code), which is the pre-existing
+    // "ig_insights_unavailable" silent-empty case.
+    const failedCode = totalsErrorCode ?? reachErrorCode;
+    const failedRequestId = totalsErrorRequestId ?? reachErrorRequestId;
+    if (failedCode) {
+      sourceMetadata.providerErrorCode = failedCode;
+      if (failedRequestId) {
+        sourceMetadata.providerRequestId = failedRequestId;
       }
     }
   }
@@ -833,10 +894,10 @@ export async function fetchMetaInstagramSnapshot(args: {
     follower,
     media,
     following,
-    insights?.views ?? null,
-    insights?.reach ?? null,
-    insights?.engagedAccounts ?? null,
-    insights?.interactions ?? null,
+    views,
+    reach,
+    engagedAccounts,
+    interactions,
   ]);
   return {
     observedAt,
@@ -844,10 +905,10 @@ export async function fetchMetaInstagramSnapshot(args: {
     followingCount: following,
     mediaCount: media,
     likesCount: null,
-    reach: insights?.reach ?? null,
-    views: insights?.views ?? null,
-    engagedAccounts: insights?.engagedAccounts ?? null,
-    interactions: insights?.interactions ?? null,
+    reach,
+    views,
+    engagedAccounts,
+    interactions,
     providerApiVersion: apiVersion,
     providerRequestId: requestId,
     responseHash: hash,
@@ -855,44 +916,72 @@ export async function fetchMetaInstagramSnapshot(args: {
   };
 }
 
-async function fetchMetaIgAccountDailyInsights(args: {
+async function fetchMetaIgDailyReach(args: {
   accessToken: string;
   igUserId: string;
   apiVersion: string;
 }): Promise<{
-  insights: {
-    reach: number | null;
-    views: number | null;
-    engagedAccounts: number | null;
-    interactions: number | null;
-  } | null;
+  reach: number | null;
   usage: MetaRateLimitUsage;
 }> {
   const url = new URL(`${graphBaseUrl(args.apiVersion)}/${args.igUserId}/insights`);
-  // `metric_type=total_value` is required for `profile_views`,
-  // `accounts_engaged`, and `total_interactions` (these are daily
-  // total metrics, not time-series). Without it, the Graph API returns
-  // `(#100) The following metrics (...) should be specified with
-  // parameter metric_type=total_value`, and the function would surface
-  // `null` for every IG account. `reach` accepts either `metric_type`
-  // value, so setting it globally is safe and matches the API docs.
-  // Pre-flight verification 2026-08-27: this was a latent bug; the
-  // existing Food Game IG connection was silently missing
-  // `accounts_engaged` and `total_interactions` until this fix.
-  url.searchParams.set("metric", "reach,profile_views,accounts_engaged,total_interactions");
+  // 2026-08-28: `reach` is a per-day time-series metric. Meta
+  // rejects it if you mix it with `metric_type=total_value` or with
+  // `period=days_28`, so this call is intentionally separate from
+  // the 28-day totals call below. Pre-3dc7fa2 the IG insights
+  // function joined all four metrics into one request with
+  // `period=day` and `metric_type=total_value`; Meta returns 400 +
+  // `error.code: 100 "period X incompatible with metric Y"` for
+  // the mixed bag, and our `classifyStatus(400)` in
+  // `src/lib/social/http.ts` maps that to `invalid_response`. The
+  // snapshot then surfaced "Meta returned an unrecognized
+  // response" while the basic followers call had succeeded —
+  // exactly the symptom the user reported on the Re-test button.
+  url.searchParams.set("metric", "reach");
   url.searchParams.set("period", "day");
+  // No `metric_type` parameter — `reach` is a time series, and
+  // `metric_type=total_value` is rejected for it.
+  url.searchParams.set("access_token", args.accessToken);
+  const { body, usage } = await providerRequest(url.toString());
+  let parsed: PageInsightsResponse;
+  try {
+    parsed = JSON.parse(body) as PageInsightsResponse;
+  } catch {
+    throw new SocialProviderError("invalid_response", false, null);
+  }
+  const first = parsed.data?.find((m) => m.name === "reach")?.values?.[0]?.value;
+  return {
+    reach: typeof first === "number" ? first : null,
+    usage,
+  };
+}
+
+async function fetchMetaIgAccount28dTotals(args: {
+  accessToken: string;
+  igUserId: string;
+  apiVersion: string;
+}): Promise<{
+  views: number | null;
+  engagedAccounts: number | null;
+  interactions: number | null;
+  usage: MetaRateLimitUsage;
+}> {
+  const url = new URL(`${graphBaseUrl(args.apiVersion)}/${args.igUserId}/insights`);
+  // 2026-08-28: `profile_views`, `accounts_engaged`, and
+  // `total_interactions` are 28-day cumulative metrics. Meta
+  // requires `period=days_28&metric_type=total_value` for all
+  // three and rejects `period=day` (returns 400 + `error.code:
+  // 100 "period day incompatible with metric accounts_engaged"`).
+  // The first Re-test after this fix should populate all three
+  // values for every connected IG account; before the fix the
+  // IG insights call returned 400 and every IG account showed
+  // `null` for views / engagedAccounts / interactions.
+  url.searchParams.set("metric", "profile_views,accounts_engaged,total_interactions");
+  url.searchParams.set("period", "days_28");
   url.searchParams.set("metric_type", "total_value");
   url.searchParams.set("access_token", args.accessToken);
-  let parsed: PageInsightsResponse;
-  // 2026-08-28: re-throw every error (including permission_denied).
-  // The outer caller `fetchMetaInstagramSnapshot` records the
-  // error in sourceMetadata + logError + captureError, then
-  // swallows permission_denied so the worker keeps going with
-  // null insights. Previously the inner function silently
-  // returned null on permission_denied, which prevented the
-  // outer catch from running — the operator had no way to know
-  // the failure was a scope issue.
   const { body, usage } = await providerRequest(url.toString());
+  let parsed: PageInsightsResponse;
   try {
     parsed = JSON.parse(body) as PageInsightsResponse;
   } catch {
@@ -900,16 +989,13 @@ async function fetchMetaIgAccountDailyInsights(args: {
   }
   const find = (name: string) => parsed.data.find((m) => m.name === name)?.values?.[0]?.value;
   return {
-    insights: {
-      reach: typeof find("reach") === "number" ? (find("reach") as number) : null,
-      views: typeof find("profile_views") === "number" ? (find("profile_views") as number) : null,
-      engagedAccounts:
-        typeof find("accounts_engaged") === "number" ? (find("accounts_engaged") as number) : null,
-      interactions:
-        typeof find("total_interactions") === "number"
-          ? (find("total_interactions") as number)
-          : null,
-    },
+    views: typeof find("profile_views") === "number" ? (find("profile_views") as number) : null,
+    engagedAccounts:
+      typeof find("accounts_engaged") === "number" ? (find("accounts_engaged") as number) : null,
+    interactions:
+      typeof find("total_interactions") === "number"
+        ? (find("total_interactions") as number)
+        : null,
     usage,
   };
 }

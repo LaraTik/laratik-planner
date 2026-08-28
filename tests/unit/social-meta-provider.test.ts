@@ -404,31 +404,54 @@ describe("error-surface safety", () => {
   });
 });
 
-describe("fetchMetaInstagramSnapshot — IG insights metric_type", () => {
-  // Regression guard for the 2026-08-27 pre-flight finding: the IG
-  // insights endpoint requires `metric_type=total_value` for
-  // `profile_views`, `accounts_engaged`, and `total_interactions`.
-  // Without it, the API returns 400 and the function surfaces `null`
-  // for every metric on every IG account, which silently breaks the
-  // engagement-rate card and the portfolio aggregate strip.
+describe("fetchMetaInstagramSnapshot — IG insights split (period × metric compatibility)", () => {
+  // 2026-08-28 regression guard. The pre-fix code joined four
+  // metrics in one `/insights` call:
+  //   metric=reach,profile_views,accounts_engaged,total_interactions
+  //   &period=day&metric_type=total_value
+  // Meta returns HTTP 400 + `error.code:100 "period X incompatible
+  // with metric Y"` for that combination because:
+  //   - `accounts_engaged` and `total_interactions` only accept
+  //     `period=days_28`
+  //   - `reach` only accepts `metric_type=total_value` with
+  //     `period=lifetime`, not with `period=day`
+  // `classifyStatus(400)` maps that to `invalid_response`, and the
+  // Re-test button surfaces "Meta returned an unrecognized
+  // response" even though the basic followers call had succeeded.
+  //
+  // The fix splits the call in two: per-day reach, and 28-day
+  // totals. These tests assert the two calls are made, that each
+  // one's params are period-compatible, and that the snapshot
+  // populates all four fields when Meta returns valid responses.
   const baseGraph = "https://graph.facebook.com/v25.0";
   const igUserId = "17841480087235357";
   const accessToken = "page-token";
 
-  it("sends metric_type=total_value on the IG insights call", async () => {
-    let capturedInsightsUrl: string | null = null;
+  it("makes TWO period-compatible insights calls and populates all 4 metrics", async () => {
+    const seenUrls: string[] = [];
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.startsWith(`${baseGraph}/${igUserId}/insights`)) {
-        capturedInsightsUrl = url;
-        return jsonResponse(200, {
-          data: [
-            { name: "reach", period: "day", values: [{ value: 2401 }] },
-            { name: "profile_views", period: "day", values: [{ value: 91 }] },
-            { name: "accounts_engaged", period: "day", values: [{ value: 15 }] },
-            { name: "total_interactions", period: "day", values: [{ value: 28 }] },
-          ],
-        });
+        seenUrls.push(url);
+        const params = new URL(url).searchParams;
+        // Return shape matches the period we asked for — that's the
+        // real Meta contract. Tests that mock `period:"day"` for
+        // accounts_engaged are testing a lie.
+        if (params.get("period") === "day") {
+          return jsonResponse(200, {
+            data: [{ name: "reach", period: "day", values: [{ value: 2401 }] }],
+          });
+        }
+        if (params.get("period") === "days_28") {
+          return jsonResponse(200, {
+            data: [
+              { name: "profile_views", period: "days_28", values: [{ value: 91 }] },
+              { name: "accounts_engaged", period: "days_28", values: [{ value: 15 }] },
+              { name: "total_interactions", period: "days_28", values: [{ value: 28 }] },
+            ],
+          });
+        }
+        throw new Error(`unexpected period in test mock: ${url}`);
       }
       if (url.startsWith(`${baseGraph}/${igUserId}?`)) {
         return jsonResponse(200, {
@@ -450,20 +473,143 @@ describe("fetchMetaInstagramSnapshot — IG insights metric_type", () => {
       requestIdHint: "test-req",
     });
 
-    expect(capturedInsightsUrl).not.toBeNull();
-    // The bug regression: the URL MUST include `metric_type=total_value`.
-    // If a future refactor drops this parameter, the test fails and the
-    // engagement-rate card silently goes to null.
-    const params = new URL(capturedInsightsUrl!).searchParams;
-    expect(params.get("metric_type")).toBe("total_value");
-    expect(params.get("period")).toBe("day");
-    // All four metrics are requested.
-    expect(params.get("metric")).toBe("reach,profile_views,accounts_engaged,total_interactions");
-    // And the snapshot actually populated the values (not null).
+    // Two insights calls were made, in the documented order.
+    expect(seenUrls).toHaveLength(2);
+    const [reachUrl, totalsUrl] = seenUrls;
+    // Call A: per-day reach — no metric_type, only reach metric.
+    const reachParams = new URL(reachUrl!).searchParams;
+    expect(reachParams.get("metric")).toBe("reach");
+    expect(reachParams.get("period")).toBe("day");
+    expect(reachParams.get("metric_type")).toBeNull();
+    // Call B: 28-day totals — period=days_28, metric_type=total_value.
+    const totalsParams = new URL(totalsUrl!).searchParams;
+    expect(totalsParams.get("metric")).toBe("profile_views,accounts_engaged,total_interactions");
+    expect(totalsParams.get("period")).toBe("days_28");
+    expect(totalsParams.get("metric_type")).toBe("total_value");
+    // Critical regression guard: NEITHER call may request reach in
+    // a 28-day context, nor accounts_engaged in a per-day context.
+    // The pre-fix code did both, which is what triggered the 400.
+    expect(reachParams.get("metric")).not.toContain("accounts_engaged");
+    expect(totalsParams.get("metric")).not.toContain("reach");
+    expect(reachParams.get("metric_type")).not.toBe("total_value");
+    expect(totalsParams.get("period")).not.toBe("day");
+    // The snapshot populates all four values (no nulls).
+    expect(snapshot.reach).toBe(2401);
+    expect(snapshot.views).toBe(91);
     expect(snapshot.engagedAccounts).toBe(15);
     expect(snapshot.interactions).toBe(28);
-    expect(snapshot.views).toBe(91);
+    expect(snapshot.sourceMetadata.partial).toBe(false);
+  });
+
+  it("propagates invalid_response when Meta returns 400 (period/metric incompatibility)", async () => {
+    // The actual Meta error body for the incompatible metric/period
+    // combination. This is the wire shape the operator sees in
+    // production today.
+    const metaErrorBody = JSON.stringify({
+      error: {
+        message: "Invalid parameter: metric_type cannot be used with period day for reach metric",
+        type: "OAuthException",
+        code: 100,
+        error_subcode: 1888399,
+        fbtrace_id: "Abc123def456",
+      },
+    });
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith(`${baseGraph}/${igUserId}/insights`)) {
+        // Simulate Meta rejecting the call with the real 400 shape.
+        return new Response(metaErrorBody, {
+          status: 400,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (url.startsWith(`${baseGraph}/${igUserId}?`)) {
+        return jsonResponse(200, {
+          id: igUserId,
+          username: "__foodgame",
+          name: "Food Game",
+          followers_count: 248,
+          media_count: 46,
+          follows_count: 0,
+        });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    // The 28-day totals call hits Meta first (Call A is reach; if
+    // that one happens to 400 first the test still asserts the
+    // right error code). Either way the throw must surface as
+    // SocialProviderError with code=invalid_response, which is
+    // what the Re-test UI humanizes to "Meta returned an
+    // unrecognized response".
+    await expect(
+      fetchMetaInstagramSnapshot({
+        accessToken,
+        igUserId,
+        apiVersion: "v25.0",
+        requestIdHint: "test-req",
+      }),
+    ).rejects.toMatchObject({ code: "invalid_response", retryable: false });
+  });
+
+  it("surfaces the totals-side error code in sourceMetadata when only the totals call fails", async () => {
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith(`${baseGraph}/${igUserId}/insights`)) {
+        const params = new URL(url).searchParams;
+        if (params.get("period") === "day") {
+          return jsonResponse(200, {
+            data: [{ name: "reach", period: "day", values: [{ value: 2401 }] }],
+          });
+        }
+        // 28-day totals returns a 403 (the typical App Review gate
+        // for these cumulative metrics). The caller swallows
+        // permission_denied and writes the error code into
+        // sourceMetadata for the operator.
+        return new Response(
+          JSON.stringify({
+            error: {
+              message: "Permission denied for metric accounts_engaged",
+              type: "OAuthException",
+              code: 10,
+              fbtrace_id: "Abc999",
+            },
+          }),
+          { status: 403, headers: { "content-type": "application/json" } },
+        );
+      }
+      if (url.startsWith(`${baseGraph}/${igUserId}?`)) {
+        return jsonResponse(200, {
+          id: igUserId,
+          username: "__foodgame",
+          name: "Food Game",
+          followers_count: 248,
+          media_count: 46,
+          follows_count: 0,
+        });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaInstagramSnapshot({
+      accessToken,
+      igUserId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+
+    // Reach populated (Call A succeeded), the 28d fields null
+    // (Call B was permission_denied and silently nulled), and the
+    // sourceMetadata surfaces the actual provider error code so a
+    // SQL query tells the operator this is an App Review gate, not
+    // a transient outage.
     expect(snapshot.reach).toBe(2401);
+    expect(snapshot.views).toBeNull();
+    expect(snapshot.engagedAccounts).toBeNull();
+    expect(snapshot.interactions).toBeNull();
+    expect(snapshot.sourceMetadata.partial).toBe(true);
+    expect(snapshot.sourceMetadata.reason).toBe("ig_insights_unavailable");
+    expect(snapshot.sourceMetadata.providerErrorCode).toBe("permission_denied");
   });
 });
 
