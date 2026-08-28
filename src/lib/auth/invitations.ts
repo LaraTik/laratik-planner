@@ -17,7 +17,7 @@ import { clientEnv, serverEnv } from "@/lib/validation/env";
 import { invitationIdentityMatches, normalizeEmailAddress } from "@/lib/auth/invitation-identity";
 import { assertCanDeactivateAgencyMember } from "@/lib/auth/member-safety";
 import type { InvitationCommand } from "@/lib/auth/invitation-command";
-import { workspaceRoleSchema } from "@/lib/auth/invitation-command";
+import { flattenWorkspaceRoleGrants, workspaceRoleSchema } from "@/lib/auth/invitation-command";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { releaseCapacity, reserveCapacity } from "@/lib/entitlements";
 
@@ -85,6 +85,10 @@ export async function createInvitation(
     const requestedWorkspaceIds = [
       ...new Set(input.workspaceRoles.map((role) => role.workspaceId)),
     ];
+    // The new command shape can carry multiple roles per workspace;
+    // `flattenWorkspaceRoleGrants` normalises it to the
+    // `(workspaceId, role)` row shape the persistence layer expects.
+    const flatGrants = flattenWorkspaceRoleGrants(input.workspaceRoles);
     if (requestedWorkspaceIds.length > 0) {
       const owned = await tx
         .select({ id: workspaces.id })
@@ -122,9 +126,9 @@ export async function createInvitation(
       .returning({ id: invitations.id });
     if (!row) throw new Error("Invitation could not be created");
 
-    if (input.workspaceRoles.length > 0) {
+    if (flatGrants.length > 0) {
       await tx.insert(invitationWorkspaceRoles).values(
-        input.workspaceRoles.map((wr) => ({
+        flatGrants.map((wr) => ({
           invitationId: row.id,
           workspaceId: wr.workspaceId,
           role: wr.role,
@@ -139,7 +143,7 @@ export async function createInvitation(
       outcome: "success",
       metadata: {
         agencyId,
-        workspaceGrantCount: input.workspaceRoles.length,
+        workspaceGrantCount: flatGrants.length,
         grantsAgencyAdmin: input.grantsAgencyAdmin,
       },
     });
@@ -424,13 +428,32 @@ export async function editInvitationAccess(input: {
   invitationId: string;
   agencyId: string;
   actorUserId: string;
-  workspaceRoles: { workspaceId: string; role: string }[];
+  /**
+   * Multi-role grant shape. Each entry can be either the legacy
+   * `{ workspaceId, role }` (still accepted for backward compatibility
+   * with older clients) or the new `{ workspaceId, roles: [role, …] }`
+   * form. The service flattens both into the row shape the
+   * `invitation_workspace_role` table expects.
+   */
+  workspaceRoles:
+    { workspaceId: string; role: string }[] | { workspaceId: string; roles: string[] }[];
 }): Promise<void> {
   const { invitationId, agencyId, actorUserId, workspaceRoles } = input;
+  // Normalise both shapes into the row-pair shape. An empty
+  // `roles: []` (or no `role` field on the legacy shape) is a no-op —
+  // the workspace is simply omitted from the grant set.
+  const flat: { workspaceId: string; role: string }[] = [];
+  for (const g of workspaceRoles) {
+    if ("roles" in g) {
+      for (const r of g.roles) flat.push({ workspaceId: g.workspaceId, role: r });
+    } else {
+      flat.push({ workspaceId: g.workspaceId, role: g.role });
+    }
+  }
   // Validate role strings against the enum. Empty role == "no
   // access" for that workspace, which the schema expresses as
   // "omit the row entirely".
-  for (const { workspaceId, role } of workspaceRoles) {
+  for (const { workspaceId, role } of flat) {
     if (role !== "" && !workspaceRoleSchema.safeParse(role).success) {
       throw new Error("Invalid workspace access selection");
     }
@@ -450,7 +473,7 @@ export async function editInvitationAccess(input: {
       throw new Error(`Cannot edit access on a ${invitation.status} invitation`);
     }
     // Scope check: every workspace must belong to the same agency.
-    const requestedWorkspaceIds = Array.from(new Set(workspaceRoles.map((r) => r.workspaceId)));
+    const requestedWorkspaceIds = Array.from(new Set(flat.map((r) => r.workspaceId)));
     if (requestedWorkspaceIds.length > 0) {
       const owned = await tx
         .select({ id: workspaces.id })
@@ -466,7 +489,7 @@ export async function editInvitationAccess(input: {
     await tx
       .delete(invitationWorkspaceRoles)
       .where(eq(invitationWorkspaceRoles.invitationId, invitationId));
-    const grants = workspaceRoles.filter((r) => r.role !== "");
+    const grants = flat.filter((r) => r.role !== "");
     if (grants.length > 0) {
       await tx.insert(invitationWorkspaceRoles).values(
         grants.map((g) => ({

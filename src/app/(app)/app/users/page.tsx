@@ -68,6 +68,8 @@ export default async function UsersPage() {
   // Per-user, per-workspace role lookup so the Edit drawer can pre-select
   // the current role in each workspace select. Active memberships only —
   // deactivated memberships aren't editable in this surface.
+  // Multi-role: a user can hold many roles in the same workspace; we
+  // group the rows by (userId, workspaceId) into a `string[]`.
   const memberRows = await db
     .select({
       userId: workspaceMemberships.userId,
@@ -88,10 +90,11 @@ export default async function UsersPage() {
         eq(workspaceMemberships.status, "active"),
       ),
     );
-  const rolesByUser: Record<string, Record<string, string>> = {};
+  const rolesByUser: Record<string, Record<string, string[]>> = {};
   for (const r of memberRows) {
-    const bucket = (rolesByUser[r.userId] ??= {});
-    bucket[r.workspaceId] = r.role;
+    const userBucket = (rolesByUser[r.userId] ??= {});
+    const wsBucket = (userBucket[r.workspaceId] ??= []);
+    if (!wsBucket.includes(r.role)) wsBucket.push(r.role);
   }
 
   const activeCount = members.filter((m) => m.status === "active").length;

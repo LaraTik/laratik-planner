@@ -106,6 +106,21 @@ const dbMock = vi.hoisted(() => {
         chain.values = vi.fn((values: unknown) => {
           dbState.insertCalls.push({ values });
           chain.returning = vi.fn(() => Promise.resolve([{ id: "u-new" }]));
+          // Multi-role grants now use `onConflictDoUpdate` on
+          // workspace_memberships and `onConflictDoNothing` on
+          // workspace_membership_role. Both return a thenable that
+          // resolves to a row so the surrounding `.returning()` call
+          // keeps working.
+          chain.onConflictDoUpdate = vi.fn(() => {
+            const inner: Record<string, unknown> = {};
+            inner.returning = vi.fn(() => Promise.resolve([{ id: "m-new" }]));
+            return inner;
+          });
+          chain.onConflictDoNothing = vi.fn(() => {
+            const inner: Record<string, unknown> = {};
+            inner.returning = vi.fn(() => Promise.resolve([{ id: "m-new" }]));
+            return inner;
+          });
           return chain;
         });
         return chain;

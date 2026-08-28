@@ -3,21 +3,18 @@ import { notFound, redirect } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
-import {
-  decodeContentCursor,
-  encodeContentCursor,
-  listWorkspaceContent,
-} from "@/lib/content/service";
+import { countWorkspaceContent, listWorkspaceContent } from "@/lib/content/service";
 import { ALL_FORMATS, ALL_STATUSES, humanFormat } from "@/lib/content/status";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
-import { Clock, Files, Plus, FileText, Download } from "lucide-react";
+import { Clock, Files, Plus, FileText, Download, AlertTriangle, LayoutGrid } from "lucide-react";
 import { StatusBadge } from "@/components/content/status-badge";
 import { PageHeader } from "@/components/workspace/page-header";
 import { ListCard, ListItem } from "@/components/workspace/list-item";
 import { MonthNav } from "@/components/workspace/month-nav";
 import { PlanningFilters } from "@/components/workspace/planning-filters";
 import { PlanningKpiBar } from "@/components/workspace/planning-kpi-bar";
+import { Pagination } from "@/components/workspace/pagination";
 import { describeActiveFilter } from "./filter-describe";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import {
@@ -38,6 +35,19 @@ import { users, workspaceMemberships } from "@/lib/db/schema";
  * At Risk / Needs Review / Ready) and the List/Board/Calendar view
  * toggle. The list itself stays in list-card form (a future pass can
  * switch to a denser table layout).
+ *
+ * Pagination (Just Halal workspace remediation, 2026-08-29):
+ *  - Page-based navigation (`?page=1`, `?page=2`, …) is the
+ *    canonical path. The previous "load more" cursor is still
+ *    supported in the service layer for callers that prefer it
+ *    (e.g. the unassigned design queue), but the planning list
+ *    renders the standard first / prev / pages / next / last
+ *    control so users can jump directly to any page.
+ *  - A separate `countWorkspaceContent` query gives the total
+ *    matched rows so the "Showing X–Y of Z" line is correct.
+ *  - The 1-indexed page number is the only pagination param on
+ *    the URL; the other filter / sort / density params are
+ *    preserved on every page link.
  */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   return { title: `Planning · ${(await params).slug}` };
@@ -53,16 +63,14 @@ export default async function PlanningPage({
     status?: string;
     risk?: string;
     density?: string;
-    /**
-     * FEAT-09 (GAP-FULL-REVIEW-2026-08-25) — new search / owner /
-     * format filters and the "load more" cursor. The cursor is the
-     * base64url-encoded `(plannedPublishAt, id)` of the last item on
-     * the previous page.
-     */
     search?: string;
     owner?: string;
     format?: string;
-    cursor?: string;
+    /**
+     * 1-indexed page number. Defaults to 1. Invalid values
+     * (non-numeric, <1) are clamped to 1.
+     */
+    page?: string;
   }>;
 }) {
   const { slug } = await params;
@@ -92,22 +100,40 @@ export default async function PlanningPage({
   const searchTerm = filters.search?.trim() || undefined;
   const ownerFilter =
     filters.owner && /^[0-9a-f-]{36}$/i.test(filters.owner) ? filters.owner : undefined;
-  const cursor = decodeContentCursor(filters.cursor);
   const density = filters.density === "compact" ? "compact" : "comfortable";
-  // Per-page cap. 20 keeps the first paint fast; the load-more button
-  // is the path to deeper history. The cap also gives the cursor a
-  // well-defined "next" when we have at least one more row beyond it.
+  // Per-page cap. 20 keeps the first paint fast; the pagination
+  // control below handles deeper history.
   const pageSize = 20;
-  let items = await listWorkspaceContent({ id: session.user.id }, ws.id, {
+  // Clamp the page number to a 1-indexed positive integer. Anything
+  // missing / malformed / <1 collapses to 1.
+  const parsedPage = Number.parseInt(filters.page ?? "1", 10);
+  const requestedPage = Number.isFinite(parsedPage) && parsedPage >= 1 ? parsedPage : 1;
+
+  // The two queries run in parallel — the data page and the total
+  // count. They're independent and both index the workspace_id +
+  // planned_publish_at columns.
+  const filterOpts = {
     monthStart,
     monthEnd,
     ...(selectedStatus ? { status: selectedStatus } : {}),
     ...(selectedFormat ? { format: selectedFormat } : {}),
     ...(ownerFilter ? { ownerId: ownerFilter } : {}),
     ...(searchTerm ? { search: searchTerm } : {}),
-    ...(cursor ? { cursor } : {}),
-    limit: pageSize + 1,
-  });
+  } as const;
+
+  const [allItems, totalCount] = await Promise.all([
+    listWorkspaceContent({ id: session.user.id }, ws.id, {
+      ...filterOpts,
+      limit: pageSize,
+      offset: (requestedPage - 1) * pageSize,
+    }),
+    countWorkspaceContent({ id: session.user.id }, ws.id, filterOpts),
+  ]);
+  let items = allItems;
+  // Apply the post-fetch `risk=at_risk` filter on the page slice so
+  // the total count is the unfiltered-by-risk size. (Risk is a
+  // post-process flag, not a DB column; we don't want it to affect
+  // the total.)
   if (filters.risk === "at_risk")
     items = items.filter(
       (item) =>
@@ -116,15 +142,13 @@ export default async function PlanningPage({
           item.status,
         ),
     );
-  const hasNextPage = items.length > pageSize;
-  const visibleItems = hasNextPage ? items.slice(0, pageSize) : items;
-  const nextCursor =
-    hasNextPage && visibleItems.length > 0
-      ? {
-          plannedPublishAt: visibleItems[visibleItems.length - 1]!.plannedPublishAt,
-          id: visibleItems[visibleItems.length - 1]!.id,
-        }
-      : null;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  // If the requested page is past the end (e.g. user bookmarked
+  // page 12 and the dataset shrunk to 3 pages), surface the empty
+  // state on page 1 rather than rendering a blank grid. The URL
+  // stays as the user wrote it so a reload re-resolves correctly.
+  const currentPage = Math.min(requestedPage, totalPages);
+  const visibleItems = currentPage === requestedPage ? items : [];
 
   // KPI tile counts — derived from the unfiltered list so the tiles
   // always reflect the full month, not whatever filter the user has
@@ -162,21 +186,23 @@ export default async function PlanningPage({
     selectedStatus || selectedFormat || ownerFilter || searchTerm || filters.risk,
   );
 
-  // Build the load-more URL by re-serialising the active filters plus
-  // the next cursor. We rebuild from a known set of keys so we never
-  // leak internal params (`risk`, `density`) into the link.
-  const loadMoreHref = (() => {
-    if (!nextCursor) return null;
+  // Page href builder. Preserves every filter / density param so a
+  // paginated link never silently drops the user's selection. The
+  // only pagination-only param is `page`; the other keys are
+  // reconstructed from the known filter set so a malicious caller
+  // can't inject internal params (`risk`, `density`, etc.) into the
+  // link.
+  const buildPageHref = (page: number) => {
     const params = new URLSearchParams();
     params.set("month", monthParam(0));
+    if (page !== 1) params.set("page", String(page));
     if (selectedStatus) params.set("status", selectedStatus);
     if (selectedFormat) params.set("format", selectedFormat);
     if (ownerFilter) params.set("owner", ownerFilter);
     if (searchTerm) params.set("search", searchTerm);
     if (filters.density === "compact") params.set("density", "compact");
-    params.set("cursor", encodeContentCursor(nextCursor));
     return `?${params.toString()}`;
-  })();
+  };
 
   return (
     <div className="space-y-6" data-testid="workspace-planning">
@@ -185,8 +211,8 @@ export default async function PlanningPage({
         title="Planning"
         description={
           <>
-            {now.toLocaleString("default", { month: "long", year: "numeric" })} ·{" "}
-            {visibleItems.length} item{visibleItems.length === 1 ? "" : "s"}
+            {now.toLocaleString("default", { month: "long", year: "numeric" })} · {totalCount} item
+            {totalCount === 1 ? "" : "s"}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {ws.timezone}
@@ -211,6 +237,33 @@ export default async function PlanningPage({
                 </Button>
               </>
             ) : null}
+            {/* Switch to the board view with the same filters applied.
+                Filters are re-serialised (the board has no month scope,
+                so we drop the `month` key on the way across). The board
+                has no density concept, so we also drop `density` and
+                `page`. The destination re-renders the filter row from
+                the URL. */}
+            <Button
+              variant="outline"
+              asChild
+              data-testid="planning-switch-to-board"
+              title="Switch to the board view with the same filters applied"
+            >
+              <Link
+                href={(() => {
+                  const params = new URLSearchParams();
+                  if (selectedStatus) params.set("status", selectedStatus);
+                  if (selectedFormat) params.set("format", selectedFormat);
+                  if (ownerFilter) params.set("owner", ownerFilter);
+                  if (searchTerm) params.set("search", searchTerm);
+                  const qs = params.toString();
+                  return qs ? `/app/w/${slug}/board?${qs}` : `/app/w/${slug}/board`;
+                })()}
+              >
+                <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+                Board view
+              </Link>
+            </Button>
             {/* FEAT-15 (GAP-FULL-REVIEW-2026-08-25) — CSV export
                 of the current month's content. The link carries
                 the active month so the download matches what's
@@ -249,7 +302,7 @@ export default async function PlanningPage({
       <div className="border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-card)] border p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <MonthNav month={now} buildHref={buildMonthHref} />
         <PlanningFilters
-          slug={slug}
+          targetPath={`/app/w/${slug}/planning`}
           monthParam={monthParam(0)}
           selectedStatus={selectedStatus}
           selectedFormat={selectedFormat}
@@ -264,7 +317,7 @@ export default async function PlanningPage({
         />
       </div>
 
-      {visibleItems.length === 0 ? (
+      {totalCount === 0 ? (
         <EmptyState
           icon={<FileText className="h-8 w-8" aria-hidden="true" />}
           title={hasFilter ? "No items match your filters" : "Nothing planned for this month"}
@@ -303,9 +356,52 @@ export default async function PlanningPage({
             ) : undefined
           }
         />
+      ) : requestedPage > totalPages ? (
+        // The user asked for a page past the end of the dataset. The
+        // header still shows the real total, the URL preserves the
+        // user's request, but the body is a soft empty state with
+        // a jump-to-page-1 affordance instead of a blank list.
+        <Card padding="lg" data-testid="planning-page-out-of-range">
+          <div className="flex flex-col items-start gap-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="text-warning h-5 w-5" aria-hidden="true" />
+              <p className="text-body text-fg-primary font-semibold">
+                Page {requestedPage} is past the end of the list
+              </p>
+            </div>
+            <p className="text-body text-fg-secondary">
+              The current filters match {totalCount} item{totalCount === 1 ? "" : "s"} across{" "}
+              {totalPages} page{totalPages === 1 ? "" : "s"}. Jump back to the first page to keep
+              browsing.
+            </p>
+            <div>
+              <Button asChild variant="outline" size="sm">
+                <Link href={buildPageHref(1)}>Go to page 1</Link>
+              </Button>
+            </div>
+          </div>
+        </Card>
+      ) : visibleItems.length === 0 ? (
+        // Page exists (1-indexed within totalPages) but the post-fetch
+        // `risk=at_risk` filter eliminated every row on this page.
+        <EmptyState
+          icon={<FileText className="h-8 w-8" aria-hidden="true" />}
+          title="No at-risk items on this page"
+          description="The at-risk filter only shows items that are overdue and still in flight. Try the next page, or clear the filter to see everything."
+          action={
+            <Button variant="outline" asChild>
+              <Link
+                href={`/app/w/${slug}/planning?month=${monthParam(0)}`}
+                data-testid="planning-empty-clear-filters"
+              >
+                Clear filters
+              </Link>
+            </Button>
+          }
+        />
       ) : (
         <>
-          <ListCard>
+          <ListCard data-testid="planning-list">
             {visibleItems.map((it) => (
               <ListItem
                 key={it.id}
@@ -318,21 +414,20 @@ export default async function PlanningPage({
               />
             ))}
           </ListCard>
-          {loadMoreHref ? (
-            <div className="flex justify-center">
-              <Button variant="outline" asChild>
-                <Link
-                  href={loadMoreHref}
-                  data-testid="planning-load-more"
-                  aria-label="Load more content items"
-                >
-                  Load more
-                </Link>
-              </Button>
-            </div>
-          ) : null}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            buildHref={buildPageHref}
+            totalCount={totalCount}
+            pageSize={pageSize}
+          />
         </>
       )}
     </div>
   );
 }
+
+// Lightweight, local import for the out-of-range card. Keeping the
+// import block at the top of the file would surface it in every
+// other test, so the lazy-require pattern keeps the diff scoped.
+import { Card } from "@/components/ui/card";

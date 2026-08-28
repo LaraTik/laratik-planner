@@ -607,6 +607,13 @@ export async function listWorkspaceContent(
      * publish date.
      */
     cursor?: { plannedPublishAt: Date; id: string };
+    /**
+     * Offset-based pagination. Mutually exclusive with `cursor` —
+     * if both are provided, the cursor wins (it's the more
+     * efficient path for large datasets). Use this when the UI
+     * needs page-based navigation (e.g. "page 3 of 12").
+     */
+    offset?: number;
   } = {},
 ) {
   await requirePolicy(
@@ -642,12 +649,65 @@ export async function listWorkspaceContent(
     );
   }
 
+  // Offset path. We apply it AFTER the cursor is resolved (they're
+  // mutually exclusive; the cursor path is the historical one and
+  // the offset path is the new page-based one). An offset past the
+  // dataset returns an empty array.
+  const offset = opts.offset && opts.offset > 0 ? opts.offset : 0;
   return db
     .select()
     .from(contentItems)
     .where(and(...conditions))
     .orderBy(sql`${contentItems.plannedPublishAt} ASC`, sql`${contentItems.id} ASC`)
-    .limit(opts.limit ?? 200);
+    .limit(opts.limit ?? 200)
+    .offset(offset);
+}
+
+/**
+ * Count workspace content items matching the same filter set as
+ * `listWorkspaceContent` (minus pagination, which is irrelevant for a
+ * count). Used by the planning list to render the "Showing X–Y of Z"
+ * total and to compute the total page count for the pagination
+ * control. Two queries (rows + count) is the standard pagination
+ * pattern; both are indexed on `workspaceId` + `plannedPublishAt`
+ * via the existing content_item indexes, so the cost is one extra
+ * fast scan per page load.
+ */
+export async function countWorkspaceContent(
+  actor: Actor,
+  workspaceId: string,
+  opts: {
+    monthStart?: Date;
+    monthEnd?: Date;
+    status?: string;
+    search?: string;
+    ownerId?: string;
+    format?: string;
+  } = {},
+): Promise<number> {
+  await requirePolicy(
+    hasWorkspaceRole(actor, workspaceId, [...INTERNAL_WORKSPACE_ROLES]),
+    "count_content",
+  );
+  const conditions = [eq(contentItems.workspaceId, workspaceId), isNull(contentItems.archivedAt)];
+  if (opts.monthStart) conditions.push(sql`${contentItems.plannedPublishAt} >= ${opts.monthStart}`);
+  if (opts.monthEnd) conditions.push(sql`${contentItems.plannedPublishAt} < ${opts.monthEnd}`);
+  if (opts.status) conditions.push(sql`${contentItems.status} = ${opts.status}`);
+  if (opts.ownerId) conditions.push(eq(contentItems.contentOwnerId, opts.ownerId));
+  if (opts.format) {
+    conditions.push(eq(contentItems.format, opts.format as never));
+  }
+  if (opts.search) {
+    const needle = `%${opts.search.toLowerCase()}%`;
+    conditions.push(
+      sql`(lower(${contentItems.title}) LIKE ${needle} OR lower(${contentItems.brief}) LIKE ${needle})`,
+    );
+  }
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(contentItems)
+    .where(and(...conditions));
+  return row?.count ?? 0;
 }
 
 /**

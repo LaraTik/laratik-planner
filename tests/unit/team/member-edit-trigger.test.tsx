@@ -21,8 +21,8 @@ describe("MemberEditTrigger", () => {
     isAgencyAdmin: false,
   };
   const workspaces = [
-    { id: "ws-1", name: "Acme", currentRole: "content_planner" },
-    { id: "ws-2", name: "Beta", currentRole: "" },
+    { id: "ws-1", name: "Acme", currentRoles: ["content_planner"] },
+    { id: "ws-2", name: "Beta", currentRoles: [] },
   ];
 
   it("renders a ghost Edit button with a per-member testid and aria-label", () => {

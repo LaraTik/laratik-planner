@@ -13,19 +13,25 @@ import {
 import { Button } from "@/components/ui/button";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toggleAgencyAdminAction, updateMemberRolesAction, type MemberEditState } from "./actions";
+import { WorkspaceRoleMatrix } from "./_components/workspace-role-matrix";
+import { workspaceRoleSchema } from "@/lib/auth/invitation-command";
 
 /**
  * Right-side slide-in drawer for editing a single agency member's:
  *   - agency-admin flag (if the actor is an agency admin and the target
  *     is not the actor)
- *   - per-workspace role assignment (one role per workspace, with
- *     "No access" available to clear access)
+ *   - per-workspace role assignment (any number of roles per workspace,
+ *     with the option to clear all access)
  *
  * The drawer is a *single form* whose two submit buttons target two
  * different server actions via React 19's `formAction` prop:
  *   - default (`action={rolesFormAction}`) — updateMemberRolesAction,
- *     replaces every per-workspace role row in a single transaction
+ *     replaces every per-workspace role row in a single transaction.
+ *     Multi-role: a user can hold `workspace_manager` + `designer`
+ *     in the same workspace — the action persists each as a separate
+ *     row in `workspace_membership_role`.
  *   - admin toggle button (`formAction={adminFormAction}`) —
  *     toggleAgencyAdminAction, flips the isAgencyAdmin flag
  *
@@ -37,14 +43,17 @@ import { toggleAgencyAdminAction, updateMemberRolesAction, type MemberEditState 
  * The form is remounted on every subject change (key={subject.id}) so
  * the in-progress edits are discarded when a different member is
  * opened, and the next subject's current roles are seeded into the
- * workspace selects.
+ * workspace matrix.
  */
 
 export type MemberEditWorkspace = {
   id: string;
   name: string;
-  /** Current role in this workspace; empty string means "no access". */
-  currentRole: string;
+  /**
+   * All roles currently assigned to this member in this workspace.
+   * Empty array means "no access".
+   */
+  currentRoles: string[];
 };
 
 export type MemberEditSubject = {
@@ -66,27 +75,25 @@ export type MemberEditDrawerProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-const ROLE_OPTIONS: { value: string; label: string }[] = [
-  { value: "workspace_manager", label: "Workspace Manager" },
-  { value: "content_planner", label: "Content Planner" },
-  { value: "designer", label: "Designer" },
-  { value: "internal_reviewer", label: "Internal Reviewer" },
-  { value: "client_reviewer", label: "Client Reviewer" },
-  { value: "publisher", label: "Publisher" },
-  { value: "viewer", label: "Viewer" },
-];
+const ROLE_LABELS: Record<string, string> = {
+  workspace_manager: "Workspace Manager",
+  content_planner: "Content Planner",
+  designer: "Designer",
+  internal_reviewer: "Internal Reviewer",
+  client_reviewer: "Client Reviewer",
+  publisher: "Publisher",
+  viewer: "Viewer",
+};
 
-function serializeGrants(grants: Record<string, string>): string {
-  return JSON.stringify(
-    Object.entries(grants).map(([workspaceId, role]) => ({ workspaceId, role })),
-  );
-}
-
-function seedGrants(workspaces: MemberEditWorkspace[]): Record<string, string> {
-  const next: Record<string, string> = {};
-  for (const w of workspaces) next[w.id] = w.currentRole;
-  return next;
-}
+const ROLE_DESCRIPTIONS: Record<string, string> = {
+  workspace_manager: "Full control of a workspace, including members and settings.",
+  content_planner: "Owns the brief, plan, and submission of content for review.",
+  designer: "Picks up design tasks and uploads delivery versions.",
+  internal_reviewer: "Reviews and approves content at the content + creative gates.",
+  client_reviewer: "Reviews and approves creative on behalf of the client.",
+  publisher: "Records per-channel publication outcomes once the item is live.",
+  viewer: "Read-only access. Cannot mutate any workspace state.",
+};
 
 export function MemberEditDrawer({
   subject,
@@ -104,7 +111,7 @@ export function MemberEditDrawer({
     >
       <DialogContent
         // Right-side slide-in (override the centered default)
-        className="bg-surface fixed top-0 right-0 bottom-0 left-auto z-50 flex h-full w-full max-w-[520px] translate-x-0 translate-y-0 flex-col gap-0 overflow-y-auto rounded-none border-t-0 border-r-0 border-b-0 border-l p-0 shadow-xl"
+        className="bg-surface fixed top-0 right-0 bottom-0 left-auto z-50 flex h-full w-full max-w-[560px] translate-x-0 translate-y-0 flex-col gap-0 overflow-y-auto rounded-none border-t-0 border-r-0 border-b-0 border-l p-0 shadow-xl"
         data-testid="member-edit-drawer"
       >
         {subject ? (
@@ -141,8 +148,16 @@ function MemberEditForm({
 }: FormProps) {
   // Seed-once on mount via lazy initialiser — the parent uses
   // key={subject.id} so a different member remounts this whole form.
-  const [grants, setGrants] = React.useState<Record<string, string>>(() => seedGrants(workspaces));
-  const grantsJson = React.useMemo(() => serializeGrants(grants), [grants]);
+  const defaultSelectedRoles = React.useMemo<Record<string, string[]>>(() => {
+    const next: Record<string, string[]> = {};
+    for (const w of workspaces) {
+      const cleaned = w.currentRoles.filter((r) =>
+        (workspaceRoleSchema.options as readonly string[]).includes(r),
+      );
+      if (cleaned.length > 0) next[w.id] = cleaned;
+    }
+    return next;
+  }, [workspaces]);
 
   const isSelf = subject.id === actorUserId;
   const showAdminToggle = actorIsAgencyAdmin && !isSelf;
@@ -176,12 +191,16 @@ function MemberEditForm({
 
   const errorMessage = rolesState.error ?? adminState.error;
 
+  // Count the current effective roles for the header summary.
+  const effectiveRoles = workspaces.flatMap((w) => w.currentRoles);
+
   return (
     <>
       <DialogHeader className="border-border bg-surface sticky top-0 z-10 border-b px-6 py-4">
         <DialogTitle>{`Edit ${subject.name}`}</DialogTitle>
         <DialogDescription>
-          Adjust agency-wide access and per-workspace roles. Changes apply immediately.
+          Adjust agency-wide access and per-workspace roles. Each workspace can hold any number of
+          roles — pick the ones that match what this person actually does.
         </DialogDescription>
       </DialogHeader>
 
@@ -199,6 +218,16 @@ function MemberEditForm({
               )
             }
           />
+          <ReadOnlyField
+            label="Current effective roles"
+            value={
+              effectiveRoles.length === 0
+                ? "No access in any workspace"
+                : `${effectiveRoles.length} role${effectiveRoles.length === 1 ? "" : "s"} across ${
+                    workspaces.filter((w) => w.currentRoles.length > 0).length
+                  } workspace${workspaces.filter((w) => w.currentRoles.length > 0).length === 1 ? "" : "s"}`
+            }
+          />
 
           {showAdminToggle ? (
             <div className="space-y-2">
@@ -206,11 +235,10 @@ function MemberEditForm({
                 Agency admin
               </p>
               <label className="text-body text-fg-primary flex items-center gap-2">
-                <input
-                  type="checkbox"
+                <Checkbox
                   name="isAgencyAdmin"
                   defaultChecked={subject.isAgencyAdmin}
-                  className="h-4 w-4"
+                  data-testid="member-edit-is-agency-admin"
                 />
                 Grant agency administrator access
               </label>
@@ -229,31 +257,44 @@ function MemberEditForm({
             </div>
           ) : null}
 
-          <fieldset className="space-y-2">
+          <fieldset className="space-y-3">
             <legend className="text-label text-fg-secondary font-semibold tracking-wide uppercase">
               Workspace roles
             </legend>
+            <p className="text-label text-fg-muted">
+              Each role grants a specific capability in that workspace. Hold a role with
+              responsibility for any of the workflow steps it controls.
+            </p>
             {workspaces.length === 0 ? (
               <p className="text-body text-fg-muted">No workspaces in this agency yet.</p>
             ) : (
-              workspaces.map((w) => (
-                <div key={w.id} className="flex items-center gap-3">
-                  <span className="text-body text-fg-primary w-44 truncate">{w.name}</span>
-                  <select
-                    value={grants[w.id] ?? ""}
-                    onChange={(e) => setGrants((prev) => ({ ...prev, [w.id]: e.target.value }))}
-                    className="border-border bg-surface text-fg-primary text-body rounded-[var(--radius-control)] border px-2 py-1"
-                    aria-label={`Role for ${w.name}`}
-                  >
-                    <option value="">No access</option>
-                    {ROLE_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
+              <>
+                <WorkspaceRoleMatrix
+                  workspaces={workspaces.map((w) => ({ id: w.id, name: w.name }))}
+                  testId="member-edit"
+                  defaultSelectedRoles={defaultSelectedRoles}
+                  showNoAccessAction
+                />
+                <details className="text-label text-fg-muted group mt-2">
+                  <summary className="hover:text-fg-primary focus-visible:ring-focus-ring cursor-pointer list-none rounded-[var(--radius-control)] py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2">
+                    <span aria-hidden="true" className="mr-1 inline-block group-open:rotate-90">
+                      ▸
+                    </span>
+                    What does each role do?
+                  </summary>
+                  <ul className="text-label text-fg-secondary mt-2 space-y-1 pl-4">
+                    {workspaceRoleSchema.options.map((role) => (
+                      <li key={role}>
+                        <span className="text-fg-primary font-semibold">
+                          {ROLE_LABELS[role] ?? role}
+                        </span>
+                        <span className="text-fg-muted mx-1">—</span>
+                        <span>{ROLE_DESCRIPTIONS[role] ?? ""}</span>
+                      </li>
                     ))}
-                  </select>
-                </div>
-              ))
+                  </ul>
+                </details>
+              </>
             )}
           </fieldset>
 
@@ -266,8 +307,6 @@ function MemberEditForm({
             </p>
           ) : null}
         </div>
-
-        <input type="hidden" name="workspaceRoles" value={grantsJson} />
 
         <DialogFooter className="border-border bg-surface sticky bottom-0 px-6 py-4">
           <Button type="button" variant="ghost" onClick={onClose} data-testid="member-edit-cancel">

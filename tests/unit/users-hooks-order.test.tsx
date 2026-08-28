@@ -116,7 +116,7 @@ describe("/app/users components — hooks order guard", () => {
           <MemberList
             actorId="actor-1"
             workspaces={baseWorkspaces}
-            rolesByUser={{ "user-1": { "ws-1": "designer" } }}
+            rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
             members={[baseMember]}
           />,
         ),
@@ -138,7 +138,7 @@ describe("/app/users components — hooks order guard", () => {
         <MemberList
           actorId="actor-1"
           workspaces={baseWorkspaces}
-          rolesByUser={{ "user-1": { "ws-1": "designer" } }}
+          rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
           members={[baseMember]}
         />,
       );
@@ -154,7 +154,7 @@ describe("/app/users components — hooks order guard", () => {
           <MemberList
             actorId="actor-1"
             workspaces={baseWorkspaces}
-            rolesByUser={{ "user-1": { "ws-1": "designer" } }}
+            rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
             members={[baseMember, member2]}
           />,
         ),
@@ -179,7 +179,7 @@ describe("/app/users components — hooks order guard", () => {
           actorId="actor-other" // not the same as baseMember.id so the
           // admin toggle is in scope for the production code path
           workspaces={baseWorkspaces}
-          rolesByUser={{ "user-1": { "ws-1": "designer" } }}
+          rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
           members={[baseMember]}
         />,
       );
@@ -193,7 +193,7 @@ describe("/app/users components — hooks order guard", () => {
           <MemberList
             actorId="actor-other"
             workspaces={baseWorkspaces}
-            rolesByUser={{ "user-1": { "ws-1": "designer" } }}
+            rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
             members={[baseMember, member2]}
           />,
         ),
@@ -223,7 +223,7 @@ describe("/app/users components — hooks order guard", () => {
         <MemberList
           actorId="actor-other"
           workspaces={baseWorkspaces}
-          rolesByUser={{ "user-1": { "ws-1": "designer" } }}
+          rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
           members={[baseMember]}
         />,
       );
@@ -235,7 +235,7 @@ describe("/app/users components — hooks order guard", () => {
           <MemberList
             actorId="actor-other"
             workspaces={baseWorkspaces}
-            rolesByUser={{ "user-1": { "ws-1": "designer" } }}
+            rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
             members={[]}
           />,
         ),
@@ -247,7 +247,7 @@ describe("/app/users components — hooks order guard", () => {
           <MemberList
             actorId="actor-other"
             workspaces={baseWorkspaces}
-            rolesByUser={{ "user-1": { "ws-1": "designer" } }}
+            rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
             members={[baseMember]}
           />,
         ),
@@ -306,7 +306,7 @@ describe("/app/users components — hooks order guard", () => {
           member={baseMember}
           actorId="actor-1"
           actorIsAgencyAdmin
-          workspaces={baseWorkspaces.map((w) => ({ ...w, currentRole: "" }))}
+          workspaces={baseWorkspaces.map((w) => ({ ...w, currentRoles: [] }))}
         />,
       );
       const err = runWithoutThrowing(() =>
@@ -315,7 +315,7 @@ describe("/app/users components — hooks order guard", () => {
             member={{ ...baseMember, isAgencyAdmin: true }}
             actorId="actor-1"
             actorIsAgencyAdmin
-            workspaces={baseWorkspaces.map((w) => ({ ...w, currentRole: "designer" }))}
+            workspaces={baseWorkspaces.map((w) => ({ ...w, currentRoles: ["designer"] }))}
           />,
         ),
       );

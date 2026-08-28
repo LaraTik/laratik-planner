@@ -39,6 +39,20 @@ function makeDrizzleMock(state: DrizzleState) {
     chain.orderBy = vi.fn(() => thenableProxy(chain));
     chain.limit = vi.fn(() => {
       const rows = state.selectResults.shift() ?? [];
+      // Return a special chain that:
+      //  - has a `then` so `await chain.limit()` resolves to the rows
+      //  - has `offset` so `.limit().offset(k)` is still chainable
+      //  - the `offset` thenable also resolves to the same rows
+      const sub: Record<string, unknown> = {};
+      sub.then = (resolve: (v: unknown) => void) => resolve(rows);
+      sub.offset = vi.fn(() => {
+        const offsetRows = state.selectResults.shift() ?? rows;
+        return Promise.resolve(offsetRows);
+      });
+      return sub;
+    });
+    chain.offset = vi.fn(() => {
+      const rows = state.selectResults.shift() ?? [];
       return Promise.resolve(rows);
     });
     return chain;
