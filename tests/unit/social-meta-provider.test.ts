@@ -404,29 +404,73 @@ describe("error-surface safety", () => {
   });
 });
 
-describe("fetchMetaInstagramSnapshot — IG insights metric_type", () => {
-  // Regression guard for the 2026-08-27 pre-flight finding: the IG
-  // insights endpoint requires `metric_type=total_value` for
-  // `profile_views`, `accounts_engaged`, and `total_interactions`.
-  // Without it, the API returns 400 and the function surfaces `null`
-  // for every metric on every IG account, which silently breaks the
-  // engagement-rate card and the portfolio aggregate strip.
+describe("fetchMetaInstagramSnapshot — IG insights response shape (cumulative vs time series)", () => {
+  // 2026-08-28 round-2 regression guard. The IG /insights endpoint
+  // returns TWO different response shapes depending on whether the
+  // request included `metric_type=total_value`:
+  //   - **Cumulative** (the shape the snapshot URL uses): each data
+  //     entry has `{ total_value: { value: <number> } }` and NO
+  //     `values` field at all.
+  //   - **Time series** (the shape a `metric_type=`-less request
+  //     returns for reach, follower_count, etc.): each data entry
+  //     has `{ values: [{ value, end_time }, …] }` with one entry
+  //     per day.
+  //
+  // The pre-fix parser only read `values?.[0]?.value`, which is
+  // `undefined` for the cumulative shape — so every cumulative
+  // metric came back as `null` and the row was marked `partial: true`
+  // with `ig_insights_unavailable` and no `providerErrorCode`,
+  // surfacing on the Re-test button as "Meta returned an
+  // unrecognized response" even though Meta returned a perfectly
+  // valid 200 with the actual numbers. The pre-fix tests mocked
+  // the WRONG shape (`values[]` with `metric_type=total_value`),
+  // which is exactly why the bug slipped past CI.
   const baseGraph = "https://graph.facebook.com/v25.0";
   const igUserId = "17841480087235357";
   const accessToken = "page-token";
 
-  it("sends metric_type=total_value on the IG insights call", async () => {
-    let capturedInsightsUrl: string | null = null;
+  it("parses the cumulative total_value.value shape (the real Meta response for metric_type=total_value)", async () => {
+    // Live response shape captured from Meta v25-v26 against the
+    // Food Game IG account (17841480087235357) on 2026-08-28.
+    // Note: NO `values` field. Pre-fix this returned `undefined`
+    // for every metric.
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.startsWith(`${baseGraph}/${igUserId}/insights`)) {
-        capturedInsightsUrl = url;
         return jsonResponse(200, {
           data: [
-            { name: "reach", period: "day", values: [{ value: 2401 }] },
-            { name: "profile_views", period: "day", values: [{ value: 91 }] },
-            { name: "accounts_engaged", period: "day", values: [{ value: 15 }] },
-            { name: "total_interactions", period: "day", values: [{ value: 28 }] },
+            {
+              name: "reach",
+              period: "day",
+              title: "Accounts reached",
+              description: "The number of unique accounts that have seen your content…",
+              total_value: { value: 2164 },
+              id: `${igUserId}/insights/reach/day`,
+            },
+            {
+              name: "profile_views",
+              period: "day",
+              title: "Profile visits",
+              description: "The number of times that your profile was visited.",
+              total_value: { value: 67 },
+              id: `${igUserId}/insights/profile_views/day`,
+            },
+            {
+              name: "accounts_engaged",
+              period: "day",
+              title: "Accounts engaged",
+              description: "The number of accounts that have interacted with your content…",
+              total_value: { value: 13 },
+              id: `${igUserId}/insights/accounts_engaged/day`,
+            },
+            {
+              name: "total_interactions",
+              period: "day",
+              title: "Content interactions",
+              description: "The total number of post interactions…",
+              total_value: { value: 27 },
+              id: `${igUserId}/insights/total_interactions/day`,
+            },
           ],
         });
       }
@@ -435,7 +479,7 @@ describe("fetchMetaInstagramSnapshot — IG insights metric_type", () => {
           id: igUserId,
           username: "__foodgame",
           name: "Food Game",
-          followers_count: 248,
+          followers_count: 251,
           media_count: 46,
           follows_count: 0,
         });
@@ -450,20 +494,101 @@ describe("fetchMetaInstagramSnapshot — IG insights metric_type", () => {
       requestIdHint: "test-req",
     });
 
-    expect(capturedInsightsUrl).not.toBeNull();
-    // The bug regression: the URL MUST include `metric_type=total_value`.
-    // If a future refactor drops this parameter, the test fails and the
-    // engagement-rate card silently goes to null.
-    const params = new URL(capturedInsightsUrl!).searchParams;
-    expect(params.get("metric_type")).toBe("total_value");
-    expect(params.get("period")).toBe("day");
-    // All four metrics are requested.
-    expect(params.get("metric")).toBe("reach,profile_views,accounts_engaged,total_interactions");
-    // And the snapshot actually populated the values (not null).
-    expect(snapshot.engagedAccounts).toBe(15);
-    expect(snapshot.interactions).toBe(28);
-    expect(snapshot.views).toBe(91);
-    expect(snapshot.reach).toBe(2401);
+    // All four fields populated from the cumulative shape.
+    expect(snapshot.reach).toBe(2164);
+    expect(snapshot.views).toBe(67);
+    expect(snapshot.engagedAccounts).toBe(13);
+    expect(snapshot.interactions).toBe(27);
+    // partial is FALSE because every field is populated.
+    expect(snapshot.sourceMetadata.partial).toBe(false);
+  });
+
+  it("also parses the time-series values[] shape (the other Meta contract)", async () => {
+    // Some IG /insights calls (e.g. without metric_type, for
+    // follower_count) return the time-series shape. The parser
+    // must support both so a future URL that doesn't set
+    // metric_type doesn't silently return nulls.
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith(`${baseGraph}/${igUserId}/insights`)) {
+        return jsonResponse(200, {
+          data: [
+            { name: "reach", period: "day", values: [{ value: 1714 }] },
+            { name: "profile_views", period: "day", values: [{ value: 22 }] },
+            { name: "accounts_engaged", period: "day", values: [{ value: 5 }] },
+            { name: "total_interactions", period: "day", values: [{ value: 9 }] },
+          ],
+        });
+      }
+      if (url.startsWith(`${baseGraph}/${igUserId}?`)) {
+        return jsonResponse(200, {
+          id: igUserId,
+          username: "__foodgame",
+          name: "Food Game",
+          followers_count: 251,
+          media_count: 46,
+          follows_count: 0,
+        });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaInstagramSnapshot({
+      accessToken,
+      igUserId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+
+    // Same parser, different shape, same result.
+    expect(snapshot.reach).toBe(1714);
+    expect(snapshot.views).toBe(22);
+    expect(snapshot.engagedAccounts).toBe(5);
+    expect(snapshot.interactions).toBe(9);
+    expect(snapshot.sourceMetadata.partial).toBe(false);
+  });
+
+  it("mixes the two shapes (cumulative for some metrics, time series for others) and reads both correctly", async () => {
+    // Meta can return different shapes in the same response if the
+    // underlying metric supports both — e.g. a future API change
+    // that exposes `reach` as `total_value.value` while the other
+    // three keep the time-series shape. The parser must NOT
+    // assume uniform shape.
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith(`${baseGraph}/${igUserId}/insights`)) {
+        return jsonResponse(200, {
+          data: [
+            { name: "reach", period: "day", total_value: { value: 2164 } },
+            { name: "profile_views", period: "day", values: [{ value: 67 }] },
+            { name: "accounts_engaged", period: "day", total_value: { value: 13 } },
+            { name: "total_interactions", period: "day", values: [{ value: 27 }] },
+          ],
+        });
+      }
+      if (url.startsWith(`${baseGraph}/${igUserId}?`)) {
+        return jsonResponse(200, {
+          id: igUserId,
+          username: "__foodgame",
+          name: "Food Game",
+          followers_count: 251,
+          media_count: 46,
+          follows_count: 0,
+        });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaInstagramSnapshot({
+      accessToken,
+      igUserId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+    expect(snapshot.reach).toBe(2164);
+    expect(snapshot.views).toBe(67);
+    expect(snapshot.engagedAccounts).toBe(13);
+    expect(snapshot.interactions).toBe(27);
   });
 });
 
@@ -487,11 +612,35 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
       const url = String(input);
       if (url.startsWith(`${baseGraph}/${pageId}/insights`)) {
         capturedInsightsUrl = url;
+        // Live Meta response shape for `metric_type=total_value`:
+        // each entry has `total_value.value`, NOT `values[]`. The
+        // pre-fix test mock used the wrong shape (`values[]`), which
+        // is exactly why the parser bug slipped past CI. The pre-fix
+        // parser would have read `values?.[0]?.value` and returned
+        // `undefined` for every metric, failing the assertions below.
         return jsonResponse(200, {
           data: [
-            { name: "page_impressions_unique", period: "day", values: [{ value: 2401 }] },
-            { name: "page_views", period: "day", values: [{ value: 91 }] },
-            { name: "page_post_engagements", period: "day", values: [{ value: 28 }] },
+            {
+              name: "page_impressions_unique",
+              period: "day",
+              title: "Daily unique page impressions",
+              total_value: { value: 2401 },
+              id: `${pageId}/insights/page_impressions_unique/day`,
+            },
+            {
+              name: "page_views",
+              period: "day",
+              title: "Daily page views",
+              total_value: { value: 91 },
+              id: `${pageId}/insights/page_views/day`,
+            },
+            {
+              name: "page_post_engagements",
+              period: "day",
+              title: "Daily post engagements",
+              total_value: { value: 28 },
+              id: `${pageId}/insights/page_post_engagements/day`,
+            },
           ],
         });
       }
@@ -521,7 +670,8 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     expect(params.get("metric_type")).toBe("total_value");
     expect(params.get("period")).toBe("day");
     expect(params.get("metric")).toBe("page_impressions_unique,page_views,page_post_engagements");
-    // And the snapshot actually populated the values (not null).
+    // And the snapshot actually populated the values from the
+    // cumulative shape (the real Meta wire format).
     expect(snapshot.followerCount).toBe(69);
     expect(snapshot.reach).toBe(2401);
     expect(snapshot.views).toBe(91);

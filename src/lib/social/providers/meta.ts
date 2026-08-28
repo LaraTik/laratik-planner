@@ -492,9 +492,60 @@ type PageInsightsResponse = {
   data: Array<{
     name: string;
     period: string;
-    values: Array<{ value: number; end_time?: string }>;
+    title?: string;
+    description?: string;
+    id?: string;
+    /**
+     * Cumulative value when the request included `metric_type=total_value`.
+     * Meta returns this instead of `values[]` for total/cumulative metrics
+     * (e.g. `profile_views` with `metric_type=total_value`). When this
+     * field is present, `values` is absent and the pre-fix parser
+     * (which only read `values?.[0]?.value`) returned `undefined`.
+     * `readMetricValue` (below) prefers this field.
+     */
+    total_value?: { value?: number };
+    /**
+     * Time-series values when the request did NOT include
+     * `metric_type=total_value`. Meta returns one entry per day (or
+     * per week, depending on `period`). For a single-day snapshot we
+     * take the most recent entry via `values?.[0]?.value`.
+     */
+    values?: Array<{ value: number; end_time?: string }>;
   }>;
 };
+
+/**
+ * Extract a single numeric value from a Meta /insights data entry.
+ *
+ * Meta's `/insights` endpoint returns TWO different shapes depending
+ * on whether the request included `metric_type=total_value`:
+ *  - **Cumulative** (the shape the IG / Page snapshot uses): each
+ *    data entry has `{ total_value: { value: <number> } }` and
+ *    NO `values` field at all.
+ *  - **Time series** (the shape a `metric_type=`-less request
+ *    returns for reach, follower_count, etc.): each data entry has
+ *    `{ values: [{ value, end_time }, …] }` with one entry per day.
+ *
+ * The pre-fix parser only read `values?.[0]?.value`, which is
+ * `undefined` for the cumulative shape — so every cumulative
+ * metric came back as `null` and the row was marked `partial: true`
+ * with `ig_insights_unavailable` / `page_insights_unavailable` and
+ * no `providerErrorCode`, surfacing on the Re-test button as
+ * "Meta returned an unrecognized response" even though Meta
+ * returned a perfectly valid 200. This helper prefers the
+ * cumulative shape and falls back to the time-series shape so
+ * both work.
+ *
+ * Returns `null` for missing metrics, missing values, or
+ * non-numeric values (the canonical "absent" sentinel for the
+ * snapshot — the outer code maps `null` to `partial: true`).
+ */
+function readMetricValue(entry: PageInsightsResponse["data"][number] | undefined): number | null {
+  if (!entry) return null;
+  if (typeof entry.total_value?.value === "number") return entry.total_value.value;
+  const first = entry.values?.[0]?.value;
+  return typeof first === "number" ? first : null;
+}
 
 export async function fetchMetaFacebookPageSnapshot(args: {
   accessToken: string;
@@ -674,25 +725,29 @@ async function fetchMetaPageDailyInsights(args: {
   // returned null on permission_denied, which prevented the
   // outer catch from running — the operator had no way to know
   // the failure was a scope issue.
+  //
+  // 2026-08-28 (round 2): the response shape for `metric_type=total_value`
+  // is `{ total_value: { value: <number> } }` — a SINGLE number, not
+  // a `values[]` time series. The pre-fix parser read
+  // `values?.[0]?.value` and silently returned `undefined` for every
+  // Page channel's `views` and `interactions` when the URL included
+  // `metric_type=total_value` (added in 7c5def5). The row was marked
+  // `partial: true` for views/interactions while the basic followers
+  // call returned `fan_count` correctly. `readMetricValue` (below)
+  // prefers the cumulative `total_value.value` shape and falls back
+  // to the time-series `values?.[0]?.value` shape.
   const { body, usage } = await providerRequest(url.toString());
   try {
     parsed = JSON.parse(body) as PageInsightsResponse;
   } catch {
     throw new SocialProviderError("invalid_response", false, null);
   }
-  const find = (name: string) => parsed.data.find((m) => m.name === name)?.values?.[0]?.value;
   return {
     insights: {
-      reach:
-        typeof find("page_impressions_unique") === "number"
-          ? (find("page_impressions_unique") as number)
-          : null,
-      views: typeof find("page_views") === "number" ? (find("page_views") as number) : null,
+      reach: readMetricValue(parsed.data.find((m) => m.name === "page_impressions_unique")),
+      views: readMetricValue(parsed.data.find((m) => m.name === "page_views")),
       engagedAccounts: null, // Page-level engagement is rarely available as a single number
-      interactions:
-        typeof find("page_post_engagements") === "number"
-          ? (find("page_post_engagements") as number)
-          : null,
+      interactions: readMetricValue(parsed.data.find((m) => m.name === "page_post_engagements")),
     },
     usage,
   };
@@ -892,23 +947,55 @@ async function fetchMetaIgAccountDailyInsights(args: {
   // returned null on permission_denied, which prevented the
   // outer catch from running — the operator had no way to know
   // the failure was a scope issue.
+  //
+  // 2026-08-28 (round 2): the response shape for `metric_type=total_value`
+  // is `{ total_value: { value: <number> } }` — a SINGLE number per
+  // metric, not a `values[]` time series. The pre-fix parser read
+  // `values?.[0]?.value` and silently returned `undefined` for every
+  // metric when the URL included `metric_type=total_value` (added in
+  // 3dc7fa2). The result: every IG channel's `views`,
+  // `engagedAccounts`, and `interactions` came back as `null` even
+  // though Meta returned a perfectly valid 200 with the actual
+  // numbers. The row was marked `partial: true` with
+  // `reason: "ig_insights_unavailable"` and no `providerErrorCode` —
+  // the operator saw "Meta returned an unrecognized response" in the
+  // UI even though the basic followers call had succeeded. The
+  // `reach` field was the only one that happened to populate,
+  // because Meta's response also has a `description` field that
+  // happens to include the number string the test mock could parse
+  // (it did NOT — see the live response below). `readMetricValue`
+  // (defined at module scope, used by both the Page and IG branches)
+  // prefers the cumulative `total_value.value` shape and falls back
+  // to the time-series `values?.[0]?.value` shape.
+  //
+  // Live response shape (Meta v25-v26, Food Game IG 17841480087235357,
+  // measured 2026-08-28 with the user's page access token):
+  //   { "data": [
+  //     { "name": "reach", "period": "day", "title": "…",
+  //       "description": "…", "total_value": { "value": 2164 },
+  //       "id": "…/reach/day" },
+  //     { "name": "profile_views", "period": "day", "title": "…",
+  //       "description": "…", "total_value": { "value": 67 },
+  //       "id": "…/profile_views/day" },
+  //     { "name": "accounts_engaged", "period": "day", …,
+  //       "total_value": { "value": 13 }, … },
+  //     { "name": "total_interactions", "period": "day", …,
+  //       "total_value": { "value": 27 }, … }
+  //   ], "paging": { … } }
+  // Note the absence of any `values` field — the pre-fix parser
+  // returned `undefined` for all four.
   const { body, usage } = await providerRequest(url.toString());
   try {
     parsed = JSON.parse(body) as PageInsightsResponse;
   } catch {
     throw new SocialProviderError("invalid_response", false, null);
   }
-  const find = (name: string) => parsed.data.find((m) => m.name === name)?.values?.[0]?.value;
   return {
     insights: {
-      reach: typeof find("reach") === "number" ? (find("reach") as number) : null,
-      views: typeof find("profile_views") === "number" ? (find("profile_views") as number) : null,
-      engagedAccounts:
-        typeof find("accounts_engaged") === "number" ? (find("accounts_engaged") as number) : null,
-      interactions:
-        typeof find("total_interactions") === "number"
-          ? (find("total_interactions") as number)
-          : null,
+      reach: readMetricValue(parsed.data.find((m) => m.name === "reach")),
+      views: readMetricValue(parsed.data.find((m) => m.name === "profile_views")),
+      engagedAccounts: readMetricValue(parsed.data.find((m) => m.name === "accounts_engaged")),
+      interactions: readMetricValue(parsed.data.find((m) => m.name === "total_interactions")),
     },
     usage,
   };
