@@ -491,6 +491,20 @@ export type ClaimedProfile = {
  * Claim up to `limit` due profiles in a single transaction. The
  * caller is responsible for running the actual provider call after
  * this transaction commits.
+ *
+ * 2026-08-28: order by a workspace-hash stagger bucket first, then
+ * by `nextSyncAt`. The Meta Graph API has a per-app hourly cap
+ * (X-App-Usage header reports the percentage; stay under ~80% to
+ * avoid the 429 cliff). The previous plain `nextSyncAt` ordering
+ * meant every channel with `nextSyncAt <= now` got picked in a
+ * tight block — at 27 pages from a single brand that's a 27-call
+ * burst inside one tick. The stagger bucket `abs(hashtext(workspace_id)) % 60`
+ * matches the minute-of-hour; at a 15-min cron cadence only 4 of
+ * the 60 slots are priority per tick, so the call budget per
+ * minute is bounded to roughly the slot-matched workspaces'
+ * channels. Off-slot channels are still picked (because the limit
+ * is 20 and slots rarely hold 20 due channels), just behind the
+ * in-slot ones.
  */
 export async function claimDueProfiles(
   db: Db,
@@ -523,7 +537,15 @@ export async function claimDueProfiles(
           ),
         ),
       )
-      .orderBy(asc(socialChannels.nextSyncAt))
+      .orderBy(
+        // 2026-08-28: prefer channels whose workspace-id hash bucket
+        // matches the current minute-of-hour (0–59). `hashtext`
+        // returns int4 in Postgres; abs() keeps it non-negative.
+        // The CASE coerces the boolean to 0/1 so it sorts before
+        // `nextSyncAt ASC`.
+        sql`CASE WHEN abs(hashtext(${socialChannels.workspaceId}::text)) % 60 = EXTRACT(MINUTE FROM now())::int THEN 0 ELSE 1 END`,
+        asc(socialChannels.nextSyncAt),
+      )
       .limit(Math.min(limit, BATCH_LIMIT))
       .for("update", { skipLocked: true });
 
