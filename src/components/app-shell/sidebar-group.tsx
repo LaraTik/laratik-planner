@@ -16,6 +16,11 @@ import { isActivePath, cn } from "@/lib/utils";
  * Open state is derived from the active path: any nested item that is
  * active keeps the group open. The user can also click the chevron to
  * force-open/close; that state persists until the next navigation.
+ *
+ * The `children` list can mix `SidebarSubLink` and `NestedSidebarGroup`
+ * — the latter is a sub-group with its own toggle and its own
+ * `SidebarSubLink` children. `Brand Kit → Identity → Logos` is the
+ * canonical example (Phase 7).
  */
 export function SidebarGroup({
   href,
@@ -89,6 +94,66 @@ export function SidebarGroup({
         </ul>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Nested sidebar group — a collapsible sub-group that lives inside
+ * a `SidebarGroup`'s child list. Renders a button (not a link) with
+ * an icon + label + chevron; when expanded, shows its child
+ * `SidebarSubLink` items.
+ *
+ * The "group" itself is not a navigable route — it is purely an
+ * organisational label. The user clicks the chevron to expand /
+ * collapse; clicking the label does nothing (per ARIA disclosure
+ * pattern).
+ *
+ * Used by the Brand Kit parent group to cluster Identity / Voice /
+ * Resources under the parent (Phase 7).
+ */
+export function NestedSidebarGroup({
+  label,
+  icon,
+  children,
+  defaultOpen,
+  parentTestId,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  defaultOpen: boolean;
+  parentTestId?: string;
+}) {
+  const [forcedOpen, setForcedOpen] = React.useState<boolean | null>(null);
+  const open = forcedOpen ?? defaultOpen;
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => setForcedOpen((v) => (v === null ? !open : !v))}
+        aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
+        aria-expanded={open}
+        data-testid={parentTestId}
+        className="text-body text-fg-secondary hover:text-fg-primary focus-visible:ring-focus-ring flex min-h-9 w-full items-center justify-between gap-2 rounded-[var(--radius-control)] px-3 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <span aria-hidden="true">{icon}</span>
+          <span className="truncate">{label}</span>
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 shrink-0 transition-transform",
+            open ? "rotate-0" : "-rotate-90",
+          )}
+          aria-hidden="true"
+        />
+      </button>
+      {open ? (
+        <ul className="mt-0.5 ml-3 space-y-0.5 border-l border-[var(--color-border)] pl-3">
+          {React.Children.toArray(children).filter(Boolean)}
+        </ul>
+      ) : null}
+    </li>
   );
 }
 

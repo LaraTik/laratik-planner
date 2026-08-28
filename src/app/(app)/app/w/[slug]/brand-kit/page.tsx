@@ -1,6 +1,16 @@
 import { redirect, notFound } from "next/navigation";
 import { and, eq, isNull } from "drizzle-orm";
-import { Clock, Download, Tag } from "lucide-react";
+import {
+  Download,
+  ImageIcon,
+  Link2,
+  MessageCircle,
+  Palette,
+  Tag,
+  Type,
+  BookOpen,
+  History,
+} from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { brandAssets, brandVoiceRules } from "@/lib/db/schema";
@@ -12,62 +22,34 @@ import {
   listContentPillars,
   listRecentBrandUpdates,
 } from "@/lib/brand/service";
-import { BRAND_KIT_SECTIONS } from "@/lib/brand/sections";
 import { getSignedDownloadUrl } from "@/lib/storage";
+import { safeHref } from "@/lib/utils/safe-href";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/workspace/page-header";
-import { SectionCard } from "@/components/workspace/section-card";
-import { WorkspaceTopTabs } from "@/components/workspace/top-tabs";
-import { AddAssetMenu } from "./add-asset-menu";
 import { BrandIdentityHero } from "./brand-identity-hero";
-import { ColorForm } from "./color-form";
-import { ColorSwatchGrid } from "./color-swatch-grid";
-import { LinkedResourceForm } from "./linked-resource-form";
-import { LinkedResourceList } from "./linked-resource-list";
-import { LogoForm } from "./logo-form";
-import { LogoGrid } from "./logo-grid";
-import { PublishingRuleForm } from "./publishing-rule-form";
-import { PublishingRuleList } from "./publishing-rule-list";
 import { RecentUpdatesTable } from "./recent-updates-table";
-import { TypographyCards } from "./typography-cards";
-import { TypographyForm } from "./typography-form";
-import { VoiceForm } from "./voice-form";
-import { VoiceRuleList } from "./voice-rule-list";
-import { safeHref } from "@/lib/utils/safe-href";
 
 /**
- * Brand kit (Goal 4 master prompt §3) — workspace-scoped reference
- * for visual assets and writing guidance.
+ * Brand Kit overview — the workspace landing for `/app/w/[slug]/brand-kit`.
  *
- * Layout history:
- *   - M0–M3: 12-col Bento grid (Bento 12-col + Stitch top tabs).
- *   - Round 4 (this commit) — visual parity + UX polish:
- *       • Section content moved into dedicated components
- *         (`LogoGrid`, `ColorSwatchGrid`, `TypographyCards`,
- *         `VoiceRuleList`, `PublishingRuleList`,
- *         `LinkedResourceList`, `RecentUpdatesTable`,
- *         `BrandIdentityHero`). The page is now composition only.
- *       • Every section renders the same `<EmptyState>` (was a
- *         mix of `<p>` and `<EmptyState>`).
- *       • Archive buttons use `<ArchiveWithUndo>` so destructive
- *         actions ship with a 5s Sonner undo toast.
- *       • Recent Updates renders the real actor (display name +
- *         initials avatar) instead of a hardcoded "M".
- *       • Linked-resource links go through `safeHref` so a stray
- *         non-HTTPS row can never render a `javascript:` URL.
- *       • The "Add asset" header CTA is a real `<AddAssetMenu>`
- *         that scrolls to the matching section; the previous
- *         "Edit brand kit" stub is removed (it linked to `#logo`
- *         with no behavioural difference from the new menu).
+ * Phase 7 (this commit) replaces the previous single-page Bento grid
+ * (Logos 8/Color 4/Typography 12/Voice 6/Pillars 6/Publishing 4/Linked 4/
+ * Activity 12 + in-page top tabs) with a focused overview:
  *
- * Section grid (per the Stitch HTML):
+ *   row 1  Brand identity hero (12)
+ *   row 2  KPI grid: 6 section cards (2-up sm / 3-up lg / 6-up xl)
+ *   row 3  Recent updates (12)
  *
- *   row 1  col-span-12  Brand identity hero (with first-logo preview)
- *   row 2  col-span-8   Logo Assets        col-span-4  Color Palette
- *   row 3  col-span-12  Typography
- *   row 4  col-span-6   Voice & tone       col-span-6  Content Pillars
- *   row 5  col-span-4   Publishing Rules   col-span-4  Linked Resources
- *   row 6  col-span-12  Recent Updates
+ * Each KPI card is a deep link to the matching per-section page
+ * (Logos / Colors / Typography / Voice / Pillars / Publishing +
+ * Linked). Per-section CRUD is no longer on this page — it lives
+ * on the per-section routes (see `logos/page.tsx`, etc.). The
+ * Download ZIP CTA stays on the overview so a designer can grab
+ * every asset in one click.
+ *
+ * `Activity` is exposed in two places: the Recent updates table on
+ * this page (last 5–10 rows) and the dedicated `/activity` route
+ * (the full feed, ready for Phase 7 per-actor / type filters).
  */
 export default async function BrandKitPage({ params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();
@@ -75,12 +57,20 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
-  const actor = { id: session.user.id };
-  const canManage = await hasWorkspaceRole(actor, workspace.id, ["workspace_manager"]);
-  const canEditBrand = await hasWorkspaceRole(actor, workspace.id, [
+  const canManage = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
+    "workspace_manager",
+  ]);
+  // The overview page is read-only; the per-section routes gate
+  // their own write capability. Both role checks are kept so the
+  // future "manager-only KPIs" can switch on `canManage` without
+  // a refactor; the per-section pages gate the actual mutations.
+  void canManage;
+  const canEditBrand = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
     "workspace_manager",
     "content_planner",
   ]);
+  void canEditBrand;
+
   const [assets, rules, pillars, recent, publishingRules, linkedResources] = await Promise.all([
     db
       .select()
@@ -98,24 +88,13 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
     listBrandLinkedResources(workspace.id),
   ]);
 
-  // Group assets by kind so the "Logo Assets" / "Color Palette" /
-  // "Typography" sections can be populated from a single table.
   const assetsByKind = {
     logo: assets.filter((a) => a.kind === "logo"),
     color: assets.filter((a) => a.kind === "color"),
     font: assets.filter((a) => a.kind === "font"),
-    other: assets.filter((a) => a.kind === "other"),
   } as const;
 
-  // First logo (by createdAt desc) feeds the Brand Identity hero.
   const firstLogo = assetsByKind.logo[0];
-  // Resolve the candidate src and route it through `safeHref` so a
-  // corrupted `storage_path` (or a non-https `external_url` from an
-  // older row pre-dating the Zod HTTPS constraint) cannot render an
-  // attacker-controlled URL in the row-1 hero. If `safeHref` rejects
-  // the URL it returns "#"; the hero's monogram fallback handles
-  // a falsy `logoSrc`, so we collapse the rejected URL back to
-  // `null` and let the monogram render.
   const firstLogoRawSrc = firstLogo
     ? firstLogo.storagePath
       ? getSignedDownloadUrl(firstLogo.storagePath)
@@ -125,66 +104,18 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
   const firstLogoSrc = firstLogoSafe && firstLogoSafe.href !== "#" ? firstLogoSafe.href : null;
 
   const totalAssetCount =
-    assetsByKind.logo.length +
-    assetsByKind.color.length +
-    assetsByKind.font.length +
-    assetsByKind.other.length;
+    assetsByKind.logo.length + assetsByKind.color.length + assetsByKind.font.length;
 
-  // Top tabs now cover every section in the page so the strip
-  // matches the actual anchor set. Counts on each tab reflect
-  // the live section listers. The source of truth for the order,
-  // label, and icon is `BRAND_KIT_SECTIONS`; the count is added
-  // here from the lister results.
-  const sectionCountById: Record<string, number> = {
-    logo: assetsByKind.logo.length,
-    color: assetsByKind.color.length,
-    guidelines: assetsByKind.font.length,
-    voice: rules.length,
-    pillars: pillars.length,
-    publishing: publishingRules.length,
-    linked: linkedResources.length,
-  };
-  const tabs = BRAND_KIT_SECTIONS.map((section) => {
-    const count = sectionCountById[section.id];
-    return {
-      id: section.id,
-      label: section.label,
-      // `icon` is a `BrandKitIconName` string, NOT a LucideIcon
-      // component. RSC can't serialise functions across the
-      // server→client boundary; `<WorkspaceTopTabs>` resolves the
-      // name to a real icon locally. See `top-tabs.tsx` for the
-      // icon map and the rationale (2026-08-27 brand-kit outage).
-      iconName: section.icon,
-      ...(typeof count === "number" ? { count } : {}),
-    };
-  });
+  const wsBase = `/app/w/${slug}/brand-kit`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="brand-kit-overview">
       <PageHeader
         eyebrow={workspace.name}
-        title="Brand kit"
-        description={
-          <>
-            The shared source for visual assets and writing guidance.
-            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
-              <Clock className="h-3 w-3" aria-hidden="true" />
-              {workspace.timezone}
-            </span>
-          </>
-        }
+        title="Brand Kit"
+        description="The shared source for visual assets and writing guidance. Every planner, designer, and reviewer ships in one voice."
         action={
           <div className="flex flex-wrap items-center gap-2">
-            {/* FEAT-15 (GAP-FULL-REVIEW-2026-08-25) — bundle every
-                active brand asset into a single ZIP for the
-                designer / external partner handoff. The link is
-                a plain <a download> so the browser handles the
-                save dialog natively; the server endpoint
-                enforces the role gate. Visible to every internal
-                workspace member, not just managers.
-                Round 5: disabled when there are no assets to
-                bundle (a 0-asset workspace used to download a
-                ZIP containing only a MANIFEST.txt — surprising). */}
             <Button
               variant="outline"
               asChild={totalAssetCount > 0}
@@ -208,159 +139,135 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
                 </span>
               )}
             </Button>
-            {canManage ? <AddAssetMenu /> : null}
           </div>
         }
       />
 
-      <WorkspaceTopTabs tabs={tabs} ariaLabel="Brand kit sections" />
+      <BrandIdentityHero
+        workspace={{ name: workspace.name, timezone: workspace.timezone }}
+        logoSrc={firstLogoSrc ? safeHref(firstLogoSrc).href : null}
+        logoAlt={firstLogo?.name}
+        assetCount={totalAssetCount}
+        logoCount={assetsByKind.logo.length}
+        lastUpdatedAt={recent[0]?.updatedAt ?? null}
+      />
 
-      <div
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:gap-4"
-        data-testid="brand-kit-bento"
+      <ul
+        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        data-testid="brand-kit-kpi-grid"
       >
-        {/* Row 1 — Brand identity hero (12) */}
-        <BrandIdentityHero
-          workspace={{ name: workspace.name, timezone: workspace.timezone }}
-          logoSrc={firstLogoSrc ? safeHref(firstLogoSrc).href : null}
-          logoAlt={firstLogo?.name}
-          assetCount={totalAssetCount}
-          logoCount={assetsByKind.logo.length}
-          lastUpdatedAt={recent[0]?.updatedAt ?? null}
-        />
-
-        {/* Row 2 — Logo (8) + Color (4) */}
-        <SectionCard
-          id="logo"
-          title="Logo Assets"
+        <KpiCard
+          href={`${wsBase}/logos`}
+          icon={ImageIcon}
+          label="Logos"
           count={assetsByKind.logo.length}
-          className="lg:col-span-8"
-          aria-label="Logo assets"
-          data-testid="brand-kit-section-logo"
-        >
-          {canManage ? <LogoForm slug={slug} workspaceId={workspace.id} /> : null}
-          <LogoGrid slug={slug} canManage={canManage} assets={assetsByKind.logo} />
-        </SectionCard>
-
-        <SectionCard
-          id="color"
-          title="Color Palette"
+          testId="brand-kit-kpi-logos"
+        />
+        <KpiCard
+          href={`${wsBase}/colors`}
+          icon={Palette}
+          label="Colors"
           count={assetsByKind.color.length}
-          className="lg:col-span-4"
-          aria-label="Color palette"
-          data-testid="brand-kit-section-color"
-        >
-          {canManage ? <ColorForm slug={slug} /> : null}
-          <ColorSwatchGrid slug={slug} canManage={canManage} assets={assetsByKind.color} />
-        </SectionCard>
-
-        {/* Row 3 — Typography (12) */}
-        <SectionCard
-          id="guidelines"
-          title="Typography"
+          testId="brand-kit-kpi-colors"
+        />
+        <KpiCard
+          href={`${wsBase}/typography`}
+          icon={Type}
+          label="Typography"
           count={assetsByKind.font.length}
-          fullWidth
-          aria-label="Typography"
-          data-testid="brand-kit-section-typography"
-        >
-          {canManage ? <TypographyForm slug={slug} /> : null}
-          <TypographyCards slug={slug} canManage={canManage} assets={assetsByKind.font} />
-        </SectionCard>
-
-        {/* Row 4 — Voice (6) + Pillars (6) */}
-        <SectionCard
-          id="voice"
-          title="Voice & Tone"
+          testId="brand-kit-kpi-typography"
+        />
+        <KpiCard
+          href={`${wsBase}/voice`}
+          icon={MessageCircle}
+          label="Voice & tone"
           count={rules.length}
-          className="lg:col-span-6"
-          aria-label="Voice and tone"
-          data-testid="brand-kit-section-voice"
-        >
-          {canManage ? <VoiceForm slug={slug} /> : null}
-          <VoiceRuleList slug={slug} canManage={canManage} rules={rules} />
-        </SectionCard>
-
-        <SectionCard
-          id="pillars"
-          title={
-            <>
-              <Tag className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-              Content Pillars
-            </>
-          }
+          testId="brand-kit-kpi-voice"
+        />
+        <KpiCard
+          href={`${wsBase}/pillars`}
+          icon={Tag}
+          label="Pillars"
           count={pillars.length}
-          className="lg:col-span-6"
-          aria-label="Content pillars"
-          data-testid="brand-kit-section-pillars"
-        >
-          {pillars.length ? (
-            <ul className="divide-border divide-y">
-              {pillars.map((pillar) => (
-                <li
-                  key={pillar.id}
-                  className="flex items-center justify-between py-3"
-                  data-testid={`brand-pillar-${pillar.id}`}
-                >
-                  <div className="flex items-center gap-3">
-                    {pillar.color ? (
-                      <span
-                        className="border-border h-4 w-4 shrink-0 rounded-full border"
-                        style={{ backgroundColor: pillar.color }}
-                        aria-hidden="true"
-                      />
-                    ) : null}
-                    <span className="text-body text-fg-primary font-semibold">{pillar.name}</span>
-                  </div>
-                  {pillar.description ? (
-                    <span className="text-label text-fg-muted ml-3 truncate">
-                      {pillar.description}
-                    </span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-body text-fg-muted py-4">No content pillars yet.</p>
-          )}
-        </SectionCard>
-
-        {/* Row 5 — Publishing (4) + Linked (4) */}
-        <SectionCard
-          id="publishing"
-          title="Publishing Rules"
+          testId="brand-kit-kpi-pillars"
+        />
+        <KpiCard
+          href={`${wsBase}/publishing`}
+          icon={BookOpen}
+          label="Publishing rules"
           count={publishingRules.length}
-          className="lg:col-span-4"
-          aria-label="Publishing rules"
-          data-testid="brand-kit-section-publishing"
-        >
-          {canEditBrand ? <PublishingRuleForm slug={slug} /> : null}
-          <PublishingRuleList slug={slug} canManage={canEditBrand} rules={publishingRules} />
-        </SectionCard>
-
-        <SectionCard
-          id="linked"
-          title="Linked Resources"
+          testId="brand-kit-kpi-publishing"
+        />
+        <KpiCard
+          href={`${wsBase}/linked`}
+          icon={Link2}
+          label="Linked resources"
           count={linkedResources.length}
-          className="lg:col-span-4"
-          aria-label="Linked resources"
-          data-testid="brand-kit-section-linked"
-        >
-          {canEditBrand ? <LinkedResourceForm slug={slug} /> : null}
-          <LinkedResourceList slug={slug} canManage={canEditBrand} resources={linkedResources} />
-        </SectionCard>
-
-        {/* Row 6 — Recent Updates (12) */}
-        <SectionCard
-          id="recent"
-          title="Recent Updates"
+          testId="brand-kit-kpi-linked"
+        />
+        <KpiCard
+          href={`${wsBase}/activity`}
+          icon={History}
+          label="Activity"
           count={recent.length}
-          fullWidth
-          aria-label="Recent updates"
-          data-testid="brand-kit-section-recent"
-        >
-          <RecentUpdatesTable rows={recent} />
-        </SectionCard>
-      </div>
+          testId="brand-kit-kpi-activity"
+        />
+      </ul>
+
+      <section
+        className="border-border bg-surface rounded-[var(--radius-card)] border p-4 sm:p-6"
+        aria-label="Recent updates"
+        data-testid="brand-kit-recent-section"
+      >
+        <header className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-section-title text-fg-primary font-semibold">Recent updates</h2>
+          <a
+            href={`${wsBase}/activity`}
+            className="text-label text-primary font-semibold hover:underline"
+            data-testid="brand-kit-recent-section-link"
+          >
+            See all activity →
+          </a>
+        </header>
+        <RecentUpdatesTable rows={recent.slice(0, 5)} />
+      </section>
     </div>
+  );
+}
+
+function KpiCard({
+  href,
+  icon: Icon,
+  label,
+  count,
+  testId,
+}: {
+  href: string;
+  icon: typeof ImageIcon;
+  label: string;
+  count: number;
+  testId: string;
+}) {
+  return (
+    <li>
+      <a
+        href={href}
+        data-testid={testId}
+        className="border-border bg-surface hover:border-primary hover:bg-surface-subtle flex items-center gap-3 rounded-[var(--radius-card)] border p-4 transition-colors"
+      >
+        <span
+          className="bg-primary-subtle text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)]"
+          aria-hidden="true"
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="text-label text-fg-muted block font-semibold tracking-wide uppercase">
+            {label}
+          </span>
+          <span className="text-section-title text-fg-primary block font-semibold">{count}</span>
+        </span>
+      </a>
+    </li>
   );
 }

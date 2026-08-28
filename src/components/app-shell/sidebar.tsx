@@ -7,30 +7,37 @@ import {
   AlertOctagon,
   ArrowLeftRight,
   BarChart3,
+  BookOpen,
   Bot,
   Briefcase,
   CalendarDays,
   ClipboardList,
+  History,
   Home,
+  Image as ImageIcon,
   Kanban,
   LayoutDashboard,
   Library,
+  MessageCircle,
   MessageSquare,
   Package,
   Palette,
   Plus,
   Settings,
+  Tag,
   Gauge,
+  Link as LinkIcon,
   Share2,
   Shield,
   ShieldCheck,
+  Sparkles,
   Users,
   Lock,
 } from "lucide-react";
 import { isActivePath } from "@/lib/utils";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 import { AgencySwitcher, type AgencyRow } from "./agency-switcher";
-import { SidebarGroup, SidebarLink, SidebarSubLink } from "./sidebar-group";
+import { NestedSidebarGroup, SidebarGroup, SidebarLink, SidebarSubLink } from "./sidebar-group";
 import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
 
 /**
@@ -228,12 +235,92 @@ export function Sidebar({
                 >
                   Social Analytics
                 </SidebarLink>
-                <SidebarLink
+                <SidebarGroup
                   href={`${wsBase}/brand-kit`}
                   icon={<Package className="h-4 w-4" />}
-                  active={isActivePath(`${wsBase}/brand-kit`, pathname)}
+                  label="Brand Kit"
+                  pathname={pathname}
+                  defaultOpen={isActivePath(`${wsBase}/brand-kit`, pathname)}
+                  active={isActivePath(`${wsBase}/brand-kit`, pathname, { exact: true })}
+                  parentTestId="sidebar-brand-kit"
                 >
-                  Brand Kit
+                  <SidebarSubLink
+                    href={`${wsBase}/brand-kit`}
+                    active={isActivePath(`${wsBase}/brand-kit`, pathname, { exact: true })}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Overview
+                  </SidebarSubLink>
+                  <NestedSidebarGroup
+                    icon={<ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />}
+                    label="Identity"
+                    defaultOpen={
+                      isActivePath(`${wsBase}/brand-kit/logos`, pathname) ||
+                      isActivePath(`${wsBase}/brand-kit/colors`, pathname) ||
+                      isActivePath(`${wsBase}/brand-kit/typography`, pathname)
+                    }
+                    parentTestId="sidebar-brand-kit-identity"
+                  >
+                    <SidebarSubLink
+                      href={`${wsBase}/brand-kit/logos`}
+                      active={isActivePath(`${wsBase}/brand-kit/logos`, pathname)}
+                    >
+                      Logos
+                    </SidebarSubLink>
+                    <SidebarSubLink
+                      href={`${wsBase}/brand-kit/colors`}
+                      active={isActivePath(`${wsBase}/brand-kit/colors`, pathname)}
+                    >
+                      Colors
+                    </SidebarSubLink>
+                    <SidebarSubLink
+                      href={`${wsBase}/brand-kit/typography`}
+                      active={isActivePath(`${wsBase}/brand-kit/typography`, pathname)}
+                    >
+                      Typography
+                    </SidebarSubLink>
+                  </NestedSidebarGroup>
+                  <NestedSidebarGroup
+                    icon={<MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />}
+                    label="Voice"
+                    defaultOpen={
+                      isActivePath(`${wsBase}/brand-kit/voice`, pathname) ||
+                      isActivePath(`${wsBase}/brand-kit/pillars`, pathname) ||
+                      isActivePath(`${wsBase}/brand-kit/publishing`, pathname)
+                    }
+                    parentTestId="sidebar-brand-kit-voice"
+                  >
+                    <SidebarSubLink
+                      href={`${wsBase}/brand-kit/voice`}
+                      active={isActivePath(`${wsBase}/brand-kit/voice`, pathname)}
+                    >
+                      Voice & tone
+                    </SidebarSubLink>
+                    <SidebarSubLink
+                      href={`${wsBase}/brand-kit/pillars`}
+                      active={isActivePath(`${wsBase}/brand-kit/pillars`, pathname)}
+                    >
+                      <Tag className="h-3.5 w-3.5" aria-hidden="true" /> Pillars
+                    </SidebarSubLink>
+                    <SidebarSubLink
+                      href={`${wsBase}/brand-kit/publishing`}
+                      active={isActivePath(`${wsBase}/brand-kit/publishing`, pathname)}
+                    >
+                      <BookOpen className="h-3.5 w-3.5" aria-hidden="true" /> Publishing
+                    </SidebarSubLink>
+                  </NestedSidebarGroup>
+                  <SidebarSubLink
+                    href={`${wsBase}/brand-kit/linked`}
+                    active={isActivePath(`${wsBase}/brand-kit/linked`, pathname)}
+                  >
+                    <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" /> Linked
+                  </SidebarSubLink>
+                </SidebarGroup>
+                <SidebarLink
+                  href={`${wsBase}/brand-kit/activity`}
+                  icon={<History className="h-4 w-4" />}
+                  active={isActivePath(`${wsBase}/brand-kit/activity`, pathname)}
+                >
+                  Activity
                 </SidebarLink>
                 <SidebarLink
                   href={`${wsBase}/team`}
