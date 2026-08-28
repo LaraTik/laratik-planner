@@ -3,6 +3,22 @@ import "server-only";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 
+// 2026-08-28: pure-data constants and the `ResetIdeaCounts` type
+// moved to `./reset-idea-shared` so the Client Component
+// `destructive-confirm-dialog` can import them without pulling the
+// whole server-only module into the client bundle. The original
+// file was the single source of truth, but Next 16's build refused
+// the Pages-Router-shaped import graph. Imported here for local
+// use (the SQL aggregate below references the type) and
+// re-exported for backward compatibility with any internal caller
+// that still imports from this path.
+import { EMPTY_RESET_IDEA_COUNTS, type ResetIdeaCounts } from "./reset-idea-shared";
+export {
+  EMPTY_RESET_IDEA_COUNTS,
+  RESET_IDEA_BUCKETS,
+  type ResetIdeaCounts,
+} from "./reset-idea-shared";
+
 /**
  * Reset-idea destructive operation (FEAT-DESTRUCTIVE-IDEA-2026-08-28).
  *
@@ -41,35 +57,6 @@ import { db } from "@/lib/db";
  * constraint that the DB rejects if we tried to NULL it out — the
  * pre-flight would fail at the DELETE anyway.
  */
-export type ResetIdeaCounts = Readonly<{
-  contentItem: number;
-  contentItemChannels: number;
-  contentAssignments: number;
-  comments: number;
-  deliveryVersions: number;
-  deliveryLinks: number;
-  approvalRequests: number;
-  approvalDecisions: number;
-  publicationRecords: number;
-  attachments: number;
-  aiUsageEvents: number;
-  activityEvents: number;
-}>;
-
-export const EMPTY_RESET_IDEA_COUNTS: ResetIdeaCounts = {
-  contentItem: 0,
-  contentItemChannels: 0,
-  contentAssignments: 0,
-  comments: 0,
-  deliveryVersions: 0,
-  deliveryLinks: 0,
-  approvalRequests: 0,
-  approvalDecisions: 0,
-  publicationRecords: 0,
-  attachments: 0,
-  aiUsageEvents: 0,
-  activityEvents: 0,
-};
 
 type CountRow = {
   content_item: string;
@@ -160,26 +147,3 @@ export async function getResetIdeaCounts(contentItemId: string): Promise<ResetId
   if (rows.length === 0 || !rows[0]) return EMPTY_RESET_IDEA_COUNTS;
   return toCounts(rows[0]);
 }
-
-/**
- * Bucket labels in display order. The keys MUST stay in lockstep
- * with `ResetIdeaCounts` and the SQL aggregate above; the unit test
- * in `tests/unit/reset-idea-counts.test.ts` pins the contract.
- */
-export const RESET_IDEA_BUCKETS = [
-  { key: "contentItem", label: "Idea (the row itself)" },
-  { key: "contentItemChannels", label: "Channel schedule rows" },
-  { key: "contentAssignments", label: "Assignment history rows" },
-  { key: "comments", label: "Comments" },
-  { key: "deliveryVersions", label: "Delivery versions" },
-  { key: "deliveryLinks", label: "Delivery links" },
-  { key: "approvalRequests", label: "Approval requests" },
-  { key: "approvalDecisions", label: "Approval decisions" },
-  { key: "publicationRecords", label: "Publication records" },
-  { key: "attachments", label: "Attachments (orphaned, link cleared)" },
-  { key: "aiUsageEvents", label: "AI usage events (orphaned, link cleared)" },
-  { key: "activityEvents", label: "Activity events (orphaned, link cleared)" },
-] as const satisfies ReadonlyArray<{
-  key: keyof ResetIdeaCounts;
-  label: string;
-}>;

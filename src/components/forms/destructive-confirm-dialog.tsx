@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { resetIdeaAction, type ResetIdeaActionState } from "@/lib/content/reset-idea-action";
-import { RESET_IDEA_BUCKETS, type ResetIdeaCounts } from "@/lib/content/reset-idea";
+import { RESET_IDEA_BUCKETS, type ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
 
 /**
  * Destructive "Reset idea" confirm dialog.
