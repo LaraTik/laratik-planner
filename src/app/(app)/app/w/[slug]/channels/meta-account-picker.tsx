@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, ChevronRight, X } from "lucide-react";
+import { Check, ChevronRight, ListChecks, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
@@ -90,14 +90,63 @@ export function MetaAccountPicker({
   return (
     <Card padding="lg" data-testid="meta-account-picker">
       <div className="space-y-4">
-        <div>
-          <h2 className="text-title-section text-fg-primary font-semibold">
-            Connect Meta accounts
-          </h2>
-          <p className="text-body text-fg-muted mt-1">
-            We found {profiles.length} profile{profiles.length === 1 ? "" : "s"} on the Pages you
-            manage. Pick the ones you want to track.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-title-section text-fg-primary font-semibold">
+              Connect Meta accounts
+            </h2>
+            <p className="text-body text-fg-muted mt-1">
+              We found {profiles.length} profile{profiles.length === 1 ? "" : "s"} on the Pages you
+              manage. Pick the ones you want to track.
+            </p>
+          </div>
+          {/*
+           * Bulk-select row. The actor's Meta account can admin 20-30+
+           * Pages (one LaraTik user manages 27 in the pre-flight probe);
+           * defaulting to "everything selected" with no easy reset was
+           * a UX trap — the operator had to click 25-30 checkboxes to
+           * deselect the brands they did NOT want before they could
+           * pick the ones they did. Two side-by-side buttons make the
+           * common flow ("Unselect all, then tick 2-3 of mine")
+           * one click each.
+           *
+           * The buttons are hidden when there are no profiles (the
+           * picker is empty anyway). They are disabled while a submit
+           * is in flight (same `pending` flag as the Link button) so
+           * a fast double-click on "Select all" doesn't race the
+           * finalize call.
+           */}
+          {profiles.length > 0 ? (
+            <div
+              className="flex items-center gap-2"
+              data-testid="picker-bulk-actions"
+              role="group"
+              aria-label="Bulk selection"
+            >
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={pending}
+                onClick={() => setSelected(new Set(profiles.map((p) => p.providerAccountId)))}
+                data-testid="picker-select-all"
+              >
+                <ListChecks className="h-3.5 w-3.5" aria-hidden={true} />
+                Select all
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={pending}
+                onClick={() => setSelected(new Set())}
+                data-testid="picker-unselect-all"
+              >
+                <X className="h-3.5 w-3.5" aria-hidden={true} />
+                Unselect all
+              </Button>
+            </div>
+          ) : null}
         </div>
 
         <ul className="space-y-3" role="list">

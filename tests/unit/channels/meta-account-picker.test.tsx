@@ -6,7 +6,7 @@ vi.mock("@/app/(app)/app/w/[slug]/channels/actions", () => ({
   revokeConnectionAction: vi.fn(),
 }));
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MetaAccountPicker } from "@/app/(app)/app/w/[slug]/channels/meta-account-picker";
 
 /**
@@ -106,5 +106,76 @@ describe("MetaAccountPicker", () => {
     const submit = screen.getByTestId("picker-submit");
     expect(submit).not.toBeDisabled();
     expect(submit.getAttribute("aria-busy")).toBe("false");
+  });
+
+  // 2026-08-28: bulk-select buttons. The actor's Meta account can
+  // admin 20-30+ Pages; the "every profile selected by default"
+  // contract means the common flow is "Unselect all, then tick the
+  // few I want" — one click each — instead of clicking N checkboxes
+  // to deselect.
+  it("renders Select all and Unselect all buttons in a labeled group", () => {
+    render(
+      <MetaAccountPicker
+        connectionId="conn-1"
+        profiles={profiles}
+        candidates={candidates}
+        slug="acme"
+      />,
+    );
+    const group = screen.getByRole("group", { name: "Bulk selection" });
+    expect(group).toBeInTheDocument();
+    expect(group.getAttribute("data-testid")).toBe("picker-bulk-actions");
+    expect(screen.getByTestId("picker-select-all")).toBeInTheDocument();
+    expect(screen.getByTestId("picker-unselect-all")).toBeInTheDocument();
+  });
+
+  it("does NOT render the bulk buttons when there are zero profiles", () => {
+    render(
+      <MetaAccountPicker connectionId="conn-1" profiles={[]} candidates={candidates} slug="acme" />,
+    );
+    expect(screen.queryByTestId("picker-bulk-actions")).not.toBeInTheDocument();
+  });
+
+  it("Unselect all clears every checkbox and updates the counter to 0", () => {
+    render(
+      <MetaAccountPicker
+        connectionId="conn-1"
+        profiles={profiles}
+        candidates={candidates}
+        slug="acme"
+      />,
+    );
+    expect(screen.getByTestId("picker-count").textContent).toContain("2 selected");
+    fireEvent.click(screen.getByTestId("picker-unselect-all"));
+    expect(screen.getByTestId("picker-count").textContent).toContain("0 selected");
+  });
+
+  it("Select all re-selects every checkbox after the user has unchecked one", () => {
+    render(
+      <MetaAccountPicker
+        connectionId="conn-1"
+        profiles={profiles}
+        candidates={candidates}
+        slug="acme"
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("Select Acme Coffee")); // uncheck page-1
+    expect(screen.getByTestId("picker-count").textContent).toContain("1 selected");
+    fireEvent.click(screen.getByTestId("picker-select-all"));
+    expect(screen.getByTestId("picker-count").textContent).toContain("2 selected");
+  });
+
+  it("Select all is idempotent — clicking it twice leaves the selection unchanged", () => {
+    render(
+      <MetaAccountPicker
+        connectionId="conn-1"
+        profiles={profiles}
+        candidates={candidates}
+        slug="acme"
+      />,
+    );
+    fireEvent.click(screen.getByTestId("picker-select-all"));
+    fireEvent.click(screen.getByTestId("picker-select-all"));
+    expect(screen.getByTestId("picker-count").textContent).toContain("2 selected");
   });
 });
