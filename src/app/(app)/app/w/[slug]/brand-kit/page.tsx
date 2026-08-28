@@ -10,6 +10,7 @@ import {
   Type,
   BookOpen,
   History,
+  Sparkles,
 } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
@@ -138,6 +139,15 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
                   Download ZIP
                 </span>
               )}
+            </Button>
+            <Button variant="outline" asChild>
+              <a
+                href={`/app/w/${slug}/brand-kit/templates`}
+                data-testid="brand-kit-browse-templates"
+              >
+                <Sparkles className="h-4 w-4" aria-hidden="true" />
+                Browse templates
+              </a>
             </Button>
           </div>
         }

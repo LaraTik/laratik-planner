@@ -323,6 +323,14 @@ export function Sidebar({
                   Activity
                 </SidebarLink>
                 <SidebarLink
+                  href={`${wsBase}/brand-kit/templates`}
+                  icon={<Sparkles className="h-4 w-4" />}
+                  active={isActivePath(`${wsBase}/brand-kit/templates`, pathname)}
+                  testId="sidebar-brand-kit-templates"
+                >
+                  Templates
+                </SidebarLink>
+                <SidebarLink
                   href={`${wsBase}/team`}
                   icon={<Users className="h-4 w-4" />}
                   active={isActivePath(`${wsBase}/team`, pathname)}

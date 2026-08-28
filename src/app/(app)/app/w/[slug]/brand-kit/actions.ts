@@ -36,6 +36,13 @@ import { suggestVoiceRules } from "@/lib/ai";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { getActiveApiKey } from "@/lib/ai";
 import { hasAnyManagedSecretConfigured } from "@/lib/ai/provider-secret";
+import {
+  colorTemplates,
+  pillarTemplates,
+  publishingTemplates,
+  typographyTemplates,
+  voiceTemplates,
+} from "@/lib/brand/templates";
 
 /**
  * Brand Kit server actions (STUDIOFLOW_MASTER_PROMPT.md §11.x).
@@ -578,5 +585,232 @@ export async function suggestVoiceRulesAction(
       ok: false,
       error: err instanceof Error ? err.message : "AI suggestion failed.",
     };
+  }
+}
+
+// ─── Template library (Phase 8) ───────────────────────────────────────────
+//
+// One-click "Add to brand kit" actions for the curated template
+// library (lib/brand/templates.ts). Each action takes a template
+// id, looks it up in the static catalog, and writes the
+// underlying entity via the same service / action surface that
+// the inline forms use. Idempotency is enforced at the service
+// level (the partial unique index on pillars, the existence
+// check for color / voice duplicates).
+
+export interface TemplateAddResult {
+  ok: boolean;
+  added?: number;
+  error?: string;
+}
+
+export async function addVoiceTemplateAction(
+  slug: string,
+  templateId: string,
+): Promise<TemplateAddResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Sign in is required." };
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return { ok: false, error: "Workspace not found." };
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
+    return { ok: false, error: "Workspace manager access is required." };
+
+  const tpl = voiceTemplates.find((t) => t.id === templateId);
+  if (!tpl) return { ok: false, error: "Voice template not found." };
+
+  // Idempotency: skip if the same content already exists in this bucket.
+  const existing = await db
+    .select({ id: brandVoiceRules.id })
+    .from(brandVoiceRules)
+    .where(
+      and(
+        eq(brandVoiceRules.workspaceId, workspace.id),
+        eq(brandVoiceRules.ruleType, tpl.ruleType),
+        eq(brandVoiceRules.content, tpl.content),
+        isNull(brandVoiceRules.archivedAt),
+      ),
+    )
+    .limit(1);
+  if (existing.length > 0) return { ok: true, added: 0 };
+
+  const parsed = BrandVoiceRuleCommandSchema.safeParse({
+    ruleType: tpl.ruleType,
+    content: tpl.content,
+  });
+  if (!parsed.success)
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid template." };
+  await db.insert(brandVoiceRules).values({
+    workspaceId: workspace.id,
+    createdBy: session.user.id,
+    ruleType: parsed.data.ruleType,
+    content: parsed.data.content,
+    sortOrder: "0",
+  });
+  revalidatePath(`/app/w/${slug}/brand-kit/voice`);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+  return { ok: true, added: 1 };
+}
+
+export async function addPillarTemplateAction(
+  slug: string,
+  templateId: string,
+): Promise<TemplateAddResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Sign in is required." };
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return { ok: false, error: "Workspace not found." };
+  if (
+    !(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
+      "workspace_manager",
+      "content_planner",
+    ]))
+  )
+    return { ok: false, error: "Brand manager access is required." };
+
+  const tpl = pillarTemplates.find((t) => t.id === templateId);
+  if (!tpl) return { ok: false, error: "Pillar template not found." };
+
+  try {
+    await createPillar({ id: session.user.id }, workspace.id, {
+      name: tpl.name,
+      ...(tpl.color ? { color: tpl.color } : {}),
+      description: tpl.description,
+    });
+    revalidatePath(`/app/w/${slug}/brand-kit/pillars`);
+    revalidatePath(`/app/w/${slug}/brand-kit`);
+    return { ok: true, added: 1 };
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.message.toLowerCase().includes("already exists")) {
+        return { ok: true, added: 0 };
+      }
+      return { ok: false, error: err.message };
+    }
+    return { ok: false, error: "Failed to add pillar." };
+  }
+}
+
+export async function addColorPaletteAction(
+  slug: string,
+  templateId: string,
+): Promise<TemplateAddResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Sign in is required." };
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return { ok: false, error: "Workspace not found." };
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
+    return { ok: false, error: "Workspace manager access is required." };
+
+  const tpl = colorTemplates.find((t) => t.id === templateId);
+  if (!tpl) return { ok: false, error: "Color palette template not found." };
+
+  // Idempotency: skip the whole palette if every swatch already
+  // exists by (name, hex) — matches the existing service-layer
+  // "you can add the same hex twice" rule (the audit still gets
+  // a new row, but the UI collapses the duplicates in the grid).
+  const existing = await db
+    .select({ name: brandAssets.name, value: brandAssets.value })
+    .from(brandAssets)
+    .where(
+      and(
+        eq(brandAssets.workspaceId, workspace.id),
+        eq(brandAssets.kind, "color"),
+        isNull(brandAssets.archivedAt),
+      ),
+    );
+  const existingKeys = new Set(
+    existing.map((row) => `${row.name}::${(row.value as { hex?: string }).hex ?? ""}`),
+  );
+  let added = 0;
+  for (const swatch of tpl.swatches) {
+    if (existingKeys.has(`${swatch.name}::${swatch.hex}`)) continue;
+    await createColorAsset({ id: session.user.id }, workspace.id, {
+      name: swatch.name,
+      hex: swatch.hex,
+      colorRole: swatch.role,
+    });
+    added++;
+  }
+  revalidatePath(`/app/w/${slug}/brand-kit/colors`);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+  return { ok: true, added };
+}
+
+export async function addTypographyTemplateAction(
+  slug: string,
+  templateId: string,
+): Promise<TemplateAddResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Sign in is required." };
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return { ok: false, error: "Workspace not found." };
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
+    return { ok: false, error: "Workspace manager access is required." };
+
+  const tpl = typographyTemplates.find((t) => t.id === templateId);
+  if (!tpl) return { ok: false, error: "Typography template not found." };
+
+  const existing = await db
+    .select({ value: brandAssets.value })
+    .from(brandAssets)
+    .where(
+      and(
+        eq(brandAssets.workspaceId, workspace.id),
+        eq(brandAssets.kind, "font"),
+        isNull(brandAssets.archivedAt),
+      ),
+    );
+  const existingFamilies = new Set(
+    existing
+      .map((row) => (row.value as { family?: string }).family)
+      .filter((f): f is string => typeof f === "string"),
+  );
+  let added = 0;
+  for (const face of tpl.faces) {
+    if (existingFamilies.has(face.family)) continue;
+    await createFontAsset({ id: session.user.id }, workspace.id, {
+      name: face.family,
+      family: face.family,
+      weight: face.weight,
+      role: face.role,
+    });
+    added++;
+  }
+  revalidatePath(`/app/w/${slug}/brand-kit/typography`);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+  return { ok: true, added };
+}
+
+export async function addPublishingTemplateAction(
+  slug: string,
+  templateId: string,
+): Promise<TemplateAddResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Sign in is required." };
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return { ok: false, error: "Workspace not found." };
+  if (
+    !(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
+      "workspace_manager",
+      "content_planner",
+    ]))
+  )
+    return { ok: false, error: "Brand manager access is required." };
+
+  const tpl = publishingTemplates.find((t) => t.id === templateId);
+  if (!tpl) return { ok: false, error: "Publishing template not found." };
+
+  try {
+    await createBrandPublishingRule({ id: session.user.id }, workspace.id, {
+      ruleType: tpl.ruleType,
+      title: tpl.title,
+      content: tpl.content,
+    });
+    revalidatePath(`/app/w/${slug}/brand-kit/publishing`);
+    revalidatePath(`/app/w/${slug}/brand-kit`);
+    return { ok: true, added: 1 };
+  } catch (err) {
+    if (err instanceof Error) return { ok: false, error: err.message };
+    return { ok: false, error: "Failed to add publishing rule." };
   }
 }
