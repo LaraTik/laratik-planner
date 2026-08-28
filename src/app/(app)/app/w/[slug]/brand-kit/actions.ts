@@ -26,6 +26,12 @@ import {
   restoreBrandPublishingRule,
   restoreBrandLinkedResource,
 } from "@/lib/brand/service";
+import {
+  createPillar,
+  archivePillar,
+  restorePillar,
+  CreatePillarSchema,
+} from "@/lib/planning/pillars";
 
 /**
  * Brand Kit server actions (STUDIOFLOW_MASTER_PROMPT.md §11.x).
@@ -398,5 +404,98 @@ export async function restoreLinkedResourceAction(slug: string, resourceId: stri
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [...BRAND_MANAGER_ROLES])))
     return;
   await restoreBrandLinkedResource({ id: session.user.id }, workspace.id, resourceId);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+}
+
+// ─── Content pillars (Phase 8 — C-5.4) ──────────────────────────────────
+//
+// Pillars are the workspace's content taxonomy ("Education",
+// "Product", "Behind the scenes"). The planning library has had
+// full CRUD since FEAT-06; the brand-kit per-section page surfaces
+// the same actions so designers and strategists can curate the
+// taxonomy from the brand-kit surface without bouncing to
+// /library. The service is the same — the role gate is
+// `workspace_manager` or `content_planner` (mirrored from
+// `lib/planning/pillars.ts`).
+
+export async function createPillarAction(
+  slug: string,
+  _previous: unknown,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Sign in is required." };
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return { error: "Workspace not found." };
+  if (
+    !(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
+      "workspace_manager",
+      "content_planner",
+    ]))
+  ) {
+    return { error: "Brand manager access is required." };
+  }
+
+  const color = readString(formData, "color") || undefined;
+  const description = readString(formData, "description") || undefined;
+  const parsed = CreatePillarSchema.safeParse({
+    name: readString(formData, "name"),
+    ...(color ? { color } : {}),
+    ...(description ? { description } : {}),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check the form." };
+  }
+  try {
+    await createPillar({ id: session.user.id }, workspace.id, parsed.data);
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message };
+    return { error: "Failed to add pillar." };
+  }
+  revalidatePath(`/app/w/${slug}/brand-kit/pillars`);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+  return { success: true };
+}
+
+export async function archivePillarAction(slug: string, pillarId: string): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return;
+  if (
+    !(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
+      "workspace_manager",
+      "content_planner",
+    ]))
+  )
+    return;
+  try {
+    await archivePillar({ id: session.user.id }, workspace.id, pillarId);
+  } catch {
+    // Best-effort: the undo toast re-fetches the page, so a failure
+    // surfaces as the row reappearing.
+  }
+  revalidatePath(`/app/w/${slug}/brand-kit/pillars`);
+  revalidatePath(`/app/w/${slug}/brand-kit`);
+}
+
+export async function restorePillarAction(slug: string, pillarId: string): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return;
+  if (
+    !(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
+      "workspace_manager",
+      "content_planner",
+    ]))
+  )
+    return;
+  try {
+    await restorePillar({ id: session.user.id }, workspace.id, pillarId);
+  } catch {
+    // Same idempotent semantics as archive — a no-op is acceptable.
+  }
+  revalidatePath(`/app/w/${slug}/brand-kit/pillars`);
   revalidatePath(`/app/w/${slug}/brand-kit`);
 }

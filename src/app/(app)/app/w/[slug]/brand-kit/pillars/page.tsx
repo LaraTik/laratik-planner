@@ -1,5 +1,4 @@
 import { redirect, notFound } from "next/navigation";
-import { Tag } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
@@ -8,18 +7,19 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { BrandKitHealth } from "../_components/brand-kit-health";
 import { BrandKitBackLink } from "../_components/brand-kit-back-link";
+import { PillarForm } from "../pillar-form";
+import { PillarList } from "../pillar-list";
 
 /**
- * /app/w/[slug]/brand-kit/pillars — the Content Pillars section
- * (Phase 7). Pillars are already CRUD-capable in the underlying
- * service (`listContentPillars` + `createContentPillar`); this
- * route exposes them under the brand kit so designers and
- * strategists have a single home for "what we talk about."
+ * /app/w/[slug]/brand-kit/pillars — the Content Pillars section.
  *
- * The full CRUD UI is delivered as part of the C-5.4 Pillar work
- * (deferred from the previous rebuild). Until then this page
- * renders the read-only list with a manager-only inline create
- * form (the previous behavior, untouched).
+ * Phase 8 (C-5.4) ships the missing CRUD: managers and planners
+ * can now create / archive / restore pillars directly from the
+ * brand kit. The underlying service is the same one the
+ * /library pillar manager uses (`lib/planning/pillars.ts`); this
+ * route is the brand-kit surface for the same operations so
+ * designers and strategists don't have to bounce out of the
+ * brand-kit flow to curate the taxonomy.
  */
 export default async function BrandKitPillarsPage({
   params,
@@ -31,13 +31,10 @@ export default async function BrandKitPillarsPage({
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
-  // Pillar CRUD UI is delivered as part of the C-5.4 Pillar work
-  // (deferred from the previous rebuild). The role check is wired
-  // up here so the page is ready when the inline form lands.
-  const _canManage = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
+  const canEdit = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
     "workspace_manager",
+    "content_planner",
   ]);
-  void _canManage;
 
   const pillars = await listContentPillars(workspace.id);
 
@@ -53,46 +50,14 @@ export default async function BrandKitPillarsPage({
 
       <SectionCard
         id="pillars"
-        title={
-          <>
-            <Tag className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-            Pillars
-          </>
-        }
+        title="Pillars"
         count={pillars.length}
         fullWidth
         aria-label="Content pillars"
         data-testid="brand-kit-section-pillars"
       >
-        {pillars.length ? (
-          <ul className="divide-border divide-y" data-testid="brand-kit-pillars-list">
-            {pillars.map((pillar) => (
-              <li
-                key={pillar.id}
-                className="flex items-center justify-between py-3"
-                data-testid={`brand-pillar-${pillar.id}`}
-              >
-                <div className="flex items-center gap-3">
-                  {pillar.color ? (
-                    <span
-                      className="border-border h-4 w-4 shrink-0 rounded-full border"
-                      style={{ backgroundColor: pillar.color }}
-                      aria-hidden="true"
-                    />
-                  ) : null}
-                  <span className="text-body text-fg-primary font-semibold">{pillar.name}</span>
-                </div>
-                {pillar.description ? (
-                  <span className="text-label text-fg-muted ml-3 truncate">
-                    {pillar.description}
-                  </span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-body text-fg-muted py-4">No content pillars yet.</p>
-        )}
+        {canEdit ? <PillarForm slug={slug} /> : null}
+        <PillarList slug={slug} canManage={canEdit} pillars={pillars} />
       </SectionCard>
     </div>
   );

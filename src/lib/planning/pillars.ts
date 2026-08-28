@@ -105,6 +105,46 @@ export async function archivePillar(
   revalidatePath(`/app/w/`);
 }
 
+/**
+ * Restore a soft-archived pillar. The audit log records the
+ * restore so an agency owner can see which manager brought a
+ * pillar back. Idempotent — restoring a non-archived pillar is a
+ * no-op.
+ */
+export async function restorePillar(
+  actor: Actor,
+  workspaceId: string,
+  pillarId: string,
+): Promise<void> {
+  await requirePolicy(
+    hasWorkspaceRole(actor, workspaceId, ["workspace_manager", "content_planner"]),
+    "restore_pillar",
+  );
+  const [existing] = await db
+    .select({
+      id: contentPillars.id,
+      name: contentPillars.name,
+      archivedAt: contentPillars.archivedAt,
+    })
+    .from(contentPillars)
+    .where(and(eq(contentPillars.id, pillarId), eq(contentPillars.workspaceId, workspaceId)))
+    .limit(1);
+  if (!existing) throw new Error("Pillar not found");
+  if (!existing.archivedAt) return; // idempotent
+  await db
+    .update(contentPillars)
+    .set({ archivedAt: null, updatedAt: new Date() })
+    .where(eq(contentPillars.id, pillarId));
+  await db.insert(activityEvents).values({
+    workspaceId,
+    actorId: actor.id,
+    kind: "update",
+    summary: `Restored pillar "${existing.name}"`,
+    afterData: { pillarId, archived: false },
+  });
+  revalidatePath(`/app/w/`);
+}
+
 export async function listActivePillars(workspaceId: string) {
   return db
     .select()
