@@ -36,6 +36,12 @@ export default async function SettingsApprovalsPage({
     .where(eq(workspaceSettingsTable.workspaceId, workspace.id))
     .limit(1);
   const currentMode = (settings?.approvalMode ?? "simple") as "simple" | "internal_then_client";
+  const leadTimes = {
+    contentApprovalLeadDays: settings?.contentApprovalLeadDays ?? 10,
+    designCompleteLeadDays: settings?.designCompleteLeadDays ?? 5,
+    creativeApprovalLeadDays: settings?.creativeApprovalLeadDays ?? 2,
+    readyToPublishLeadDays: settings?.readyToPublishLeadDays ?? 1,
+  };
 
   return (
     <div className="space-y-4">
@@ -58,7 +64,7 @@ export default async function SettingsApprovalsPage({
         data-testid="settings-section-approvals"
       >
         {canManage ? (
-          <ApprovalsForm slug={slug} currentMode={currentMode} />
+          <ApprovalsForm slug={slug} currentMode={currentMode} leadTimes={leadTimes} />
         ) : (
           <p className="text-label text-fg-muted">
             Read-only. Workspace manager access is required to edit these settings.
