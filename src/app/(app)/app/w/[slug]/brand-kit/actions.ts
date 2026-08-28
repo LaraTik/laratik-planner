@@ -1,10 +1,10 @@
 "use server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
-import { brandAssets, brandVoiceRules } from "@/lib/db/schema";
+import { aiFeatureSettings, brandAssets, brandVoiceRules } from "@/lib/db/schema";
 import {
   BrandAssetCommandSchema,
   BrandLinkedResourceCommandSchema,
@@ -32,6 +32,10 @@ import {
   restorePillar,
   CreatePillarSchema,
 } from "@/lib/planning/pillars";
+import { suggestVoiceRules } from "@/lib/ai";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { getActiveApiKey } from "@/lib/ai";
+import { hasAnyManagedSecretConfigured } from "@/lib/ai/provider-secret";
 
 /**
  * Brand Kit server actions (STUDIOFLOW_MASTER_PROMPT.md §11.x).
@@ -498,4 +502,81 @@ export async function restorePillarAction(slug: string, pillarId: string): Promi
   }
   revalidatePath(`/app/w/${slug}/brand-kit/pillars`);
   revalidatePath(`/app/w/${slug}/brand-kit`);
+}
+
+// ─── Voice rule suggestions (Phase 8 / Phase 9) ──────────────────────────
+//
+// On-demand AI suggestions for the voice section. The user clicks
+// "Suggest do rules" and the server reads the existing tone + do +
+// don't rules, calls the model, and returns 2-3 new rules that
+// are consistent with the existing voice but do not duplicate
+// it. The agency must have the AI feature enabled (the existing
+// capability allowlist gates the underlying /api/ai/generate
+// route; we use the same key-resolution + budget flow so a
+// 429 / 403 from one place surfaces here too).
+export interface VoiceSuggestionsResult {
+  ok: boolean;
+  suggestions?: string[];
+  error?: string;
+}
+
+export async function suggestVoiceRulesAction(
+  slug: string,
+  ruleType: "tone" | "do" | "dont",
+): Promise<VoiceSuggestionsResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Sign in is required." };
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return { ok: false, error: "Workspace not found." };
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"]))) {
+    return { ok: false, error: "Workspace manager access is required." };
+  }
+
+  // AI availability check — mirrors /api/ai/generate's gate.
+  const ctx = await resolveActiveAgencyContext({ actor: { id: session.user.id } });
+  const agencyId = ctx?.agencyId ?? null;
+  if (!agencyId) return { ok: false, error: "Agency not configured." };
+  const [feature] = await db
+    .select()
+    .from(aiFeatureSettings)
+    .where(eq(aiFeatureSettings.agencyId, agencyId))
+    .limit(1);
+  if (!feature?.enabled || !feature.enabledCapabilities.includes("caption_drafts")) {
+    return {
+      ok: false,
+      error: "AI suggestions are disabled in agency settings. Enable Caption drafts to use this.",
+    };
+  }
+  const apiKey = await getActiveApiKey(agencyId);
+  if (!apiKey && !hasAnyManagedSecretConfigured()) {
+    return { ok: false, error: "AI features are disabled." };
+  }
+
+  // Pull the existing rules for the prompt's "do not duplicate" guard.
+  const rows = await db
+    .select({ ruleType: brandVoiceRules.ruleType, content: brandVoiceRules.content })
+    .from(brandVoiceRules)
+    .where(and(eq(brandVoiceRules.workspaceId, workspace.id), isNull(brandVoiceRules.archivedAt)));
+  const existing = {
+    tone: rows.filter((r) => r.ruleType === "tone").map((r) => r.content),
+    do: rows.filter((r) => r.ruleType === "do").map((r) => r.content),
+    dont: rows.filter((r) => r.ruleType === "dont").map((r) => r.content),
+  };
+
+  try {
+    const suggestions = await suggestVoiceRules({
+      ruleType,
+      existingTone: existing.tone,
+      existingDo: existing.do,
+      existingDont: existing.dont,
+      audience: workspace.name,
+      ...(apiKey ? { apiKey } : {}),
+    });
+    return { ok: true, suggestions };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "AI suggestion failed.",
+    };
+  }
 }

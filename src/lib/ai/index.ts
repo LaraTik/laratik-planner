@@ -611,3 +611,73 @@ export async function relatedFormatIdeas(input: {
   if (result) input.onUsage?.(result);
   return result?.content ?? null;
 }
+
+/**
+ * Brand Kit (Phase 8) — suggest new voice rules to add to a
+ * workspace's brand kit. The function takes the existing tone /
+ * do / don't rules and asks the model for 2-3 *new* rules in the
+ * requested bucket that are consistent with the existing voice
+ * but do not duplicate it.
+ *
+ * Each suggestion is returned as a single line (no bullets, no
+ * numbers, no preamble) so the UI can render the array as
+ * clickable chips without parsing. Length is bounded to the same
+ * 60 / 280 char ceiling as `BrandVoiceRuleCommandSchema` so a
+ * suggestion is always submittable as-is.
+ */
+export async function suggestVoiceRules(input: {
+  ruleType: "tone" | "do" | "dont";
+  existingTone: string[];
+  existingDo: string[];
+  existingDont: string[];
+  audience?: string | undefined;
+  apiKey?: string | undefined;
+  onUsage?: (result: ChatResult) => void;
+  maxTokens?: number | undefined;
+  context?: AiContext | null | undefined;
+}): Promise<string[]> {
+  if (!isAiEnabled() && !input.apiKey) return [];
+  const contextBlock = buildContextBlock(input.context);
+  const maxChars = input.ruleType === "tone" ? 60 : 280;
+  const bucket = input.ruleType === "tone" ? "tone" : input.ruleType === "do" ? "do" : "don't";
+  const system = [
+    `You are a senior brand strategist. Suggest 2-3 new ${bucket} rules for a brand voice guide.`,
+    `Each rule is a single line, no bullet, no number, no preamble. Max ${maxChars} chars per line.`,
+    "Rules must be consistent with the existing voice but must NOT duplicate any rule already in the list.",
+    "Plain text. Return exactly 2-3 lines and nothing else.",
+  ].join(" ");
+  const result = await chat({
+    temperature: 0.7,
+    maxTokens: input.maxTokens ?? 300,
+    apiKey: input.apiKey,
+    messages: [
+      { role: "system", content: system },
+      {
+        role: "user",
+        content: [
+          `Suggest ${bucket} rules.`,
+          input.audience ? `Audience: ${input.audience}` : null,
+          "Existing tone rules:",
+          input.existingTone.length
+            ? input.existingTone.map((t) => `- ${t}`).join("\n")
+            : "(none yet)",
+          "Existing do rules:",
+          input.existingDo.length ? input.existingDo.map((t) => `- ${t}`).join("\n") : "(none yet)",
+          "Existing don't rules:",
+          input.existingDont.length
+            ? input.existingDont.map((t) => `- ${t}`).join("\n")
+            : "(none yet)",
+          contextBlock,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      },
+    ],
+  });
+  if (!result?.content) return [];
+  input.onUsage?.(result);
+  return result.content
+    .split("\n")
+    .map((s) => s.replace(/^[-*\d.)\s]+/, "").trim())
+    .filter((s) => s.length > 0 && s.length <= maxChars);
+}

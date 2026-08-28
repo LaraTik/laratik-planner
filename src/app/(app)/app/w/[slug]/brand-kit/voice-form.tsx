@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
+import { VoiceRuleSuggestions } from "./voice-rule-suggestions";
 
 /**
  * VoiceForm — three inline sub-forms (Tone / Do / Don't) that all
@@ -15,6 +16,12 @@ import { CharacterCountInput } from "@/components/workspace/character-count-inpu
  * bound at the form level (tone is shorter — 60 chars — while
  * do/dont allow 280). The Zod schema on the server enforces the
  * same limits.
+ *
+ * Phase 8: each sub-form is now controlled so the AI suggestion
+ * flow (`VoiceRuleSuggestions`) can fill the textarea when the
+ * user picks a chip. The picker calls `onPick` and the parent
+ * updates the state; the next submit posts the (possibly
+ * edited) value.
  */
 type RuleType = "tone" | "do" | "dont";
 
@@ -36,7 +43,23 @@ const LABEL: Record<RuleType, string> = {
   dont: "Add don't",
 };
 
-function RuleSubForm({ slug, ruleType }: { slug: string; ruleType: RuleType }) {
+const FIELD_LABEL: Record<RuleType, string> = {
+  tone: "Tone",
+  do: "Do",
+  dont: "Don't",
+};
+
+function RuleSubForm({
+  slug,
+  ruleType,
+  value,
+  onValueChange,
+}: {
+  slug: string;
+  ruleType: RuleType;
+  value: string;
+  onValueChange: (next: string) => void;
+}) {
   const [state, action] = useActionState(
     createVoiceRuleAction.bind(null, slug),
     {} as { error?: string; success?: boolean },
@@ -48,22 +71,20 @@ function RuleSubForm({ slug, ruleType }: { slug: string; ruleType: RuleType }) {
   const max = MAX_LENGTH[ruleType];
   const useTextarea = ruleType !== "tone";
   return (
-    <form ref={formRef} action={action} className="grid gap-2">
+    <form ref={formRef} action={action} className="grid gap-3">
       <input type="hidden" name="ruleType" value={ruleType} />
-      <FormField
-        id={`voice-rule-${ruleType}-content`}
-        label={ruleType === "tone" ? "Tone" : ruleType === "do" ? "Do" : "Don't"}
-        required
-      >
+      <FormField id={`voice-rule-${ruleType}-content`} label={FIELD_LABEL[ruleType]} required>
         {useTextarea ? (
           <CharacterCountInput
-            id={`voice-rule-${ruleType}-content`}
             as="textarea"
+            id={`voice-rule-${ruleType}-content`}
             name="content"
             required
             maxLength={max}
             rows={2}
             placeholder={PLACEHOLDER[ruleType]}
+            value={value}
+            onChange={(e) => onValueChange(e.target.value)}
           />
         ) : (
           <CharacterCountInput
@@ -72,6 +93,8 @@ function RuleSubForm({ slug, ruleType }: { slug: string; ruleType: RuleType }) {
             required
             maxLength={max}
             placeholder={PLACEHOLDER[ruleType]}
+            value={value}
+            onChange={(e) => onValueChange(e.target.value)}
           />
         )}
       </FormField>
@@ -88,16 +111,29 @@ function RuleSubForm({ slug, ruleType }: { slug: string; ruleType: RuleType }) {
 }
 
 export function VoiceForm({ slug }: { slug: string }) {
+  const [tone, setTone] = React.useState("");
+  const [doRule, setDoRule] = React.useState("");
+  const [dontRule, setDontRule] = React.useState("");
+
   return (
     <div className="mb-3 grid gap-3 sm:grid-cols-3">
       <Card padding="md">
-        <RuleSubForm slug={slug} ruleType="tone" />
+        <div className="space-y-3">
+          <RuleSubForm slug={slug} ruleType="tone" value={tone} onValueChange={setTone} />
+          <VoiceRuleSuggestions slug={slug} ruleType="tone" onPick={setTone} />
+        </div>
       </Card>
       <Card padding="md">
-        <RuleSubForm slug={slug} ruleType="do" />
+        <div className="space-y-3">
+          <RuleSubForm slug={slug} ruleType="do" value={doRule} onValueChange={setDoRule} />
+          <VoiceRuleSuggestions slug={slug} ruleType="do" onPick={setDoRule} />
+        </div>
       </Card>
       <Card padding="md">
-        <RuleSubForm slug={slug} ruleType="dont" />
+        <div className="space-y-3">
+          <RuleSubForm slug={slug} ruleType="dont" value={dontRule} onValueChange={setDontRule} />
+          <VoiceRuleSuggestions slug={slug} ruleType="dont" onPick={setDontRule} />
+        </div>
       </Card>
     </div>
   );
