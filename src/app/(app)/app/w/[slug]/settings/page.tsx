@@ -97,6 +97,17 @@ export default async function WorkspaceSettingsPage({
             </span>
           </>
         }
+        action={
+          canManage ? (
+            <a
+              href={`/app/w/${slug}/settings/templates`}
+              data-testid="settings-browse-presets"
+              className="border-border bg-surface hover:bg-surface-subtle text-body text-fg-primary inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 font-semibold transition-colors"
+            >
+              Browse presets
+            </a>
+          ) : undefined
+        }
       />
 
       <ul
