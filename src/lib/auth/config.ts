@@ -65,6 +65,12 @@ export const authConfig: NextAuthConfig = {
           id: user.id,
           email: user.email,
           name: user.name ?? user.email,
+          // `mustChangePassword` is forwarded to the JWT callback so
+          // the first-login redirect middleware can route the user to
+          // /set-password on first sign-in. The Drizzle adapter sets
+          // the same field for OAuth / magic-link flows, so the JWT
+          // callback path is the same across all providers.
+          mustChangePassword: user.mustChangePassword,
           // Custom field — not in the User type but passed through to
           // the jwt() callback. Cast to any in the JWT callback to
           // access it.
@@ -136,8 +142,17 @@ export const authConfig: NextAuthConfig = {
      * `token.exp` to 24h so the session dies sooner than the
      * config-level 30-day maxAge. When remember=true (or for
      * OAuth/magic-link), the default 30-day cap applies.
+     *
+     * `mustChangePassword` is read from the `user` object on first
+     * sign-in (the Drizzle adapter returns the full row including
+     * this column, and the Credentials provider's `authorize` is
+     * updated to forward it). On a `trigger === "update"` call
+     * (typically from `useSession().update({ mustChangePassword: false })`
+     * after the user sets a new password on /set-password), we
+     * re-read the column so the first-login redirect middleware
+     * stops intercepting.
      */
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id as string;
         // role defaults to "user" on first sign-in; promoted to "agency_admin"
@@ -149,6 +164,22 @@ export const authConfig: NextAuthConfig = {
           // 24 hours from now
           token.exp = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
         }
+        const mustChange = (user as { mustChangePassword?: boolean }).mustChangePassword;
+        if (typeof mustChange === "boolean") {
+          token.mustChangePassword = mustChange;
+        }
+      }
+      // Re-read the must-change flag only on a client-driven
+      // session refresh. On first sign-in, the value came in via
+      // `user` above. The DB lookup is one indexed query per
+      // `useSession().update()` call — negligible.
+      if (trigger === "update" && token.id) {
+        const [row] = await db
+          .select({ mustChangePassword: users.mustChangePassword })
+          .from(users)
+          .where(eq(users.id, token.id))
+          .limit(1);
+        token.mustChangePassword = row?.mustChangePassword === true;
       }
       return token;
     },
@@ -156,6 +187,9 @@ export const authConfig: NextAuthConfig = {
     async session({ session, token }) {
       if (token.id) session.user.id = token.id;
       if (token.role) session.user.role = token.role;
+      if (typeof token.mustChangePassword === "boolean") {
+        session.user.mustChangePassword = token.mustChangePassword;
+      }
       return session;
     },
 

@@ -23,6 +23,13 @@ import {
   revokeInvitation,
 } from "@/lib/auth/invitations";
 import { invitationCommandSchema, workspaceRoleSchema } from "@/lib/auth/invitation-command";
+import { userCreateCommandSchema } from "@/lib/auth/user-create-command";
+import {
+  ActiveAgencyMemberError,
+  InvalidPasswordError,
+  UserAlreadyExistsError,
+  createUserDirectly,
+} from "@/lib/auth/user-creation";
 import { enforceRateLimit, rateLimitRuleFor } from "@/lib/security/rate-limit";
 import { captureError } from "@/lib/observability/sentry";
 
@@ -525,4 +532,129 @@ export async function toggleAgencyAdminAction(
   revalidatePath("/app/users");
   revalidatePath(`/app/w/[slug]/team`, "page");
   return { saved: true };
+}
+
+export type AddDirectlyActionState = {
+  error?: string;
+  fieldErrors?: Record<string, string[]>;
+  success?: boolean;
+  /** Plaintext — only set on success, used for the one-time reveal. */
+  tempPassword?: string;
+  email?: string;
+  userId?: string;
+  acceptedWorkspaceIds?: string[];
+};
+
+/**
+ * Server action for the "Add directly" tab on /app/users.
+ *
+ * The form posts `email`, `name`, `password`, `mustChangePassword`
+ * (checkbox → "on"), `grantsAgencyAdmin` (checkbox → "on"), and
+ * `workspaceRoles` (JSON string of `[{ workspaceId, role }]`).
+ *
+ * The plaintext `password` is the admin-supplied (or auto-generated
+ * by the form's "Generate strong password" button) temporary
+ * credential. The service hashes it; the action returns the plaintext
+ * to the client for the one-time reveal strip, and never persists it
+ * anywhere except as a bcrypt hash.
+ *
+ * On success: `tempPassword` + `email` + `acceptedWorkspaceIds` are
+ * returned. The form's `key` (tied to `userId`) remounts so all
+ * uncontrolled inputs reset, and the success strip renders with a
+ * copy-to-clipboard button.
+ */
+export async function createUserDirectlyAction(
+  _prev: AddDirectlyActionState | undefined,
+  formData: FormData,
+): Promise<AddDirectlyActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not signed in. Please sign in again." };
+  const actor = await currentActor();
+  if (!actor) return { error: "Not signed in. Please sign in again." };
+  const ctx = await resolveActiveAgencyContext({ actor });
+  const agencyId = ctx?.agencyId ?? null;
+  if (!agencyId) return { error: "Agency not configured. Contact the platform admin." };
+  if (!(await isAgencyAdmin(actor, agencyId))) {
+    return { error: "Only agency administrators can add users directly." };
+  }
+
+  let workspaceRoles: unknown = [];
+  try {
+    const raw = formData.get("workspaceRoles");
+    workspaceRoles = typeof raw === "string" && raw ? JSON.parse(raw) : [];
+  } catch {
+    return {
+      error: "Invalid workspace access selection.",
+      fieldErrors: { workspaceRoles: ["Invalid JSON"] },
+    };
+  }
+
+  const parsed = userCreateCommandSchema.safeParse({
+    email: formData.get("email"),
+    name: formData.get("name") || undefined,
+    password: formData.get("password"),
+    mustChangePassword: formData.get("mustChangePassword") === "on",
+    grantsAgencyAdmin: formData.get("grantsAgencyAdmin") === "on",
+    workspaceRoles,
+  });
+  if (!parsed.success) {
+    return formatZodIssues(parsed.error.issues);
+  }
+
+  const rateLimit = await enforceRateLimit({
+    scope: "user_create",
+    subject: session.user.id,
+    actorId: session.user.id,
+  });
+  if (!rateLimit.allowed) {
+    return { error: formatRateLimitRetry(rateLimit.retryAfterSeconds) };
+  }
+
+  try {
+    const result = await createUserDirectly({
+      agencyId,
+      email: parsed.data.email,
+      ...(parsed.data.name ? { name: parsed.data.name } : {}),
+      password: parsed.data.password,
+      mustChangePassword: parsed.data.mustChangePassword,
+      grantsAgencyAdmin: parsed.data.grantsAgencyAdmin,
+      workspaceRoles: parsed.data.workspaceRoles,
+      createdBy: session.user.id,
+    });
+    revalidatePath("/app/users");
+    revalidatePath(`/app/w/[slug]/team`, "page");
+    return {
+      success: true,
+      tempPassword: result.tempPassword,
+      email: result.email,
+      userId: result.userId,
+      acceptedWorkspaceIds: result.acceptedWorkspaceIds,
+    };
+  } catch (e) {
+    // Translate known business errors to inline form state; the rest
+    // is treated as an infrastructure failure (DB / SMTP) and shipped
+    // to Sentry so on-call sees sustained failures.
+    if (e instanceof UserAlreadyExistsError) {
+      return {
+        error: e.message,
+        fieldErrors: { email: ["This email already has an account."] },
+      };
+    }
+    if (e instanceof ActiveAgencyMemberError) {
+      return {
+        error: e.message,
+        fieldErrors: { email: ["Already an active member of this agency."] },
+      };
+    }
+    if (e instanceof InvalidPasswordError) {
+      return {
+        error: e.message,
+        fieldErrors: { password: [e.message] },
+      };
+    }
+    captureError("users.createUserDirectly", e);
+    return {
+      error: "We couldn't create that user. The error has been logged. Please try again.",
+    };
+  }
 }

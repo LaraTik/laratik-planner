@@ -32,6 +32,33 @@ export function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, BCRYPT_COST);
 }
 
+/**
+ * Generate a one-shot strong temporary password for the
+ * "Add directly" admin flow (see `lib/auth/user-creation.ts`).
+ *
+ * 16 characters, drawn from `[A-Za-z0-9!@#$%^&*]`. Always passes
+ * `isPasswordStrong` (length + letter + digit) and is safe to render
+ * in a "share these credentials securely" reveal strip — the caller
+ * must ensure the reveal is one-time and the temporary password is
+ * never persisted in plaintext anywhere except the bcrypt hash.
+ *
+ * `randomBytes(24)` over-allocates entropy for a 16-char output
+ * (192 bits >> 16*log2(70) ≈ 99 bits needed) and gives plenty of
+ * slack against biased sampling modulo a 70-character alphabet.
+ */
+export function generateStrongPassword(): string {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+  const bytes = randomBytes(24);
+  let out = "";
+  for (let i = 0; i < 16; i++) {
+    // Modulo is safe here because the alphabet length (70) is well
+    // under 256 and the input is uniformly random — the bias on any
+    // single character is < 0.5%.
+    out += alphabet[bytes[i]! % alphabet.length];
+  }
+  return out;
+}
+
 /** Verify a plaintext password against a stored bcrypt hash. */
 export function verifyPassword(plain: string, hash: string): Promise<boolean> {
   return bcrypt.compare(plain, hash);
@@ -162,12 +189,20 @@ export async function setPassword(userId: string, plain: string): Promise<void> 
 /**
  * Look up a user by email + password. Used by the Credentials
  * provider; returns null on any failure so the caller doesn't leak
- * which side of the credential pair was wrong.
+ * which side of the credential pair was wrong. The `mustChangePassword`
+ * flag is forwarded so the JWT callback can stamp it on first
+ * sign-in (the first-login redirect middleware reads the flag from
+ * the JWT to route the user to /set-password).
  */
 export async function findUserByEmailAndPassword(
   email: string,
   password: string,
-): Promise<{ id: string; email: string; name: string | null } | null> {
+): Promise<{
+  id: string;
+  email: string;
+  name: string | null;
+  mustChangePassword: boolean;
+} | null> {
   const normalized = email.trim().toLowerCase();
   const [user] = await db
     .select({
@@ -175,6 +210,7 @@ export async function findUserByEmailAndPassword(
       email: users.email,
       name: users.name,
       passwordHash: users.passwordHash,
+      mustChangePassword: users.mustChangePassword,
     })
     .from(users)
     .where(eq(users.email, normalized))
@@ -182,5 +218,10 @@ export async function findUserByEmailAndPassword(
   if (!user?.passwordHash) return null;
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) return null;
-  return { id: user.id, email: user.email, name: user.name };
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    mustChangePassword: user.mustChangePassword === true,
+  };
 }

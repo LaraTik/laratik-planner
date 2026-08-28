@@ -138,6 +138,34 @@ export async function proxy(req: NextRequest) {
     return res;
   }
 
+  // First-login redirect for users created via the "Add directly"
+  // admin flow (lib/auth/user-creation.ts:createUserDirectly). The
+  // JWT carries `mustChangePassword: true` until the user rotates
+  // the admin-supplied password on /set-password. The /set-password
+  // action calls `useSession().update({ mustChangePassword: false })`
+  // which re-stamps the JWT so subsequent requests pass through.
+  //
+  // This check runs AFTER the auth gate so an unauthenticated
+  // request to /app/* is bounced to /signin first (the user then
+  // signs in, lands on /app, and is bounced here to /set-password).
+  // The signin / signout / auth endpoints are excluded so the user
+  // can escape an infinite redirect if the flow is misconfigured.
+  if (
+    isAuthed &&
+    token?.mustChangePassword === true &&
+    pathname !== "/set-password" &&
+    pathname !== "/signin" &&
+    pathname !== "/signout" &&
+    !pathname.startsWith("/api/auth/")
+  ) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/set-password";
+    url.search = "";
+    const res = NextResponse.redirect(url);
+    res.headers.set("x-request-id", requestId);
+    return res;
+  }
+
   // Default pass-through. Forward the request id on both the
   // rewritten inbound headers (so `headers().get('x-request-id')`
   // works in route handlers / server actions) AND the response
