@@ -139,6 +139,21 @@ jobs:
       contents: read
       packages: read
     steps:
+      - name: Log in to GHCR
+        # The `docker buildx imagetools inspect` call below needs an
+        # authenticated request — GHCR returns 401 Unauthorized for
+        # anonymous calls against a private image, and our
+        # `ghcr.io/laratik/laratik-planner{-migrator}` images are
+        # private. Without this login, the verify step would fail
+        # even when the image IS in GHCR (as the post-merge
+        # auto-deploy on 2026-08-28 demonstrated on the first run
+        # of the new contract).
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Verify image exists in GHCR
         # Fast-fail in the Actions UI if the image is missing. On
         # the normal path CI pushed it; on the dispatch path the
