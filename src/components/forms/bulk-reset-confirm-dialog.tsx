@@ -23,7 +23,7 @@ import {
   ALL_CONTENT_STATUSES,
   CONTENT_STATUS_LABELS,
   type ResetAllIdeasCounts,
-} from "@/lib/content/reset-all-ideas";
+} from "@/lib/content/reset-all-ideas-shared";
 
 /**
  * Bulk destructive "Reset all ideas" confirm dialog.

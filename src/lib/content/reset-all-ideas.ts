@@ -3,6 +3,33 @@ import "server-only";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import type { ContentStatus } from "@/lib/content/status";
+import {
+  ALL_CONTENT_STATUSES,
+  EMPTY_RESET_ALL_COUNTS,
+  type ResetAllIdeasCounts,
+} from "./reset-all-ideas-shared";
+
+// 2026-08-28: the client component `bulk-reset-confirm-dialog.tsx`
+// imports `ALL_CONTENT_STATUSES` and `CONTENT_STATUS_LABELS` (and
+// the `ResetAllIdeasCounts` type) as RUNTIME values from this
+// module. That triggered `next build` to fail with:
+//
+//   "You're importing a module that depends on 'server-only'..."
+//
+// The constants and type now live in `reset-all-ideas-shared.ts`
+// (no `import "server-only"`, safe for both Server and Client
+// Components). The single-idea fix in d0cc4b9 established this
+// pattern; this commit applies it to the bulk variant. We
+// re-export from this module so existing server-side callers
+// (`reset-all-ideas-action.ts`, the settings page) keep their
+// existing import paths.
+export {
+  ALL_CONTENT_STATUSES,
+  CONTENT_STATUS_LABELS,
+  EMPTY_RESET_ALL_COUNTS,
+  LIVE_STATUSES,
+  type ResetAllIdeasCounts,
+} from "./reset-all-ideas-shared";
 
 /**
  * Bulk "Reset all ideas" destructive operation.
@@ -18,57 +45,7 @@ import type { ContentStatus } from "@/lib/content/status";
  * "delete all the drafts" and "delete live social posts". The
  * default is OFF. When OFF, the operator sees how many live ideas
  * are being SKIPPED so the count is fully transparent.
- *
- * `LIVE_STATUSES` is the set of statuses we treat as "live on the
- * social networks". It deliberately does NOT include
- * `ready_to_publish` — that's a state where the idea is approved
- * to go but hasn't gone yet, so it's safe to remove without
- * touching published content. `partially_published` IS included
- * because at least one channel has a live post that points to
- * the idea.
  */
-export const LIVE_STATUSES: readonly ContentStatus[] = [
-  "published",
-  "partially_published",
-] as const;
-
-export const ALL_CONTENT_STATUSES: readonly ContentStatus[] = [
-  "draft",
-  "content_review",
-  "approved_for_design",
-  "in_design",
-  "creative_review",
-  "ready_to_publish",
-  "partially_published",
-  "published",
-  "changes_requested",
-  "blocked",
-  "cancelled",
-] as const;
-
-export type ResetAllIdeasCounts = Readonly<{
-  // Set the action will delete.
-  total: number;
-  byStatus: Readonly<Record<ContentStatus, number>>;
-  // Context for the dialog — ideas the action will NOT delete.
-  totalAllIdeas: number;
-  totalExcludedByDefault: number; // live ideas skipped because includePublished=false
-  totalLive: number; // total live ideas in the workspace, regardless of the toggle
-}>;
-
-export const EMPTY_RESET_ALL_COUNTS: ResetAllIdeasCounts = {
-  total: 0,
-  byStatus: ALL_CONTENT_STATUSES.reduce(
-    (acc, status) => {
-      acc[status] = 0;
-      return acc;
-    },
-    {} as Record<ContentStatus, number>,
-  ),
-  totalAllIdeas: 0,
-  totalExcludedByDefault: 0,
-  totalLive: 0,
-};
 
 function emptyByStatus(): Record<ContentStatus, number> {
   return ALL_CONTENT_STATUSES.reduce(
@@ -178,23 +155,3 @@ export async function getResetAllIdeasCounts(
     totalLive,
   };
 }
-
-/**
- * Human label per status for the dialog's breakdown table. Mirrors
- * `humanStatus` from `src/lib/content/status.ts` but is inlined so
- * the destructive dialog can render without importing the larger
- * status module (which has format/colour helpers irrelevant here).
- */
-export const CONTENT_STATUS_LABELS: Readonly<Record<ContentStatus, string>> = {
-  draft: "Draft",
-  content_review: "Content review",
-  approved_for_design: "Approved for design",
-  in_design: "In design",
-  creative_review: "Creative review",
-  ready_to_publish: "Ready to publish",
-  partially_published: "Partially published",
-  published: "Published",
-  changes_requested: "Changes requested",
-  blocked: "Blocked",
-  cancelled: "Cancelled",
-};
