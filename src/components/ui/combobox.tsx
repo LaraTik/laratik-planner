@@ -95,6 +95,18 @@ export interface ComboboxProps {
   triggerClassName?: string;
   /** When true, the combobox is disabled. */
   disabled?: boolean;
+  /**
+   * When true, the combobox is marked `aria-required`. The hidden
+   * input that backs the form post still uses `required` for
+   * browser-level validation; the ARIA flag is the screen-reader
+   * surface.
+   */
+  required?: boolean;
+  /**
+   * `aria-describedby` forwarded to the trigger and the search
+   * input so the field's helper text is announced on focus.
+   */
+  "aria-describedby"?: string;
 }
 
 /**
@@ -135,6 +147,8 @@ export function Combobox({
   id,
   triggerClassName,
   disabled,
+  required,
+  "aria-describedby": describedBy,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [needle, setNeedle] = React.useState("");
@@ -147,8 +161,21 @@ export function Combobox({
   const [focusedValue, setFocusedValue] = React.useState<string | null>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const searchRef = React.useRef<HTMLInputElement>(null);
-  const optionRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
   const listId = React.useId();
+  // Stable id for the focused option, used as the
+  // `aria-activedescendant` target on the search input. The WAI-ARIA
+  // combobox + listbox pattern requires this so screen readers
+  // announce the visually-focused option as the user arrows. The id
+  // is derived from the option's value, which the flat() map keeps
+  // in lockstep with the rendered list, so the focus / DOM / id are
+  // never out of sync. We also use this id to scroll the focused
+  // option into view on keyboard nav — the previous implementation
+  // cached a ref array and called `scrollIntoView` on the cached
+  // element, but the cached ref could point at a stale element (or
+  // a value that jsdom doesn't recognise as a `scrollIntoView`-able
+  // node) when the option list re-orders. `getElementById` is always
+  // synchronous and always points at the live DOM.
+  const optionIdFor = (value: string) => `${listId}-opt-${value.replace(/[^A-Za-z0-9_-]/g, "_")}`;
 
   const selectedOption = options.find((o) => o.value === value) ?? null;
   const filtered = options.filter((o) => matches(o, needle));
@@ -204,19 +231,41 @@ export function Combobox({
     triggerRef.current?.focus();
   }
 
+  function scrollFocusedIntoView(value: string) {
+    // `getElementById` is preferred over a ref array because the
+    // option's id is stable across re-orders, so the lookup always
+    // points at the live DOM node. We also guard the `scrollIntoView`
+    // call: jsdom does not implement it, and the call is purely a
+    // visual affordance — a missing scroll-into-view on a test
+    // runner should not fail the test.
+    if (typeof document === "undefined") return;
+    const el = document.getElementById(optionIdFor(value));
+    if (!el) return;
+    const scrollIntoView = (
+      el as HTMLElement & { scrollIntoView?: (opts?: ScrollIntoViewOptions) => void }
+    ).scrollIntoView;
+    if (typeof scrollIntoView === "function") {
+      scrollIntoView.call(el, { block: "nearest" });
+    }
+  }
+
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
       const next = Math.min(focusIndex + 1, flat.length - 1);
       const nextValue = flat[next]?.value;
-      if (nextValue) setFocusedValue(nextValue);
-      optionRefs.current[next]?.scrollIntoView({ block: "nearest" });
+      if (nextValue) {
+        setFocusedValue(nextValue);
+        scrollFocusedIntoView(nextValue);
+      }
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       const next = Math.max(focusIndex - 1, 0);
       const nextValue = flat[next]?.value;
-      if (nextValue) setFocusedValue(nextValue);
-      optionRefs.current[next]?.scrollIntoView({ block: "nearest" });
+      if (nextValue) {
+        setFocusedValue(nextValue);
+        scrollFocusedIntoView(nextValue);
+      }
     } else if (e.key === "Enter") {
       e.preventDefault();
       const opt = flat[focusIndex];
@@ -245,6 +294,7 @@ export function Combobox({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={open ? listId : undefined}
+          aria-describedby={describedBy}
           disabled={disabled}
           data-testid={triggerTestId}
           className={cn(
@@ -275,6 +325,11 @@ export function Combobox({
             aria-expanded={open}
             aria-controls={listId}
             aria-autocomplete="list"
+            aria-activedescendant={
+              flat[focusIndex] ? optionIdFor(flat[focusIndex]!.value) : undefined
+            }
+            aria-required={required || undefined}
+            aria-describedby={describedBy}
             value={needle}
             onChange={(e) => setNeedle(e.target.value)}
             onKeyDown={onKeyDown}
@@ -327,9 +382,7 @@ export function Combobox({
                 return (
                   <li key={opt.value}>
                     <button
-                      ref={(el) => {
-                        optionRefs.current[idx] = el;
-                      }}
+                      id={optionIdFor(opt.value)}
                       type="button"
                       role="option"
                       aria-selected={isSelected}

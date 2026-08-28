@@ -130,4 +130,35 @@ describe("Combobox", () => {
     expect(screen.queryByText("Inter")).toBeNull();
     expect(screen.queryByText("Roboto")).toBeNull();
   });
+
+  it("wires aria-activedescendant on the search input to the focused option (WAI-ARIA combobox pattern)", async () => {
+    // The WAI-ARIA combobox + listbox pattern requires
+    // `aria-activedescendant` on the search input so screen readers
+    // announce the visually-focused option as the user arrows. The
+    // TimezoneCombobox has this; the new Combobox must too. This
+    // test pins both ends of the contract: the search input has the
+    // attribute, and it points at the id of the currently focused
+    // option (the first option by default).
+    const user = userEvent.setup();
+    renderHarness();
+    await user.click(screen.getByTestId("combobox-trigger"));
+    const search = screen.getByTestId("combobox-search");
+    const activeId = search.getAttribute("aria-activedescendant");
+    expect(activeId).toBeTruthy();
+    // The pointed-at node must be one of the rendered options
+    // (i.e. the id resolves to a real element, not a stale reference).
+    expect(document.getElementById(activeId as string)).not.toBeNull();
+  });
+
+  it("updates aria-activedescendant as the user arrows through the options", async () => {
+    const user = userEvent.setup();
+    renderHarness({ initialValue: "Inter" });
+    await user.click(screen.getByTestId("combobox-trigger"));
+    const search = screen.getByTestId("combobox-search");
+    const beforeId = search.getAttribute("aria-activedescendant");
+    await user.keyboard("{ArrowDown}");
+    const afterId = search.getAttribute("aria-activedescendant");
+    expect(afterId).not.toBe(beforeId);
+    expect(document.getElementById(afterId as string)).not.toBeNull();
+  });
 });
