@@ -156,7 +156,11 @@ export function InlineEditableField<TValue>({
           ) : null}
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              size="sm"
+              // size="default" → 40px control. The previous
+              // `sm` (36px) was below the studio's 40px
+              // standard and tight on touch. The full editor
+              // view already uses default-sized buttons.
+              size="default"
               onClick={save}
               disabled={pending}
               data-testid={testId ? `${testId}-save` : undefined}
@@ -169,7 +173,7 @@ export function InlineEditableField<TValue>({
               {pending ? "Saving…" : "Save"}
             </Button>
             <Button
-              size="sm"
+              size="default"
               variant="ghost"
               onClick={cancel}
               disabled={pending}
@@ -195,14 +199,30 @@ export function InlineEditableField<TValue>({
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">{render(value)}</div>
           <Button
+            // size="icon" → 40×40 (project standard for icon
+            // buttons; matches `--control-standard`). 32×32 was
+            // below the WCAG 2.2 AA 24×24 minimum and the
+            // studio's own 40×40 icon convention.
             size="icon"
             variant="ghost"
             onClick={beginEdit}
             aria-label={`Edit ${label}`}
             data-testid={testId ? `${testId}-edit` : undefined}
             className={cn(
-              revealOnHover ? "opacity-0 group-hover/field:opacity-100" : "opacity-100",
-              "h-8 w-8 transition-opacity",
+              // Two visibility modes:
+              //  - Default (`revealOnHover=false`): the pencil
+              //    is always visible at 50% opacity on rest,
+              //    100% on hover/focus. Discoverable on touch
+              //    devices, calm on desktop. The hover/focus
+              //    state is also reinforced by the underlying
+              //    `variant="ghost"` background change.
+              //  - Opt-in `revealOnHover=true`: hidden at rest
+              //    (e.g. inside a dense table row), 100% on
+              //    hover/focus via the field group.
+              revealOnHover
+                ? "opacity-0 group-focus-within/field:opacity-100 group-hover/field:opacity-100"
+                : "opacity-50 hover:opacity-100 focus-visible:opacity-100",
+              "transition-opacity",
             )}
           >
             <Pencil className="h-3.5 w-3.5" aria-hidden="true" />

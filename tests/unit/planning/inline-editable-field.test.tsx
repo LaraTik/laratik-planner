@@ -19,6 +19,51 @@ describe("InlineEditableField", () => {
     expect(screen.getByText("Hello world")).toBeInTheDocument();
   });
 
+  it("renders the pencil button at the 40×40 project-standard touch target", () => {
+    // 32×32 (the old `h-8 w-8`) was below the WCAG 2.2 AA
+    // 24×24 minimum and below the studio's own 40×40 icon
+    // convention (`size="icon"`). Pin the new size so a
+    // future refactor that re-shrinks the button fails CI.
+    render(
+      <InlineEditableField
+        label="brief"
+        value="Hello"
+        render={(v) => <p>{v}</p>}
+        renderEditor={({ value, onChange }) => (
+          <input value={value} onChange={(e) => onChange(e.target.value)} />
+        )}
+        onSave={async () => ({ ok: true as const })}
+      />,
+    );
+    const pencil = screen.getByRole("button", { name: /Edit brief/i });
+    expect(pencil.className).toMatch(/\bh-10\b/);
+    expect(pencil.className).toMatch(/\bw-10\b/);
+  });
+
+  it("renders the Save / Cancel buttons at the 40px project-standard control height", async () => {
+    // The previous `sm` (36px) was tight on touch; the
+    // studio standard is 40px (`size="default"`). The editor
+    // is the primary touch surface on mobile so this matters.
+    const user = userEvent.setup();
+    render(
+      <InlineEditableField
+        label="brief"
+        value="Hello"
+        render={(v) => <p>{v}</p>}
+        renderEditor={({ value, onChange }) => (
+          <input value={value} onChange={(e) => onChange(e.target.value)} />
+        )}
+        onSave={async () => ({ ok: true as const })}
+      />,
+    );
+    // Switch to edit mode first.
+    await user.click(screen.getByRole("button", { name: /Edit brief/i }));
+    const save = screen.getByRole("button", { name: /^Save$/i });
+    const cancel = screen.getByRole("button", { name: /Cancel/i });
+    expect(save.className).toMatch(/\bh-10\b/);
+    expect(cancel.className).toMatch(/\bh-10\b/);
+  });
+
   it("switches to edit mode when the pencil is clicked", async () => {
     render(
       <InlineEditableField
