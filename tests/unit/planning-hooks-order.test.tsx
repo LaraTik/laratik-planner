@@ -19,7 +19,7 @@ vi.mock("react-dom", async (importOriginal) => {
 
 import { WorkflowBar } from "@/app/(app)/app/w/[slug]/planning/[id]/workflow-bar";
 import { DeliverySection } from "@/app/(app)/app/w/[slug]/planning/[id]/delivery-section";
-import { PublishingSection } from "@/app/(app)/app/w/[slug]/planning/[id]/publishing-section";
+import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
 import { CommentForm } from "@/components/comments/comment-form";
 
 /**
@@ -164,37 +164,38 @@ describe("planning detail components — hooks order guard", () => {
     }
   });
 
-  it("PublishingSection: same instance, empty/populated channels keep hook count stable", () => {
+  it("ChannelPublishingCard: same instance, form open/close cycle keeps hook count stable", () => {
+    // The per-channel card toggles between view (no form) and
+    // edit (form mounted) on click. Hooks must stay in the same
+    // order across that toggle so React's #441 validator doesn't
+    // fire on the post-action re-render.
     const cap = captureConsoleError();
     try {
-      // State A: zero channels (would early-return null)
-      const { rerender } = render(
-        <PublishingSection
-          workspaceSlug="acme"
-          contentItemId="ci-1"
-          channels={[]}
-          publications={[]}
-          isPublisher={false}
-          isManager={false}
-        />,
-      );
-      // State B: channels present, manager. Same instance.
+      const baseProps = {
+        workspaceSlug: "acme",
+        channel: {
+          id: "cic-1",
+          platform: "instagram",
+          accountName: "@acme",
+          configured: true,
+        },
+        publication: null,
+        isPublisher: true,
+      };
+      const { rerender, getByTestId } = render(<ChannelPublishingCard {...baseProps} />);
+      // State A: no publication — "Record outcome" button visible.
+      expect(getByTestId("channel-card-record-outcome")).toBeInTheDocument();
+      // State B: publication exists — "Update outcome" button visible.
       const err = runWithoutThrowing(() =>
         rerender(
-          <PublishingSection
-            workspaceSlug="acme"
-            contentItemId="ci-1"
-            channels={[
-              {
-                id: "cic-1",
-                accountName: "@acme",
-                platform: "instagram",
-                plannedPublishAtOverride: null,
-              },
-            ]}
-            publications={[]}
-            isPublisher
-            isManager
+          <ChannelPublishingCard
+            {...baseProps}
+            publication={{
+              status: "published" as const,
+              publishedUrl: "https://example.com/post/1",
+              note: null,
+              failureReason: null,
+            }}
           />,
         ),
       );

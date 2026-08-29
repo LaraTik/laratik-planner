@@ -4,17 +4,34 @@ import { Button } from "@/components/ui/button";
 import { ALL_FORMATS, ALL_STATUSES, humanFormat, humanStatus } from "@/lib/content/status";
 
 /**
- * PlanningFilters — status + format + owner + search + density + apply/clear
- * controls for the Monthly Planning list. Server-rendered: the page already
- * knows the current filter values from the URL search params, so this is a
- * pure form that posts back to itself.
+ * PlanningFilters — status + format + owner + search + apply/clear
+ * controls for the Planning list and the Workflow Board.
  *
- * Centralises the select + button styling so the planning page (and
- * any future filter surface) can use the same UX without re-deriving
- * the option list.
+ * Server-rendered: the page already knows the current filter values
+ * from the URL search params, so this is a pure form that posts
+ * back to the same path (`targetPath`). Centralises the select +
+ * button styling so the planning list and the board can use the
+ * exact same UX without re-deriving the option list, and so
+ * `targetPath` is the only thing that differs between the two
+ * surfaces.
+ *
+ * Multi-surface contract:
+ *  - The List view (the planning list) shows a row-density selector.
+ *  - The Board view does not — board density is fixed by the
+ *    column geometry, not a user preference. `showDensity`
+ *    controls whether the row renders.
+ *  - Switching between the two views preserves every other filter
+ *    (status, format, owner, search) by re-serialising the active
+ *    filters in the `targetPath` querystring. The parent's view
+ *    switcher is responsible for passing the right `targetPath`
+ *    so the user lands on the right view with the right state.
  */
 export interface PlanningFiltersProps {
-  slug: string;
+  /**
+   * Base path the form submits to AND the Clear button links to.
+   * Defaults to `/app/w/{slug}/planning` (the list) when not set.
+   */
+  targetPath?: string;
   /** ISO `YYYY-MM` for the current month — preserved across submits. */
   monthParam: string;
   /** Currently active status filter, or undefined for "All". */
@@ -25,8 +42,10 @@ export interface PlanningFiltersProps {
   selectedOwnerId?: string | undefined;
   /** Current search term, or undefined for "no search". */
   searchValue?: string | undefined;
-  /** Currently active list density. */
-  density: "comfortable" | "compact";
+  /** Currently active list density. Required when `showDensity` is true. */
+  density?: "comfortable" | "compact";
+  /** Whether to render the density selector. List view: true. Board view: false. */
+  showDensity?: boolean;
   /** Whether any filter is active (controls whether Clear shows). */
   hasFilter: boolean;
   /**
@@ -34,6 +53,8 @@ export interface PlanningFiltersProps {
    * the dropdown never queries the DB itself.
    */
   members: { id: string; label: string }[];
+  /** Test id prefix; defaults to "planning". Board surfaces can override. */
+  testIdPrefix?: string;
 }
 
 const DENSITY_OPTIONS: { value: "comfortable" | "compact"; label: string }[] = [
@@ -45,18 +66,33 @@ const controlClass =
   "border-border bg-surface text-body h-10 rounded-[var(--radius-control)] border px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1";
 
 export function PlanningFilters({
-  slug,
+  targetPath,
   monthParam,
   selectedStatus,
   selectedFormat,
   selectedOwnerId,
   searchValue,
   density,
+  showDensity = true,
   hasFilter,
   members,
+  testIdPrefix = "planning",
 }: PlanningFiltersProps) {
+  // The form's `action` is the same path it lives on — both the
+  // list and the board pages render this form on themselves. The
+  // form has no `action` attribute, which makes the browser fall
+  // back to the page's own URL, so a user who submits the form on
+  // the board stays on the board (with the new filters applied).
+  // This is the same submit-back-to-self pattern the previous
+  // version used — we just expose `targetPath` so the Clear
+  // button can link to a known URL on the same surface.
   return (
-    <form className="flex flex-wrap items-center gap-2">
+    <form
+      method="get"
+      action={targetPath}
+      className="flex flex-wrap items-center gap-2"
+      data-testid={`${testIdPrefix}-filters-form`}
+    >
       <input type="hidden" name="month" value={monthParam} />
       <div className="relative">
         <Search
@@ -71,7 +107,7 @@ export function PlanningFilters({
           placeholder="Search title or brief"
           maxLength={80}
           className={`${controlClass} w-44 pl-7`}
-          data-testid="planning-search-input"
+          data-testid={`${testIdPrefix}-search-input`}
         />
       </div>
       <select
@@ -79,7 +115,7 @@ export function PlanningFilters({
         aria-label="Filter by status"
         defaultValue={selectedStatus ?? ""}
         className={controlClass}
-        data-testid="planning-status-filter"
+        data-testid={`${testIdPrefix}-status-filter`}
       >
         <option value="">All statuses</option>
         {ALL_STATUSES.map((status) => (
@@ -93,7 +129,7 @@ export function PlanningFilters({
         aria-label="Filter by format"
         defaultValue={selectedFormat ?? ""}
         className={controlClass}
-        data-testid="planning-format-filter"
+        data-testid={`${testIdPrefix}-format-filter`}
       >
         <option value="">All formats</option>
         {ALL_FORMATS.map((format) => (
@@ -107,7 +143,7 @@ export function PlanningFilters({
         aria-label="Filter by owner"
         defaultValue={selectedOwnerId ?? ""}
         className={controlClass}
-        data-testid="planning-owner-filter"
+        data-testid={`${testIdPrefix}-owner-filter`}
       >
         <option value="">All owners</option>
         {members.map((m) => (
@@ -116,27 +152,29 @@ export function PlanningFilters({
           </option>
         ))}
       </select>
-      <select
-        name="density"
-        aria-label="List density"
-        defaultValue={density}
-        className={controlClass}
-        data-testid="planning-density-filter"
-      >
-        {DENSITY_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <Button variant="outline" type="submit" data-testid="planning-apply-filters">
+      {showDensity && density ? (
+        <select
+          name="density"
+          aria-label="List density"
+          defaultValue={density}
+          className={controlClass}
+          data-testid={`${testIdPrefix}-density-filter`}
+        >
+          {DENSITY_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      ) : null}
+      <Button variant="outline" type="submit" data-testid={`${testIdPrefix}-apply-filters`}>
         Apply
       </Button>
-      {hasFilter ? (
+      {hasFilter && targetPath ? (
         <Button variant="ghost" asChild>
           <Link
-            href={`/app/w/${slug}/planning?month=${monthParam}`}
-            data-testid="planning-clear-filters"
+            href={`${targetPath}?month=${monthParam}`}
+            data-testid={`${testIdPrefix}-clear-filters`}
           >
             Clear
           </Link>

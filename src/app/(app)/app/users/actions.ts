@@ -254,7 +254,15 @@ export async function toggleDeactivationAction(userId: string, currentlyActive: 
 
 export type MemberEditState = { error?: string; saved?: boolean };
 
-type ParsedWorkspaceGrant = { workspaceId: string; role: string };
+/**
+ * Multi-role grant shape used internally by the action. Each
+ * workspace can carry any number of roles. The form serialises
+ * `[{ workspaceId, roles: [role, …] }]`, but we also accept the
+ * legacy single-role shape `[{ workspaceId, role }]` so old clients
+ * (and the existing integration test) keep working without
+ * coordination.
+ */
+type ParsedWorkspaceGrant = { workspaceId: string; roles: string[] };
 
 function parseWorkspaceRolesJson(raw: FormDataEntryValue | null): ParsedWorkspaceGrant[] | null {
   if (typeof raw !== "string" || !raw) return [];
@@ -263,21 +271,27 @@ function parseWorkspaceRolesJson(raw: FormDataEntryValue | null): ParsedWorkspac
     if (!Array.isArray(value)) return null;
     const out: ParsedWorkspaceGrant[] = [];
     for (const entry of value) {
-      if (
-        entry &&
-        typeof entry === "object" &&
-        "workspaceId" in entry &&
-        "role" in entry &&
-        typeof (entry as { workspaceId: unknown }).workspaceId === "string" &&
-        typeof (entry as { role: unknown }).role === "string"
-      ) {
-        out.push({
-          workspaceId: (entry as { workspaceId: string }).workspaceId,
-          role: (entry as { role: string }).role,
-        });
+      if (!entry || typeof entry !== "object") return null;
+      const e = entry as { workspaceId?: unknown; role?: unknown; roles?: unknown };
+      if (typeof e.workspaceId !== "string") return null;
+      let roles: string[] = [];
+      if (typeof e.roles === "string") {
+        // A single role encoded in the `roles` slot — also accepted
+        // for clients that already moved to the new shape but
+        // submitted one role.
+        roles = [e.roles];
+      } else if (Array.isArray(e.roles)) {
+        for (const r of e.roles) {
+          if (typeof r !== "string") return null;
+          roles.push(r);
+        }
+      } else if (typeof e.role === "string") {
+        // Legacy single-role shape.
+        roles = [e.role];
       } else {
         return null;
       }
+      out.push({ workspaceId: e.workspaceId, roles });
     }
     return out;
   } catch {
@@ -331,14 +345,26 @@ export async function updateMemberRolesAction(
     return { error: "Invalid workspace access selection." };
   }
   // Validate every role against the enum (empty string = "no access")
+  // and de-duplicate the (workspaceId, role) pair so a user can't end
+  // up with two rows of the same role in the same workspace.
+  const grantByWorkspace = new Map<string, string[]>();
+  let totalRoles = 0;
   for (const g of grants) {
-    if (g.role !== "" && !workspaceRoleSchema.safeParse(g.role).success) {
-      return { error: "Invalid workspace access selection." };
+    const seen = new Set<string>();
+    const validated: string[] = [];
+    for (const role of g.roles) {
+      if (role === "") continue; // empty == "no access" — the workspace is omitted
+      if (!workspaceRoleSchema.safeParse(role).success) {
+        return { error: "Invalid workspace access selection." };
+      }
+      if (seen.has(role)) continue;
+      seen.add(role);
+      validated.push(role);
     }
+    if (validated.length === 0) continue;
+    grantByWorkspace.set(g.workspaceId, validated);
+    totalRoles += validated.length;
   }
-  // De-dup workspaces: last write wins (mirrors the form behaviour)
-  const grantByWorkspace = new Map<string, string>();
-  for (const g of grants) grantByWorkspace.set(g.workspaceId, g.role);
 
   // Confirm the target is an active member of this agency
   const [target] = await db
@@ -355,7 +381,11 @@ export async function updateMemberRolesAction(
   if (!target) return { error: "Member not found." };
 
   // Load the agency's workspaces; scope the change to that set so a
-  // malicious caller cannot inject an arbitrary workspaceId.
+  // malicious caller cannot inject an arbitrary workspaceId. A
+  // workspace with no selected roles is treated as "no access" and
+  // we still need to walk it so we can wipe any existing role rows
+  // (otherwise a previous role would survive a save that submitted
+  // an empty selection for that workspace).
   const agencyWorkspaces = await db
     .select({ id: workspaces.id })
     .from(workspaces)
@@ -370,7 +400,7 @@ export async function updateMemberRolesAction(
   try {
     await db.transaction(async (tx) => {
       for (const workspaceId of validWorkspaceIds) {
-        const newRole = grantByWorkspace.get(workspaceId) ?? "";
+        const newRoles = grantByWorkspace.get(workspaceId) ?? [];
 
         // Upsert the membership row so the user can hold a role here.
         // The `onConflictDoUpdate` SET clause intentionally does NOT
@@ -388,16 +418,21 @@ export async function updateMemberRolesAction(
           .returning({ id: workspaceMemberships.id });
         if (!membership) continue;
 
-        // Wipe existing roles for this membership, then insert the new one
-        // if one was provided. Empty string == "no access" == no role rows.
+        // Wipe existing roles for this membership, then insert the
+        // new set. Empty selection == "no access" == no role rows
+        // for this workspace. Multiple roles are inserted as
+        // separate rows; the (workspaceMembershipId, role) primary
+        // key dedupes on conflict.
         await tx
           .delete(workspaceMembershipRoles)
           .where(eq(workspaceMembershipRoles.workspaceMembershipId, membership.id));
-        if (newRole !== "") {
-          await tx.insert(workspaceMembershipRoles).values({
-            workspaceMembershipId: membership.id,
-            role: newRole as never,
-          });
+        if (newRoles.length > 0) {
+          await tx.insert(workspaceMembershipRoles).values(
+            newRoles.map((role) => ({
+              workspaceMembershipId: membership.id,
+              role: role as never,
+            })),
+          );
         }
       }
 
@@ -407,7 +442,10 @@ export async function updateMemberRolesAction(
         targetType: "user",
         targetId: userId,
         outcome: "success",
-        metadata: { workspaceCount: grantByWorkspace.size },
+        metadata: {
+          workspaceCount: grantByWorkspace.size,
+          roleCount: totalRoles,
+        },
       });
     });
   } catch (err) {

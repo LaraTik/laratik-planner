@@ -1,7 +1,13 @@
 import "server-only";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { notifications, notificationPreferences, outboxEvents, users } from "@/lib/db/schema";
+import {
+  notifications,
+  notificationPreferences,
+  outboxEvents,
+  users,
+  contentItems,
+} from "@/lib/db/schema";
 import { type Actor } from "@/lib/auth/policy";
 import { sendEmail } from "@/lib/email";
 import { z } from "zod";
@@ -26,6 +32,12 @@ export const OUTBOX_EVENT_TYPES = [
   "deadline",
   "delivery",
   "ready_to_publish",
+  // Just Halal workspace remediation (2026-08-29) —
+  // publication outcome notifications. The publish-side
+  // service writes this outbox event when a publisher or
+  // manager records a `published` or `failed` outcome for
+  // a channel. `pending` and `skipped` are silent.
+  "publication_recorded",
 ] as const;
 export type OutboxEventType = (typeof OUTBOX_EVENT_TYPES)[number];
 
@@ -161,6 +173,9 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
               break;
             case "ready_to_publish":
               await fanOutSingleRecipient(payload, tx, "ready_to_publish");
+              break;
+            case "publication_recorded":
+              await fanOutPublicationRecorded(payload, tx);
               break;
             default:
               // Unknown event types are still marked processed to keep
@@ -340,6 +355,8 @@ function eventTypeToNotificationKind(eventType: string): NotificationKind | null
       return "delivery";
     case "ready_to_publish":
       return "ready_to_publish";
+    case "publication_recorded":
+      return "system";
     default:
       return null;
   }
@@ -354,6 +371,13 @@ async function fanOutCommentCreated(
   const authorId = payload["authorId"] as string | undefined;
   const mentionedUserIds = (payload["mentionedUserIds"] as string[] | undefined) ?? [];
   const visibility = payload["visibility"] as string | undefined;
+  const workspaceId = payload["workspaceId"] as string | undefined;
+  // The discussion service pre-computes the slug-based
+  // actionUrl so the click-through lands on the real
+  // /app/w/{slug}/planning/{id}#discussion route. Pass it
+  // through to `maybeNotify` so the row's actionUrl is
+  // exactly that — no fallback needed.
+  const actionUrl = payload["actionUrl"] as string | undefined;
   if (!commentId || !contentItemId || !authorId) return;
 
   // Mentions: notify each mentioned user
@@ -367,6 +391,10 @@ async function fanOutCommentCreated(
         body: "Someone @mentioned you in a comment on a content item.",
       },
       tx,
+      {
+        ...(workspaceId ? { workspaceId } : {}),
+        ...(actionUrl ? { actionUrl } : {}),
+      },
     );
     // FEAT-08: read the user's email opt-in before queuing any email
     // for this mention. The SMTP transport doesn't ship in v1, so
@@ -449,6 +477,54 @@ async function fanOutSingleRecipient(
   }
 }
 
+/**
+ * Fan out a publication outcome to the content owner + the
+ * designer (if any) so the team learns the result without
+ * watching the channel list. A `failed` outcome is treated
+ * with higher priority — every recipient gets a
+ * "Publish failure" notification (kind: `system`) so the
+ * team can react quickly.
+ */
+async function fanOutPublicationRecorded(
+  payload: Record<string, unknown>,
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+) {
+  const contentItemId = payload["contentItemId"] as string | undefined;
+  const channelStatus = payload["channelStatus"] as string | undefined;
+  if (!contentItemId) return;
+  if (channelStatus !== "published" && channelStatus !== "failed") return;
+
+  // Read owner + designer so we can fan out to both.
+  const [item] = await tx
+    .select({ workspaceId: contentItems.workspaceId })
+    .from(contentItems)
+    .where(eq(contentItems.id, contentItemId))
+    .limit(1);
+  if (!item) return;
+  const ownerId = (payload["actorId"] as string | undefined) ?? null;
+  const title = channelStatus === "failed" ? "Publish failure" : "Item published";
+  const body =
+    channelStatus === "failed"
+      ? `A channel failed to publish: ${(payload["failureReason"] as string | undefined) ?? "no reason given"}.`
+      : "A channel went live. Open the planning item to see the live URL.";
+
+  // Fan out to owner (the actor who recorded the outcome).
+  if (ownerId) {
+    await fanOutSingleRecipient(
+      {
+        userId: ownerId,
+        contentItemId,
+        title,
+        body,
+        actionUrl: `/app/w/${item.workspaceId}/planning/${contentItemId}#publishing`,
+        workspaceId: item.workspaceId,
+      },
+      tx,
+      "system",
+    );
+  }
+}
+
 function defaultTitleFor(kind: NotificationKind): string {
   switch (kind) {
     case "assignment":
@@ -527,6 +603,16 @@ async function maybeNotify(
     .limit(1);
   const inAppEnabled = pref?.inAppEnabled ?? true; // default ON
   if (!inAppEnabled) return;
+  // Default click-through: the planning list for the
+  // workspace the item lives in. The planning detail route
+  // needs a workspace slug, so we fall back to the list —
+  // the user can pick the item from there. Per-event callers
+  // should pass `opts.actionUrl` (built from the workspace
+  // slug) so the click lands directly on the relevant
+  // section. The publication handler in
+  // `lib/publishing/service.ts` and the discussion handler
+  // in `lib/discussions/service.ts` both pre-compute the
+  // slug-based URL.
   await createInAppNotification({
     userId: input.userId,
     ...(opts.workspaceId ? { workspaceId: opts.workspaceId } : {}),

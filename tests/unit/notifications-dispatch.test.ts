@@ -396,4 +396,40 @@ describe("dispatchEmailOnce (FEAT-10)", () => {
     expect(result.skipped).toBe(1);
     expect(result.sent).toBe(0);
   });
+
+  it("comment_created mention uses the slug-based actionUrl from the payload", async () => {
+    // Regression guard: the discussion service now writes a
+    // slug-based actionUrl into the outbox payload so the
+    // notification's click-through lands on the real
+    // /app/w/{slug}/planning/{id}#discussion route. The
+    // dispatcher must pass that actionUrl through unchanged.
+    state.selectResults.push([
+      {
+        id: "evt-1",
+        eventType: "comment_created",
+        payload: {
+          commentId: "cm-1",
+          contentItemId: "ci-1",
+          authorId: "u-author",
+          workspaceId: "ws-1",
+          mentionedUserIds: ["u-mentioned"],
+          visibility: "internal",
+          actionUrl: "/app/w/just-halal/planning/ci-1#discussion",
+        },
+      },
+    ]);
+    // notificationPreferences default inAppEnabled=true
+    state.selectResults.push([]);
+    // shouldEmailUserFor: []
+    state.selectResults.push([]);
+    const result = await dispatchOutboxOnce({ maxEvents: 10 });
+    expect(result.processed).toBe(1);
+    const notifInsert = state.insertCalls.find(
+      (c) => (c.values as Record<string, unknown>)["kind"] === "mention",
+    );
+    expect(notifInsert, "no mention notification row inserted").toBeDefined();
+    expect((notifInsert!.values as Record<string, unknown>)["actionUrl"]).toBe(
+      "/app/w/just-halal/planning/ci-1#discussion",
+    );
+  });
 });

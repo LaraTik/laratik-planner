@@ -49,8 +49,17 @@ const ICON_BY_ID = {
   completeness_check: ListChecks,
 } as const;
 
+// The planner-detail surface lists AI capabilities that
+// complement the per-field buttons in the format-payload
+// editor. We intentionally EXCLUDE `caption_drafts` here:
+// the per-field `<PerFieldAiSuggest>` button next to every
+// caption/hook/CTA field is the primary surface, and a
+// separate "Draft caption" card would be a duplicate entry
+// point. The metadata registry still lists it for surfaces
+// where the per-field button doesn't apply (e.g. the team
+// page).
 const PLANNER_CAPABILITIES: ReadonlyArray<AiCapabilityMetadata> = AI_CAPABILITY_METADATA.filter(
-  (c) => c.enabledOnContentDetail,
+  (c) => c.enabledOnContentDetail && c.id !== "caption_drafts",
 );
 
 type OffReason = "agency-disabled" | "no-key" | "capability-off";

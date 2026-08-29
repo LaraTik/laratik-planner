@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { PlanningFilters } from "@/components/workspace/planning-filters";
 
 const baseProps = {
-  slug: "acme",
+  targetPath: "/app/w/acme/planning",
   monthParam: "2026-08",
   density: "comfortable" as const,
   hasFilter: false,
@@ -30,6 +30,25 @@ describe("PlanningFilters", () => {
     render(<PlanningFilters {...baseProps} selectedStatus="ready_to_publish" hasFilter={true} />);
     const clear = screen.getByRole("link", { name: "Clear" });
     expect(clear).toHaveAttribute("href", "/app/w/acme/planning?month=2026-08");
+  });
+
+  it("hides the density selector when showDensity is false (board view)", () => {
+    render(<PlanningFilters {...baseProps} showDensity={false} />);
+    expect(screen.queryByLabelText("List density")).toBeNull();
+  });
+
+  it("uses the targetPath for the Clear button (board view)", () => {
+    render(
+      <PlanningFilters
+        {...baseProps}
+        targetPath="/app/w/acme/board"
+        showDensity={false}
+        selectedStatus="draft"
+        hasFilter={true}
+      />,
+    );
+    const clear = screen.getByRole("link", { name: "Clear" });
+    expect(clear).toHaveAttribute("href", "/app/w/acme/board?month=2026-08");
   });
 
   it("reflects the active status and density in the defaultValue", () => {

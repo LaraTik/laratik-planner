@@ -71,7 +71,16 @@ export type CreateUserDirectlyInput = {
   /** Plaintext — if absent, a strong random one is generated. */
   password?: string;
   grantsAgencyAdmin: boolean;
-  workspaceRoles: { workspaceId: string; role: WorkspaceRole }[];
+  /**
+   * Multi-role grant shape. Each entry is either the legacy
+   * `{ workspaceId, role }` or the new `{ workspaceId, roles: [role, …] }`
+   * shape. The service normalises both forms and persists one
+   * `workspace_membership_role` row per (workspaceId, role) pair.
+   */
+  workspaceRoles: ReadonlyArray<
+    | { workspaceId: string; role: WorkspaceRole }
+    | { workspaceId: string; roles: ReadonlyArray<WorkspaceRole> }
+  >;
   /** Default true. The first-login redirect enforces this. */
   mustChangePassword?: boolean;
   createdBy: string;
@@ -159,10 +168,20 @@ export async function createUserDirectly(
     // 5. Validate every requested workspace belongs to the agency
     //    and every role is a valid enum value. Same contract as
     //    `createInvitation` (mirrored here to keep the action layer
-    //    free of business validation).
-    const requestedWorkspaceIds = Array.from(
-      new Set(input.workspaceRoles.map((r) => r.workspaceId)),
-    );
+    //    free of business validation). The command shape can carry
+    //    multiple roles per workspace; flatten before validating
+    //    each row.
+    const flatGrants: { workspaceId: string; role: WorkspaceRole }[] = [];
+    for (const g of input.workspaceRoles) {
+      if ("role" in g) {
+        flatGrants.push({ workspaceId: g.workspaceId, role: g.role });
+      } else {
+        for (const role of g.roles) {
+          flatGrants.push({ workspaceId: g.workspaceId, role });
+        }
+      }
+    }
+    const requestedWorkspaceIds = Array.from(new Set(flatGrants.map((r) => r.workspaceId)));
     if (requestedWorkspaceIds.length > 0) {
       const owned = await tx
         .select({ id: workspaces.id })
@@ -174,7 +193,7 @@ export async function createUserDirectly(
         throw new Error("Invalid workspace access selection");
       }
     }
-    for (const { role } of input.workspaceRoles) {
+    for (const { role } of flatGrants) {
       if (!workspaceRoleSchema.safeParse(role).success) {
         throw new Error("Invalid workspace access selection");
       }
@@ -210,9 +229,14 @@ export async function createUserDirectly(
       isAgencyAdmin: input.grantsAgencyAdmin,
     });
 
-    // 8. Insert workspace_memberships + role rows.
+    // 8. Insert workspace_memberships + role rows. Multiple roles in
+    //    the same workspace are stored as separate rows in
+    //    `workspace_membership_role`; the membership row itself is
+    //    upserted on `(workspaceId, userId)` so re-inserting is a
+    //    no-op for the first role and a status-only update for any
+    //    subsequent role in the same workspace.
     const acceptedWorkspaceIds: string[] = [];
-    for (const { workspaceId, role } of input.workspaceRoles) {
+    for (const { workspaceId, role } of flatGrants) {
       const [m] = await tx
         .insert(workspaceMemberships)
         .values({
@@ -220,12 +244,19 @@ export async function createUserDirectly(
           userId: userRow.id,
           status: "active",
         })
+        .onConflictDoUpdate({
+          target: [workspaceMemberships.workspaceId, workspaceMemberships.userId],
+          set: { status: "active", deactivatedAt: null },
+        })
         .returning({ id: workspaceMemberships.id });
       if (!m) continue;
-      await tx.insert(workspaceMembershipRoles).values({
-        workspaceMembershipId: m.id,
-        role: role as never,
-      });
+      await tx
+        .insert(workspaceMembershipRoles)
+        .values({
+          workspaceMembershipId: m.id,
+          role: role as never,
+        })
+        .onConflictDoNothing();
       acceptedWorkspaceIds.push(workspaceId);
     }
 
@@ -244,7 +275,7 @@ export async function createUserDirectly(
         agencyId,
         source: "admin_direct",
         grantsAgencyAdmin: input.grantsAgencyAdmin,
-        workspaceGrantCount: input.workspaceRoles.length,
+        workspaceGrantCount: flatGrants.length,
         mustChangePassword: mustChange,
       },
     });

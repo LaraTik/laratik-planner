@@ -21,9 +21,10 @@ import {
   assignDesignerAction,
 } from "../actions";
 import { humanize } from "@/lib/content/status";
-import { CheckCircle, XCircle, ArrowRight, Ban, Play } from "lucide-react";
+import { CheckCircle, XCircle, ArrowRight, Ban, Play, Info } from "lucide-react";
 import { ApprovalTimeline } from "@/components/workspace/approval-timeline";
 import { ReasonDialog } from "@/components/forms/reason-dialog";
+import { STEP_EXPLANATIONS, explainStatus } from "@/lib/content/workflow-explanations";
 
 type Role =
   | "isManager"
@@ -122,12 +123,101 @@ export function WorkflowBar({
   };
 
   const can = (allowed: Role[]) => allowed.some((r) => roles[r]);
+  // The current step's plain-English explanation. Used to render the
+  // "what this means" card so the user always sees who is responsible
+  // and what happens after the step completes, without having to read
+  // the workflow engine.
+  const currentStep = (() => {
+    try {
+      return explainStatus(status as Parameters<typeof explainStatus>[0]);
+    } catch {
+      return null;
+    }
+  })();
+  // Roles that are eligible to act on the CURRENT step. Compared to
+  // the actor's role set, this drives the "available actions" section
+  // AND the "why is this disabled" tooltip on the action buttons.
+  const currentEligibleRoles: Role[] = (() => {
+    switch (status) {
+      case "draft":
+      case "changes_requested":
+        return ["isManager", "isPlanner"];
+      case "content_review":
+        return ["isInternalReviewer", "isManager"];
+      case "approved_for_design":
+        return ["isManager", "isDesigner"];
+      case "in_design":
+        return ["isManager", "isDesigner"];
+      case "creative_review":
+        return ["isInternalReviewer", "isClientReviewer", "isManager"];
+      case "ready_to_publish":
+      case "partially_published":
+        return ["isManager", "isPublisher"];
+      case "blocked":
+        return ["isManager"];
+      case "cancelled":
+        return ["isManager"];
+      case "published":
+        return ["isManager", "isPublisher"];
+      default:
+        return [];
+    }
+  })();
+  const canActOnCurrentStep = currentEligibleRoles.some((r) => roles[r]);
+  const currentRoleLabels = (currentStep?.responsibleRoles ?? []).map((r) => r.label);
 
   return (
     <Card>
       <CardTitle className="mb-3">Workflow</CardTitle>
 
-      <div className="mb-3 flex flex-wrap items-center gap-1.5">
+      {/* What-this-step-means card. Always visible so the user can
+          understand the current stage without scanning the
+          permission matrix. The "Next" line gives a concrete cue
+          (e.g. "Resubmit once the changes are in.") that maps to
+          the action buttons below. */}
+      {currentStep ? (
+        <div
+          className="border-border bg-surface-subtle mb-4 rounded-[var(--radius-control)] border p-3"
+          data-testid="workflow-step-explanation"
+          data-step={status}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-body text-fg-primary font-semibold">{currentStep.label}</p>
+            {currentEligibleRoles.length > 0 ? (
+              <Badge variant={canActOnCurrentStep ? "primary" : "outline"}>
+                {canActOnCurrentStep ? "You can act on this" : "Awaiting another role"}
+              </Badge>
+            ) : null}
+          </div>
+          <p className="text-body text-fg-secondary mt-1.5">{currentStep.description}</p>
+          <div className="text-label text-fg-secondary mt-2 flex flex-wrap items-center gap-1.5">
+            <span className="text-fg-muted">Responsible:</span>
+            {currentRoleLabels.length > 0 ? (
+              currentRoleLabels.map((label) => (
+                <Badge key={label} variant="info">
+                  {label}
+                </Badge>
+              ))
+            ) : (
+              <span className="text-fg-muted">—</span>
+            )}
+          </div>
+          {currentStep.next ? (
+            <p className="text-label text-fg-muted mt-2 inline-flex items-start gap-1.5">
+              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>
+                <span className="text-fg-secondary font-semibold">Next:</span> {currentStep.next}
+              </span>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Pipeline of past / current / future steps. The current step
+          is the same label the explanation card above uses; future
+          steps render as ghost pills so the user can scan the whole
+          workflow at a glance. */}
+      <div className="mb-3 flex flex-wrap items-center gap-1.5" data-testid="workflow-pipeline">
         {(() => {
           // Compute `idx` once per render instead of inside the map
           // (O(n²) → O(n)). The `>= 0` guard keeps `past` correct for
@@ -283,6 +373,46 @@ export function WorkflowBar({
             onConfirm={(reason) => executeTransition("block", reason)}
           />
         ) : null}
+        {/* The "no available actions" case. When the current step has
+            eligible roles (currentEligibleRoles.length > 0) and the
+            actor doesn't hold one, we render a small "Awaiting …"
+            hint. Without this, the action row would just be empty
+            and the user would not know whether the workflow is stuck
+            or whether they lack the right role. */}
+        {(() => {
+          const hasAnyButton =
+            (status === "draft" && can(["isManager", "isPlanner"])) ||
+            (status === "content_review" && can(["isInternalReviewer", "isManager"])) ||
+            (status === "changes_requested" && can(["isManager", "isPlanner"])) ||
+            (status === "approved_for_design" && (roles.isDesigner || roles.isManager)) ||
+            (status === "blocked" && roles.isManager) ||
+            ([
+              "draft",
+              "content_review",
+              "approved_for_design",
+              "in_design",
+              "creative_review",
+              "ready_to_publish",
+            ].includes(status) &&
+              roles.isManager);
+          if (hasAnyButton) return null;
+          if (currentEligibleRoles.length === 0) return null;
+          const step = STEP_EXPLANATIONS[status as keyof typeof STEP_EXPLANATIONS];
+          const eligibleLabels = currentEligibleRoles
+            .map((r) => step?.responsibleRoles.find((x) => x.role === roleNameForFlag(r))?.label)
+            .filter((label): label is string => Boolean(label));
+          return (
+            <p
+              className="text-label text-fg-muted inline-flex items-center gap-1.5"
+              data-testid="workflow-awaiting-others"
+            >
+              <Info className="h-3.5 w-3.5" aria-hidden="true" />
+              {eligibleLabels.length > 0
+                ? `Awaiting ${eligibleLabels.join(" or ")}.`
+                : "Awaiting another team member."}
+            </p>
+          );
+        })()}
       </div>
 
       {approvals.length > 0 ? (
@@ -323,6 +453,37 @@ export function WorkflowBar({
       ) : null}
     </Card>
   );
+}
+
+/** Map the client-side flag union back to the canonical role name
+ *  so the explanation lookup is symmetrical. The flag/role pairs are
+ *  static — see `actorRoles` in the planning detail page. */
+function roleNameForFlag(
+  flag: Role,
+):
+  | "workspace_manager"
+  | "content_planner"
+  | "designer"
+  | "internal_reviewer"
+  | "client_reviewer"
+  | "publisher"
+  | "viewer" {
+  switch (flag) {
+    case "isManager":
+      return "workspace_manager";
+    case "isPlanner":
+      return "content_planner";
+    case "isDesigner":
+      return "designer";
+    case "isInternalReviewer":
+      return "internal_reviewer";
+    case "isClientReviewer":
+      return "client_reviewer";
+    case "isPublisher":
+      return "publisher";
+    default:
+      return "viewer";
+  }
 }
 
 /**

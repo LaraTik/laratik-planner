@@ -64,6 +64,18 @@ export {
   publishingAdapterRegistry,
   isSupportedPlatform,
 } from "./adapters";
+
+// Publication records — read by the planning detail page
+// (so the per-channel "outcome" card can render), written by
+// the publish-side actions. Lives in `service.ts`, not
+// `materiality-helpers.ts`, because the publication history
+// is a separate concern from material edits.
+export {
+  listPublicationsForItem,
+  recordPublication,
+  RecordPublicationSchema,
+  type RecordPublicationInput,
+} from "./service";
 export type {
   PublishingAdapter,
   PublishResult,

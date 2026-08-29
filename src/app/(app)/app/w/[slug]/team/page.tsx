@@ -36,7 +36,7 @@ type MemberRow = {
 function teamColumns(args: {
   actorId: string;
   actorIsAgencyAdmin: boolean;
-  memberRolesByWorkspace: Record<string, Record<string, string>>;
+  memberRolesByWorkspace: Record<string, Record<string, string[]>>;
   allWorkspaces: { id: string; name: string }[];
 }): DataTableColumnDef<MemberRow>[] {
   return [
@@ -108,7 +108,7 @@ function teamColumns(args: {
           workspaces={args.allWorkspaces.map((w) => ({
             id: w.id,
             name: w.name,
-            currentRole: args.memberRolesByWorkspace[member.id]?.[w.id] ?? "",
+            currentRoles: args.memberRolesByWorkspace[member.id]?.[w.id] ?? [],
           }))}
         />
       ),
@@ -234,9 +234,14 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
         eq(workspaceMemberships.status, "active"),
       ),
     );
-  const memberRolesByWorkspace: Record<string, Record<string, string>> = {};
+  // Multi-role: group rows by (userId, workspaceId) so a user with
+  // multiple roles in the same workspace shows up as a single chip
+  // list, not as multiple rows.
+  const memberRolesByWorkspace: Record<string, Record<string, string[]>> = {};
   for (const r of roleRows) {
-    (memberRolesByWorkspace[r.userId] ??= {})[r.workspaceId] = r.role;
+    const userBucket = (memberRolesByWorkspace[r.userId] ??= {});
+    const wsBucket = (userBucket[r.workspaceId] ??= []);
+    if (!wsBucket.includes(r.role)) wsBucket.push(r.role);
   }
 
   return (

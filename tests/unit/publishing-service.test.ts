@@ -101,6 +101,7 @@ vi.mock("@/lib/db", () => ({ db: dbMock }));
 
 const policyMock = vi.hoisted(() => ({
   hasWorkspaceRole: vi.fn(async () => true as boolean),
+  canAccessWorkspace: vi.fn(async () => true as boolean),
   requirePolicy: vi.fn(async (predicate: Promise<boolean>, action: string) => {
     if (!(await predicate)) {
       const err = new Error(`Permission denied: ${action}`);
@@ -131,6 +132,8 @@ beforeEach(() => {
   dbMock.state.transactionCalls = 0;
   policyMock.hasWorkspaceRole.mockReset();
   policyMock.hasWorkspaceRole.mockResolvedValue(true);
+  policyMock.canAccessWorkspace.mockReset();
+  policyMock.canAccessWorkspace.mockResolvedValue(true);
   policyMock.requirePolicy.mockReset();
   policyMock.requirePolicy.mockImplementation(
     async (predicate: Promise<boolean>, action: string) => {
@@ -405,9 +408,14 @@ describe("listPublicationsForItem", () => {
     await expect(listPublicationsForItem(actor, contentItemId)).rejects.toThrow(/not found/i);
   });
 
-  it("rejects when the actor is not a publisher/manager", async () => {
+  it("rejects when the actor is not a workspace member", async () => {
+    // Widened the read gate to `canAccessWorkspace` (any
+    // workspace member, not just publisher/manager) so a
+    // viewer / client_reviewer can see the publication
+    // outcomes on the planning detail page. A user that
+    // isn't a workspace member at all is still rejected.
     dbMock.state.selectResults.push([{ workspaceId: "ws-1" }]);
-    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    policyMock.canAccessWorkspace.mockResolvedValue(false);
     await expect(listPublicationsForItem(actor, contentItemId)).rejects.toThrow(
       /permission denied/i,
     );

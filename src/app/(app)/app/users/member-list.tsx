@@ -25,7 +25,12 @@ export function MemberList({
 }: {
   actorId: string;
   workspaces: { id: string; name: string }[];
-  rolesByUser: Record<string, Record<string, string>>;
+  /**
+   * Multi-role map. `rolesByUser[userId][workspaceId]` is the
+   * full set of roles the user holds in that workspace. Empty
+   * array (or missing key) means "no access".
+   */
+  rolesByUser: Record<string, Record<string, string[]>>;
   members: MemberRow[];
 }) {
   const [pending, start] = useTransition();
@@ -39,11 +44,12 @@ export function MemberList({
   // future refactor that adds a hook here cannot accidentally move
   // it past an early return (the bug class the 2026-08-26
   // `users-hooks-order` regression guard was added to catch).
+  // Multi-role: the page passes an array of roles per workspace.
   const editingWorkspaces: MemberEditWorkspace[] = editing
     ? workspaces.map((w) => ({
         id: w.id,
         name: w.name,
-        currentRole: rolesByUser[editing.id]?.[w.id] ?? "",
+        currentRoles: rolesByUser[editing.id]?.[w.id] ?? [],
       }))
     : [];
 
