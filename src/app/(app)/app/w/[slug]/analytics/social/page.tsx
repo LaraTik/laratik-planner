@@ -23,6 +23,7 @@ import { SocialGrowthChart } from "./social-growth-chart";
 import { SocialMetricsTable, type SocialMetricsRow } from "./social-metrics-table";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { SocialHealthBanner } from "./social-health-banner";
+import { SocialSyncDiagnostics } from "./social-sync-diagnostics";
 import { SocialAggregateStrip, type AggregateChannel } from "./social-aggregate-strip";
 import { SocialSparkline, socialSparklineTestId } from "./social-sparkline";
 import { SocialEngagementRateCard } from "./social-engagement-rate";
@@ -142,6 +143,35 @@ export default async function SocialAnalyticsPage({
             </span>
           </>
         }
+      />
+
+      <SocialSyncDiagnostics
+        channels={channels.map((c) => {
+          // Same data slice the banner uses. The diagnostics only
+          // needs the connection-state fields, so we keep the mapping
+          // explicit (and narrow) rather than passing the full row.
+          const latestMetric = (byChannel.get(c.id) ?? [])
+            .slice()
+            .sort((a, b) => (a.metricDate < b.metricDate ? 1 : -1))[0];
+          const latestProviderError = latestMetric
+            ? ((
+                latestMetric.sourceMetadata as {
+                  providerErrorCode?: string;
+                } | null
+              )?.providerErrorCode ?? null)
+            : null;
+          return {
+            id: c.id,
+            accountName: c.accountName,
+            platform: c.platform as "instagram" | "facebook" | "tiktok",
+            connectionStatus: c.connectionStatus as
+              "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected",
+            lastSyncedAt: c.lastSyncedAt,
+            lastSyncErrorCode: c.lastSyncErrorCode,
+            latestProviderErrorCode: latestProviderError,
+          };
+        })}
+        slug={slug}
       />
 
       <SocialHealthBanner
