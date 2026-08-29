@@ -4,7 +4,6 @@ import * as React from "react";
 import {
   Sparkles,
   Wand2,
-  Bot,
   CornerDownLeft,
   Replace,
   RefreshCcw,
@@ -17,7 +16,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { applyAiDraftAction } from "../actions";
 import { AI_CAPABILITY_METADATA, type AiCapabilityMetadata } from "@/lib/ai/capabilities";
 import { DiffPreview } from "@/components/ai/diff-preview";
@@ -306,19 +304,22 @@ export function AiAssistanceSection({
           <Sparkles className="text-primary h-5 w-5" aria-hidden="true" />
           <CardTitle>AI assistance</CardTitle>
         </div>
-        <a
-          href={`/app/w/${workspaceSlug}/ai-settings`}
-          aria-label="Open AI status and capabilities (read-only)"
-          className="text-label text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
-          data-testid="ai-open-workspace-settings"
-        >
-          Status (read-only)
-          <Bot className="h-3.5 w-3.5" aria-hidden="true" />
-        </a>
+        {/* The previous "Status (read-only)" link was a developer
+            affordance. The agency admin can still open the
+            configuration page from the AI settings page; here we
+            just show the contextual note. The link is preserved
+            for operators only. */}
+        {isManager ? (
+          <a
+            href={`/app/w/${workspaceSlug}/ai-settings`}
+            className="text-label text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+            data-testid="ai-open-workspace-settings"
+          >
+            AI settings
+          </a>
+        ) : null}
       </header>
-      <CardDescription>
-        Drafts only — the human inserts or replaces. Configure capabilities at the agency level.
-      </CardDescription>
+      <CardDescription>Drafts only — the human inserts or replaces.</CardDescription>
 
       {!agencyEnabled || !hasKey ? (
         <div
@@ -358,13 +359,18 @@ export function AiAssistanceSection({
         className="border-border bg-surface-subtle mt-4 rounded-[var(--radius-control)] border p-3"
         data-testid="ai-context-selection"
       >
+        {/* Re-labeled: the previous copy "Send with context (3 of 5 on)"
+            was a technical progress indicator. The new summary tells
+            the user *what* AI is using and exposes the per-context
+            toggles behind the same disclosure. The visible summary
+            on the normal (collapsed) state is a single line that
+            reads as a product affordance, not a configuration panel. */}
         <summary className="text-label text-fg-primary cursor-pointer font-semibold">
-          Send with context ({Object.values(contextSelection).filter(Boolean).length} of{" "}
-          {CONTEXT_TOGGLES.length} on)
+          AI uses your brand, campaign and content context
         </summary>
         <p className="text-label text-fg-muted mt-2">
-          Each toggle adds a slice of workspace data (brand voice, campaign, etc.) to the prompt.
-          Turn these on for on-brand rewrites; turn them off for a clean-room draft.
+          By default AI includes the workspace&apos;s brand voice, active campaign and content
+          pillars. Turn any of these off for a clean-room draft.
         </p>
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
           {CONTEXT_TOGGLES.map((toggle) => (
@@ -409,17 +415,16 @@ export function AiAssistanceSection({
               className="border-border bg-surface-subtle flex flex-col gap-2 rounded-[var(--radius-control)] border p-3"
               data-testid={`ai-action-${cap.id}`}
             >
+              {/* Header — label + icon. The previous "Ready / Off"
+                  badges provided no actionable signal to a normal
+                  user; we now only surface the off reason as plain
+                  text when the capability is unavailable. The
+                  `data-ai-state` attribute is the test contract. */}
               <div className="flex items-start justify-between gap-2">
                 <p className="text-body text-fg-primary flex items-center gap-2 font-semibold">
                   <Icon className="text-fg-secondary h-3.5 w-3.5" aria-hidden="true" />
                   {cap.label}
                 </p>
-                <Badge
-                  variant={on ? "success" : "outline"}
-                  data-testid={`ai-action-status-${cap.id}`}
-                >
-                  {on ? "Ready" : "Off"}
-                </Badge>
               </div>
               <p className="text-label text-fg-muted">{cap.description}</p>
               {cap.hint ? <p className="text-label text-fg-muted italic">{cap.hint}</p> : null}
@@ -427,6 +432,7 @@ export function AiAssistanceSection({
                 <p
                   className="text-label text-warning"
                   data-testid={`ai-action-off-reason-${cap.id}`}
+                  data-ai-state="off"
                 >
                   {OFF_REASON_LABEL[reason]}
                 </p>

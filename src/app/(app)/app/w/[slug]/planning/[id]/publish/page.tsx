@@ -7,12 +7,8 @@ import { hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { getContentItem } from "@/lib/content/service";
 import { listDeliveryVersionsForItem } from "@/lib/deliveries/service";
-import {
-  evaluateReadiness,
-  readAllChannelPayloads,
-  type ReadinessReport,
-  type ReadinessIssue,
-} from "@/lib/publishing";
+import { evaluateReadiness, readAllChannelPayloads, type ReadinessReport } from "@/lib/publishing";
+import { presentReadinessIssues } from "@/lib/publishing/readiness-presentation";
 import { mapFormatPayloadToPlatform } from "@/lib/format-payload/mapper";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -101,8 +97,8 @@ export default async function PublishPackagePage({
       </Link>
 
       <PageHeader
-        title="Publish package"
-        description={`Configure the per-channel publish package for "${item.title}". Material edits reset approvals and increment the revision.`}
+        title="Publishing setup"
+        description={`Prepare "${item.title}" for each channel. Material edits reset approvals and increment the revision.`}
       />
 
       {/* Readiness summary — at the top on every viewport */}
@@ -146,11 +142,12 @@ export default async function PublishPackagePage({
             className="border-border mt-3 max-h-48 overflow-y-auto rounded-[var(--radius-control)] border p-2 text-sm"
             data-testid="publish-issues-list"
           >
-            {(readiness.issues as ReadinessIssue[]).map((issue: ReadinessIssue, i: number) => (
+            {presentReadinessIssues(readiness.issues).map((issue, i) => (
               <li
-                key={`${issue.path}-${i}`}
+                key={`${issue.code}-${i}`}
                 className="flex items-start gap-2 py-1"
                 data-testid={`publish-issue-${issue.code}`}
+                data-issue-severity={issue.severity}
               >
                 {issue.severity === "blocker" ? (
                   <XCircle className="text-danger mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -161,8 +158,8 @@ export default async function PublishPackagePage({
                   />
                 )}
                 <span>
-                  <code className="text-label text-fg-muted">{issue.path}</code>
-                  <span className="text-body text-fg-primary ml-2">{issue.message}</span>
+                  <span className="text-body text-fg-primary font-semibold">{issue.title}</span>
+                  <span className="text-body text-fg-secondary ml-2">{issue.message}</span>
                 </span>
               </li>
             ))}

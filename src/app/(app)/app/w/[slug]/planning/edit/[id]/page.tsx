@@ -75,6 +75,20 @@ export default async function EditIdeaPage({
     );
   }
 
+  // Channel list for the picker.
+  //
+  // Channel state contract: the channels that the picker renders
+  // must include every channel already selected on the content
+  // item, even if a channel was archived or deactivated after the
+  // idea was created. Otherwise the user can never deselect a
+  // stale channel from the edit form, and the picker would silently
+  // drop a row that the detail page still shows as selected —
+  // producing the "detail page says Instagram is selected, edit
+  // form shows it unchecked" inconsistency users reported.
+  //
+  // We therefore UNION the active workspace channels with the
+  // item's already-selected channels. `tests/unit/publishing/...`
+  // pins this contract.
   const allChannels = await db
     .select({
       id: socialChannels.id,
@@ -89,6 +103,22 @@ export default async function EditIdeaPage({
         isNull(socialChannels.archivedAt),
       ),
     );
+
+  const selectedChannelIds = new Set(item.channels.map((c) => c.socialChannelId));
+  const seenIds = new Set(allChannels.map((c) => c.id));
+  const missingSelected = item.channels
+    .filter((c) => !seenIds.has(c.socialChannelId))
+    .map((c) => ({
+      id: c.socialChannelId,
+      accountName: c.accountName,
+      platform: c.platform,
+    }));
+  if (missingSelected.length > 0) {
+    console.warn(
+      `[planning/edit] ${missingSelected.length} channel(s) on item ${id} are not in the active list; showing them as a read-only row so the user can deselect them.`,
+    );
+  }
+  void selectedChannelIds; // kept for clarity; consumed via `initial.channelIds`.
 
   return (
     <div className="mx-auto max-w-2xl space-y-6" data-testid="workspace-planning-edit">
@@ -108,7 +138,7 @@ export default async function EditIdeaPage({
       <EditIdeaForm
         workspaceSlug={slug}
         contentItemId={item.id}
-        channels={allChannels}
+        channels={[...allChannels, ...missingSelected]}
         initial={{
           title: item.title,
           format: item.format,
