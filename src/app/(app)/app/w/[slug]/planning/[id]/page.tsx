@@ -19,7 +19,7 @@ import { ReadinessPanel } from "@/components/planning/readiness-panel";
 import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
 import { ActivityTimeline } from "@/components/planning/activity-timeline";
 import { FormatPayloadEditor } from "@/components/forms/format-payload-editor";
-import { InlineEditableField } from "@/components/forms/inline-editable-field";
+import { InlineBriefEditor, InlineDateEditor, InlineTitleEditor } from "./inline-editable-fields";
 import { WorkflowBar } from "./workflow-bar";
 import { DeliverySection } from "./delivery-section";
 import { DiscussionSection } from "./discussion-section";
@@ -35,13 +35,7 @@ import { isAiEnabled } from "@/lib/ai";
 import { AI_CAPABILITY_METADATA } from "@/lib/ai/capabilities";
 import { parseFormatPayload } from "@/lib/format-payload/schemas";
 import { listActivityEvents } from "@/lib/notifications/activity";
-import {
-  inlineUpdateBriefAction,
-  inlineUpdateDateAction,
-  inlineUpdateTitleAction,
-} from "@/lib/content/inline-update";
 import { readAllChannelPayloads } from "@/lib/publishing";
-import { formatDateForInput, parseInputAsLocalDate } from "@/lib/utils/date";
 
 export async function generateMetadata({
   params,
@@ -304,27 +298,10 @@ export default async function ContentDetailPage({
         }
       >
         {canEdit ? (
-          <InlineEditableField
-            testId="inline-edit-brief"
-            label="brief"
+          <InlineBriefEditor
+            workspaceSlug={slug}
+            contentItemId={item.id}
             value={item.brief ?? ""}
-            render={(value) => (
-              <p className="text-body text-fg-primary whitespace-pre-wrap">
-                {value ? value : "No brief yet."}
-              </p>
-            )}
-            renderEditor={({ value, onChange }) => (
-              <textarea
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                rows={6}
-                maxLength={2000}
-                className="border-border bg-surface text-fg-primary text-body w-full rounded-[var(--radius-control)] border px-3 py-2"
-                placeholder="Goal, audience, key points."
-                data-testid="inline-edit-brief-textarea"
-              />
-            )}
-            onSave={(next) => inlineUpdateBriefAction(slug, item.id, next)}
           />
         ) : item.brief ? (
           <p className="text-body text-fg-primary whitespace-pre-wrap">{item.brief}</p>
@@ -344,25 +321,7 @@ export default async function ContentDetailPage({
           <div>
             <p className="text-label text-fg-secondary font-semibold uppercase">Title</p>
             {canEdit ? (
-              <InlineEditableField
-                testId="inline-edit-title"
-                label="title"
-                value={item.title}
-                render={(value) => (
-                  <p className="text-body text-fg-primary font-semibold">{value}</p>
-                )}
-                renderEditor={({ value, onChange }) => (
-                  <input
-                    type="text"
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    maxLength={200}
-                    className="border-border bg-surface text-fg-primary text-body h-10 w-full rounded-[var(--radius-control)] border px-3 py-2"
-                    data-testid="inline-edit-title-input"
-                  />
-                )}
-                onSave={(next) => inlineUpdateTitleAction(slug, item.id, next)}
-              />
+              <InlineTitleEditor workspaceSlug={slug} contentItemId={item.id} value={item.title} />
             ) : (
               <p className="text-body text-fg-primary font-semibold">{item.title}</p>
             )}
@@ -370,26 +329,11 @@ export default async function ContentDetailPage({
           <div>
             <p className="text-label text-fg-secondary font-semibold uppercase">Planned publish</p>
             {canEdit ? (
-              <InlineEditableField
-                testId="inline-edit-date"
-                label="planned publish date"
+              <InlineDateEditor
+                workspaceSlug={slug}
+                contentItemId={item.id}
                 value={item.plannedPublishAt.toISOString()}
-                render={(value) => (
-                  <p className="text-body text-fg-primary">
-                    {new Date(value).toLocaleString()}{" "}
-                    <span className="text-label text-fg-muted">· {ws.timezone}</span>
-                  </p>
-                )}
-                renderEditor={({ value, onChange }) => (
-                  <input
-                    type="datetime-local"
-                    value={formatDateForInput(value)}
-                    onChange={(e) => onChange(parseInputAsLocalDate(e.target.value).toISOString())}
-                    className="border-border bg-surface text-fg-primary text-body h-10 w-full rounded-[var(--radius-control)] border px-3 py-2"
-                    data-testid="inline-edit-date-input"
-                  />
-                )}
-                onSave={(next) => inlineUpdateDateAction(slug, item.id, new Date(next))}
+                timezone={ws.timezone}
               />
             ) : (
               <p className="text-body text-fg-primary">
