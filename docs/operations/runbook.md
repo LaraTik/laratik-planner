@@ -559,6 +559,16 @@ sudo CRON_SECRET=$(sudo cat /opt/laratik-planner/.env | grep ^CRON_SECRET= | cut
 
 The expected response shape is `{ "claimed": <int>, "succeeded": <int>, "failed": <int>, "needsReauth": <int> }`. A non-JSON response or an HTTP non-2xx indicates the secret rotated, the route is down, or `SOCIAL_SYNC_ENABLED` is `false`.
 
+### Cron routes and the proxy bypass list
+
+All `/api/cron/*` routes authenticate via `Authorization: Bearer $CRON_SECRET`, not the NextAuth session cookie. The proxy (`src/proxy.ts`) MUST let these requests through without redirecting to `/signin` — otherwise the VPS-side cron gets a `307 → /signin` and the route handler's Bearer check is never reached.
+
+**Symptom of the bypass being missing:** the social-metrics cron appears to run silently — `/var/log/laratik-planner-social-sync.log` shows `[social-metrics] unexpected 307 from http://127.0.0.1:3100/api/cron/social-metrics: /signin?callbackUrl=...` on every tick, channels' `last_synced_at` stops moving, no `last_sync_error_code` is set, and the analytics UI shows "Last synced 19h ago" (or similar) with no error banner.
+
+**Where it's locked down:** `tests/unit/proxy-bypass.test.ts` enumerates every public path and asserts `status === 200, location === null`. If a future refactor drops `/api/cron/*` from the bypass list, that test fails before the bug reaches prod.
+
+**Adding a new cron route:** add the path to `PUBLIC_PATHS` in `tests/unit/proxy-bypass.test.ts` in the same PR, and confirm the route handler still gates on `Authorization: Bearer $CRON_SECRET` (timing-safe compare — see `safeEqual` in any existing `/api/cron/*/route.ts`).
+
 ### Onboarding a new social profile (Meta, post-M4.6)
 
 The Meta app config is **per-agency**, not platform-wide. Each agency that wants to use social analytics must add their own Meta app credentials at `/app/agency-settings/social/providers`. The agency admin pastes `app_id` + `app_secret` + `login_config_id`; the app secret is sealed with the per-agency DEK (the same key that protects the OAuth tokens) and re-fetched only when the cron or a Re-test needs it. After that, every workspace in the agency can run the OAuth flow.

@@ -45,6 +45,13 @@ const PUBLIC_PATHS: ReadonlyArray<{ name: string; pathname: string }> = [
   { name: "health (bare alias)", pathname: "/api/health" },
   { name: "health liveness (docker HEALTHCHECK)", pathname: "/api/health/live" },
   { name: "health readiness (Traefik upstream probe)", pathname: "/api/health/ready" },
+  // 2026-08-29: /api/cron/* are Bearer-authenticated by the route handler
+  // (the secret is never a NextAuth session cookie). The proxy MUST
+  // bypass the session gate or every VPS cron tick 307s to /signin
+  // before the route handler can run. See the regression test below.
+  { name: "cron social-metrics (Bearer-auth, VPS)", pathname: "/api/cron/social-metrics" },
+  { name: "cron outbox (Bearer-auth, VPS)", pathname: "/api/cron/outbox" },
+  { name: "cron email-dispatch (Bearer-auth, VPS)", pathname: "/api/cron/email-dispatch" },
   { name: "bootstrap status", pathname: "/api/bootstrap/status" },
   { name: "favicon", pathname: "/favicon.ico" },
   { name: "robots.txt", pathname: "/robots.txt" },

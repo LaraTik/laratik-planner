@@ -87,6 +87,16 @@ export async function proxy(req: NextRequest) {
     // /signin by the auth check.
     pathname === "/api/health" ||
     pathname.startsWith("/api/health/") ||
+    // Cron routes authenticate via `Authorization: Bearer $CRON_SECRET`
+    // (see /api/cron/social-metrics/route.ts et al). The proxy has no
+    // way to validate the secret — that's the route handler's job —
+    // so we MUST bypass the session-cookie gate for /api/cron/*. Without
+    // this, the VPS-side `social-metrics-sync.sh` (which sends only the
+    // Bearer header, no session cookie) gets a 307 to /signin before
+    // the route handler can run, and the cron tick never executes. The
+    // route handler's timing-safe `safeEqual` check is the actual auth;
+    // missing/wrong secrets still get a 401 with no worker invocation.
+    pathname.startsWith("/api/cron/") ||
     pathname === "/api/bootstrap/status" ||
     // Dev/test-only helpers — guarded server-side by NODE_ENV !== "production".
     // The dev/* endpoints refuse to run in production builds, so allowing
