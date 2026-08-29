@@ -8,6 +8,7 @@ import {
   outboxEvents,
   users,
   workspaceMemberships,
+  workspaces,
 } from "@/lib/db/schema";
 import { canAccessWorkspace, hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { revalidatePath } from "next/cache";
@@ -119,10 +120,17 @@ export async function createComment(
   }
   const data = parsed.data;
 
-  // Resolve workspaceId via the content item
+  // Resolve workspaceId + slug via the content item. The slug
+  // is needed for the notification click-through (the route
+  // is /app/w/{slug}/planning/{id}); see the outbox payload
+  // below.
   const [item] = await db
-    .select({ workspaceId: contentItems.workspaceId })
+    .select({
+      workspaceId: contentItems.workspaceId,
+      workspaceSlug: workspaces.slug,
+    })
     .from(contentItems)
+    .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
     .where(eq(contentItems.id, data.contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
@@ -228,6 +236,13 @@ export async function createComment(
         visibility: data.visibility,
         mentionedUserIds,
         workspaceId: item.workspaceId,
+        // The actionUrl uses the workspace slug (not UUID) so the
+        // notification's click-through lands on the real
+        // /app/w/{slug}/planning/{id} route. Without this, the
+        // default actionUrl fallback in the notifications
+        // dispatcher produces a 404 — the click-through was
+        // broken before this fix.
+        actionUrl: `/app/w/${item.workspaceSlug}/planning/${data.contentItemId}#discussion`,
       },
     });
 

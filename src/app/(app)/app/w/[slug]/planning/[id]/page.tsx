@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Clock, Pencil, ArrowLeft, ExternalLink } from "lucide-react";
+import { Pencil, ArrowLeft, ExternalLink } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getContentItem, listWorkspaceDesigners, UPDATEABLE_STATUSES } from "@/lib/content/service";
 import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
@@ -11,17 +11,10 @@ import { getWorkspaceRoles } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { hasPlatformPermission } from "@/lib/auth/platform-access";
-import { statusBadgeVariant, humanStatus, humanFormat } from "@/lib/content/status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PlanningHeader } from "@/components/planning/planning-header";
 import { PlanningSection } from "@/components/planning/planning-section";
-import { WorkflowProgress } from "@/components/planning/workflow-progress";
-// WorkflowProgress is rendered via the existing WorkflowBar
-// component (see ./workflow-bar.tsx) which already uses the
-// same explanations. We re-import the type for the prop
-// shape but don't render the standalone component here.
-void WorkflowProgress;
 import { ReadinessPanel } from "@/components/planning/readiness-panel";
 import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
 import { ActivityTimeline } from "@/components/planning/activity-timeline";
@@ -640,10 +633,3 @@ export default async function ContentDetailPage({
     </div>
   );
 }
-
-// silence
-void humanFormat;
-void humanStatus;
-void statusBadgeVariant;
-void Clock;
-void Badge;

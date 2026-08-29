@@ -371,6 +371,13 @@ async function fanOutCommentCreated(
   const authorId = payload["authorId"] as string | undefined;
   const mentionedUserIds = (payload["mentionedUserIds"] as string[] | undefined) ?? [];
   const visibility = payload["visibility"] as string | undefined;
+  const workspaceId = payload["workspaceId"] as string | undefined;
+  // The discussion service pre-computes the slug-based
+  // actionUrl so the click-through lands on the real
+  // /app/w/{slug}/planning/{id}#discussion route. Pass it
+  // through to `maybeNotify` so the row's actionUrl is
+  // exactly that — no fallback needed.
+  const actionUrl = payload["actionUrl"] as string | undefined;
   if (!commentId || !contentItemId || !authorId) return;
 
   // Mentions: notify each mentioned user
@@ -384,6 +391,10 @@ async function fanOutCommentCreated(
         body: "Someone @mentioned you in a comment on a content item.",
       },
       tx,
+      {
+        ...(workspaceId ? { workspaceId } : {}),
+        ...(actionUrl ? { actionUrl } : {}),
+      },
     );
     // FEAT-08: read the user's email opt-in before queuing any email
     // for this mention. The SMTP transport doesn't ship in v1, so
@@ -592,6 +603,16 @@ async function maybeNotify(
     .limit(1);
   const inAppEnabled = pref?.inAppEnabled ?? true; // default ON
   if (!inAppEnabled) return;
+  // Default click-through: the planning list for the
+  // workspace the item lives in. The planning detail route
+  // needs a workspace slug, so we fall back to the list —
+  // the user can pick the item from there. Per-event callers
+  // should pass `opts.actionUrl` (built from the workspace
+  // slug) so the click lands directly on the relevant
+  // section. The publication handler in
+  // `lib/publishing/service.ts` and the discussion handler
+  // in `lib/discussions/service.ts` both pre-compute the
+  // slug-based URL.
   await createInAppNotification({
     userId: input.userId,
     ...(opts.workspaceId ? { workspaceId: opts.workspaceId } : {}),
