@@ -20,6 +20,12 @@ export default defineConfig({
         "src/app/**/route.ts",
         "src/app/**/page.tsx",
         "src/app/**/layout.tsx",
+        // Type-only files have no runtime expressions to
+        // cover; the v8 reporter reports 0% on them which
+        // drags down the per-glob branch threshold for no
+        // useful reason. The actual type contract is
+        // enforced by tsc + the per-test file imports.
+        "src/lib/auth/platform-navigation-access.ts",
       ],
       // Per-glob thresholds per PRODUCTION_READINESS_TRACKER.md QA-003.
       // The unit suite alone does not exercise the DB-touching service

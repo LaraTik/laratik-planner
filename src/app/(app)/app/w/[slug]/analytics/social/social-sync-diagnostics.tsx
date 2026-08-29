@@ -4,12 +4,7 @@ import { type socialChannels } from "@/lib/db/schema/channels";
 
 type ChannelLike = Pick<
   typeof socialChannels.$inferSelect,
-  | "id"
-  | "accountName"
-  | "platform"
-  | "connectionStatus"
-  | "lastSyncedAt"
-  | "lastSyncErrorCode"
+  "id" | "accountName" | "platform" | "connectionStatus" | "lastSyncedAt" | "lastSyncErrorCode"
 > & {
   lastSyncedAt: Date | null;
   /**
@@ -109,9 +104,7 @@ export function SocialSyncDiagnostics({
           <Activity className="text-fg-muted h-4 w-4" aria-hidden={true} />
           <h2 className="text-title-card text-fg-primary font-semibold">Sync diagnostics</h2>
         </div>
-        <p className="text-label text-fg-muted">
-          {state.summary}
-        </p>
+        <p className="text-label text-fg-muted">{state.summary}</p>
       </header>
 
       <div
@@ -164,7 +157,7 @@ export function SocialSyncDiagnostics({
           <Link
             href={`/app/w/${slug}/channels`}
             data-testid="social-sync-diagnostics-retry"
-            className="border-border bg-surface text-fg-primary inline-flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition-colors duration-200 hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+            className="border-border bg-surface text-fg-primary hover:bg-surface-subtle inline-flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
           >
             <RefreshCw className="h-4 w-4" aria-hidden={true} />
             Re-test on channels page

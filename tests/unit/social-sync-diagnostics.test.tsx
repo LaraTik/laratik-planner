@@ -27,7 +27,9 @@ import {
 
 const NOW = new Date("2026-08-29T09:30:00Z");
 
-function channel(overrides: Partial<Parameters<typeof SocialSyncDiagnostics>[0]["channels"][number]>) {
+function channel(
+  overrides: Partial<Parameters<typeof SocialSyncDiagnostics>[0]["channels"][number]>,
+) {
   return {
     id: "ch_test",
     accountName: "Test Account",
@@ -57,10 +59,7 @@ describe("SocialSyncDiagnostics", () => {
       <SocialSyncDiagnostics
         slug="acme"
         now={NOW}
-        channels={[
-          channel({ id: "a" }),
-          channel({ id: "b", lastSyncErrorCode: "rate_limited" }),
-        ]}
+        channels={[channel({ id: "a" }), channel({ id: "b", lastSyncErrorCode: "rate_limited" })]}
       />,
     );
     const root = screen.getByTestId("social-sync-diagnostics");
@@ -85,9 +84,7 @@ describe("SocialSyncDiagnostics", () => {
       <SocialSyncDiagnostics
         slug="acme"
         now={NOW}
-        channels={[
-          channel({ id: "a", connectionStatus: "needs_reauth", lastSyncedAt: null }),
-        ]}
+        channels={[channel({ id: "a", connectionStatus: "needs_reauth", lastSyncedAt: null })]}
       />,
     );
     const stalled = screen.getByTestId("social-sync-diagnostics-cell-stalled");
@@ -148,11 +145,7 @@ describe("SocialSyncDiagnostics", () => {
 
   it("does not show the Re-test CTA when only synced channels exist (it returns null entirely)", () => {
     const { queryByTestId } = render(
-      <SocialSyncDiagnostics
-        slug="acme"
-        now={NOW}
-        channels={[channel({ id: "a" })]}
-      />,
+      <SocialSyncDiagnostics slug="acme" now={NOW} channels={[channel({ id: "a" })]} />,
     );
     expect(queryByTestId("social-sync-diagnostics-retry")).toBeNull();
   });
@@ -162,9 +155,7 @@ describe("SocialSyncDiagnostics", () => {
       <SocialSyncDiagnostics
         slug="acme"
         now={NOW}
-        channels={[
-          channel({ id: "a", accountName: "Acme Main", lastSyncedAt: null }),
-        ]}
+        channels={[channel({ id: "a", accountName: "Acme Main", lastSyncedAt: null })]}
       />,
     );
     const oldest = screen.getByTestId("social-sync-diagnostics-oldest");
@@ -208,10 +199,7 @@ describe("classifyChannel", () => {
   });
   it("returns 'stalled' for needs_reauth regardless of lastSyncedAt", () => {
     expect(
-      classifyChannel(
-        channel({ connectionStatus: "needs_reauth", lastSyncedAt: NOW }),
-        NOW,
-      ),
+      classifyChannel(channel({ connectionStatus: "needs_reauth", lastSyncedAt: NOW }), NOW),
     ).toBe("stalled");
   });
   it("returns 'synced' for a 24h-old lastSyncedAt (under threshold)", () => {
