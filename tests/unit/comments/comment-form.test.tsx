@@ -84,27 +84,32 @@ describe("CommentForm", () => {
   it("defaults visibility to 'client' when the user can post client-visible", () => {
     mockedUseFormStatus.mockReturnValue({ pending: false } as ReturnType<typeof useFormStatus>);
     renderForm();
-    const select = document.querySelector('select[name="visibility"]') as HTMLSelectElement;
-    expect(select.value).toBe("client");
+    // The new composer renders visibility as a chip toggle
+    // (`aria-pressed` button) with `name="visibility"` and
+    // `value="client" | "internal"`. The pressed chip is the
+    // value the form serialises.
+    const clientChip = screen.getByTestId("comment-visibility-client");
+    expect(clientChip).toHaveAttribute("aria-pressed", "true");
+    expect(clientChip).toHaveAttribute("value", "client");
   });
 
   it("defaults visibility to 'internal' when the user cannot post client-visible", () => {
     mockedUseFormStatus.mockReturnValue({ pending: false } as ReturnType<typeof useFormStatus>);
     renderForm({ canPostClientVisible: false });
-    const select = document.querySelector('select[name="visibility"]') as HTMLSelectElement;
-    expect(select.value).toBe("internal");
+    const internalChip = screen.getByTestId("comment-visibility-internal");
+    expect(internalChip).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("hides the 'Client visible' option when canPostClientVisible is false", () => {
+  it("hides the 'Client visible' chip when canPostClientVisible is false", () => {
     mockedUseFormStatus.mockReturnValue({ pending: false } as ReturnType<typeof useFormStatus>);
     renderForm({ canPostClientVisible: false });
-    expect(screen.queryByRole("option", { name: "Client visible" })).toBeNull();
+    expect(screen.queryByTestId("comment-visibility-client")).toBeNull();
   });
 
-  it("hides the 'Internal only' option when canPostInternal is false", () => {
+  it("hides the 'Internal only' chip when canPostInternal is false", () => {
     mockedUseFormStatus.mockReturnValue({ pending: false } as ReturnType<typeof useFormStatus>);
     renderForm({ canPostInternal: false });
-    expect(screen.queryByRole("option", { name: "Internal only" })).toBeNull();
+    expect(screen.queryByTestId("comment-visibility-internal")).toBeNull();
   });
 
   it("shows all four label options", () => {
@@ -126,21 +131,26 @@ describe("CommentForm", () => {
   it("labels the submit button 'Comment' for a top-level comment", () => {
     mockedUseFormStatus.mockReturnValue({ pending: false } as ReturnType<typeof useFormStatus>);
     renderForm();
-    expect(screen.getByRole("button", { name: "Comment" })).toBeInTheDocument();
+    expect(screen.getByTestId("comment-composer-submit")).toHaveTextContent(/^Comment$/);
   });
 
   it("labels the submit button 'Reply' when parentCommentId is set", () => {
     mockedUseFormStatus.mockReturnValue({ pending: false } as ReturnType<typeof useFormStatus>);
     renderForm({ parentCommentId: "c-parent" });
-    expect(screen.getByRole("button", { name: "Reply" })).toBeInTheDocument();
+    expect(screen.getByTestId("comment-composer-submit")).toHaveTextContent(/^Reply$/);
   });
 
-  it("disables the textarea and the selects while pending", () => {
+  it("disables the textarea and the visibility/label controls while pending", () => {
     mockedUseFormStatus.mockReturnValue({ pending: true } as ReturnType<typeof useFormStatus>);
     renderForm();
     expect(screen.getByPlaceholderText(/Add a comment/i)).toBeDisabled();
-    const visSel = document.querySelector('select[name="visibility"]') as HTMLSelectElement;
-    expect(visSel).toBeDisabled();
+    // Label select is still a `<select>` in the new composer.
+    const labelSel = document.querySelector('select[name="label"]') as HTMLSelectElement;
+    expect(labelSel).toBeDisabled();
+    // Visibility chips are buttons; they keep their `disabled`
+    // attribute while pending so a user can't toggle mid-submit.
+    const clientChip = screen.getByTestId("comment-visibility-client");
+    expect(clientChip).toBeDisabled();
   });
 
   it("renders the Cancel button when onCancel is provided", () => {

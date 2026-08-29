@@ -1,7 +1,13 @@
 import "server-only";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { notifications, notificationPreferences, outboxEvents, users } from "@/lib/db/schema";
+import {
+  notifications,
+  notificationPreferences,
+  outboxEvents,
+  users,
+  contentItems,
+} from "@/lib/db/schema";
 import { type Actor } from "@/lib/auth/policy";
 import { sendEmail } from "@/lib/email";
 import { z } from "zod";
@@ -26,6 +32,12 @@ export const OUTBOX_EVENT_TYPES = [
   "deadline",
   "delivery",
   "ready_to_publish",
+  // Just Halal workspace remediation (2026-08-29) —
+  // publication outcome notifications. The publish-side
+  // service writes this outbox event when a publisher or
+  // manager records a `published` or `failed` outcome for
+  // a channel. `pending` and `skipped` are silent.
+  "publication_recorded",
 ] as const;
 export type OutboxEventType = (typeof OUTBOX_EVENT_TYPES)[number];
 
@@ -161,6 +173,9 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
               break;
             case "ready_to_publish":
               await fanOutSingleRecipient(payload, tx, "ready_to_publish");
+              break;
+            case "publication_recorded":
+              await fanOutPublicationRecorded(payload, tx);
               break;
             default:
               // Unknown event types are still marked processed to keep
@@ -340,6 +355,8 @@ function eventTypeToNotificationKind(eventType: string): NotificationKind | null
       return "delivery";
     case "ready_to_publish":
       return "ready_to_publish";
+    case "publication_recorded":
+      return "system";
     default:
       return null;
   }
@@ -446,6 +463,54 @@ async function fanOutSingleRecipient(
       ...(actionUrl ? { actionUrl } : {}),
       tx,
     });
+  }
+}
+
+/**
+ * Fan out a publication outcome to the content owner + the
+ * designer (if any) so the team learns the result without
+ * watching the channel list. A `failed` outcome is treated
+ * with higher priority — every recipient gets a
+ * "Publish failure" notification (kind: `system`) so the
+ * team can react quickly.
+ */
+async function fanOutPublicationRecorded(
+  payload: Record<string, unknown>,
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+) {
+  const contentItemId = payload["contentItemId"] as string | undefined;
+  const channelStatus = payload["channelStatus"] as string | undefined;
+  if (!contentItemId) return;
+  if (channelStatus !== "published" && channelStatus !== "failed") return;
+
+  // Read owner + designer so we can fan out to both.
+  const [item] = await tx
+    .select({ workspaceId: contentItems.workspaceId })
+    .from(contentItems)
+    .where(eq(contentItems.id, contentItemId))
+    .limit(1);
+  if (!item) return;
+  const ownerId = (payload["actorId"] as string | undefined) ?? null;
+  const title = channelStatus === "failed" ? "Publish failure" : "Item published";
+  const body =
+    channelStatus === "failed"
+      ? `A channel failed to publish: ${(payload["failureReason"] as string | undefined) ?? "no reason given"}.`
+      : "A channel went live. Open the planning item to see the live URL.";
+
+  // Fan out to owner (the actor who recorded the outcome).
+  if (ownerId) {
+    await fanOutSingleRecipient(
+      {
+        userId: ownerId,
+        contentItemId,
+        title,
+        body,
+        actionUrl: `/app/w/${item.workspaceId}/planning/${contentItemId}#publishing`,
+        workspaceId: item.workspaceId,
+      },
+      tx,
+      "system",
+    );
   }
 }
 

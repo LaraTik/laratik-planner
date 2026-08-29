@@ -5,9 +5,10 @@ import {
   activityEvents,
   contentItemChannels,
   contentItems,
+  outboxEvents,
   publicationRecords,
 } from "@/lib/db/schema";
-import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import { canAccessWorkspace, hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { derivePublicationAggregate } from "@/lib/publishing/aggregate";
@@ -190,6 +191,28 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
       metadata: { contentItemChannelId: input.contentItemChannelId },
     });
 
+    // Outbox event for the notification dispatcher. A
+    // `published` or `failed` outcome surfaces a notification
+    // to the content owner + designer (so the team learns
+    // about the result without watching the channel list).
+    // `pending` and `skipped` are silent — the planner
+    // already knows the work is in flight.
+    if (input.status === "published" || input.status === "failed") {
+      await tx.insert(outboxEvents).values({
+        eventType: "publication_recorded",
+        aggregateType: "content_item",
+        aggregateId: chan.contentItemId,
+        payload: {
+          contentItemId: chan.contentItemId,
+          workspaceId: item.workspaceId,
+          channelStatus: input.status,
+          publishedUrl: input.publishedUrl ?? null,
+          failureReason: input.failureReason ?? null,
+          actorId: actor.id,
+        },
+      });
+    }
+
     if (
       allFailed &&
       (lockedItem.status === "published" || lockedItem.status === "partially_published")
@@ -222,16 +245,20 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
 }
 
 export async function listPublicationsForItem(actor: Actor, contentItemId: string) {
+  // The publication record list is *read* by any workspace
+  // member who can see the planning detail page (everyone
+  // who has a role in the workspace). The mutation paths
+  // (record-publication) keep the publisher / manager role
+  // gate. Widening the read gate is a fix for the
+  // permission-denied error a viewer / client_reviewer
+  // would otherwise hit on the planning detail page.
   const [item] = await db
     .select({ workspaceId: contentItems.workspaceId })
     .from(contentItems)
     .where(eq(contentItems.id, contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
-  await requirePolicy(
-    hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "publisher"]),
-    "list_publications",
-  );
+  await requirePolicy(canAccessWorkspace(actor, item.workspaceId), "list_publications");
 
   return db
     .select()

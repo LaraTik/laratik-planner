@@ -422,7 +422,31 @@ export async function createCommentAction(
       error: parsed.error.issues.map((i) => i.message).join("; "),
     };
   }
-  await createComment(actor, parsed.data);
+  // The new <CommentComposer> posts a structured mention list
+  // alongside the body (the picker tracks user ids, not just
+  // `@displayName` tokens). The discussion service still
+  // falls back to the body regex for clients that don't
+  // post the structured list (e.g. legacy single-input
+  // forms), so omitting the list is a no-op. The server uses
+  // the *union* of the structured list and the regex list so
+  // we never lose a mention that the user picked via the
+  // picker, even if the user's display name was edited out
+  // of the body by the time they hit Post.
+  let structuredMentionIds: string[] = [];
+  const raw = formData.get("mentionedUserIds");
+  if (typeof raw === "string" && raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        structuredMentionIds = parsed.filter(
+          (v): v is string => typeof v === "string" && v.length > 0,
+        );
+      }
+    } catch {
+      // ignore — service will fall back to body regex
+    }
+  }
+  await createComment(actor, parsed.data, structuredMentionIds);
   revalidatePath(`/app/w/${workspaceSlug}/planning/${formData.get("contentItemId")}`);
   void workspace;
   return null;

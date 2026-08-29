@@ -99,7 +99,20 @@ export const ResolveCommentSchema = z.object({
 export type ResolveCommentInput = z.infer<typeof ResolveCommentSchema>;
 
 // ─── Create comment ────────────────────────────────────────────────────
-export async function createComment(actor: Actor, input: CreateCommentInput) {
+/**
+ * Create a comment. Optionally pass `structuredMentionIds` (the
+ * ids the client tracked in its mention picker) to guarantee the
+ * mention rows are written even if the body text doesn't contain
+ * the `@displayName` token (e.g. a user was renamed after they
+ * were picked, or the picker was used and the user hasn't typed
+ * anything yet). The service still runs the body regex and
+ * unions the two sets before inserting.
+ */
+export async function createComment(
+  actor: Actor,
+  input: CreateCommentInput,
+  structuredMentionIds: string[] = [],
+) {
   const parsed = CreateCommentSchema.safeParse(input);
   if (!parsed.success) {
     throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
@@ -162,6 +175,22 @@ export async function createComment(actor: Actor, input: CreateCommentInput) {
   const mentionedUserIds = extractMentions(data.body, mentionableUsers).filter(
     (id) => id !== actor.id, // don't self-notify
   );
+  // Merge the structured picker list. The client picker posts
+  // user ids directly, so the list survives name changes and
+  // body edits. We dedupe against the regex list and re-check
+  // that each id is actually a workspace member (a malicious
+  // client could submit any uuid; we silently drop ids that
+  // aren't on the membership list).
+  const regexIds = new Set(mentionedUserIds);
+  const validIds = new Set(mentionableUsers.map((u) => u.id));
+  for (const id of structuredMentionIds) {
+    if (id === actor.id) continue;
+    if (!validIds.has(id)) continue;
+    if (!regexIds.has(id)) {
+      mentionedUserIds.push(id);
+      regexIds.add(id);
+    }
+  }
 
   // Single transaction: comment + mentions + outbox + activity
   const result = await db.transaction(async (tx) => {
