@@ -117,7 +117,52 @@ describe("inline-editable-fields wrappers (planning detail)", () => {
           value=""
         />,
       );
-      expect(screen.getByText("No brief yet.")).toBeInTheDocument();
+      // The empty state is muted + italic and prompts the
+      // user toward the pencil affordance.
+      expect(screen.getByText(/no brief yet/i)).toBeInTheDocument();
+    });
+
+    it("shows the live character counter on the textarea", async () => {
+      render(
+        <InlineBriefEditor
+          workspaceSlug="food-game"
+          contentItemId="260aa351-a049-4a1a-9437-546a1ad28e3d"
+          value="Initial"
+        />,
+      );
+      await userEvent.click(screen.getByRole("button", { name: /Edit brief/i }));
+      // "Initial" is 7 chars → counter reads "7 / 2 000".
+      const counter = screen.getByTestId("inline-edit-brief-counter");
+      expect(counter).toHaveTextContent(/7\s*\/\s*2,000/);
+    });
+
+    it("turns the counter to the warning colour near the cap", async () => {
+      // 1 800 / 2 000 → 90 % of cap → warning colour.
+      const value = "a".repeat(1800);
+      render(
+        <InlineBriefEditor
+          workspaceSlug="food-game"
+          contentItemId="260aa351-a049-4a1a-9437-546a1ad28e3d"
+          value={value}
+        />,
+      );
+      await userEvent.click(screen.getByRole("button", { name: /Edit brief/i }));
+      const counter = screen.getByTestId("inline-edit-brief-counter");
+      expect(counter.className).toMatch(/\btext-warning\b/);
+    });
+
+    it("turns the counter to the danger colour at the cap", async () => {
+      const value = "a".repeat(2000);
+      render(
+        <InlineBriefEditor
+          workspaceSlug="food-game"
+          contentItemId="260aa351-a049-4a1a-9437-546a1ad28e3d"
+          value={value}
+        />,
+      );
+      await userEvent.click(screen.getByRole("button", { name: /Edit brief/i }));
+      const counter = screen.getByTestId("inline-edit-brief-counter");
+      expect(counter.className).toMatch(/\btext-danger\b/);
     });
 
     it("calls inlineUpdateBriefAction with (slug, id, next) on save", async () => {
@@ -151,6 +196,33 @@ describe("inline-editable-fields wrappers (planning detail)", () => {
         />,
       );
       expect(screen.getByText("August Kickoff")).toBeInTheDocument();
+    });
+
+    it("shows the live character counter on the input", async () => {
+      render(
+        <InlineTitleEditor
+          workspaceSlug="food-game"
+          contentItemId="260aa351-a049-4a1a-9437-546a1ad28e3d"
+          value="Hello"
+        />,
+      );
+      await userEvent.click(screen.getByRole("button", { name: /Edit title/i }));
+      const counter = screen.getByTestId("inline-edit-title-counter");
+      expect(counter).toHaveTextContent(/5\s*\/\s*200/);
+    });
+
+    it("turns the title counter to the warning colour near the cap", async () => {
+      const value = "a".repeat(180);
+      render(
+        <InlineTitleEditor
+          workspaceSlug="food-game"
+          contentItemId="260aa351-a049-4a1a-9437-546a1ad28e3d"
+          value={value}
+        />,
+      );
+      await userEvent.click(screen.getByRole("button", { name: /Edit title/i }));
+      const counter = screen.getByTestId("inline-edit-title-counter");
+      expect(counter.className).toMatch(/\btext-warning\b/);
     });
 
     it("calls inlineUpdateTitleAction with (slug, id, next) on save", async () => {

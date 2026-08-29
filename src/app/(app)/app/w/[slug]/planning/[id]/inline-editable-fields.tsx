@@ -61,13 +61,39 @@ import {
   inlineUpdateTitleAction,
 } from "@/lib/content/inline-update";
 import { formatDateForInput, parseInputAsLocalDate } from "@/lib/utils/date";
+import { cn } from "@/lib/utils";
+
+/**
+ * StudioFlow input chrome — every editable field on the
+ * planning detail page uses the same focus ring, border, and
+ * padding so the page reads as one surface, not three
+ * independent editors.
+ *
+ *   focus-visible:ring-focus-ring → 2px ring at the focus
+ *                                  colour, 1px offset to keep
+ *                                  the border crisp.
+ *   focus-visible:ring-offset-1   → 1px gap between the input
+ *                                  border and the ring; without
+ *                                  it the ring looks "muddy"
+ *                                  against the 1px border.
+ *   focus-visible:outline-none    → drop the browser default
+ *                                  outline (we replace it with
+ *                                  the ring).
+ */
+const INPUT_CHROME =
+  "border-border bg-surface text-fg-primary text-body w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1";
 
 /**
  * Brief inline editor. View mode shows the brief as pre-wrapped
  * text, or a muted placeholder when empty. Edit mode is a
  * 6-row textarea capped at 2_000 chars (matches
- * `BriefUpdateSchema.brief` in `lib/content/inline-update.ts`).
+ * `BriefUpdateSchema.brief` in `lib/content/inline-update.ts`),
+ * with a live `X / 2 000` character counter that turns warning
+ * at 90 % and danger at 100 % so the user has a soft warning
+ * before the browser hard-stops them at `maxLength`.
  */
+const BRIEF_MAX = 2000;
+const BRIEF_WARN = Math.floor(BRIEF_MAX * 0.9); // 1 800
 export function InlineBriefEditor({
   workspaceSlug,
   contentItemId,
@@ -82,20 +108,55 @@ export function InlineBriefEditor({
       testId="inline-edit-brief"
       label="brief"
       value={value}
-      render={(v) => (
-        <p className="text-body text-fg-primary whitespace-pre-wrap">{v ? v : "No brief yet."}</p>
-      )}
-      renderEditor={({ value, onChange }) => (
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          rows={6}
-          maxLength={2000}
-          className="border-border bg-surface text-fg-primary text-body w-full rounded-[var(--radius-control)] border px-3 py-2"
-          placeholder="Goal, audience, key points."
-          data-testid="inline-edit-brief-textarea"
-        />
-      )}
+      render={(v) =>
+        v ? (
+          <p className="text-body text-fg-primary whitespace-pre-wrap">{v}</p>
+        ) : (
+          // Empty state — muted text, italic to read as a
+          // hint, no `border` so the page chrome doesn't
+          // double-up. Same hierarchy as the rest of the
+          // empty placeholders on the page.
+          <p className="text-body text-fg-muted italic">
+            No brief yet — click the pencil to add one.
+          </p>
+        )
+      }
+      renderEditor={({ value, onChange }) => {
+        const len = value.length;
+        const overWarn = len >= BRIEF_WARN;
+        const atMax = len >= BRIEF_MAX;
+        return (
+          <div className="space-y-1">
+            <textarea
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              rows={6}
+              maxLength={BRIEF_MAX}
+              // The counter sits *outside* the textarea so it
+              // never blocks the user's reading line; the
+              // colour class is reactive to the current length
+              // (state flows in via the `value` prop from the
+              // parent field component).
+              className={cn(INPUT_CHROME, "resize-y")}
+              placeholder="Goal, audience, key points. Up to 2 000 characters."
+              aria-describedby="inline-edit-brief-counter"
+              data-testid="inline-edit-brief-textarea"
+            />
+            <p
+              id="inline-edit-brief-counter"
+              data-testid="inline-edit-brief-counter"
+              aria-live="polite"
+              className={cn(
+                "text-label text-fg-muted text-right tabular-nums",
+                overWarn && !atMax && "text-warning",
+                atMax && "text-danger font-semibold",
+              )}
+            >
+              {len.toLocaleString()} / {BRIEF_MAX.toLocaleString()}
+            </p>
+          </div>
+        );
+      }}
       onSave={(next) => inlineUpdateBriefAction(workspaceSlug, contentItemId, next)}
     />
   );
@@ -105,8 +166,11 @@ export function InlineBriefEditor({
  * Title inline editor. View mode shows the title with the same
  * "font-semibold" treatment the page uses outside the field.
  * Edit mode is a single-line text input capped at 200 chars
- * (matches `TitleUpdateSchema.title`).
+ * (matches `TitleUpdateSchema.title`) with a live `X / 200`
+ * counter.
  */
+const TITLE_MAX = 200;
+const TITLE_WARN = Math.floor(TITLE_MAX * 0.9); // 180
 export function InlineTitleEditor({
   workspaceSlug,
   contentItemId,
@@ -122,16 +186,36 @@ export function InlineTitleEditor({
       label="title"
       value={value}
       render={(v) => <p className="text-body text-fg-primary font-semibold">{v}</p>}
-      renderEditor={({ value, onChange }) => (
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          maxLength={200}
-          className="border-border bg-surface text-fg-primary text-body h-10 w-full rounded-[var(--radius-control)] border px-3 py-2"
-          data-testid="inline-edit-title-input"
-        />
-      )}
+      renderEditor={({ value, onChange }) => {
+        const len = value.length;
+        const overWarn = len >= TITLE_WARN;
+        const atMax = len >= TITLE_MAX;
+        return (
+          <div className="space-y-1">
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              maxLength={TITLE_MAX}
+              className={cn(INPUT_CHROME, "h-10")}
+              aria-describedby="inline-edit-title-counter"
+              data-testid="inline-edit-title-input"
+            />
+            <p
+              id="inline-edit-title-counter"
+              data-testid="inline-edit-title-counter"
+              aria-live="polite"
+              className={cn(
+                "text-label text-fg-muted text-right tabular-nums",
+                overWarn && !atMax && "text-warning",
+                atMax && "text-danger font-semibold",
+              )}
+            >
+              {len} / {TITLE_MAX}
+            </p>
+          </div>
+        );
+      }}
       onSave={(next) => inlineUpdateTitleAction(workspaceSlug, contentItemId, next)}
     />
   );
@@ -178,13 +262,32 @@ export function InlineDateEditor({
         </p>
       )}
       renderEditor={({ value, onChange }) => (
-        <input
-          type="datetime-local"
-          value={formatDateForInput(value)}
-          onChange={(e) => onChange(parseInputAsLocalDate(e.target.value).toISOString())}
-          className="border-border bg-surface text-fg-primary text-body h-10 w-full rounded-[var(--radius-control)] border px-3 py-2"
-          data-testid="inline-edit-date-input"
-        />
+        <div className="space-y-1">
+          <input
+            type="datetime-local"
+            value={formatDateForInput(value)}
+            onChange={(e) => onChange(parseInputAsLocalDate(e.target.value).toISOString())}
+            // Shared focus ring + padding with the other
+            // editors so the page reads as one surface.
+            className={cn(INPUT_CHROME, "h-10")}
+            aria-describedby="inline-edit-date-timezone"
+            data-testid="inline-edit-date-input"
+          />
+          <p
+            id="inline-edit-date-timezone"
+            data-testid="inline-edit-date-timezone"
+            className="text-label text-fg-muted"
+          >
+            {/* Re-state the workspace timezone in the editor
+                so the user never types a "9 AM" in their local
+                clock and forgets the value is stored in
+                {timezone}. The view-mode label also says
+                this, but the editor is the place the user
+                actually decides what to type. */}
+            Times are in your local clock. Stored as{" "}
+            <span className="font-semibold">{timezone}</span>.
+          </p>
+        </div>
       )}
       onSave={(next) => inlineUpdateDateAction(workspaceSlug, contentItemId, new Date(next))}
     />
