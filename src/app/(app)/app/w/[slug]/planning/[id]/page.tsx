@@ -11,13 +11,13 @@ import { getWorkspaceRoles } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { hasPlatformPermission } from "@/lib/auth/platform-access";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PlanningHeader } from "@/components/planning/planning-header";
 import { PlanningSection } from "@/components/planning/planning-section";
 import { ReadinessPanel } from "@/components/planning/readiness-panel";
 import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
 import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
+import { OverviewCommandCenter } from "@/components/planning/overview-command-center";
 import { FormatPayloadEditor } from "@/components/forms/format-payload-editor";
 import { InlineBriefEditor, InlineDateEditor, InlineTitleEditor } from "./inline-editable-fields";
 import { WorkflowBar } from "./workflow-bar";
@@ -44,6 +44,37 @@ export async function generateMetadata({
   params: Promise<{ slug: string; id: string }>;
 }) {
   return { title: `Content · ${(await params).id.slice(0, 8)}` };
+}
+
+/**
+ * Primary CTA copy for the Next-Action card in the Overview.
+ * Mirrors the contextual button in the workspace header so the
+ * two are never out of sync. The override hook (e.g. when the
+ * server already determined a different primary action) is the
+ * `primaryActionLabel` prop in `OverviewCommandCenter`.
+ */
+function nextActionLabel(status: string, canEdit: boolean): string {
+  switch (status) {
+    case "draft":
+      return canEdit ? "Edit content" : "View content";
+    case "content_review":
+      return "Open content review";
+    case "changes_requested":
+      return "Review changes";
+    case "approved_for_design":
+    case "in_design":
+    case "creative_review":
+      return "Open Creative";
+    case "ready_to_publish":
+    case "partially_published":
+      return "Open Publishing";
+    case "blocked":
+      return "Open workflow";
+    case "published":
+      return "View Publishing";
+    default:
+      return "View content";
+  }
 }
 
 export default async function ContentDetailPage({
@@ -202,6 +233,144 @@ export default async function ContentDetailPage({
     (c) => c.currentUserMentioned && !c.resolvedAt,
   ).length;
 
+  // ── Overview command-center inputs ─────────────────────────
+  // The Overview tab is a "command center" — not a duplicate of
+  // every section. It needs four compact signals:
+  //   1. A one-line readiness per workspace area (Content /
+  //      Creative / Publishing / Schedule). Each row is a
+  //      deep-link to the section that resolves it.
+  //   2. A compact content summary (format, channels, owner,
+  //      planned publish).
+  //   3. The last 3-5 meaningful activity events.
+  //   4. A primary CTA based on the current workflow status.
+
+  const finalApprovedCount = deliveries.filter((d) => d.isFinalApproved).length;
+  const deliveryCount = deliveries.length;
+  const configuredChannelCount = channelConfigs.filter((c) => c.configured).length;
+
+  // Content readiness — derived from brief + required format fields.
+  // The detailed readiness service already reports per-issue
+  // blockers; we look at the highest-severity issue in the
+  // "content.*" path to pick the headline status.
+  const contentReadinessIssue = readiness.issues.find((i) =>
+    i.path.toLowerCase().startsWith("content"),
+  );
+  const contentReadinessStatus: "ready" | "warning" | "danger" | "neutral" =
+    contentReadinessIssue?.severity === "blocker"
+      ? "danger"
+      : contentReadinessIssue?.severity === "recommendation"
+        ? "warning"
+        : (item.brief ?? "").trim().length > 0
+          ? "ready"
+          : "warning";
+
+  // Creative readiness — derived from delivery presence + approval.
+  const creativeReadinessStatus: "ready" | "warning" | "danger" | "neutral" =
+    finalApprovedCount > 0
+      ? "ready"
+      : deliveryCount > 0
+        ? "warning"
+        : item.status === "in_design" ||
+            item.status === "creative_review" ||
+            item.status === "changes_requested"
+          ? "warning"
+          : "neutral";
+
+  // Publishing readiness — derived from per-channel config + blocker count.
+  const publishingBlockers = readiness.issues.filter(
+    (i) =>
+      i.severity === "blocker" &&
+      (i.path.toLowerCase().startsWith("publish") ||
+        i.path.toLowerCase().startsWith("channel") ||
+        i.path.toLowerCase().startsWith("disclosure")),
+  ).length;
+  const publishingReadinessStatus: "ready" | "warning" | "danger" | "neutral" =
+    publishingBlockers > 0
+      ? "danger"
+      : item.channels.length === 0
+        ? "neutral"
+        : configuredChannelCount < item.channels.length
+          ? "warning"
+          : "ready";
+
+  // Schedule readiness — past-dated or shipped. `nowMs` is the
+  // server's request time, not a render-time impurity (this is a
+  // Server Component, evaluated once per request).
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
+  const plannedMs = item.plannedPublishAt.getTime();
+  const shipped =
+    item.status === "published" ||
+    item.status === "partially_published" ||
+    item.status === "cancelled";
+  const scheduleReadinessStatus: "ready" | "warning" | "danger" | "neutral" = shipped
+    ? "ready"
+    : plannedMs < nowMs
+      ? "warning"
+      : "ready";
+
+  const channelsNotConfigured = item.channels.length - configuredChannelCount;
+  const overviewReadinessLines = [
+    {
+      id: "content",
+      label: "Content",
+      status: contentReadinessStatus,
+      detail:
+        contentReadinessStatus === "ready"
+          ? "Brief and format fields are filled in"
+          : (contentReadinessIssue?.message ?? "Brief is empty"),
+      href: "#content",
+    },
+    {
+      id: "creative",
+      label: "Creative",
+      status: creativeReadinessStatus,
+      detail:
+        creativeReadinessStatus === "ready"
+          ? "An approved delivery is on file"
+          : deliveryCount === 0
+            ? "No delivery versions yet"
+            : `${deliveryCount} version${deliveryCount === 1 ? "" : "s"}, none approved`,
+      href: "#creative",
+    },
+    {
+      id: "publishing",
+      label: "Publishing",
+      status: publishingReadinessStatus,
+      detail:
+        publishingReadinessStatus === "ready"
+          ? item.channels.length === 0
+            ? "No channels"
+            : "Channels configured"
+          : publishingReadinessStatus === "danger"
+            ? `${publishingBlockers} blocker${publishingBlockers === 1 ? "" : "s"}`
+            : `${channelsNotConfigured} channel${channelsNotConfigured === 1 ? "" : "s"} need setup`,
+      href: "#publishing",
+    },
+    {
+      id: "schedule",
+      label: "Schedule",
+      status: scheduleReadinessStatus,
+      detail: shipped
+        ? item.status === "cancelled"
+          ? "Cancelled"
+          : "Shipped"
+        : plannedMs < nowMs
+          ? "Planned date is in the past"
+          : "On schedule",
+      href: "#publishing",
+    },
+  ];
+
+  // Recent activity: last 5 events. The full list is also
+  // rendered under the Activity tab. We don't filter by kind
+  // here — the user wants to see what just happened at a
+  // glance, regardless of category.
+  const recentActivity = activityEvents.slice(0, 5);
+
+  const primaryActionLabel = nextActionLabel(item.status, canEdit);
+  const reviewChangesHref = `#creative`;
+
   // ── Primary action — exactly ONE "Edit content" entrypoint.
   // The previous design had three identical buttons (Edit / Edit
   // all fields / Open full editor) all routing to the same URL.
@@ -321,128 +490,109 @@ export default async function ContentDetailPage({
         mentionCount={mentionCount}
       >
         {/* ─── OVERVIEW ──────────────────────────────────────── */}
-        <section
-          id="overview"
-          className="scroll-mt-24 space-y-4"
-          data-testid="workspace-tab-panel-overview"
-        >
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <PlanningSection
-              id="brief"
-              title="Brief"
-              description={
-                canEdit
-                  ? "Click the pencil to edit in place."
-                  : "The brief that was approved. Changes require a fresh review."
-              }
-            >
-              {canEdit ? (
-                <InlineBriefEditor
-                  workspaceSlug={slug}
-                  contentItemId={item.id}
-                  value={item.brief ?? ""}
-                />
-              ) : item.brief ? (
-                <p className="text-body text-fg-primary whitespace-pre-wrap">{item.brief}</p>
-              ) : (
-                <p className="text-body text-fg-muted">No brief yet.</p>
-              )}
-            </PlanningSection>
-            <PlanningSection
-              id="schedule"
-              title="Schedule"
-              description={`Stored as ${ws.timezone}.`}
-            >
-              <div className="space-y-3">
-                <div>
-                  <p className="text-label text-fg-secondary font-semibold uppercase">Title</p>
-                  {canEdit ? (
-                    <InlineTitleEditor
-                      workspaceSlug={slug}
-                      contentItemId={item.id}
-                      value={item.title}
-                    />
-                  ) : (
-                    <p className="text-body text-fg-primary font-semibold">{item.title}</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-label text-fg-secondary font-semibold uppercase">
-                    Planned publish
-                  </p>
-                  {canEdit ? (
-                    <InlineDateEditor
-                      workspaceSlug={slug}
-                      contentItemId={item.id}
-                      value={item.plannedPublishAt.toISOString()}
-                      timezone={ws.timezone}
-                    />
-                  ) : (
-                    <p className="text-body text-fg-primary">
-                      {item.plannedPublishAt.toLocaleString()}{" "}
-                      <span className="text-label text-fg-muted">· {ws.timezone}</span>
-                    </p>
-                  )}
-                </div>
-              </div>
-            </PlanningSection>
-            <PlanningSection
-              id="channels"
-              title="Channels"
-              description={
-                item.channels.length === 0
-                  ? "Add at least one social channel to publish this item to."
-                  : `${item.channels.length} channel${item.channels.length === 1 ? "" : "s"} selected.`
-              }
-            >
-              {item.channels.length === 0 ? (
-                <p className="text-body text-fg-muted">No channels selected yet.</p>
-              ) : (
-                <ul className="space-y-2" data-testid="planning-channels-list">
-                  {item.channels.map((ch) => {
-                    const cfg = channelConfigs.find((c) => c.id === ch.id);
-                    return (
-                      <li
-                        key={ch.id}
-                        className="border-border bg-surface-subtle flex flex-wrap items-center gap-2 rounded-[var(--radius-control)] border p-3"
-                        data-testid={`planning-channel-${ch.id}`}
-                      >
-                        <Badge variant="outline">{ch.platform}</Badge>
-                        <span className="text-body text-fg-primary font-semibold">
-                          {ch.accountName}
-                        </span>
-                        {ch.plannedPublishAtOverride ? (
-                          <span className="text-label text-fg-muted">
-                            · override{" "}
-                            {ch.plannedPublishAtOverride instanceof Date
-                              ? ch.plannedPublishAtOverride.toLocaleString()
-                              : new Date(ch.plannedPublishAtOverride).toLocaleString()}
-                          </span>
-                        ) : null}
-                        {cfg?.configured ? (
-                          <Badge variant="success" className="ml-auto">
-                            Configured
-                          </Badge>
-                        ) : (
-                          <Badge variant="warning" className="ml-auto">
-                            In setup
-                          </Badge>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </PlanningSection>
-          </div>
+        <section id="overview" className="scroll-mt-24" data-testid="workspace-tab-panel-overview">
+          <OverviewCommandCenter
+            workspaceSlug={slug}
+            contentItemId={item.id}
+            contentStatus={item.status}
+            format={item.format}
+            plannedPublishAt={item.plannedPublishAt.toLocaleString()}
+            workspaceTimezone={ws.timezone}
+            channels={item.channels.map((ch) => {
+              const cfg = channelConfigs.find((c) => c.id === ch.id);
+              return {
+                id: ch.id,
+                platform: ch.platform,
+                accountName: ch.accountName,
+                configured: cfg?.configured ?? false,
+              };
+            })}
+            ownerName={owner?.displayName ?? null}
+            readinessBlockers={readiness.blockers}
+            readinessCanPublish={readiness.canPublish}
+            readiness={overviewReadinessLines}
+            deliveryCount={deliveryCount}
+            finalApprovedCount={finalApprovedCount}
+            recentActivity={recentActivity}
+            totalActivityCount={activityEvents.length}
+            canEdit={canEdit}
+            editHref={editHref}
+            primaryActionLabel={primaryActionLabel}
+            reviewChangesHref={reviewChangesHref}
+          />
         </section>
 
         {/* ─── CONTENT ──────────────────────────────────────── */}
         <section
           id="content"
-          className="mt-6 scroll-mt-24 space-y-4"
+          className="mt-6 scroll-mt-24 space-y-6"
           data-testid="workspace-tab-panel-content"
         >
+          {/* Basic information — title, brief, planned publish.
+              Lives at the top of the Content tab because the
+              planner / editor is the role that opens this tab
+              and these are the fields they touch most. */}
+          <section aria-labelledby="content-basic-info-heading" data-testid="content-basic-info">
+            <header className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+              <h2
+                id="content-basic-info-heading"
+                className="text-label text-fg-secondary font-semibold uppercase"
+              >
+                Basic information
+              </h2>
+            </header>
+            <div className="border-border bg-surface divide-y divide-[color:var(--border)] overflow-hidden rounded-[var(--radius-control)] border sm:grid sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+              <div className="px-3 py-3">
+                <p className="text-label text-fg-muted mb-1 font-semibold uppercase">Title</p>
+                {canEdit ? (
+                  <InlineTitleEditor
+                    workspaceSlug={slug}
+                    contentItemId={item.id}
+                    value={item.title}
+                  />
+                ) : (
+                  <p className="text-body text-fg-primary font-semibold break-words">
+                    {item.title}
+                  </p>
+                )}
+              </div>
+              <div className="px-3 py-3">
+                <p className="text-label text-fg-muted mb-1 font-semibold uppercase">
+                  Planned publish
+                </p>
+                {canEdit ? (
+                  <InlineDateEditor
+                    workspaceSlug={slug}
+                    contentItemId={item.id}
+                    value={item.plannedPublishAt.toISOString()}
+                    timezone={ws.timezone}
+                  />
+                ) : (
+                  <p className="text-body text-fg-primary">
+                    {item.plannedPublishAt.toLocaleString()}{" "}
+                    <span className="text-label text-fg-muted">· {ws.timezone}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="border-border bg-surface mt-3 overflow-hidden rounded-[var(--radius-control)] border">
+              <div className="px-3 py-3">
+                <p className="text-label text-fg-muted mb-1 font-semibold uppercase">Brief</p>
+                {canEdit ? (
+                  <InlineBriefEditor
+                    workspaceSlug={slug}
+                    contentItemId={item.id}
+                    value={item.brief ?? ""}
+                  />
+                ) : item.brief ? (
+                  <p className="text-body text-fg-primary whitespace-pre-wrap">{item.brief}</p>
+                ) : (
+                  <p className="text-body text-fg-muted">No brief yet.</p>
+                )}
+              </div>
+            </div>
+          </section>
+
           {/* Live preview + per-channel structure for the content tab */}
           {item.channels.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(0,360px)]">
