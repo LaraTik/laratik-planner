@@ -585,7 +585,9 @@ function ExpandableNavGroup({
       </div>
       {!collapsed && open ? (
         <ul className="ml-4 hidden space-y-0.5 border-l border-[var(--color-border)] pl-3 xl:block">
-          {spec.children.map((child) => renderItem(child, pathname, planningActive, collapsed))}
+          {spec.children.map((child) => (
+            <li key={child.key}>{renderItem(child, pathname, planningActive, collapsed)}</li>
+          ))}
         </ul>
       ) : null}
     </div>

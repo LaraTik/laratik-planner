@@ -61,6 +61,13 @@
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-subtle: var(--primary-subtle);
+  /* Foreground for elements rendered on `bg-primary` (buttons, the
+   * workflow stepper's current-step pill). White gives ~7:1 contrast
+   * against `--primary` (#4f46e5). The class `text-primary-foreground`
+   * was previously undefined and fell back to `--fg-primary` (a dark
+   * blue), which failed axe-core's color-contrast check (2.58:1 vs
+   * the 4.5:1 minimum). Added 2026-08-30 by the M5 a11y sweep. */
+  --color-primary-foreground: #ffffff;
   --color-focus-ring: var(--focus-ring);
   --color-success: var(--success);
   --color-success-subtle: var(--success-subtle);

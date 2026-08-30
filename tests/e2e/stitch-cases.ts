@@ -403,9 +403,20 @@ export const STITCH_CASES: StitchCase[] = [
 // taken at (mobile 360, tablet 768, desktop 1440) plus the canonical
 // "wide" desktop the production UI is built for. The full 6-viewport
 // matrix can be re-enabled once a longer CI job budget is allocated.
+//
+// 2026-08-30 — Milestone 5: Planning Content Detail refactor. The
+// spec calls for explicit review at 375 / 768 / 1024 / 1440. We
+// re-introduce 1024 (small laptop / iPad-landscape split) and bump
+// the mobile width from 360 to 375 to match the iPhone 12/13/14
+// logical viewport. The 4-viewport matrix is 23 canonical surfaces
+// × 4 = 92 baselines per capture run (vs. the 3×23 = 69 currently
+// committed). The capture job budget needs to grow from 25 to
+// ~35 min to absorb the extra viewport; see `M5` row in
+// PRODUCTION_READINESS_TRACKER.md.
 export const REGRESSION_VIEWPORTS = [
-  { name: "mobile-s", width: 360, height: 800 },
+  { name: "mobile-s", width: 375, height: 812 },
   { name: "tablet", width: 768, height: 1024 },
+  { name: "laptop", width: 1024, height: 768 },
   { name: "wide", width: 1440, height: 900 },
 ] as const;
 

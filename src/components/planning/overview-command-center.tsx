@@ -2,18 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  AlertTriangle,
-  ArrowRight,
-  CalendarDays,
-  CheckCircle2,
-  Circle,
-  History,
-  Info,
-  Pencil,
-  Send,
-  Users,
-} from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Circle, Info } from "lucide-react";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { humanFormat, humanStatus } from "@/lib/content/status";
@@ -461,39 +450,19 @@ function ContentSummary({
         className="border-border bg-surface grid grid-cols-1 divide-y divide-[color:var(--border)] overflow-hidden rounded-[var(--radius-control)] border sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3"
         data-testid="overview-content-summary-list"
       >
+        <SummaryRow label="Format" value={humanFormat(format)} />
+        <SummaryRow label="Channels" value={channelSummary(channels)} />
         <SummaryRow
-          icon={<Pencil className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />}
-          label="Format"
-          value={humanFormat(format)}
-        />
-        <SummaryRow
-          icon={<Users className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />}
-          label="Channels"
-          value={channelSummary(channels)}
-        />
-        <SummaryRow
-          icon={<CalendarDays className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />}
           label="Planned publish"
           value={
-            <span>
+            <>
               {plannedPublishAt} <span className="text-fg-muted">· {workspaceTimezone}</span>
-            </span>
+            </>
           }
         />
+        <SummaryRow label="Creative" value={creativeSummary(deliveryCount, finalApprovedCount)} />
+        {ownerName ? <SummaryRow label="Owner" value={ownerName} /> : null}
         <SummaryRow
-          icon={<Send className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />}
-          label="Creative"
-          value={creativeSummary(deliveryCount, finalApprovedCount)}
-        />
-        {ownerName ? (
-          <SummaryRow
-            icon={<Users className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />}
-            label="Owner"
-            value={ownerName}
-          />
-        ) : null}
-        <SummaryRow
-          icon={<History className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />}
           label="Workspace"
           value={
             <Link
@@ -511,22 +480,16 @@ function ContentSummary({
   );
 }
 
-function SummaryRow({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: React.ReactNode;
-}) {
+function SummaryRow({ label, value }: { label: string; value: React.ReactNode }) {
+  // Per the HTML5 spec, a <dl> can contain a <div> wrapper but the
+  // wrapper must contain exactly one <dt> followed by one <dd>. No
+  // siblings, no presentational content. The icon was dropped from
+  // each row (it was decorative anyway) to satisfy axe-core's
+  // `definition-list` rule.
   return (
-    <div className="flex items-start gap-2 px-3 py-2.5">
-      <div className="mt-0.5">{icon}</div>
-      <div className="min-w-0 flex-1">
-        <dt className="text-label text-fg-muted font-semibold uppercase">{label}</dt>
-        <dd className="text-body text-fg-primary mt-0.5 break-words">{value}</dd>
-      </div>
+    <div className="px-3 py-2.5">
+      <dt className="text-label text-fg-muted font-semibold uppercase">{label}</dt>
+      <dd className="text-body text-fg-primary mt-0.5 break-words">{value}</dd>
     </div>
   );
 }

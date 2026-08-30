@@ -110,9 +110,9 @@ describe("visual regression harness contract (Task 7)", () => {
     expect(canonical).toHaveLength(27);
   });
 
-  it("declares the three CI regression viewports (360, 768, 1440) — TEST-03 (GAP-FULL-REVIEW-2026-08-25) reduced from 6 to fit the 25-min capture job budget", () => {
+  it("declares the four CI regression viewports (375, 768, 1024, 1440) — Milestone 5 (M5, 2026-08-30) expanded from 3 to match the planning content detail spec", () => {
     const widths = REGRESSION_VIEWPORTS.map((v) => v.width);
-    expect(widths).toEqual([360, 768, 1440]);
+    expect(widths).toEqual([375, 768, 1024, 1440]);
   });
 
   it("resolves {contentItemId} placeholders when given a SeedResult", () => {
