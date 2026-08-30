@@ -106,11 +106,24 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await expectClean("/app/w/acme/planning/[id]", page);
   });
 
-  test("@a11y /app/w/[slug]/planning/[id]/publish has no critical violations", async ({ page }) => {
+  test("@a11y /app/w/[slug]/planning/[id]?tab=publishing has no critical violations", async ({
+    page,
+  }) => {
+    // Phase 7 of the planning-detail refactor (2026-08-30)
+    // absorbed the standalone `/publish` route into the
+    // Publishing tab. The `/publish` URL is now a server-side
+    // redirect to `#publishing`; the publishing form lives
+    // inside the planning detail page (mount testID
+    // `publish-package-form-mount`). The a11y sweep now targets
+    // the planning detail page with the publishing tab active.
     const seeded = await bootstrapTestSession(page);
-    await page.goto(`/app/w/${seeded.workspaceSlug}/planning/${seeded.contentItemId}/publish`);
-    await expect(page.getByTestId("publish-package-root")).toBeVisible();
-    await expectClean("/app/w/[slug]/planning/[id]/publish", page);
+    await page.goto(`/app/w/${seeded.workspaceSlug}/planning/${seeded.contentItemId}#publishing`);
+    // The shell may mount the panel asynchronously after the
+    // hash syncs; give the form mount a beat to appear.
+    await expect(page.getByTestId("publish-package-form-mount")).toBeVisible({
+      timeout: 10_000,
+    });
+    await expectClean("/app/w/[slug]/planning/[id]?tab=publishing", page);
   });
 
   // ─── Extended Stitch canonical coverage ──────────────────────────────────

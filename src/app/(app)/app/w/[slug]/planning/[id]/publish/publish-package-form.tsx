@@ -578,13 +578,18 @@ export function PublishPackageForm({
               testId="publish-paid-partnership"
             />
             <div>
-              <CardTitle className="text-title-card">Approved delivery version</CardTitle>
+              {/* Phase 8 (2026-08-30): user-facing label renamed from
+                  "Approved delivery version" → "Approved version"
+                  per the terminology sweep in the planning-detail
+                  refactor (spec §10 / §16 — the DB column
+                  `delivery_versions` is unchanged). */}
+              <CardTitle className="text-title-card">Approved version</CardTitle>
               {deliveryVersions.filter((d) => d.isFinalApproved).length === 0 ? (
                 <p
                   className="text-label text-warning mt-1"
                   data-testid="publish-no-approved-delivery"
                 >
-                  No approved delivery version yet — block from readiness.
+                  No approved version yet — block from readiness.
                 </p>
               ) : (
                 <ul className="mt-2 space-y-1 text-sm" data-testid="publish-approved-deliveries">

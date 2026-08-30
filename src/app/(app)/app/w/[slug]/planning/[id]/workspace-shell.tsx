@@ -6,8 +6,11 @@ import { DestructiveConfirmDialog } from "@/components/forms/destructive-confirm
 import { DiscussionDrawer } from "@/components/planning/discussion-drawer";
 import {
   DiscussionTrigger,
+  WorkspacePanels,
   WorkspaceTabs,
+  initialActiveTabFromHash,
   type WorkspaceTab,
+  type WorkspaceTabId,
 } from "@/components/planning/workspace-tabs";
 import type { CommentRecord, CommentRoleFlags } from "@/components/comments/comment-item";
 import type { ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
@@ -15,13 +18,21 @@ import type { ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
 /**
  * WorkspaceShell — the client-side shell that:
  *
- *   1. Owns the open state for the right-side Discussion drawer.
- *   2. Renders the `Overview | Content | Publishing | Activity` tab strip.
- *   3. Renders the header overflow menu (operator actions like
+ *   1. Owns the active-tab state (state-driven panels; replaced
+ *      the previous scroll-spy DOM in phase 1 of the planning-
+ *      detail refactor on 2026-08-30).
+ *   2. Mirrors the active tab to the URL hash so deep links
+ *      (`#content`, `#publishing`, …) keep working.
+ *   3. Renders the `Overview | Content | Publishing | Activity`
+ *      tab strip and the panel body for the active tab.
+ *   4. Owns the open state for the right-side Discussion drawer.
+ *   5. Renders the header overflow menu (operator actions like
  *      "Reset idea" + utilities like "Duplicate" / "Archive").
  *
  * The page is still a Server Component for all data fetching;
- * this wrapper only handles the interactive bits.
+ * this wrapper only handles the interactive bits. The page
+ * passes a `panels` record (one entry per `WorkspaceTabId`); the
+ * shell mounts only the entry for the active tab.
  *
  * A11y:
  *   - The overflow menu is a real `<button>` driven menu
@@ -30,6 +41,9 @@ import type { ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
  *     Escape / outside-click are handled by the browser).
  *   - The drawer traps focus via the Radix Dialog primitive
  *     in the parent (we re-use the same component).
+ *   - Tab switches update `aria-current` on the strip and
+ *     swap the panel; screen-reader rotor still works because
+ *     the panel IDs match the hash route.
  */
 export interface WorkspaceShellProps {
   workspaceSlug: string;
@@ -43,6 +57,9 @@ export interface WorkspaceShellProps {
   /** Optional tabs (server-computed counts) — at least the four
    *  defaults are always present. */
   tabs: WorkspaceTab[];
+  /** Panel bodies, keyed by tab id. The shell renders only the
+   *  active panel. Missing keys render nothing. */
+  panels: Partial<Record<WorkspaceTabId, React.ReactNode>>;
   /** Operator-only reset action. */
   canResetIdea: boolean;
   resetCounts: ResetIdeaCounts;
@@ -51,7 +68,6 @@ export interface WorkspaceShellProps {
   /** Total open / mentioning comment counts (for the trigger). */
   openCommentCount: number;
   mentionCount: number;
-  children: React.ReactNode;
 }
 
 export function WorkspaceShell({
@@ -64,14 +80,49 @@ export function WorkspaceShell({
   canPostInternal,
   canPostClientVisible,
   tabs,
+  panels,
   canResetIdea,
   resetCounts,
   openCommentCount,
   mentionCount,
-  children,
 }: WorkspaceShellProps) {
+  const [activeId, setActiveId] = React.useState<WorkspaceTabId>(() =>
+    initialActiveTabFromHash(tabs),
+  );
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [resetOpen, setResetOpen] = React.useState(false);
+
+  // Sync the active tab to the URL hash so deep links and the
+  // back/forward buttons keep working. We only push to history
+  // when the active tab actually changes, and we use
+  // `replaceState` for the initial mount to avoid filling the
+  // back stack with a synthetic entry on first paint.
+  const isFirstHashSyncRef = React.useRef(true);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const target = `#${activeId}`;
+    if (window.location.hash !== target) {
+      if (isFirstHashSyncRef.current) {
+        window.history.replaceState(null, "", target);
+        isFirstHashSyncRef.current = false;
+      } else {
+        window.history.pushState(null, "", target);
+      }
+    }
+  }, [activeId]);
+
+  // Hash → state (back/forward button, manual hash edit).
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    function onHashChange() {
+      const next = window.location.hash.replace(/^#/, "") as WorkspaceTabId;
+      if (next && tabs.some((t) => t.id === next) && next !== activeId) {
+        setActiveId(next);
+      }
+    }
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [tabs, activeId]);
 
   return (
     <>
@@ -79,6 +130,8 @@ export function WorkspaceShell({
         <WorkspaceTabs
           tabs={tabs}
           ariaLabel="Content workspace sections"
+          value={activeId}
+          onValueChange={setActiveId}
           className="static border-b-0"
         />
         <div className="flex items-center gap-1.5 pr-1">
@@ -116,7 +169,7 @@ export function WorkspaceShell({
         />
       ) : null}
 
-      {children}
+      <WorkspacePanels panels={panels} value={activeId} />
     </>
   );
 }

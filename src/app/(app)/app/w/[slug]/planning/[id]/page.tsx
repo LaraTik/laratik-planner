@@ -1,12 +1,18 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Pencil, ArrowLeft, ExternalLink, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getContentItem, listWorkspaceDesigners, UPDATEABLE_STATUSES } from "@/lib/content/service";
 import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
-import { listPublicationsForItem, evaluateReadiness } from "@/lib/publishing";
+import {
+  listPublicationsForItem,
+  evaluateReadiness,
+  readAllChannelPayloads,
+} from "@/lib/publishing";
+import { listActivityEvents } from "@/lib/notifications/activity";
+import { mapFormatPayloadToPlatform } from "@/lib/format-payload/mapper";
 import { listCommentsForItem } from "@/lib/discussions/service";
-import { getWorkspaceRoles } from "@/lib/auth/policy";
+import { getWorkspaceRoles, hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
 // resolveActiveAgencyContext is intentionally NOT imported here. The
 // page derives its agency scope from `ws.agencyId` (the workspace
 // row's actual agency) rather than the user's active agency, so
@@ -22,25 +28,28 @@ import { ChannelPublishingCard } from "@/components/planning/channel-publishing-
 import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
 import { OverviewCommandCenter } from "@/components/planning/overview-command-center";
 import { FormatPayloadEditor } from "@/components/forms/format-payload-editor";
-import { InlineBriefEditor, InlineDateEditor, InlineTitleEditor } from "./inline-editable-fields";
-import { WorkflowBar } from "./workflow-bar";
-import { WorkflowRail } from "@/components/planning/workflow-rail";
+// Phase 6 of the planning-detail refactor (2026-08-30): the
+// inline title/date/brief editors used to live here. They
+// moved into the Overview's `DetailsSection` (see
+// `@/components/planning/overview-command-center`). The
+// source component (`./inline-editable-fields`) is unchanged.
+import { WorkflowRail, WorkflowSheet } from "@/components/planning/workflow-rail";
 import { DeliverySection } from "./delivery-section";
 import { AiAssistancePanel } from "@/components/planning/ai-assistance-panel";
 import { getResetIdeaCounts, EMPTY_RESET_IDEA_COUNTS } from "@/lib/content/reset-idea";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
-import { aiFeatureSettings, agencies, users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { aiFeatureSettings, agencies, socialChannels, users } from "@/lib/db/schema";
+import { and, eq, isNull } from "drizzle-orm";
+import { EditDetailsDrawer } from "@/components/planning/edit-details-drawer";
 import { isAiEnabled } from "@/lib/ai";
 import { AI_CAPABILITY_METADATA } from "@/lib/ai/capabilities";
 import { parseFormatPayload } from "@/lib/format-payload/schemas";
-import { listActivityEvents } from "@/lib/notifications/activity";
-import { readAllChannelPayloads } from "@/lib/publishing";
 import { WorkflowStepper } from "@/components/planning/workflow-stepper";
 import { PlatformPreview } from "@/components/planning/platform-preview";
 import { WorkspaceShell } from "./workspace-shell";
 import { type WorkspaceTab } from "@/components/planning/workspace-tabs";
+import { PublishPackageForm } from "./publish/publish-package-form";
 
 export async function generateMetadata({
   params,
@@ -119,6 +128,9 @@ export default async function ContentDetailPage({
     activityEvents,
     readiness,
     channelPayloads,
+    activeChannels,
+    canConfirmReadiness,
+    canApproveFinalCopy,
   ] = await Promise.all([
     listApprovalsForItem(actor, id),
     listPublicationsForItem(actor, id).catch(() => []),
@@ -142,6 +154,33 @@ export default async function ContentDetailPage({
       channels: [],
     })),
     readAllChannelPayloads({ actor, workspaceId: ws.id, contentItemId: id }).catch(() => ({})),
+    // Phase 5 of the planning-detail refactor (2026-08-30):
+    // the EditDetailsDrawer needs the same channel list as
+    // the standalone `/edit/[id]` page. We union the active
+    // workspace channels with the item's already-selected
+    // channels so a stale channel can still be deselected
+    // (mirrors `planning/edit/[id]/page.tsx`).
+    db
+      .select({
+        id: socialChannels.id,
+        accountName: socialChannels.accountName,
+        platform: socialChannels.platform,
+      })
+      .from(socialChannels)
+      .where(
+        and(
+          eq(socialChannels.workspaceId, ws.id),
+          eq(socialChannels.isActive, true),
+          isNull(socialChannels.archivedAt),
+        ),
+      ),
+    // Phase 7 of the planning-detail refactor (2026-08-30):
+    // these two role checks were previously computed inside
+    // the standalone `/publish` route. With the publish form
+    // moving into the Publishing tab, the checks now live
+    // here so the form can render with the right affordances.
+    hasWorkspaceRole(actor, ws.id, ["workspace_manager", "content_planner", "publisher"]),
+    isAgencyAdmin(actor, ws.agencyId),
   ]);
 
   const agencyId = ws.agencyId;
@@ -380,17 +419,51 @@ export default async function ContentDetailPage({
   const reviewChangesHref = `#assets-versions`;
 
   // ── Primary action — exactly ONE "Edit content" entrypoint.
-  // The previous design had three identical buttons (Edit / Edit
-  // all fields / Open full editor) all routing to the same URL.
-  // See planning/[id]/edit-button.tsx for the rationale.
+  // Phase 5 of the planning-detail refactor (2026-08-30) replaced
+  // the previous `<Link>` to `/edit/[id]` with an
+  // `EditDetailsDrawer` so routine edits stay on the planning
+  // detail page. The standalone route is preserved as a deep-
+  // link fallback (the drawer has an "Open full editor" link to
+  // it). The `editHref` is still passed to the Overview's "Edit
+  // details" readiness row, which is left as a deep-link for
+  // now (will become a drawer open callback in phase 6).
   const editHref = `/app/w/${slug}/planning/edit/${item.id}`;
+
+  // Channel list for the drawer's picker. Union the active
+  // channels with the item's already-selected channels so a
+  // stale channel can still be deselected (mirrors the
+  // standalone edit page).
+  const seenChannelIds = new Set(activeChannels.map((c) => c.id));
+  const missingSelected = item.channels
+    .filter((c) => !seenChannelIds.has(c.socialChannelId))
+    .map((c) => ({
+      id: c.socialChannelId,
+      accountName: c.accountName,
+      platform: c.platform,
+    }));
+  const editChannels = [...activeChannels, ...missingSelected];
+
   const primaryAction = canEdit ? (
-    <Button asChild size="sm">
-      <Link href={editHref} data-testid="open-full-edit" data-testid-edit-content="true">
-        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-        Edit content
-      </Link>
-    </Button>
+    <EditDetailsDrawer
+      workspaceSlug={slug}
+      contentItemId={item.id}
+      channels={editChannels}
+      initial={{
+        title: item.title,
+        format: item.format as
+          | "static_post"
+          | "carousel"
+          | "story"
+          | "short_form_video"
+          | "long_form_video"
+          | "live_content"
+          | "article"
+          | "other",
+        brief: item.brief,
+        plannedPublishAtIso: item.plannedPublishAt.toISOString(),
+        channelIds: item.channels.map((c) => c.socialChannelId),
+      }}
+    />
   ) : (
     <Button variant="ghost" asChild>
       <Link href={`/app/w/${slug}/planning`} data-testid="planning-back-link">
@@ -442,28 +515,38 @@ export default async function ContentDetailPage({
         meta={<WorkflowStepper status={item.status} size="compact" />}
       />
 
-      {/* Workflow — current status explanation + action buttons.
-          The full 11-step pipeline is collapsed behind a "View
-          workflow" disclosure inside the bar (M5 spec §14). The
-          detailed blocker list (was: ReadinessPanel above the
-          tabs) is now surfaced via the Overview's "Next action"
-          card + 4-line readiness summary, which deep-links into
-          the relevant section.
-
-          Phase 2 of the planning-detail refactor (2026-08-30)
-          added a right-side `WorkflowRail` for `lg+` viewports
-          that owns the 4-stage list + current-step block. The
-          top `WorkflowBar` is kept as a transitional surface
-          for `<lg` and is removed in phase 4 when the mobile
-          bottom-sheet lands. */}
-      <div className="space-y-4">
-        {/* Rail — lg+ only, lives in the right column of the
-            workspace grid further down. We render it inline
-            here on lg+ to keep the data wiring local; phase 4
-            will move the rail into the right column of a
-            unified page grid and add a bottom-sheet trigger
-            for mobile. */}
-        <div className="hidden lg:block">
+      {/* Workflow — Phase 4 of the planning-detail refactor
+          (2026-08-30) split this into two responsive variants:
+            - Desktop (`lg+`): `WorkflowRail` — right-side column
+              with collapse/expand + localStorage persistence.
+            - Mobile (`<lg`): `WorkflowSheet` — a compact trigger
+              pill under the header that opens a bottom sheet.
+          The legacy top-of-page `WorkflowBar` (the original
+          implementation) was deleted in the dead-code cleanup
+          pass; its action button tree + approval timeline
+          now live inside `WorkflowRail`. The `workflow` anchor
+          is preserved for legacy hash deep links from the
+          planning list. */}
+      <div className="space-y-3">
+        <div className="lg:hidden">
+          <WorkflowSheet
+            workspaceSlug={slug}
+            contentItemId={item.id}
+            status={item.status}
+            blockedReason={item.blockedReason}
+            cancellationReason={item.cancellationReason}
+            roles={actorRoles}
+            approvals={approvals.map((a) => ({
+              id: a.id,
+              gate: a.gate,
+              status: a.status,
+              requestedAt: a.requestedAt.toISOString(),
+              deliveryVersionId: a.deliveryVersionId,
+            }))}
+            designers={designers}
+          />
+        </div>
+        <div id="workflow" className="hidden scroll-mt-24 lg:block">
           <WorkflowRail
             workspaceSlug={slug}
             contentItemId={item.id}
@@ -481,25 +564,6 @@ export default async function ContentDetailPage({
             designers={designers}
           />
         </div>
-        {/* Top WorkflowBar — <lg only, removed in phase 4. */}
-        <section id="workflow" className="scroll-mt-24 lg:hidden">
-          <WorkflowBar
-            workspaceSlug={slug}
-            contentItemId={item.id}
-            status={item.status}
-            blockedReason={item.blockedReason}
-            cancellationReason={item.cancellationReason}
-            roles={actorRoles}
-            approvals={approvals.map((a) => ({
-              id: a.id,
-              gate: a.gate,
-              status: a.status,
-              requestedAt: a.requestedAt.toISOString(),
-              deliveryVersionId: a.deliveryVersionId,
-            }))}
-            designers={designers}
-          />
-        </section>
       </div>
 
       {/* Tabbed workspace + drawer + overflow menu. Phase 1 of the
@@ -538,6 +602,8 @@ export default async function ContentDetailPage({
                 workspaceSlug={slug}
                 contentItemId={item.id}
                 contentStatus={item.status}
+                title={item.title}
+                brief={item.brief ?? ""}
                 format={item.format}
                 plannedPublishAt={item.plannedPublishAt.toLocaleString()}
                 workspaceTimezone={ws.timezone}
@@ -571,73 +637,13 @@ export default async function ContentDetailPage({
               className="mt-6 scroll-mt-24 space-y-6"
               data-testid="workspace-tab-panel-content"
             >
-              {/* Basic information — title, brief, planned publish.
-                  Lives at the top of the Content tab because the
-                  planner / editor is the role that opens this tab
-                  and these are the fields they touch most. */}
-              <section
-                aria-labelledby="content-basic-info-heading"
-                data-testid="content-basic-info"
-              >
-                <header className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-                  <h2
-                    id="content-basic-info-heading"
-                    className="text-label text-fg-secondary font-semibold uppercase"
-                  >
-                    Basic information
-                  </h2>
-                </header>
-                <div className="border-border bg-surface divide-y divide-[color:var(--border)] overflow-hidden rounded-[var(--radius-control)] border sm:grid sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-                  <div className="px-3 py-3">
-                    <p className="text-label text-fg-muted mb-1 font-semibold uppercase">Title</p>
-                    {canEdit ? (
-                      <InlineTitleEditor
-                        workspaceSlug={slug}
-                        contentItemId={item.id}
-                        value={item.title}
-                      />
-                    ) : (
-                      <p className="text-body text-fg-primary font-semibold break-words">
-                        {item.title}
-                      </p>
-                    )}
-                  </div>
-                  <div className="px-3 py-3">
-                    <p className="text-label text-fg-muted mb-1 font-semibold uppercase">
-                      Planned publish
-                    </p>
-                    {canEdit ? (
-                      <InlineDateEditor
-                        workspaceSlug={slug}
-                        contentItemId={item.id}
-                        value={item.plannedPublishAt.toISOString()}
-                        timezone={ws.timezone}
-                      />
-                    ) : (
-                      <p className="text-body text-fg-primary">
-                        {item.plannedPublishAt.toLocaleString()}{" "}
-                        <span className="text-label text-fg-muted">· {ws.timezone}</span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="border-border bg-surface mt-3 overflow-hidden rounded-[var(--radius-control)] border">
-                  <div className="px-3 py-3">
-                    <p className="text-label text-fg-muted mb-1 font-semibold uppercase">Brief</p>
-                    {canEdit ? (
-                      <InlineBriefEditor
-                        workspaceSlug={slug}
-                        contentItemId={item.id}
-                        value={item.brief ?? ""}
-                      />
-                    ) : item.brief ? (
-                      <p className="text-body text-fg-primary whitespace-pre-wrap">{item.brief}</p>
-                    ) : (
-                      <p className="text-body text-fg-muted">No brief yet.</p>
-                    )}
-                  </div>
-                </div>
-              </section>
+              {/* Phase 6 of the planning-detail refactor (2026-08-30):
+                  the "Basic information" block (title, brief, planned
+                  publish) was moved into the Overview's `DetailsSection`,
+                  where the same inline editors are mounted. The Content
+                  tab now opens directly with the creative brief + live
+                  preview, which is the working surface the planner /
+                  editor actually came for. */}
 
               {/* Live preview + per-channel structure for the content tab */}
               {item.channels.length > 0 ? (
@@ -809,50 +815,87 @@ export default async function ContentDetailPage({
               className="mt-6 scroll-mt-24 space-y-4"
               data-testid="workspace-tab-panel-publishing"
             >
-              <PlanningSection
-                id="publishing-setup"
-                title="Publishing setup"
-                description="Per-channel publish configuration. Configure caption, disclosures, and approvals."
-                actions={
-                  <Button size="sm" variant="outline" asChild>
-                    <Link
-                      href={`/app/w/${slug}/planning/${item.id}/publish`}
-                      data-testid="open-publish-package"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                      Open publishing setup
-                    </Link>
-                  </Button>
-                }
-              >
-                {item.channels.length === 0 ? (
-                  <p className="text-body text-fg-muted">
-                    No channels selected. Add a channel first, then configure the publishing setup.
-                  </p>
-                ) : (
-                  <div className="space-y-3" data-testid="publishing-cards">
-                    {item.channels.map((ch) => {
-                      const cfg = channelConfigs.find((c) => c.id === ch.id);
-                      const pub = publicationByChannel.get(ch.id);
-                      return (
-                        <ChannelPublishingCard
-                          key={ch.id}
-                          workspaceSlug={slug}
-                          channel={{
-                            id: ch.id,
-                            platform: ch.platform,
-                            accountName: ch.accountName,
-                            configured: cfg?.configured ?? false,
-                          }}
-                          publication={pub ? { ...pub.publication_record } : null}
-                          isPublisher={actorRoles.isPublisher || actorRoles.isManager}
-                          publishPackageHref={`/app/w/${slug}/planning/${item.id}/publish#channel-${ch.id}`}
-                        />
-                      );
+              {/*
+                Phase 7 of the planning-detail refactor (2026-08-30)
+                absorbed the standalone `/publish` route into the
+                Publishing tab. The `ChannelPublishingCard` list
+                stays for the per-channel "Record outcome" affordance
+                (still useful for managers / publishers who just
+                want to record a published URL without opening the
+                full form). The full `PublishPackageForm` is mounted
+                below it for users who want to edit the package.
+
+                The previous "Open publishing setup" deep-link is
+                gone — the form is in front of the user. The
+                `/publish` route still exists as a server-side
+                redirect (see `publish/page.tsx`).
+              */}
+              {item.channels.length === 0 ? (
+                <p className="text-body text-fg-muted">
+                  No channels selected. Add a channel first, then configure the publishing setup.
+                </p>
+              ) : (
+                <div className="space-y-3" data-testid="publishing-cards">
+                  {item.channels.map((ch) => {
+                    const cfg = channelConfigs.find((c) => c.id === ch.id);
+                    const pub = publicationByChannel.get(ch.id);
+                    return (
+                      <ChannelPublishingCard
+                        key={ch.id}
+                        workspaceSlug={slug}
+                        channel={{
+                          id: ch.id,
+                          platform: ch.platform,
+                          accountName: ch.accountName,
+                          configured: cfg?.configured ?? false,
+                        }}
+                        publication={pub ? { ...pub.publication_record } : null}
+                        isPublisher={actorRoles.isPublisher || actorRoles.isManager}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+
+              {item.channels.length > 0 ? (
+                <div className="mt-4" data-testid="publish-package-form-mount">
+                  <PublishPackageForm
+                    workspaceId={ws.id}
+                    workspaceSlug={slug}
+                    contentItemId={item.id}
+                    itemTitle={item.title}
+                    itemFormat={item.format}
+                    formatPayloadPreFill={mapFormatPayloadToPlatform({
+                      format: item.format,
+                      formatPayload: (item as { formatPayload?: unknown }).formatPayload,
                     })}
-                  </div>
-                )}
-              </PlanningSection>
+                    channels={item.channels.map((c) => ({
+                      id: c.id,
+                      socialChannelId: c.socialChannelId,
+                      platform: c.platform,
+                      accountName: c.accountName,
+                      // The strict `PlatformPayload` discriminated
+                      // union comes from the publish-package form.
+                      // The lookup is widened through
+                      // `Record<string, unknown>` because the
+                      // `readAllChannelPayloads` return type
+                      // tracks the per-platform schema; the form
+                      // itself handles the validation on save.
+                      payload: ((channelPayloads as Record<string, unknown>)[c.socialChannelId] ??
+                        null) as never,
+                    }))}
+                    deliveryVersions={deliveries.map((d) => ({
+                      id: d.id,
+                      versionNumber: d.versionNumber,
+                      isFinalApproved: d.isFinalApproved,
+                    }))}
+                    readiness={readiness}
+                    canEdit={canEdit}
+                    canApproveFinalCopy={canApproveFinalCopy}
+                    canConfirmReadiness={canConfirmReadiness}
+                  />
+                </div>
+              ) : null}
             </section>
           ),
           activity: (

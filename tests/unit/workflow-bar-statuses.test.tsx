@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { ALL_STATUSES } from "@/lib/content/status";
-import { WorkflowBar } from "@/app/(app)/app/w/[slug]/planning/[id]/workflow-bar";
+import { WorkflowRail } from "@/components/planning/workflow-rail";
 
 vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
   transitionAction: vi.fn(),
@@ -10,26 +10,26 @@ vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
 }));
 
 /**
- * Regression guard for the WorkflowBar status ladder.
+ * Regression guard for the WorkflowRail's "View workflow" disclosure.
  *
- * The workflow bar renders a per-status badge row using an internal
- * STATUSES constant. If that constant is missing any branch state
- * (`changes_requested`, `blocked`, `cancelled`) the badge row renders
- * without a "current" marker for items in those states — the
- * `STATUSES.indexOf(status)` lookup returns -1, every `past` predicate
- * is false, and all badges collapse to the outline variant.
+ * The rail renders an 11-step pipeline behind a `<details>`
+ * toggle. Each step's badge uses a per-status variant — the
+ * current step uses `primary`, past steps use `success`, and
+ * future steps use `outline`. The `STATUSES.indexOf(status)`
+ * lookup is the gate: if a status is missing from the ladder
+ * the lookup returns -1, every `past` predicate is false, and
+ * every badge collapses to `outline`. The current-step badge
+ * disappears, the page renders without a "current" marker for
+ * items in those states, and React #441 fires on the
+ * post-`revalidatePath("/app/w/")` re-render because the server
+ * HTML and the client re-render diverge.
  *
- * That divergence between the data the server-rendered HTML implies
- * (no current badge) and the shape the client component expects to
- * re-render after `revalidatePath("/app/w/")` ran the workflow
- * transition is what surfaces in production builds as React error
- * #441 ("An error occurred in the Server Components render").
- *
- * This test asserts the WorkflowBar's STATUSES ladder contains every
- * canonical ContentStatus. If a future refactor trims it back, the
- * assert below fails before the change reaches CI.
+ * Phase 5 of the planning-detail refactor (2026-08-30) moved
+ * the disclosure from the legacy `WorkflowBar` into the new
+ * `WorkflowRail`. This test now guards the rail's STATUSES
+ * ladder against the same defect class.
  */
-describe("WorkflowBar status ladder (React #441 regression guard)", () => {
+describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
   const baseRoles = {
     isManager: false,
     isPlanner: false,
@@ -44,7 +44,7 @@ describe("WorkflowBar status ladder (React #441 regression guard)", () => {
 
     for (const status of ALL_STATUSES) {
       const { container, unmount } = render(
-        <WorkflowBar
+        <WorkflowRail
           workspaceSlug="acme"
           contentItemId="ci-1"
           status={status}
@@ -56,10 +56,11 @@ describe("WorkflowBar status ladder (React #441 regression guard)", () => {
         />,
       );
 
-      // `bg-primary-subtle` is the class the `primary` Badge variant
-      // uses (per components/ui/badge.tsx). The current status's
-      // badge should carry it; if the status is missing from the
-      // ladder, no badge carries it and we fail.
+      // `bg-primary-subtle` is the class the `primary` Badge
+      // variant uses (per components/ui/badge.tsx). The
+      // current status's badge should carry it; if the
+      // status is missing from the ladder, no badge
+      // carries it and we fail.
       const primaryBadges = container.querySelectorAll(".bg-primary-subtle");
       expect(
         primaryBadges.length,

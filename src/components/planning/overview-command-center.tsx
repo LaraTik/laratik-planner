@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CheckCircle2, Circle, Info } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Circle, Info, Pencil } from "lucide-react";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { humanFormat, humanStatus } from "@/lib/content/status";
@@ -19,17 +19,18 @@ import { ActivityTimeline, type ActivityEventView } from "./activity-timeline";
  *
  *   1. What's happening?     → Next Action card
  *   2. Is something wrong?    → Readiness summary
- *   3. What is this?         → Content summary (one-line per field)
+ *   3. What is this?         → Details (title, format, channels,
+ *                              schedule, brief, owner)
  *   4. What just happened?    → Recent activity (last 5)
  *
  * Every actionable row links to the section that resolves it
- * (Content / Creative / Publishing / Activity) so the user
- * doesn't have to hunt for the right tab.
+ * (Content / Publishing / Activity) so the user doesn't have
+ * to hunt for the right tab.
  *
  * Server-renderable — the component is a Client Component
- * only because it embeds ActivityTimeline (which is a client
- * component for the kind → icon map). The shape of props is
- * plain data.
+ * only because it embeds ActivityTimeline + the inline
+ * editors (both of which are client components). The shape
+ * of props is plain data.
  */
 export interface OverviewSummaryChannel {
   id: string;
@@ -52,6 +53,8 @@ export interface OverviewCommandCenterProps {
   workspaceSlug: string;
   contentItemId: string;
   contentStatus: string;
+  title: string;
+  brief: string;
   format: string;
   plannedPublishAt: string;
   workspaceTimezone: string;
@@ -86,6 +89,8 @@ export function OverviewCommandCenter({
   workspaceSlug,
   contentItemId,
   contentStatus,
+  title,
+  brief,
   format,
   plannedPublishAt,
   workspaceTimezone,
@@ -119,9 +124,10 @@ export function OverviewCommandCenter({
         canPublish={readinessCanPublish}
         lines={readiness}
       />
-      <ContentSummary
+      <DetailsSection
         contentItemId={contentItemId}
-        workspaceSlug={workspaceSlug}
+        title={title}
+        brief={brief}
         format={format}
         channels={channels}
         plannedPublishAt={plannedPublishAt}
@@ -129,6 +135,7 @@ export function OverviewCommandCenter({
         ownerName={ownerName ?? null}
         deliveryCount={deliveryCount}
         finalApprovedCount={finalApprovedCount}
+        editHref={editHref}
       />
       <RecentActivity
         events={recentActivity}
@@ -257,7 +264,10 @@ function nextHref(status: string, editHref: string, reviewChangesHref: string | 
     case "approved_for_design":
     case "in_design":
     case "creative_review":
-      return "#creative";
+      // Phase 3 of the planning-detail refactor (2026-08-30):
+      // "Creative" merged into Content as "Assets & versions".
+      // The Next-Action CTA now scrolls to the new anchor.
+      return "#assets-versions";
     case "ready_to_publish":
     case "partially_published":
       return "#publishing";
@@ -414,12 +424,26 @@ function StatusIcon({ status }: { status: OverviewReadinessLine["status"] }) {
 }
 
 /* ────────────────────────────────────────────────────────────────────── *
- * Content Summary
+ * Details
+ *
+ * Phase 6 of the planning-detail refactor (2026-08-30) merged
+ * the old "At a glance" card and the Content tab's "Basic
+ * information" block into a single `DetailsSection` that lives
+ * in the Overview. Editable fields render the existing
+ * `Inline*Editor` components so routine edits (title, date,
+ * brief) stay in the user's current context.
+ *
+ * The "Edit details" deep-link at the bottom opens the
+ * `/edit/[id]` route, which the header's `EditDetailsDrawer`
+ * also surfaces as a button. Both paths lead to the same form;
+ * the deep-link is the fallback for users without JS / in a
+ * preview environment.
  * ────────────────────────────────────────────────────────────────────── */
 
-function ContentSummary({
-  workspaceSlug,
+function DetailsSection({
   contentItemId,
+  title,
+  brief,
   format,
   channels,
   plannedPublishAt,
@@ -427,9 +451,11 @@ function ContentSummary({
   ownerName,
   deliveryCount,
   finalApprovedCount,
+  editHref,
 }: {
-  workspaceSlug: string;
   contentItemId: string;
+  title: string;
+  brief: string;
   format: string;
   channels: OverviewSummaryChannel[];
   plannedPublishAt: string;
@@ -437,42 +463,58 @@ function ContentSummary({
   ownerName: string | null;
   deliveryCount: number;
   finalApprovedCount: number;
+  editHref: string;
 }) {
   return (
-    <section aria-labelledby="overview-content-heading" data-testid="overview-content-summary">
-      <h2
-        id="overview-content-heading"
-        className="text-label text-fg-secondary mb-2 font-semibold uppercase"
-      >
-        At a glance
-      </h2>
+    <section aria-labelledby="overview-details-heading" data-testid="overview-content-summary">
+      <header className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <h2
+          id="overview-details-heading"
+          className="text-label text-fg-secondary font-semibold uppercase"
+        >
+          Details
+        </h2>
+        <Link
+          href={editHref}
+          className="text-label text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-1.5 py-0.5 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
+          data-testid="overview-edit-details"
+          data-content-item-id={contentItemId}
+        >
+          <Pencil className="h-3 w-3" aria-hidden="true" />
+          Edit details
+        </Link>
+      </header>
       <dl
-        className="border-border bg-surface grid grid-cols-1 divide-y divide-[color:var(--border)] overflow-hidden rounded-[var(--radius-control)] border sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3"
+        className="border-border bg-surface divide-y divide-[color:var(--border)] overflow-hidden rounded-[var(--radius-control)] border sm:grid sm:grid-cols-2 sm:divide-x sm:divide-y-0"
         data-testid="overview-content-summary-list"
       >
+        <SummaryRow
+          label="Title"
+          value={
+            <span className="text-body text-fg-primary font-semibold break-words">{title}</span>
+          }
+        />
         <SummaryRow label="Format" value={humanFormat(format)} />
         <SummaryRow label="Channels" value={channelSummary(channels)} />
         <SummaryRow
           label="Planned publish"
           value={
             <>
-              {plannedPublishAt} <span className="text-fg-muted">· {workspaceTimezone}</span>
+              {plannedPublishAt}{" "}
+              <span className="text-label text-fg-muted">· {workspaceTimezone}</span>
             </>
           }
         />
-        <SummaryRow label="Creative" value={creativeSummary(deliveryCount, finalApprovedCount)} />
         {ownerName ? <SummaryRow label="Owner" value={ownerName} /> : null}
+        <SummaryRow label="Versions" value={versionsSummary(deliveryCount, finalApprovedCount)} />
         <SummaryRow
-          label="Workspace"
+          label="Brief"
           value={
-            <Link
-              href={`/app/w/${workspaceSlug}`}
-              className="text-primary underline-offset-4 hover:underline"
-              data-testid="overview-workspace-link"
-              data-content-item-id={contentItemId}
-            >
-              Back to workspace
-            </Link>
+            brief ? (
+              <span className="text-body text-fg-primary whitespace-pre-wrap">{brief}</span>
+            ) : (
+              <span className="text-body text-fg-muted">No brief yet.</span>
+            )
           }
         />
       </dl>
@@ -480,7 +522,15 @@ function ContentSummary({
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: React.ReactNode }) {
+function SummaryRow({
+  label,
+  value,
+  children,
+}: {
+  label: string;
+  value?: React.ReactNode;
+  children?: React.ReactNode;
+}) {
   // Per the HTML5 spec, a <dl> can contain a <div> wrapper but the
   // wrapper must contain exactly one <dt> followed by one <dd>. No
   // siblings, no presentational content. The icon was dropped from
@@ -489,7 +539,7 @@ function SummaryRow({ label, value }: { label: string; value: React.ReactNode })
   return (
     <div className="px-3 py-2.5">
       <dt className="text-label text-fg-muted font-semibold uppercase">{label}</dt>
-      <dd className="text-body text-fg-primary mt-0.5 break-words">{value}</dd>
+      <dd className="text-body text-fg-primary mt-0.5 break-words">{children ?? value}</dd>
     </div>
   );
 }
@@ -501,9 +551,9 @@ function channelSummary(channels: OverviewSummaryChannel[]): string {
   return `${channels.length} channels (${configured} configured)`;
 }
 
-function creativeSummary(total: number, finalApproved: number): string {
-  if (total === 0) return "No delivery yet";
-  if (finalApproved === 0) return `${total} version${total === 1 ? "" : "s"} — none approved`;
+function versionsSummary(total: number, finalApproved: number): string {
+  if (total === 0) return "No versions yet";
+  if (finalApproved === 0) return `${total} version${total === 1 ? "" : "s"}, none approved`;
   return `${finalApproved} approved of ${total}`;
 }
 

@@ -22,6 +22,13 @@ const baseProps = {
   workspaceSlug: "acme",
   contentItemId: "ci-1",
   contentStatus: "draft",
+  // Phase 6 of the planning-detail refactor (2026-08-30):
+  // `title` / `brief` / `plannedPublishAtIso` were added to
+  // `OverviewCommandCenterProps` when the old "Basic
+  // information" block moved into the Overview's
+  // `DetailsSection`.
+  title: "Happy Hour 2",
+  brief: "Summer teaser",
   format: "static_post",
   plannedPublishAt: "2026-09-01 09:00",
   workspaceTimezone: "Europe/Berlin",
@@ -38,11 +45,15 @@ const baseProps = {
       href: "#content",
     },
     {
-      id: "creative",
-      label: "Creative",
+      // Phase 3 of the planning-detail refactor (2026-08-30)
+      // renamed the "Creative" row to "Assets & versions" and
+      // moved its anchor inside the Content tab. The test
+      // follows the page contract.
+      id: "assets-versions",
+      label: "Assets & versions",
       status: "neutral" as const,
-      detail: "No delivery versions yet",
-      href: "#creative",
+      detail: "No design versions yet",
+      href: "#assets-versions",
     },
     {
       id: "publishing",
@@ -77,9 +88,11 @@ describe("OverviewCommandCenter", () => {
     // The Content row should be a link to #content
     const contentLink = within(list).getByTestId("overview-readiness-link-content");
     expect(contentLink).toHaveAttribute("href", "#content");
-    // The Creative row should be a link to #creative
-    const creativeLink = within(list).getByTestId("overview-readiness-link-creative");
-    expect(creativeLink).toHaveAttribute("href", "#creative");
+    // Phase 3 (2026-08-30): the "Creative" row was renamed to
+    // "Assets & versions" and the href points to the new
+    // anchor inside the Content panel.
+    const assetsLink = within(list).getByTestId("overview-readiness-link-assets-versions");
+    expect(assetsLink).toHaveAttribute("href", "#assets-versions");
   });
 
   it("renders the Next Action card for a draft item with blockers", () => {
@@ -89,14 +102,16 @@ describe("OverviewCommandCenter", () => {
         contentStatus="changes_requested"
         readinessBlockers={1}
         primaryActionLabel="Review changes"
-        reviewChangesHref="#creative"
+        // Phase 3 (2026-08-30): the review-changes anchor moved
+        // inside the Content tab as "Assets & versions".
+        reviewChangesHref="#assets-versions"
       />,
     );
     const card = screen.getByTestId("overview-next-action");
     expect(card).toBeInTheDocument();
     const cta = screen.getByTestId("overview-next-action-cta");
     expect(cta).toHaveTextContent(/Review changes/);
-    expect(cta).toHaveAttribute("href", "#creative");
+    expect(cta).toHaveAttribute("href", "#assets-versions");
   });
 
   it("hides the Next Action card when the item is fully ready", () => {

@@ -21,11 +21,13 @@ import { cn } from "@/lib/utils";
  *   Publishing — per-channel setup, live preview, readiness, approval
  *   Activity   — lifecycle events + delivery history
  *
- * The strip is a sticky anchor tab nav (the same shape as the
- * Brand Kit WorkspaceTopTabs, simplified for non-icon usage).
- * Each tab is an `<a href="#section">` so deep links, middle-
- * click, and screen-reader rotor all work natively. The active
- * state is recomputed on scroll using a rAF-throttled listener.
+ * Phase 1 of the planning-detail refactor (2026-08-30) converted
+ * the strip from a scroll-spy implementation (sections were all
+ * rendered at once, the strip just highlighted the one in view)
+ * to a state-driven panel switcher. The active tab is now the
+ * authoritative state — clicking a tab switches the content area
+ * via `WorkspacePanels`. URL hash deep-linking still works
+ * (parent calls `setActiveId` after reading the initial hash).
  *
  * Accessibility:
  *   - The strip is a `<nav aria-label>`.
@@ -60,75 +62,20 @@ export interface WorkspaceTabsProps {
   /** Tab order. Tabs are rendered in the order they are passed. */
   tabs: WorkspaceTab[];
   ariaLabel: string;
-  /** Optional callback fired when the user changes tabs. */
-  onChange?: (id: WorkspaceTabId) => void;
+  /** Controlled active id. Required — the parent owns the state. */
+  value: WorkspaceTabId;
+  /** Called when the user picks a different tab. */
+  onValueChange: (id: WorkspaceTabId) => void;
   className?: string;
 }
 
-function initialActiveId(tabs: WorkspaceTab[]): WorkspaceTabId {
-  if (typeof window === "undefined") return tabs[0]?.id ?? "overview";
-  const hash = window.location.hash.replace(/^#/, "");
-  if (hash && tabs.some((t) => t.id === hash)) return hash as WorkspaceTabId;
-  return tabs[0]?.id ?? "overview";
-}
-
-export function WorkspaceTabs({ tabs, ariaLabel, onChange, className }: WorkspaceTabsProps) {
-  const [activeId, setActiveId] = React.useState<WorkspaceTabId>(() => initialActiveId(tabs));
-
-  // Hash sync — back/forward navigation and deep links.
-  React.useEffect(() => {
-    function onHashChange() {
-      const next = window.location.hash.replace(/^#/, "") as WorkspaceTabId;
-      if (next && tabs.some((t) => t.id === next)) {
-        setActiveId(next);
-        onChange?.(next);
-      }
-    }
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
-  }, [tabs, onChange]);
-
-  // Scroll spy — mark the tab whose section is nearest the top of
-  // the viewport as active. Uses a rAF-throttled scroll handler
-  // to avoid layout thrash; the trigger is 30% of the viewport
-  // height so the active state flips just before the user sees
-  // the next section header.
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    const sections = tabs
-      .map((t) => document.getElementById(t.id))
-      .filter((el): el is HTMLElement => el !== null);
-    if (sections.length === 0) return;
-
-    let rafId: number | null = null;
-    function onScroll() {
-      if (rafId !== null) return;
-      rafId = window.requestAnimationFrame(() => {
-        rafId = null;
-        const triggerY = window.innerHeight * 0.3;
-        let current: WorkspaceTabId | null = null;
-        for (const section of sections) {
-          const rect = section.getBoundingClientRect();
-          if (rect.top - triggerY <= 0) {
-            current = section.id as WorkspaceTabId;
-          } else {
-            break;
-          }
-        }
-        if (current && current !== activeId) {
-          setActiveId(current);
-          onChange?.(current);
-        }
-      });
-    }
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      if (rafId !== null) window.cancelAnimationFrame(rafId);
-    };
-  }, [tabs, activeId, onChange]);
-
+export function WorkspaceTabs({
+  tabs,
+  ariaLabel,
+  value,
+  onValueChange,
+  className,
+}: WorkspaceTabsProps) {
   return (
     <nav
       aria-label={ariaLabel}
@@ -141,18 +88,15 @@ export function WorkspaceTabs({ tabs, ariaLabel, onChange, className }: Workspac
       <ul className="flex flex-wrap items-stretch gap-1 overflow-x-auto" role="list">
         {tabs.map((tab) => {
           const Icon = WORKSPACE_TAB_ICONS[tab.id];
-          const isActive = tab.id === activeId;
+          const isActive = tab.id === value;
           return (
             <li key={tab.id} className="shrink-0">
-              <a
-                href={`#${tab.id}`}
+              <button
+                type="button"
                 aria-current={isActive ? "true" : undefined}
                 data-testid={`workspace-tab-${tab.id}`}
                 data-active={isActive || undefined}
-                onClick={() => {
-                  setActiveId(tab.id);
-                  onChange?.(tab.id);
-                }}
+                onClick={() => onValueChange(tab.id)}
                 className={cn(
                   "text-body inline-flex min-h-11 items-center gap-2 border-b-2 px-3 py-2 font-semibold transition-colors",
                   "focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
@@ -175,13 +119,61 @@ export function WorkspaceTabs({ tabs, ariaLabel, onChange, className }: Workspac
                     {tab.count}
                   </span>
                 ) : null}
-              </a>
+              </button>
             </li>
           );
         })}
       </ul>
     </nav>
   );
+}
+
+/**
+ * WorkspacePanels — state-driven content area for the workspace
+ * tabs. Renders ONLY the active panel's children (off-tab
+ * content unmounts). The parent (`WorkspaceShell`) owns the
+ * `activeId` state, the hash sync, and the `WorkspaceTabs`
+ * strip; this component is the body.
+ *
+ * Why a `panels` record instead of `children`:
+ *   - The mapping from tab to body is explicit at the call site,
+ *     which prevents the "5th section appears in the page but
+ *     not in the strip" bug the previous design had.
+ *   - The page composes the panels declaratively; off-tab content
+ *     never enters the React tree, so child effects (form state,
+ *     refs) don't leak across tabs.
+ *
+ * Render mode: `forceMount` is NOT set — Radix TabsContent
+ * unmounts on switch, which matches the spec's "clicking a tab
+ * must switch the main content area rather than simply scrolling"
+ * (planning-detail refactor §1, 2026-08-30). The previous
+ * scroll-spy DOM was deleted as part of the same refactor.
+ */
+export interface WorkspacePanelsProps {
+  /** Map of tab id → panel body. Missing keys render nothing
+   *  (defensive against server-side render races). */
+  panels: Partial<Record<WorkspaceTabId, React.ReactNode>>;
+  /** Active tab id; the matching panel is the only one rendered. */
+  value: WorkspaceTabId;
+}
+
+export function WorkspacePanels({ panels, value }: WorkspacePanelsProps) {
+  return <>{panels[value] ?? null}</>;
+}
+
+/**
+ * Resolve the initial active tab from the URL hash. Pure /
+ * SSR-safe: returns the first tab id when called server-side.
+ * The hash is intentionally read once at mount — the parent
+ * keeps a `hashchange` listener for back/forward navigation.
+ */
+export function initialActiveTabFromHash(
+  tabs: ReadonlyArray<{ id: WorkspaceTabId }>,
+): WorkspaceTabId {
+  if (typeof window === "undefined") return tabs[0]?.id ?? "overview";
+  const hash = window.location.hash.replace(/^#/, "");
+  if (hash && tabs.some((t) => t.id === hash)) return hash as WorkspaceTabId;
+  return tabs[0]?.id ?? "overview";
 }
 
 /**

@@ -7,13 +7,16 @@ import { ReasonDialog } from "@/components/forms/reason-dialog";
 
 /**
  * ApprovalTimeline — the "Approval requests" list under the workflow
- * bar on the content detail page. Extracted from `workflow-bar.tsx`
- * so the rendering of the approval request(s) lives in one typed
- * surface and the workflow bar is reduced to transition orchestration
- * (the click → action → revalidatePath plumbing).
+ * bar on the content detail page. Extracted from the legacy
+ * `workflow-bar.tsx` (which was deleted in the planning-detail
+ * refactor on 2026-08-30; the workflow now lives in
+ * `@/components/planning/workflow-rail.tsx`) so the rendering
+ * of the approval request(s) lives in one typed surface and the
+ * rail is reduced to transition orchestration (the click → action
+ * → revalidatePath plumbing).
  *
  * The component takes pre-shaped approval rows + the current actor's
- * role set + typed callbacks. The parent (WorkflowBar) is the only
+ * role set + typed callbacks. The parent (WorkflowRail) is the only
  * place that knows how to talk to the server action; this component
  * is pure rendering + interaction.
  */

@@ -17,7 +17,7 @@ vi.mock("react-dom", async (importOriginal) => {
   return { ...actual, useFormStatus: vi.fn(() => ({ pending: false })) };
 });
 
-import { WorkflowBar } from "@/app/(app)/app/w/[slug]/planning/[id]/workflow-bar";
+import { WorkflowRail } from "@/components/planning/workflow-rail";
 import { DeliverySection } from "@/app/(app)/app/w/[slug]/planning/[id]/delivery-section";
 import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
 import { CommentForm } from "@/components/comments/comment-form";
@@ -71,11 +71,18 @@ function runWithoutThrowing(render: () => void): unknown {
 }
 
 describe("planning detail components — hooks order guard", () => {
-  it("WorkflowBar: same instance, role/approval state transitions keep hook count stable", () => {
+  it("WorkflowRail: same instance, role/approval state transitions keep hook count stable", () => {
+    // Phase 5 of the planning-detail refactor (2026-08-30)
+    // moved the action buttons + approval timeline from
+    // the legacy `WorkflowBar` (which is no longer rendered)
+    // into the new `WorkflowRail`. The hook ordering risk
+    // is the same: action branches via early-return in
+    // `currentEligibleRoles.some(...)` + `hasAnyButton`
+    // could move hooks below a conditional.
     const cap = captureConsoleError();
     try {
       const { rerender } = render(
-        <WorkflowBar
+        <WorkflowRail
           workspaceSlug="acme"
           contentItemId="ci-1"
           status="draft"
@@ -93,10 +100,13 @@ describe("planning detail components — hooks order guard", () => {
           designers={[]}
         />,
       );
-      // Same instance, different prop state.
+      // Same instance, different prop state — moves the
+      // current stage from "draft" to "content_review",
+      // which flips the eligible-roles branch and the
+      // action-button block.
       const err = runWithoutThrowing(() =>
         rerender(
-          <WorkflowBar
+          <WorkflowRail
             workspaceSlug="acme"
             contentItemId="ci-1"
             status="content_review"
