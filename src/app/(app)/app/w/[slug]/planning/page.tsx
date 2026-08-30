@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Clock, Files, Plus, FileText, Download, AlertTriangle, LayoutGrid } from "lucide-react";
 import { PageHeader } from "@/components/workspace/page-header";
-import { PlanningListItem, PlanningListItemList } from "@/components/workspace/planning-list-item";
+import { PlanningListActions } from "@/components/workspace/planning-list-actions";
+import { PlanningListGrouped } from "@/components/workspace/planning-list-grouped";
+import { PlanningFiltersBar } from "@/components/workspace/planning-filters-bar";
 import { MonthNav } from "@/components/workspace/month-nav";
-import { PlanningFilters } from "@/components/workspace/planning-filters";
 import { PlanningKpiBar } from "@/components/workspace/planning-kpi-bar";
 import { Pagination } from "@/components/workspace/pagination";
 import { describeActiveFilter } from "./filter-describe";
@@ -329,21 +330,16 @@ export default async function PlanningPage({
         }
       />
 
-      <div className="border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-card)] border p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div className="border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-card)] border p-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
         <MonthNav month={now} buildHref={buildMonthHref} />
-        <PlanningFilters
-          targetPath={`/app/w/${slug}/planning`}
+        <PlanningFiltersBar
+          basePath={`/app/w/${slug}/planning`}
           monthParam={monthParam(0)}
-          selectedStatus={selectedStatus}
-          selectedFormat={selectedFormat}
-          selectedOwnerId={ownerFilter}
-          searchValue={searchTerm}
-          density={density}
-          hasFilter={hasFilter}
           members={memberRows.map((m) => ({
             id: m.id,
             label: m.displayName ?? m.name ?? m.id.slice(0, 8),
           }))}
+          channels={[]}
         />
       </div>
 
@@ -431,18 +427,25 @@ export default async function PlanningPage({
         />
       ) : (
         <>
-          <PlanningListItemList>
-            {visibleItems.map((it) => (
-              <PlanningListItem
-                key={it.id}
-                item={it}
+          <PlanningListGrouped
+            items={visibleItems}
+            workspaceSlug={slug}
+            workspaceTimezone={ws.timezone}
+            density={density}
+            now={nowRef}
+            grouped={!hasFilter}
+            actions={(it) => (
+              <PlanningListActions
                 workspaceSlug={slug}
-                workspaceTimezone={ws.timezone}
-                density={density}
-                now={nowRef}
+                itemId={it.id}
+                itemTitle={it.title}
+                status={it.status}
+                canEdit={canCreate && (it.status === "draft" || it.status === "changes_requested")}
+                canSubmit={canCreate}
+                canArchive={canCreate}
               />
-            ))}
-          </PlanningListItemList>
+            )}
+          />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
