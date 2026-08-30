@@ -17,7 +17,7 @@ import { PlanningHeader } from "@/components/planning/planning-header";
 import { PlanningSection } from "@/components/planning/planning-section";
 import { ReadinessPanel } from "@/components/planning/readiness-panel";
 import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
-import { ActivityTimeline } from "@/components/planning/activity-timeline";
+import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
 import { FormatPayloadEditor } from "@/components/forms/format-payload-editor";
 import { InlineBriefEditor, InlineDateEditor, InlineTitleEditor } from "./inline-editable-fields";
 import { WorkflowBar } from "./workflow-bar";
@@ -659,7 +659,7 @@ export default async function ContentDetailPage({
               previous design always rendered an "Activity" card even
               when empty; that wasted vertical space. */}
           {activityEvents.length > 0 ? (
-            <ActivityTimeline events={activityEvents} />
+            <ActivityWithFilters events={activityEvents} />
           ) : (
             <PlanningSection
               id="activity-empty"
