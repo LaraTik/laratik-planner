@@ -33,7 +33,8 @@ import { FormatPayloadEditor } from "@/components/forms/format-payload-editor";
 // moved into the Overview's `DetailsSection` (see
 // `@/components/planning/overview-command-center`). The
 // source component (`./inline-editable-fields`) is unchanged.
-import { WorkflowRail, WorkflowSheet } from "@/components/planning/workflow-rail";
+import { WorkflowSheet } from "@/components/planning/workflow-rail";
+import { PlanningDetailShell } from "@/components/planning/planning-detail-shell";
 import { DeliverySection } from "./delivery-section";
 import { AiAssistancePanel } from "@/components/planning/ai-assistance-panel";
 import { getResetIdeaCounts, EMPTY_RESET_IDEA_COUNTS } from "@/lib/content/reset-idea";
@@ -47,7 +48,6 @@ import { AI_CAPABILITY_METADATA } from "@/lib/ai/capabilities";
 import { parseFormatPayload } from "@/lib/format-payload/schemas";
 import { WorkflowStepper } from "@/components/planning/workflow-stepper";
 import { PlatformPreview } from "@/components/planning/platform-preview";
-import { WorkspaceShell } from "./workspace-shell";
 import { type WorkspaceTab } from "@/components/planning/workspace-tabs";
 import { PublishPackageForm } from "./publish/publish-package-form";
 
@@ -495,149 +495,141 @@ export default async function ContentDetailPage({
   ];
 
   return (
-    <div className="space-y-6" data-testid="workspace-content-detail">
-      {/* Compact header — answers the four questions at a glance */}
-      <PlanningHeader
-        workspaceSlug={slug}
-        workspaceName={ws.name}
-        workspaceTimezone={ws.timezone}
-        contentItemId={item.id}
-        title={item.title}
-        format={item.format}
-        status={item.status}
-        channels={item.channels.map((ch) => ({
-          platform: ch.platform,
-          accountName: ch.accountName,
-        }))}
-        plannedPublishAt={item.plannedPublishAt.toLocaleString()}
-        owner={owner}
-        primaryAction={primaryAction}
-        meta={<WorkflowStepper status={item.status} size="compact" />}
-      />
-
-      {/* Workflow — Phase 4 of the planning-detail refactor
-          (2026-08-30) split this into two responsive variants:
-            - Desktop (`lg+`): `WorkflowRail` — right-side column
-              with collapse/expand + localStorage persistence.
-            - Mobile (`<lg`): `WorkflowSheet` — a compact trigger
-              pill under the header that opens a bottom sheet.
-          The legacy top-of-page `WorkflowBar` (the original
-          implementation) was deleted in the dead-code cleanup
-          pass; its action button tree + approval timeline
-          now live inside `WorkflowRail`. The `workflow` anchor
-          is preserved for legacy hash deep links from the
-          planning list. */}
-      <div className="space-y-3">
-        <div className="lg:hidden">
-          <WorkflowSheet
-            workspaceSlug={slug}
-            contentItemId={item.id}
-            status={item.status}
-            blockedReason={item.blockedReason}
-            cancellationReason={item.cancellationReason}
-            roles={actorRoles}
-            approvals={approvals.map((a) => ({
-              id: a.id,
-              gate: a.gate,
-              status: a.status,
-              requestedAt: a.requestedAt.toISOString(),
-              deliveryVersionId: a.deliveryVersionId,
-            }))}
-            designers={designers}
-          />
-        </div>
-        <div id="workflow" className="hidden scroll-mt-24 lg:block">
-          <WorkflowRail
-            workspaceSlug={slug}
-            contentItemId={item.id}
-            status={item.status}
-            blockedReason={item.blockedReason}
-            cancellationReason={item.cancellationReason}
-            roles={actorRoles}
-            approvals={approvals.map((a) => ({
-              id: a.id,
-              gate: a.gate,
-              status: a.status,
-              requestedAt: a.requestedAt.toISOString(),
-              deliveryVersionId: a.deliveryVersionId,
-            }))}
-            designers={designers}
-          />
-        </div>
-      </div>
-
-      {/* Tabbed workspace + drawer + overflow menu. Phase 1 of the
-          planning-detail refactor (2026-08-30) replaced the previous
-          scroll-spy `children` pattern with a `panels` record keyed
-          by `WorkspaceTabId`. The shell now renders only the active
-          panel — off-tab content unmounts. The 5 in-page sections
-          (overview, content, creative, publishing, activity) become
-          4 panels; the Creative section moves inside the Content
-          panel for now (its `id="creative"` survives so the
-          Overview's Creative readiness row still scrolls to it).
-          Phase 3 retires the Creative section's testID. */}
-      <WorkspaceShell
-        workspaceSlug={slug}
-        contentItemId={item.id}
-        ideaTitle={item.title}
-        comments={discussionComments.map((c) => ({
-          ...c,
-          createdAt: c.createdAt.toISOString(),
-          editedAt: c.editedAt ? c.editedAt.toISOString() : null,
-          resolvedAt: c.resolvedAt ? c.resolvedAt.toISOString() : null,
-        }))}
-        currentUserId={actor.id}
-        roles={actorRoles}
-        canPostInternal={canPostInternal}
-        canPostClientVisible={canPostClientVisible}
-        tabs={tabs}
-        panels={{
-          overview: (
-            <section
-              id="overview"
-              className="scroll-mt-24"
-              data-testid="workspace-tab-panel-overview"
-            >
-              <OverviewCommandCenter
+    <div data-testid="workspace-content-detail">
+      {/* Three-zone application shell: header (top, spans the
+          center column) + center workspace + sticky right rail.
+          The `PlanningDetailShell` is a thin client wrapper that
+          owns the grid layout, the right-rail collapse state, and
+          the responsive breakpoint switches. The page itself
+          stays a Server Component — only the shell is "use client". */}
+      <PlanningDetailShell
+        header={
+          <>
+            {/* Mobile-only workflow trigger. The page is a
+                Server Component, so it can render the
+                <WorkflowSheet> (a Radix Dialog) directly without
+                a client boundary for the trigger itself. The
+                sheet only appears on <lg viewports. */}
+            <div className="lg:hidden">
+              <WorkflowSheet
                 workspaceSlug={slug}
                 contentItemId={item.id}
-                contentStatus={item.status}
-                title={item.title}
-                brief={item.brief ?? ""}
-                format={item.format}
-                plannedPublishAt={item.plannedPublishAt.toLocaleString()}
-                workspaceTimezone={ws.timezone}
-                channels={item.channels.map((ch) => {
-                  const cfg = channelConfigs.find((c) => c.id === ch.id);
-                  return {
-                    id: ch.id,
-                    platform: ch.platform,
-                    accountName: ch.accountName,
-                    configured: cfg?.configured ?? false,
-                  };
-                })}
-                ownerName={owner?.displayName ?? null}
-                readinessBlockers={readiness.blockers}
-                readinessCanPublish={readiness.canPublish}
-                readiness={overviewReadinessLines}
-                deliveryCount={deliveryCount}
-                finalApprovedCount={finalApprovedCount}
-                recentActivity={recentActivity}
-                totalActivityCount={activityEvents.length}
-                canEdit={canEdit}
-                editHref={editHref}
-                primaryActionLabel={primaryActionLabel}
-                reviewChangesHref={reviewChangesHref}
+                status={item.status}
+                blockedReason={item.blockedReason}
+                cancellationReason={item.cancellationReason}
+                roles={actorRoles}
+                approvals={approvals.map((a) => ({
+                  id: a.id,
+                  gate: a.gate,
+                  status: a.status,
+                  requestedAt: a.requestedAt.toISOString(),
+                  deliveryVersionId: a.deliveryVersionId,
+                }))}
+                designers={designers}
               />
-            </section>
-          ),
-          content: (
-            <section
-              id="content"
-              className="mt-6 scroll-mt-24 space-y-6"
-              data-testid="workspace-tab-panel-content"
-            >
-              {/* Phase 6 of the planning-detail refactor (2026-08-30):
+            </div>
+            {/* Compact header — answers the four questions at a
+                glance (back link, title, status, action). The
+                workflow status stepper stays inside the header
+                so the user can see the lifecycle at a glance
+                even on the smallest viewport. */}
+            <PlanningHeader
+              workspaceSlug={slug}
+              workspaceName={ws.name}
+              workspaceTimezone={ws.timezone}
+              contentItemId={item.id}
+              title={item.title}
+              format={item.format}
+              status={item.status}
+              channels={item.channels.map((ch) => ({
+                platform: ch.platform,
+                accountName: ch.accountName,
+              }))}
+              plannedPublishAt={item.plannedPublishAt.toLocaleString()}
+              owner={owner}
+              primaryAction={primaryAction}
+              meta={<WorkflowStepper status={item.status} size="compact" />}
+            />
+          </>
+        }
+        workflow={{
+          workspaceSlug: slug,
+          contentItemId: item.id,
+          status: item.status,
+          blockedReason: item.blockedReason,
+          cancellationReason: item.cancellationReason,
+          roles: actorRoles,
+          approvals: approvals.map((a) => ({
+            id: a.id,
+            gate: a.gate,
+            status: a.status,
+            requestedAt: a.requestedAt.toISOString(),
+            deliveryVersionId: a.deliveryVersionId,
+          })),
+          designers,
+        }}
+        workspace={{
+          workspaceSlug: slug,
+          contentItemId: item.id,
+          ideaTitle: item.title,
+          comments: discussionComments.map((c) => ({
+            ...c,
+            createdAt: c.createdAt.toISOString(),
+            editedAt: c.editedAt ? c.editedAt.toISOString() : null,
+            resolvedAt: c.resolvedAt ? c.resolvedAt.toISOString() : null,
+          })),
+          currentUserId: actor.id,
+          roles: actorRoles,
+          canPostInternal,
+          canPostClientVisible,
+          tabs,
+          panels: {
+            overview: (
+              <section
+                id="overview"
+                className="scroll-mt-24"
+                data-testid="workspace-tab-panel-overview"
+              >
+                <OverviewCommandCenter
+                  workspaceSlug={slug}
+                  contentItemId={item.id}
+                  contentStatus={item.status}
+                  title={item.title}
+                  brief={item.brief ?? ""}
+                  format={item.format}
+                  plannedPublishAt={item.plannedPublishAt.toLocaleString()}
+                  workspaceTimezone={ws.timezone}
+                  channels={item.channels.map((ch) => {
+                    const cfg = channelConfigs.find((c) => c.id === ch.id);
+                    return {
+                      id: ch.id,
+                      platform: ch.platform,
+                      accountName: ch.accountName,
+                      configured: cfg?.configured ?? false,
+                    };
+                  })}
+                  ownerName={owner?.displayName ?? null}
+                  readinessBlockers={readiness.blockers}
+                  readinessCanPublish={readiness.canPublish}
+                  readiness={overviewReadinessLines}
+                  deliveryCount={deliveryCount}
+                  finalApprovedCount={finalApprovedCount}
+                  recentActivity={recentActivity}
+                  totalActivityCount={activityEvents.length}
+                  canEdit={canEdit}
+                  editHref={editHref}
+                  primaryActionLabel={primaryActionLabel}
+                  reviewChangesHref={reviewChangesHref}
+                />
+              </section>
+            ),
+            content: (
+              <section
+                id="content"
+                className="mt-6 scroll-mt-24 space-y-6"
+                data-testid="workspace-tab-panel-content"
+              >
+                {/* Phase 6 of the planning-detail refactor (2026-08-30):
                   the "Basic information" block (title, brief, planned
                   publish) was moved into the Overview's `DetailsSection`,
                   where the same inline editors are mounted. The Content
@@ -645,9 +637,71 @@ export default async function ContentDetailPage({
                   preview, which is the working surface the planner /
                   editor actually came for. */}
 
-              {/* Live preview + per-channel structure for the content tab */}
-              {item.channels.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(0,360px)]">
+                {/* Live preview + per-channel structure for the content tab */}
+                {item.channels.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(0,360px)]">
+                    <PlanningSection
+                      id="creative"
+                      title="Creative brief"
+                      description="The per-format fields (caption, hook, scenes, …). AI suggestions are inline per field."
+                    >
+                      <FormatPayloadEditor
+                        workspaceSlug={slug}
+                        contentItemId={item.id}
+                        format={item.format}
+                        initial={(() => {
+                          try {
+                            return parseFormatPayload(
+                              item.format,
+                              (item as { formatPayload?: unknown }).formatPayload,
+                            ) as Record<string, unknown>;
+                          } catch {
+                            return { schemaVersion: 1 };
+                          }
+                        })()}
+                        editable={canEdit}
+                        locale={activeLocale}
+                        aiEnabled={aiLive && captionDraftsEnabled}
+                      />
+                    </PlanningSection>
+                    <div className="space-y-3">
+                      <h3 className="text-title-card text-fg-primary font-semibold">
+                        Live preview
+                      </h3>
+                      {item.channels[0] ? (
+                        <PlatformPreview
+                          platform={item.channels[0].platform}
+                          accountName={item.channels[0].accountName}
+                          caption={
+                            (
+                              parseFormatPayload(
+                                item.format,
+                                (item as { formatPayload?: unknown }).formatPayload,
+                              ) as { caption?: string }
+                            ).caption ??
+                            item.brief ??
+                            ""
+                          }
+                          {...((
+                            parseFormatPayload(
+                              item.format,
+                              (item as { formatPayload?: unknown }).formatPayload,
+                            ) as { hashtags?: string[] }
+                          ).hashtags
+                            ? {
+                                hashtags: (
+                                  parseFormatPayload(
+                                    item.format,
+                                    (item as { formatPayload?: unknown }).formatPayload,
+                                  ) as { hashtags?: string[] }
+                                ).hashtags,
+                              }
+                            : {})}
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
                   <PlanningSection
                     id="creative"
                     title="Creative brief"
@@ -672,103 +726,43 @@ export default async function ContentDetailPage({
                       aiEnabled={aiLive && captionDraftsEnabled}
                     />
                   </PlanningSection>
-                  <div className="space-y-3">
-                    <h3 className="text-title-card text-fg-primary font-semibold">Live preview</h3>
-                    {item.channels[0] ? (
-                      <PlatformPreview
-                        platform={item.channels[0].platform}
-                        accountName={item.channels[0].accountName}
-                        caption={
-                          (
-                            parseFormatPayload(
-                              item.format,
-                              (item as { formatPayload?: unknown }).formatPayload,
-                            ) as { caption?: string }
-                          ).caption ??
-                          item.brief ??
-                          ""
-                        }
-                        {...((
-                          parseFormatPayload(
-                            item.format,
-                            (item as { formatPayload?: unknown }).formatPayload,
-                          ) as { hashtags?: string[] }
-                        ).hashtags
-                          ? {
-                              hashtags: (
-                                parseFormatPayload(
-                                  item.format,
-                                  (item as { formatPayload?: unknown }).formatPayload,
-                                ) as { hashtags?: string[] }
-                              ).hashtags,
-                            }
-                          : {})}
-                      />
-                    ) : null}
-                  </div>
-                </div>
-              ) : (
-                <PlanningSection
-                  id="creative"
-                  title="Creative brief"
-                  description="The per-format fields (caption, hook, scenes, …). AI suggestions are inline per field."
-                >
-                  <FormatPayloadEditor
-                    workspaceSlug={slug}
-                    contentItemId={item.id}
-                    format={item.format}
-                    initial={(() => {
-                      try {
-                        return parseFormatPayload(
-                          item.format,
-                          (item as { formatPayload?: unknown }).formatPayload,
-                        ) as Record<string, unknown>;
-                      } catch {
-                        return { schemaVersion: 1 };
-                      }
-                    })()}
-                    editable={canEdit}
-                    locale={activeLocale}
-                    aiEnabled={aiLive && captionDraftsEnabled}
-                  />
-                </PlanningSection>
-              )}
+                )}
 
-              {aiLive ? (
-                <div
-                  className="flex flex-wrap items-center justify-between gap-2"
-                  data-testid="content-ai-section"
-                >
-                  <p className="text-label text-fg-secondary font-semibold uppercase">
-                    AI assistance
-                  </p>
-                  <div className="flex items-center gap-2">
-                    {canEdit ? (
-                      <AiAssistancePanel
-                        workspaceSlug={slug}
-                        contentItemId={item.id}
-                        contentStatus={item.status}
-                        isManager={actorRoles.isManager}
-                        isPlanner={actorRoles.isPlanner}
-                        enabledCapabilities={enabledCapabilities}
-                        agencyEnabled={agencyEnabled}
-                        hasKey={hasKey}
-                        currentBrief={item.brief ?? ""}
-                      />
-                    ) : null}
-                    {canEdit ? (
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/app/w/${slug}/ai-settings`}>
-                          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                          AI settings
-                        </Link>
-                      </Button>
-                    ) : null}
+                {aiLive ? (
+                  <div
+                    className="flex flex-wrap items-center justify-between gap-2"
+                    data-testid="content-ai-section"
+                  >
+                    <p className="text-label text-fg-secondary font-semibold uppercase">
+                      AI assistance
+                    </p>
+                    <div className="flex items-center gap-2">
+                      {canEdit ? (
+                        <AiAssistancePanel
+                          workspaceSlug={slug}
+                          contentItemId={item.id}
+                          contentStatus={item.status}
+                          isManager={actorRoles.isManager}
+                          isPlanner={actorRoles.isPlanner}
+                          enabledCapabilities={enabledCapabilities}
+                          agencyEnabled={agencyEnabled}
+                          hasKey={hasKey}
+                          currentBrief={item.brief ?? ""}
+                        />
+                      ) : null}
+                      {canEdit ? (
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link href={`/app/w/${slug}/ai-settings`}>
+                            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                            AI settings
+                          </Link>
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              ) : null}
+                ) : null}
 
-              {/* Assets & Versions — designer submissions, version
+                {/* Assets & Versions — designer submissions, version
                   history, and feedback. Phase 3 of the planning-
                   detail refactor (2026-08-30) merged the orphan
                   "Creative" tab into the Content panel and
@@ -777,45 +771,45 @@ export default async function ContentDetailPage({
                   technical model (`delivery_versions`) is
                   unchanged; only the visible label and anchor
                   moved. */}
-              <section
-                id="assets-versions"
-                className="scroll-mt-24 space-y-4"
-                data-testid="content-assets-versions"
-              >
-                <PlanningSection
-                  id="delivery"
-                  title="Assets & versions"
-                  description="Design versions uploaded by the designer, plus the final-copy approval."
+                <section
+                  id="assets-versions"
+                  className="scroll-mt-24 space-y-4"
+                  data-testid="content-assets-versions"
                 >
-                  <DeliverySection
-                    workspaceSlug={slug}
-                    contentItemId={item.id}
-                    contentStatus={item.status}
-                    isDesigner={actorRoles.isDesigner}
-                    isManager={actorRoles.isManager}
-                    viewerIsClient={actorRoles.isClientReviewer}
-                    deliveries={deliveries.map((d) => ({
-                      id: d.id,
-                      versionNumber: d.versionNumber,
-                      description: d.description,
-                      designerNote: d.designerNote,
-                      submittedAt: d.submittedAt.toISOString(),
-                      isFinalApproved: d.isFinalApproved,
-                      submittedBy: d.submittedBy,
-                      links: d.links,
-                    }))}
-                  />
-                </PlanningSection>
+                  <PlanningSection
+                    id="delivery"
+                    title="Assets & versions"
+                    description="Design versions uploaded by the designer, plus the final-copy approval."
+                  >
+                    <DeliverySection
+                      workspaceSlug={slug}
+                      contentItemId={item.id}
+                      contentStatus={item.status}
+                      isDesigner={actorRoles.isDesigner}
+                      isManager={actorRoles.isManager}
+                      viewerIsClient={actorRoles.isClientReviewer}
+                      deliveries={deliveries.map((d) => ({
+                        id: d.id,
+                        versionNumber: d.versionNumber,
+                        description: d.description,
+                        designerNote: d.designerNote,
+                        submittedAt: d.submittedAt.toISOString(),
+                        isFinalApproved: d.isFinalApproved,
+                        submittedBy: d.submittedBy,
+                        links: d.links,
+                      }))}
+                    />
+                  </PlanningSection>
+                </section>
               </section>
-            </section>
-          ),
-          publishing: (
-            <section
-              id="publishing"
-              className="mt-6 scroll-mt-24 space-y-4"
-              data-testid="workspace-tab-panel-publishing"
-            >
-              {/*
+            ),
+            publishing: (
+              <section
+                id="publishing"
+                className="mt-6 scroll-mt-24 space-y-4"
+                data-testid="workspace-tab-panel-publishing"
+              >
+                {/*
                 Phase 7 of the planning-detail refactor (2026-08-30)
                 absorbed the standalone `/publish` route into the
                 Publishing tab. The `ChannelPublishingCard` list
@@ -830,110 +824,111 @@ export default async function ContentDetailPage({
                 `/publish` route still exists as a server-side
                 redirect (see `publish/page.tsx`).
               */}
-              {item.channels.length === 0 ? (
-                <p className="text-body text-fg-muted">
-                  No channels selected. Add a channel first, then configure the publishing setup.
-                </p>
-              ) : (
-                <div className="space-y-3" data-testid="publishing-cards">
-                  {item.channels.map((ch) => {
-                    const cfg = channelConfigs.find((c) => c.id === ch.id);
-                    const pub = publicationByChannel.get(ch.id);
-                    return (
-                      <ChannelPublishingCard
-                        key={ch.id}
-                        workspaceSlug={slug}
-                        channel={{
-                          id: ch.id,
-                          platform: ch.platform,
-                          accountName: ch.accountName,
-                          configured: cfg?.configured ?? false,
-                        }}
-                        publication={pub ? { ...pub.publication_record } : null}
-                        isPublisher={actorRoles.isPublisher || actorRoles.isManager}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-
-              {item.channels.length > 0 ? (
-                <div className="mt-4" data-testid="publish-package-form-mount">
-                  <PublishPackageForm
-                    workspaceId={ws.id}
-                    workspaceSlug={slug}
-                    contentItemId={item.id}
-                    itemTitle={item.title}
-                    itemFormat={item.format}
-                    formatPayloadPreFill={mapFormatPayloadToPlatform({
-                      format: item.format,
-                      formatPayload: (item as { formatPayload?: unknown }).formatPayload,
+                {item.channels.length === 0 ? (
+                  <p className="text-body text-fg-muted">
+                    No channels selected. Add a channel first, then configure the publishing setup.
+                  </p>
+                ) : (
+                  <div className="space-y-3" data-testid="publishing-cards">
+                    {item.channels.map((ch) => {
+                      const cfg = channelConfigs.find((c) => c.id === ch.id);
+                      const pub = publicationByChannel.get(ch.id);
+                      return (
+                        <ChannelPublishingCard
+                          key={ch.id}
+                          workspaceSlug={slug}
+                          channel={{
+                            id: ch.id,
+                            platform: ch.platform,
+                            accountName: ch.accountName,
+                            configured: cfg?.configured ?? false,
+                          }}
+                          publication={pub ? { ...pub.publication_record } : null}
+                          isPublisher={actorRoles.isPublisher || actorRoles.isManager}
+                        />
+                      );
                     })}
-                    channels={item.channels.map((c) => ({
-                      id: c.id,
-                      socialChannelId: c.socialChannelId,
-                      platform: c.platform,
-                      accountName: c.accountName,
-                      // The strict `PlatformPayload` discriminated
-                      // union comes from the publish-package form.
-                      // The lookup is widened through
-                      // `Record<string, unknown>` because the
-                      // `readAllChannelPayloads` return type
-                      // tracks the per-platform schema; the form
-                      // itself handles the validation on save.
-                      payload: ((channelPayloads as Record<string, unknown>)[c.socialChannelId] ??
-                        null) as never,
-                    }))}
-                    deliveryVersions={deliveries.map((d) => ({
-                      id: d.id,
-                      versionNumber: d.versionNumber,
-                      isFinalApproved: d.isFinalApproved,
-                    }))}
-                    readiness={readiness}
-                    canEdit={canEdit}
-                    canApproveFinalCopy={canApproveFinalCopy}
-                    canConfirmReadiness={canConfirmReadiness}
-                  />
-                </div>
-              ) : null}
-            </section>
-          ),
-          activity: (
-            <section
-              id="activity"
-              className="mt-6 scroll-mt-24 space-y-4"
-              data-testid="workspace-tab-panel-activity"
-            >
-              {/* Lifecycle events — only when there's at least one. The
+                  </div>
+                )}
+
+                {item.channels.length > 0 ? (
+                  <div className="mt-4" data-testid="publish-package-form-mount">
+                    <PublishPackageForm
+                      workspaceId={ws.id}
+                      workspaceSlug={slug}
+                      contentItemId={item.id}
+                      itemTitle={item.title}
+                      itemFormat={item.format}
+                      formatPayloadPreFill={mapFormatPayloadToPlatform({
+                        format: item.format,
+                        formatPayload: (item as { formatPayload?: unknown }).formatPayload,
+                      })}
+                      channels={item.channels.map((c) => ({
+                        id: c.id,
+                        socialChannelId: c.socialChannelId,
+                        platform: c.platform,
+                        accountName: c.accountName,
+                        // The strict `PlatformPayload` discriminated
+                        // union comes from the publish-package form.
+                        // The lookup is widened through
+                        // `Record<string, unknown>` because the
+                        // `readAllChannelPayloads` return type
+                        // tracks the per-platform schema; the form
+                        // itself handles the validation on save.
+                        payload: ((channelPayloads as Record<string, unknown>)[c.socialChannelId] ??
+                          null) as never,
+                      }))}
+                      deliveryVersions={deliveries.map((d) => ({
+                        id: d.id,
+                        versionNumber: d.versionNumber,
+                        isFinalApproved: d.isFinalApproved,
+                      }))}
+                      readiness={readiness}
+                      canEdit={canEdit}
+                      canApproveFinalCopy={canApproveFinalCopy}
+                      canConfirmReadiness={canConfirmReadiness}
+                    />
+                  </div>
+                ) : null}
+              </section>
+            ),
+            activity: (
+              <section
+                id="activity"
+                className="mt-6 scroll-mt-24 space-y-4"
+                data-testid="workspace-tab-panel-activity"
+              >
+                {/* Lifecycle events — only when there's at least one. The
                   previous design always rendered an "Activity" card even
                   when empty; that wasted vertical space. */}
-              {activityEvents.length > 0 ? (
-                <ActivityWithFilters events={activityEvents} />
-              ) : (
-                <PlanningSection
-                  id="activity-empty"
-                  title="Activity"
-                  description="Lifecycle events will appear here as the item moves through the workflow."
-                >
-                  <p className="text-body text-fg-muted">
-                    No activity yet. Submit, comment, or upload a delivery to start the timeline.
-                  </p>
-                </PlanningSection>
-              )}
-            </section>
-          ),
+                {activityEvents.length > 0 ? (
+                  <ActivityWithFilters events={activityEvents} />
+                ) : (
+                  <PlanningSection
+                    id="activity-empty"
+                    title="Activity"
+                    description="Lifecycle events will appear here as the item moves through the workflow."
+                  >
+                    <p className="text-body text-fg-muted">
+                      No activity yet. Submit, comment, or upload a delivery to start the timeline.
+                    </p>
+                  </PlanningSection>
+                )}
+              </section>
+            ),
+          },
+          canResetIdea,
+          resetCounts,
+          activityCount: activityEvents.length,
+          openCommentCount: openCommentsCount,
+          mentionCount,
         }}
-        canResetIdea={canResetIdea}
-        resetCounts={resetCounts}
-        activityCount={activityEvents.length}
-        openCommentCount={openCommentsCount}
-        mentionCount={mentionCount}
+        footer={
+          <p className="text-label text-fg-muted text-center">
+            Last updated {item.updatedAt.toLocaleString()} · Revision {readiness.revision}
+          </p>
+        }
       />
-
-      {/* Audit row — meta info that doesn't fit anywhere else */}
-      <p className="text-label text-fg-muted text-center">
-        Last updated {item.updatedAt.toLocaleString()} · Revision {readiness.revision}
-      </p>
     </div>
   );
 }
