@@ -13,6 +13,7 @@ import {
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { contentItems, workspaces } from "@/lib/db/schema";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
@@ -47,9 +48,24 @@ export default async function MyWorkPage() {
   const weekEnd = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000);
   const nowMs = now.getTime();
 
-  // Pull every item I have any stake in (owner / designer / reviewer),
-  // archive-free. Capped at 200 to keep the page snappy; the KPI tiles
-  // and "Needs attention" list don't need more than that.
+  // My Work is scoped to the ACTIVE agency only. A user who belongs
+  // to multiple agencies sees items from the agency they are
+  // currently in — the agency switcher in the sidebar is the
+  // canonical way to see another agency's queue. The previous
+  // behavior (no agency filter) leaked cross-tenant data: the
+  // "Needs attention" list would surface items from another
+  // agency, and clicking one would navigate to a workspace URL
+  // that the WorkspaceLayout re-resolves to the active agency,
+  // so the page would 404 the idea and the user would see the
+  // error page. Scoping at the data layer is the correct fix.
+  const ctx = await resolveActiveAgencyContext({ actor: { id: userId } });
+  const activeAgencyId = ctx?.agencyId ?? null;
+  if (!activeAgencyId) return null;
+
+  // Pull every item I have any stake in (owner / designer / reviewer)
+  // WITHIN the active agency, archive-free. Capped at 200 to keep the
+  // page snappy; the KPI tiles and "Needs attention" list don't need
+  // more than that.
   const myItems = await db
     .select({
       id: contentItems.id,
@@ -69,6 +85,7 @@ export default async function MyWorkPage() {
     .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
     .where(
       and(
+        eq(workspaces.agencyId, activeAgencyId),
         isNull(contentItems.archivedAt),
         or(
           eq(contentItems.contentOwnerId, userId),
