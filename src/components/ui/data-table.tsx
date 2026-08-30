@@ -24,11 +24,29 @@ import { cn } from "@/lib/utils";
  * `hidden <breakpoint>:table-cell` so the column is removed from the
  * table layout on small screens (rather than just being 0-width).
  *
- * When `getRowHref` is supplied, every row becomes a link to that
- * href and the row is keyboard-navigable: Enter activates the link,
- * rows are focusable, and a clear focus ring is rendered. The last
- * cell stops click propagation so action buttons / kebab menus stay
- * interactive.
+ * When `getRowHref` is supplied, the first cell of every row becomes
+ * a link to that href and the row is keyboard-navigable: Enter
+ * activates the link, the link is focusable, and a clear focus ring
+ * is rendered. Action buttons / kebab menus in other cells stop
+ * their own click propagation in their own onClick handlers (see
+ * e.g. `WorkspaceRowActions`), so they stay interactive without
+ * needing a row-level click suppressor.
+ *
+ * Note: `DataTable` is a Server Component (no "use client" — it has
+ * to stay a Server Component so the page can pass per-row data like
+ * `Map<string, …>` aggregates from a DB query through `columns[i].cell`
+ * closures). It therefore CANNOT attach a row-level onClick handler:
+ * inline function props on Server-Component-rendered DOM elements
+ * are serialised into the RSC payload as function references, and
+ * when the client hydrates the closure can't resolve the captured
+ * server-side locals — Next.js + React surface this as
+ * "Minified React error #441: more hooks than during the previous
+ * render" (the orphan function prop makes the reconciler treat the
+ * `<td>` as a different component on the second pass, so the hook
+ * count diverges). If a future variant needs row-level click
+ * handling, mark the component `"use client"` AND refactor the
+ * column-def `cell` signature to take serialisable data instead of
+ * closing over server-side Maps.
  */
 export interface DataTableColumnDef<T> {
   /** Stable key — also used as the React key for the header cell. */
@@ -114,7 +132,6 @@ export function DataTable<T>({
                 {columns.map((c, idx) => (
                   <td
                     key={c.key}
-                    onClick={href ? (e) => onCellClick(e, idx, columns.length) : undefined}
                     className={cn(
                       "px-4 py-3",
                       c.hideOn ? HIDE_CLASS[c.hideOn] : null,
@@ -122,11 +139,10 @@ export function DataTable<T>({
                     )}
                   >
                     {href && idx === 0 ? (
-                      // First cell anchors the row click target. Other
-                      // cells still get the row hover but the inner
-                      // content (kebab menu, action button) is allowed
-                      // to receive its own clicks via stopPropagation
-                      // in the cell click handler.
+                      // First cell anchors the row click target via
+                      // the inline <a>; interactive children in other
+                      // cells (e.g. WorkspaceRowActions) handle their
+                      // own click stopPropagation.
                       <RowLink href={href} row={row} cell={c.cell} />
                     ) : (
                       c.cell(row)
@@ -165,18 +181,4 @@ function RowLink<T>({
       {cell(_row)}
     </a>
   );
-}
-
-/**
- * When the row is clickable, suppress the row-click for the last
- * column (where action menus live) so a kebab button remains
- * clickable. The cell click handler walks the DOM to find the
- * nearest interactive descendant and short-circuits if found.
- */
-function onCellClick(event: React.MouseEvent<HTMLTableCellElement>, colIdx: number, total: number) {
-  if (colIdx !== total - 1) return;
-  const target = event.target as HTMLElement;
-  if (target.closest("a, button, [role='button'], [role='menuitem']")) {
-    event.stopPropagation();
-  }
 }

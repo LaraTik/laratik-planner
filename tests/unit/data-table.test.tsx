@@ -107,3 +107,90 @@ describe("DataTable", () => {
     expect(document.querySelectorAll("tbody tr")).toHaveLength(0);
   });
 });
+
+/**
+ * Regression: /app/workspaces React #441 ("more hooks than during the
+ * previous render").
+ *
+ * `DataTable` is a Server Component (no "use client") so the
+ * /app/workspaces page can pass per-row `Map<string, …>` aggregates
+ * from a DB query through `columns[i].cell` closures. A previous
+ * revision attached an inline `onClick` to every `<td>` so the last
+ * cell could call `event.stopPropagation()` when the click target was
+ * an interactive element (kebab / action button). That inline function
+ * is a closure that captures `idx` and `columns.length` — variables
+ * that exist on the server but not on the client. When Next.js
+ * serialised the rendered tree into the RSC payload, the function
+ * reference crossed the server→client boundary as a reference to a
+ * server-only closure. On the second render, React's reconciler
+ * treated the `<td>` as a different component (the orphan function
+ * prop changed the reconciliation key), so the hook count diverged
+ * and React threw minified error #441 on the workspaces page.
+ *
+ * The fix removed the `<td>` onClick entirely. The kebab button in
+ * the actions column already calls `e.stopPropagation()` in its own
+ * onClick (see `WorkspaceRowActions`), so row-level click suppression
+ * is unnecessary.
+ *
+ * These tests pin the contract:
+ *   - No <td> ever carries an onClick prop (the bug).
+ *   - When `getRowHref` is set, the row navigation still works via
+ *     the inline <a> in the first cell (so the click target is
+ *     preserved).
+ */
+describe("DataTable (Server-Component / React #441 regression)", () => {
+  it("does not attach an onClick prop to any <td> when getRowHref is set", () => {
+    render(
+      <DataTable
+        columns={columns}
+        rows={rows}
+        getRowKey={(r) => r.id}
+        getRowHref={(r) => `/row/${r.id}`}
+      />,
+    );
+    const tds = document.querySelectorAll("td");
+    for (const td of Array.from(tds)) {
+      // `onclick` is the lowercased DOM property used by jsdom to
+      // surface React's synthetic onClick; a function here would mean
+      // we serialised a server-side closure into the RSC payload.
+      expect((td as HTMLElement & { onclick: unknown }).onclick).toBeNull();
+    }
+  });
+
+  it("does not attach an onClick prop to any <td> when getRowHref is omitted", () => {
+    render(<DataTable columns={columns} rows={rows} getRowKey={(r) => r.id} />);
+    const tds = document.querySelectorAll("td");
+    for (const td of Array.from(tds)) {
+      expect((td as HTMLElement & { onclick: unknown }).onclick).toBeNull();
+    }
+  });
+
+  it("wraps the first cell in an <a> when getRowHref is supplied (row stays navigable)", () => {
+    render(
+      <DataTable
+        columns={columns}
+        rows={rows}
+        getRowKey={(r) => r.id}
+        getRowHref={(r) => `/row/${r.id}`}
+      />,
+    );
+    const firstRowFirstCellAnchor = document.querySelector(
+      'tbody tr:first-child td:first-child a[href="/row/r1"]',
+    );
+    expect(firstRowFirstCellAnchor).not.toBeNull();
+    expect(firstRowFirstCellAnchor).toHaveTextContent("Alice");
+  });
+
+  it("does not wrap the last cell in an <a> (so cell-local controls like kebabs stay clear of navigation)", () => {
+    render(
+      <DataTable
+        columns={columns}
+        rows={rows}
+        getRowKey={(r) => r.id}
+        getRowHref={(r) => `/row/${r.id}`}
+      />,
+    );
+    const lastRowLastCellAnchor = document.querySelector("tbody tr:first-child td:last-child a");
+    expect(lastRowLastCellAnchor).toBeNull();
+  });
+});
