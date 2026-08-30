@@ -9,21 +9,27 @@ import { MobileContextHeader } from "./mobile-context-header";
 import type { AgencyRow } from "./agency-switcher";
 import type { BuildInfo } from "@/lib/build-info";
 import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
+import { cn } from "@/lib/utils";
 
 /**
  * App shell — sidebar (left, persistent on desktop) + topbar (right
  * of sidebar) + mobile bottom nav. The content area is the {children}.
  *
+ * Width model:
+ *   - Expanded (default):  248px sidebar, topbar + main align to it
+ *   - Collapsed (cookie):  64px icon-rail, topbar + main align to it
+ *   - Tablet (md):         72px sidebar (icon-rail, no labels), no collapse toggle
+ *   - Mobile (<md):        bottom-sheet nav, no sidebar
+ *
  * Per Stitch design (project 5403097764334458790):
- *  - Desktop ≥1280px: expanded sidebar (248px), 64px topbar
- *  - Tablet 768-1279px: collapsed icon rail (64px), 64px topbar, touch ≥44px
- *  - Mobile <768px: bottom navigation, full-screen sheets
+ *   - Desktop ≥1280px: expanded sidebar (248px), 64px topbar
+ *   - Tablet 768-1279px: collapsed icon rail (72px), 64px topbar
+ *   - Mobile <768px: bottom navigation, full-screen sheets
  *
  * The sidebar is workspace-aware: it inspects the current pathname
  * and renders either the global nav (My Work, Workspaces, admin) or
- * the workspace nav (Overview, Planning, Calendar, Reviews, Social
- * Channels, Brand Kit, Team) depending on whether the URL lives
- * under /app/w/[slug]/*.
+ * the workspace nav (Overview, Planning, Brand, Manage) depending
+ * on whether the URL lives under /app/w/[slug]/*.
  *
  * A11y: the first focusable element is a "Skip to main content" link,
  * which is invisible until focused. The main element has a stable id
@@ -41,6 +47,9 @@ export function AppShell({
   unreadCount,
   platformAccess,
   supportGrants = [],
+  workspaceBadges,
+  unreadAppErrors = 0,
+  sidebarCollapsed = false,
   children,
 }: {
   user: {
@@ -78,17 +87,22 @@ export function AppShell({
     expiresAt: string;
     remainingMinutes: number;
   }>;
+  workspaceBadges?: Record<string, { approvals: number; designQueue: number }>;
+  unreadAppErrors?: number;
+  sidebarCollapsed?: boolean;
   children: React.ReactNode;
 }) {
+  // The active workspace is the one whose slug is currently in the
+  // URL — but the AppShell is a server component and doesn't have
+  // access to the pathname. The Sidebar inspects the URL itself
+  // and looks up the right entry from `workspaceBadges` (keyed by
+  // workspace id). We forward the entire map; the Sidebar picks
+  // the entry that matches the URL slug.
+  const sidebarWidth = sidebarCollapsed ? "w-[64px]" : "xl:w-[248px] w-[72px]";
+  const mainOffset = sidebarCollapsed ? "md:ml-[64px] xl:ml-[64px]" : "md:ml-[72px] xl:ml-[248px]";
   return (
     <div className="bg-canvas flex min-h-screen flex-col">
       <RouteScrollReset />
-      {/* Skip-to-content link for keyboard / screen-reader users. Hidden
-          until focused, then snaps to the top. Required by the OTHER-09
-          audit (GAP-FULL-REVIEW-2026-08-25) — the link + matching
-          `id="main-content" tabIndex={-1}` below must stay in lockstep
-          so a screen-reader user can bypass the sidebar/topbar in a
-          single keystroke. */}
       <a
         href="#main-content"
         className="bg-primary text-label focus-visible:ring-focus-ring pointer-events-none absolute top-2 left-2 z-50 inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3 py-1.5 font-semibold text-white opacity-0 focus:pointer-events-auto focus:opacity-100 focus:outline-none focus-visible:ring-2"
@@ -96,10 +110,14 @@ export function AppShell({
         Skip to main content
       </a>
 
-      {/* Tablet icon rail (72px) expands to the full 248px sidebar at xl. */}
+      {/* Tablet icon rail / desktop full sidebar */}
       <aside
-        className="group/sidebar bg-surface border-border fixed inset-y-0 left-0 z-30 hidden w-[72px] border-r md:flex md:flex-col xl:w-[248px]"
+        className={cn(
+          "group/sidebar bg-surface border-border fixed inset-y-0 left-0 z-30 hidden border-r md:flex md:flex-col",
+          sidebarWidth,
+        )}
         data-testid="app-sidebar"
+        data-state={sidebarCollapsed ? "collapsed" : "expanded"}
       >
         <Sidebar
           user={user}
@@ -110,16 +128,25 @@ export function AppShell({
           agencySwitcher={agencySwitcher}
           canCreateWorkspace={canCreateWorkspace}
           platformAccess={platformAccess}
+          workspaceBadgesByWorkspaceId={workspaceBadges ?? {}}
+          unreadAppErrors={unreadAppErrors}
+          collapsed={sidebarCollapsed}
         />
       </aside>
 
       {/* Topbar (desktop + tablet) — search + notifications + user menu */}
-      <header className="bg-surface border-border sticky top-0 z-20 ml-0 hidden h-14 border-b md:ml-[72px] md:block xl:ml-[248px]">
+      <header
+        className={cn(
+          "bg-surface border-border sticky top-0 z-20 ml-0 hidden h-14 border-b md:block",
+          mainOffset,
+        )}
+      >
         <Topbar
           user={user}
           buildInfo={buildInfo}
           notifications={notifications}
           unreadCount={unreadCount}
+          activeAgency={agencySwitcher.active}
         />
       </header>
 
@@ -139,6 +166,7 @@ export function AppShell({
             }}
             buildInfo={buildInfo}
             variant="mobile"
+            activeAgency={agencySwitcher.active}
           />
         </div>
       </header>
@@ -147,7 +175,10 @@ export function AppShell({
       <main
         id="main-content"
         tabIndex={-1}
-        className="min-w-0 overflow-x-clip pb-[calc(5.25rem+env(safe-area-inset-bottom))] focus:outline-none md:ml-[72px] md:pb-0 xl:ml-[248px]"
+        className={cn(
+          "min-w-0 overflow-x-clip pb-[calc(5.25rem+env(safe-area-inset-bottom))] focus:outline-none md:pb-0",
+          mainOffset,
+        )}
       >
         <div className="mx-auto w-full max-w-7xl px-4 py-5 md:px-6 md:py-6 xl:px-8 xl:py-8">
           <SupportSessionBanner grants={supportGrants} />
@@ -168,3 +199,8 @@ export function AppShell({
     </div>
   );
 }
+
+/**
+ * No helper needed — the Sidebar inspects the pathname and looks
+ * up the badge set from the map by workspace id.
+ */

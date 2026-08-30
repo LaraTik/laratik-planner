@@ -79,7 +79,7 @@ describe("Sidebar (workspace-aware)", () => {
   it("renders the global nav when the user is on a global page", () => {
     usePathnameMock.mockReturnValue("/app");
     render(<Sidebar {...baseProps} />);
-    expect(screen.getByRole("link", { name: "My Work" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "My work" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Workspaces" })).toBeInTheDocument();
     // Workspace tabs are NOT rendered in global mode
     expect(screen.queryByRole("link", { name: "Overview" })).toBeNull();
@@ -152,9 +152,9 @@ describe("Sidebar (workspace-aware)", () => {
     const planning = screen.getByRole("link", { name: "Planning" });
     expect(planning).toHaveAttribute("href", "/app/w/northstar/planning");
     expect(screen.getByRole("link", { name: "Calendar" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Reviews" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Social Channels" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Brand Kit" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Approvals" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Channels" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Brand kit" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Team" })).toBeInTheDocument();
     // "Workspaces" list link is NOT rendered in workspace mode
     expect(screen.queryByRole("link", { name: "Workspaces" })).toBeNull();
@@ -240,7 +240,7 @@ describe("Sidebar (workspace-aware)", () => {
     // Falls back to global mode (no workspace name shown, no workspace
     // tabs). The user is still authenticated; the route's own gate
     // is responsible for the 404.
-    expect(screen.getByRole("link", { name: "My Work" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "My work" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Overview" })).toBeNull();
   });
 
@@ -358,5 +358,101 @@ describe("Sidebar (agency switcher wiring — M1.5)", () => {
       expect(pushMock).toHaveBeenCalledWith("/app");
       expect(refreshMock).toHaveBeenCalled();
     });
+  });
+});
+
+describe("Sidebar (/ui-ux-pro-max refinement)", () => {
+  beforeEach(() => {
+    usePathnameMock.mockReset();
+  });
+
+  it("surfaces actionable badge counts in the workspace sidebar", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(
+      <Sidebar
+        {...baseProps}
+        workspaceBadgesByWorkspaceId={{
+          "ws-1": { approvals: 3, designQueue: 2 },
+          "ws-2": { approvals: 0, designQueue: 0 },
+        }}
+      />,
+    );
+    const approvalsBadge = screen.getByTestId("sidebar-badge-approvals");
+    expect(approvalsBadge).toHaveTextContent("3");
+    const designQueueBadge = screen.getByTestId("sidebar-badge-design-queue");
+    expect(designQueueBadge).toHaveTextContent("2");
+  });
+
+  it("hides badges when the count is zero", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(
+      <Sidebar
+        {...baseProps}
+        workspaceBadgesByWorkspaceId={{
+          "ws-1": { approvals: 0, designQueue: 0 },
+          "ws-2": { approvals: 0, designQueue: 0 },
+        }}
+      />,
+    );
+    expect(screen.queryByTestId("sidebar-badge-approvals")).toBeNull();
+    expect(screen.queryByTestId("sidebar-badge-design-queue")).toBeNull();
+  });
+
+  it("collapses to icon-rail when collapsed=true; hides labels and footer switchers", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(<Sidebar {...baseProps} collapsed={true} />);
+    // Brand block: the logo (icon) is still discoverable via the link's
+    // accessible name; the text label is hidden in icon-rail mode.
+    expect(screen.getByLabelText("StudioFlow home")).toBeInTheDocument();
+    // In collapsed mode the workspace switcher is hidden (icon-only
+    // affordances only render on the footer toggle)
+    expect(screen.queryByTestId("sidebar-workspace-switcher-trigger")).toBeNull();
+    // Create content CTA still rendered (per spec §18)
+    expect(screen.getByTestId("sidebar-create-content")).toBeInTheDocument();
+    // Footer collapse toggle is visible so the user can expand again
+    expect(screen.getByTestId("sidebar-collapse-toggle")).toBeInTheDocument();
+  });
+
+  it("groups workspace navigation by Content / Performance / Brand / Manage", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/team");
+    render(<Sidebar {...baseProps} />);
+    // Group headings render
+    expect(screen.getByText("Content")).toBeInTheDocument();
+    expect(screen.getByText("Performance")).toBeInTheDocument();
+    expect(screen.getByText("Brand")).toBeInTheDocument();
+    expect(screen.getByText("Manage")).toBeInTheDocument();
+  });
+
+  it("hides the Manage group when the user is a viewer (not a manager)", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(
+      <Sidebar
+        {...baseProps}
+        user={{ name: "Viewer", isAdmin: false }}
+        workspaceCanCreateContent={{ "ws-1": false, "ws-2": false }}
+      />,
+    );
+    expect(screen.queryByText("Manage")).toBeNull();
+  });
+
+  it("renders the workspace switcher at the top of the sidebar in workspace mode", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(<Sidebar {...baseProps} />);
+    // The switcher is rendered; the desktop layout mounts it inside
+    // a parent <aside data-testid="app-sidebar">. Standalone, the
+    // switcher is simply in the document at the top of the Sidebar.
+    const switcher = screen.getByTestId("sidebar-workspace-switcher-trigger");
+    const nav = screen.getByRole("navigation", { name: "Primary" });
+    expect(nav).toContainElement(switcher);
+  });
+
+  it("renames Reviews → Approvals and Social Channels → Channels per spec §5/§6", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(<Sidebar {...baseProps} />);
+    expect(screen.getByRole("link", { name: "Approvals" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Channels" })).toBeInTheDocument();
+    // Old labels should no longer appear
+    expect(screen.queryByRole("link", { name: "Reviews" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Social Channels" })).toBeNull();
   });
 });

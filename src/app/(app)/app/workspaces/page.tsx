@@ -15,6 +15,7 @@ import { IconTile } from "@/components/workspace/icon-button";
 import { KpiTile } from "@/components/workspace/kpi-tile";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
+import { WorkspaceRowActions } from "@/components/workspace/workspace-row-actions";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 
 /**
@@ -24,14 +25,10 @@ import { formatRelativeDate } from "@/lib/utils/format-relative-date";
  * Stitch design (project 5403097764334458790, screen `01aa8faf`):
  *   header: "Workspaces" + description
  *   KPI strip: Active brands / Ideas this month / Need review / Ready
- *   table: Brand | Channels | Members | Coverage | Health | Next publish | Actions
+ *   table: Brand | Channels | Members | Last activity | Row actions
  *
- * v1 ships the table (Brand / Channels / Members / Last active) + an
- * agency-wide KPI strip. Coverage, Health and Next publish columns
- * need a per-workspace aggregation that v1 doesn't run inline; they
- * land in a follow-up that uses the workspace overview metrics
- * service. Today's goal is a Stitch-faithful shape, not a byte-faithful
- * one.
+ * Rows are clickable; secondary actions (open, settings, team,
+ * channels) live in a kebab menu so the row stays scannable.
  */
 export const metadata = { title: "Workspaces" };
 
@@ -166,22 +163,6 @@ export default async function WorkspacesPage() {
         }
       />
 
-      <div
-        role="note"
-        data-parity="partial"
-        data-testid="workspaces-partial-parity"
-        className="border-info/30 bg-info-subtle text-body text-fg-secondary flex flex-wrap items-center gap-2 rounded-[var(--radius-card)] border px-3 py-2"
-      >
-        <span className="text-label text-info font-semibold tracking-wide uppercase">
-          Partial parity
-        </span>
-        <span>
-          This table ships the v1 columns (Brand, Channels, Members, Last activity). The Stitch
-          design adds three more — Coverage, Health, Next publish — that depend on the per-workspace
-          overview metrics service and are tracked in a follow-up.
-        </span>
-      </div>
-
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4" data-testid="workspaces-kpi-row">
         <KpiTile
           icon={<Building className="h-4 w-4" aria-hidden="true" />}
@@ -236,11 +217,14 @@ export default async function WorkspacesPage() {
               data-testid="workspaces-table"
               getRowKey={(ws) => ws.id}
               getRowTestId={(ws) => `workspaces-row-${ws.id}`}
+              getRowHref={(ws) => `/app/w/${ws.slug}`}
               rows={rows}
               columns={workspacesColumns({
                 channelCounts,
                 sampleChannels,
                 memberCounts,
+                canArchive: isAdmin,
+                canEditSettings: isAdmin,
               })}
             />
           </div>
@@ -265,6 +249,8 @@ function workspacesColumns(props: {
   channelCounts: ChannelCountMap;
   sampleChannels: SampleChannelMap;
   memberCounts: MemberCountMap;
+  canArchive: boolean;
+  canEditSettings: boolean;
 }): DataTableColumnDef<WorkspaceRow>[] {
   return [
     {
@@ -340,9 +326,12 @@ function workspacesColumns(props: {
       headerClassName: "w-12",
       cellClassName: "text-right",
       cell: (ws) => (
-        <Button asChild size="sm" variant="ghost">
-          <Link href={`/app/w/${ws.slug}`}>Open</Link>
-        </Button>
+        <WorkspaceRowActions
+          slug={ws.slug}
+          name={ws.name}
+          canArchive={props.canArchive}
+          canEditSettings={props.canEditSettings}
+        />
       ),
     },
   ];

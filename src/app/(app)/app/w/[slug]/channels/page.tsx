@@ -282,7 +282,7 @@ export default async function ChannelsPage({
     <div className="space-y-6">
       <PageHeader
         eyebrow={workspace.name}
-        title="Social channels"
+        title="Channels"
         description={
           <>
             Keep the brand&rsquo;s account information in one place. Connections and analytics are
@@ -393,7 +393,7 @@ export default async function ChannelsPage({
         <Card variant="dashed" padding="lg" data-testid="channels-empty-state">
           <EmptyState
             icon={<Radio className="h-8 w-8" />}
-            title="No social channels"
+            title="No channels yet"
             description={
               canManage
                 ? "A workspace manager can add the brand’s accounts here."

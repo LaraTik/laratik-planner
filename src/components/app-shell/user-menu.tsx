@@ -83,10 +83,12 @@ export function UserMenu({
   user,
   buildInfo,
   variant = "desktop",
+  activeAgency,
 }: {
   user: UserMenuUser;
   buildInfo: BuildInfo;
   variant?: "desktop" | "mobile";
+  activeAgency?: { name: string; isAdmin: boolean } | null | undefined;
 }) {
   if (variant === "mobile") {
     return (
@@ -113,6 +115,16 @@ export function UserMenu({
               ) : null}
             </div>
             <DialogDescription className="truncate">{user.email}</DialogDescription>
+            {activeAgency ? (
+              <p
+                className="text-label text-fg-muted truncate"
+                data-testid="user-menu-active-agency"
+                title={`Active agency: ${activeAgency.name}`}
+              >
+                {activeAgency.name}
+                {activeAgency.isAdmin ? " · admin" : ""}
+              </p>
+            ) : null}
           </DialogHeader>
           <div role="menu" aria-label="Account" className="space-y-1 p-2 pb-4">
             <DialogClose asChild>
@@ -174,6 +186,16 @@ export function UserMenu({
           <span className="text-label text-fg-muted block truncate font-normal tracking-normal">
             {user.email}
           </span>
+          {activeAgency ? (
+            <span
+              className="text-label text-fg-muted mt-0.5 block truncate font-normal tracking-normal"
+              data-testid="user-menu-active-agency"
+              title={`Active agency: ${activeAgency.name}`}
+            >
+              {activeAgency.name}
+              {activeAgency.isAdmin ? " · admin" : ""}
+            </span>
+          ) : null}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild className="min-h-11 cursor-pointer">

@@ -23,6 +23,8 @@ import {
 import { and, eq, inArray, isNotNull, or } from "drizzle-orm";
 import { createBuildInfo } from "@/lib/build-info";
 import { serverEnv } from "@/lib/validation/env";
+import { getWorkspaceBadges, getGlobalBadges } from "@/lib/nav/badges";
+import { readSidebarCollapsed } from "@/lib/nav/sidebar-preference";
 
 /**
  * Authenticated app shell — wraps every page under (app)/*.
@@ -169,6 +171,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     environment: serverEnv.NODE_ENV,
   });
 
+  // Compute per-workspace sidebar badge counts in parallel with the
+  // global badge set. The badge service is permission-aware — a
+  // user without internal access gets 0 for that workspace.
+  const [sidebarCollapsed, globalBadges, workspaceBadges] = await Promise.all([
+    readSidebarCollapsed(),
+    getGlobalBadges(actor, platformAdmin),
+    Promise.all(
+      switcher.options.map(async (ws) => {
+        const badges = await getWorkspaceBadges(actor, ws.id);
+        return [ws.id, badges] as const;
+      }),
+    ),
+  ]);
+  const workspaceBadgesMap: Record<string, { approvals: number; designQueue: number }> =
+    Object.fromEntries(workspaceBadges);
+
   return (
     <AppShell
       buildInfo={buildInfo}
@@ -197,6 +215,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       unreadCount={unreadCount}
       platformAccess={platformAccess}
       supportGrants={supportGrants}
+      workspaceBadges={workspaceBadgesMap}
+      unreadAppErrors={globalBadges.unreadAppErrors}
+      sidebarCollapsed={sidebarCollapsed}
     >
       {children}
     </AppShell>

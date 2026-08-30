@@ -14,6 +14,7 @@ import { DeliveryHealthCard } from "@/components/workspace/delivery-health-card"
 import { StatusPipeline } from "@/components/workspace/status-pipeline";
 import { AtRiskMilestonesCard } from "@/components/workspace/at-risk-milestones-card";
 import { RecentItemsCard } from "@/components/workspace/recent-items-card";
+import { AttentionBanner } from "@/components/workspace/attention-banner";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 
 /**
@@ -115,8 +116,26 @@ export default async function WorkspaceOverviewPage({
     .sort((a, b) => a.plannedPublishAt.getTime() - b.plannedPublishAt.getTime())
     .slice(0, 5);
 
+  // Approaching-deadline count for the attention banner: items
+  // scheduled in the next 7 days that are NOT yet shipped / ready.
+  // We reuse the same monthly rows so we don't add a second query.
+  const sevenDayCutoff = nowMs + 7 * 24 * 60 * 60 * 1000;
+  const approachingCount = monthlyItems.filter(
+    (i) =>
+      i.plannedPublishAt.getTime() > nowMs &&
+      i.plannedPublishAt.getTime() <= sevenDayCutoff &&
+      !["ready_to_publish", "partially_published", "published", "cancelled"].includes(i.status),
+  ).length;
+
   return (
     <div className="space-y-6" data-testid="workspace-overview">
+      <AttentionBanner
+        atRiskCount={overview.atRiskCount}
+        blockedCount={overview.blockedCount}
+        approachingCount={approachingCount}
+        reviewHref={`/app/w/${slug}/reviews`}
+        atRiskHref={`/app/w/${slug}/planning?status=at_risk`}
+      />
       <PageHeader
         eyebrow={ws.name}
         title={

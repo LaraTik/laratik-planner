@@ -17,11 +17,18 @@ import { cn } from "@/lib/utils";
  *     rows={rows}
  *     getRowKey={(r) => r.id}
  *     getRowTestId={(r) => `channel-row-${r.id}`}
+ *     getRowHref={(r) => `/app/w/${r.slug}`}     // optional — turns the row into a link
  *   />
  *
  * `hideOn` collapses a column below the named breakpoint — uses CSS
  * `hidden <breakpoint>:table-cell` so the column is removed from the
  * table layout on small screens (rather than just being 0-width).
+ *
+ * When `getRowHref` is supplied, every row becomes a link to that
+ * href and the row is keyboard-navigable: Enter activates the link,
+ * rows are focusable, and a clear focus ring is rendered. The last
+ * cell stops click propagation so action buttons / kebab menus stay
+ * interactive.
  */
 export interface DataTableColumnDef<T> {
   /** Stable key — also used as the React key for the header cell. */
@@ -45,6 +52,11 @@ export interface DataTableProps<T> {
   rows: readonly T[];
   getRowKey: (row: T) => string;
   getRowTestId?: (row: T) => string;
+  /**
+   * If supplied, every row becomes a link to the resolved href
+   * and the row is keyboard-navigable. Hover state is preserved.
+   */
+  getRowHref?: (row: T) => string;
   /** Optional className forwarded to the <table>. */
   className?: string;
 }
@@ -62,6 +74,7 @@ export function DataTable<T>({
   rows,
   getRowKey,
   getRowTestId,
+  getRowHref,
   className,
   "data-testid": dataTestId,
 }: DataTableProps<T>) {
@@ -85,28 +98,85 @@ export function DataTable<T>({
           </tr>
         </thead>
         <tbody className="divide-border text-table-dense divide-y">
-          {rows.map((row) => (
-            <tr
-              key={getRowKey(row)}
-              data-testid={getRowTestId?.(row)}
-              className="hover:bg-surface-subtle transition-colors"
-            >
-              {columns.map((c) => (
-                <td
-                  key={c.key}
-                  className={cn(
-                    "px-4 py-3",
-                    c.hideOn ? HIDE_CLASS[c.hideOn] : null,
-                    c.cellClassName,
-                  )}
-                >
-                  {c.cell(row)}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {rows.map((row) => {
+            const href = getRowHref ? getRowHref(row) : undefined;
+            return (
+              <tr
+                key={getRowKey(row)}
+                data-testid={getRowTestId?.(row)}
+                className={cn(
+                  "transition-colors",
+                  href
+                    ? "hover:bg-surface-subtle focus-within:bg-surface-subtle"
+                    : "hover:bg-surface-subtle",
+                )}
+              >
+                {columns.map((c, idx) => (
+                  <td
+                    key={c.key}
+                    onClick={href ? (e) => onCellClick(e, idx, columns.length) : undefined}
+                    className={cn(
+                      "px-4 py-3",
+                      c.hideOn ? HIDE_CLASS[c.hideOn] : null,
+                      c.cellClassName,
+                    )}
+                  >
+                    {href && idx === 0 ? (
+                      // First cell anchors the row click target. Other
+                      // cells still get the row hover but the inner
+                      // content (kebab menu, action button) is allowed
+                      // to receive its own clicks via stopPropagation
+                      // in the cell click handler.
+                      <RowLink href={href} row={row} cell={c.cell} />
+                    ) : (
+                      c.cell(row)
+                    )}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
   );
+}
+
+/**
+ * First-cell row link. Wraps the first cell content in an anchor
+ * that is the row's keyboard-navigable activator. The link
+ * includes `aria-describedby`-style row info via the visible
+ * content (the brand / row label).
+ */
+function RowLink<T>({
+  href,
+  row: _row,
+  cell,
+}: {
+  href: string;
+  row: T;
+  cell: (row: T) => React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      className="text-fg-primary focus-visible:ring-focus-ring hover:text-primary -m-1 inline-flex max-w-full items-center gap-2 rounded-[var(--radius-control)] p-1 font-semibold focus:outline-none focus-visible:ring-2"
+    >
+      {cell(_row)}
+    </a>
+  );
+}
+
+/**
+ * When the row is clickable, suppress the row-click for the last
+ * column (where action menus live) so a kebab button remains
+ * clickable. The cell click handler walks the DOM to find the
+ * nearest interactive descendant and short-circuits if found.
+ */
+function onCellClick(event: React.MouseEvent<HTMLTableCellElement>, colIdx: number, total: number) {
+  if (colIdx !== total - 1) return;
+  const target = event.target as HTMLElement;
+  if (target.closest("a, button, [role='button'], [role='menuitem']")) {
+    event.stopPropagation();
+  }
 }

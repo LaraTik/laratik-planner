@@ -133,7 +133,7 @@ export default async function SocialAnalyticsPage({
     <div className="space-y-6" data-testid="social-analytics-page">
       <PageHeader
         eyebrow={workspace.name}
-        title="Social analytics"
+        title="Analytics"
         description={
           <>
             Daily follower totals, growth windows, and connection health for the channels in this

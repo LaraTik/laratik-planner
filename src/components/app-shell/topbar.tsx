@@ -12,6 +12,7 @@ export function Topbar({
   buildInfo,
   notifications,
   unreadCount,
+  activeAgency,
 }: {
   user: {
     id: string;
@@ -32,6 +33,7 @@ export function Topbar({
     createdAt: string;
   }[];
   unreadCount: number;
+  activeAgency?: { name: string; isAdmin: boolean } | null | undefined;
 }) {
   return (
     <div className="flex h-full items-center justify-end px-3 sm:px-6">
@@ -41,7 +43,7 @@ export function Topbar({
           initialUnread={unreadCount}
           badgeTestId="unread-badge"
         />
-        <UserMenu user={user} buildInfo={buildInfo} />
+        <UserMenu user={user} buildInfo={buildInfo} activeAgency={activeAgency} />
       </div>
     </div>
   );

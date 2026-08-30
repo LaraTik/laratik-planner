@@ -79,7 +79,7 @@ export default async function ReviewsQueuePage({
     <div className="space-y-6" data-testid="reviews-kpi-row">
       <PageHeader
         eyebrow={workspace.name}
-        title="Reviews queue"
+        title="Approvals"
         description={
           <>
             {sortedRows.length} decision{sortedRows.length === 1 ? "" : "s"} waiting for you.
