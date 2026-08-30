@@ -36,11 +36,17 @@ import { cn } from "@/lib/utils";
 
 export type WorkspaceTabId = "overview" | "content" | "publishing" | "activity";
 
+/**
+ * Serialisable tab descriptor passed from a Server Component
+ * parent to the Client `WorkspaceTabs` component. The `icon`
+ * is intentionally NOT on this type — React component
+ * functions don't survive the RSC boundary, so the client
+ * resolves the icon from `id` via `WORKSPACE_TAB_ICONS`.
+ */
 export interface WorkspaceTab {
   id: WorkspaceTabId;
   label: string;
   count?: number;
-  icon: LucideIcon;
 }
 
 export const WORKSPACE_TAB_ICONS: Record<WorkspaceTabId, LucideIcon> = {
@@ -134,7 +140,7 @@ export function WorkspaceTabs({ tabs, ariaLabel, onChange, className }: Workspac
     >
       <ul className="flex flex-wrap items-stretch gap-1 overflow-x-auto" role="list">
         {tabs.map((tab) => {
-          const Icon = tab.icon;
+          const Icon = WORKSPACE_TAB_ICONS[tab.id];
           const isActive = tab.id === activeId;
           return (
             <li key={tab.id} className="shrink-0">

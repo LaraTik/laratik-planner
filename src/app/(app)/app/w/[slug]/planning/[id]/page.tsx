@@ -36,7 +36,7 @@ import { readAllChannelPayloads } from "@/lib/publishing";
 import { WorkflowStepper } from "@/components/planning/workflow-stepper";
 import { PlatformPreview } from "@/components/planning/platform-preview";
 import { WorkspaceShell } from "./workspace-shell";
-import { WORKSPACE_TAB_ICONS, type WorkspaceTab } from "@/components/planning/workspace-tabs";
+import { type WorkspaceTab } from "@/components/planning/workspace-tabs";
 
 export async function generateMetadata({
   params,
@@ -224,19 +224,22 @@ export default async function ContentDetailPage({
   );
 
   // ── Workspace tabs — order matters; counts feed the badges.
+  // The icon for each tab is resolved inside the Client
+  // `WorkspaceTabs` component via `WORKSPACE_TAB_ICONS[id]`,
+  // because React component functions are not serialisable
+  // across the RSC boundary. The server only sends the
+  // serialisable parts: id, label, count.
   const tabs: WorkspaceTab[] = [
-    { id: "overview", label: "Overview", icon: WORKSPACE_TAB_ICONS.overview },
-    { id: "content", label: "Content", icon: WORKSPACE_TAB_ICONS.content },
+    { id: "overview", label: "Overview" },
+    { id: "content", label: "Content" },
     {
       id: "publishing",
       label: "Publishing",
-      icon: WORKSPACE_TAB_ICONS.publishing,
       ...(readiness.blockers > 0 ? { count: readiness.blockers } : {}),
     },
     {
       id: "activity",
       label: "Activity",
-      icon: WORKSPACE_TAB_ICONS.activity,
       count: activityEvents.length,
     },
   ];

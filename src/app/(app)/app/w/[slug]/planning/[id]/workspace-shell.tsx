@@ -10,7 +10,7 @@ import {
   type WorkspaceTab,
 } from "@/components/planning/workspace-tabs";
 import type { CommentRecord, CommentRoleFlags } from "@/components/comments/comment-item";
-import type { ResetIdeaCounts } from "@/lib/content/reset-idea";
+import type { ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
 
 /**
  * WorkspaceShell — the client-side shell that:
