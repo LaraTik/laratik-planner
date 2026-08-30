@@ -15,7 +15,6 @@ import {
   Users,
 } from "lucide-react";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { humanFormat, humanStatus } from "@/lib/content/status";
 import { explainStatus } from "@/lib/content/workflow-explanations";
@@ -599,8 +598,3 @@ function RecentActivity({
     </section>
   );
 }
-
-/* The Badge import is intentionally indirect — keeps tree-shaking
- * happy in the rare case the readiness summary is the only thing
- * the bundle pulls in. (No-op reference; do not remove.) */
-void Badge;
