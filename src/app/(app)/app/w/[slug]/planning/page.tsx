@@ -22,6 +22,7 @@ import {
   type KpiContentStatus,
   calculateWorkspaceKpis,
 } from "@/lib/dashboard/kpis";
+import { aggregateHealth } from "@/lib/dashboard/health";
 import { db } from "@/lib/db";
 import { users, workspaceMemberships } from "@/lib/db/schema";
 
@@ -133,15 +134,23 @@ export default async function PlanningPage({
   // Apply the post-fetch `risk=at_risk` filter on the page slice so
   // the total count is the unfiltered-by-risk size. (Risk is a
   // post-process flag, not a DB column; we don't want it to affect
-  // the total.)
-  if (filters.risk === "at_risk")
+  // the total.) The strict-overdue definition (ADR-0006) excludes
+  // drafts and `blocked` so the filtered list matches the KPI bar.
+  if (filters.risk === "at_risk") {
+    const now = new Date();
     items = items.filter(
       (item) =>
-        item.plannedPublishAt < new Date() &&
-        !["ready_to_publish", "partially_published", "published", "cancelled"].includes(
-          item.status,
-        ),
+        item.plannedPublishAt < now &&
+        ![
+          "ready_to_publish",
+          "partially_published",
+          "published",
+          "cancelled",
+          "blocked",
+          "draft",
+        ].includes(item.status),
     );
+  }
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   // If the requested page is past the end (e.g. user bookmarked
   // page 12 and the dataset shrunk to 3 pages), surface the empty
@@ -166,6 +175,18 @@ export default async function PlanningPage({
       status: i.status as KpiContentStatus,
       plannedPublishAt: i.plannedPublishAt,
     })) as { status: KpiContentStatus; plannedPublishAt: Date; format?: KpiContentFormat }[],
+  });
+  // Strict-overdue rollup (ADR-0006). `kpis.atRisk` is the historical
+  // math; `healthRollup.atRisk` excludes drafts and `blocked`. The
+  // KPI bar uses the strict number; the row Health column uses
+  // `classifyHealth` (same source of truth). The two surfaces can
+  // never disagree.
+  const healthRollup = aggregateHealth({
+    rows: allMonthItems.map((i) => ({
+      status: i.status as KpiContentStatus,
+      plannedPublishAt: i.plannedPublishAt,
+    })),
+    now: new Date(),
   });
 
   // Owner dropdown source — every active workspace member, in display
@@ -285,9 +306,10 @@ export default async function PlanningPage({
 
       <PlanningKpiBar
         total={kpis.totalIdeas}
-        atRisk={kpis.atRisk}
+        atRisk={healthRollup.atRisk}
         needsReview={kpis.needsReview}
         ready={kpis.ready}
+        notStarted={healthRollup.notStarted}
         baseHref={`/app/w/${slug}/planning`}
         currentQuery={
           new URLSearchParams(
