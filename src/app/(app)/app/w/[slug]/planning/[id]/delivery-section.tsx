@@ -12,7 +12,7 @@ import { humanize } from "@/lib/content/status";
 import {
   DeliveryVersionList,
   type DeliveryVersion,
-} from "@/components/workspace/delivery-version-list";
+} from "@/components/workspace/delivery-version-card";
 
 const PROVIDERS = [
   "google_drive",
@@ -87,7 +87,11 @@ export function DeliverySection({
             ) : null}
           </header>
 
-          <DeliveryVersionList versions={deliveries} viewerIsClient={viewerIsClient} />
+          <DeliveryVersionList
+            versions={deliveries}
+            viewerIsClient={viewerIsClient}
+            contentStatus={contentStatus}
+          />
         </Card>
       ) : null}
 

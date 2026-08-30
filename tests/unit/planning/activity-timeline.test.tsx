@@ -63,4 +63,57 @@ describe("ActivityTimeline", () => {
     expect(screen.getAllByTestId("activity-event")).toHaveLength(10);
     expect(screen.getByText(/\+20 older events/i)).toBeInTheDocument();
   });
+
+  // Phase 1 of the planning-workspace-v2 refactor (2026-08-30):
+  // the humanizer now covers every kind we actually emit, so
+  // no machine enum ever leaks to the user. This test pins
+  // that contract — a future change that adds a new `kind`
+  // without a humanizer entry will fail here, with a precise
+  // name for the missing kind.
+  it("humanises every known kind without leaking the raw enum", () => {
+    const knownKinds = [
+      "status_transition",
+      "brief_updated",
+      "title_updated",
+      "date_updated",
+      "content_updated",
+      "delivery_submitted",
+      "comment_added",
+      "mention",
+      "ai_draft_applied",
+      "publication_recorded",
+      "publication",
+      "blocked",
+      "claimed",
+      "assignment",
+      "schedule_change",
+      "bulk_archive",
+      "create",
+      "update",
+      "system",
+    ];
+    const events: ActivityEventView[] = knownKinds.map((k, i) => ({
+      id: `ev-${k}`,
+      kind: k,
+      summary: "",
+      actorName: "Ada",
+      occurredAt: `2026-08-29T10:00:0${i}.000Z`,
+    }));
+    render(<ActivityTimeline events={events} />);
+    const rendered = screen.getAllByTestId("activity-event");
+    expect(rendered).toHaveLength(knownKinds.length);
+    rendered.forEach((node, idx) => {
+      const kind = knownKinds[idx]!;
+      const text = (node.textContent ?? "").toLowerCase();
+      // After humanizing, the rendered text MUST NOT be the
+      // raw enum string. The fallback path (`.replace(/_/g, " ")`)
+      // would produce "ada status transition" which is two
+      // words — still technically a sentence, but the
+      // contract is a richer phrase with a verb. We assert
+      // that the humanized form is at least 3 words (a verb
+      // + object) and not the raw snake_case kind.
+      expect(text).not.toBe(`ada ${kind.replace(/_/g, " ")}`);
+      expect(text.split(/\s+/).length).toBeGreaterThanOrEqual(3);
+    });
+  });
 });

@@ -26,8 +26,8 @@ import { PlanningHeader } from "@/components/planning/planning-header";
 import { PlanningSection } from "@/components/planning/planning-section";
 import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
 import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
-import { OverviewCommandCenter } from "@/components/planning/overview-command-center";
-import { FormatPayloadEditor } from "@/components/forms/format-payload-editor";
+import { OverviewNavigator } from "@/components/planning/overview-navigator";
+import { FormatAwareContentEditor } from "@/components/forms/format-aware-content-editor";
 // Phase 6 of the planning-detail refactor (2026-08-30): the
 // inline title/date/brief editors used to live here. They
 // moved into the Overview's `DetailsSection` (see
@@ -590,7 +590,7 @@ export default async function ContentDetailPage({
                 className="scroll-mt-24"
                 data-testid="workspace-tab-panel-overview"
               >
-                <OverviewCommandCenter
+                <OverviewNavigator
                   workspaceSlug={slug}
                   contentItemId={item.id}
                   contentStatus={item.status}
@@ -645,7 +645,7 @@ export default async function ContentDetailPage({
                       title="Creative brief"
                       description="The per-format fields (caption, hook, scenes, …). AI suggestions are inline per field."
                     >
-                      <FormatPayloadEditor
+                      <FormatAwareContentEditor
                         workspaceSlug={slug}
                         contentItemId={item.id}
                         format={item.format}
@@ -707,7 +707,7 @@ export default async function ContentDetailPage({
                     title="Creative brief"
                     description="The per-format fields (caption, hook, scenes, …). AI suggestions are inline per field."
                   >
-                    <FormatPayloadEditor
+                    <FormatAwareContentEditor
                       workspaceSlug={slug}
                       contentItemId={item.id}
                       format={item.format}

@@ -902,20 +902,30 @@ function ActionButtons({
 }) {
   const can = (allowed: Role[]) => allowed.some((r) => roles[r]);
   return (
-    <div className="flex flex-wrap gap-1.5" data-testid="workflow-rail-actions">
+    <div className="flex flex-col gap-1.5" data-testid="workflow-rail-actions">
       {status === "draft" && can(["isManager", "isPlanner"]) ? (
-        <Button size="sm" onClick={() => onTransition("submit_content_review")}>
+        <Button
+          size="default"
+          onClick={() => onTransition("submit_content_review")}
+          data-testid="workflow-rail-primary-action"
+          className="w-full"
+        >
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /> Submit for review
         </Button>
       ) : null}
       {status === "content_review" && can(["isInternalReviewer", "isManager"]) ? (
         <>
-          <Button size="sm" onClick={() => onTransition("approve_content")}>
-            <CheckCircle className="h-3.5 w-3.5" aria-hidden="true" /> Approve
+          <Button
+            size="default"
+            onClick={() => onTransition("approve_content")}
+            data-testid="workflow-rail-primary-action"
+            className="w-full"
+          >
+            <CheckCircle className="h-3.5 w-3.5" aria-hidden="true" /> Approve content
           </Button>
           <ReasonDialog
             trigger={
-              <Button size="sm" variant="secondary" disabled={pending}>
+              <Button size="default" variant="secondary" disabled={pending} className="w-full">
                 <XCircle className="h-3.5 w-3.5" aria-hidden="true" /> Request changes
               </Button>
             }
@@ -928,16 +938,23 @@ function ActionButtons({
         </>
       ) : null}
       {status === "changes_requested" && can(["isManager", "isPlanner"]) ? (
-        <Button size="sm" onClick={() => onTransition("resubmit_content")}>
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /> Resubmit
+        <Button
+          size="default"
+          onClick={() => onTransition("resubmit_content")}
+          data-testid="workflow-rail-primary-action"
+          className="w-full"
+        >
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /> Resubmit for review
         </Button>
       ) : null}
       {status === "approved_for_design" && isDesigner ? (
         <Button
-          size="sm"
+          size="default"
           onClick={() => {
             void onClaim();
           }}
+          data-testid="workflow-rail-primary-action"
+          className="w-full"
         >
           <Play className="h-3.5 w-3.5" aria-hidden="true" /> Claim as designer
         </Button>

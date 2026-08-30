@@ -76,6 +76,17 @@ export interface OverviewCommandCenterProps {
   canEdit: boolean;
   /** Edit-content href (the "Edit content" CTA in the header). */
   editHref: string;
+  /**
+   * Optional callback fired when a readiness row with a
+   * destination is clicked. The parent (the planning-detail
+   * page) uses this to switch tabs and scroll the target
+   * sub-anchor into view, because Next.js's `<Link>` with
+   * a same-page hash doesn't always scroll to a section
+   * that just mounted. When absent, the row falls back to
+   * a plain `<Link>` (preserves the previous behaviour for
+   * callers that haven't been updated yet).
+   */
+  onReadinessNavigate?: (href: string) => void;
   /** Why is the primary action what it is. Used to render the
    *  contextual CTA copy in the Next Action card. */
   primaryActionLabel?: string;
@@ -104,6 +115,7 @@ export function OverviewCommandCenter({
   totalActivityCount,
   canEdit,
   editHref,
+  onReadinessNavigate,
   primaryActionLabel,
   reviewChangesHref,
 }: OverviewCommandCenterProps) {
@@ -122,6 +134,7 @@ export function OverviewCommandCenter({
         blockers={readinessBlockers}
         canPublish={readinessCanPublish}
         lines={readiness}
+        onNavigate={onReadinessNavigate}
       />
       <DetailsSection
         contentItemId={contentItemId}
@@ -274,10 +287,12 @@ function ReadinessSummary({
   blockers,
   canPublish,
   lines,
+  onNavigate,
 }: {
   blockers: number;
   canPublish: boolean;
   lines: OverviewReadinessLine[];
+  onNavigate: ((href: string) => void) | undefined;
 }) {
   return (
     <section
@@ -312,14 +327,20 @@ function ReadinessSummary({
         data-testid="overview-readiness-list"
       >
         {lines.map((line) => (
-          <ReadinessRow key={line.id} line={line} />
+          <ReadinessRow key={line.id} line={line} onNavigate={onNavigate} />
         ))}
       </ul>
     </section>
   );
 }
 
-function ReadinessRow({ line }: { line: OverviewReadinessLine }) {
+function ReadinessRow({
+  line,
+  onNavigate,
+}: {
+  line: OverviewReadinessLine;
+  onNavigate: ((href: string) => void) | undefined;
+}) {
   const content = (
     <div className="flex min-w-0 flex-1 items-center gap-2">
       <StatusIcon status={line.status} />
@@ -332,6 +353,29 @@ function ReadinessRow({ line }: { line: OverviewReadinessLine }) {
   const className =
     "flex items-center gap-2 px-3 py-2 hover:bg-surface-subtle focus-visible:bg-surface-subtle focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none";
   if (line.href) {
+    // Phase 1 of the planning-workspace-v2 refactor (2026-08-30):
+    // when the parent supplies an `onNavigate` callback we
+    // render a real <button> that triggers it. The button
+    // still updates the URL hash via the same code path the
+    // <Link> used to, but the parent's callback also
+    // switches tabs and scrolls the target anchor into view
+    // (Next.js's <Link> with a same-page hash doesn't always
+    // scroll when the destination section just mounted).
+    if (onNavigate) {
+      return (
+        <li data-testid={`overview-readiness-row-${line.id}`} data-status={line.status}>
+          <button
+            type="button"
+            className={className + " w-full text-left"}
+            data-testid={`overview-readiness-link-${line.id}`}
+            onClick={() => onNavigate(line.href!)}
+          >
+            {content}
+            <ArrowRight className="text-fg-muted h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          </button>
+        </li>
+      );
+    }
     return (
       <li data-testid={`overview-readiness-row-${line.id}`} data-status={line.status}>
         <Link
