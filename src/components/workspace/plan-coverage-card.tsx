@@ -1,117 +1,159 @@
 import * as React from "react";
+import Link from "next/link";
+import { Target, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DashboardPanel } from "./dashboard-panel";
+import { FormatDistributionBars, type FormatDistributionBar } from "./format-distribution-bars";
+import type { KpiContentFormat } from "@/lib/dashboard/kpis";
 
 /**
- * One row in the Plan Coverage card's Format Breakdown bar. Each
- * non-zero format is rendered as a colored segment whose width is
- * `count / total * 100%`. Zero-count formats are simply not rendered.
+ * PlanCoverageCard — the refactored "Plan coverage" panel on the
+ * workspace Overview.
+ *
+ * Pre-refactor the card displayed the same "27 / — items · No
+ * target" number twice and the format breakdown was a row of
+ * tiny dots that the operator could not visually compare. The
+ * refactor (ADR-0007) gives the card four concrete jobs:
+ *
+ *   1. Show the planned count prominently.
+ *   2. Show coverage vs target (when set) with a progress bar.
+ *   3. Show "No target" as an ACTIONABLE state, not a passive
+ *      label — the operator gets a "Set target" CTA pointing
+ *      at the workspace settings page.
+ *   4. Show the format mix as a horizontal distribution of bars,
+ *      each clickable into a filtered Planning view.
  */
-function formatSegmentColor(index: number): string {
-  const palette = [
-    "bg-primary",
-    "bg-tertiary-container",
-    "bg-surface-variant",
-    "bg-secondary-container",
-    "bg-info-subtle",
-  ];
-  return palette[index % palette.length] ?? "bg-primary";
-}
-
 export interface PlanCoverageCardProps {
   total: number;
   monthlyTarget: number | null;
   coveragePercent: number | null;
-  formatBreakdown: { format: string; label: string; count: number }[];
+  formatBreakdown: FormatDistributionBar[];
+  /** Returns a URL for a given format (e.g. `/app/w/.../planning?format=story`). */
+  buildFormatHref: (format: KpiContentFormat) => string;
+  /** Where "Set target" / "Edit target" points. */
+  settingsHref: string;
 }
 
-/**
- * Plan Coverage — first of the two cards in the Stitch overview's
- * "Health & Coverage" row. Shows the X / Y items + coverage badge,
- * the per-format breakdown bar, and (below the bar) a small legend
- * with the count per format. When the workspace has no target set,
- * the badge shows "No target" instead of a percentage.
- */
 export function PlanCoverageCard({
   total,
   monthlyTarget,
   coveragePercent,
   formatBreakdown,
+  buildFormatHref,
+  settingsHref,
 }: PlanCoverageCardProps) {
-  const nonZero = formatBreakdown.filter((b) => b.count > 0);
-  const totalForBar = nonZero.reduce((s, b) => s + b.count, 0);
+  const hasTarget = monthlyTarget !== null && monthlyTarget > 0;
+  const remaining = hasTarget ? Math.max(0, monthlyTarget - total) : null;
 
   return (
-    <section
-      aria-label="Plan coverage"
-      className="border-border bg-surface rounded-[var(--radius-card)] border p-6"
+    <DashboardPanel
+      title="Plan coverage"
+      eyebrow="How much have we planned"
+      data-testid="plan-coverage"
+      headerAction={
+        <Link
+          href={settingsHref}
+          className="text-label text-primary inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline"
+          aria-label={hasTarget ? "Edit monthly target" : "Set a monthly target"}
+        >
+          <Target className="h-3.5 w-3.5" aria-hidden="true" />
+          {hasTarget ? "Edit target" : "Set target"}
+        </Link>
+      }
     >
-      <h2 className="text-title-card text-fg-primary mb-4 font-semibold">Plan Coverage</h2>
-
-      <div className="mb-6 flex items-end gap-3">
-        <span className="text-title-page text-fg-primary text-4xl leading-none font-bold">
-          {total}
-        </span>
-        {monthlyTarget ? (
-          <span className="text-body text-fg-secondary pb-1 font-medium">
-            / {monthlyTarget} items
-          </span>
-        ) : (
-          <span className="text-body text-fg-muted pb-1 font-medium">/ — items</span>
-        )}
-        {coveragePercent !== null ? (
-          <span
-            className={cn(
-              "mb-1 ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold",
-              coveragePercent >= 100
-                ? "bg-success-subtle text-success"
-                : "bg-warning-subtle text-warning",
-            )}
-          >
-            {coveragePercent}%
-          </span>
-        ) : (
-          <span className="text-label text-fg-muted mb-1 ml-2 font-semibold">No target</span>
-        )}
-      </div>
-
-      <div className="space-y-4">
+      <div className="space-y-5">
+        {/* Headline count + coverage progress */}
         <div>
-          <div className="text-label text-fg-secondary mb-1 font-medium">Format Breakdown</div>
-          <div
-            className="bg-surface-container-low flex h-2 w-full overflow-hidden rounded-full"
-            role="img"
-            aria-label="Format breakdown bar"
-          >
-            {nonZero.length === 0 ? (
-              <div className="bg-surface-variant h-full w-full" aria-hidden="true" />
-            ) : (
-              nonZero.map((b, i) => (
-                <div
-                  key={b.format}
-                  className={cn("h-full", formatSegmentColor(i))}
-                  style={{ width: `${totalForBar ? (b.count / totalForBar) * 100 : 0}%` }}
-                  title={`${b.label}: ${b.count}`}
-                />
-              ))
-            )}
+          <div className="flex items-baseline gap-2">
+            <span className="text-title-page text-fg-primary text-4xl leading-none font-bold tabular-nums">
+              {total}
+            </span>
+            <span className="text-body text-fg-secondary font-medium">
+              {hasTarget ? (
+                <>
+                  / <span className="tabular-nums">{monthlyTarget}</span> planned
+                </>
+              ) : (
+                <>planned this month</>
+              )}
+            </span>
           </div>
-          <ul className="text-label text-fg-secondary mt-2 flex flex-wrap gap-x-4 gap-y-1">
-            {nonZero.length === 0 ? (
-              <li className="text-fg-muted">No items yet this month.</li>
-            ) : (
-              nonZero.map((b, i) => (
-                <li key={b.format} className="flex items-center gap-1">
-                  <span
-                    className={cn("h-2 w-2 rounded-full", formatSegmentColor(i))}
-                    aria-hidden="true"
-                  />
-                  {b.label} ({b.count})
-                </li>
-              ))
-            )}
-          </ul>
+          {hasTarget ? (
+            <CoverageBar
+              coveragePercent={coveragePercent ?? 0}
+              remaining={remaining ?? 0}
+              met={total >= (monthlyTarget ?? 0)}
+            />
+          ) : (
+            <NoTargetCallout settingsHref={settingsHref} />
+          )}
+        </div>
+
+        {/* Format mix */}
+        <div>
+          <p className="text-label text-fg-muted mb-2 font-semibold tracking-wide uppercase">
+            Format mix
+          </p>
+          <FormatDistributionBars bars={formatBreakdown} buildHref={buildFormatHref} />
         </div>
       </div>
-    </section>
+    </DashboardPanel>
+  );
+}
+
+function CoverageBar({
+  coveragePercent,
+  remaining,
+  met,
+}: {
+  coveragePercent: number;
+  remaining: number;
+  met: boolean;
+}) {
+  return (
+    <div className="mt-3 space-y-1.5">
+      <div
+        className="bg-surface-container-low relative h-2 w-full overflow-hidden rounded-full"
+        role="progressbar"
+        aria-valuenow={coveragePercent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${coveragePercent} percent of monthly target`}
+      >
+        <div
+          className={cn(
+            "h-full rounded-full transition-[width] duration-500",
+            met ? "bg-success" : "bg-primary",
+          )}
+          style={{ width: `${Math.min(100, Math.max(0, coveragePercent))}%` }}
+        />
+      </div>
+      <p className={cn("text-label font-semibold", met ? "text-success" : "text-fg-secondary")}>
+        {met
+          ? `Target met (${coveragePercent}%)`
+          : `${coveragePercent}% coverage · ${remaining} item${remaining === 1 ? "" : "s"} to go`}
+      </p>
+    </div>
+  );
+}
+
+function NoTargetCallout({ settingsHref }: { settingsHref: string }) {
+  return (
+    <div className="border-border bg-surface-subtle mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border border-dashed px-3 py-2">
+      <div className="flex items-center gap-2">
+        <Target className="text-fg-muted h-4 w-4" aria-hidden="true" />
+        <p className="text-body text-fg-secondary">
+          <span className="font-semibold">No monthly target</span> — set one to see coverage
+          progress.
+        </p>
+      </div>
+      <Link
+        href={settingsHref}
+        className="bg-primary text-label text-button inline-flex min-h-9 items-center gap-1 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold text-white"
+      >
+        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+        Set target
+      </Link>
+    </div>
   );
 }

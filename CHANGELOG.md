@@ -12,6 +12,140 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Changed — Workspace Overview dashboard refactor (2026-08-30)
+
+Full UX/UI + data-semantics refactor of `/app/w/[slug]` (the
+workspace Overview). The page previously displayed a donut
+labelled "4% AT RISK" while the at-risk count next to it was
+23 of 27 (≈ 85%) — two numbers in the same card fighting for
+the same headline. The refactor (ADR-0007) restructures the
+page around five primary regions and reconciles every metric
+to a single source of truth.
+
+- **Reconciled the 4% / 23-of-27 audit contradiction**
+  (`src/lib/dashboard/kpis.ts`). The pre-refactor donut math
+  was `(ready_to_publish + partially_published + published) /
+  total` (1/27 → 3.7% → 4%) — a "% complete" value wearing the
+  wrong label. The refactor:
+  - Renames the math to `completionPercent` (semantically
+    correct) and keeps `deliveryHealthPercent` as a deprecated
+    alias for the planning list.
+  - Adds three mutually-exclusive health buckets
+    (`onTrack`, `atRisk`, `blocked`) whose counts sum to
+    `total` and whose percentages sum to 100. The new
+    `DeliveryHealthCard` renders a stacked bar (green / amber /
+    red) instead of a donut; the headline number is the
+    on-track percent (15% in the audit fixture), so 4% and 23
+    at-risk can no longer fight for the same card.
+  - Pins the contract with 12 new unit tests in
+    `tests/unit/workspace-kpis.test.ts`, including the exact
+    27-item audit fixture. A regression that re-introduces the
+    wrong label or breaks the math consistency fails CI.
+- **4-stage workflow flow** (replaces the 8-tile
+  "StatusPipeline"). The 11-status enum collapses to 4
+  semantic stages — Planning / Review / Design / Publish —
+  matching the planner vocabulary on the planning detail page.
+  The "Total" tile is removed (it's not a workflow state; the
+  executive summary strip shows total). Each stage card is a
+  clickable drill-down into the planning list with the
+  matching status filter pre-applied.
+- **5-tile executive summary strip** (new
+  `src/components/workspace/overview-kpi-strip.tsx`).
+  Compact, clickable, drill-down. Tiles: Planned / On track /
+  At risk / Needs review / Published.
+- **Actionable "no target" state** on Plan Coverage. When
+  `monthlyTarget` is `null`, the card shows a "No monthly
+  target — set one to see coverage progress" callout with a
+  "Set target" CTA pointing at the workspace settings page.
+  When a target is set, the card shows a progress bar and
+  "X% coverage · N items to go" (or "Target met" when ≥ 100%).
+- **Format mix** rendered as horizontal distribution bars
+  (new `src/components/workspace/format-distribution-bars.tsx`),
+  each row clickable into a filtered Planning view. Replaces
+  the pre-refactor "tiny text dots" legend.
+- **Needs attention list** (replaces
+  `at-risk-milestones-card.tsx`). Severity ordering
+  (blocked → overdue → other), format chip, status badge,
+  owner name, per-row "Open" CTA. Includes `blocked` items
+  in the list (they were previously excluded under the loose
+  at-risk definition) because operators need to see them.
+- **Recently updated list** (replaces `recent-items-card.tsx`).
+  Widened from 1/3-col to 4/12-col, with format + status +
+  date + owner on every row. Renamed to make the ordering
+  semantics explicit ("recently updated" rather than the
+  ambiguous "recent items").
+- **Attention banner** with severity tiers (critical /
+  warning / info) and an Approvals CTA when approvals are
+  pending. Auto-hides entirely when no item needs attention —
+  a healthy workspace no longer shouts at its operator.
+- **Month navigation** (Previous / Next / Today) on the
+  overview header. Selecting a different month passes
+  `?month=YYYY-MM`; the planning list also accepts the param,
+  so drilling into Planning shows the same period.
+- **Shared `DashboardPanel` shell** (new
+  `src/components/workspace/dashboard-panel.tsx`) for the
+  shared card anatomy: eyebrow + title + description + header
+  action + children + optional footer.
+
+### Removed
+
+- `src/components/workspace/status-pipeline.tsx` (replaced by
+  `workflow-pipeline.tsx`).
+- `src/components/workspace/at-risk-milestones-card.tsx`
+  (replaced by `needs-attention-list.tsx`).
+- `src/components/workspace/recent-items-card.tsx` (replaced
+  by `recently-updated-list.tsx`).
+- `tests/unit/workspace/recent-items-card.test.tsx` (the
+  coverage is split across the new component test files).
+- `data-testid="workspace-overview-pipeline-tile-{status}"` —
+  the 8-tile pipeline had a tile-per-status testid; the new
+  4-stage pipeline uses `data-testid="workflow-pipeline"`
+  (and per-stage links for the drill-down).
+
+### Changed — test contracts
+
+- `tests/unit/workspace-kpis.test.ts` —
+  `atRiskItems` fixture updated to expect the strict-overdue
+  definition (blocked is now a separate bucket, not part of
+  at-risk). The 12 new `calculateOverviewDashboardMetrics`
+  tests pin the 4%/23-of-27 reconciliation, the stacked-bar
+  consistency, the workflow stages, the risk-reason breakdown,
+  the needs-attention severity ordering, the recently-updated
+  cap, the coverage-percent clamping, and the empty-workspace
+  zero-division safety.
+- `tests/unit/workspace/recent-items-card.test.tsx` — replaced
+  by 5 new tests in
+  `tests/unit/workspace/recently-updated-list.test.tsx`.
+- New `tests/unit/workspace/format-distribution-bars.test.tsx`
+  (4 tests pinning the clickable-rows + share-% contract).
+- New `tests/unit/workspace/plan-coverage-card.test.tsx` (6
+  tests pinning the no-target CTA, target-met copy, and
+  format-mix wiring).
+- New `tests/unit/workspace/delivery-health-card.test.tsx` (7
+  tests pinning the stacked-bar math consistency, the
+  risk-reason breakdown, the at-risk count drill-down, and
+  the empty-workspace zero-division safety).
+- New `tests/unit/workspace/workflow-pipeline.test.tsx` (4
+  tests pinning the 4-stage contract and the "no Total tile"
+  regression guard).
+- New `tests/unit/workspace/needs-attention-list.test.tsx` (7
+  tests pinning the severity ordering, the relative-deadline
+  language, the empty-state copy, and the per-row "Open" CTA).
+- New `tests/unit/workspace/overview-kpi-strip.test.tsx` (3
+  tests pinning the 5-tile click drill-down and the tone
+  classes).
+- New `tests/unit/workspace/attention-banner.test.tsx` (6
+  tests pinning the severity tiers, the auto-hide-on-empty
+  contract, and the Approvals CTA conditional).
+
+### Documentation
+
+- `docs/decisions/0007-workspace-overview-dashboard-refactor.md`
+  records the metric fix, the workflow-stage taxonomy, the
+  page restructuring, the month navigation, and the deferred
+  work (My work vs Recently updated, finer "why at risk"
+  reasons, approval count source).
+
 ### Changed — Planning List enriched row (2026-08-30)
 
 Refactor of `/app/w/[slug]/planning` per the Goal-33 planning-list
