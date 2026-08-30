@@ -3,14 +3,14 @@ import { notFound, redirect } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
-import { countWorkspaceContent, listWorkspaceContent } from "@/lib/content/service";
-import { ALL_FORMATS, ALL_STATUSES, humanFormat } from "@/lib/content/status";
+import { listWorkspaceContent } from "@/lib/content/service";
+import { listWorkspaceContentEnriched, resolveActorRoles } from "@/lib/content/enriched-list";
+import { ALL_FORMATS, ALL_STATUSES } from "@/lib/content/status";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Clock, Files, Plus, FileText, Download, AlertTriangle, LayoutGrid } from "lucide-react";
-import { StatusBadge } from "@/components/content/status-badge";
 import { PageHeader } from "@/components/workspace/page-header";
-import { ListCard, ListItem } from "@/components/workspace/list-item";
+import { PlanningListItem, PlanningListItemList } from "@/components/workspace/planning-list-item";
 import { MonthNav } from "@/components/workspace/month-nav";
 import { PlanningFilters } from "@/components/workspace/planning-filters";
 import { PlanningKpiBar } from "@/components/workspace/planning-kpi-bar";
@@ -122,25 +122,32 @@ export default async function PlanningPage({
     ...(searchTerm ? { search: searchTerm } : {}),
   } as const;
 
-  const [allItems, totalCount] = await Promise.all([
-    listWorkspaceContent({ id: session.user.id }, ws.id, {
+  // Two parallel queries: the enriched list (one base + 5 fan-out
+  // queries, all indexed) and the unfiltered-by-risk count. The
+  // count is from the old service so the "Showing X-Y of Z" line
+  // and the pagination total stay exact regardless of which
+  // post-filter is active.
+  const nowRef = new Date();
+  const actorRoles = await resolveActorRoles({ id: session.user.id }, ws.id);
+  const enrichedResult = await listWorkspaceContentEnriched(
+    { id: session.user.id },
+    ws.id,
+    {
       ...filterOpts,
       limit: pageSize,
       offset: (requestedPage - 1) * pageSize,
-    }),
-    countWorkspaceContent({ id: session.user.id }, ws.id, filterOpts),
-  ]);
-  let items = allItems;
-  // Apply the post-fetch `risk=at_risk` filter on the page slice so
-  // the total count is the unfiltered-by-risk size. (Risk is a
-  // post-process flag, not a DB column; we don't want it to affect
-  // the total.) The strict-overdue definition (ADR-0006) excludes
-  // drafts and `blocked` so the filtered list matches the KPI bar.
+    },
+    nowRef,
+    actorRoles,
+  );
+  let visibleEnrichedItems = enrichedResult.items;
+  // Post-fetch `risk=at_risk` filter. The strict-overdue definition
+  // (ADR-0006) excludes drafts and `blocked` so the filtered list
+  // matches the KPI bar.
   if (filters.risk === "at_risk") {
-    const now = new Date();
-    items = items.filter(
+    visibleEnrichedItems = visibleEnrichedItems.filter(
       (item) =>
-        item.plannedPublishAt < now &&
+        item.plannedPublishAt < nowRef &&
         ![
           "ready_to_publish",
           "partially_published",
@@ -151,13 +158,14 @@ export default async function PlanningPage({
         ].includes(item.status),
     );
   }
+  const totalCount = enrichedResult.total;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   // If the requested page is past the end (e.g. user bookmarked
   // page 12 and the dataset shrunk to 3 pages), surface the empty
   // state on page 1 rather than rendering a blank grid. The URL
   // stays as the user wrote it so a reload re-resolves correctly.
   const currentPage = Math.min(requestedPage, totalPages);
-  const visibleItems = currentPage === requestedPage ? items : [];
+  const visibleItems = currentPage === requestedPage ? visibleEnrichedItems : [];
 
   // KPI tile counts — derived from the unfiltered list so the tiles
   // always reflect the full month, not whatever filter the user has
@@ -226,7 +234,7 @@ export default async function PlanningPage({
   };
 
   return (
-    <div className="space-y-6" data-testid="workspace-planning">
+    <div className="mx-auto w-full max-w-[1440px] space-y-6" data-testid="workspace-planning">
       <PageHeader
         eyebrow={ws.name}
         title="Planning"
@@ -423,19 +431,18 @@ export default async function PlanningPage({
         />
       ) : (
         <>
-          <ListCard data-testid="planning-list">
+          <PlanningListItemList>
             {visibleItems.map((it) => (
-              <ListItem
+              <PlanningListItem
                 key={it.id}
-                href={`/app/w/${slug}/planning/${it.id}`}
-                leading={<FileText className="text-fg-muted h-4 w-4" aria-hidden="true" />}
-                title={it.title}
-                meta={`${humanFormat(it.format)} · ${it.plannedPublishAt.toLocaleDateString()}`}
-                trailing={<StatusBadge status={it.status} />}
+                item={it}
+                workspaceSlug={slug}
+                workspaceTimezone={ws.timezone}
                 density={density}
+                now={nowRef}
               />
             ))}
-          </ListCard>
+          </PlanningListItemList>
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
