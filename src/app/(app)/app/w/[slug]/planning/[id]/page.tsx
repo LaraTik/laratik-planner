@@ -5,7 +5,6 @@ import { auth } from "@/lib/auth/config";
 import { getContentItem, listWorkspaceDesigners, UPDATEABLE_STATUSES } from "@/lib/content/service";
 import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
 import { listPublicationsForItem, evaluateReadiness } from "@/lib/publishing";
-import { presentReadinessIssues } from "@/lib/publishing/readiness-presentation";
 import { listCommentsForItem } from "@/lib/discussions/service";
 import { getWorkspaceRoles } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
@@ -14,7 +13,6 @@ import { hasPlatformPermission } from "@/lib/auth/platform-access";
 import { Button } from "@/components/ui/button";
 import { PlanningHeader } from "@/components/planning/planning-header";
 import { PlanningSection } from "@/components/planning/planning-section";
-import { ReadinessPanel } from "@/components/planning/readiness-panel";
 import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
 import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
 import { OverviewCommandCenter } from "@/components/planning/overview-command-center";
@@ -225,8 +223,6 @@ export default async function ContentDetailPage({
     }
   }
 
-  const presentationIssues = presentReadinessIssues(readiness.issues);
-
   // ── Comment-counts for the discussion trigger
   const openCommentsCount = discussionComments.filter((c) => !c.resolvedAt).length;
   const mentionCount = discussionComments.filter(
@@ -434,7 +430,13 @@ export default async function ContentDetailPage({
         meta={<WorkflowStepper status={item.status} size="compact" />}
       />
 
-      {/* Workflow — compact stepper + plain-language explanation + primary action */}
+      {/* Workflow — current status explanation + action buttons.
+          The full 11-step pipeline is collapsed behind a "View
+          workflow" disclosure inside the bar (M5 spec §14). The
+          detailed blocker list (was: ReadinessPanel above the
+          tabs) is now surfaced via the Overview's "Next action"
+          card + 4-line readiness summary, which deep-links into
+          the relevant section. */}
       <section id="workflow" className="scroll-mt-24">
         <WorkflowBar
           workspaceSlug={slug}
@@ -453,17 +455,6 @@ export default async function ContentDetailPage({
           designers={designers}
         />
       </section>
-
-      {/* Readiness — only shown when there are blockers / recommendations.
-          Now points to the publishing section in the same page. */}
-      {readiness.blockers > 0 || readiness.recommendations > 0 ? (
-        <ReadinessPanel
-          ready={readiness.canPublish}
-          blockers={readiness.blockers}
-          recommendations={readiness.recommendations}
-          issues={presentationIssues}
-        />
-      ) : null}
 
       {/* Tabbed workspace + drawer + overflow menu. The shell
           renders nothing itself — it wraps the four section

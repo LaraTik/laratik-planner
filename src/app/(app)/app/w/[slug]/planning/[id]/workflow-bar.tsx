@@ -213,35 +213,52 @@ export function WorkflowBar({
         </div>
       ) : null}
 
-      {/* Pipeline of past / current / future steps. The current step
-          is the same label the explanation card above uses; future
-          steps render as ghost pills so the user can scan the whole
-          workflow at a glance. */}
-      <div className="mb-3 flex flex-wrap items-center gap-1.5" data-testid="workflow-pipeline">
-        {(() => {
-          // Compute `idx` once per render instead of inside the map
-          // (O(n²) → O(n)). The `>= 0` guard keeps `past` correct for
-          // any unexpected status the page might pass in before the
-          // render throws — see the comment on STATUSES above for why
-          // this matters on the post-`revalidatePath` re-render.
-          const idx = STATUSES.indexOf(status as (typeof STATUSES)[number]);
-          return STATUSES.map((s) => {
-            const sIdx = STATUSES.indexOf(s);
-            const past = idx >= 0 && sIdx >= 0 && sIdx < idx;
-            const current = s === status;
-            return (
-              <Badge
-                key={s}
-                variant={current ? "primary" : past ? "success" : "outline"}
-                data-testid={current ? "status-current" : undefined}
-                data-status={s}
-              >
-                {humanize(s)}
-              </Badge>
-            );
-          });
-        })()}
-      </div>
+      {/* Pipeline of past / current / future steps. Hidden by
+          default per the M5 spec §14 — the full 11-step state
+          machine is secondary information, surfaced behind a
+          "View workflow" popover. The current-step explanation
+          above and the action buttons below carry the primary
+          signal. The "View workflow" affordance stays one click
+          away for users who want to scan the whole pipeline. */}
+      <details
+        className="border-border bg-surface-subtle mb-3 rounded-[var(--radius-control)] border"
+        data-testid="workflow-pipeline-details"
+      >
+        <summary
+          className="text-label text-fg-secondary cursor-pointer list-none px-3 py-2 font-semibold [&::-webkit-details-marker]:hidden"
+          data-testid="workflow-pipeline-toggle"
+        >
+          View workflow ({STATUSES.length} steps)
+        </summary>
+        <div
+          className="flex flex-wrap items-center gap-1.5 border-t border-[color:var(--border)] px-3 py-2"
+          data-testid="workflow-pipeline"
+        >
+          {(() => {
+            // Compute `idx` once per render instead of inside the map
+            // (O(n²) → O(n)). The `>= 0` guard keeps `past` correct for
+            // any unexpected status the page might pass in before the
+            // render throws — see the comment on STATUSES above for why
+            // this matters on the post-`revalidatePath` re-render.
+            const idx = STATUSES.indexOf(status as (typeof STATUSES)[number]);
+            return STATUSES.map((s) => {
+              const sIdx = STATUSES.indexOf(s);
+              const past = idx >= 0 && sIdx >= 0 && sIdx < idx;
+              const current = s === status;
+              return (
+                <Badge
+                  key={s}
+                  variant={current ? "primary" : past ? "success" : "outline"}
+                  data-testid={current ? "status-current" : undefined}
+                  data-status={s}
+                >
+                  {humanize(s)}
+                </Badge>
+              );
+            });
+          })()}
+        </div>
+      </details>
 
       {blockedReason ? (
         <p className="text-body text-danger mb-3">
