@@ -3,7 +3,9 @@
 import * as React from "react";
 import { useEffect, useId, useState, useTransition } from "react";
 import {
+  Check,
   CheckCircle,
+  Circle,
   XCircle,
   ArrowRight,
   Ban,
@@ -99,6 +101,78 @@ const STAGE_LABEL: Record<WorkflowStage, string> = {
   design: "Creative production",
   publish: "Publishing",
 };
+
+/**
+ * Rail-stage model — a finer-grained 6-stage view used ONLY by
+ * the right-rail (the planning-detail spec's primary workflow
+ * surface). The 4-stage model above stays in place for the
+ * header-pill `WorkflowStepper` because the header is at-a-
+ * glance and 4 chips read better than 6 in a tight horizontal
+ * row.
+ *
+ * The 11-state backend machine maps to the 6 rail stages as
+ * follows:
+ *
+ *   1. planning           draft
+ *   2. content_review     content_review, changes_requested
+ *   3. creative_production approved_for_design, in_design
+ *   4. creative_approval  creative_review
+ *   5. publishing_setup   ready_to_publish, partially_published
+ *   6. published          published
+ *
+ * `blocked` and `cancelled` are special cases: the rail marks
+ * them as `attention` against the most-relevant user-facing
+ * stage (planning by default — the user can return to the
+ * content item from there) but surfaces the system state as a
+ * separate "Blocked" / "Cancelled" pill so the user is never
+ * silently mis-led.
+ */
+export type RailStage =
+  | "planning"
+  | "content_review"
+  | "creative_production"
+  | "creative_approval"
+  | "publishing_setup"
+  | "published";
+
+const RAIL_STAGES: ReadonlyArray<{ id: RailStage; label: string }> = [
+  { id: "planning", label: "Planning" },
+  { id: "content_review", label: "Content review" },
+  { id: "creative_production", label: "Creative production" },
+  { id: "creative_approval", label: "Creative approval" },
+  { id: "publishing_setup", label: "Publishing setup" },
+  { id: "published", label: "Published" },
+];
+
+export function railStageForStatus(status: string): {
+  stage: RailStage;
+  /** "linear" or "blocked" / "cancelled" special states. */
+  variant: "linear" | "blocked" | "cancelled";
+} {
+  switch (status) {
+    case "draft":
+      return { stage: "planning", variant: "linear" };
+    case "content_review":
+    case "changes_requested":
+      return { stage: "content_review", variant: "linear" };
+    case "approved_for_design":
+    case "in_design":
+      return { stage: "creative_production", variant: "linear" };
+    case "creative_review":
+      return { stage: "creative_approval", variant: "linear" };
+    case "ready_to_publish":
+    case "partially_published":
+      return { stage: "publishing_setup", variant: "linear" };
+    case "published":
+      return { stage: "published", variant: "linear" };
+    case "blocked":
+      return { stage: "planning", variant: "blocked" };
+    case "cancelled":
+      return { stage: "planning", variant: "cancelled" };
+    default:
+      return { stage: "planning", variant: "linear" };
+  }
+}
 
 /**
  * WorkflowRail — right-side persistent rail for the planning
@@ -360,6 +434,7 @@ function WorkflowRailBody({
   const currentRoleLabels = (currentStep?.responsibleRoles ?? []).map((r) => r.label);
 
   const { stage: currentStage } = stageForStatus(status);
+  const { stage: railCurrentStage } = railStageForStatus(status);
   const hasAnyButton =
     (status === "draft" && can(["isManager", "isPlanner"])) ||
     (status === "content_review" && can(["isInternalReviewer", "isManager"])) ||
@@ -386,17 +461,33 @@ function WorkflowRailBody({
           {canActOnCurrentStep ? "You can act" : "Awaiting"}
         </Badge>
       </div>
-      <ol className="px-3 py-2" aria-label="Workflow stages" data-testid="workflow-rail-stages">
-        {(["draft", "review", "design", "publish"] as const).map((stage) => {
-          const expanded = stage === currentStage;
+      <ol
+        className="relative px-3 py-2"
+        aria-label="Workflow stages"
+        data-testid="workflow-rail-stages"
+      >
+        {/* Vertical process line — a single hairline that connects
+            all the stage markers. Rendered via an absolutely-
+            positioned pseudo-element on the <ol> so the line
+            stays continuous even when the current stage's
+            expanded block pushes the row height. The line sits
+            16px in from the left edge to align with the stage
+            marker centers. */}
+        <div
+          className="bg-border absolute top-2 bottom-2 left-[22px] w-px"
+          aria-hidden="true"
+          data-testid="workflow-rail-process-line"
+        />
+        {RAIL_STAGES.map(({ id: stage, label }) => {
+          const expanded = stage === railCurrentStage;
           return (
             <li
               key={stage}
-              className="py-1"
+              className="relative py-1"
               data-stage-id={stage}
               data-active={expanded || undefined}
             >
-              <StageRow stage={stage} status={status} />
+              <RailStageRow stage={stage} label={label} status={status} />
               {expanded ? (
                 <div
                   className="border-border bg-surface-subtle mt-1 ml-7 space-y-2 rounded-[var(--radius-control)] border p-2"
@@ -580,26 +671,41 @@ function WorkflowRailBody({
 }
 
 /**
- * Compact stage row. Renders a single line per stage with the
- * spec's icon + colour + text state language. The current
- * stage is signalled by `aria-current="step"` and gets the
- * expanded block rendered as a sibling (handled by the parent).
+ * Rail-stage row — the 6-stage equivalent of `StageRow`. Lives
+ * inside the right-rail's <ol> which has an absolutely-
+ * positioned vertical process line on its left side. The row
+ * keeps the spec's icon + label + colour + text state language
+ * (the same five state icons the original 4-stage row used) and
+ * leaves the current stage's expanded block to the parent.
  */
-function StageRow({ stage, status }: { stage: WorkflowStage; status: string }) {
-  const state = stageState(stage, status);
+function RailStageRow({
+  stage,
+  label,
+  status,
+}: {
+  stage: RailStage;
+  label: string;
+  status: string;
+}) {
+  const state = railStageState(stage, status);
   return (
     <div
-      className="flex items-center gap-2"
+      className="flex items-center gap-3"
       aria-current={state.kind === "current" ? "step" : undefined}
+      data-testid={`workflow-rail-stage-${stage}`}
     >
-      <StageIcon kind={state.kind} />
+      <RailStageIcon kind={state.kind} />
       <span
         className={cn(
           "text-body font-semibold",
-          state.kind === "current" ? "text-fg-primary" : "text-fg-secondary",
+          state.kind === "current"
+            ? "text-fg-primary"
+            : state.kind === "upcoming"
+              ? "text-fg-muted"
+              : "text-fg-secondary",
         )}
       >
-        {STAGE_LABEL[stage]}
+        {label}
       </span>
     </div>
   );
@@ -619,6 +725,86 @@ function stageState(stage: WorkflowStage, status: string): StageState {
   const cIdx = order.indexOf(currentStage);
   if (sIdx < cIdx) return { kind: "complete" };
   return { kind: "upcoming" };
+}
+
+/**
+ * 6-stage equivalent of `stageState`. Uses the rail's own
+ * `RAIL_STAGES` order and the `railStageForStatus` mapping. The
+ * "blocked" / "cancelled" variants anchor the user to the
+ * "planning" rail stage with an "attention" state — the
+ * system state is rendered as a separate badge in the
+ * expanded current block so the user is never silently
+ * mis-led.
+ */
+function railStageState(stage: RailStage, status: string): StageState {
+  const { stage: currentStage, variant } = railStageForStatus(status);
+  if (variant === "blocked" || variant === "cancelled") {
+    if (stage === currentStage) return { kind: "blocked" };
+    const order: RailStage[] = RAIL_STAGES.map((s) => s.id);
+    const sIdx = order.indexOf(stage);
+    const cIdx = order.indexOf(currentStage);
+    if (sIdx < cIdx) return { kind: "complete" };
+    return { kind: "upcoming" };
+  }
+  if (stage === currentStage) return { kind: "current" };
+  const order: RailStage[] = RAIL_STAGES.map((s) => s.id);
+  const sIdx = order.indexOf(stage);
+  const cIdx = order.indexOf(currentStage);
+  if (sIdx < cIdx) return { kind: "complete" };
+  return { kind: "upcoming" };
+}
+
+/**
+ * Compact stage marker for the rail's 6-stage list. Sized
+ * 24×24 so the markers line up with the absolutely-positioned
+ * 1px process line at `left-[22px]`. The marker background
+ * covers the line behind the icon so the line doesn't poke
+ * through the marker.
+ */
+function RailStageIcon({ kind }: { kind: StageState["kind"] }) {
+  if (kind === "complete") {
+    return (
+      <span
+        className="border-success/40 bg-success-subtle text-success relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
+        aria-label="Complete"
+        data-state="complete"
+      >
+        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+      </span>
+    );
+  }
+  if (kind === "blocked") {
+    return (
+      <span
+        className="border-danger/40 bg-danger-subtle text-danger relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
+        aria-label="Blocked"
+        data-state="blocked"
+      >
+        <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
+      </span>
+    );
+  }
+  if (kind === "current") {
+    return (
+      <span
+        className="border-primary bg-primary text-primary-foreground relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 shadow-sm"
+        aria-label="Current"
+        data-state="current"
+      >
+        <Circle className="h-2.5 w-2.5 fill-current" aria-hidden="true" />
+      </span>
+    );
+  }
+  // "upcoming"
+  return (
+    <span
+      className="border-border bg-surface text-fg-muted relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
+      aria-label="Upcoming"
+      data-state="upcoming"
+    >
+      <Circle className="h-2 w-2" aria-hidden="true" />
+    </span>
+  );
 }
 
 function StageIcon({ kind, compact = false }: { kind: StageState["kind"]; compact?: boolean }) {
