@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Copy, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DirAwareInput } from "@/components/forms/dir-aware-textarea";
@@ -44,6 +44,12 @@ import { cn } from "@/lib/utils";
  *   still renders the chip strip / row stack so the
  *   editor stays useful as a reference for creative
  *   handoff.
+ * - Reorder: `Alt+ArrowUp` / `Alt+ArrowDown` on a focused
+ *   chip moves that row up/down by one. There are also
+ *   explicit "Move up" / "Move down" / "Duplicate" buttons
+ *   in the active panel header. Mouse users can drag
+ *   chips to reorder — the strip is HTML5 draggable with
+ *   visible drop indicators.
  *
  * Keyboard nav: when a chip has focus, Left/Right arrows
  * move the active index, Home/End jump to the first/last
@@ -132,6 +138,46 @@ export function NavigableArrayField({
     setActiveIndex(next.length - 1);
   }
 
+  /**
+   * Move the row at `from` to the slot currently held by
+   * `to`. We re-insert (instead of swapping) so the user
+   * can drag a chip from the middle to the end without
+   * the intermediate slide flipping twice. Positions are
+   * renumbered on the next render so `position` always
+   * reflects the current display order.
+   */
+  function moveTo(from: number, to: number) {
+    if (from === to) return;
+    if (from < 0 || from >= rows.length) return;
+    if (to < 0 || to >= rows.length) return;
+    const next = rows.slice();
+    const [moved] = next.splice(from, 1);
+    if (moved === undefined) return;
+    next.splice(to, 0, moved);
+    update(next);
+    setActiveIndex(to);
+  }
+
+  /** Duplicate the row at `idx` and insert the copy
+   *  immediately after it. Useful for carousel slides
+   *  where the planner wants a copy with a tweak. */
+  function duplicateAt(idx: number) {
+    if (idx < 0 || idx >= rows.length) return;
+    const source = rows[idx];
+    if (!source || typeof source !== "object" || Array.isArray(source)) return;
+    const copy: Record<string, unknown> = { ...(source as Record<string, unknown>) };
+    const next = [...rows];
+    next.splice(idx + 1, 0, copy);
+    update(next);
+    setActiveIndex(idx + 1);
+  }
+
+  // Local drag state. We track the row currently being
+  // dragged and the row the user is hovering over, so
+  // the drop indicator appears on the target chip.
+  const [dragIndex, setDragIndex] = React.useState<number | null>(null);
+  const [dropTarget, setDropTarget] = React.useState<number | null>(null);
+
   function removeAt(idx: number) {
     const next = rows.filter((_, i) => i !== idx);
     update(next);
@@ -207,6 +253,8 @@ export function NavigableArrayField({
                     ? (r[previewColumn.key] as string).trim()
                     : "";
                 const isActive = idx === activeIndex;
+                const isDropTarget =
+                  editable && dropTarget === idx && dragIndex !== null && dragIndex !== idx;
                 return (
                   <li key={idx} className="shrink-0">
                     <button
@@ -217,14 +265,69 @@ export function NavigableArrayField({
                       aria-controls={`${fieldKey}-panel`}
                       tabIndex={isActive ? 0 : -1}
                       onClick={() => setActiveIndex(idx)}
-                      onKeyDown={(e) => handleChipKey(e, idx, rows.length, setActiveIndex)}
+                      onKeyDown={(e) =>
+                        handleChipKey(
+                          e,
+                          idx,
+                          rows.length,
+                          setActiveIndex,
+                          editable,
+                          moveTo,
+                          removeAt,
+                          duplicateAt,
+                        )
+                      }
                       data-testid={`${fieldKey}-tab-${idx}`}
+                      draggable={editable}
+                      onDragStart={(e) => {
+                        if (!editable) return;
+                        setDragIndex(idx);
+                        // dataTransfer is required for
+                        // Firefox to consider the element
+                        // draggable; the actual payload is
+                        // kept in React state.
+                        try {
+                          e.dataTransfer.setData("text/plain", String(idx));
+                          e.dataTransfer.effectAllowed = "move";
+                        } catch {
+                          // Some test environments throw on
+                          // dataTransfer access — ignore.
+                        }
+                      }}
+                      onDragOver={(e) => {
+                        if (!editable) return;
+                        e.preventDefault();
+                        try {
+                          e.dataTransfer.dropEffect = "move";
+                        } catch {
+                          // ignore
+                        }
+                        if (dropTarget !== idx) setDropTarget(idx);
+                      }}
+                      onDragLeave={() => {
+                        if (dropTarget === idx) setDropTarget(null);
+                      }}
+                      onDrop={(e) => {
+                        if (!editable) return;
+                        e.preventDefault();
+                        const from = dragIndex;
+                        if (from !== null) moveTo(from, idx);
+                        setDragIndex(null);
+                        setDropTarget(null);
+                      }}
+                      onDragEnd={() => {
+                        setDragIndex(null);
+                        setDropTarget(null);
+                      }}
+                      aria-grabbed={dragIndex === idx || undefined}
                       className={cn(
                         "border-border bg-surface text-fg-primary text-label flex max-w-[10rem] items-center gap-2 rounded-full border px-3 py-1.5 text-left transition-colors",
                         "hover:bg-surface-subtle focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none",
                         isActive
                           ? "border-primary bg-primary-subtle text-primary font-semibold"
                           : "",
+                        isDropTarget ? "ring-2 ring-[color:var(--primary)] ring-offset-1" : "",
+                        dragIndex === idx ? "opacity-60" : "",
                       )}
                     >
                       <span
@@ -288,6 +391,12 @@ export function NavigableArrayField({
             <div className="mb-2 flex items-center justify-between gap-2">
               <p className="text-label text-fg-secondary font-semibold">
                 {noun} {activeIndex + 1}
+                <span
+                  className="text-fg-muted ml-1 font-normal"
+                  data-testid={`${fieldKey}-active-counter`}
+                >
+                  of {rows.length}
+                </span>
               </p>
               <div className="flex items-center gap-1">
                 <Button
@@ -311,16 +420,54 @@ export function NavigableArrayField({
                   <ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </Button>
                 {editable ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => removeAt(activeIndex)}
-                    aria-label={`Remove ${noun.toLowerCase()} ${activeIndex + 1}`}
-                    className="text-fg-muted hover:text-danger"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Remove
-                  </Button>
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => moveTo(activeIndex, activeIndex - 1)}
+                      disabled={activeIndex === 0}
+                      aria-label={`Move ${noun.toLowerCase()} ${activeIndex + 1} up`}
+                      data-testid={`${fieldKey}-move-up`}
+                      title="Move up (Alt+ArrowUp)"
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => moveTo(activeIndex, activeIndex + 1)}
+                      disabled={activeIndex >= rows.length - 1}
+                      aria-label={`Move ${noun.toLowerCase()} ${activeIndex + 1} down`}
+                      data-testid={`${fieldKey}-move-down`}
+                      title="Move down (Alt+ArrowDown)"
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => duplicateAt(activeIndex)}
+                      aria-label={`Duplicate ${noun.toLowerCase()} ${activeIndex + 1}`}
+                      data-testid={`${fieldKey}-duplicate`}
+                      title="Duplicate (Ctrl/Cmd+D)"
+                    >
+                      <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => removeAt(activeIndex)}
+                      aria-label={`Remove ${noun.toLowerCase()} ${activeIndex + 1}`}
+                      data-testid={`${fieldKey}-remove`}
+                      className="text-fg-muted hover:text-danger"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Remove
+                    </Button>
+                  </>
                 ) : null}
               </div>
             </div>
@@ -501,6 +648,10 @@ function handleChipKey(
   idx: number,
   total: number,
   setActiveIndex: (n: number) => void,
+  editable: boolean,
+  moveTo: (from: number, to: number) => void,
+  removeAt: (idx: number) => void,
+  duplicateAt: (idx: number) => void,
 ) {
   switch (e.key) {
     case "ArrowLeft":
@@ -526,6 +677,44 @@ function handleChipKey(
       e.preventDefault();
       setActiveIndex(total - 1);
       requestAnimationFrame(() => focusChipByIndex(total - 1));
+      return;
+    // Reorder: Alt+ArrowUp / Alt+ArrowDown swaps the
+    // active row with the neighbour above/below. Alt is
+    // required so the bare arrow keys keep their default
+    // meaning (move focus between chips, no data change).
+    case "ArrowUp":
+      if (editable && e.altKey) {
+        e.preventDefault();
+        moveTo(idx, idx - 1);
+        requestAnimationFrame(() => focusChipByIndex(Math.max(0, idx - 1)));
+      }
+      return;
+    case "ArrowDown":
+      if (editable && e.altKey) {
+        e.preventDefault();
+        moveTo(idx, idx + 1);
+        requestAnimationFrame(() => focusChipByIndex(Math.min(total - 1, idx + 1)));
+      }
+      return;
+    // Delete / Backspace removes the focused chip in
+    // editable mode. We do NOT treat these as plain typing
+    // because the chip button is a single focusable
+    // element — there's no input to receive the keystroke.
+    case "Delete":
+    case "Backspace":
+      if (editable) {
+        e.preventDefault();
+        removeAt(idx);
+      }
+      return;
+    // Ctrl/Cmd+D duplicates the focused chip.
+    case "d":
+    case "D":
+      if (editable && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        duplicateAt(idx);
+        requestAnimationFrame(() => focusChipByIndex(Math.min(total, idx + 1)));
+      }
       return;
     default:
       return;

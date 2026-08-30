@@ -11,6 +11,16 @@ import {
   Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useImageDimensions } from "@/lib/preview/use-image-dimensions";
+import {
+  diagnoseAspectRatio,
+  CAROUSEL_RATIOS,
+  FEED_RATIOS,
+  REEL_RATIOS,
+  type AspectRatioSpec,
+} from "@/lib/preview/instagram-aspect-ratios";
+import { AspectRatioDiagnosticView } from "@/components/preview/aspect-ratio-diagnostic";
+import { SafeAreaOverlay, type SafeAreaShape } from "@/components/preview/safe-area-overlay";
 
 /**
  * PlatformPreview — a recognisable, format-aware preview of a
@@ -26,6 +36,18 @@ import { cn } from "@/lib/utils";
  * platform's own OG image / embed requires the post to exist;
  * the planner needs the preview *before* publishing. So we
  * render a faithful stand-in.
+ *
+ * Phase 4 of the planning-workspace-v2 refactor (2026-08-30)
+ * added:
+ *   - **Aspect-ratio diagnostic** — the preview now measures
+ *     the loaded image and reports whether it matches the
+ *     destination's recommended shape. The diagnostic is
+ *     rendered as a status pill below the media area; warnings
+ *     carry a one-line recommendation (e.g. "Try 1080 × 1350
+ *     for 4:5").
+ *   - **Safe-area overlay** for Reels/Stories — toggle a
+ *     translucent mask over the regions the Instagram UI
+ *     typically covers (caption, profile, action buttons).
  *
  * Contract:
  *   - `<PlatformPreview />` is a Client Component because it
@@ -47,6 +69,13 @@ export interface PlatformPreviewProps {
    *  otherwise fall back to a single "post" view. */
   initialFormat?: PreviewFormat;
   className?: string;
+  /**
+   * Optional content format (e.g. "carousel", "short_form_video").
+   * When "carousel" the preview swaps the feed candidates for
+   * the carousel candidate set (square + 4:5) and shows a
+   * "carousel preview" label.
+   */
+  contentFormat?: string | null;
 }
 
 function formatOptionsFor(platform: string): PreviewFormat[] {
@@ -63,6 +92,22 @@ function formatOptionsFor(platform: string): PreviewFormat[] {
   }
 }
 
+function candidatesFor(
+  format: PreviewFormat,
+  contentFormat: string | null | undefined,
+): ReadonlyArray<AspectRatioSpec> {
+  if (contentFormat === "carousel") return CAROUSEL_RATIOS;
+  if (format === "reel" || format === "story") return REEL_RATIOS;
+  return FEED_RATIOS;
+}
+
+function safeAreaShapeFor(format: PreviewFormat): SafeAreaShape | null {
+  if (format === "story") return "story";
+  if (format === "reel") return "reel";
+  if (format === "feed") return "feed";
+  return null;
+}
+
 export function PlatformPreview({
   platform,
   accountName,
@@ -71,10 +116,57 @@ export function PlatformPreview({
   thumbnailUrl,
   initialFormat,
   className,
+  contentFormat,
 }: PlatformPreviewProps) {
   const options = formatOptionsFor(platform);
   const [format, setFormat] = React.useState<PreviewFormat>(
     initialFormat && options.includes(initialFormat) ? initialFormat : options[0]!,
+  );
+  const candidates = candidatesFor(format, contentFormat);
+  const imageDims = useImageDimensions(thumbnailUrl);
+  const diagnostic = React.useMemo(
+    () => diagnoseAspectRatio(imageDims.width, imageDims.height, candidates),
+    [imageDims.width, imageDims.height, candidates],
+  );
+  const safeAreaShape = safeAreaShapeFor(format);
+  const mediaBody = (
+    <div
+      className={cn(
+        "bg-surface-subtle relative flex items-center justify-center",
+        format === "story" ? "aspect-[9/16] max-h-[420px]" : "aspect-square",
+      )}
+      data-testid="platform-preview-media"
+    >
+      {thumbnailUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={thumbnailUrl}
+          alt={`${accountName} preview`}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div
+          className="text-fg-muted flex flex-col items-center gap-1"
+          data-testid="platform-preview-empty"
+        >
+          {format === "reel" ? (
+            <Play className="h-12 w-12" aria-hidden="true" />
+          ) : (
+            <ImageIcon className="h-12 w-12" aria-hidden="true" />
+          )}
+          <p className="text-label">No media yet</p>
+        </div>
+      )}
+      {format === "reel" ? (
+        <span
+          className="absolute right-2 bottom-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white"
+          aria-hidden="true"
+        >
+          <Play className="h-3 w-3" />
+          Reel
+        </span>
+      ) : null}
+    </div>
   );
 
   return (
@@ -111,6 +203,14 @@ export function PlatformPreview({
               {opt}
             </button>
           ))}
+          {contentFormat === "carousel" ? (
+            <span
+              className="text-label text-fg-muted ml-auto inline-flex items-center gap-1 px-2 font-semibold tracking-wide uppercase"
+              data-testid="platform-preview-carousel-label"
+            >
+              Carousel preview
+            </span>
+          ) : null}
         </div>
       ) : null}
 
@@ -129,44 +229,26 @@ export function PlatformPreview({
         <MoreHorizontal className="text-fg-muted h-4 w-4" aria-hidden="true" />
       </header>
 
-      {/* Media area */}
-      <div
-        className={cn(
-          "bg-surface-subtle relative flex items-center justify-center",
-          format === "story" ? "aspect-[9/16] max-h-[420px]" : "aspect-square",
-        )}
-        data-testid="platform-preview-media"
-      >
-        {thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={thumbnailUrl}
-            alt={`${accountName} preview`}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div
-            className="text-fg-muted flex flex-col items-center gap-1"
-            data-testid="platform-preview-empty"
-          >
-            {format === "reel" ? (
-              <Play className="h-12 w-12" aria-hidden="true" />
-            ) : (
-              <ImageIcon className="h-12 w-12" aria-hidden="true" />
-            )}
-            <p className="text-label">No media yet</p>
-          </div>
-        )}
-        {format === "reel" ? (
-          <span
-            className="absolute right-2 bottom-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white"
-            aria-hidden="true"
-          >
-            <Play className="h-3 w-3" />
-            Reel
-          </span>
-        ) : null}
-      </div>
+      {/* Media area — wrapped in the safe-area overlay for
+          Reel/Story so the planner can see the regions the
+          app's own UI covers. */}
+      {safeAreaShape ? (
+        <SafeAreaOverlay shape={safeAreaShape}>{mediaBody}</SafeAreaOverlay>
+      ) : (
+        mediaBody
+      )}
+
+      {/* Aspect-ratio diagnostic. The view hides itself when
+          the image is still loading or the URL was a share
+          page (no dimensions available). The diagnostic is
+          the planner-facing signal: "this 1080×1920 image
+          matches Reel 9:16" or "this 1920×1080 image is
+          landscape — try 1080×566 for the feed". */}
+      {thumbnailUrl ? (
+        <div className="px-3 pt-2" data-testid="platform-preview-aspect-diagnostic">
+          <AspectRatioDiagnosticView diagnostic={diagnostic} />
+        </div>
+      ) : null}
 
       {/* Actions + caption — same chrome across formats; stories
           collapse to just the caption. */}

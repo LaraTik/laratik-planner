@@ -50,23 +50,45 @@ export interface ActivityTimelineProps {
 const ICON_BY_KIND: Record<string, React.ComponentType<{ className?: string }>> = {
   status_transition: ArrowRight,
   brief_updated: FileEdit,
+  title_updated: FileEdit,
+  date_updated: FileEdit,
+  content_updated: FileEdit,
   delivery_submitted: Upload,
   comment_added: MessageCircle,
+  mention: MessageCircle,
   ai_draft_applied: Sparkles,
   publication_recorded: Eye,
+  publication: Eye,
   blocked: ShieldX,
   claimed: Play,
+  assignment: Play,
+  schedule_change: FileEdit,
+  bulk_archive: FileEdit,
+  create: Sparkles,
+  update: FileEdit,
+  system: ArrowRight,
 };
 
 const TONE_BY_KIND: Record<string, string> = {
   status_transition: "border-primary/30 bg-primary-subtle text-primary",
   brief_updated: "border-info/30 bg-info-subtle text-info",
+  title_updated: "border-info/30 bg-info-subtle text-info",
+  date_updated: "border-info/30 bg-info-subtle text-info",
+  content_updated: "border-info/30 bg-info-subtle text-info",
   delivery_submitted: "border-success/30 bg-success-subtle text-success",
   comment_added: "border-border bg-surface text-fg-secondary",
+  mention: "border-border bg-surface text-fg-secondary",
   ai_draft_applied: "border-warning/30 bg-warning-subtle text-warning",
   publication_recorded: "border-success/30 bg-success-subtle text-success",
+  publication: "border-success/30 bg-success-subtle text-success",
   blocked: "border-danger/30 bg-danger-subtle text-danger",
   claimed: "border-primary/30 bg-primary-subtle text-primary",
+  assignment: "border-primary/30 bg-primary-subtle text-primary",
+  schedule_change: "border-info/30 bg-info-subtle text-info",
+  bulk_archive: "border-warning/30 bg-warning-subtle text-warning",
+  create: "border-primary/30 bg-primary-subtle text-primary",
+  update: "border-info/30 bg-info-subtle text-info",
+  system: "border-border bg-surface text-fg-secondary",
 };
 
 export function ActivityTimeline({
@@ -130,19 +152,46 @@ function humanizeKind(kind: string, summary: string): string {
       return "moved the workflow forward";
     case "brief_updated":
       return "updated the brief";
+    case "title_updated":
+      return "updated the title";
+    case "date_updated":
+      return "updated the planned publish date";
+    case "content_updated":
+      return "updated content details";
     case "delivery_submitted":
       return "submitted a delivery version";
     case "comment_added":
       return "commented on the item";
+    case "mention":
+      return "mentioned someone in a comment";
     case "ai_draft_applied":
       return "applied an AI suggestion";
     case "publication_recorded":
       return "recorded a publication outcome";
+    case "publication":
+      return "marked the item as published";
     case "blocked":
       return "blocked the item";
     case "claimed":
       return "claimed the design task";
+    case "assignment":
+      return "was assigned to the item";
+    case "schedule_change":
+      return "changed the schedule";
+    case "bulk_archive":
+      return "bulk-archived items";
+    case "create":
+      return "created the item";
+    case "update":
+      return "updated the item";
+    case "system":
+      return "ran a system action";
     default:
+      // Last-resort fallback: turn `creative_internal_decision` into
+      // "creative internal decision" so we never render raw enum
+      // strings to the user. The list above is the canonical map
+      // (one entry per `kind:` we emit) — when a new kind is added
+      // it MUST be added here in the same PR.
       return kind.replace(/_/g, " ");
   }
 }

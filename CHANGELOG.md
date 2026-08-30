@@ -25,7 +25,7 @@ to a single source of truth.
 - **Reconciled the 4% / 23-of-27 audit contradiction**
   (`src/lib/dashboard/kpis.ts`). The pre-refactor donut math
   was `(ready_to_publish + partially_published + published) /
-  total` (1/27 → 3.7% → 4%) — a "% complete" value wearing the
+total` (1/27 → 3.7% → 4%) — a "% complete" value wearing the
   wrong label. The refactor:
   - Renames the math to `completionPercent` (semantically
     correct) and keeps `deliveryHealthPercent` as a deprecated
@@ -145,6 +145,128 @@ to a single source of truth.
   page restructuring, the month navigation, and the deferred
   work (My work vs Recently updated, finer "why at risk"
   reasons, approval count source).
+
+### Changed — Planning Item Workspace v2 (2026-08-30)
+
+Full product-quality refinement of the `/app/w/[slug]/planning/[id]`
+detail page. Six phases delivered in one branch.
+
+- **Format-aware Content tab.** The previous editor dumped every
+  per-format field into a single essential/advanced list. The new
+  `FormatAwareContentEditor` (`src/components/forms/format-aware-content-editor.tsx`)
+  splits the same payload into **Strategy** (why), **Copy** (what
+  gets posted), and **Creative** (the visual), with distinct
+  layouts for Static Post / Carousel / Reel / Story / Long-form
+  video / Article / Live / Other. The page now mounts the
+  sectioned editor by default; the old `FormatPayloadEditor` is
+  still exported for any other caller.
+- **Carousel slide management** (`src/components/forms/navigable-array-field.tsx`).
+  The shared `NavigableArrayField` now supports full
+  add / duplicate / delete / reorder with:
+  - explicit Move-up / Move-down / Duplicate buttons in the
+    active panel header;
+  - HTML5 drag-and-drop on the chip strip with a visible drop
+    indicator;
+  - `Alt+↑` / `Alt+↓` on a focused chip for keyboard reordering;
+  - `⌘D` / `Ctrl+D` for duplicate;
+  - `Delete` / `Backspace` for remove.
+    Positions are renumbered on every render so the `position`
+    field is always the current display order.
+- **Creative version cards** (`src/components/workspace/delivery-version-card.tsx`).
+  The previous toggle-row design is replaced with a proper card
+  per delivery: prominent V{n} pill, status badge (Final
+  approved / Awaiting review / Changes requested) derived from
+  `contentStatus` + `isFinalApproved`, thumbnail strip (one
+  tile per link, with provider-icon fallback for share pages),
+  designer-note blockquote, and explicit Open-assets / Preview /
+  Approve action buttons. The old `delivery-version-list.tsx` is
+  removed.
+- **Real Instagram preview** (`src/components/planning/platform-preview.tsx`,
+  `src/lib/preview/instagram-aspect-ratios.ts`,
+  `src/components/preview/safe-area-overlay.tsx`). The preview
+  now:
+  - measures the loaded image with a one-shot client probe
+    (`useImageDimensions`);
+  - runs an aspect-ratio diagnostic against the destination's
+    recommended shape (feed = 1:1 / 4:5 / 1.91:1, carousel = 1:1
+    / 4:5, reel/story = 9:16) and surfaces OK / warning with a
+    one-line recommendation (e.g. "Try 1080 × 1350 for 4:5");
+  - paints a toggleable safe-area overlay for Reel/Story
+    showing the regions the Instagram UI typically covers
+    (caption, profile, action buttons, bottom progress).
+    Platform requirements are centralised in
+    `instagram-aspect-ratios.ts` so the rules can be updated
+    when Meta changes them.
+- **Readiness navigation** (`src/components/planning/overview-navigator.tsx`).
+  Clicking an Overview readiness row now switches the workspace
+  shell's active tab, scrolls the target sub-anchor into view,
+  and moves keyboard focus to the first interactive child of
+  that section. The old `<Link>`-only behaviour didn't always
+  scroll because the destination panel just mounted.
+- **Activity humanizer** (`src/components/planning/activity-timeline.tsx`).
+  Every known `kind` (`status_transition`, `brief_updated`,
+  `title_updated`, `date_updated`, `content_updated`,
+  `delivery_submitted`, `comment_added`, `mention`,
+  `ai_draft_applied`, `publication_recorded`, `publication`,
+  `blocked`, `claimed`, `assignment`, `schedule_change`,
+  `bulk_archive`, `create`, `update`, `system`) now maps to a
+  full human sentence; the snake-case fallback remains as a
+  last resort for forward-compat.
+- **Workflow rail polish** (`src/components/planning/workflow-rail.tsx`).
+  The primary action button (Submit / Approve / Resubmit /
+  Claim) is now a full-width prominent button so the user
+  always knows which click moves the item forward.
+
+### Added — new components / modules
+
+- `src/components/forms/format-aware-content-editor.tsx` —
+  sectioned, format-aware editor (replaces the use of
+  `FormatPayloadEditor` on the planning detail page).
+- `src/components/planning/overview-navigator.tsx` — client
+  wrapper that gives the Overview's readiness rows tab-switch
+  - scroll + focus behaviour.
+- `src/components/workspace/delivery-version-card.tsx` —
+  Creative Version card + list.
+- `src/components/preview/aspect-ratio-diagnostic.tsx` —
+  visual status pill for the aspect-ratio check.
+- `src/components/preview/safe-area-overlay.tsx` — toggleable
+  safe-area mask for Reel / Story.
+- `src/lib/preview/instagram-aspect-ratios.ts` — pure helpers
+  - spec constants for Instagram shape validation.
+- `src/lib/preview/use-image-dimensions.ts` — one-shot image
+  probe hook.
+
+### Tests added
+
+- `tests/unit/planning/activity-timeline.test.tsx` — pins the
+  "no machine enum leaks" contract across 19 known kinds.
+- `tests/unit/planning/overview-navigator.test.tsx` — pins
+  tab-switch + scroll + focus behaviour for the readiness
+  rows.
+- `tests/unit/forms/format-aware-content-editor.test.tsx` —
+  pins the section composition per format and the
+  read-only/edit-mode contract.
+- `tests/unit/forms/navigable-array-field-reorder.test.tsx` —
+  pins the new Move-up / Move-down / Duplicate / drag / keyboard
+  contract.
+- `tests/unit/workspace/delivery-version-list.test.tsx` —
+  rewrites the old row tests against the new card with status
+  derivation, thumbnail strip, and Approve action.
+- `tests/unit/preview/instagram-aspect-ratios.test.ts` —
+  pins the pure diagnostic helpers.
+- `tests/unit/preview/platform-preview-aspect.test.tsx` —
+  pins the safe-area toggle and the diagnostic container
+  rendering in the preview.
+
+### Changed — test contracts
+
+- `tests/unit/forms/format-payload-editor.test.tsx` still
+  passes; the underlying `FormatPayloadEditor` is unchanged.
+  The planning detail page now mounts
+  `FormatAwareContentEditor` instead.
+- `tests/unit/workspace/delivery-version-list.test.tsx` was
+  rewritten to cover the new card behaviour; the file name
+  and test ids changed accordingly.
 
 ### Changed — Planning List enriched row (2026-08-30)
 
