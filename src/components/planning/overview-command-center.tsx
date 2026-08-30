@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, CheckCircle2, Circle, Info, Pencil } from "lucide-react";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { humanFormat, humanStatus } from "@/lib/content/status";
 import { explainStatus } from "@/lib/content/workflow-explanations";
 import { ActivityTimeline, type ActivityEventView } from "./activity-timeline";
@@ -155,10 +154,6 @@ function NextActionCard({
   contentStatus,
   readinessBlockers,
   readinessCanPublish,
-  canEdit,
-  editHref,
-  primaryActionLabel,
-  reviewChangesHref,
 }: {
   contentStatus: string;
   readinessBlockers: number;
@@ -168,18 +163,20 @@ function NextActionCard({
   primaryActionLabel?: string;
   reviewChangesHref?: string;
 }) {
-  const step = safeExplain(contentStatus);
-
   // "Healthy" item — no action required.
   if (readinessCanPublish && readinessBlockers === 0 && !stepIsActionable(contentStatus)) {
     return null;
   }
 
-  // Pick a contextual headline + CTA.
+  // The right rail now owns the primary workflow transition
+  // action (Submit for review, Resubmit, Approve, etc.) and the
+  // current stage block. The Overview's "Next action" card
+  // therefore no longer renders its own CTA — it summarises
+  // the work that needs attention and links each item to the
+  // relevant workspace section. The right rail handles the
+  // actual transition.
   const headline = nextHeadline(contentStatus, readinessBlockers);
-  const body = nextBody(contentStatus, step?.next);
-  const ctaHref = nextHref(contentStatus, editHref, reviewChangesHref);
-  const ctaLabel = primaryActionLabel ?? nextCtaLabel(contentStatus, canEdit);
+  const body = nextBody(contentStatus, safeExplain(contentStatus)?.next);
 
   const tone =
     readinessBlockers > 0
@@ -190,22 +187,12 @@ function NextActionCard({
 
   return (
     <Card padding="md" data-testid="overview-next-action" className={tone}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1 space-y-1.5">
-          <p className="text-label text-fg-muted font-semibold uppercase">Next action</p>
-          <CardTitle className="text-body text-fg-primary text-lg font-semibold">
-            {headline}
-          </CardTitle>
-          {body ? <CardDescription>{body}</CardDescription> : null}
-        </div>
-        {ctaHref && ctaLabel ? (
-          <Button asChild size="sm" data-testid="overview-next-action-cta">
-            <Link href={ctaHref}>
-              {ctaLabel}
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
-          </Button>
-        ) : null}
+      <div className="space-y-1.5">
+        <p className="text-label text-fg-muted font-semibold uppercase">Action required</p>
+        <CardTitle className="text-body text-fg-primary text-lg font-semibold">
+          {headline}
+        </CardTitle>
+        {body ? <CardDescription>{body}</CardDescription> : null}
       </div>
     </Card>
   );
@@ -255,47 +242,6 @@ function nextBody(status: string, fallback: string | undefined): string | null {
     return "Open Publishing to schedule or publish to the configured channels.";
   }
   return fallback ?? null;
-}
-
-function nextHref(status: string, editHref: string, reviewChangesHref: string | undefined): string {
-  switch (status) {
-    case "changes_requested":
-      return reviewChangesHref ?? editHref;
-    case "approved_for_design":
-    case "in_design":
-    case "creative_review":
-      // Phase 3 of the planning-detail refactor (2026-08-30):
-      // "Creative" merged into Content as "Assets & versions".
-      // The Next-Action CTA now scrolls to the new anchor.
-      return "#assets-versions";
-    case "ready_to_publish":
-    case "partially_published":
-      return "#publishing";
-    case "draft":
-    case "content_review":
-    default:
-      return editHref;
-  }
-}
-
-function nextCtaLabel(status: string, canEdit: boolean): string {
-  switch (status) {
-    case "draft":
-      return canEdit ? "Edit content" : "View content";
-    case "content_review":
-      return "View content";
-    case "changes_requested":
-      return "Review changes";
-    case "approved_for_design":
-    case "in_design":
-    case "creative_review":
-      return "Open Creative";
-    case "ready_to_publish":
-    case "partially_publish":
-      return "Open Publishing";
-    default:
-      return "View";
-  }
 }
 
 function stepIsActionable(status: string): boolean {

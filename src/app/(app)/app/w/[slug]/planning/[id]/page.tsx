@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Clock, Sparkles } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getContentItem, listWorkspaceDesigners, UPDATEABLE_STATUSES } from "@/lib/content/service";
 import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
@@ -664,7 +664,7 @@ export default async function ContentDetailPage({
                         aiEnabled={aiLive && captionDraftsEnabled}
                       />
                     </PlanningSection>
-                    <div className="space-y-3">
+                    <div className="space-y-3 lg:sticky lg:top-20 lg:self-start">
                       <h3 className="text-title-card text-fg-primary font-semibold">
                         Live preview
                       </h3>
@@ -898,21 +898,29 @@ export default async function ContentDetailPage({
                 className="mt-6 scroll-mt-24 space-y-4"
                 data-testid="workspace-tab-panel-activity"
               >
-                {/* Lifecycle events — only when there's at least one. The
-                  previous design always rendered an "Activity" card even
-                  when empty; that wasted vertical space. */}
+                {/* Lifecycle events — only when there's at least one.
+                  Phase 7 of the three-zone refactor (2026-08-30)
+                  replaces the previous "Activity" card with an
+                  intentional empty state that sits near the
+                  useful content area rather than stretching to
+                  fill the entire viewport. */}
                 {activityEvents.length > 0 ? (
                   <ActivityWithFilters events={activityEvents} />
                 ) : (
-                  <PlanningSection
-                    id="activity-empty"
-                    title="Activity"
-                    description="Lifecycle events will appear here as the item moves through the workflow."
+                  <div
+                    className="border-border bg-surface-subtle mx-auto flex max-w-md flex-col items-center gap-3 rounded-[var(--radius-card)] border border-dashed px-6 py-10 text-center"
+                    data-testid="activity-empty-state"
+                    role="status"
                   >
-                    <p className="text-body text-fg-muted">
-                      No activity yet. Submit, comment, or upload a delivery to start the timeline.
+                    <Clock className="text-fg-muted h-10 w-10" aria-hidden="true" />
+                    <h3 className="text-title-card text-fg-primary font-semibold">
+                      No activity yet
+                    </h3>
+                    <p className="text-body text-fg-secondary max-w-sm">
+                      Activity appears here as this item moves through creation, review and
+                      publishing.
                     </p>
-                  </PlanningSection>
+                  </div>
                 )}
               </section>
             ),

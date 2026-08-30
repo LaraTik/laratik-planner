@@ -109,9 +109,12 @@ describe("OverviewCommandCenter", () => {
     );
     const card = screen.getByTestId("overview-next-action");
     expect(card).toBeInTheDocument();
-    const cta = screen.getByTestId("overview-next-action-cta");
-    expect(cta).toHaveTextContent(/Review changes/);
-    expect(cta).toHaveAttribute("href", "#assets-versions");
+    // The right rail now owns the primary workflow transition
+    // action. The Overview's Action Required card therefore
+    // intentionally does NOT render a CTA button — the user
+    // gets a single obvious primary action in the rail, not
+    // two competing ones. We assert the CTA is gone here.
+    expect(screen.queryByTestId("overview-next-action-cta")).toBeNull();
   });
 
   it("hides the Next Action card when the item is fully ready", () => {
