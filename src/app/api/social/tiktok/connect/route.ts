@@ -6,10 +6,12 @@ import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
+import { agencies } from "@/lib/db/schema";
 import { buildTikTokAuthorizationUrl, TIKTOK_SCOPES } from "@/lib/social/providers/tiktok";
 import { createOauthState } from "@/lib/social/repository";
 import { getAgencyProviderConfig } from "@/lib/social/provider-config";
-import { clientEnv } from "@/lib/validation/env";
+import { buildPerAgencyCallbackUrl } from "@/lib/social/callback-url";
+import { eq } from "drizzle-orm";
 
 /**
  * POST /api/social/tiktok/connect
@@ -34,11 +36,6 @@ export const runtime = "nodejs";
 const CHANNELS_PATH = /^\/app\/w\/[a-z0-9-]+\/channels$/;
 const STATE_TTL_MS = 10 * 60_000;
 const SETUP_URL = "/app/agency-settings/social/providers";
-
-function buildCallbackUrl(): string {
-  const base = clientEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
-  return `${base}/api/social/tiktok/callback`;
-}
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -119,10 +116,28 @@ export async function POST(req: NextRequest) {
     expiresAt: new Date(Date.now() + STATE_TTL_MS),
   });
 
+  // Per-agency callback URL — the agency admin pastes this exact
+  // string into their TikTok app's "Redirect URL" field. The route
+  // at `/api/social/tiktok/callback/[agencySlug]` resolves the
+  // agency from the URL and asserts the state's workspaceId
+  // belongs to that agency.
+  const [agency] = await db
+    .select({ slug: agencies.slug })
+    .from(agencies)
+    .where(eq(agencies.id, context.agencyId))
+    .limit(1);
+  if (!agency) {
+    return NextResponse.json(
+      { error: "Agency not found." },
+      { status: 500, headers: mutatingApiHeaders() },
+    );
+  }
+  const callbackUrl = buildPerAgencyCallbackUrl("tiktok", agency.slug);
+
   const url = buildTikTokAuthorizationUrl({
     clientKey: config.appId,
     state,
-    redirectUri: buildCallbackUrl(),
+    redirectUri: callbackUrl,
     scopes: TIKTOK_SCOPES,
   });
   return NextResponse.json({ redirectTo: url }, { headers: mutatingApiHeaders() });

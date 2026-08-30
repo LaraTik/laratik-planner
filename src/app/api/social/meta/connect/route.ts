@@ -6,10 +6,12 @@ import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
+import { agencies } from "@/lib/db/schema";
 import { buildMetaAuthorizationUrl } from "@/lib/social/providers/meta";
 import { createOauthState } from "@/lib/social/repository";
 import { getAgencyProviderConfig } from "@/lib/social/provider-config";
-import { clientEnv } from "@/lib/validation/env";
+import { buildPerAgencyCallbackUrl } from "@/lib/social/callback-url";
+import { eq } from "drizzle-orm";
 
 /**
  * POST /api/social/meta/connect
@@ -45,11 +47,6 @@ export const runtime = "nodejs";
 
 const STATE_TTL_MS = 10 * 60 * 1000;
 const SETUP_URL = "/app/agency-settings/social/providers";
-
-function buildCallbackUrl(): string {
-  const base = clientEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
-  return `${base}/api/social/meta/callback`;
-}
 
 function buildReturnPath(slug: string): string {
   if (!/^[a-z0-9-]+$/.test(slug)) {
@@ -156,11 +153,29 @@ export async function POST(req: NextRequest) {
     returnPath: buildReturnPath(workspace.slug),
     expiresAt,
   });
+  // Per-agency callback URL — the agency admin pastes this exact
+  // string into their Meta app's "Valid OAuth Redirect URIs". The
+  // route at `/api/social/meta/callback/[agencySlug]` resolves the
+  // agency from the URL and asserts the state's workspaceId
+  // belongs to that agency (defense in depth on top of the
+  // single-use state token).
+  const [agency] = await db
+    .select({ slug: agencies.slug })
+    .from(agencies)
+    .where(eq(agencies.id, context.agencyId))
+    .limit(1);
+  if (!agency) {
+    return NextResponse.json(
+      { error: "Agency not found" },
+      { status: 500, headers: mutatingApiHeaders() },
+    );
+  }
+  const callbackUrl = buildPerAgencyCallbackUrl("meta", agency.slug);
   const authUrl = buildMetaAuthorizationUrl({
     appId: config.appId,
     loginConfigId: config.loginConfigId,
     state,
-    redirectUri: buildCallbackUrl(),
+    redirectUri: callbackUrl,
     graphApiVersion: config.graphApiVersion,
   });
   return NextResponse.json({ redirectUrl: authUrl }, { headers: mutatingApiHeaders() });

@@ -7,7 +7,7 @@ import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { PageHeader } from "@/components/workspace/page-header";
 import { db } from "@/lib/db";
-import { agencySocialProviderConfig } from "@/lib/db/schema";
+import { agencies, agencySocialProviderConfig } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { ProviderConfigCard } from "./provider-config-card";
 
@@ -62,7 +62,10 @@ export default async function AgencySocialProvidersPage() {
   // provider) so a partial config (e.g. only Meta, no TikTok) still
   // renders both cards with the missing one showing the empty
   // "Add" state. The form component handles the upsert + remove.
-  const [metaRow, tiktokRow] = await Promise.all([
+  // The agency slug is loaded alongside because each provider card
+  // surfaces the per-agency OAuth callback URL (the value the admin
+  // pastes into their Meta / TikTok developer console).
+  const [metaRow, tiktokRow, agency] = await Promise.all([
     db
       .select()
       .from(agencySocialProviderConfig)
@@ -83,6 +86,12 @@ export default async function AgencySocialProvidersPage() {
           eq(agencySocialProviderConfig.provider, "tiktok"),
         ),
       )
+      .limit(1)
+      .then((r) => r[0] ?? null),
+    db
+      .select({ slug: agencies.slug })
+      .from(agencies)
+      .where(eq(agencies.id, agencyId))
       .limit(1)
       .then((r) => r[0] ?? null),
   ]);
@@ -118,12 +127,14 @@ export default async function AgencySocialProvidersPage() {
           <ProviderConfigCard
             provider="meta"
             agencyId={agencyId}
+            agencySlug={agency?.slug ?? ""}
             actorId={actor.id}
             existing={metaRow ? toExistingSummary(metaRow) : null}
           />
           <ProviderConfigCard
             provider="tiktok"
             agencyId={agencyId}
+            agencySlug={agency?.slug ?? ""}
             actorId={actor.id}
             existing={tiktokRow ? toExistingSummary(tiktokRow) : null}
           />

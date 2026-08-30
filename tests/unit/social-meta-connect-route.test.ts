@@ -30,6 +30,7 @@ const hasWorkspaceRoleMock = vi.fn();
 const getAgencyProviderConfigMock = vi.fn();
 const createOauthStateMock = vi.fn();
 const buildMetaAuthorizationUrlMock = vi.fn();
+const agencySelectMock = vi.fn();
 
 vi.mock("@/lib/auth/config", () => ({
   auth: authMock,
@@ -52,6 +53,18 @@ vi.mock("@/lib/social/repository", () => ({
 vi.mock("@/lib/social/providers/meta", () => ({
   buildMetaAuthorizationUrl: buildMetaAuthorizationUrlMock,
 }));
+// The connect route now reads the agency slug from `db` so it can
+// build a per-agency callback URL. Mock the drizzle chain that the
+// route actually traverses — the rest of `db` is unused in the
+// happy path. The chain is `db.select({...}).from(agencies)
+//   .where(...).limit(1)` → returns an array.
+vi.mock("@/lib/db", () => {
+  return {
+    db: {
+      select: agencySelectMock,
+    },
+  };
+});
 
 beforeEach(() => {
   authMock.mockReset();
@@ -61,6 +74,7 @@ beforeEach(() => {
   getAgencyProviderConfigMock.mockReset();
   createOauthStateMock.mockReset();
   buildMetaAuthorizationUrlMock.mockReset();
+  agencySelectMock.mockReset();
   // Defaults for a happy-path request; individual tests override.
   authMock.mockResolvedValue({ user: { id: "user-1" } });
   resolveActiveAgencyContextMock.mockResolvedValue({ agencyId: "agency-1" });
@@ -82,6 +96,14 @@ beforeEach(() => {
   buildMetaAuthorizationUrlMock.mockReturnValue(
     "https://www.facebook.com/v25.0/dialog/oauth?config_id=config-1&state=stub",
   );
+  // Default: agency slug lookup returns a row.
+  agencySelectMock.mockReturnValue({
+    from: () => ({
+      where: () => ({
+        limit: () => Promise.resolve([{ slug: "acme-agency" }]),
+      }),
+    }),
+  });
 });
 
 afterEach(() => {
@@ -205,5 +227,40 @@ describe("POST /api/social/meta/connect — body parsing", () => {
     const body = await res.json();
     expect(body.errorCode).toBe("not_configured");
     expect(body.setupUrl).toBe("/app/agency-settings/social/providers");
+  });
+
+  it("builds the OAuth URL with the per-agency callback (defense-in-depth)", async () => {
+    // Each agency has their own callback URL so the agency admin
+    // can paste it straight into their Meta app. The route must
+    // pass the per-agency URL — not the legacy global one — to
+    // buildMetaAuthorizationUrl.
+    const { POST } = await loadRoute();
+    const res = await POST(makeFormRequest("acme"));
+    expect(res.status).toBe(200);
+    // The buildMetaAuthorizationUrl mock captured its `redirectUri`.
+    const buildCall = buildMetaAuthorizationUrlMock.mock.calls[0]![0] as {
+      redirectUri: string;
+    };
+    expect(buildCall.redirectUri).toBe(
+      "http://localhost:3000/api/social/meta/callback/acme-agency",
+    );
+  });
+
+  it("returns 500 when the agency slug cannot be resolved", async () => {
+    // If the agency row vanished between the context check and the
+    // slug lookup, the route should fail fast rather than fall back
+    // to a global URL that another agency might already be using.
+    agencySelectMock.mockReturnValueOnce({
+      from: () => ({
+        where: () => ({
+          limit: () => Promise.resolve([]),
+        }),
+      }),
+    });
+    const { POST } = await loadRoute();
+    const res = await POST(makeFormRequest("acme"));
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe("Agency not found");
   });
 });

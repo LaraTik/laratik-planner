@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Check, Eye, EyeOff, PlugZap, Save, Trash2 } from "lucide-react";
+import { useState, useSyncExternalStore, useTransition } from "react";
+import { Check, Copy, Eye, EyeOff, Link2, PlugZap, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,12 @@ import {
   testProviderConfigAction,
   type ProviderConfigFormState,
 } from "./actions";
+
+// Hydration-aware `window.location.origin` reader. Mirrors the
+// pattern in `edit-agency-form.tsx` (browser-only value, server
+// snapshot empty). The empty server snapshot is rendered on the
+// first paint to keep server and client output in lockstep.
+const subscribeToHydration = () => () => undefined;
 
 type ExistingSummary = {
   appId: string;
@@ -54,11 +60,13 @@ const PROVIDER_META = {
 export function ProviderConfigCard({
   provider,
   agencyId,
+  agencySlug,
   actorId,
   existing,
 }: {
   provider: "meta" | "tiktok";
   agencyId: string;
+  agencySlug: string;
   actorId: string;
   existing: ExistingSummary | null;
 }) {
@@ -73,6 +81,33 @@ export function ProviderConfigCard({
   const [testPending, startTest] = useTransition();
   const [removePending, startRemove] = useTransition();
   const [state, setState] = useState<ProviderConfigFormState>({});
+  // The per-agency callback URL is what the admin pastes into
+  // their Meta / TikTok developer console. We build it from the
+  // browser's actual origin (no NEXT_PUBLIC_APP_URL drift in
+  // preview deploys) and the agency slug, computed during render
+  // via useSyncExternalStore so the server snapshot stays empty
+  // and the client first paints the empty string — no hydration
+  // mismatch, no effect-driven setState cascade.
+  const isHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  );
+  const callbackUrl =
+    isHydrated && /^[a-z0-9-]+$/.test(agencySlug)
+      ? `${window.location.origin}/api/social/${provider}/callback/${agencySlug}`
+      : "";
+  const [copied, setCopied] = useState(false);
+  async function copyCallbackUrl() {
+    if (!callbackUrl) return;
+    try {
+      await navigator.clipboard.writeText(callbackUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
 
   function save() {
     if (!appId || !appSecret) {
@@ -152,6 +187,45 @@ export function ProviderConfigCard({
         )}
       </header>
       <p className="text-label text-fg-muted mb-4">{meta.description}</p>
+
+      {callbackUrl ? (
+        <section
+          className="border-border bg-surface-subtle mb-4 rounded-[var(--radius-control)] border p-3"
+          data-testid={`provider-config-callback-${provider}`}
+          aria-label="OAuth callback URL"
+        >
+          <div className="mb-2 flex items-center gap-1.5">
+            <Link2 className="text-fg-muted h-3.5 w-3.5" aria-hidden={true} />
+            <h4 className="text-label text-fg-primary font-semibold">OAuth callback URL</h4>
+          </div>
+          <div className="flex items-center gap-2">
+            <code
+              className="bg-surface text-body text-fg-primary border-border flex-1 overflow-x-auto rounded-[var(--radius-control)] border px-2.5 py-1.5 font-mono break-all"
+              data-testid={`provider-config-callback-url-${provider}`}
+            >
+              {callbackUrl}
+            </code>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={copyCallbackUrl}
+              aria-label="Copy callback URL"
+              data-testid={`provider-config-callback-copy-${provider}`}
+            >
+              <Copy className="mr-1.5 h-3.5 w-3.5" aria-hidden={true} />
+              {copied ? "Copied" : "Copy"}
+            </Button>
+          </div>
+          <p className="text-label text-fg-muted mt-2">
+            Paste this URL into the
+            {provider === "meta"
+              ? ' "Valid OAuth Redirect URIs" field in your Meta app'
+              : ' "Redirect URL" field in your TikTok app'}
+            . Each agency has their own URL — the state token keeps every flow isolated.
+          </p>
+        </section>
+      ) : null}
 
       <form
         className="space-y-3"
