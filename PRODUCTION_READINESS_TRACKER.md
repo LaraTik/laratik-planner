@@ -312,11 +312,9 @@ activity`. `data-testid="app-sidebar"` added to the Sidebar
 > `pnpm build` all green. UI-004 row above updated with the
 > three new SHAs.
 >
-> **Outstanding:** visual-regression sweep at 375 / 768 /
-> 1024 / 1440px viewports is the next QA pass; mobile audit
->
-> - Activity-tab filter chips end-to-end screenshot matrix
->   should land in `tests/e2e/visual-regression.spec.ts` before
->   the next milestone sign-off. Spec §47 second-pass review
->   (planner / editor / designer / reviewer / publisher /
->   workspace manager / mobile user) is also a future milestone.
+> **Outstanding:** the 27-row
+> `docs/production-readiness/ACCESSIBILITY_CHECKLIST.md`
+> needs independent-reviewer sign-off for the 5 planning
+> surfaces; the 30-step UAT in
+> `docs/production-readiness/UAT_RELEASE.md` is still Task 13
+> (independent reviewer).

@@ -4,7 +4,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { bootstrapTestSession, devSeed, devSignIn, type SeedResult } from "./_helpers";
 import {
   CANONICAL_SURFACES,
-  REGRESSION_VIEWPORTS,
+  viewportsForSurface,
   SETUP_FUNCTIONS,
   STITCH_CASES,
   responsiveScreenshotName,
@@ -436,7 +436,7 @@ test.describe("visual regression (responsive matrix)", () => {
         });
       }
 
-      for (const viewport of REGRESSION_VIEWPORTS) {
+      for (const viewport of viewportsForSurface(surface)) {
         test(`responsive ${surface} @ ${viewport.name}`, async ({ page }, testInfo) => {
           if (isCaptureMode) {
             testInfo.setTimeout(CAPTURE_MODE_TEST_TIMEOUT_MS);

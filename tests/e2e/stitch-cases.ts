@@ -408,17 +408,60 @@ export const STITCH_CASES: StitchCase[] = [
 // spec calls for explicit review at 375 / 768 / 1024 / 1440. We
 // re-introduce 1024 (small laptop / iPad-landscape split) and bump
 // the mobile width from 360 to 375 to match the iPhone 12/13/14
-// logical viewport. The 4-viewport matrix is 23 canonical surfaces
-// × 4 = 92 baselines per capture run (vs. the 3×23 = 69 currently
-// committed). The capture job budget needs to grow from 25 to
-// ~35 min to absorb the extra viewport; see `M5` row in
-// PRODUCTION_READINESS_TRACKER.md.
+// logical viewport.
+//
+// The 4-viewport matrix is **scoped to the planning content detail
+// only** — see `PLANNING_DETAIL_VIEWPORTS` below and the
+// `viewportsForSurface()` helper. Every other canonical surface
+// stays on the legacy 3-viewport matrix (360/768/1440). Reasoning:
+// only the planning content detail refactor is in M5; the other
+// 19 surfaces have stable 3-viewport baselines from before this
+// work and don't need 1024 / 375 baselines. Scoping the matrix
+// avoids the 25 → 35 min CI capture-budget bump and prevents
+// accidental visual drift in unrelated surfaces when the design
+// system moves.
 export const REGRESSION_VIEWPORTS = [
+  { name: "mobile-s", width: 360, height: 800 },
+  { name: "tablet", width: 768, height: 1024 },
+  { name: "wide", width: 1440, height: 900 },
+] as const;
+
+/**
+ * M5-specific 4-viewport matrix for the planning content detail.
+ * Used by `viewportsForSurface()` when the surface is the planning
+ * content detail route. The other 19 canonical surfaces continue
+ * to use the legacy `REGRESSION_VIEWPORTS`.
+ */
+export const PLANNING_DETAIL_VIEWPORTS = [
   { name: "mobile-s", width: 375, height: 812 },
   { name: "tablet", width: 768, height: 1024 },
   { name: "laptop", width: 1024, height: 768 },
   { name: "wide", width: 1440, height: 900 },
 ] as const;
+
+/**
+ * Pick the right viewport matrix for a given surface. Every route
+ * under `/app/w/acme/planning*` (list / detail / batch / new) is
+ * the M5 planning workspace and uses the 4-viewport M5 matrix.
+ * Every other canonical surface uses the legacy 3.
+ *
+ * Prefix matching (rather than exact match) so future planning
+ * surfaces — e.g. `/app/w/acme/planning/library` — pick up the
+ * M5 matrix without a code change here.
+ *
+ * Update this branch whenever a new surface family needs a
+ * different viewport set.
+ */
+export function viewportsForSurface(surface: string): readonly {
+  name: string;
+  width: number;
+  height: number;
+}[] {
+  if (surface.startsWith("/app/w/acme/planning")) {
+    return PLANNING_DETAIL_VIEWPORTS;
+  }
+  return REGRESSION_VIEWPORTS;
+}
 
 export type RegressionViewportName = (typeof REGRESSION_VIEWPORTS)[number]["name"];
 

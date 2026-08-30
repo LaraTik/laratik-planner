@@ -44,11 +44,13 @@ export default defineConfig({
   // job budget is allocated.
   //
   // 2026-08-30 — Milestone 5 (Planning Content Detail refactor).
-  // The viewport matrix is now 4 (mobile-s 375, tablet 768, laptop
-  // 1024, wide 1440) per the M5 spec. 23 canonical surfaces × 4 = 92
-  // baselines per capture run. The capture job budget needs to
-  // grow from 25 to ~35 min; tracked under `M5` in
-  // PRODUCTION_READINESS_TRACKER.md.
+  // The 4-viewport M5 matrix (375/768/1024/1440) is **scoped to the
+  // planning content detail only** via the `viewportsForSurface()`
+  // helper. Every other canonical surface continues to use the
+  // legacy 3-viewport matrix. This keeps the capture job within
+  // the 25-min CI budget and avoids forcing unrelated surfaces to
+  // re-capture baselines for a viewport only the planning detail
+  // spec requires.
   // Task 8 + TEST-03 (GAP-FULL-REVIEW-2026-08-25): portable
   // visual-baseline filenames. The default Playwright template embeds
   // the absolute test file path ({testFilePath}) and the host OS

@@ -3,9 +3,11 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   CANONICAL_SURFACES,
+  PLANNING_DETAIL_VIEWPORTS,
   REGRESSION_VIEWPORTS,
   SETUP_FUNCTIONS,
   STITCH_CASES,
+  viewportsForSurface,
   type StitchCase,
   resolveStitchRoute,
   responsiveScreenshotName,
@@ -110,9 +112,42 @@ describe("visual regression harness contract (Task 7)", () => {
     expect(canonical).toHaveLength(27);
   });
 
-  it("declares the four CI regression viewports (375, 768, 1024, 1440) — Milestone 5 (M5, 2026-08-30) expanded from 3 to match the planning content detail spec", () => {
+  it("declares the three legacy CI regression viewports (360, 768, 1440) — TEST-03 (GAP-FULL-REVIEW-2026-08-25) reduced from 6 to fit the 25-min capture job budget", () => {
     const widths = REGRESSION_VIEWPORTS.map((v) => v.width);
+    expect(widths).toEqual([360, 768, 1440]);
+  });
+
+  it("declares the M5 planning-detail viewport matrix (375, 768, 1024, 1440) — Milestone 5 (2026-08-30) spec §19 mobile/tablet/laptop/desktop", () => {
+    const widths = PLANNING_DETAIL_VIEWPORTS.map((v) => v.width);
     expect(widths).toEqual([375, 768, 1024, 1440]);
+  });
+
+  it("routes every /planning surface to the 4-viewport M5 matrix and other surfaces to the 3-viewport legacy", () => {
+    // Every /planning surface (prefix match) uses the M5 4-viewport
+    // matrix, including list / detail / batch / new.
+    for (const surface of [
+      "/app/w/acme/planning",
+      "/app/w/acme/planning/{contentItemId}",
+      "/app/w/acme/planning/batch",
+      "/app/w/acme/planning/new",
+    ]) {
+      const viewports = viewportsForSurface(surface);
+      expect(viewports).toBe(PLANNING_DETAIL_VIEWPORTS);
+      expect(viewports.map((v) => v.width)).toEqual([375, 768, 1024, 1440]);
+    }
+    // Non-planning surfaces stay on the legacy 3-viewport matrix.
+    for (const surface of [
+      "/app/w/acme/board",
+      "/app/w/acme/calendar",
+      "/app/w/acme/brand-kit",
+      "/app/w/acme/reviews",
+      "/app/w/acme/channels",
+      "/app/w/acme/settings",
+    ]) {
+      const viewports = viewportsForSurface(surface);
+      expect(viewports).toBe(REGRESSION_VIEWPORTS);
+      expect(viewports.map((v) => v.width)).toEqual([360, 768, 1440]);
+    }
   });
 
   it("resolves {contentItemId} placeholders when given a SeedResult", () => {
