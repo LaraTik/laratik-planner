@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore, useTransition } from "react";
-import { Check, Copy, Eye, EyeOff, Link2, PlugZap, Save, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Copy, Eye, EyeOff, Link2, PlugZap, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -224,6 +224,82 @@ export function ProviderConfigCard({
               : ' "Redirect URL" field in your TikTok app'}
             . Each agency has their own URL — the state token keeps every flow isolated.
           </p>
+          <details
+            className="text-label text-fg-muted group mt-3"
+            data-testid={`provider-config-callback-howto-${provider}`}
+          >
+            <summary className="text-fg-primary hover:text-primary inline-flex cursor-pointer list-none items-center gap-1 font-medium select-none [&::-webkit-details-marker]:hidden">
+              <ChevronDown
+                className="h-3.5 w-3.5 transition-transform group-open:rotate-180"
+                aria-hidden={true}
+              />
+              How to register this URL
+            </summary>
+            <div className="border-border mt-2 space-y-3 border-t pt-3">
+              {provider === "meta" ? (
+                <ol className="list-decimal space-y-1.5 pl-5">
+                  <li>
+                    Sign in to <span className="font-mono">developers.facebook.com</span> with this
+                    agency&apos;s developer account.
+                  </li>
+                  <li>
+                    <strong className="text-fg-primary font-medium">My Apps</strong> → click the
+                    agency&apos;s app (the App ID shown on this card).
+                  </li>
+                  <li>
+                    Left sidebar →{" "}
+                    <strong className="text-fg-primary font-medium">
+                      Facebook Login for Business
+                    </strong>{" "}
+                    → <strong className="text-fg-primary font-medium">Configurations</strong>.
+                  </li>
+                  <li>
+                    Open the config whose ID matches the agency&apos;s &quot;Login for Business
+                    config id&quot; (shown above). If no config exists, create one first.
+                  </li>
+                  <li>
+                    Scroll to{" "}
+                    <strong className="text-fg-primary font-medium">
+                      Valid OAuth Redirect URIs
+                    </strong>{" "}
+                    → paste the URL above →{" "}
+                    <strong className="text-fg-primary font-medium">Save Changes</strong>.
+                  </li>
+                </ol>
+              ) : (
+                <ol className="list-decimal space-y-1.5 pl-5">
+                  <li>
+                    Sign in to <span className="font-mono">developers.tiktok.com</span> with this
+                    agency&apos;s developer account.
+                  </li>
+                  <li>
+                    <strong className="text-fg-primary font-medium">Apps</strong> → click the
+                    agency&apos;s app.
+                  </li>
+                  <li>
+                    <strong className="text-fg-primary font-medium">Login Kit</strong> →{" "}
+                    <strong className="text-fg-primary font-medium">Settings</strong>.
+                  </li>
+                  <li>
+                    Add the URL above to{" "}
+                    <strong className="text-fg-primary font-medium">Redirect URIs</strong> → Save.
+                  </li>
+                </ol>
+              )}
+              <p className="border-border bg-surface mt-2 rounded-[var(--radius-control)] border p-2">
+                <strong className="text-fg-primary font-medium">Also required on Meta:</strong>{" "}
+                Settings → Basic — toggle ON <em>Client OAuth Login</em> and{" "}
+                <em>Web OAuth Login</em>, and add{" "}
+                <span className="font-mono">planner.laratik.com</span> to App Domains. Without App
+                Domains, Meta rejects the redirect even with the URI allowlisted.
+              </p>
+              <p className="text-label text-fg-muted">
+                Each agency does this once for their own app. The URL is unique per agency because
+                each agency owns their own Meta/TikTok app — a global callback would mix tenants and
+                force every agency to share one app, which neither provider allows.
+              </p>
+            </div>
+          </details>
         </section>
       ) : null}
 
