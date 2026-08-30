@@ -22,7 +22,7 @@ import { FormatPayloadEditor } from "@/components/forms/format-payload-editor";
 import { InlineBriefEditor, InlineDateEditor, InlineTitleEditor } from "./inline-editable-fields";
 import { WorkflowBar } from "./workflow-bar";
 import { DeliverySection } from "./delivery-section";
-import { AiAssistanceSection } from "./ai-assistance-section";
+import { AiAssistancePanel } from "@/components/planning/ai-assistance-panel";
 import { getResetIdeaCounts, EMPTY_RESET_IDEA_COUNTS } from "@/lib/content/reset-idea";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
@@ -503,14 +503,6 @@ export default async function ContentDetailPage({
                       : {})}
                   />
                 ) : null}
-                {canEdit && aiLive ? (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/app/w/${slug}/ai-settings`}>
-                      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                      AI settings
-                    </Link>
-                  </Button>
-                ) : null}
               </div>
             </div>
           ) : (
@@ -541,18 +533,68 @@ export default async function ContentDetailPage({
           )}
 
           {aiLive ? (
-            <AiAssistanceSection
+            <div
+              className="flex flex-wrap items-center justify-between gap-2"
+              data-testid="content-ai-section"
+            >
+              <p className="text-label text-fg-secondary font-semibold uppercase">AI assistance</p>
+              <div className="flex items-center gap-2">
+                {canEdit ? (
+                  <AiAssistancePanel
+                    workspaceSlug={slug}
+                    contentItemId={item.id}
+                    contentStatus={item.status}
+                    isManager={actorRoles.isManager}
+                    isPlanner={actorRoles.isPlanner}
+                    enabledCapabilities={enabledCapabilities}
+                    agencyEnabled={agencyEnabled}
+                    hasKey={hasKey}
+                    currentBrief={item.brief ?? ""}
+                  />
+                ) : null}
+                {canEdit ? (
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href={`/app/w/${slug}/ai-settings`}>
+                      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                      AI settings
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+        </section>
+
+        {/* ─── CREATIVE ──────────────────────────────────────── */}
+        <section
+          id="creative"
+          className="mt-6 scroll-mt-24 space-y-4"
+          data-testid="workspace-tab-panel-creative"
+        >
+          <PlanningSection
+            id="delivery"
+            title="Delivery"
+            description="Design versions uploaded by the designer, plus the final-copy approval."
+          >
+            <DeliverySection
               workspaceSlug={slug}
               contentItemId={item.id}
               contentStatus={item.status}
+              isDesigner={actorRoles.isDesigner}
               isManager={actorRoles.isManager}
-              isPlanner={actorRoles.isPlanner}
-              enabledCapabilities={enabledCapabilities}
-              agencyEnabled={agencyEnabled}
-              hasKey={hasKey}
-              currentBrief={item.brief ?? ""}
+              viewerIsClient={actorRoles.isClientReviewer}
+              deliveries={deliveries.map((d) => ({
+                id: d.id,
+                versionNumber: d.versionNumber,
+                description: d.description,
+                designerNote: d.designerNote,
+                submittedAt: d.submittedAt.toISOString(),
+                isFinalApproved: d.isFinalApproved,
+                submittedBy: d.submittedBy,
+                links: d.links,
+              }))}
             />
-          ) : null}
+          </PlanningSection>
         </section>
 
         {/* ─── PUBLISHING ──────────────────────────────────── */}
@@ -604,30 +646,6 @@ export default async function ContentDetailPage({
                 })}
               </div>
             )}
-          </PlanningSection>
-          <PlanningSection
-            id="delivery"
-            title="Delivery"
-            description="Design versions uploaded by the designer, plus the final-copy approval."
-          >
-            <DeliverySection
-              workspaceSlug={slug}
-              contentItemId={item.id}
-              contentStatus={item.status}
-              isDesigner={actorRoles.isDesigner}
-              isManager={actorRoles.isManager}
-              viewerIsClient={actorRoles.isClientReviewer}
-              deliveries={deliveries.map((d) => ({
-                id: d.id,
-                versionNumber: d.versionNumber,
-                description: d.description,
-                designerNote: d.designerNote,
-                submittedAt: d.submittedAt.toISOString(),
-                isFinalApproved: d.isFinalApproved,
-                submittedBy: d.submittedBy,
-                links: d.links,
-              }))}
-            />
           </PlanningSection>
         </section>
 
