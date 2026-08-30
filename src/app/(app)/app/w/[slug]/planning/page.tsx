@@ -3,16 +3,17 @@ import { notFound, redirect } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
-import { countWorkspaceContent, listWorkspaceContent } from "@/lib/content/service";
-import { ALL_FORMATS, ALL_STATUSES, humanFormat } from "@/lib/content/status";
+import { listWorkspaceContent } from "@/lib/content/service";
+import { listWorkspaceContentEnriched, resolveActorRoles } from "@/lib/content/enriched-list";
+import { ALL_FORMATS, ALL_STATUSES } from "@/lib/content/status";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Clock, Files, Plus, FileText, Download, AlertTriangle, LayoutGrid } from "lucide-react";
-import { StatusBadge } from "@/components/content/status-badge";
 import { PageHeader } from "@/components/workspace/page-header";
-import { ListCard, ListItem } from "@/components/workspace/list-item";
+import { PlanningListActions } from "@/components/workspace/planning-list-actions";
+import { PlanningListGrouped } from "@/components/workspace/planning-list-grouped";
+import { PlanningFiltersBar } from "@/components/workspace/planning-filters-bar";
 import { MonthNav } from "@/components/workspace/month-nav";
-import { PlanningFilters } from "@/components/workspace/planning-filters";
 import { PlanningKpiBar } from "@/components/workspace/planning-kpi-bar";
 import { Pagination } from "@/components/workspace/pagination";
 import { describeActiveFilter } from "./filter-describe";
@@ -22,6 +23,7 @@ import {
   type KpiContentStatus,
   calculateWorkspaceKpis,
 } from "@/lib/dashboard/kpis";
+import { aggregateHealth } from "@/lib/dashboard/health";
 import { db } from "@/lib/db";
 import { users, workspaceMemberships } from "@/lib/db/schema";
 
@@ -121,34 +123,50 @@ export default async function PlanningPage({
     ...(searchTerm ? { search: searchTerm } : {}),
   } as const;
 
-  const [allItems, totalCount] = await Promise.all([
-    listWorkspaceContent({ id: session.user.id }, ws.id, {
+  // Two parallel queries: the enriched list (one base + 5 fan-out
+  // queries, all indexed) and the unfiltered-by-risk count. The
+  // count is from the old service so the "Showing X-Y of Z" line
+  // and the pagination total stay exact regardless of which
+  // post-filter is active.
+  const nowRef = new Date();
+  const actorRoles = await resolveActorRoles({ id: session.user.id }, ws.id);
+  const enrichedResult = await listWorkspaceContentEnriched(
+    { id: session.user.id },
+    ws.id,
+    {
       ...filterOpts,
       limit: pageSize,
       offset: (requestedPage - 1) * pageSize,
-    }),
-    countWorkspaceContent({ id: session.user.id }, ws.id, filterOpts),
-  ]);
-  let items = allItems;
-  // Apply the post-fetch `risk=at_risk` filter on the page slice so
-  // the total count is the unfiltered-by-risk size. (Risk is a
-  // post-process flag, not a DB column; we don't want it to affect
-  // the total.)
-  if (filters.risk === "at_risk")
-    items = items.filter(
+    },
+    nowRef,
+    actorRoles,
+  );
+  let visibleEnrichedItems = enrichedResult.items;
+  // Post-fetch `risk=at_risk` filter. The strict-overdue definition
+  // (ADR-0006) excludes drafts and `blocked` so the filtered list
+  // matches the KPI bar.
+  if (filters.risk === "at_risk") {
+    visibleEnrichedItems = visibleEnrichedItems.filter(
       (item) =>
-        item.plannedPublishAt < new Date() &&
-        !["ready_to_publish", "partially_published", "published", "cancelled"].includes(
-          item.status,
-        ),
+        item.plannedPublishAt < nowRef &&
+        ![
+          "ready_to_publish",
+          "partially_published",
+          "published",
+          "cancelled",
+          "blocked",
+          "draft",
+        ].includes(item.status),
     );
+  }
+  const totalCount = enrichedResult.total;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   // If the requested page is past the end (e.g. user bookmarked
   // page 12 and the dataset shrunk to 3 pages), surface the empty
   // state on page 1 rather than rendering a blank grid. The URL
   // stays as the user wrote it so a reload re-resolves correctly.
   const currentPage = Math.min(requestedPage, totalPages);
-  const visibleItems = currentPage === requestedPage ? items : [];
+  const visibleItems = currentPage === requestedPage ? visibleEnrichedItems : [];
 
   // KPI tile counts — derived from the unfiltered list so the tiles
   // always reflect the full month, not whatever filter the user has
@@ -166,6 +184,18 @@ export default async function PlanningPage({
       status: i.status as KpiContentStatus,
       plannedPublishAt: i.plannedPublishAt,
     })) as { status: KpiContentStatus; plannedPublishAt: Date; format?: KpiContentFormat }[],
+  });
+  // Strict-overdue rollup (ADR-0006). `kpis.atRisk` is the historical
+  // math; `healthRollup.atRisk` excludes drafts and `blocked`. The
+  // KPI bar uses the strict number; the row Health column uses
+  // `classifyHealth` (same source of truth). The two surfaces can
+  // never disagree.
+  const healthRollup = aggregateHealth({
+    rows: allMonthItems.map((i) => ({
+      status: i.status as KpiContentStatus,
+      plannedPublishAt: i.plannedPublishAt,
+    })),
+    now: new Date(),
   });
 
   // Owner dropdown source — every active workspace member, in display
@@ -205,7 +235,7 @@ export default async function PlanningPage({
   };
 
   return (
-    <div className="space-y-6" data-testid="workspace-planning">
+    <div className="mx-auto w-full max-w-[1440px] space-y-6" data-testid="workspace-planning">
       <PageHeader
         eyebrow={ws.name}
         title="Planning"
@@ -285,9 +315,10 @@ export default async function PlanningPage({
 
       <PlanningKpiBar
         total={kpis.totalIdeas}
-        atRisk={kpis.atRisk}
+        atRisk={healthRollup.atRisk}
         needsReview={kpis.needsReview}
         ready={kpis.ready}
+        notStarted={healthRollup.notStarted}
         baseHref={`/app/w/${slug}/planning`}
         currentQuery={
           new URLSearchParams(
@@ -299,21 +330,16 @@ export default async function PlanningPage({
         }
       />
 
-      <div className="border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-card)] border p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div className="border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-card)] border p-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
         <MonthNav month={now} buildHref={buildMonthHref} />
-        <PlanningFilters
-          targetPath={`/app/w/${slug}/planning`}
+        <PlanningFiltersBar
+          basePath={`/app/w/${slug}/planning`}
           monthParam={monthParam(0)}
-          selectedStatus={selectedStatus}
-          selectedFormat={selectedFormat}
-          selectedOwnerId={ownerFilter}
-          searchValue={searchTerm}
-          density={density}
-          hasFilter={hasFilter}
           members={memberRows.map((m) => ({
             id: m.id,
             label: m.displayName ?? m.name ?? m.id.slice(0, 8),
           }))}
+          channels={[]}
         />
       </div>
 
@@ -401,19 +427,25 @@ export default async function PlanningPage({
         />
       ) : (
         <>
-          <ListCard data-testid="planning-list">
-            {visibleItems.map((it) => (
-              <ListItem
-                key={it.id}
-                href={`/app/w/${slug}/planning/${it.id}`}
-                leading={<FileText className="text-fg-muted h-4 w-4" aria-hidden="true" />}
-                title={it.title}
-                meta={`${humanFormat(it.format)} · ${it.plannedPublishAt.toLocaleDateString()}`}
-                trailing={<StatusBadge status={it.status} />}
-                density={density}
+          <PlanningListGrouped
+            items={visibleItems}
+            workspaceSlug={slug}
+            workspaceTimezone={ws.timezone}
+            density={density}
+            now={nowRef}
+            grouped={!hasFilter}
+            actions={(it) => (
+              <PlanningListActions
+                workspaceSlug={slug}
+                itemId={it.id}
+                itemTitle={it.title}
+                status={it.status}
+                canEdit={canCreate && (it.status === "draft" || it.status === "changes_requested")}
+                canSubmit={canCreate}
+                canArchive={canCreate}
               />
-            ))}
-          </ListCard>
+            )}
+          />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

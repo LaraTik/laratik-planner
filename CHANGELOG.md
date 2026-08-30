@@ -12,6 +12,42 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Changed — Planning List enriched row (2026-08-30)
+
+Refactor of `/app/w/[slug]/planning` per the Goal-33 planning-list
+brief. The list now exposes the data the detail page already had
+(owner, channels, workflow stage, readiness rollup, next action,
+comment/asset counts) directly in the row, so a user can scan a
+month's content without opening every item. The change ships in
+three atomic PRs (backend, row, interactions); this entry covers
+the backend foundation + at-risk semantics shipped in PR-1.
+
+- **New: `HealthSnapshot` rollup** (`src/lib/dashboard/health.ts`).
+  Single source of truth for the row Health column, the workspace
+  KPI bar, and the manager "Needs attention" view. The KPI bar
+  and the row column can no longer disagree.
+- **New: `NextAction` derivation** (`src/lib/content/next-action.ts`).
+  Row hint is sourced from `STEP_EXPLANATIONS[status].next` so the
+  list and the detail page use identical wording. The `canCurrentUserAct`
+  flag is derived from the workflow engine's role gate, so the row
+  shows a subtle CTA only when the current user can push the item.
+- **New: `listWorkspaceContentEnriched`** (`src/lib/content/enriched-list.ts`).
+  One base query + 5 bounded fan-out queries (channels, comment
+  count, asset count, delivery count, open approval count) merged
+  in JS. No N+1.
+- **At-risk KPI semantics — strict overdue, drafts excluded**
+  (ADR-0006, `docs/decisions/0006-planning-list-at-risk-semantics.md`).
+  The existing `calculateWorkspaceKpis` math counted `draft` as
+  at risk, which produced the unhelpful "23 of 27" number. The
+  new definition excludes drafts (and `blocked`); a separate
+  "Not started" tile is added so a back-of-drafts month is
+  reported accurately. The existing `?risk=at_risk` URL filter
+  continues to mean "past-due, still in flight (excluding drafts
+  and blocked)" — see ADR for the full breakdown.
+- **Tests**: 12 health-rollup tests + 10 next-action tests pin
+  the contracts. Both files fail loudly if anyone re-introduces
+  the draft-as-at-risk bug or drifts the workflow-engine wording.
+
 ### Changed — Planning Content Detail refactor (2026-08-30)
 
 Redesigned the `/app/w/[slug]/planning/[id]` page per the StudioFlow M5

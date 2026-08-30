@@ -1,26 +1,28 @@
 import * as React from "react";
-import { ClipboardCheck, Clock, ListTodo, Rocket } from "lucide-react";
+import { ClipboardCheck, Clock, FileEdit, ListTodo, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Planning KPI Bar — 4 compact tiles shown above the planning list,
+ * Planning KPI Bar — 5 compact tiles shown above the planning list,
  * per the Stitch design (project 5403097764334458790, Monthly Planning
  * List). Each tile surfaces one number + a short label:
  *
  *  - Total Planned — all non-cancelled items in the current month
- *  - At Risk — overdue, in-flight (not done, not cancelled, not blocked)
- *  - Needs Review — items waiting on the user (content_review /
- *    creative_review / changes_requested)
+ *  - At Risk — past-due, still in flight (NOT including drafts or blocked; see
+ *    ADR-0006 for the strict-overdue definition)
+ *  - Needs Review — items in content_review / creative_review / changes_requested
  *  - Ready — items in ready_to_publish / partially_published
+ *  - Not started — items still in `draft` (the new tile, 2026-08-30)
  *
  * Numbers link to the planning list with the matching filter pre-applied
- * (status param + risk=at_risk for the At Risk tile).
+ * (status param + risk=at_risk for the At Risk tile, status=draft for Not started).
  */
 export interface PlanningKpiBarProps {
   total: number;
   atRisk: number;
   needsReview: number;
   ready: number;
+  notStarted: number;
   baseHref: string;
   currentQuery: URLSearchParams;
 }
@@ -44,6 +46,7 @@ export function PlanningKpiBar({
   atRisk,
   needsReview,
   ready,
+  notStarted,
   baseHref,
   currentQuery,
 }: PlanningKpiBarProps) {
@@ -52,7 +55,7 @@ export function PlanningKpiBar({
     value: number;
     icon: React.ComponentType<{ className?: string }>;
     href: string;
-    accent: "default" | "warning" | "info" | "success";
+    accent: "default" | "warning" | "info" | "success" | "muted";
   }[] = [
     {
       label: "Total Planned",
@@ -82,10 +85,20 @@ export function PlanningKpiBar({
       href: buildHref(baseHref, currentQuery, { status: "ready_to_publish" }),
       accent: "success",
     },
+    {
+      label: "Not started",
+      value: notStarted,
+      icon: FileEdit,
+      href: buildHref(baseHref, currentQuery, { status: "draft" }),
+      accent: "muted",
+    },
   ];
 
   return (
-    <section aria-label="Planning KPIs" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <section
+      aria-label="Planning KPIs"
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+    >
       {tiles.map((tile) => {
         const Icon = tile.icon;
         return (
@@ -104,6 +117,7 @@ export function PlanningKpiBar({
                 tile.accent === "info" && "text-info",
                 tile.accent === "success" && "text-success",
                 tile.accent === "default" && "text-primary",
+                tile.accent === "muted" && "text-fg-muted",
               )}
             >
               <Icon className="h-4 w-4" aria-hidden="true" />

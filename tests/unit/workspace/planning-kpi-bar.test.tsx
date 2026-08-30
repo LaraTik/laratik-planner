@@ -6,13 +6,14 @@ import { PlanningKpiBar } from "@/components/workspace/planning-kpi-bar";
 // next/navigation mock needed.
 
 describe("PlanningKpiBar", () => {
-  it("renders 4 tiles with the given counts", () => {
+  it("renders 5 tiles with the given counts", () => {
     render(
       <PlanningKpiBar
         total={18}
         atRisk={3}
         needsReview={2}
         ready={5}
+        notStarted={4}
         baseHref="/app/w/acme/planning"
         currentQuery={new URLSearchParams("month=2026-08")}
       />,
@@ -21,10 +22,12 @@ describe("PlanningKpiBar", () => {
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
     expect(screen.getByText("Total Planned")).toBeInTheDocument();
     expect(screen.getByText("At Risk")).toBeInTheDocument();
     expect(screen.getByText("Needs Review")).toBeInTheDocument();
     expect(screen.getByText("Ready")).toBeInTheDocument();
+    expect(screen.getByText("Not started")).toBeInTheDocument();
   });
 
   it("links the At Risk tile with risk=at_risk and the Ready tile with status=ready_to_publish", () => {
@@ -34,6 +37,7 @@ describe("PlanningKpiBar", () => {
         atRisk={3}
         needsReview={2}
         ready={5}
+        notStarted={4}
         baseHref="/app/w/acme/planning"
         currentQuery={new URLSearchParams("month=2026-08")}
       />,
@@ -45,6 +49,11 @@ describe("PlanningKpiBar", () => {
       "href",
       "/app/w/acme/planning?month=2026-08&status=ready_to_publish",
     );
+    const notStartedLink = screen.getByTestId("planning-kpi-not-started");
+    expect(notStartedLink).toHaveAttribute(
+      "href",
+      "/app/w/acme/planning?month=2026-08&status=draft",
+    );
   });
 
   it("preserves unrelated query params on the tile links", () => {
@@ -54,6 +63,7 @@ describe("PlanningKpiBar", () => {
         atRisk={3}
         needsReview={2}
         ready={5}
+        notStarted={4}
         baseHref="/app/w/acme/planning"
         currentQuery={new URLSearchParams("month=2026-08&density=compact")}
       />,
@@ -70,6 +80,7 @@ describe("PlanningKpiBar", () => {
         atRisk={3}
         needsReview={2}
         ready={5}
+        notStarted={4}
         baseHref="/app/w/acme/planning"
         currentQuery={new URLSearchParams("month=2026-08&risk=at_risk")}
       />,
