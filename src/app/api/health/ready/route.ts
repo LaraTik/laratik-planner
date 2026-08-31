@@ -214,14 +214,24 @@ export async function GET() {
   // to leave in — the endpoint already exposes the same fields on
   // the response body.
   if (!ok) {
-    const { captureError } = await import("@/lib/observability/sentry");
-    captureError("health.ready.failing", new Error("readiness probe failing"), {
-      db: dbStatus,
-      schema: schemaStatus,
-      storage: storageStatus,
-      rateLimit: rateLimitStatus,
-      appVersion: buildInfo.shortSha ?? buildInfo.displayLabel,
-    });
+    // console.error writes to stderr which the Docker logging
+    // driver captures but the deploy script does NOT surface on
+    // stdout. The GHA SSH step only forwards the deploy script's
+    // stdout, so stderr-only logs are invisible from the Actions
+    // UI. Use console.log (stdout) for this one line so the next
+    // deploy run's log shows the exact failing-check breakdown.
+    console.log(
+      JSON.stringify({
+        level: "error",
+        event: "health.ready.failing",
+        timestamp: new Date().toISOString(),
+        appVersion: buildInfo.shortSha ?? buildInfo.displayLabel,
+        db: dbStatus,
+        schema: schemaStatus,
+        storage: storageStatus,
+        rateLimit: rateLimitStatus,
+      }),
+    );
   }
 
   return NextResponse.json(

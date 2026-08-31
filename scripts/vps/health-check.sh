@@ -13,7 +13,14 @@ SLEEP_SECONDS="${HEALTH_CHECK_SLEEP_SECONDS:-2}"
 EXPECTED_APP_VERSION="${EXPECTED_APP_VERSION:-}"
 
 for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
-  response="$(curl -fsS -m 5 -w "\n%{http_code}" "$URL" || true)"
+  # 2026-08-31: dropped `-f` (--fail) so the body is captured even on
+  # 5xx. The 2026-08-31 social-cron-admin deploy returned 503 with
+  # an empty body, which made it impossible to tell which of the
+  # four readiness checks (db / schema / storage / rateLimit)
+  # tripped the gate. The health endpoint itself already returns
+  # the per-check status on the 503 body, so we just need curl
+  # to not throw it away.
+  response="$(curl -sS -m 5 -w "\n%{http_code}" "$URL" || true)"
   body="${response%$'\n'*}"
   code="${response##*$'\n'}"
 
