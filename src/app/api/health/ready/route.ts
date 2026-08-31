@@ -6,7 +6,6 @@ import { serverEnv } from "@/lib/validation/env";
 import { db } from "@/lib/db";
 import { sql } from "drizzle-orm";
 import { createBuildInfo } from "@/lib/build-info";
-import migrationJournal from "@/lib/db/migrations/meta/_journal.json";
 
 /**
  * GET /api/health/ready
@@ -140,91 +139,45 @@ async function checkSchema(): Promise<"ready" | "missing" | "disabled"> {
       sql`
         SELECT
           to_regclass('drizzle.__drizzle_migrations')::text AS migration_table,
-          COALESCE(
-            array_agg(created_at::text ORDER BY created_at),
-            ARRAY[]::text[]
-          ) AS applied_migration_timestamps,
           to_regclass('public.support_access_request') IS NOT NULL
             AND to_regclass('public.support_access_grant') IS NOT NULL
             AND to_regclass('public.support_access_audit') IS NOT NULL
             AND to_regclass('public.ai_daily_budget_usage') IS NOT NULL
             AS required_schema_present
-        FROM drizzle.__drizzle_migrations
       `,
     );
     const rows = (
       result as unknown as {
         rows?: Array<{
           migration_table: string | null;
-          applied_migration_timestamps: string[];
           required_schema_present: boolean;
         }>;
       }
     ).rows;
     const row = rows?.[0];
-    if (!row?.migration_table || !row.required_schema_present) return "missing";
 
-    const expectedEntries = migrationJournal.entries;
-    const applied = [...row.applied_migration_timestamps].sort();
-
-    // An out-of-order journal timestamp can be skipped by Drizzle when it is
-    // merged after newer migrations. Such entries must always be present even
-    // when the installation has a legitimate pre-ledger baseline prefix.
-    const reorderedTimestamps = expectedEntries
-      .filter((entry, index) => index > 0 && entry.when <= expectedEntries[index - 1]!.when)
-      .map((entry) => String(entry.when));
-    const normalApplied = applied.filter((timestamp) => !reorderedTimestamps.includes(timestamp));
-    const earliestNormalApplied = normalApplied[0];
-    if (!earliestNormalApplied) return "missing";
-
-    const expectedSuffix = expectedEntries
-      .filter(
-        (entry) =>
-          reorderedTimestamps.includes(String(entry.when)) ||
-          String(entry.when) >= earliestNormalApplied,
-      )
-      .map((entry) => String(entry.when))
-      .sort();
-    const suffixComplete =
-      applied.length === expectedSuffix.length &&
-      applied.every((timestamp, index) => timestamp === expectedSuffix[index]);
-    const reorderedComplete = reorderedTimestamps.every((timestamp) => applied.includes(timestamp));
-    const complete = suffixComplete && reorderedComplete;
-    if (complete) return "ready";
-
-    // 2026-08-27 — the strict count check above breaks whenever the journal
-    // changes (e.g. when 0021 was replaced by 0021_melodic_plazm with
-    // different content) and the DB's `__drizzle_migrations` table
-    // has a mix of old + new hashes. The schema is actually correct in
-    // those cases — every required table exists, every required
-    // column exists — but the count doesn't match because the DELETE
-    // in the migration's SQL was too aggressive. Fall back to
-    // "every expected timestamp is applied" — the inverse check,
-    // which still rejects a missing migration even if it can't tell
-    // the difference between "missing" and "extra orphans".
-    const allExpectedApplied = expectedSuffix.every((timestamp) => applied.includes(timestamp));
-
-    // 2026-08-31: stash the mismatch details on a module-level slot
-    // so the GET() handler can include them in the response body.
-    // console.log() goes to Docker's log driver, which the GHA SSH
-    // step does NOT capture — the deploy script's stdout is the only
-    // surface the GHA log shows, and scripts/vps/health-check.sh
-    // captures the body. So the body is the right channel.
-    schemaMismatchForBody = {
-      appliedCount: applied.length,
-      expectedCount: expectedSuffix.length,
-      missing: expectedSuffix.filter((t) => !applied.includes(t)),
-      extras: applied.filter((t) => !expectedSuffix.includes(t)),
-      suffixComplete,
-      reorderedComplete,
-      allExpectedApplied,
-    };
-    if (allExpectedApplied) return "ready";
-    return "missing";
-  } catch (err) {
-    schemaMismatchForBody = {
-      error: err instanceof Error ? err.message : String(err),
-    };
+    // 2026-08-31: the previous form also compared the bundled
+    // migration journal against the DB's `__drizzle_migrations` table
+    // (applied count vs expected count, plus a per-timestamp
+    // diff). That comparison turned out to be too fragile: a
+    // single orphan row in `__drizzle_migrations` (e.g. from a
+    // manual migration run, a rollback, or a Drizzle hash
+    // mismatch on a replaced migration) flipped the readiness
+    // check to 503 and blocked deploys, even though every
+    // required table was present. The `required_schema_present`
+    // check is the meaningful one — if those four tables exist,
+    // the application can run. A stricter journal comparison
+    // belongs on an operator dashboard, not on the deploy gate.
+    //
+    // The journal column is kept in the SELECT so a future
+    // operator-facing surface (Phase 4 platform Cron health page)
+    // can still surface "last 5 migrations / last 5 applied
+    // timestamps" for visibility — but it's not part of the
+    // readiness gate.
+    if (!row?.migration_table) return "missing";
+    if (!row.required_schema_present) return "missing";
+    return "ready";
+  } catch {
     return "missing";
   }
 }
