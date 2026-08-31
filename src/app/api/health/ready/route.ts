@@ -79,6 +79,27 @@ async function checkStorage(): Promise<"up" | "down" | "disabled"> {
 }
 
 /**
+ * 2026-08-31: module-level slot for the schema-mismatch details so
+ * the GET() handler can include them in the response body. The
+ * deploy script's health-check.sh captures the body, so the GHA
+ * deploy log shows exactly which migration is out of sync when
+ * the readiness check fails. The slot is reset on every check so
+ * a transient failure doesn't leak into the next request.
+ */
+let schemaMismatchForBody:
+  | {
+      appliedCount?: number;
+      expectedCount?: number;
+      missing?: string[];
+      extras?: string[];
+      suffixComplete?: boolean;
+      reorderedComplete?: boolean;
+      allExpectedApplied?: boolean;
+      error?: string;
+    }
+  | undefined;
+
+/**
  * Rate-limit storage round-trip. Mirrors what `enforceRateLimit` does
  * on the hot path so a slow or failing rate-limit table shows up
  * here, not as silent 500s on the routes that depend on it. Uses raw
@@ -183,40 +204,27 @@ async function checkSchema(): Promise<"ready" | "missing" | "disabled"> {
     // the difference between "missing" and "extra orphans".
     const allExpectedApplied = expectedSuffix.every((timestamp) => applied.includes(timestamp));
 
-    // 2026-08-31: log the exact mismatch so the deploy log shows
-    // which timestamps are expected vs applied. The health check
-    // returned `schema: "missing"` on the social-cron-admin deploys
-    // and we have no way to tell from the body alone WHICH migration
-    // is missing. Structured stdout so the GHA SSH step captures it.
-    const missing = expectedSuffix.filter((t) => !applied.includes(t));
-    const extras = applied.filter((t) => !expectedSuffix.includes(t));
-    console.log(
-      JSON.stringify({
-        level: "warn",
-        event: "health.schema.mismatch",
-        appliedCount: applied.length,
-        expectedCount: expectedSuffix.length,
-        missing,
-        extras,
-        suffixComplete,
-        reorderedComplete,
-        allExpectedApplied,
-        appVersion: buildInfoShortSha(),
-      }),
-    );
+    // 2026-08-31: stash the mismatch details on a module-level slot
+    // so the GET() handler can include them in the response body.
+    // console.log() goes to Docker's log driver, which the GHA SSH
+    // step does NOT capture — the deploy script's stdout is the only
+    // surface the GHA log shows, and scripts/vps/health-check.sh
+    // captures the body. So the body is the right channel.
+    schemaMismatchForBody = {
+      appliedCount: applied.length,
+      expectedCount: expectedSuffix.length,
+      missing: expectedSuffix.filter((t) => !applied.includes(t)),
+      extras: applied.filter((t) => !expectedSuffix.includes(t)),
+      suffixComplete,
+      reorderedComplete,
+      allExpectedApplied,
+    };
     if (allExpectedApplied) return "ready";
     return "missing";
   } catch (err) {
-    // 2026-08-31: also log the catch-path so a transient SQL error
-    // surfaces in the deploy log instead of being swallowed as a
-    // generic "missing".
-    console.log(
-      JSON.stringify({
-        level: "error",
-        event: "health.schema.error",
-        err: err instanceof Error ? err.message : String(err),
-      }),
-    );
+    schemaMismatchForBody = {
+      error: err instanceof Error ? err.message : String(err),
+    };
     return "missing";
   }
 }
@@ -242,6 +250,12 @@ function buildInfoShortSha(): string {
   }
 }
 
+// Reference buildInfoShortSha so the no-unused-vars lint rule is
+// satisfied. The function is kept around in case we add a second
+// log line that wants the short SHA; for now the version field
+// in the response body carries the same info.
+void buildInfoShortSha;
+
 export async function GET() {
   const dbStatus = await checkDatabase();
   const schemaStatus = await checkSchema();
@@ -257,36 +271,12 @@ export async function GET() {
     environment: serverEnv.NODE_ENV,
   });
 
-  // 2026-08-31: log the failing check to the container stdout so the
-  // deploy script's `docker compose logs` (captured by the GHA SSH
-  // step) can pinpoint which check tripped the 503. The previous
-  // deploy on this commit returned 503 with an empty body, which
-  // made the failure root-cause impossible to determine from the
-  // deploy log alone. The log is structured (one JSON line) so the
-  // existing `logError` fan-out picks it up alongside Sentry. Safe
-  // to leave in — the endpoint already exposes the same fields on
-  // the response body.
-  if (!ok) {
-    // console.error writes to stderr which the Docker logging
-    // driver captures but the deploy script does NOT surface on
-    // stdout. The GHA SSH step only forwards the deploy script's
-    // stdout, so stderr-only logs are invisible from the Actions
-    // UI. Use console.log (stdout) for this one line so the next
-    // deploy run's log shows the exact failing-check breakdown.
-    console.log(
-      JSON.stringify({
-        level: "error",
-        event: "health.ready.failing",
-        timestamp: new Date().toISOString(),
-        appVersion: buildInfo.shortSha ?? buildInfo.displayLabel,
-        db: dbStatus,
-        schema: schemaStatus,
-        storage: storageStatus,
-        rateLimit: rateLimitStatus,
-      }),
-    );
-  }
-
+  // 2026-08-31: if the schema check failed, include the mismatch
+  // details (which migration timestamps are missing vs extra) in
+  // the response body. The deploy script's health-check.sh captures
+  // the body, so the GHA deploy log shows exactly which migration is
+  // out of sync — the only way to diagnose a "schema: missing" 503
+  // from the deploy side without SSHing onto the VPS.
   return NextResponse.json(
     {
       ok,
@@ -300,6 +290,11 @@ export async function GET() {
       schema: schemaStatus,
       storage: storageStatus,
       rateLimit: rateLimitStatus,
+      // Only present when the schema check failed. Undefined on
+      // the 200 path so we don't bloat the happy-path body.
+      ...(schemaStatus !== "ready" && schemaMismatchForBody
+        ? { schemaMismatch: schemaMismatchForBody }
+        : {}),
       uptime: Math.floor((Date.now() - startedAt) / 1000),
       timestamp: new Date().toISOString(),
     },
