@@ -112,10 +112,18 @@ export async function getClientWorkspace(actor: Actor, slug: string, requestedAg
 /**
  * Every workspace in the current agency the actor can switch to.
  *
- * Members see their own active memberships. Agency admins
- * additionally see every other active workspace in the agency,
- * with member rows first so the order matches what the user
- * expects. Used by the workspace switcher in the sidebar.
+ * Members see their own active memberships in the active agency.
+ * Agency admins additionally see every other active workspace in
+ * the agency, with member rows first so the order matches what the
+ * user expects. Used by the workspace switcher in the sidebar.
+ *
+ * The agency filter on `memberRows` is critical: without it, a
+ * non-admin who holds memberships in two agencies would see
+ * workspaces from BOTH agencies when the switcher is rendered in
+ * either one (a clear cross-tenant data leak at the UI surface).
+ * The active agency is resolved from the signed `laratik_active_agency`
+ * cookie (or the single-active-agency fallback) — see
+ * `resolveActiveAgencyContext`.
  */
 export type SwitcherWorkspace = { id: string; name: string; slug: string };
 
@@ -127,6 +135,11 @@ export async function listSwitcherWorkspaces(
   if (!agencyId) return { options: [], isAdmin: false };
   const isAdmin = await isAgencyAdmin(actor, agencyId);
 
+  // Member rows MUST be agency-scoped. Pre-fix, this query joined
+  // workspaceMemberships with workspaces but did not constrain
+  // workspaces.agencyId, so a multi-agency user saw workspaces
+  // from every agency they had a membership in (a cross-tenant
+  // UI leak). The agency admin path below was already correct.
   const memberRows = await db
     .select({ id: workspaces.id, name: workspaces.name, slug: workspaces.slug })
     .from(workspaceMemberships)
@@ -136,6 +149,7 @@ export async function listSwitcherWorkspaces(
         eq(workspaceMemberships.userId, actor.id),
         eq(workspaceMemberships.status, "active"),
         eq(workspaces.status, "active"),
+        eq(workspaces.agencyId, agencyId),
       ),
     )
     .orderBy(asc(workspaces.name))

@@ -10,6 +10,11 @@ type DrizzleMockState = {
    *  selects, so a simple counter is enough. */
   memberRows: { id: string; name: string; slug: string }[];
   adminRows: { id: string; name: string; slug: string }[];
+  /** Captured WHERE args per call — used to assert the agency
+   *  filter is on the member query (regression: pre-fix, the
+   *  member query was not agency-scoped and contaminated the
+   *  workspace switcher list for multi-agency users). */
+  whereCalls: unknown[][];
 };
 
 function makeDrizzleMock(state: DrizzleMockState) {
@@ -18,7 +23,10 @@ function makeDrizzleMock(state: DrizzleMockState) {
   // The chain is chainable in any order; the only terminator is `.limit()`.
   chain.from = vi.fn(() => chain);
   chain.innerJoin = vi.fn(() => chain);
-  chain.where = vi.fn(() => chain);
+  chain.where = vi.fn((...args: unknown[]) => {
+    state.whereCalls.push(args);
+    return chain;
+  });
   chain.orderBy = vi.fn(() => chain);
   chain.limit = vi.fn(() => {
     callCount += 1;
@@ -31,7 +39,7 @@ function makeDrizzleMock(state: DrizzleMockState) {
 
 // Hoist the mock so it's installed before the SUT is imported.
 const dbMock = vi.hoisted(() => {
-  const state: DrizzleMockState = { memberRows: [], adminRows: [] };
+  const state: DrizzleMockState = { memberRows: [], adminRows: [], whereCalls: [] };
   return makeDrizzleMock(state);
 });
 vi.mock("@/lib/db", () => ({ db: dbMock }));
@@ -72,6 +80,7 @@ const { listSwitcherWorkspaces } = await import("@/lib/workspaces/context");
 beforeEach(() => {
   dbMock.state.memberRows = [];
   dbMock.state.adminRows = [];
+  dbMock.state.whereCalls = [];
   policyMock.isAgencyAdmin.mockReset();
   policyMock.isAgencyAdmin.mockResolvedValue(false);
   agencyContextMock.resolveActiveAgencyContext.mockReset();
@@ -130,5 +139,60 @@ describe("listSwitcherWorkspaces", () => {
     const result = await listSwitcherWorkspaces({ id: "user-1" });
     expect(result.isAdmin).toBe(false);
     expect(result.options).toEqual([]);
+  });
+
+  /**
+   * Regression: pre-fix, the member query joined workspaceMemberships
+   * with workspaces but did NOT filter by `workspaces.agencyId`. A
+   * non-admin with memberships in two agencies saw workspaces from
+   * BOTH agencies when the switcher was rendered in either one (a
+   * cross-tenant UI leak). The admin query was already correctly
+   * scoped.
+   *
+   * The fix added `eq(workspaces.agencyId, agencyId)` to the member
+   * query. This test pins the contract by asserting the captured
+   * WHERE args for the first select include the active agency id
+   * string (we serialize the AND-of-equalities expression by
+   * inspecting its `queryChunks` — Drizzle's `and(...)` returns a
+   * SQL fragment with one chunk per operand, and each chunk's
+   * `queryChunks` array carries the column name and value).
+   */
+  it("scopes the member query to the active agency (cross-tenant leak fix)", async () => {
+    agencyContextMock.resolveActiveAgencyContext.mockResolvedValue({
+      agencyId: "agency-A",
+      source: "cookie",
+    });
+    await listSwitcherWorkspaces({ id: "user-1" });
+    // First WHERE is the member query, second is the admin query
+    // (only when the actor is an agency admin). For a non-admin
+    // only the member query runs.
+    expect(dbMock.state.whereCalls.length).toBeGreaterThanOrEqual(1);
+    // Drizzle's `and()` and `eq()` produce SQL fragments with a
+    // `queryChunks` array. Walk the structure (the AST has
+    // circular references through the column table, so a plain
+    // JSON.stringify recurses forever; the replacer breaks the
+    // cycle by skipping the `table` field).
+    const memberWhere = dbMock.state.whereCalls[0]?.[0] as {
+      queryChunks?: unknown[];
+    };
+    const seen = new WeakSet<object>();
+    const serialized = JSON.stringify(memberWhere, (_key, value) => {
+      if (value && typeof value === "object") {
+        if (seen.has(value as object)) return "[Circular]";
+        seen.add(value as object);
+        // Drop the Drizzle table reference (the cycle source).
+        if ((value as { table?: unknown }).table !== undefined) {
+          const { table: _table, ...rest } = value as Record<string, unknown>;
+          return rest;
+        }
+      }
+      return value;
+    });
+    // The agency-scoped `eq(workspaces.agencyId, agencyId)` must
+    // appear in the WHERE. The pre-fix WHERE only carried the
+    // user-id / status filters — the missing `agencyId` predicate
+    // is the cross-tenant leak we're pinning.
+    expect(serialized).toContain("agency_id");
+    expect(serialized).toContain("agency-A");
   });
 });
