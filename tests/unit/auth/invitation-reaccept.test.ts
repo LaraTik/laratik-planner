@@ -157,7 +157,14 @@ beforeEach(() => {
  * `isAgencyAdmin` SQL fragment.
  */
 async function acceptOnce(opts: {
-  invitation: { id: string; email: string; agencyId: string; status: "pending"; grantsAgencyAdmin: boolean; expiresAt: Date };
+  invitation: {
+    id: string;
+    email: string;
+    agencyId: string;
+    status: "pending";
+    grantsAgencyAdmin: boolean;
+    expiresAt: Date;
+  };
   user: { id: string; email: string; emailVerifiedAt: Date | null };
   grantRoles: { invitationId: string; workspaceId: string; role: string }[];
 }) {
