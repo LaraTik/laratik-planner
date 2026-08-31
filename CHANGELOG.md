@@ -253,6 +253,18 @@ work.
   address bar), and switching from `/app` lands
   on the new workspace too. Pins the contract
   documented in `AGENTS.md` §W.
+  - **E2E status (2026-08-31)**: the new cases
+    **fail in chromium / firefox / webkit** (562–603ms
+    fast-fail). The pre-existing M1.5 cases in the
+    same spec also fail (5–30s timeouts) — same
+    pattern as the visual baseline drift. The auth-gate
+    E2E spec (no bootstrap) passes cleanly. Root cause
+    is likely the dev-sign-in / bootstrap state, not
+    the test logic. **Release-gate work**: investigate
+    the dev-sign-in + bootstrap helpers before this
+    push is fully validated. The contract is unit-tested
+    (`tests/unit/agency-actions.test.ts`); the E2E is a
+    safety net for the navigation contract.
 - `tests/unit/workspace/stage-pill.test.tsx` — pins the status →
   stage mapping for every `ContentStatus`. The "covers every
   content status without crashing" case is the prompt to add a
