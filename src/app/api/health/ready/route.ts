@@ -204,6 +204,26 @@ export async function GET() {
     environment: serverEnv.NODE_ENV,
   });
 
+  // 2026-08-31: log the failing check to the container stdout so the
+  // deploy script's `docker compose logs` (captured by the GHA SSH
+  // step) can pinpoint which check tripped the 503. The previous
+  // deploy on this commit returned 503 with an empty body, which
+  // made the failure root-cause impossible to determine from the
+  // deploy log alone. The log is structured (one JSON line) so the
+  // existing `logError` fan-out picks it up alongside Sentry. Safe
+  // to leave in — the endpoint already exposes the same fields on
+  // the response body.
+  if (!ok) {
+    const { captureError } = await import("@/lib/observability/sentry");
+    captureError("health.ready.failing", new Error("readiness probe failing"), {
+      db: dbStatus,
+      schema: schemaStatus,
+      storage: storageStatus,
+      rateLimit: rateLimitStatus,
+      appVersion: buildInfo.shortSha ?? buildInfo.displayLabel,
+    });
+  }
+
   return NextResponse.json(
     {
       ok,
