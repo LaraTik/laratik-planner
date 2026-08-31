@@ -3,11 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckSquare, Square, Paintbrush } from "lucide-react";
+import { CheckSquare, FileText, Paintbrush, Square, User } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { StatusBadge } from "@/components/content/status-badge";
+import { humanFormat } from "@/lib/content/status";
 import { DesignQueueBulkToolbar } from "./bulk-toolbar";
+import { cn } from "@/lib/utils";
 
 /**
  * Client-side design-queue list (FEAT-14, GAP-FULL-REVIEW-2026-08-25).
@@ -24,6 +26,26 @@ export interface DesignQueueListItem {
   status: string;
   plannedPublishAtIso: string;
   href: string;
+  /**
+   * Designer-facing context. The master prompt §13 + the
+   * /ui-ux-pro-max P3.2 pass says the queue must answer
+   * "what creative work can / should a designer pick up?"
+   * — that's a different question than "which items are
+   * unassigned?", and the row needs the fields that answer
+   * it. The server page is the source of these; the client
+   * list is a thin renderer.
+   */
+  format: string;
+  briefExcerpt: string | null;
+  ownerDisplayName: string | null;
+  /** ISO timestamp of the row's `updatedAt` for the
+   * "last touched" tooltip on the card. */
+  updatedAtIso: string;
+  /** True when `brief` is empty or whitespace-only. Used
+   * to surface the "brief not ready" indicator so a
+   * designer can see which items are unclaimable
+   * until the planner tightens the brief. */
+  briefIsEmpty: boolean;
 }
 
 export function DesignQueueList({
@@ -104,10 +126,79 @@ export function DesignQueueList({
                   className="focus-visible:ring-focus-ring block rounded focus:outline-none focus-visible:ring-2"
                 >
                   <p className="text-body text-fg-primary font-semibold">{item.title}</p>
-                  <p className="text-label text-fg-muted my-3">
-                    Publish {new Date(item.plannedPublishAtIso).toLocaleDateString()}
+                  <p
+                    className="text-label text-fg-muted mt-1 font-semibold tracking-wide uppercase"
+                    data-testid="design-queue-row-format"
+                  >
+                    {humanFormat(item.format)}
                   </p>
-                  <StatusBadge status={item.status} />
+                  <p
+                    className="text-label text-fg-muted my-3"
+                    data-testid="design-queue-row-required-by"
+                  >
+                    Required by {new Date(item.plannedPublishAtIso).toLocaleDateString()}
+                  </p>
+                  <p
+                    className="text-body text-fg-secondary line-clamp-2"
+                    data-testid="design-queue-row-brief"
+                  >
+                    {item.briefIsEmpty ? (
+                      <span className="text-fg-muted italic">
+                        Brief not ready — open the item to add a Hook / Main message / CTA.
+                      </span>
+                    ) : (
+                      item.briefExcerpt
+                    )}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {item.ownerDisplayName ? (
+                      <span
+                        className="text-label text-fg-muted inline-flex items-center gap-1"
+                        data-testid="design-queue-row-owner"
+                        title={`Owner: ${item.ownerDisplayName}`}
+                      >
+                        <User className="h-3 w-3" aria-hidden="true" />
+                        <span className="font-semibold">Owner</span>
+                        <span className="text-fg-primary font-medium">{item.ownerDisplayName}</span>
+                      </span>
+                    ) : (
+                      <span
+                        className="text-label text-fg-muted inline-flex items-center gap-1"
+                        data-testid="design-queue-row-owner"
+                        data-empty="true"
+                      >
+                        <User className="h-3 w-3" aria-hidden="true" />
+                        <span className="font-semibold">Owner</span>
+                        <span className="italic">Unassigned</span>
+                      </span>
+                    )}
+                    {item.briefIsEmpty ? (
+                      <span
+                        className={cn(
+                          "text-label inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-semibold",
+                          "bg-warning-subtle text-warning",
+                        )}
+                        data-testid="design-queue-row-brief-status"
+                        data-brief-ready="false"
+                      >
+                        <FileText className="h-3 w-3" aria-hidden="true" />
+                        Brief needed
+                      </span>
+                    ) : (
+                      <span
+                        className={cn(
+                          "text-label inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-semibold",
+                          "bg-success-subtle text-success",
+                        )}
+                        data-testid="design-queue-row-brief-status"
+                        data-brief-ready="true"
+                      >
+                        <FileText className="h-3 w-3" aria-hidden="true" />
+                        Brief ready
+                      </span>
+                    )}
+                    <StatusBadge status={item.status} />
+                  </div>
                 </Link>
               </div>
               {canBulkArchive ? (

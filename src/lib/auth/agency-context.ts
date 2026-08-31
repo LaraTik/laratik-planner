@@ -569,7 +569,7 @@ async function findSingleActiveAgency(actor: Actor): Promise<string | null> {
   }
 }
 
-async function isActiveMember(actor: Actor, agencyId: string): Promise<boolean> {
+export async function isActiveMember(actor: Actor, agencyId: string): Promise<boolean> {
   try {
     const [row] = await db
       .select({ x: sql<number>`1` })

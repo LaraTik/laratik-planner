@@ -100,7 +100,14 @@ export async function setupFinalState(page: Page, seed: SeedResultLike): Promise
   const slug = workspaceSlug(seed as SeedResultLike & { workspaceSlug?: string });
   await page.goto(`/app/w/${slug}/planning/${seed.contentItemId}`);
   await page.waitForLoadState("domcontentloaded");
-  await page.locator('[data-testid="workspace-content-detail"]').waitFor({ state: "visible" });
+  // The page wrapper testid may briefly resolve to 2 elements during
+  // RSC streaming / hydration (one visible, one hidden). Use `.first()`
+  // so Playwright's strict mode doesn't reject the locator; the
+  // visible one is always the first match.
+  await page
+    .locator('[data-testid="workspace-content-detail"]')
+    .first()
+    .waitFor({ state: "visible" });
 }
 
 /**
@@ -159,7 +166,10 @@ export async function setupDiscussionState(page: Page, seed: SeedResultLike): Pr
   const slug = workspaceSlug(seed as SeedResultLike & { workspaceSlug?: string });
   await page.goto(`/app/w/${slug}/planning/${seed.contentItemId}`);
   await page.waitForLoadState("domcontentloaded");
-  await page.locator('[data-testid="workspace-content-detail"]').waitFor({ state: "visible" });
+  await page
+    .locator('[data-testid="workspace-content-detail"]')
+    .first()
+    .waitFor({ state: "visible" });
 }
 
 /**

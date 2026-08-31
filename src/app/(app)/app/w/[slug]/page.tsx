@@ -106,6 +106,10 @@ export default async function WorkspaceOverviewPage({
         status: contentItems.status,
         format: contentItems.format,
         plannedPublishAt: contentItems.plannedPublishAt,
+        // P3.1 — the "Recently updated" panel now sorts by
+        // `updatedAt` instead of `plannedPublishAt`. The old
+        // sort made the panel's name a lie.
+        updatedAt: contentItems.updatedAt,
         contentOwnerId: contentItems.contentOwnerId,
       })
       .from(contentItems)
@@ -149,6 +153,7 @@ export default async function WorkspaceOverviewPage({
     status: i.status,
     format: i.format,
     plannedPublishAt: i.plannedPublishAt,
+    updatedAt: i.updatedAt,
     ownerId: i.contentOwnerId,
     ownerName: i.contentOwnerId ? (ownerById.get(i.contentOwnerId) ?? null) : null,
   }));

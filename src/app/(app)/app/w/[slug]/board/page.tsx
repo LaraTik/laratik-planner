@@ -7,7 +7,11 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { listWorkspaceContent } from "@/lib/content/service";
 import { ALL_FORMATS, ALL_STATUSES, humanFormat } from "@/lib/content/status";
 import { PageHeader } from "@/components/workspace/page-header";
-import { WorkflowBoard, type WorkflowBoardColumn } from "@/components/board/workflow-board";
+import {
+  WorkflowBoard,
+  type WorkflowBoardColumn,
+  type BoardMemberEntry,
+} from "@/components/board/workflow-board";
 import { PlanningFilters } from "@/components/workspace/planning-filters";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Button } from "@/components/ui/button";
@@ -206,7 +210,14 @@ export default async function WorkflowBoardPage({
           }
         />
       ) : (
-        <WorkflowBoard items={items} columns={COLUMNS} workspaceSlug={slug} />
+        <WorkflowBoard
+          items={items}
+          columns={COLUMNS}
+          workspaceSlug={slug}
+          memberDirectory={Object.fromEntries(
+            memberRows.map((m) => [m.id, m satisfies BoardMemberEntry]),
+          )}
+        />
       )}
     </div>
   );

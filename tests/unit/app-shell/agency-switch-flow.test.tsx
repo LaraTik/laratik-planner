@@ -39,9 +39,19 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const switchActiveAgencyMock = vi.hoisted(() => vi.fn(async () => true));
+type SwitchRedirectResult =
+  | { ok: true; agencyId: string; firstWorkspaceSlug: string | null }
+  | { ok: false; reason: "unauthenticated" | "not-a-member" | "no-secret" };
+
+const switchActiveAgencyAndRedirectMock = vi.hoisted(() =>
+  vi.fn(async (agencyId: string): Promise<SwitchRedirectResult> => ({
+    ok: true as const,
+    agencyId,
+    firstWorkspaceSlug: null as string | null,
+  })),
+);
 vi.mock("@/lib/auth/agency-actions", () => ({
-  switchActiveAgency: switchActiveAgencyMock,
+  switchActiveAgencyAndRedirect: switchActiveAgencyAndRedirectMock,
 }));
 
 function makeProps(agencyId: string, agencyName: string) {

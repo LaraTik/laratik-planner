@@ -35,9 +35,24 @@ vi.mock("next/link", () => ({
 // Vitest's CJS/ESM resolution chokes on next-auth's `import "next/server"`
 // (no `.js` extension). We mock the action surface so the import graph
 // stops at the agency-switcher module boundary.
-const switchActiveAgencyMock = vi.hoisted(() => vi.fn(async () => true));
+//
+// The mocked action is the switch-and-redirect variant. The old
+// `switchActiveAgency` (boolean-only) is no longer called by the
+// client; the new action returns `{ ok, firstWorkspaceSlug }` so
+// the agency switcher can navigate atomically into the new agency.
+type SwitchRedirectResult =
+  | { ok: true; agencyId: string; firstWorkspaceSlug: string | null }
+  | { ok: false; reason: "unauthenticated" | "not-a-member" | "no-secret" };
+
+const switchActiveAgencyAndRedirectMock = vi.hoisted(() =>
+  vi.fn(async (agencyId: string): Promise<SwitchRedirectResult> => ({
+    ok: true as const,
+    agencyId,
+    firstWorkspaceSlug: null as string | null,
+  })),
+);
 vi.mock("@/lib/auth/agency-actions", () => ({
-  switchActiveAgency: switchActiveAgencyMock,
+  switchActiveAgencyAndRedirect: switchActiveAgencyAndRedirectMock,
 }));
 
 const baseProps = {
@@ -274,8 +289,12 @@ describe("Sidebar (agency switcher wiring — M1.5)", () => {
     usePathnameMock.mockReturnValue("/app");
     pushMock.mockReset();
     refreshMock.mockReset();
-    switchActiveAgencyMock.mockReset();
-    switchActiveAgencyMock.mockResolvedValue(true);
+    switchActiveAgencyAndRedirectMock.mockReset();
+    switchActiveAgencyAndRedirectMock.mockResolvedValue({
+      ok: true as const,
+      agencyId: "agency-1",
+      firstWorkspaceSlug: null,
+    });
   });
 
   it("renders the agency switcher trigger with the active agency name", () => {
@@ -335,8 +354,13 @@ describe("Sidebar (agency switcher wiring — M1.5)", () => {
     expect(screen.getByTestId("sidebar-workspace-switcher-trigger")).toBeInTheDocument();
   });
 
-  it("lands on the neutral app page after switching agencies", async () => {
+  it("lands on the new agency's first workspace after switching agencies (no-workspace fallback to /app)", async () => {
     const user = userEvent.setup();
+    switchActiveAgencyAndRedirectMock.mockResolvedValueOnce({
+      ok: true as const,
+      agencyId: "agency-2",
+      firstWorkspaceSlug: null,
+    });
     render(
       <Sidebar
         {...baseProps}
@@ -354,10 +378,74 @@ describe("Sidebar (agency switcher wiring — M1.5)", () => {
     await user.click(screen.getByRole("option", { name: /Second Agency/ }));
 
     await waitFor(() => {
-      expect(switchActiveAgencyMock).toHaveBeenCalledWith("agency-2");
+      expect(switchActiveAgencyAndRedirectMock).toHaveBeenCalledWith("agency-2");
       expect(pushMock).toHaveBeenCalledWith("/app");
       expect(refreshMock).toHaveBeenCalled();
     });
+  });
+
+  it("navigates to the new agency's first workspace slug when one is returned", async () => {
+    const user = userEvent.setup();
+    switchActiveAgencyAndRedirectMock.mockResolvedValueOnce({
+      ok: true as const,
+      agencyId: "agency-2",
+      firstWorkspaceSlug: "second-ws",
+    });
+    render(
+      <Sidebar
+        {...baseProps}
+        agencySwitcher={{
+          active: baseProps.agencySwitcher.active,
+          options: [
+            baseProps.agencySwitcher.active,
+            { id: "agency-2", name: "Second Agency", slug: "second", isAdmin: false },
+          ],
+        }}
+      />,
+    );
+
+    await user.click(screen.getByTestId("sidebar-agency-switcher-trigger"));
+    await user.click(screen.getByRole("option", { name: /Second Agency/ }));
+
+    await waitFor(() => {
+      expect(switchActiveAgencyAndRedirectMock).toHaveBeenCalledWith("agency-2");
+      // The agency switcher must NOT leave a stale workspace slug
+      // in the address bar — it navigates atomically into the new
+      // agency's first workspace.
+      expect(pushMock).toHaveBeenCalledWith("/app/w/second-ws");
+      expect(refreshMock).toHaveBeenCalled();
+    });
+  });
+
+  it("keeps the user on the current page when the switch is refused", async () => {
+    const user = userEvent.setup();
+    switchActiveAgencyAndRedirectMock.mockResolvedValueOnce({
+      ok: false as const,
+      reason: "not-a-member" as const,
+    });
+    render(
+      <Sidebar
+        {...baseProps}
+        agencySwitcher={{
+          active: baseProps.agencySwitcher.active,
+          options: [
+            baseProps.agencySwitcher.active,
+            { id: "agency-2", name: "Second Agency", slug: "second", isAdmin: false },
+          ],
+        }}
+      />,
+    );
+
+    await user.click(screen.getByTestId("sidebar-agency-switcher-trigger"));
+    await user.click(screen.getByRole("option", { name: /Second Agency/ }));
+
+    await waitFor(() => {
+      expect(switchActiveAgencyAndRedirectMock).toHaveBeenCalledWith("agency-2");
+    });
+    // The router MUST NOT push anywhere when the switch is refused
+    // (membership check failed or session expired). A forced
+    // navigation would mask the failure.
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });
 

@@ -138,6 +138,7 @@ export function Sidebar({
         currentWorkspace={currentWorkspace}
         workspaceSwitcherOptions={workspaceSwitcherOptions}
         canCreateWorkspace={canCreateWorkspace}
+        agencySwitcher={agencySwitcher}
         onCollapsedChange={onCollapsedChange}
       />
 
@@ -188,50 +189,71 @@ function SidebarHeader({
   currentWorkspace,
   workspaceSwitcherOptions,
   canCreateWorkspace,
+  agencySwitcher,
   onCollapsedChange,
 }: {
   collapsed: boolean;
   currentWorkspace: { id: string; name: string; slug: string } | null;
   workspaceSwitcherOptions: { id: string; name: string; slug: string }[];
   canCreateWorkspace: boolean;
+  agencySwitcher?: { active: AgencyRow | null; options: AgencyRow[] };
   onCollapsedChange?: ((next: boolean) => void) | undefined;
 }) {
+  // Header is a stacked Agency → Workspace context strip so the
+  // user always sees "I am in agency X, workspace Y" without
+  // having to dig into a switcher. The agency label is small
+  // and the workspace switcher is the primary control.
   return (
-    <div
-      className={cn(
-        "flex items-center gap-2 px-2 pt-2 pb-2 xl:px-3",
-        collapsed ? "justify-center" : "justify-between",
-      )}
-    >
-      <Link
-        href="/app"
-        className={cn(
-          "focus-visible:ring-focus-ring flex items-center gap-2 rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2",
-          collapsed ? "justify-center" : "flex-1",
-        )}
-        aria-label="StudioFlow home"
-        title="StudioFlow"
+    <div className={cn("flex flex-col gap-1 px-2 pt-2 pb-2 xl:px-3")}>
+      <div
+        className={cn("flex items-center gap-2", collapsed ? "justify-center" : "justify-between")}
       >
-        <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] font-bold text-white">
-          S
-        </div>
-        {!collapsed ? (
-          <div className="min-w-0">
-            <p className="text-section-title text-fg-primary truncate font-semibold">StudioFlow</p>
+        <Link
+          href="/app"
+          className={cn(
+            "focus-visible:ring-focus-ring flex items-center gap-2 rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2",
+            collapsed ? "justify-center" : "flex-1",
+          )}
+          aria-label="StudioFlow home"
+          title="StudioFlow"
+        >
+          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] font-bold text-white">
+            S
           </div>
+          {!collapsed ? (
+            <div className="min-w-0">
+              <p className="text-section-title text-fg-primary truncate font-semibold">
+                StudioFlow
+              </p>
+            </div>
+          ) : null}
+        </Link>
+        {!collapsed && onCollapsedChange ? (
+          <SidebarCollapseToggle collapsed={collapsed} variant="header" />
         ) : null}
-      </Link>
+      </div>
       {!collapsed && currentWorkspace ? (
-        <WorkspaceSwitcher
-          active={currentWorkspace}
-          options={workspaceSwitcherOptions}
-          canCreate={canCreateWorkspace}
-          compact
-          testId="sidebar-workspace-switcher-trigger"
-        />
-      ) : null}
-      {!collapsed && onCollapsedChange ? (
-        <SidebarCollapseToggle collapsed={collapsed} variant="header" />
+        <div className="space-y-0.5 pt-1">
+          {/* Agency label (small, eyebrow-style) so the user sees the
+              hierarchy at a glance. The agency switcher lives in the
+              footer; this label is just context, not a control. */}
+          {agencySwitcher?.active ? (
+            <p
+              className="text-label text-fg-muted truncate ps-1 font-semibold tracking-wide uppercase"
+              title={`Agency: ${agencySwitcher.active.name}`}
+              data-testid="sidebar-active-agency-label"
+            >
+              {agencySwitcher.active.name}
+            </p>
+          ) : null}
+          <WorkspaceSwitcher
+            active={currentWorkspace}
+            options={workspaceSwitcherOptions}
+            canCreate={canCreateWorkspace}
+            compact
+            testId="sidebar-workspace-switcher-trigger"
+          />
+        </div>
       ) : null}
     </div>
   );
@@ -274,45 +296,49 @@ function SidebarFooter({
         </Link>
       ) : null}
 
-      {/* Global mode: agency switcher + workspace switcher in footer.
-          The workspace switcher is reachable from the top header
-          when in a workspace, so it stays in the footer only when
-          we're on a global route. */}
-      {!inWorkspace ? (
-        <>
-          {agencySwitcher.options.length > 1 || platformAccess.canEnter ? (
-            <div className="pt-1">
-              <AgencySwitcher
-                active={agencySwitcher.active}
-                options={agencySwitcher.options}
-                isPlatformAdmin={platformAccess.canEnter}
-                compact
-                testId="sidebar-agency-switcher-trigger"
-              />
-            </div>
-          ) : null}
+      {/* Agency + workspace context.
+          The agency switcher is the OUTER context — it stays
+          reachable in BOTH global and workspace modes when the
+          user has multiple agencies. Hiding it in workspace mode
+          (the previous behavior) meant a multi-agency user had to
+          navigate back to /app just to switch agency, even though
+          they were sitting in a workspace that was about to become
+          cross-tenant invalid. The workspace switcher stays in the
+          footer only on global routes; on workspace routes the
+          header is the primary surface. */}
+      {agencySwitcher.options.length > 1 || platformAccess.canEnter ? (
+        <div className="pt-1">
+          <AgencySwitcher
+            active={agencySwitcher.active}
+            options={agencySwitcher.options}
+            isPlatformAdmin={platformAccess.canEnter}
+            compact
+            testId="sidebar-agency-switcher-trigger"
+          />
+        </div>
+      ) : null}
 
-          <div className="pt-1">
-            {workspaceSwitcherOptions.length === 0 ? (
-              <Link
-                href="/app/workspaces/new"
-                className="text-body text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex items-center gap-2 rounded-[var(--radius-control)] border border-dashed px-3 py-2 font-semibold focus:outline-none focus-visible:ring-2"
-                data-testid="sidebar-workspace-empty"
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Create your first workspace
-              </Link>
-            ) : (
-              <WorkspaceSwitcher
-                active={currentWorkspace ?? workspaceSwitcherOptions[0] ?? null}
-                options={workspaceSwitcherOptions}
-                canCreate={canCreateWorkspace}
-                compact
-                testId="sidebar-workspace-switcher-trigger"
-              />
-            )}
-          </div>
-        </>
+      {!inWorkspace ? (
+        <div className="pt-1">
+          {workspaceSwitcherOptions.length === 0 ? (
+            <Link
+              href="/app/workspaces/new"
+              className="text-body text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex items-center gap-2 rounded-[var(--radius-control)] border border-dashed px-3 py-2 font-semibold focus:outline-none focus-visible:ring-2"
+              data-testid="sidebar-workspace-empty"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Create your first workspace
+            </Link>
+          ) : (
+            <WorkspaceSwitcher
+              active={currentWorkspace ?? workspaceSwitcherOptions[0] ?? null}
+              options={workspaceSwitcherOptions}
+              canCreate={canCreateWorkspace}
+              compact
+              testId="sidebar-workspace-switcher-trigger"
+            />
+          )}
+        </div>
       ) : null}
 
       {/* Footer toggle (only visible when collapsed — header toggle covers expanded). */}

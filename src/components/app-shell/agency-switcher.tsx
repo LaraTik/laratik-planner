@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Check, ChevronsUpDown, Plus, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { switchActiveAgency } from "@/lib/auth/agency-actions";
+import { switchActiveAgencyAndRedirect } from "@/lib/auth/agency-actions";
 
 /**
  * Row shape consumed by the agency switcher. Mirrors
@@ -77,8 +77,17 @@ export function AgencySwitcher({
     if (a.id === active?.id) return; // no-op selection
     setPending(true);
     try {
-      const ok = await switchActiveAgency(a.id);
-      if (!ok) {
+      // Switch-and-redirect: the server action writes the cookie and
+      // returns the first accessible workspace in the new agency. We
+      // navigate to that workspace (or `/app` if the agency has none)
+      // atomically so the URL never holds a workspace slug from the
+      // previous agency. Going to `/app` was the v1 behavior; it
+      // worked when there was only one agency on the deployment, but
+      // with multi-agency it left the previous (now invalid)
+      // workspace URL in the address bar until the next click, and
+      // a browser-back could resurrect a cross-tenant URL.
+      const result = await switchActiveAgencyAndRedirect(a.id);
+      if (!result.ok) {
         // The server action refused (membership check failed or the
         // session expired). We keep the user on the current page;
         // the popover is already closed. A real production version
@@ -87,7 +96,8 @@ export function AgencySwitcher({
         // important guarantee.
         return;
       }
-      router.push("/app");
+      const nextHref = result.firstWorkspaceSlug ? `/app/w/${result.firstWorkspaceSlug}` : "/app";
+      router.push(nextHref);
       router.refresh();
     } finally {
       setPending(false);

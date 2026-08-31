@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import {
   WorkflowBoard,
+  type BoardMemberEntry,
   type WorkflowBoardColumn,
   type WorkflowBoardItem,
 } from "@/components/board/workflow-board";
@@ -158,5 +159,131 @@ describe("WorkflowBoard", () => {
     expect(sections).toHaveLength(2);
     expect(sections[0]).toHaveAttribute("data-testid", "board-column-zeta");
     expect(sections[1]).toHaveAttribute("data-testid", "board-column-alpha");
+  });
+});
+
+/**
+ * Owner + Designer role rows on the board card (master prompt §5,
+ * §11, AGENTS.md §C). The card's contract:
+ *  - Always renders the role label (Owner / Designer), even when
+ *    the id is missing — never an empty row, never a hidden role.
+ *  - Renders the user's displayName when the directory knows them;
+ *    falls back to the raw name; falls back to italic "Unassigned"
+ *    when the id is missing or unknown.
+ *  - The `data-role` + `data-empty` attributes are the contract
+ *    the planning list's PeopleCell uses too — a regression that
+ *    re-collapses Owner + Designer into a single pill fails
+ *    this test.
+ */
+const directory: Record<string, BoardMemberEntry> = {
+  "user-owner": { id: "user-owner", name: "Ghaleb", displayName: "Ghaleb K." },
+  "user-designer": { id: "user-designer", name: "Sarah", displayName: "Sarah A." },
+};
+
+describe("WorkflowBoard — role-labelled Owner/Designer on cards", () => {
+  it("renders the role label and the user's display name when the directory knows them", () => {
+    render(
+      <WorkflowBoard
+        items={[
+          makeItem({
+            id: "k-1",
+            status: "in_design",
+            contentOwnerId: "user-owner",
+            designerId: "user-designer",
+          }),
+        ]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+        memberDirectory={directory}
+      />,
+    );
+    const ownerRow = screen.getByTestId("board-card-owner");
+    expect(ownerRow).toHaveAttribute("data-role", "owner");
+    expect(ownerRow).toHaveTextContent("Owner");
+    expect(ownerRow).toHaveTextContent("Ghaleb K.");
+    expect(ownerRow).not.toHaveAttribute("data-empty");
+    const designerRow = screen.getByTestId("board-card-designer");
+    expect(designerRow).toHaveAttribute("data-role", "designer");
+    expect(designerRow).toHaveTextContent("Designer");
+    expect(designerRow).toHaveTextContent("Sarah A.");
+  });
+
+  it("renders italic 'Unassigned' when the owner id is missing", () => {
+    render(
+      <WorkflowBoard
+        items={[makeItem({ id: "k-1", status: "in_design", contentOwnerId: null })]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+        memberDirectory={directory}
+      />,
+    );
+    const ownerRow = screen.getByTestId("board-card-owner");
+    expect(ownerRow).toHaveAttribute("data-empty", "true");
+    expect(ownerRow).toHaveTextContent("Unassigned");
+  });
+
+  it("renders italic 'Unassigned' when the designer id is missing", () => {
+    render(
+      <WorkflowBoard
+        items={[makeItem({ id: "k-1", status: "in_design", designerId: null })]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+        memberDirectory={directory}
+      />,
+    );
+    const designerRow = screen.getByTestId("board-card-designer");
+    expect(designerRow).toHaveAttribute("data-empty", "true");
+    expect(designerRow).toHaveTextContent("Unassigned");
+  });
+
+  it("renders italic 'Unassigned' when the user is not in the directory", () => {
+    render(
+      <WorkflowBoard
+        items={[makeItem({ id: "k-1", status: "in_design", contentOwnerId: "ghost-id" })]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+        memberDirectory={directory}
+      />,
+    );
+    const ownerRow = screen.getByTestId("board-card-owner");
+    expect(ownerRow).toHaveAttribute("data-empty", "true");
+  });
+
+  it("falls back to the raw name when displayName is null", () => {
+    const noDisplay: Record<string, BoardMemberEntry> = {
+      "user-owner": { id: "user-owner", name: "Ghaleb Raw", displayName: null },
+    };
+    render(
+      <WorkflowBoard
+        items={[
+          makeItem({
+            id: "k-1",
+            status: "in_design",
+            contentOwnerId: "user-owner",
+            designerId: null,
+          }),
+        ]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+        memberDirectory={noDisplay}
+      />,
+    );
+    const ownerRow = screen.getByTestId("board-card-owner");
+    expect(ownerRow).toHaveTextContent("Ghaleb Raw");
+  });
+
+  it("renders the role rows even when no memberDirectory is provided", () => {
+    render(
+      <WorkflowBoard
+        items={[makeItem({ id: "k-1", status: "in_design" })]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+      />,
+    );
+    // The role label is the canonical signal — without a directory
+    // the name renders as "Unassigned" so the user can still see
+    // the role is missing rather than guessing.
+    expect(screen.getByTestId("board-card-owner")).toHaveTextContent("Unassigned");
+    expect(screen.getByTestId("board-card-designer")).toHaveTextContent("Unassigned");
   });
 });

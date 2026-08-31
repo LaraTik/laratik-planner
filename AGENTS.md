@@ -356,6 +356,232 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 - **ADRs:** material deviations from the master prompt go in `docs/decisions/`. The first one (`docs/decisions/0001-vps-port.md`) records the choice to self-host on the LaraTik VPS instead of Supabase + Vercel.
 - **Merge on completion:** when a change is finished and `pnpm verify` is green AND the local pre-merge E2E checklist (`pnpm test:e2e:isolated` + `pnpm test:visual` on the release-candidate branch) is complete, commit it with a `<type>(<scope>): <description>` message and push to `main`. The deploy workflow fires on `workflow_run: CI success`, so the change is live on production the moment the deploy job finishes. No finished work sits in the local working tree or on a stale local branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space.
 
+## Product UI/UX Engineering Rules
+
+Every agent modifying user-facing UI in this repository — pages, components, layout, navigation, copy, color, motion, or interaction — MUST follow these rules. They are the durable UX contract that survives across PRs, branches, and goals. They are deliberately opinionated so future agents converge on a consistent product rather than re-deriving conventions per change.
+
+### A. Understand the screen before modifying it
+
+Before implementation, write a one-paragraph "screen review" covering: SCREEN, PURPOSE, PRIMARY USER, PRIMARY QUESTION, PRIMARY ACTION, CURRENT UX PROBLEMS, PROPOSED CHANGE, RESPONSIVE BEHAVIOR, REUSED COMPONENTS, NEW COMPONENTS, RISKS. The list page templates live next to the route. Never start by simply moving cards around.
+
+### B. Follow progressive disclosure
+
+Show the first decision-making metadata only:
+
+1. what the item is (title + format icon)
+2. current state (status / stage)
+3. owner
+4. deadline (or overdue)
+5. next action (single primary CTA)
+
+Move secondary metadata and advanced settings behind tabs, expandable sections, drawers, inspectors, or contextual menus. **Never inline the full workflow stepper in a list row** — the full stepper belongs in the detail view. (See `src/components/planning/planning-list-grouped.tsx` for the canonical list row; `src/components/planning/workflow-rail.tsx` for the inspector stepper.)
+
+### C. One concept has one visual language
+
+These concepts must look consistent everywhere they appear. Do not invent a new badge, color, or icon treatment on a per-screen basis — extract a shared primitive instead.
+
+- **Content status** — `draft` / `in_design` / `content_review` / `creative_review` / `changes_requested` / `approved` / `ready_to_publish` / `partially_published` / `published` / `blocked` / `cancelled`. Source: `src/components/content/status-badge.tsx`. Map: `ALL_STATUSES` in `src/lib/content/status.ts`. Color: muted/primary/warning/danger variants. Never re-derive the mapping inside a page.
+- **Workflow stage** — current step in the stage machine (Planning, Content Review, Design, Creative Review, Publishing). Source: `src/components/planning/workflow-stepper.tsx`. Stage count "3 / 5" is the only inline format allowed in list rows; full stepper is a popover or detail view.
+- **Approval state** — `pending` / `approved` / `changes_requested` / `rejected`. Source: `src/lib/deliveries/service.ts`. Visual: distinct from content status; never share a color with the corresponding content status unless intentional and documented in `docs/decisions/`.
+- **Publishing state** — `not_started` / `pending` / `succeeded` / `failed` / `partially_failed`. Source: `src/lib/publishing`. Visual: success/warning/danger variants. Always paired with the channel name so the failure is actionable.
+- **Health / risk** — `on_track` / `at_risk` / `blocked` / `not_started`. Source: `aggregateHealth` in `src/lib/dashboard/health.ts`. Use the strict definition (excludes drafts, cancelled, blocked from "at risk") so the KPI tile and the row badge cannot disagree.
+- **Ownership** — Owner, Designer, Reviewer. Three different responsibilities. Never collapse into a generic "assignee" — see `src/components/planning/overview-command-center.tsx` for the canonical role display.
+- **Due / overdue** — always pair a planned date with its health state. Use the shared `DateBadge` primitive (if present) or the pattern in `src/components/planning/planning-list-grouped.tsx`. "Overdue" must be a color + an icon + a label, never color alone.
+
+When a new visual treatment is needed twice, it is a candidate for extraction. When it is needed three times, extract it.
+
+### D. Every screen must be responsive
+
+Test at minimum: **375px (mobile)**, **768px (tablet portrait)**, **1024px (laptop)**, **1280px (desktop)**, **1440px+ (wide)**. Visual regression baselines for the 23 unique routes × 6 viewports live in `tests/e2e/visual-regression.spec.ts` and are pinned in `tests/unit/stitch-cases.test.ts`. Do not ship a screen that has not been verified at the relevant widths.
+
+- Large desktop (≥1280px): persistent sidebar + main + optional inspector. Max content width 1440px (`max-w-[1440px]`) for planning/board; `max-w-7xl` (1280px) for forms.
+- Standard laptop (1024–1279px): collapsed icon rail (72px), main, inspector drawer.
+- Tablet (768–1023px): collapsed rail + collapsible inspector.
+- Mobile (<768px): top app bar with workspace context (`MobileContextHeader`), bottom navigation, full-screen sheets for inspectors/dialogs. Never squeeze editor + preview + workflow into three tiny mobile columns.
+
+Avoid fixed pixel widths in component CSS. Use Tailwind responsive prefixes (`md:`, `xl:`, `2xl:`) and the design tokens from `src/app/globals.css`. If a layout truly needs a fixed width, document the breakpoint in the component header.
+
+### E. Avoid duplicate information
+
+Do not show the same metadata repeatedly in the page header, tabs, cards, sidebar, and workflow rail unless repetition provides clear task context. The "what" appears once (e.g. content title in the header), the "who" appears once in the inspector, the "when" appears once. Cross-reference by anchor, not by repetition.
+
+### F. Make actions obvious
+
+Every page and workflow state must answer "What can I do now?" The primary CTA is the visually dominant action (full-color button, top-right or in the inspector). Secondary actions are outline buttons. Tertiary actions are text links or menu items. **Never present five actions with identical hierarchy.**
+
+The Next-Action card in the content detail (`OverviewCommandCenter` → `NextActionCard`) is the canonical source of "what to do now" for a content item. The primary action label is the same string in the workspace header (server-computed `nextActionLabel` in the page). The two must never disagree.
+
+### G. Prefer contextual editing
+
+- Trivial fields: inline edit (`InlineEditableFields` pattern).
+- Grouped related fields: panel/section (card with fieldset).
+- Complex object: drawer (`EditDetailsDrawer` in `src/components/planning/`).
+- Whole-content edit: dedicated screen (`/planning/[id]/edit`).
+- Whole-content read: detail page (`/planning/[id]`).
+
+Do not open a full editor for a single-field change. Do not put a single field inside a drawer.
+
+### H. Preserve user context
+
+Navigation and mutations must preserve, where reasonable: active agency, active workspace, selected month, filters, sort, density, selected content, selected tab. The list/board calendar page must accept the active filter set on the URL and reconstruct every pagination link from the known filter keys (see `buildPageHref` in `src/app/(app)/app/w/[slug]/planning/page.tsx`). Never silently drop a filter on a pagination click.
+
+When switching agency or workspace, prefer to land the user inside the new context (the new agency's first workspace, or the new workspace's overview) rather than on the global app home. The agency switcher must surface a confirmation when the user is mid-task in a workspace URL that will become invalid — switching agency invalidates the current workspace URL.
+
+### I. Accessibility is mandatory
+
+Minimum bar:
+
+- Semantic `<button>` / `<a>` / `<nav>` / `<main>` / `<header>`. No `<div onClick>`.
+- Keyboard accessibility: every interactive element reachable by Tab, operable by Enter / Space.
+- Visible focus treatment: `focus-visible:ring-focus-ring` (the `--focus-ring` token). The skip-link is a real skip-link with `focus:opacity-100`.
+- ARIA labels on icon-only controls (`aria-label="Switch agency"`).
+- Sufficient contrast: 4.5:1 for body text, 3:1 for large text and UI components. Test with light + dark mode.
+- **Never** communicate state by color alone — pair color with an icon or a label (e.g. "29 days overdue" + warning icon + amber color).
+- Meaningful empty states (see §Q below).
+- Tooltips for icon-only controls via Radix's `Tooltip` (already wrapped on most primitives).
+- The `prefers-reduced-motion` query is honored by `src/app/globals.css` (motion-fade utilities are gated).
+
+### J. Responsive density
+
+- Desktop may use information-rich layouts (the planning list at "comfortable" density).
+- Tablet should reduce secondary metadata (hide the row's `comments` count, hide the `format` sublabel).
+- Mobile should prioritize: title, status, owner, deadline, primary action. Everything else hides into a detail view or a swipe action.
+
+Never compress desktop text below `text-body` (14px). The token is defined in `src/app/globals.css`. If a layout needs to fit more on mobile, change the representation (stacked card, sheet) — do not shrink type.
+
+### K. Maintainability
+
+Do not solve UI issues with one-off CSS hacks. Prefer:
+
+- Shared primitives in `src/components/ui/` (Card, Button, Badge, EmptyState, Tooltip, Popover).
+- Reusable layout components in `src/components/workspace/` (PageHeader, KpiCard, ListCard, ListItem, Pagination).
+- Typed configuration (TS const arrays, not string literals inline).
+- Consistent variants (`variant="outline"`, `density="compact"`).
+- Design tokens (CSS variables in `src/app/globals.css`).
+- Small composable components.
+
+If the same pattern appears 3+ times, evaluate extraction. The `StatusBadge`, `EmptyState`, `KpiCard`, and `ListItem` are the canonical "extract these" precedents.
+
+### L. Every UI task requires a UX regression review
+
+Before completion verify, on every touched screen:
+
+- navigation (does the back/forward button work? does the URL reflect state?)
+- workspace isolation (does the data loader gate by workspace id? does the query key include the workspace?)
+- permissions (does the server action check the role?)
+- loading state (skeleton, not blank)
+- empty state (no items, no match, no permission)
+- error state (the global error boundary renders the surface, not a white page)
+- long text (does the layout survive 200-char titles?)
+- many items (100+ rows: pagination, virtualization if needed)
+- zero items (the empty state explains + offers an action)
+- mobile (375px)
+- keyboard navigation (Tab through the screen)
+- browser back/forward
+- deep links (visiting a deep URL with a stale filter)
+
+### M. No emoji as icons
+
+Use the Lucide icon set (`lucide-react`) for UI icons. Do not use emojis (📷 🎨 🚀) as inline icons. The `
+
+### N. Cursor pointer on interactive surfaces
+
+Every clickable element (card, row, list item) MUST have `cursor-pointer`. The default cursor on an interactive element reads as "broken" to operators.
+
+### O. No layout shift on hover
+
+Hover states use color / background / opacity / shadow transitions only. No scale transforms that reflow neighboring elements. The exception is the canonical "lift" pattern on Cards (translate-y -1px + shadow), which is allowed because the surrounding grid tolerates the small reflow.
+
+### P. No nested cards
+
+A card inside a card inside a card is a visual smell. Use sections (borderless dividers + spacing) within a card, or use a flat grid of cards at the same nesting level. The "Owner / Designer / Reviewer" rows inside the workflow inspector are a divider, not a card.
+
+### Q. Empty states must be meaningful
+
+Every empty state MUST explain:
+
+1. **what is missing** (e.g. "No content for August 2026")
+2. **why it matters** (e.g. "This is where your monthly plan lives")
+3. **what to do next** (e.g. "Quick Create →" or "Clear filters")
+
+Reuse the `EmptyState` component from `src/components/feedback/empty-state.tsx`. The icon prop accepts any Lucide icon. The action prop is optional — not every empty state has a CTA, but a blank region is never acceptable.
+
+### R. Loading states must be consistent
+
+- Use skeletons for structured content (`<Skeleton>` from `src/components/ui/skeleton.tsx`).
+- Use a single spinner for whole-page loads (`<Loader2 className="h-6 w-6 animate-spin" />`).
+- Never render a duplicated spinner (page spinner + button spinner) on the same surface.
+- Workspace switching must not flash stale content. The agency switcher does `router.refresh()` after the cookie write; the new SSR pass replaces the tree. If the user is on a workspace page, the new server pass returns 404 for the old URL (correct anti-IDOR) — but the agency switcher MUST navigate to a new URL atomically (see §H). See `src/components/app-shell/agency-switcher.tsx` for the canonical pattern.
+
+### S. Status system audit (do not collapse different domains)
+
+These are five distinct state enums. They MUST be modeled separately, queried separately, and rendered with separate primitives. The temptation to collapse them for UI convenience is a known bug pattern; the audit fixture in `tests/unit/workspace-kpis.test.ts` pins the rule.
+
+| Dimension        | Enum                                                                                                                                                                                 | Source                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| Content status   | draft / content_review / changes_requested / approved_for_design / in_design / creative_review / approved / ready_to_publish / partially_published / published / blocked / cancelled | `ALL_STATUSES` in `src/lib/content/status.ts`                                                             |
+| Workflow stage   | Planning → Content Review → Design → Creative Review → Publishing (the stage-machine view)                                                                                           | `src/lib/content/workflow.ts`                                                                             |
+| Approval state   | pending / approved / changes_requested / rejected (per delivery version)                                                                                                             | `src/lib/deliveries/service.ts`                                                                           |
+| Publishing state | not_started / pending / succeeded / failed / partially_failed (per channel)                                                                                                          | `src/lib/publishing`                                                                                      |
+| Health / risk    | on_track / at_risk / blocked / not_started                                                                                                                                           | `aggregateHealth` in `src/lib/dashboard/health.ts` (strict, excludes drafts and `blocked` from "at risk") |
+
+If a future agent is tempted to render "At risk" as a status badge, or to filter by "at risk" using the content status enum, that is a bug. The five dimensions live in `docs/content/state-model.md` (or this section) and the unit test fixture in `tests/unit/workspace-kpis.test.ts` pins the boundary.
+
+### T. Information density hierarchy
+
+Follow this hierarchy. The same metadata MUST NOT appear at two of these levels on the same screen.
+
+- **List / board rows:** decision-making metadata only. Title, format, status, date, owner, next action. (See §B.)
+- **Detail overview:** operational summary. Next action, health, owner, designer, reviewer, planned date, last activity. (See `OverviewCommandCenter` in `src/components/planning/`.)
+- **Content tab:** creation / editing fields. The 4-field Quick Create is the minimum; per-format `formatPayload` fields live under "More details". (See §G + the `formatPayload` rule above.)
+- **Preview tab:** representation of the final published output. Platform selector, safe areas, carousel, story / reel / feed. NOT a live editor.
+- **Publishing tab:** destination-specific publishing configuration. Channel selection, scheduled time, captions, hashtags.
+- **Activity tab:** history / audit trail. Append-only.
+- **Workflow inspector:** current process state and next action. Not a duplicate of the detail overview — answers "what is blocking me and what do I do next?"
+
+### U. AI assistance rules
+
+- **AI must NEVER silently overwrite user content.** Every AI output surfaces a preview with Insert / Replace / Copy / Dismiss. (Per master prompt §0.13; see `src/components/forms/per-field-ai-suggest.tsx` and `src/components/planning/ai-assistance-panel.tsx`.)
+- For generated multi-field content, show exactly which fields will change. (Will update ✓ Hook, ✓ Main message, ✓ CTA. Will not change: Caption, Visual direction.)
+- Surface a compact "Using:" indicator with the AI context (Brand Kit, Campaign, Content brief, Instagram constraints). Do not expose the technical implementation (no "tokens used", no "model", no "temperature" in the user-visible surface).
+- Disabling an `ai_*` capability in agency settings hides the button on the content detail page; the route returns 403 if the disabled capability is requested.
+
+### V. Screen review template
+
+For EVERY touched screen, before writing code, write a short review (in the PR description or in a comment on the route file):
+
+```
+SCREEN:           /app/w/[slug]/planning (list view)
+PURPOSE:          Monthly plan of content ideas for the active workspace.
+PRIMARY USER:     Content planner / workspace manager
+PRIMARY QUESTION: "What needs my attention this month?"
+PRIMARY ACTION:   Open an item to act on it.
+CURRENT UX ISSUES:
+  - Workflow stepper in every row steals width
+  - "OVERDUE (1)" repeated as a header per group
+  - Owner and Designer are visually identical (no role distinction)
+PROPOSED CHANGE:
+  - Inline stage pill ("Design  3/5") replaces the full stepper
+  - Group under "Overdue · 6 / Due this week · 4 / Upcoming · 12"
+  - Owner + Designer get role-labelled row (Owner, Designer)
+RESPONSIVE:       Compress row on mobile to title+status+owner+date+arrow
+REUSED:           StatusBadge, DateBadge (extract), ListItem, EmptyState
+NEW:              StagePill, RoleAvatarRow
+RISKS:            Mobile row might lose the Owner/Designer pair — use a stacked sub-row.
+```
+
+This template is enforced by code review, not by an automated test. The intent is to force deliberate design decisions before pixels move.
+
+### W. The agency → workspace context is correctness, not UI
+
+Agency and workspace context is a P0 invariant. The current implementation has multiple defenses (signed `laratik_active_agency` cookie, HMAC, per-request decode with membership re-check, `getAccessibleWorkspace` anti-IDOR gate, 404 not 403 on cross-tenant lookup). Future agents MUST NOT weaken any of these defenses for a UI affordance. Specifically:
+
+- The agency switcher MUST issue the cookie server-side via a server action. The client cannot forge a cookie for an agency it is not a member of.
+- A user who is not a member of `agencyId` MUST be unable to load `/app/w/[slug]` for any slug in that agency — the layout returns 404, not 403 (anti-enumeration).
+- A user who switches agency loses authority over the old workspace URL. The agency switcher navigates to a new URL atomically; it does not leave the old URL in the address bar.
+- Cross-workspace query keys MUST include the workspace id. A `useSWR(['/api/content', workspaceId])` key without the workspace id is a data-leak bug.
+- Tests covering A1→A2, A1→B1, B1→A1, browser refresh, browser back, direct URL, workspace removed, stale cached API response live in `tests/unit/workspace-isolation.test.ts` and `tests/e2e/workspace.spec.ts`.
+
 ## Cross-references
 
 - `STUDIOFLOW_MASTER_PROMPT.md` — the source spec (3,010 lines, 26 sections)

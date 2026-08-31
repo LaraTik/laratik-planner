@@ -85,14 +85,25 @@ describe("PlanningListItem", () => {
     );
     expect(screen.getByTestId("planning-list-item")).toBeInTheDocument();
     expect(screen.getByTestId("row-title")).toHaveTextContent("August Kickoff");
-    expect(screen.getByTestId("owner-badge")).toHaveTextContent("Ghaleb N.");
-    expect(screen.getByTestId("workflow-mini-progress")).toHaveAttribute("data-status", "draft");
+    // The row now uses a PeopleCell that surfaces Owner + Designer
+    // as two role-labelled sub-rows (AGENTS.md §C).
+    expect(screen.getByTestId("people-cell")).toBeInTheDocument();
+    const ownerRow = screen.getByTestId("people-cell-owner");
+    expect(ownerRow).toHaveTextContent("Ghaleb N.");
+    expect(ownerRow).toHaveAttribute("data-role", "owner");
+    // The row uses a StagePill instead of the full WorkflowMiniProgress
+    // stepper. The full stepper is one click away in the detail page's
+    // workflow inspector. The pill surfaces the current stage + position
+    // in a single line (AGENTS.md §B + §C).
+    expect(screen.getByTestId("stage-pill")).toHaveAttribute("data-stage", "planning");
+    expect(screen.getByTestId("stage-pill")).toHaveTextContent(/Planning/);
+    expect(screen.getByTestId("stage-pill")).toHaveTextContent(/1\/4/);
     expect(screen.getByTestId("readiness-indicator")).toBeInTheDocument();
     expect(screen.getByTestId("next-action-chip")).toBeInTheDocument();
   });
 
-  it("shows 'Unassigned' when the row has no owner", () => {
-    const item = makeItem({ owner: null });
+  it("shows 'Unassigned' for both owner and designer when neither is set", () => {
+    const item = makeItem({ owner: null, designer: null });
     render(
       <ul>
         <PlanningListItem
@@ -103,9 +114,34 @@ describe("PlanningListItem", () => {
         />
       </ul>,
     );
-    const badge = screen.getByTestId("owner-badge");
-    expect(badge).toHaveAttribute("data-unassigned", "true");
-    expect(badge).toHaveTextContent("Unassigned");
+    expect(screen.getByTestId("people-cell-owner")).toHaveAttribute("data-empty", "true");
+    expect(screen.getByTestId("people-cell-owner")).toHaveTextContent(/Unassigned/);
+    expect(screen.getByTestId("people-cell-designer")).toHaveAttribute("data-empty", "true");
+    expect(screen.getByTestId("people-cell-designer")).toHaveTextContent(/Unassigned/);
+  });
+
+  it("shows the designer name when a designer is assigned", () => {
+    const item = makeItem({
+      designer: {
+        id: "user-2",
+        name: "Sarah Ahmed",
+        displayName: "Sarah A.",
+        avatarPath: null,
+      },
+    });
+    render(
+      <ul>
+        <PlanningListItem
+          item={item}
+          workspaceSlug="acme"
+          workspaceTimezone="Europe/Berlin"
+          now={NOW}
+        />
+      </ul>,
+    );
+    const designerRow = screen.getByTestId("people-cell-designer");
+    expect(designerRow).toHaveAttribute("data-role", "designer");
+    expect(designerRow).toHaveTextContent("Sarah A.");
   });
 
   it("surfaces the overdue day count in the schedule cell for past-due rows", () => {

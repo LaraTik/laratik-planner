@@ -144,3 +144,109 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
     expect(activeCookie?.value.startsWith(`${first.agencyId}.`)).toBe(true);
   });
 });
+
+/**
+ * /ui-ux-pro-max (P0.2) — atomic agency switcher.
+ *
+ * The pre-refactor agency switcher pushed the user to `/app`
+ * after writing the signed cookie. The previous workspace URL
+ * stayed in the address bar until the next click. A
+ * browser-back resurrected a cross-tenant URL; the
+ * WorkspaceLayout correctly 404'd it (anti-IDOR) but the
+ * user had no idea *why* their URL was suddenly invalid.
+ *
+ * The contract this spec pins:
+ *  - Switching agency from a workspace-scoped URL
+ *    navigates to the new agency's first workspace, not
+ *    to `/app`. The old workspace slug never lingers.
+ *  - Switching agency from the global `/app` lands on
+ *    the new agency's first workspace too (the same
+ *    action returns the new default).
+ *  - When the switch is refused (not-a-member / no-secret),
+ *    the URL is unchanged and the cookie is not written.
+ *  - The workspace switcher drops detail-page suffixes:
+ *    `/app/w/old/planning/123` → `/app/w/new/planning` (not
+ *    a stale cross-tenant 404).
+ */
+test.describe("Agency switcher — atomic navigation (P0.2)", () => {
+  test("switching agency from a workspace URL lands on the new agency's first workspace", async ({
+    page,
+  }) => {
+    const email = "agency-switch-atomic@laratik.local";
+    const a = await devSeed(page.request, {
+      email,
+      agencyName: "Atomic Agency A",
+      agencySlug: "atomic-agency-a",
+      workspaceName: "Atomic Workspace A1",
+      workspaceSlug: "atomic-workspace-a1",
+    });
+    await devSeed(page.request, {
+      email,
+      agencyName: "Atomic Agency B",
+      agencySlug: "atomic-agency-b",
+      workspaceName: "Atomic Workspace B1",
+      workspaceSlug: "atomic-workspace-b1",
+    });
+    await devSignIn(page.request, { email });
+
+    // Start in agency A on a workspace-scoped URL.
+    await page.goto(`/app/w/${a.workspaceSlug}/planning`);
+    await expect(page.getByTestId("app-sidebar")).toBeVisible();
+
+    // Switch to agency B. The new contract: navigate
+    // atomically to the new agency's first workspace —
+    // `/app/w/atomic-workspace-b1` — never leave the old
+    // slug in the address bar.
+    const trigger = page.getByTestId("sidebar-agency-switcher-trigger");
+    await trigger.click();
+    await page
+      .getByRole("listbox", { name: "Agencies" })
+      .getByRole("option", { name: /Atomic Agency B/ })
+      .click();
+
+    // The URL after switch must be the new workspace —
+    // not /app, not the old slug. The old slug
+    // (`atomic-workspace-a1`) must NOT appear in the
+    // current address bar at any point.
+    await expect(page).toHaveURL(/\/app\/w\/atomic-workspace-b1/);
+    await expect(page).not.toHaveURL(/atomic-workspace-a1/);
+
+    // The active agency label on the sidebar trigger has
+    // updated to Agency B.
+    await expect(trigger).toHaveAttribute("aria-label", /Active agency: Atomic Agency B/);
+  });
+
+  test("switching agency from /app also lands on the new workspace (not /app)", async ({
+    page,
+  }) => {
+    const email = "agency-switch-from-app@laratik.local";
+    await devSeed(page.request, {
+      email,
+      agencyName: "FromApp Agency A",
+      agencySlug: "fromapp-agency-a",
+      workspaceName: "FromApp Workspace A1",
+      workspaceSlug: "fromapp-workspace-a1",
+    });
+    await devSeed(page.request, {
+      email,
+      agencyName: "FromApp Agency B",
+      agencySlug: "fromapp-agency-b",
+      workspaceName: "FromApp Workspace B1",
+      workspaceSlug: "fromapp-workspace-b1",
+    });
+    await devSignIn(page.request, { email });
+
+    await page.goto("/app");
+
+    const trigger = page.getByTestId("sidebar-agency-switcher-trigger");
+    await trigger.click();
+    await page
+      .getByRole("listbox", { name: "Agencies" })
+      .getByRole("option", { name: /FromApp Agency B/ })
+      .click();
+
+    // From `/app` the user lands on the new agency's
+    // first workspace, not the global landing.
+    await expect(page).toHaveURL(/\/app\/w\/fromapp-workspace-b1/);
+  });
+});

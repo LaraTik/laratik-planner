@@ -66,6 +66,31 @@ export interface AiCapabilityMetadata {
    * own visual signal (e.g. a globe for platform adaptation).
    */
   icon?: ReactNode;
+  /**
+   * Will update — the content-item fields this capability touches
+   * when the user clicks Replace. Surfaced in the AI panel as a
+   * "Will update / Will not change" contract per AGENTS.md §U.
+   * The contract is the user-facing answer to "what does clicking
+   * Replace actually do?" — a regression that silently overwrites
+   * fields not on this list is caught by the contract test.
+   *
+   * Empty array = the capability is read-only (e.g. a score /
+   * diagnostic). Empty array is also valid for capabilities whose
+   * output is a free-text draft that the user manually pastes; the
+   * contract is the draft text, not a field list.
+   */
+  willUpdate?: ReadonlyArray<string>;
+  /**
+   * Will not change — the content-item fields this capability
+   * deliberately leaves alone. Surfaced in the AI panel for
+   * multi-field capabilities so the user sees "this does not touch
+   * the visual direction" before clicking Apply. The list is a
+   * closed set per capability (it does NOT enumerate every
+   * non-touched field); the message is "we will leave these alone
+   * even if it looks like we should", not "we won't touch anything
+   * else".
+   */
+  willNotChange?: ReadonlyArray<string>;
 }
 
 /**
@@ -84,6 +109,11 @@ export const AI_CAPABILITY_METADATA: ReadonlyArray<AiCapabilityMetadata> = [
     description: "Generate 3-5 campaign ideas that ladder up to the active brief.",
     enabledOnContentDetail: true,
     hint: "3-5 angle ideas, one line each.",
+    // Read-only suggestion list — Replace / Insert do not write
+    // back to the content item. The user picks one and uses it
+    // as a starting point.
+    willUpdate: [],
+    willNotChange: ["title", "brief", "format", "channels", "schedule"],
   },
   {
     id: "brief_improvement",
@@ -92,6 +122,11 @@ export const AI_CAPABILITY_METADATA: ReadonlyArray<AiCapabilityMetadata> = [
     description: "Tighten a vague brief into a clear Hook → Main message → CTA structure.",
     enabledOnContentDetail: true,
     hint: "Three labelled lines you can paste into the brief.",
+    // Only the brief is touched. Everything else (format,
+    // channels, schedule, format-specific payload) is left
+    // alone so the planner's structural decisions survive.
+    willUpdate: ["brief"],
+    willNotChange: ["title", "format", "channels", "schedule", "format payload"],
   },
   {
     id: "caption_drafts",
@@ -100,6 +135,10 @@ export const AI_CAPABILITY_METADATA: ReadonlyArray<AiCapabilityMetadata> = [
     description: "Draft a caption with platform-aware tone; editable before save.",
     enabledOnContentDetail: true,
     hint: "One caption draft, ready to edit.",
+    // Per-field scope: caption (and optional hashtags). The
+    // per-field AI button surfaces the same contract.
+    willUpdate: ["caption", "hashtags"],
+    willNotChange: ["hook", "main message", "CTA", "visual direction"],
   },
   {
     id: "platform_adaptation",
@@ -108,6 +147,8 @@ export const AI_CAPABILITY_METADATA: ReadonlyArray<AiCapabilityMetadata> = [
     description: "Adapt a draft caption to a different channel (Instagram, TikTok, LinkedIn, X).",
     enabledOnContentDetail: true,
     hint: "Rewrites the draft for the target platform's conventions.",
+    willUpdate: ["caption"],
+    willNotChange: ["format", "channels", "schedule", "visual direction"],
   },
   {
     id: "related_format_ideas",
@@ -116,6 +157,8 @@ export const AI_CAPABILITY_METADATA: ReadonlyArray<AiCapabilityMetadata> = [
     description: "Suggest adjacent formats for a piece of content (carousel ↔ reel ↔ story).",
     enabledOnContentDetail: true,
     hint: "3-5 format suggestions from the fixed format list.",
+    willUpdate: [],
+    willNotChange: ["title", "brief", "format", "channels", "schedule"],
   },
   {
     id: "completeness_check",
@@ -124,6 +167,9 @@ export const AI_CAPABILITY_METADATA: ReadonlyArray<AiCapabilityMetadata> = [
     description: "Score how ready a brief is for creative handoff and flag the missing pieces.",
     enabledOnContentDetail: true,
     hint: "Score (0-100) plus the missing pieces.",
+    // Read-only diagnostic — nothing is written.
+    willUpdate: [],
+    willNotChange: ["title", "brief", "format", "channels", "schedule", "format payload"],
   },
 ] as const;
 

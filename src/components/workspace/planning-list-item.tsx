@@ -15,9 +15,9 @@ import { cn } from "@/lib/utils";
 import { humanFormat } from "@/lib/content/status";
 import { formatOperationalDate } from "@/lib/dashboard/format-date";
 import type { EnrichedContentItem } from "@/lib/content/enriched-list";
-import { OwnerBadge } from "@/components/workspace/owner-badge";
+import { PeopleCell } from "@/components/workspace/people-cell";
 import { ChannelIcons } from "@/components/workspace/channel-icons";
-import { WorkflowMiniProgress } from "@/components/workspace/workflow-mini-progress";
+import { StagePill } from "@/components/workspace/stage-pill";
 import { ReadinessIndicator } from "@/components/workspace/readiness-indicator";
 import { NextActionChip } from "@/components/workspace/next-action-chip";
 
@@ -190,20 +190,28 @@ export function PlanningListItem({
           </span>
         </div>
 
-        {/* OWNER */}
-        <div className="text-label flex items-center gap-2 lg:flex-col lg:items-start lg:gap-0.5">
-          <span className="text-fg-muted font-semibold tracking-wide uppercase lg:sr-only">
-            Owner
+        {/* PEOPLE — owner + designer, role-labelled (AGENTS.md §C).
+            The same column width as the previous single owner badge;
+            stacking vertically keeps the row's horizontal footprint
+            stable on tablet. */}
+        <div className="flex items-center gap-2 lg:flex-col lg:items-start lg:gap-0.5">
+          <span className="text-fg-muted text-label hidden font-semibold tracking-wide uppercase lg:inline">
+            People
           </span>
-          <OwnerBadge owner={item.owner} />
+          <span className="text-fg-muted font-semibold tracking-wide uppercase lg:sr-only">
+            Owner + Designer
+          </span>
+          <PeopleCell owner={item.owner} designer={item.designer} />
         </div>
 
-        {/* WORKFLOW */}
+        {/* WORKFLOW — stage pill replaces the full inline stepper.
+            The full stepper is one click away in the detail page's
+            workflow inspector. See AGENTS.md §B + §C for the rule. */}
         <div className="text-label flex items-center gap-2 lg:flex-col lg:items-start lg:gap-0.5">
           <span className="text-fg-muted font-semibold tracking-wide uppercase lg:sr-only">
-            Workflow
+            Stage
           </span>
-          <WorkflowMiniProgress status={item.status} />
+          <StagePill status={item.status} />
         </div>
 
         {/* HEALTH + NEXT ACTION */}

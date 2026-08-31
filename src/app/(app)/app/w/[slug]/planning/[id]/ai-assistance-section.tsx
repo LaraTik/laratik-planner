@@ -13,11 +13,16 @@ import {
   Link2,
   AlertTriangle,
   Check,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { applyAiDraftAction } from "../actions";
-import { AI_CAPABILITY_METADATA, type AiCapabilityMetadata } from "@/lib/ai/capabilities";
+import {
+  AI_CAPABILITY_METADATA,
+  getAiCapabilityMetadata,
+  type AiCapabilityMetadata,
+} from "@/lib/ai/capabilities";
 import { DiffPreview } from "@/components/ai/diff-preview";
 
 /**
@@ -548,68 +553,82 @@ export function AiAssistanceSection({
           ) : null}
 
           {selectedVariant ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Insert is hidden for brief_improvement — the whole
+            <>
+              {/* Will update / Will not change contract (AGENTS.md §U).
+                  For capabilities that touch content fields, the user
+                  MUST see exactly which fields the AI will write before
+                  they click Replace. The contract is also the
+                  audit-trail signal: a regression that silently writes
+                  a field not listed here is caught by the contract
+                  test in `tests/unit/ai/capabilities-metadata.test.ts`.
+                  Read-only capabilities (campaign_ideas,
+                  related_format_ideas, completeness_check) collapse
+                  the contract to a single "Read-only — nothing is
+                  written" line so the user is never left guessing. */}
+              <AiWillUpdateWillNotChange capabilityId={draft.capabilityId} />
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Insert is hidden for brief_improvement — the whole
                   point of "improve brief" is replacement, and
                   appending a 3-line structured rewrite below an
                   existing brief is a worse outcome than no action. */}
-              {!isBriefImprovement ? (
+                {!isBriefImprovement ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="default"
+                    onClick={() => onApply("insert")}
+                    disabled={applying || !canEditBrief}
+                    title={
+                      canEditBrief
+                        ? "Append this draft below the current brief"
+                        : "Insert is only available while the item is in draft or changes requested"
+                    }
+                    data-testid="ai-assistance-insert"
+                  >
+                    <CornerDownLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                    {applying ? "Working…" : "Insert (append below)"}
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   size="sm"
-                  variant="default"
-                  onClick={() => onApply("insert")}
-                  disabled={applying || !canEditBrief}
+                  variant="secondary"
+                  onClick={() => onApply("replace")}
+                  disabled={applying || !canEditBrief || (isBriefImprovement && !replaceConfirmed)}
                   title={
-                    canEditBrief
-                      ? "Append this draft below the current brief"
-                      : "Insert is only available while the item is in draft or changes requested"
+                    isBriefImprovement && !replaceConfirmed
+                      ? "Confirm the diff below to enable Replace"
+                      : canEditBrief
+                        ? "Overwrite the current brief with this draft"
+                        : "Replace is only available while the item is in draft or changes requested"
                   }
-                  data-testid="ai-assistance-insert"
+                  data-testid="ai-assistance-replace"
                 >
-                  <CornerDownLeft className="h-3.5 w-3.5" aria-hidden="true" />
-                  {applying ? "Working…" : "Insert (append below)"}
+                  <Replace className="h-3.5 w-3.5" aria-hidden="true" />
+                  {applying ? "Working…" : "Replace brief"}
                 </Button>
-              ) : null}
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => onApply("replace")}
-                disabled={applying || !canEditBrief || (isBriefImprovement && !replaceConfirmed)}
-                title={
-                  isBriefImprovement && !replaceConfirmed
-                    ? "Confirm the diff below to enable Replace"
-                    : canEditBrief
-                      ? "Overwrite the current brief with this draft"
-                      : "Replace is only available while the item is in draft or changes requested"
-                }
-                data-testid="ai-assistance-replace"
-              >
-                <Replace className="h-3.5 w-3.5" aria-hidden="true" />
-                {applying ? "Working…" : "Replace brief"}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => onCopy(selectedVariant.text)}
-                data-testid="ai-assistance-copy"
-              >
-                Copy
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => onInvoke(draft.capabilityId)}
-                disabled={pendingId === draft.capabilityId}
-                data-testid="ai-assistance-try-again"
-              >
-                <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                {pendingId === draft.capabilityId ? "Working…" : "Re-roll"}
-              </Button>
-            </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onCopy(selectedVariant.text)}
+                  data-testid="ai-assistance-copy"
+                >
+                  Copy
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onInvoke(draft.capabilityId)}
+                  disabled={pendingId === draft.capabilityId}
+                  data-testid="ai-assistance-try-again"
+                >
+                  <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                  {pendingId === draft.capabilityId ? "Working…" : "Re-roll"}
+                </Button>
+              </div>
+            </> // close the contract + action button fragment
           ) : null}
 
           {/* FEAT-09 — the diff gate. Only rendered for
@@ -658,5 +677,96 @@ export function AiAssistanceSection({
         </div>
       ) : null}
     </Card>
+  );
+}
+
+/**
+ * AiWillUpdateWillNotChange — the "Will update / Will not change"
+ * contract per AGENTS.md §U. Surfaces exactly which fields the
+ * selected capability writes to when the user clicks Replace.
+ *
+ * The contract is intentionally per-capability (not a generic
+ * "may modify some fields" disclaimer) so the planner sees the
+ * real field names — a vague disclaimer is what AGENTS.md §U
+ * flagged as the source of the "AI silently overwrote my
+ * caption" bug.
+ *
+ * Rendering rules:
+ *  - Capability has `willUpdate.length > 0` → render both
+ *    "Will update" and "Will not change" lists.
+ *  - Capability has `willUpdate.length === 0` → render a
+ *    single "Read-only — nothing is written" line. This covers
+ *    campaign_ideas, related_format_ideas, completeness_check.
+ *  - Unknown capability id → render a defensive "unknown"
+ *    line. The route rejects unknown ids at the server, but
+ *    a stale client bundle could carry one; the user deserves
+ *    a clear signal rather than a silent no-op.
+ *
+ * Pure presentational — server-renderable, no client state.
+ */
+function AiWillUpdateWillNotChange({ capabilityId }: { capabilityId: string }) {
+  const meta = getAiCapabilityMetadata(capabilityId);
+  if (!meta) {
+    return (
+      <p
+        data-testid="ai-assistance-contract-unknown"
+        className="text-label text-fg-muted font-semibold"
+      >
+        Unknown capability — nothing will be written.
+      </p>
+    );
+  }
+  const willUpdate = meta.willUpdate ?? [];
+  const willNotChange = meta.willNotChange ?? [];
+  if (willUpdate.length === 0) {
+    return (
+      <p
+        data-testid="ai-assistance-contract-readonly"
+        className="text-label text-fg-muted font-semibold"
+      >
+        Read-only suggestion — nothing is written to the content item.
+      </p>
+    );
+  }
+  return (
+    <div
+      className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+      data-testid="ai-assistance-contract"
+    >
+      <p className="text-label text-fg-muted font-semibold tracking-wide uppercase">
+        Clicking Replace will…
+      </p>
+      <ul className="mt-1 space-y-0.5" data-testid="ai-assistance-contract-will-update">
+        {willUpdate.map((field) => (
+          <li
+            key={field}
+            className="text-body text-fg-primary inline-flex items-center gap-1.5 font-medium"
+          >
+            <Check className="text-success h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>
+              update <span className="font-semibold">{field}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {willNotChange.length > 0 ? (
+        <>
+          <p className="text-label text-fg-muted mt-2 font-semibold tracking-wide uppercase">
+            …and will not touch
+          </p>
+          <ul className="mt-1 space-y-0.5" data-testid="ai-assistance-contract-will-not-change">
+            {willNotChange.map((field) => (
+              <li
+                key={field}
+                className="text-body text-fg-secondary inline-flex items-center gap-1.5 font-medium"
+              >
+                <X className="text-fg-muted h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span className="italic">{field}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </div>
   );
 }

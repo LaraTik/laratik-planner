@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Palette, User } from "lucide-react";
 import { StatusBadge } from "@/components/content/status-badge";
 import { humanFormat, type ContentStatus } from "@/lib/content/status";
+import { cn } from "@/lib/utils";
 
 /**
  * One column on the workflow board. `label` is the human header,
@@ -12,9 +14,28 @@ export type WorkflowBoardColumn = {
 };
 
 /**
+ * A single row in the `memberDirectory` map the board page passes
+ * in. The page already loads the workspace member list for the
+ * owner filter dropdown; we reuse the same fetch to look up
+ * owner + designer names on the cards. Keeping the directory
+ * shape minimal means the page does ONE extra round-trip
+ * (already runs) instead of N per-card joins.
+ */
+export type BoardMemberEntry = {
+  id: string;
+  name: string | null;
+  displayName: string | null;
+};
+
+/**
  * The minimal content-item shape the board needs. We accept the bare
  * fields rather than the full DB row so the page can pre-shape
  * Date→string for serialisation if it wants to.
+ *
+ * `contentOwnerId` + `designerId` are optional so callers that
+ * only have the title/format/status can still render the card —
+ * the role rows collapse to "Unassigned" when the id is missing
+ * (matches the planning list's PeopleCell contract).
  */
 export type WorkflowBoardItem = {
   id: string;
@@ -22,24 +43,60 @@ export type WorkflowBoardItem = {
   format: string;
   status: ContentStatus;
   plannedPublishAt: Date | string;
+  contentOwnerId?: string | null;
+  designerId?: string | null;
 };
 
 export interface WorkflowBoardProps {
   items: readonly WorkflowBoardItem[];
   columns: readonly WorkflowBoardColumn[];
   workspaceSlug: string;
+  /**
+   * Map of user id → display name. Optional — when omitted,
+   * the card renders the role label only ("Owner" / "Designer")
+   * with the value area blank. The board page already fetches
+   * this for the owner filter; the board just reuses it.
+   */
+  memberDirectory?: Readonly<Record<string, BoardMemberEntry>>;
+}
+
+/**
+ * Resolve the display name for a user id from the member
+ * directory. Returns null when the user is missing (which the
+ * caller renders as "Unassigned" in italic, matching the
+ * planning list's PeopleCell contract).
+ */
+function displayNameFor(
+  directory: Readonly<Record<string, BoardMemberEntry>> | undefined,
+  id: string | null | undefined,
+): string | null {
+  if (!id) return null;
+  const entry = directory?.[id];
+  if (!entry) return null;
+  return entry.displayName ?? entry.name ?? null;
 }
 
 /**
  * WorkflowBoard — 7-column kanban-style view of every content item,
  * grouped by production stage. Renders a `<Link>` card per item with
- * the title, format, planned publish date, and current status badge.
+ * the title, format, planned publish date, current status badge, and
+ * a compact role-labelled Owner + Designer row.
  *
  * Extracted from `board/page.tsx` so the same column grouping + card
  * shape is available to any future surface (client review board, design
  * queue, etc.) without duplicating the 50-line render block.
+ *
+ * Owner + Designer visibility (master prompt §5, §11): the
+ * designer is a first-class operational role. The card surfaces
+ * both, role-labelled, so the board answers "who is working on
+ * this?" without the planner having to open the detail page.
  */
-export function WorkflowBoard({ items, columns, workspaceSlug }: WorkflowBoardProps) {
+export function WorkflowBoard({
+  items,
+  columns,
+  workspaceSlug,
+  memberDirectory,
+}: WorkflowBoardProps) {
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
       {columns.map((column) => {
@@ -65,7 +122,12 @@ export function WorkflowBoard({ items, columns, workspaceSlug }: WorkflowBoardPr
             <div className="space-y-2">
               {rows.length ? (
                 rows.map((item) => (
-                  <BoardCard key={item.id} item={item} workspaceSlug={workspaceSlug} />
+                  <BoardCard
+                    key={item.id}
+                    item={item}
+                    workspaceSlug={workspaceSlug}
+                    {...(memberDirectory ? { memberDirectory } : {})}
+                  />
                 ))
               ) : (
                 <p className="text-label text-fg-muted py-4 text-center">No items</p>
@@ -78,9 +140,60 @@ export function WorkflowBoard({ items, columns, workspaceSlug }: WorkflowBoardPr
   );
 }
 
-function BoardCard({ item, workspaceSlug }: { item: WorkflowBoardItem; workspaceSlug: string }) {
+function PersonRow({
+  Icon,
+  roleLabel,
+  name,
+  roleAccent,
+  testId,
+}: {
+  Icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  roleLabel: string;
+  name: string | null;
+  roleAccent: "primary" | "warning";
+  testId: string;
+}) {
+  const tone =
+    roleAccent === "primary" ? "bg-primary-subtle text-primary" : "bg-warning-subtle text-warning";
+  return (
+    <span
+      className="text-label text-fg-secondary inline-flex min-w-0 items-center gap-1"
+      data-testid={testId}
+      data-role={roleLabel.toLowerCase()}
+      data-empty={name ? null : "true"}
+    >
+      <span
+        aria-hidden="true"
+        className={cn(
+          "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full",
+          name ? tone : "bg-surface-subtle text-fg-muted",
+        )}
+      >
+        {name ? <Icon className="h-2.5 w-2.5" aria-hidden={true} /> : null}
+      </span>
+      <span className="text-fg-muted font-semibold tracking-wide uppercase">{roleLabel}</span>
+      <span
+        className={cn("truncate font-medium", name ? "text-fg-primary" : "text-fg-muted italic")}
+      >
+        {name ?? "Unassigned"}
+      </span>
+    </span>
+  );
+}
+
+function BoardCard({
+  item,
+  workspaceSlug,
+  memberDirectory,
+}: {
+  item: WorkflowBoardItem;
+  workspaceSlug: string;
+  memberDirectory?: Readonly<Record<string, BoardMemberEntry>>;
+}) {
   const publishDate =
     item.plannedPublishAt instanceof Date ? item.plannedPublishAt : new Date(item.plannedPublishAt);
+  const ownerName = displayNameFor(memberDirectory, item.contentOwnerId);
+  const designerName = displayNameFor(memberDirectory, item.designerId);
   return (
     <Link
       href={`/app/w/${workspaceSlug}/planning/${item.id}`}
@@ -91,7 +204,25 @@ function BoardCard({ item, workspaceSlug }: { item: WorkflowBoardItem; workspace
       <p className="text-label text-fg-muted my-2">
         {humanFormat(item.format)} · {publishDate.toLocaleDateString()}
       </p>
-      <StatusBadge status={item.status} />
+      <div className="space-y-0.5" data-testid="board-card-people">
+        <PersonRow
+          Icon={User}
+          roleLabel="Owner"
+          name={ownerName}
+          roleAccent="primary"
+          testId="board-card-owner"
+        />
+        <PersonRow
+          Icon={Palette}
+          roleLabel="Designer"
+          name={designerName}
+          roleAccent="warning"
+          testId="board-card-designer"
+        />
+      </div>
+      <div className="mt-2">
+        <StatusBadge status={item.status} />
+      </div>
     </Link>
   );
 }

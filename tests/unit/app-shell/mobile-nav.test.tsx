@@ -29,7 +29,11 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/lib/auth/agency-actions", () => ({
-  switchActiveAgency: vi.fn(async () => true),
+  switchActiveAgencyAndRedirect: vi.fn(async (agencyId: string) => ({
+    ok: true as const,
+    agencyId,
+    firstWorkspaceSlug: null,
+  })),
 }));
 
 const baseProps = {

@@ -1,11 +1,29 @@
 import { redirect, notFound } from "next/navigation";
+import { inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { listUnassignedDesignWork } from "@/lib/content/service";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { PageHeader } from "@/components/workspace/page-header";
 import { Clock } from "lucide-react";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
 import { DesignQueueList, type DesignQueueListItem } from "./design-queue-list";
+
+/**
+ * /ui-ux-pro-max P3.2 — the design queue answers
+ * "what creative work can / should a designer pick up?",
+ * not "which items are unassigned?". The page passes the
+ * designer-facing context (format, brief excerpt, brief
+ * readiness, owner) per row so the card can show the
+ * fields a designer needs to triage at a glance.
+ */
+function briefExcerpt(brief: string | null | undefined): string | null {
+  if (!brief) return null;
+  const trimmed = brief.trim();
+  if (trimmed.length === 0) return null;
+  return trimmed.length > 140 ? `${trimmed.slice(0, 137).trimEnd()}…` : trimmed;
+}
 
 export default async function DesignQueuePage({ params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();
@@ -25,13 +43,42 @@ export default async function DesignQueuePage({ params }: { params: Promise<{ sl
     "workspace_manager",
     "content_planner",
   ]);
-  const items: DesignQueueListItem[] = rows.map((r) => ({
-    id: r.id,
-    title: r.title,
-    status: r.status,
-    plannedPublishAtIso: r.plannedPublishAt.toISOString(),
-    href: `/app/w/${slug}/planning/${r.id}`,
-  }));
+
+  // Owner name resolution (P3.2). One extra round-trip for
+  // every distinct owner id in the unassigned set. The set
+  // is bounded by `listUnassignedDesignWork`'s 200-row cap
+  // so the IN-clause stays well under the index page size.
+  const ownerIds = Array.from(
+    new Set(
+      rows
+        .map((r) => r.contentOwnerId)
+        .filter((id): id is string => typeof id === "string" && id.length > 0),
+    ),
+  );
+  const ownerRows =
+    ownerIds.length > 0
+      ? await db
+          .select({ id: users.id, displayName: users.displayName, name: users.name })
+          .from(users)
+          .where(inArray(users.id, ownerIds))
+      : [];
+  const ownerById = new Map(ownerRows.map((o) => [o.id, o.displayName ?? o.name ?? null]));
+
+  const items: DesignQueueListItem[] = rows.map((r) => {
+    const brief = briefExcerpt(r.brief);
+    return {
+      id: r.id,
+      title: r.title,
+      status: r.status,
+      plannedPublishAtIso: r.plannedPublishAt.toISOString(),
+      href: `/app/w/${slug}/planning/${r.id}`,
+      format: r.format,
+      briefExcerpt: brief,
+      ownerDisplayName: r.contentOwnerId ? (ownerById.get(r.contentOwnerId) ?? null) : null,
+      updatedAtIso: r.updatedAt.toISOString(),
+      briefIsEmpty: !brief,
+    };
+  });
   return (
     <div className="space-y-6" data-testid="workspace-design-queue">
       <PageHeader

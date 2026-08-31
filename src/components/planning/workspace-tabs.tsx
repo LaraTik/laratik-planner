@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  Eye,
   History,
   LayoutDashboard,
   MessageCircle,
@@ -14,11 +15,16 @@ import { cn } from "@/lib/utils";
 /**
  * WorkspaceTabs — the in-page tab strip for the content detail
  * page. Reduces vertical page length by grouping the body into
- * four task-oriented views:
+ * five task-oriented views:
  *
  *   Overview   — at-a-glance: brief, schedule, channels, readiness
  *   Content    — caption, creative brief, format fields, AI
- *   Publishing — per-channel setup, live preview, readiness, approval
+ *   Preview    — full-width platform simulator (Feed / Reel / Story /
+ *                Carousel). The old "sticky 360px right rail" was
+ *                the row's biggest UX smell per AGENTS.md §B;
+ *                moving it to a dedicated tab gives the Content
+ *                tab its editing width back.
+ *   Publishing — per-channel setup, readiness, approval
  *   Activity   — lifecycle events + delivery history
  *
  * Phase 1 of the planning-detail refactor (2026-08-30) converted
@@ -36,7 +42,7 @@ import { cn } from "@/lib/utils";
  *   - Touch targets are 44px on small viewports.
  */
 
-export type WorkspaceTabId = "overview" | "content" | "publishing" | "activity";
+export type WorkspaceTabId = "overview" | "content" | "preview" | "publishing" | "activity";
 
 /**
  * Serialisable tab descriptor passed from a Server Component
@@ -54,6 +60,7 @@ export interface WorkspaceTab {
 export const WORKSPACE_TAB_ICONS: Record<WorkspaceTabId, LucideIcon> = {
   overview: LayoutDashboard,
   content: Pencil,
+  preview: Eye,
   publishing: Send,
   activity: History,
 };

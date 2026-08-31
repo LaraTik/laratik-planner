@@ -1,6 +1,16 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Clock, Sparkles } from "lucide-react";
+import { ArrowLeft, Clock, Eye, Sparkles } from "lucide-react";
+
+/**
+ * Localised platform name. We render the raw platform key in
+ * title case; a future pass can extend this with a more
+ * comprehensive vocabulary when the channel catalog grows.
+ */
+function humanPlatform(platform: string | undefined): string {
+  if (!platform) return "platform";
+  return platform.charAt(0).toUpperCase() + platform.slice(1);
+}
 import { auth } from "@/lib/auth/config";
 import { getContentItem, listWorkspaceDesigners, UPDATEABLE_STATUSES } from "@/lib/content/service";
 import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
@@ -479,9 +489,19 @@ export default async function ContentDetailPage({
   // because React component functions are not serialisable
   // across the RSC boundary. The server only sends the
   // serialisable parts: id, label, count.
+  //
+  // `Preview` is the dedicated tab for the platform simulator.
+  // It used to live in a sticky 360px right rail inside the
+  // Content tab — that was the row's biggest UX smell because
+  // it forced the editor + preview + workflow rail to compete
+  // for width. Moving it to its own tab gives the Content tab
+  // its editing width back and gives the preview room for
+  // proper Feed / Reel / Story / Carousel surfaces in a later
+  // pass (master prompt §7 + AGENTS.md §B + §C).
   const tabs: WorkspaceTab[] = [
     { id: "overview", label: "Overview" },
     { id: "content", label: "Content" },
+    { id: "preview", label: "Preview" },
     {
       id: "publishing",
       label: "Publishing",
@@ -633,18 +653,23 @@ export default async function ContentDetailPage({
                   the "Basic information" block (title, brief, planned
                   publish) was moved into the Overview's `DetailsSection`,
                   where the same inline editors are mounted. The Content
-                  tab now opens directly with the creative brief + live
-                  preview, which is the working surface the planner /
-                  editor actually came for. */}
+                  tab now opens directly with the creative brief — the
+                  working surface the planner / editor actually came for.
 
-                {/* Live preview + per-channel structure for the content tab */}
+                  Phase 7 (2026-08-31, /ui-ux-pro-max): the Live Preview
+                  moved out of a sticky 360px right rail on this tab
+                  and into a dedicated Preview tab. The editor now owns
+                  the full content width. A compact "Open preview"
+                  affordance + the platform label keep the preview
+                  discoverable from the editing surface. */}
+
                 {item.channels.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(0,360px)]">
-                    <PlanningSection
-                      id="creative"
-                      title="Creative brief"
-                      description="The per-format fields (caption, hook, scenes, …). AI suggestions are inline per field."
-                    >
+                  <PlanningSection
+                    id="creative"
+                    title="Creative brief"
+                    description="The per-format fields (caption, hook, scenes, …). AI suggestions are inline per field."
+                  >
+                    <div className="space-y-3">
                       <FormatAwareContentEditor
                         workspaceSlug={slug}
                         contentItemId={item.id}
@@ -663,44 +688,28 @@ export default async function ContentDetailPage({
                         locale={activeLocale}
                         aiEnabled={aiLive && captionDraftsEnabled}
                       />
-                    </PlanningSection>
-                    <div className="space-y-3 lg:sticky lg:top-20 lg:self-start">
-                      <h3 className="text-title-card text-fg-primary font-semibold">
-                        Live preview
-                      </h3>
-                      {item.channels[0] ? (
-                        <PlatformPreview
-                          platform={item.channels[0].platform}
-                          accountName={item.channels[0].accountName}
-                          caption={
-                            (
-                              parseFormatPayload(
-                                item.format,
-                                (item as { formatPayload?: unknown }).formatPayload,
-                              ) as { caption?: string }
-                            ).caption ??
-                            item.brief ??
-                            ""
-                          }
-                          {...((
-                            parseFormatPayload(
-                              item.format,
-                              (item as { formatPayload?: unknown }).formatPayload,
-                            ) as { hashtags?: string[] }
-                          ).hashtags
-                            ? {
-                                hashtags: (
-                                  parseFormatPayload(
-                                    item.format,
-                                    (item as { formatPayload?: unknown }).formatPayload,
-                                  ) as { hashtags?: string[] }
-                                ).hashtags,
-                              }
-                            : {})}
-                        />
-                      ) : null}
+                      <div
+                        className="border-border bg-surface-subtle text-label text-fg-secondary flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border px-3 py-2"
+                        data-testid="content-preview-shortcut"
+                      >
+                        <span className="font-medium">
+                          Previewing on {humanPlatform(item.channels[0]?.platform)} ·{" "}
+                          {item.channels[0]?.accountName ?? "no channel"}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          asChild
+                          data-testid="content-open-preview"
+                        >
+                          <Link href="#preview">
+                            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                            Open preview
+                          </Link>
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  </PlanningSection>
                 ) : (
                   <PlanningSection
                     id="creative"
@@ -801,6 +810,88 @@ export default async function ContentDetailPage({
                     />
                   </PlanningSection>
                 </section>
+              </section>
+            ),
+            preview: (
+              <section
+                id="preview"
+                className="mt-6 scroll-mt-24"
+                data-testid="workspace-tab-panel-preview"
+              >
+                {/* Preview tab — the platform simulator lives here,
+                    full-width. Previously a sticky 360px right rail
+                    inside the Content tab; moved here by the
+                    /ui-ux-pro-max pass (2026-08-31) so the editor
+                    + preview + workflow rail stop competing for
+                    width. Future passes (master prompt §7) will
+                    add a real Feed / Reel / Story / Carousel
+                    surface here; the current `PlatformPreview`
+                    is the minimal first pass. */}
+                {item.channels.length === 0 ? (
+                  <div
+                    className="border-border bg-surface-subtle text-fg-secondary rounded-[var(--radius-card)] border p-6"
+                    data-testid="preview-empty"
+                  >
+                    <h3 className="text-title-card text-fg-primary mb-1 font-semibold">
+                      No channels to preview
+                    </h3>
+                    <p className="text-body">
+                      Add at least one channel to the content item to see how the post will render
+                      on the destination platform.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <header className="flex flex-wrap items-baseline justify-between gap-2">
+                      <div>
+                        <h2 className="text-section-title text-fg-primary font-semibold">
+                          Platform preview
+                        </h2>
+                        <p className="text-body text-fg-secondary">
+                          How this post will look on {humanPlatform(item.channels[0]?.platform)} (
+                          {item.channels[0]?.accountName ?? "no channel"}).
+                        </p>
+                      </div>
+                      {item.channels.length > 1 ? (
+                        <p className="text-label text-fg-muted">
+                          Showing the first of {item.channels.length} channels. Use the Publishing
+                          tab to configure the rest.
+                        </p>
+                      ) : null}
+                    </header>
+                    {item.channels[0] ? (
+                      <PlatformPreview
+                        platform={item.channels[0].platform}
+                        accountName={item.channels[0].accountName}
+                        caption={
+                          (
+                            parseFormatPayload(
+                              item.format,
+                              (item as { formatPayload?: unknown }).formatPayload,
+                            ) as { caption?: string }
+                          ).caption ??
+                          item.brief ??
+                          ""
+                        }
+                        {...((
+                          parseFormatPayload(
+                            item.format,
+                            (item as { formatPayload?: unknown }).formatPayload,
+                          ) as { hashtags?: string[] }
+                        ).hashtags
+                          ? {
+                              hashtags: (
+                                parseFormatPayload(
+                                  item.format,
+                                  (item as { formatPayload?: unknown }).formatPayload,
+                                ) as { hashtags?: string[] }
+                              ).hashtags,
+                            }
+                          : {})}
+                      />
+                    ) : null}
+                  </div>
+                )}
               </section>
             ),
             publishing: (

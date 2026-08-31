@@ -343,6 +343,17 @@ export interface DashboardItem {
   status: KpiContentStatus;
   format: KpiContentFormat;
   plannedPublishAt: Date;
+  /**
+   * When the row was last touched (any update path: status,
+   * brief, channel, delivery upload, etc.). Drives the
+   * "Recently updated" panel's actual ordering. Without this
+   * the panel was sorted by `plannedPublishAt` and the
+   * "Recently updated" name was a lie — items with a future
+   * publish date floated to the top regardless of how stale
+   * they were. Master prompt §16 calls this out as the
+   * "operational surface" the planner needs.
+   */
+  updatedAt: Date;
   ownerId: string | null;
   ownerName: string | null;
 }
@@ -375,6 +386,14 @@ export interface RecentlyUpdatedItem {
   title: string;
   status: KpiContentStatus;
   format: KpiContentFormat;
+  /**
+   * When the row was last touched. The panel sorts by this
+   * DESC and renders the relative time as the row's primary
+   * date signal (`formatRelativeDate(updatedAt)`).
+   * `plannedPublishAt` stays on the type for the
+   * "View all activity" deep link + future cross-filters.
+   */
+  updatedAt: Date;
   plannedPublishAt: Date;
   ownerName: string | null;
 }
@@ -558,13 +577,20 @@ export function calculateOverviewDashboardMetrics(input: {
     .slice(0, MAX_NEEDS_ATTENTION);
 
   const recentlyUpdated: RecentlyUpdatedItem[] = [...actionable]
-    .sort((a, b) => b.plannedPublishAt.getTime() - a.plannedPublishAt.getTime())
+    // Sort by `updatedAt` (when the row was last touched),
+    // NOT `plannedPublishAt` (which is the user's intent, not
+    // the system's signal of "this just changed"). The old
+    // sort made "Recently updated" float items with a future
+    // publish date to the top regardless of how stale they
+    // were. Master prompt §16 / /ui-ux-pro-max P3.1.
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
     .slice(0, MAX_RECENTLY_UPDATED)
     .map((it) => ({
       id: it.id,
       title: it.title,
       status: it.status,
       format: it.format,
+      updatedAt: it.updatedAt,
       plannedPublishAt: it.plannedPublishAt,
       ownerName: it.ownerName,
     }));

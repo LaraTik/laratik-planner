@@ -70,12 +70,45 @@ export function WorkspaceSwitcher({
     setOpen(false);
     // If the user is on a workspace-scoped page, swap the slug; otherwise
     // go to the workspace overview.
+    //
+    // Sub-resource heuristic: if the current path is a detail page
+    // (e.g. `/app/w/old/planning/123` or `/app/w/old/planning/123/edit`),
+    // the new workspace almost certainly does NOT contain the same
+    // item id — copying the suffix across workspaces produces a 404
+    // (correct anti-IDOR, but a confusing UX). In that case we land
+    // the user on the same section's index (e.g. `/app/w/new/planning`).
+    // The section root keeps the user's intent ("I was in planning")
+    // without leaking a stale item id from the old workspace.
     const isWorkspacePage = /^\/app\/w\/[^/]+/.test(pathname);
-    router.push(
-      isWorkspacePage
-        ? pathname.replace(/^\/app\/w\/[^/]+/, `/app/w/${w.slug}`)
-        : `/app/w/${w.slug}`,
-    );
+    if (!isWorkspacePage) {
+      router.push(`/app/w/${w.slug}`);
+      return;
+    }
+    // Match the section segment (the first path segment after
+    // /app/w/<slug>) and stop there. Examples:
+    //   /app/w/old/planning/123           -> /app/w/new/planning
+    //   /app/w/old/planning/123/edit      -> /app/w/new/planning
+    //   /app/w/old/planning               -> /app/w/new/planning
+    //   /app/w/old/planning/batch         -> /app/w/new/planning/batch
+    // The "batch" + "new" sub-paths are workspace-scoped create
+    // surfaces; they survive a slug swap.
+    const sectionMatch = pathname.match(/^\/app\/w\/[^/]+\/([^/]+)(?:\/.*)?$/);
+    const section = sectionMatch?.[1];
+    if (!section) {
+      router.push(`/app/w/${w.slug}`);
+      return;
+    }
+    // Detail-style sub-resources: navigate to the section index.
+    // The set is a known set — adding a new detail surface means
+    // adding its segment name here so the workspace switcher keeps
+    // landing users on a page that exists in the new workspace.
+    const isDetailSection =
+      section === "planning" && /^\/app\/w\/[^/]+\/planning\/[^/]+/.test(pathname);
+    if (isDetailSection) {
+      router.push(`/app/w/${w.slug}/planning`);
+      return;
+    }
+    router.push(pathname.replace(/^\/app\/w\/[^/]+/, `/app/w/${w.slug}`));
   };
 
   const onListKeyDown = (e: React.KeyboardEvent<HTMLUListElement>) => {
