@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { workspaceMembershipRoles, workspaceMemberships, workspaces } from "@/lib/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
-import { listAgencyMembers, listInvitations } from "@/lib/auth/invitations";
+import { listAgencyMembers, listInvitationGrants, listInvitations } from "@/lib/auth/invitations";
 import { SendInviteForm } from "./send-invite-form";
 import { AddDirectlyForm } from "./add-directly-form";
 import { InvitationList } from "./invitation-list";
@@ -64,6 +64,17 @@ export default async function UsersPage() {
       .from(workspaces)
       .where(and(eq(workspaces.agencyId, agencyId))),
   ]);
+
+  // Per-invitation workspace role grants so the admin can audit
+  // what access a pending invite will grant on accept. Without
+  // this, the pending-invitations list only shows the email +
+  // expiry + the agency-admin flag, and the admin cannot tell
+  // at a glance whether the invitee is going to be added to
+  // any workspace.
+  const grantsByInvitation = await listInvitationGrants(
+    pending.map((i) => i.id),
+    agencyId,
+  );
 
   // Per-user, per-workspace role lookup so the Edit drawer can pre-select
   // the current role in each workspace select. Active memberships only —
@@ -167,6 +178,7 @@ export default async function UsersPage() {
             email: i.email,
             expiresAt: i.expiresAt.toISOString().slice(0, 10),
             grantsAgencyAdmin: i.grantsAgencyAdmin,
+            workspaceGrants: grantsByInvitation[i.id] ?? [],
           }))}
         />
       </Card>

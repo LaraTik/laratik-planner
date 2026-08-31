@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Mail, RotateCcw, X } from "lucide-react";
+import { AlertCircle, Building2, CheckCircle2, Mail, RotateCcw, X } from "lucide-react";
 import { resendInviteAction, revokeInviteAction } from "./actions";
 
 type InvitationRow = {
@@ -11,6 +11,22 @@ type InvitationRow = {
   email: string;
   expiresAt: string;
   grantsAgencyAdmin: boolean;
+  workspaceGrants: { workspaceId: string; workspaceName: string; role: string }[];
+};
+
+// Human-readable label for each role value. Mirrors the
+// `WORKSPACE_ROLE_LABELS` map in
+// `app/(app)/app/users/_components/workspace-role-matrix.tsx`.
+// Kept in sync intentionally — duplicated here so the list
+// view doesn't pull a server component into a client component.
+const ROLE_LABEL: Record<string, string> = {
+  workspace_manager: "Manager",
+  content_planner: "Planner",
+  designer: "Designer",
+  internal_reviewer: "Internal reviewer",
+  client_reviewer: "Client reviewer",
+  publisher: "Publisher",
+  viewer: "Viewer",
 };
 
 /**
@@ -45,6 +61,15 @@ export function InvitationList({ invitations }: { invitations: InvitationRow[] }
                 <p className="text-label text-fg-muted">Expires {inv.expiresAt}</p>
               </div>
               {inv.grantsAgencyAdmin ? <Badge variant="primary">Agency admin</Badge> : null}
+              {inv.workspaceGrants.length === 0 ? (
+                <Badge
+                  variant="outline"
+                  data-testid={`users-invitation-no-access-${inv.id}`}
+                  title="On accept this person will be added to the agency but cannot access any workspace until you grant a role."
+                >
+                  No workspace access yet
+                </Badge>
+              ) : null}
               <Button
                 size="sm"
                 variant="ghost"
@@ -107,6 +132,21 @@ export function InvitationList({ invitations }: { invitations: InvitationRow[] }
                 Revoke
               </Button>
             </div>
+            {inv.workspaceGrants.length > 0 ? (
+              <ul
+                className="text-label text-fg-secondary flex flex-wrap gap-x-3 gap-y-1 ps-7"
+                data-testid={`users-invitation-grants-${inv.id}`}
+              >
+                {inv.workspaceGrants.map((g) => (
+                  <li key={`${g.workspaceId}:${g.role}`} className="inline-flex items-center gap-1">
+                    <Building2 className="h-3 w-3" aria-hidden="true" />
+                    <span className="font-semibold">{g.workspaceName}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{ROLE_LABEL[g.role] ?? g.role}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             {message ? (
               <div
                 role={message.kind === "error" ? "alert" : "status"}

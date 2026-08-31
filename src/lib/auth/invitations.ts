@@ -250,7 +250,13 @@ export async function acceptInvitation(input: {
       .from(invitationWorkspaceRoles)
       .where(eq(invitationWorkspaceRoles.invitationId, inv.id));
 
-    // Ensure the user has an agency_membership
+    // Ensure the user has an agency_membership. The isAgencyAdmin flag is
+    // monotonic — an existing admin stays admin regardless of what a later
+    // invite says. Demotions go through `assertCanDeactivateAgencyMember`
+    // on the member-edit drawer path, never through a re-accepted invite.
+    // Without this OR, an existing agency admin who accepts a second,
+    // narrower invite with `grantsAgencyAdmin: false` would be silently
+    // demoted.
     await tx
       .insert(agencyMemberships)
       .values({
@@ -261,7 +267,10 @@ export async function acceptInvitation(input: {
       })
       .onConflictDoUpdate({
         target: [agencyMemberships.agencyId, agencyMemberships.userId],
-        set: { status: "active", isAgencyAdmin: inv.grantsAgencyAdmin },
+        set: {
+          status: "active",
+          isAgencyAdmin: sql`${agencyMemberships.isAgencyAdmin} OR ${inv.grantsAgencyAdmin}`,
+        },
       });
 
     // Add workspace memberships + roles
@@ -334,6 +343,51 @@ export async function listInvitations(agencyId: string) {
     .from(invitations)
     .where(and(eq(invitations.agencyId, agencyId), eq(invitations.status, "pending")))
     .orderBy(sql`${invitations.createdAt} DESC`);
+}
+
+/**
+ * Per-invitation workspace role grants, grouped by invitation id.
+ * Returns `Record<invitationId, { workspaceId, workspaceName, role }[]>`.
+ * Used by the pending-invitations list so the admin can audit
+ * exactly what access each pending invite will grant on accept
+ * (this is the row that answers "is the user actually going to
+ * be added, and to which workspace, with which role?").
+ *
+ * Joins through `workspaces` for the human-readable workspace
+ * name. The list view is the primary consumer; the
+ * `editInvitationAccess` and the member-edit drawer also use the
+ * same shape.
+ */
+export async function listInvitationGrants(
+  invitationIds: string[],
+  agencyId: string,
+): Promise<Record<string, { workspaceId: string; workspaceName: string; role: string }[]>> {
+  if (invitationIds.length === 0) return {};
+  const rows = await db
+    .select({
+      invitationId: invitationWorkspaceRoles.invitationId,
+      workspaceId: workspaces.id,
+      workspaceName: workspaces.name,
+      role: invitationWorkspaceRoles.role,
+    })
+    .from(invitationWorkspaceRoles)
+    .innerJoin(workspaces, eq(workspaces.id, invitationWorkspaceRoles.workspaceId))
+    .where(
+      and(
+        inArray(invitationWorkspaceRoles.invitationId, invitationIds),
+        eq(workspaces.agencyId, agencyId),
+      ),
+    );
+  const grouped: Record<string, { workspaceId: string; workspaceName: string; role: string }[]> =
+    {};
+  for (const r of rows) {
+    (grouped[r.invitationId] ??= []).push({
+      workspaceId: r.workspaceId,
+      workspaceName: r.workspaceName,
+      role: r.role,
+    });
+  }
+  return grouped;
 }
 
 /**

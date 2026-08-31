@@ -97,6 +97,7 @@ const baseInvitations = [
     email: "pending@acme.test",
     expiresAt: "2026-09-01",
     grantsAgencyAdmin: false,
+    workspaceGrants: [],
   },
 ];
 

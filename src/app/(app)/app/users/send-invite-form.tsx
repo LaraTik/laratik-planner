@@ -128,8 +128,16 @@ export function SendInviteForm({ workspaces }: { workspaces: { id: string; name:
         {workspaces.length > 0 ? (
           <fieldset className="space-y-2">
             <legend className="text-body text-fg-primary font-semibold">
-              Workspace roles (optional)
+              Workspace roles
             </legend>
+            <p
+              id="send-invite-workspace-roles-help"
+              className="text-fg-muted text-label"
+            >
+              Pick at least one role in at least one workspace. Leaving everything
+              blank adds the person to the agency but gives them no workspace
+              access — they can sign in but cannot open any workspace.
+            </p>
             {fieldErrors.workspaceRoles ? (
               <p role="alert" className="text-label text-danger font-semibold">
                 {fieldErrors.workspaceRoles.join("; ")}
