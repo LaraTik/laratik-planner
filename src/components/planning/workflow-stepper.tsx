@@ -166,7 +166,7 @@ export function WorkflowStepper({ status, size = "full", className }: WorkflowSt
               </span>
               <span
                 className={cn(
-                  "ml-2 text-sm font-semibold",
+                  "ms-2 text-sm font-semibold",
                   current ? "text-fg-primary" : past ? "text-fg-secondary" : "text-fg-muted",
                 )}
               >

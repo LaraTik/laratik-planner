@@ -144,8 +144,8 @@ export function MobileNav({
           </ul>
         </nav>
 
-        <DialogContent className="inset-x-0 top-auto bottom-0 left-0 max-h-[min(86dvh,760px)] w-full max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-t-[var(--radius-card)] rounded-b-none p-0 md:hidden">
-          <DialogHeader className="border-border border-b px-4 py-4 pr-14">
+        <DialogContent className="inset-x-0 start-0 top-auto bottom-0 max-h-[min(86dvh,760px)] w-full max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-t-[var(--radius-card)] rounded-b-none p-0 md:hidden">
+          <DialogHeader className="border-border border-b px-4 py-4 pe-14">
             <DialogTitle>Navigate</DialogTitle>
             <DialogDescription>
               {currentWorkspace ? currentWorkspace.name : "Agency and platform destinations"}
@@ -265,7 +265,7 @@ export function MobileNav({
       {createHref ? (
         <Link
           href={createHref}
-          className="bg-primary hover:bg-primary-hover focus-visible:ring-focus-ring fixed right-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 flex h-14 min-h-14 w-14 min-w-14 items-center justify-center rounded-full text-white shadow-lg transition-colors focus:outline-none focus-visible:ring-2 md:hidden"
+          className="bg-primary hover:bg-primary-hover focus-visible:ring-focus-ring fixed end-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 flex h-14 min-h-14 w-14 min-w-14 items-center justify-center rounded-full text-white shadow-lg transition-colors focus:outline-none focus-visible:ring-2 md:hidden"
           aria-label={createLabel}
           title={createLabel}
           data-testid="mobile-primary-create"

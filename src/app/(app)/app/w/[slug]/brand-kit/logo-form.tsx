@@ -176,7 +176,7 @@ export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: str
                 type="file"
                 accept={ALLOWED_EXTS.map((e) => `.${e}`).join(",")}
                 onChange={onFileChange}
-                className="text-body file:border-border file:bg-surface file:text-fg-primary file:mr-3 file:rounded-[var(--radius-control)] file:border file:px-3 file:py-1.5 file:font-semibold"
+                className="text-body file:border-border file:bg-surface file:text-fg-primary file:me-3 file:rounded-[var(--radius-control)] file:border file:px-3 file:py-1.5 file:font-semibold"
                 disabled={uploading}
                 aria-describedby="logo-file-status"
               />

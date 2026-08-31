@@ -344,7 +344,7 @@ export function AiAssistanceSection({
             </div>
           </div>
           {isManager ? (
-            <div className="border-border bg-surface-subtle text-label ml-6 flex flex-wrap items-center gap-2 rounded-[var(--radius-control)] border p-2">
+            <div className="border-border bg-surface-subtle text-label ms-6 flex flex-wrap items-center gap-2 rounded-[var(--radius-control)] border p-2">
               <span className="text-fg-secondary">
                 Need to know <em>why</em> it&apos;s off?
               </span>

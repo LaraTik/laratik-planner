@@ -97,7 +97,7 @@ export function FormatDistributionBars({
                   style={{ width: `${widthPct}%` }}
                 />
               </span>
-              <span className="text-label text-fg-primary w-20 text-right font-semibold tabular-nums">
+              <span className="text-label text-fg-primary w-20 text-end font-semibold tabular-nums">
                 {b.count} <span className="text-fg-muted font-normal">· {sharePct}%</span>
               </span>
             </Link>

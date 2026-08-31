@@ -67,12 +67,12 @@ export function SignInOptions({
                 autoComplete="current-password"
                 required
                 placeholder="Enter your password"
-                className="h-11 pr-11"
+                className="h-11 pe-11"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((visible) => !visible)}
-                className="text-fg-muted hover:text-fg-primary focus-visible:ring-focus-ring absolute inset-y-0 right-0 flex min-w-11 cursor-pointer items-center justify-center rounded-r-[var(--radius-control)] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                className="text-fg-muted hover:text-fg-primary focus-visible:ring-focus-ring absolute inset-y-0 end-0 flex min-w-11 cursor-pointer items-center justify-center rounded-e-[var(--radius-control)] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (

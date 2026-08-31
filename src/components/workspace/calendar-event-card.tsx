@@ -23,12 +23,12 @@ export type CalendarEventCardProps = {
 };
 
 const LEFT_BORDER_BY_VARIANT: Record<string, string> = {
-  success: "border-l-success",
-  warning: "border-l-warning",
-  danger: "border-l-danger",
-  info: "border-l-info",
-  primary: "border-l-primary",
-  default: "border-l-border",
+  success: "border-s-success",
+  warning: "border-s-warning",
+  danger: "border-s-danger",
+  info: "border-s-info",
+  primary: "border-s-primary",
+  default: "border-s-border",
 };
 
 export function CalendarEventCard({ id, href, title, status, format }: CalendarEventCardProps) {
@@ -44,7 +44,7 @@ export function CalendarEventCard({ id, href, title, status, format }: CalendarE
         // shows the status at a glance without competing with the
         // badge inside.
         leftBorder,
-        "border-l-4",
+        "border-s-4",
       )}
     >
       <p className="text-label text-fg-primary truncate font-semibold">{title}</p>

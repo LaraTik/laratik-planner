@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Check, Circle, ArrowRight, Ban, Play, Lock, X } from "lucide-react";
+import { Check, Circle, Ban, Play, Lock, X } from "lucide-react";
+import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import {
@@ -183,7 +184,7 @@ export function WorkflowProgress({
           {/* Inline next-step cue */}
           {next && !TERMINAL_STATUSES.has(status) ? (
             <p className="text-label text-fg-muted mt-2 inline-flex items-center gap-1.5">
-              <ArrowRight className="h-3 w-3" aria-hidden="true" />
+              <DirAwareArrowRight className="h-3 w-3" aria-hidden="true" />
               Next: <span className="text-fg-secondary font-semibold">{humanize(next)}</span> · held
               by{" "}
               <span className="text-fg-secondary font-semibold">
@@ -291,7 +292,7 @@ export function WorkflowProgress({
                 </span>
                 <span>
                   <span>{explanation.label}</span>
-                  <span className="text-fg-muted ml-1.5">
+                  <span className="text-fg-muted ms-1.5">
                     · {explanation.responsibleRoles.map((r) => r.label).join(" / ")}
                   </span>
                 </span>

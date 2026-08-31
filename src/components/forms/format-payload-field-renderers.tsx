@@ -93,7 +93,7 @@ function LabeledField({
     <div className="flex flex-wrap items-center gap-2">
       <label htmlFor={fieldKey} className="text-body text-fg-primary block font-semibold">
         {label}
-        {hint ? <span className="text-fg-muted text-label ml-2 font-normal">{hint}</span> : null}
+        {hint ? <span className="text-fg-muted text-label ms-2 font-normal">{hint}</span> : null}
       </label>
     </div>
   );

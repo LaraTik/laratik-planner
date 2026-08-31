@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+
+import { DirAwareChevronLeft, DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 import { cn } from "@/lib/utils";
 
 /**
@@ -36,7 +37,7 @@ export function MonthNav({ month, buildHref, className }: MonthNavProps) {
         href={buildHref(-1)}
         className="border-border bg-surface focus-visible:ring-focus-ring rounded-[var(--radius-control)] border p-2 transition-colors focus:outline-none focus-visible:ring-2"
       >
-        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        <DirAwareChevronLeft className="h-4 w-4" aria-hidden="true" />
       </Link>
       <span className="text-body min-w-32 text-center font-semibold sm:min-w-36">{label}</span>
       <Link
@@ -44,7 +45,7 @@ export function MonthNav({ month, buildHref, className }: MonthNavProps) {
         href={buildHref(1)}
         className="border-border bg-surface focus-visible:ring-focus-ring rounded-[var(--radius-control)] border p-2 transition-colors focus:outline-none focus-visible:ring-2"
       >
-        <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        <DirAwareChevronRight className="h-4 w-4" aria-hidden="true" />
       </Link>
     </div>
   );

@@ -109,7 +109,7 @@ export function MentionPicker({
                   data-testid={`mention-option-${u.id}`}
                   data-mention-index={i}
                   className={cn(
-                    "text-body flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors focus:outline-none",
+                    "text-body flex w-full items-center gap-2.5 px-3 py-2 text-start transition-colors focus:outline-none",
                     active ? "bg-primary-subtle text-primary" : "hover:bg-surface-subtle",
                   )}
                   onMouseEnter={() => onHighlight(i)}

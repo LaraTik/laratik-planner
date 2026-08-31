@@ -55,7 +55,7 @@ export default async function EditorialCalendarPage({
         description={
           <>
             Planned publish dates in the workspace timezone.
-            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
             </span>
@@ -124,7 +124,7 @@ export default async function EditorialCalendarPage({
               <div
                 key={index}
                 className={cn(
-                  "border-border min-h-32 border-r border-b p-2",
+                  "border-border min-h-32 border-e border-b p-2",
                   !inMonth && "bg-surface-subtle/40",
                 )}
               >

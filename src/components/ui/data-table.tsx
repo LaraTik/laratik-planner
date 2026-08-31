@@ -98,7 +98,10 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   return (
     <div className="overflow-x-auto" data-testid={`${dataTestId ?? "data-table"}-wrapper`}>
-      <table className={cn("w-full border-collapse text-left", className)} data-testid={dataTestId}>
+      <table
+        className={cn("w-full border-collapse text-start", className)}
+        data-testid={dataTestId}
+      >
         <thead>
           <tr className="bg-surface-subtle border-border border-b">
             {columns.map((c) => (

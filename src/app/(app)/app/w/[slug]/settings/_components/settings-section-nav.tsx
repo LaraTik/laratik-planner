@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Check, Circle } from "lucide-react";
+import { Check, Circle } from "lucide-react";
+import { DirAwareArrowLeft, DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { cn } from "@/lib/utils";
 
 /**
@@ -111,12 +112,12 @@ export function SettingsSectionNav({
             data-testid="settings-section-nav-prev"
             className="text-label text-fg-secondary hover:text-fg-primary hover:border-border inline-flex items-center gap-1 rounded-[var(--radius-control)] border border-transparent px-2 py-1 font-semibold transition-colors"
           >
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            <DirAwareArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
             {prev.label}
           </Link>
         ) : (
           <span className="text-label text-fg-muted inline-flex items-center gap-1 px-2 py-1">
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            <DirAwareArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
             No previous section
           </span>
         )}
@@ -127,7 +128,7 @@ export function SettingsSectionNav({
             className="text-label text-primary border-border bg-surface hover:bg-primary-subtle inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2.5 py-1 font-semibold transition-colors"
           >
             Next: {next.label}
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         ) : (
           <span className="text-label text-fg-muted inline-flex items-center gap-1 px-2 py-1 font-semibold">

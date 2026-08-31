@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   Check,
   ChevronDown,
-  ChevronRight,
   ClipboardList,
   Copy,
   ExternalLink,
@@ -17,6 +16,7 @@ import {
   Smartphone,
   Wifi,
 } from "lucide-react";
+import { DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
@@ -435,7 +435,7 @@ export default function AppError({
               What to do next
             </p>
             <ol
-              className="text-body text-fg-primary mt-2 list-decimal space-y-1 pl-5"
+              className="text-body text-fg-primary mt-2 list-decimal space-y-1 ps-5"
               data-testid="app-error-hint-fixes"
             >
               {hint.fixes.map((fix, i) => (
@@ -455,14 +455,14 @@ export default function AppError({
               onClick={() => setStackOpen((v) => !v)}
               aria-expanded={stackOpen}
               aria-controls={stackRegionId}
-              className="text-body text-fg-primary focus-visible:ring-focus-ring inline-flex w-full items-center justify-between gap-2 rounded-[var(--radius-control)] px-0 py-0 text-left font-semibold focus-visible:ring-2 focus-visible:outline-none"
+              className="text-body text-fg-primary focus-visible:ring-focus-ring inline-flex w-full items-center justify-between gap-2 rounded-[var(--radius-control)] px-0 py-0 text-start font-semibold focus-visible:ring-2 focus-visible:outline-none"
               data-testid="app-error-stack-toggle"
             >
               <span className="inline-flex items-center gap-2">
                 {stackOpen ? (
                   <ChevronDown className="h-4 w-4" aria-hidden="true" />
                 ) : (
-                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                  <DirAwareChevronRight className="h-4 w-4" aria-hidden="true" />
                 )}
                 Stack trace
                 <span className="text-label text-fg-muted font-normal">
@@ -488,14 +488,14 @@ export default function AppError({
               onClick={() => setComponentStackOpen((v) => !v)}
               aria-expanded={componentStackOpen}
               aria-controls={componentStackRegionId}
-              className="text-body text-fg-primary focus-visible:ring-focus-ring inline-flex w-full items-center justify-between gap-2 rounded-[var(--radius-control)] px-0 py-0 text-left font-semibold focus-visible:ring-2 focus-visible:outline-none"
+              className="text-body text-fg-primary focus-visible:ring-focus-ring inline-flex w-full items-center justify-between gap-2 rounded-[var(--radius-control)] px-0 py-0 text-start font-semibold focus-visible:ring-2 focus-visible:outline-none"
               data-testid="app-error-component-stack-toggle"
             >
               <span className="inline-flex items-center gap-2">
                 {componentStackOpen ? (
                   <ChevronDown className="h-4 w-4" aria-hidden="true" />
                 ) : (
-                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                  <DirAwareChevronRight className="h-4 w-4" aria-hidden="true" />
                 )}
                 Component stack
                 <span className="text-label text-fg-muted font-normal">

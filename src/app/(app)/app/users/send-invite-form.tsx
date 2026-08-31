@@ -119,7 +119,7 @@ export function SendInviteForm({ workspaces }: { workspaces: { id: string; name:
             />
             Grant agency admin
           </label>
-          <p id="send-invite-grants-admin-help" className="text-fg-muted text-label pl-6">
+          <p id="send-invite-grants-admin-help" className="text-fg-muted text-label ps-6">
             Agency admins can manage members, workspaces, and all agency settings. Only grant to
             people you trust with full access.
           </p>

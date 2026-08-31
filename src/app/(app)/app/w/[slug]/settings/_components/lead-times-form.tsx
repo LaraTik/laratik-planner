@@ -174,7 +174,7 @@ export function LeadTimesForm({
               </h3>
               <span
                 className={cn(
-                  "text-label ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-bold",
+                  "text-label ms-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-bold",
                   previewTotal < total
                     ? "bg-success/15 text-success"
                     : previewTotal > total
@@ -357,7 +357,7 @@ function LeadTimeField({
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-label text-fg-primary font-semibold">
         {label}
-        <span aria-hidden="true" className="text-danger ml-0.5">
+        <span aria-hidden="true" className="text-danger ms-0.5">
           *
         </span>
       </label>

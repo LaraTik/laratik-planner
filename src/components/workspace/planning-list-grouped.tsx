@@ -122,7 +122,7 @@ export function PlanningListGrouped({
             data-testid="planning-group-header"
           >
             {g.label}
-            <span className="text-fg-muted ml-2 font-normal">({g.items.length})</span>
+            <span className="text-fg-muted ms-2 font-normal">({g.items.length})</span>
           </h3>
           <PlanningListItemList>
             {g.items.map((it) => (

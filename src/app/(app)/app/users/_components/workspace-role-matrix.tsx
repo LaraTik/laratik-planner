@@ -164,7 +164,7 @@ export function WorkspaceRoleMatrix({
                     <button
                       type="button"
                       onClick={() => toggleRole(w.id, role)}
-                      className="hover:text-primary-fg focus-visible:ring-focus-ring ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2"
+                      className="hover:text-primary-fg focus-visible:ring-focus-ring ms-1 inline-flex h-4 w-4 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2"
                       aria-label={`Remove ${roleLabel(role as WorkspaceRole)} from ${w.name}`}
                     >
                       <X className="h-3 w-3" aria-hidden="true" />

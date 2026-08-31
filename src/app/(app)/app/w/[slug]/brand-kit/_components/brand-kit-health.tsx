@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
-import { Sparkles, CheckCircle2, AlertCircle, Info, ArrowRight, Check, Clock } from "lucide-react";
+import { Sparkles, CheckCircle2, AlertCircle, Info, Check, Clock } from "lucide-react";
+import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { Card, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -304,7 +305,7 @@ export function BrandKitHealth({ section, slug, count, breakdown }: BrandKitHeal
             className="text-label text-primary inline-flex items-center gap-1 font-semibold hover:underline"
           >
             Brand Kit overview
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         </div>
 

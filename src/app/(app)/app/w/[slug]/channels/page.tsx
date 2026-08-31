@@ -111,7 +111,7 @@ function channelsColumns(props: {
       key: "actions",
       header: "",
       headerClassName: "w-12",
-      cellClassName: "text-right",
+      cellClassName: "text-end",
       cell: (row) => {
         if (!props.canManage) {
           return (
@@ -287,7 +287,7 @@ export default async function ChannelsPage({
           <>
             Keep the brand&rsquo;s account information in one place. Connections and analytics are
             planned for a future version.
-            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
             </span>

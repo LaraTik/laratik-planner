@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Bot, KeyRound, Server } from "lucide-react";
+import { Bot, KeyRound, Server } from "lucide-react";
+import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 import { auth } from "@/lib/auth/config";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
@@ -50,7 +51,7 @@ export default async function AgencyAiSettingsPage() {
           href="/app/agency-settings"
           className="text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          <DirAwareArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to Agency Settings
         </Link>
       </div>
@@ -108,7 +109,7 @@ export default async function AgencyAiSettingsPage() {
             href="/app/agency-settings"
             className="text-primary focus-visible:ring-focus-ring text-body inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
           >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            <DirAwareArrowLeft className="h-4 w-4" aria-hidden="true" />
             Back to Agency Settings
           </Link>
         }
@@ -170,7 +171,7 @@ export default async function AgencyAiSettingsPage() {
         <Bot className="text-fg-muted mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <p>
           Workspace managers see a read-only status card at
-          <code className="bg-surface text-label ml-1 rounded px-1.5 py-0.5 font-semibold">
+          <code className="bg-surface text-label ms-1 rounded px-1.5 py-0.5 font-semibold">
             /w/&lt;slug&gt;/ai-settings
           </code>
           — they can&apos;t change anything here, only see what the agency has configured.

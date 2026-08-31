@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AlertOctagon, ArrowLeft, ExternalLink, Search } from "lucide-react";
+import { AlertOctagon, ExternalLink, Search } from "lucide-react";
+import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
@@ -192,7 +193,7 @@ export default async function PlatformErrorsPage({
             href="/app/platform/overview"
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
           >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            <DirAwareArrowLeft className="h-4 w-4" aria-hidden="true" />
             Back to overview
           </Link>
         }
@@ -225,7 +226,7 @@ export default async function PlatformErrorsPage({
           </label>
           <div className="relative min-w-64 flex-1">
             <Search
-              className="text-fg-muted pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2"
+              className="text-fg-muted pointer-events-none absolute start-2.5 top-1/2 h-4 w-4 -translate-y-1/2"
               aria-hidden="true"
             />
             <input
@@ -234,7 +235,7 @@ export default async function PlatformErrorsPage({
               name={SEARCH_PARAM}
               defaultValue={query}
               placeholder="Search by route or message…"
-              className="border-border bg-surface text-body text-fg-primary placeholder:text-fg-muted focus-visible:ring-focus-ring h-9 w-full rounded-[var(--radius-control)] border pr-2 pl-8 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+              className="border-border bg-surface text-body text-fg-primary placeholder:text-fg-muted focus-visible:ring-focus-ring h-9 w-full rounded-[var(--radius-control)] border ps-8 pe-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
             />
           </div>
           {page > 1 ? <input type="hidden" name="page" value="1" /> : null}

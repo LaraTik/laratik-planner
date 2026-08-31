@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AlertCircle, ArrowLeft, Wrench } from "lucide-react";
+import { AlertCircle, Wrench } from "lucide-react";
+import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 import { authError } from "./auth-error-codes";
 import {
   signInWithGoogleAction,
@@ -49,7 +50,7 @@ export default async function SignInPage({
     >
       <div
         aria-hidden="true"
-        className="bg-primary-subtle absolute top-[-16rem] left-1/2 -z-10 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full blur-3xl"
+        className="bg-primary-subtle absolute start-1/2 top-[-16rem] -z-10 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full blur-3xl"
       />
       <section className="w-full max-w-md space-y-6" aria-labelledby="signin-title">
         <div className="flex flex-col items-center gap-4 text-center">
@@ -171,7 +172,7 @@ export default async function SignInPage({
             href="/"
             className="text-label text-primary inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline"
           >
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Back to home
+            <DirAwareArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Back to home
           </Link>
         </footer>
       </section>

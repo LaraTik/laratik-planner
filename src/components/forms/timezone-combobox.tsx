@@ -190,7 +190,7 @@ export function TimezoneCombobox({
             onKeyDown={onTriggerKeyDown}
             className={cn(
               controlClass,
-              "flex items-center justify-between gap-2 text-left",
+              "flex items-center justify-between gap-2 text-start",
               !selected && "text-fg-muted",
             )}
             data-testid="timezone-combobox-trigger"
@@ -268,7 +268,7 @@ export function TimezoneCombobox({
                     onMouseEnter={() => setActiveIndex(index)}
                     onClick={() => commit(option)}
                     className={cn(
-                      "text-body flex w-full items-center gap-2 px-3 py-2 text-left",
+                      "text-body flex w-full items-center gap-2 px-3 py-2 text-start",
                       "focus:outline-none",
                       isActive && "bg-surface-subtle",
                       isSelected && "font-semibold",
@@ -276,7 +276,7 @@ export function TimezoneCombobox({
                   >
                     <span className="flex-1 truncate">
                       <span className="text-fg-primary">{option.value}</span>
-                      <span className="text-fg-muted ml-2">({option.offset})</span>
+                      <span className="text-fg-muted ms-2">({option.offset})</span>
                     </span>
                     {isSelected ? (
                       <Check className="text-primary h-4 w-4 shrink-0" aria-hidden="true" />

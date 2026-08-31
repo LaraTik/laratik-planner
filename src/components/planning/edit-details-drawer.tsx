@@ -86,7 +86,7 @@ export function EditDetailsDrawer({
         // itself uses `space-y-4` and the page-level spacing
         // is preserved by the `<form>` element inside
         // `EditIdeaForm`.
-        className="top-0 right-0 bottom-0 left-auto h-screen max-h-screen w-full max-w-xl translate-x-0 translate-y-0 overflow-y-auto rounded-none border-y-0 border-r-0 border-l p-6 sm:rounded-none"
+        className="end-0 top-0 bottom-0 left-auto h-screen max-h-screen w-full max-w-xl translate-x-0 translate-y-0 overflow-y-auto rounded-none border-y-0 border-s border-e-0 p-6 sm:rounded-none"
         data-testid="edit-details-drawer"
       >
         <DialogHeader>

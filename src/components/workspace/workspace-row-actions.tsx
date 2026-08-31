@@ -63,14 +63,14 @@ export function WorkspaceRowActions({
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href={`/app/w/${slug}`} data-testid={`workspaces-row-open-${slug}`}>
-            <span className="mr-2 inline-flex w-4 justify-center">↗</span>
+            <span className="me-2 inline-flex w-4 justify-center">↗</span>
             Open workspace
           </Link>
         </DropdownMenuItem>
         {canEditSettings ? (
           <DropdownMenuItem asChild>
             <Link href={`/app/w/${slug}/settings`} data-testid={`workspaces-row-settings-${slug}`}>
-              <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
+              <Settings className="me-2 h-4 w-4" aria-hidden="true" />
               Workspace settings
             </Link>
           </DropdownMenuItem>
@@ -78,20 +78,20 @@ export function WorkspaceRowActions({
         {canManageTeam ? (
           <DropdownMenuItem asChild>
             <Link href={`/app/w/${slug}/team`} data-testid={`workspaces-row-team-${slug}`}>
-              <Users className="mr-2 h-4 w-4" aria-hidden="true" />
+              <Users className="me-2 h-4 w-4" aria-hidden="true" />
               Manage team
             </Link>
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem asChild>
           <Link href={`/app/w/${slug}/channels`} data-testid={`workspaces-row-channels-${slug}`}>
-            <Share2 className="mr-2 h-4 w-4" aria-hidden="true" />
+            <Share2 className="me-2 h-4 w-4" aria-hidden="true" />
             Social channels
           </Link>
         </DropdownMenuItem>
         {canDuplicate ? (
           <DropdownMenuItem disabled aria-disabled>
-            <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
+            <Copy className="me-2 h-4 w-4" aria-hidden="true" />
             Duplicate workspace
           </DropdownMenuItem>
         ) : null}
@@ -104,7 +104,7 @@ export function WorkspaceRowActions({
               aria-disabled
               data-testid={`workspaces-row-archive-${slug}`}
             >
-              <Archive className="mr-2 h-4 w-4" aria-hidden="true" />
+              <Archive className="me-2 h-4 w-4" aria-hidden="true" />
               Archive
             </DropdownMenuItem>
           </>

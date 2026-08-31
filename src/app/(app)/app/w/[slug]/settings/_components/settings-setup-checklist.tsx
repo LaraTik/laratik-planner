@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
-import { Check, Circle, ArrowRight } from "lucide-react";
+import { Check, Circle } from "lucide-react";
+import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { cn } from "@/lib/utils";
 
 /**
@@ -105,7 +106,7 @@ export function SettingsSetupChecklist({ items }: SettingsSetupChecklistProps) {
                 </span>
                 <span className="text-label text-fg-muted block">{i.blurb}</span>
               </span>
-              <ArrowRight className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
+              <DirAwareArrowRight className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
             </Link>
           </li>
         ))}

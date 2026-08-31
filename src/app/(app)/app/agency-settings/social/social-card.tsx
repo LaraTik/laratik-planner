@@ -417,7 +417,7 @@ function EnabledBody({
           disabled={rotating}
           data-testid="agency-social-rotate-button"
         >
-          <RotateCcw className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          <RotateCcw className="me-1.5 h-4 w-4" aria-hidden="true" />
           {rotating ? "Rotating…" : "Rotate DEK"}
         </Button>
         <Button
@@ -426,7 +426,7 @@ function EnabledBody({
           onClick={onResetRecoveryClick}
           data-testid="agency-social-reset-recovery-button"
         >
-          <KeyRound className="mr-1.5 h-4 w-4" aria-hidden="true" />I lost my recovery key
+          <KeyRound className="me-1.5 h-4 w-4" aria-hidden="true" />I lost my recovery key
         </Button>
         <Button
           type="button"
@@ -434,7 +434,7 @@ function EnabledBody({
           onClick={onDisableClick}
           data-testid="agency-social-disable-button"
         >
-          <ShieldAlert className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          <ShieldAlert className="me-1.5 h-4 w-4" aria-hidden="true" />
           Disable
         </Button>
       </div>
@@ -508,7 +508,7 @@ function RecoveryKeyModal({
             onClick={handleCopy}
             data-testid="agency-social-recovery-key-copy"
           >
-            <Copy className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+            <Copy className="me-1.5 h-3.5 w-3.5" aria-hidden="true" />
             {copied ? "Copied" : "Copy"}
           </Button>
         </div>

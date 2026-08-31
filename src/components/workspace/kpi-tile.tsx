@@ -31,9 +31,9 @@ export interface KpiTileProps {
 
 const TONE_BORDER: Record<NonNullable<KpiTileProps["tone"]>, string> = {
   default: "",
-  success: "border-l-4 border-l-success",
-  warning: "border-l-4 border-l-warning",
-  danger: "border-l-4 border-l-danger",
+  success: "border-s-4 border-s-success",
+  warning: "border-s-4 border-s-warning",
+  danger: "border-s-4 border-s-danger",
 };
 
 const TONE_ICON: Record<NonNullable<KpiTileProps["tone"]>, string> = {

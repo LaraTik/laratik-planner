@@ -2,18 +2,12 @@
 
 import * as React from "react";
 import { useEffect, useId, useState, useTransition } from "react";
+import { Check, CheckCircle, Circle, XCircle, Ban, Play, Info } from "lucide-react";
 import {
-  Check,
-  CheckCircle,
-  Circle,
-  XCircle,
-  ArrowRight,
-  Ban,
-  Play,
-  Info,
-  ChevronRight,
-  ChevronLeft,
-} from "lucide-react";
+  DirAwareArrowRight,
+  DirAwareChevronLeft,
+  DirAwareChevronRight,
+} from "@/components/ui/dir-aware-icon";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -271,7 +265,7 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
           aria-label="Expand workflow rail"
           data-testid="workflow-rail-expand"
         >
-          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          <DirAwareChevronLeft className="h-4 w-4" aria-hidden="true" />
         </button>
         <ol
           className="flex flex-col items-center gap-1 px-1 py-1"
@@ -311,7 +305,7 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
           aria-label="Collapse workflow rail"
           data-testid="workflow-rail-collapse"
         >
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          <DirAwareChevronRight className="h-4 w-4" aria-hidden="true" />
         </button>
       </header>
       <WorkflowRailBody {...props} />
@@ -474,7 +468,7 @@ function WorkflowRailBody({
             16px in from the left edge to align with the stage
             marker centers. */}
         <div
-          className="bg-border absolute top-2 bottom-2 left-[22px] w-px"
+          className="bg-border absolute start-[22px] top-2 bottom-2 w-px"
           aria-hidden="true"
           data-testid="workflow-rail-process-line"
         />
@@ -490,7 +484,7 @@ function WorkflowRailBody({
               <RailStageRow stage={stage} label={label} status={status} />
               {expanded ? (
                 <div
-                  className="border-border bg-surface-subtle mt-1 ml-7 space-y-2 rounded-[var(--radius-control)] border p-2"
+                  className="border-border bg-surface-subtle ms-7 mt-1 space-y-2 rounded-[var(--radius-control)] border p-2"
                   data-testid="workflow-rail-current"
                 >
                   {currentStep ? (
@@ -521,13 +515,13 @@ function WorkflowRailBody({
 
                       {blockedReason ? (
                         <p className="text-body text-danger">
-                          <Ban className="mr-1 inline h-4 w-4" aria-hidden="true" />
+                          <Ban className="me-1 inline h-4 w-4" aria-hidden="true" />
                           Blocked: {blockedReason}
                         </p>
                       ) : null}
                       {cancellationReason ? (
                         <p className="text-body text-danger">
-                          <Ban className="mr-1 inline h-4 w-4" aria-hidden="true" />
+                          <Ban className="me-1 inline h-4 w-4" aria-hidden="true" />
                           Cancelled: {cancellationReason}
                         </p>
                       ) : null}
@@ -757,7 +751,7 @@ function railStageState(stage: RailStage, status: string): StageState {
 /**
  * Compact stage marker for the rail's 6-stage list. Sized
  * 24×24 so the markers line up with the absolutely-positioned
- * 1px process line at `left-[22px]`. The marker background
+ * 1px process line at `start-[22px]`. The marker background
  * covers the line behind the icon so the line doesn't poke
  * through the marker.
  */
@@ -835,7 +829,7 @@ function StageIcon({ kind, compact = false }: { kind: StageState["kind"]; compac
         )}
         aria-label="Current step"
       >
-        <ChevronRight className={iconClass} aria-hidden="true" />
+        <DirAwareChevronRight className={iconClass} aria-hidden="true" />
       </span>
     );
   }
@@ -910,7 +904,7 @@ function ActionButtons({
           data-testid="workflow-rail-primary-action"
           className="w-full"
         >
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /> Submit for review
+          <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" /> Submit for review
         </Button>
       ) : null}
       {status === "content_review" && can(["isInternalReviewer", "isManager"]) ? (
@@ -944,7 +938,7 @@ function ActionButtons({
           data-testid="workflow-rail-primary-action"
           className="w-full"
         >
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /> Resubmit for review
+          <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" /> Resubmit for review
         </Button>
       ) : null}
       {status === "approved_for_design" && isDesigner ? (
@@ -1266,7 +1260,7 @@ export function WorkflowSheet(props: WorkflowRailBodyProps) {
         >
           {canAct ? "You can act" : humanStatus(props.status)}
         </Badge>
-        <ChevronRight className="text-fg-muted h-4 w-4" aria-hidden="true" />
+        <DirAwareChevronRight className="text-fg-muted h-4 w-4" aria-hidden="true" />
       </button>
 
       {open ? (
@@ -1286,7 +1280,7 @@ export function WorkflowSheet(props: WorkflowRailBodyProps) {
             data-testid="workflow-mobile-backdrop"
           />
           <div
-            className="border-border bg-surface absolute right-0 bottom-0 left-0 max-h-[85vh] overflow-y-auto rounded-t-[var(--radius-control)] border shadow-2xl"
+            className="border-border bg-surface absolute start-0 end-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-[var(--radius-control)] border shadow-2xl"
             data-testid="workflow-mobile-panel"
           >
             <header className="border-border bg-surface sticky top-0 z-10 flex items-center justify-between border-b px-3 py-2">

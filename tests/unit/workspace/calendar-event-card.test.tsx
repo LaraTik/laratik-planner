@@ -114,7 +114,7 @@ describe("CalendarEventCard", () => {
     // day cell still conveys status at a glance.
     const card = screen.getByTestId("calendar-event-item-1");
     const className = card.className;
-    expect(className).toMatch(/border-l-\w+/);
+    expect(className).toMatch(/border-s-\w+/);
   });
 
   it("renders approved statuses with a success color cue", () => {

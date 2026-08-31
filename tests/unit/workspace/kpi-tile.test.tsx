@@ -27,12 +27,12 @@ describe("KpiTile", () => {
   it("uses neutral border + muted icon when tone is default", () => {
     render(<KpiTile icon={<FileText aria-hidden="true" />} label="x" value={1} tone="default" />);
     const tile = screen.getByText("x").parentElement?.parentElement;
-    expect(tile?.className).not.toContain("border-l-success");
-    expect(tile?.className).not.toContain("border-l-warning");
-    expect(tile?.className).not.toContain("border-l-danger");
+    expect(tile?.className).not.toContain("border-s-success");
+    expect(tile?.className).not.toContain("border-s-warning");
+    expect(tile?.className).not.toContain("border-s-danger");
   });
 
-  it("applies border-l-success + green icon when tone is success", () => {
+  it("applies border-s-success + green icon when tone is success", () => {
     render(
       <KpiTile
         icon={<CheckCircle data-testid="icon" aria-hidden="true" />}
@@ -42,12 +42,12 @@ describe("KpiTile", () => {
       />,
     );
     const tile = screen.getByText("Active").parentElement?.parentElement;
-    expect(tile?.className).toContain("border-l-success");
+    expect(tile?.className).toContain("border-s-success");
     const iconWrap = screen.getByTestId("icon").parentElement;
     expect(iconWrap?.className).toContain("text-success");
   });
 
-  it("applies border-l-warning + warning icon when tone is warning", () => {
+  it("applies border-s-warning + warning icon when tone is warning", () => {
     render(
       <KpiTile
         icon={<AlertTriangle data-testid="icon" aria-hidden="true" />}
@@ -57,12 +57,12 @@ describe("KpiTile", () => {
       />,
     );
     const tile = screen.getByText("Pending").parentElement?.parentElement;
-    expect(tile?.className).toContain("border-l-warning");
+    expect(tile?.className).toContain("border-s-warning");
     const iconWrap = screen.getByTestId("icon").parentElement;
     expect(iconWrap?.className).toContain("text-warning");
   });
 
-  it("applies border-l-danger + danger icon when tone is danger", () => {
+  it("applies border-s-danger + danger icon when tone is danger", () => {
     render(
       <KpiTile
         icon={<X data-testid="icon" aria-hidden="true" />}
@@ -72,7 +72,7 @@ describe("KpiTile", () => {
       />,
     );
     const tile = screen.getByText("Failed").parentElement?.parentElement;
-    expect(tile?.className).toContain("border-l-danger");
+    expect(tile?.className).toContain("border-s-danger");
     const iconWrap = screen.getByTestId("icon").parentElement;
     expect(iconWrap?.className).toContain("text-danger");
   });

@@ -68,7 +68,7 @@ const AvatarTrigger = React.forwardRef<
         </span>
       )}
       {compact ? null : (
-        <span className="text-label hidden pr-1 font-semibold sm:inline">{user.name}</span>
+        <span className="text-label hidden pe-1 font-semibold sm:inline">{user.name}</span>
       )}
     </button>
   );
@@ -98,9 +98,9 @@ export function UserMenu({
         </DialogTrigger>
         <DialogContent
           data-testid="user-menu-mobile"
-          className="top-auto bottom-0 left-0 w-full max-w-none translate-x-0 translate-y-0 gap-0 rounded-t-[var(--radius-card)] rounded-b-none p-0"
+          className="start-0 top-auto bottom-0 w-full max-w-none translate-x-0 translate-y-0 gap-0 rounded-t-[var(--radius-card)] rounded-b-none p-0"
         >
-          <DialogHeader className="border-border border-b px-4 py-4 pr-14">
+          <DialogHeader className="border-border border-b px-4 py-4 pe-14">
             <div className="flex flex-wrap items-center gap-2">
               <DialogTitle className="truncate">{user.name}</DialogTitle>
               {user.isPlatformAdmin ? (

@@ -201,7 +201,7 @@ describe("CommentItem", () => {
   it("applies the reply indent when isReply is true", () => {
     const { container } = renderItem({}, vi.fn());
     const card = container.firstChild as HTMLElement;
-    expect(card.className).not.toContain("sm:ml-6");
+    expect(card.className).not.toContain("sm:ms-6");
     // re-render with isReply
     const { container: c2 } = render(
       <CommentItem
@@ -213,6 +213,6 @@ describe("CommentItem", () => {
         isReply
       />,
     );
-    expect((c2.firstChild as HTMLElement).className).toContain("sm:ml-6");
+    expect((c2.firstChild as HTMLElement).className).toContain("sm:ms-6");
   });
 });

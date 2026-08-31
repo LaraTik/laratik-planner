@@ -113,14 +113,14 @@ export function DesignQueueList({
               {canBulkArchive ? (
                 <input
                   type="checkbox"
-                  className="absolute top-3 left-3 h-4 w-4 cursor-pointer accent-[var(--color-primary,#4f46e5)]"
+                  className="absolute start-3 top-3 h-4 w-4 cursor-pointer accent-[var(--color-primary,#4f46e5)]"
                   aria-label={`Select ${item.title}`}
                   data-testid="design-queue-row-checkbox"
                   checked={isSelected}
                   onChange={() => toggleOne(item.id)}
                 />
               ) : null}
-              <div className={canBulkArchive ? "pl-7" : ""}>
+              <div className={canBulkArchive ? "ps-7" : ""}>
                 <Link
                   href={item.href}
                   className="focus-visible:ring-focus-ring block rounded focus:outline-none focus-visible:ring-2"
@@ -202,7 +202,7 @@ export function DesignQueueList({
                 </Link>
               </div>
               {canBulkArchive ? (
-                <span className="absolute top-3 right-3" aria-hidden="true">
+                <span className="absolute end-3 top-3" aria-hidden="true">
                   {isSelected ? (
                     <CheckSquare className="text-fg-muted h-4 w-4" />
                   ) : (

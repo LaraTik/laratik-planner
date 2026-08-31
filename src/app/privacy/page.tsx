@@ -100,7 +100,7 @@ export default function PrivacyPage() {
               </h2>
 
               <SubSection title="3.1 Data you provide directly" accent="primary">
-                <ul className="list-disc space-y-1 pl-6">
+                <ul className="list-disc space-y-1 ps-6">
                   <li>
                     <strong className="text-fg-primary">Account data:</strong> name, email address,
                     profile photo, and any optional fields you fill in inside the Service.
@@ -122,7 +122,7 @@ export default function PrivacyPage() {
                   Meta authorization dialog, we receive the data described in our published
                   permission set, specifically:
                 </p>
-                <ul className="list-disc space-y-1 pl-6">
+                <ul className="list-disc space-y-1 ps-6">
                   <li>
                     <code className="bg-surface-subtle text-fg-primary text-label rounded px-1.5 py-0.5 font-mono">
                       pages_show_list
@@ -182,7 +182,7 @@ export default function PrivacyPage() {
               <h2 id="purposes" className="text-title-section text-fg-primary font-semibold">
                 4. Why we use your data (purposes)
               </h2>
-              <ul className="list-disc space-y-1 pl-6">
+              <ul className="list-disc space-y-1 ps-6">
                 <li>
                   <strong className="text-fg-primary">Service provision.</strong> To operate the
                   planning, design, approval, and analytics features you request.
@@ -212,7 +212,7 @@ export default function PrivacyPage() {
                 We process your personal data on the following legal bases under the EU General Data
                 Protection Regulation:
               </p>
-              <ul className="list-disc space-y-1 pl-6">
+              <ul className="list-disc space-y-1 ps-6">
                 <li>
                   <strong className="text-fg-primary">
                     Art. 6(1)(b) — Performance of a contract.
@@ -243,7 +243,7 @@ export default function PrivacyPage() {
               <h2 id="retention" className="text-title-section text-fg-primary font-semibold">
                 6. How long we keep your data
               </h2>
-              <ul className="list-disc space-y-1 pl-6">
+              <ul className="list-disc space-y-1 ps-6">
                 <li>
                   <strong className="text-fg-primary">Access tokens:</strong> until you disconnect
                   the channel or until the token expires and cannot be refreshed (whichever is
@@ -275,7 +275,7 @@ export default function PrivacyPage() {
                 7. Who else receives your data (sub-processors)
               </h2>
               <p>We share your personal data only with the following categories of recipients:</p>
-              <ul className="list-disc space-y-1 pl-6">
+              <ul className="list-disc space-y-1 ps-6">
                 <li>
                   <strong className="text-fg-primary">Meta Platforms Ireland Limited</strong> (and
                   its affiliates) — when you connect a Facebook Page or Instagram business account.
@@ -472,12 +472,12 @@ function Toc({ sections }: { sections: readonly (typeof SECTIONS)[number][] }) {
     <nav aria-label="Table of contents" className="hidden lg:block">
       <div className="sticky top-8">
         <p className="text-label text-fg-muted mb-3 tracking-wide uppercase">On this page</p>
-        <ul className="border-border space-y-1 border-l">
+        <ul className="border-border space-y-1 border-s">
           {sections.map((s) => (
             <li key={s.id}>
               <a
                 href={`#${s.id}`}
-                className="text-body text-fg-secondary hover:text-primary hover:border-primary -ml-px block border-l py-1.5 pl-4 transition-colors"
+                className="text-body text-fg-secondary hover:text-primary hover:border-primary -ms-px block border-s py-1.5 ps-4 transition-colors"
               >
                 {s.title}
               </a>
@@ -566,7 +566,7 @@ function Section({
           <a
             href={`#${id}`}
             aria-label={`Permalink to this section`}
-            className="text-fg-muted hover:text-primary absolute top-1 -left-7 hidden transition-colors lg:group-hover/anchor:flex"
+            className="text-fg-muted hover:text-primary absolute -start-7 top-1 hidden transition-colors lg:group-hover/anchor:flex"
           >
             <Link2 className="h-3.5 w-3.5" />
           </a>
@@ -612,7 +612,7 @@ function Callout({
   }[tone];
   return (
     <div
-      className={`text-body mt-3 rounded-[var(--radius-control)] border-l-4 px-4 py-3 leading-relaxed ${toneClass}`}
+      className={`text-body mt-3 rounded-[var(--radius-control)] border-s-4 px-4 py-3 leading-relaxed ${toneClass}`}
     >
       {children}
     </div>

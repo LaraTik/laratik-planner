@@ -47,8 +47,8 @@ export function LeadTimeTimeline({
               key={stage.key}
               className={cn(
                 "h-full transition-all",
-                i === 0 && "rounded-l-full",
-                i === stages.length - 1 && "rounded-r-full",
+                i === 0 && "rounded-s-full",
+                i === stages.length - 1 && "rounded-e-full",
                 // Subtle palette by stage so the planner can read
                 // the bar at a glance without a legend.
                 i === 0 && "bg-primary/70",

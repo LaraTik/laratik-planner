@@ -150,11 +150,11 @@ export default async function UsersPage() {
         <Tabs defaultValue="invite">
           <TabsList aria-label="Add a user: send an invitation or pre-create an account">
             <TabsTrigger value="invite" data-testid="users-tab-invite">
-              <Mail className="mr-1 h-4 w-4" aria-hidden="true" />
+              <Mail className="me-1 h-4 w-4" aria-hidden="true" />
               Send invitation
             </TabsTrigger>
             <TabsTrigger value="add" data-testid="users-tab-add">
-              <UserPlus className="mr-1 h-4 w-4" aria-hidden="true" />
+              <UserPlus className="me-1 h-4 w-4" aria-hidden="true" />
               Add directly
             </TabsTrigger>
           </TabsList>

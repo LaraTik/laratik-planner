@@ -147,7 +147,7 @@ export function InlineBriefEditor({
               data-testid="inline-edit-brief-counter"
               aria-live="polite"
               className={cn(
-                "text-label text-fg-muted text-right tabular-nums",
+                "text-label text-fg-muted text-end tabular-nums",
                 overWarn && !atMax && "text-warning",
                 atMax && "text-danger font-semibold",
               )}
@@ -206,7 +206,7 @@ export function InlineTitleEditor({
               data-testid="inline-edit-title-counter"
               aria-live="polite"
               className={cn(
-                "text-label text-fg-muted text-right tabular-nums",
+                "text-label text-fg-muted text-end tabular-nums",
                 overWarn && !atMax && "text-warning",
                 atMax && "text-danger font-semibold",
               )}

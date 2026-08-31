@@ -111,7 +111,7 @@ export function MemberEditDrawer({
     >
       <DialogContent
         // Right-side slide-in (override the centered default)
-        className="bg-surface fixed top-0 right-0 bottom-0 left-auto z-50 flex h-full w-full max-w-[560px] translate-x-0 translate-y-0 flex-col gap-0 overflow-y-auto rounded-none border-t-0 border-r-0 border-b-0 border-l p-0 shadow-xl"
+        className="bg-surface fixed end-0 top-0 bottom-0 left-auto z-50 flex h-full w-full max-w-[560px] translate-x-0 translate-y-0 flex-col gap-0 overflow-y-auto rounded-none border-s border-e-0 border-t-0 border-b-0 p-0 shadow-xl"
         data-testid="member-edit-drawer"
       >
         {subject ? (
@@ -277,12 +277,12 @@ function MemberEditForm({
                 />
                 <details className="text-label text-fg-muted group mt-2">
                   <summary className="hover:text-fg-primary focus-visible:ring-focus-ring cursor-pointer list-none rounded-[var(--radius-control)] py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2">
-                    <span aria-hidden="true" className="mr-1 inline-block group-open:rotate-90">
+                    <span aria-hidden="true" className="me-1 inline-block group-open:rotate-90">
                       ▸
                     </span>
                     What does each role do?
                   </summary>
-                  <ul className="text-label text-fg-secondary mt-2 space-y-1 pl-4">
+                  <ul className="text-label text-fg-secondary mt-2 space-y-1 ps-4">
                     {workspaceRoleSchema.options.map((role) => (
                       <li key={role}>
                         <span className="text-fg-primary font-semibold">

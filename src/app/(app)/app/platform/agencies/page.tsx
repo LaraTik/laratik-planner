@@ -164,14 +164,14 @@ export default async function PlatformAgenciesPage() {
             </div>
             <div className="relative w-full sm:w-72">
               <Search
-                className="text-fg-muted absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                className="text-fg-muted absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2"
                 aria-hidden="true"
               />
               <input
                 type="search"
                 placeholder="Search by name or slug"
                 aria-label="Search agencies"
-                className="border-border bg-surface text-fg-primary placeholder:text-fg-muted focus-visible:ring-focus-ring w-full rounded-[var(--radius-control)] border py-2 pr-3 pl-9 focus:outline-none focus-visible:ring-2"
+                className="border-border bg-surface text-fg-primary placeholder:text-fg-muted focus-visible:ring-focus-ring w-full rounded-[var(--radius-control)] border py-2 ps-9 pe-3 focus:outline-none focus-visible:ring-2"
                 data-testid="platform-agencies-search"
               />
             </div>

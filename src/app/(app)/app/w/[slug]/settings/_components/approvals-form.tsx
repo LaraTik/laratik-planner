@@ -2,7 +2,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useActionState } from "react";
-import { Check, Users, MessageSquare, AlertCircle, Info, ArrowRight } from "lucide-react";
+import { Check, Users, MessageSquare, AlertCircle, Info } from "lucide-react";
+import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
@@ -131,7 +132,7 @@ export function ApprovalsForm({
                       ) : null}
                     </div>
                   </div>
-                  <ul className="border-border ml-6 space-y-1 border-l pl-3 text-sm">
+                  <ul className="border-border ms-6 space-y-1 border-s ps-3 text-sm">
                     {m.steps.map((step, i) => (
                       <li key={i} className="text-fg-secondary flex items-center gap-2">
                         <step.icon
@@ -143,7 +144,7 @@ export function ApprovalsForm({
                       </li>
                     ))}
                   </ul>
-                  <p className="text-label text-fg-muted ml-6">{m.days}</p>
+                  <p className="text-label text-fg-muted ms-6">{m.days}</p>
                 </label>
               );
             })}
@@ -196,7 +197,7 @@ export function ApprovalsForm({
               data-testid="approvals-impact-lead-times-link"
             >
               Open lead times
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           </div>
         ) : (

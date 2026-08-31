@@ -63,7 +63,7 @@ export default async function QuickCreatePage({ params }: { params: Promise<{ sl
         description={
           <>
             Four fields, a draft is born. Edit anything later.
-            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {ws.timezone}
             </span>

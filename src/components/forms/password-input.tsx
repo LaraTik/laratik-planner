@@ -45,7 +45,7 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
           ref={ref}
           type={revealed ? "text" : "password"}
           disabled={disabled}
-          className={cn("pr-10", className)}
+          className={cn("pe-10", className)}
           {...rest}
         />
         <button
@@ -57,7 +57,7 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
           // 44x44 minimum target on touch devices (the icon is 16px
           // but the button is padded via p-2 around it).
           className={cn(
-            "text-fg-muted hover:text-fg-primary focus-visible:ring-focus-ring absolute top-1/2 right-2 -translate-y-1/2 rounded-sm p-2 focus:outline-none focus-visible:ring-2",
+            "text-fg-muted hover:text-fg-primary focus-visible:ring-focus-ring absolute end-2 top-1/2 -translate-y-1/2 rounded-sm p-2 focus:outline-none focus-visible:ring-2",
             "disabled:cursor-not-allowed disabled:opacity-50",
           )}
           data-testid={toggleTestId}

@@ -129,7 +129,7 @@ export default async function PlatformAccessPage() {
       key: "actions",
       header: <span className="sr-only">Actions</span>,
       headerClassName: "w-24",
-      cellClassName: "text-right",
+      cellClassName: "text-end",
       cell: (row) => (
         <div className="flex justify-end gap-1">
           <ChangePlatformRoleDialog userId={row.userId} email={row.email} currentRole={row.role} />

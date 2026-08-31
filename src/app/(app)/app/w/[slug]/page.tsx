@@ -5,7 +5,8 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { contentItems, users, workspaceMemberships, workspaceSettings } from "@/lib/db/schema";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Clock, ListChecks, Plus } from "lucide-react";
+import { Clock, ListChecks, Plus } from "lucide-react";
+import { DirAwareChevronLeft, DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlanCoverageCard } from "@/components/workspace/plan-coverage-card";
@@ -317,7 +318,7 @@ export default async function WorkspaceOverviewPage({
               aria-label={`Previous month, ${previousMonthLabel}`}
               className="border-border bg-surface focus-visible:ring-focus-ring hover:bg-surface-subtle inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2"
             >
-              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              <DirAwareChevronLeft className="h-4 w-4" aria-hidden="true" />
             </Link>
             <span
               aria-label="Selected month"
@@ -330,7 +331,7 @@ export default async function WorkspaceOverviewPage({
               aria-label={`Next month, ${nextMonthLabel}`}
               className="border-border bg-surface focus-visible:ring-focus-ring hover:bg-surface-subtle inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2"
             >
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              <DirAwareChevronRight className="h-4 w-4" aria-hidden="true" />
             </Link>
             {!isCurrentMonth ? (
               <Link

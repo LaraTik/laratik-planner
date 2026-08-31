@@ -91,7 +91,7 @@ export function CopyBuildInfoSheetAction({ buildInfo }: { buildInfo: BuildInfo }
       role="menuitem"
       onClick={() => void copy()}
       data-testid="copy-build-info-sheet-action"
-      className="hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2"
+      className="hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-start transition-colors focus:outline-none focus-visible:ring-2"
     >
       <GitCommitHorizontal className="text-fg-secondary h-4 w-4 shrink-0" aria-hidden="true" />
       <span className="min-w-0 flex-1">

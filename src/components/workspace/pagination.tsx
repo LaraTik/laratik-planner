@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronFirst, ChevronLast } from "lucide-react";
+import { DirAwareChevronLeft, DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 import { cn } from "@/lib/utils";
 
 /**
@@ -121,7 +122,7 @@ export function Pagination({
             disabled={!hasPrev}
             label="Previous page"
           >
-            <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            <DirAwareChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
             <span className="sr-only sm:hidden">Previous page</span>
             <span className="text-label hidden sm:inline">Previous</span>
           </PageLink>
@@ -152,7 +153,7 @@ export function Pagination({
           >
             <span className="text-label hidden sm:inline">Next</span>
             <span className="sr-only sm:hidden">Next page</span>
-            <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+            <DirAwareChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
           </PageLink>
         </li>
         <li>

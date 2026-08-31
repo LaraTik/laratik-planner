@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Copy, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, Plus, Trash2 } from "lucide-react";
+import { DirAwareChevronLeft, DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 
 import { Button } from "@/components/ui/button";
 import { DirAwareInput } from "@/components/forms/dir-aware-textarea";
@@ -321,7 +322,7 @@ export function NavigableArrayField({
                       }}
                       aria-grabbed={dragIndex === idx || undefined}
                       className={cn(
-                        "border-border bg-surface text-fg-primary text-label flex max-w-[10rem] items-center gap-2 rounded-full border px-3 py-1.5 text-left transition-colors",
+                        "border-border bg-surface text-fg-primary text-label flex max-w-[10rem] items-center gap-2 rounded-full border px-3 py-1.5 text-start transition-colors",
                         "hover:bg-surface-subtle focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none",
                         isActive
                           ? "border-primary bg-primary-subtle text-primary font-semibold"
@@ -392,7 +393,7 @@ export function NavigableArrayField({
               <p className="text-label text-fg-secondary font-semibold">
                 {noun} {activeIndex + 1}
                 <span
-                  className="text-fg-muted ml-1 font-normal"
+                  className="text-fg-muted ms-1 font-normal"
                   data-testid={`${fieldKey}-active-counter`}
                 >
                   of {rows.length}
@@ -407,7 +408,7 @@ export function NavigableArrayField({
                   disabled={activeIndex === 0}
                   aria-label="Previous"
                 >
-                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                  <DirAwareChevronLeft className="h-4 w-4" aria-hidden="true" />
                 </Button>
                 <Button
                   type="button"
@@ -417,7 +418,7 @@ export function NavigableArrayField({
                   disabled={activeIndex >= rows.length - 1}
                   aria-label="Next"
                 >
-                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                  <DirAwareChevronRight className="h-4 w-4" aria-hidden="true" />
                 </Button>
                 {editable ? (
                   <>

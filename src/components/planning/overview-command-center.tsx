@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CheckCircle2, Circle, Info, Pencil } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Circle, Info, Pencil } from "lucide-react";
+import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { humanFormat, humanStatus } from "@/lib/content/status";
 import { explainStatus } from "@/lib/content/workflow-explanations";
@@ -366,12 +367,12 @@ function ReadinessRow({
         <li data-testid={`overview-readiness-row-${line.id}`} data-status={line.status}>
           <button
             type="button"
-            className={className + " w-full text-left"}
+            className={className + " w-full text-start"}
             data-testid={`overview-readiness-link-${line.id}`}
             onClick={() => onNavigate(line.href!)}
           >
             {content}
-            <ArrowRight className="text-fg-muted h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <DirAwareArrowRight className="text-fg-muted h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           </button>
         </li>
       );
@@ -384,7 +385,7 @@ function ReadinessRow({
           data-testid={`overview-readiness-link-${line.id}`}
         >
           {content}
-          <ArrowRight className="text-fg-muted h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <DirAwareArrowRight className="text-fg-muted h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         </Link>
       </li>
     );
@@ -583,7 +584,7 @@ function RecentActivity({
             data-content-item-id={contentItemId}
           >
             View all
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         ) : null}
       </header>

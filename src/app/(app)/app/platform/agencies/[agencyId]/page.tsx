@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { count, desc, eq, sql } from "drizzle-orm";
-import { ArrowLeft, Building2, Sparkles, Users2, Workflow } from "lucide-react";
+import { Building2, Sparkles, Users2, Workflow } from "lucide-react";
+import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 import { db } from "@/lib/db";
 import { agencyMemberships, agencies, aiUsageEvents, workspaces } from "@/lib/db/schema";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -136,7 +137,7 @@ export default async function PlatformAgencyDetailPage({
         className="text-primary focus-visible:ring-focus-ring text-body inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
         data-testid="platform-agency-back"
       >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        <DirAwareArrowLeft className="h-4 w-4" aria-hidden="true" />
         Back to agencies
       </Link>
 
@@ -318,7 +319,7 @@ function workspaceColumns(): DataTableColumnDef<{
     {
       key: "hint",
       header: "",
-      cellClassName: "text-right",
+      cellClassName: "text-end",
       cell: () => (
         <span
           className="bg-surface-subtle text-fg-muted text-label rounded-[var(--radius-control)] px-2 py-0.5"

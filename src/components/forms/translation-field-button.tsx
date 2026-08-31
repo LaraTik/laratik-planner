@@ -138,7 +138,7 @@ export function TranslationFieldButton({
           <Languages className="h-3.5 w-3.5" aria-hidden="true" />
           Translations
           {count > 0 ? (
-            <Badge variant="info" className="ml-1">
+            <Badge variant="info" className="ms-1">
               {count}
             </Badge>
           ) : null}
@@ -231,7 +231,7 @@ function PopoverAddLocale({
                   onAdd(l.code);
                   setOpen(false);
                 }}
-                className="text-body text-fg-primary hover:bg-surface-subtle flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-left"
+                className="text-body text-fg-primary hover:bg-surface-subtle flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-start"
               >
                 <span>{l.label}</span>
                 <span className="text-label text-fg-muted" dir={l.dir}>

@@ -99,13 +99,13 @@ export function AppShell({
   // workspace id). We forward the entire map; the Sidebar picks
   // the entry that matches the URL slug.
   const sidebarWidth = sidebarCollapsed ? "w-[64px]" : "xl:w-[248px] w-[72px]";
-  const mainOffset = sidebarCollapsed ? "md:ml-[64px] xl:ml-[64px]" : "md:ml-[72px] xl:ml-[248px]";
+  const mainOffset = sidebarCollapsed ? "md:ms-[64px] xl:ms-[64px]" : "md:ms-[72px] xl:ms-[248px]";
   return (
     <div className="bg-canvas flex min-h-screen flex-col">
       <RouteScrollReset />
       <a
         href="#main-content"
-        className="bg-primary text-label focus-visible:ring-focus-ring pointer-events-none absolute top-2 left-2 z-50 inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3 py-1.5 font-semibold text-white opacity-0 focus:pointer-events-auto focus:opacity-100 focus:outline-none focus-visible:ring-2"
+        className="bg-primary text-label focus-visible:ring-focus-ring pointer-events-none absolute start-2 top-2 z-50 inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3 py-1.5 font-semibold text-white opacity-0 focus:pointer-events-auto focus:opacity-100 focus:outline-none focus-visible:ring-2"
       >
         Skip to main content
       </a>
@@ -113,7 +113,7 @@ export function AppShell({
       {/* Tablet icon rail / desktop full sidebar */}
       <aside
         className={cn(
-          "group/sidebar bg-surface border-border fixed inset-y-0 left-0 z-30 hidden border-r md:flex md:flex-col",
+          "group/sidebar bg-surface border-border fixed inset-y-0 start-0 z-30 hidden border-e md:flex md:flex-col",
           sidebarWidth,
         )}
         data-testid="app-sidebar"
@@ -137,7 +137,7 @@ export function AppShell({
       {/* Topbar (desktop + tablet) — search + notifications + user menu */}
       <header
         className={cn(
-          "bg-surface border-border sticky top-0 z-20 ml-0 hidden h-14 border-b md:block",
+          "bg-surface border-border sticky top-0 z-20 ms-0 hidden h-14 border-b md:block",
           mainOffset,
         )}
       >
@@ -171,12 +171,20 @@ export function AppShell({
         </div>
       </header>
 
-      {/* Main content area */}
+      {/* Main content area
+       *
+       * Bottom padding on mobile is sized to clear the bottom nav
+       * (h-16 = 64px) plus a comfortable buffer (3rem = 48px) so an
+       * EmptyState's primary action button is never hidden behind the
+       * nav. Total = 112px. Desktop collapses the padding to 0 because
+       * there is no bottom nav. The `env(safe-area-inset-bottom)`
+       * term keeps the buffer honest on iOS devices with a home
+       * indicator. */}
       <main
         id="main-content"
         tabIndex={-1}
         className={cn(
-          "min-w-0 overflow-x-clip pb-[calc(5.25rem+env(safe-area-inset-bottom))] focus:outline-none md:pb-0",
+          "min-w-0 overflow-x-clip pb-[calc(7rem+env(safe-area-inset-bottom))] focus:outline-none md:pb-0",
           mainOffset,
         )}
       >
