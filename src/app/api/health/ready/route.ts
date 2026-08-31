@@ -182,10 +182,63 @@ async function checkSchema(): Promise<"ready" | "missing" | "disabled"> {
     // which still rejects a missing migration even if it can't tell
     // the difference between "missing" and "extra orphans".
     const allExpectedApplied = expectedSuffix.every((timestamp) => applied.includes(timestamp));
+
+    // 2026-08-31: log the exact mismatch so the deploy log shows
+    // which timestamps are expected vs applied. The health check
+    // returned `schema: "missing"` on the social-cron-admin deploys
+    // and we have no way to tell from the body alone WHICH migration
+    // is missing. Structured stdout so the GHA SSH step captures it.
+    const missing = expectedSuffix.filter((t) => !applied.includes(t));
+    const extras = applied.filter((t) => !expectedSuffix.includes(t));
+    console.log(
+      JSON.stringify({
+        level: "warn",
+        event: "health.schema.mismatch",
+        appliedCount: applied.length,
+        expectedCount: expectedSuffix.length,
+        missing,
+        extras,
+        suffixComplete,
+        reorderedComplete,
+        allExpectedApplied,
+        appVersion: buildInfoShortSha(),
+      }),
+    );
     if (allExpectedApplied) return "ready";
     return "missing";
-  } catch {
+  } catch (err) {
+    // 2026-08-31: also log the catch-path so a transient SQL error
+    // surfaces in the deploy log instead of being swallowed as a
+    // generic "missing".
+    console.log(
+      JSON.stringify({
+        level: "error",
+        event: "health.schema.error",
+        err: err instanceof Error ? err.message : String(err),
+      }),
+    );
     return "missing";
+  }
+}
+
+/**
+ * Read the bundled short SHA at module-eval time. Used for the
+ * schema-mismatch log line so the deploy log can correlate the
+ * failure with the running build. Falls back to "unknown" if the
+ * build-info module isn't initialized yet (shouldn't happen, but
+ * defensive).
+ */
+
+function buildInfoShortSha(): string {
+  try {
+    return (
+      createBuildInfo({
+        version: serverEnv.APP_VERSION,
+        environment: serverEnv.NODE_ENV,
+      }).shortSha ?? "unknown"
+    );
+  } catch {
+    return "unknown";
   }
 }
 
