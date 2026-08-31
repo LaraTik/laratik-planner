@@ -610,7 +610,7 @@ function ExpandableNavGroup({
         ) : null}
       </div>
       {!collapsed && open ? (
-        <ul className="ml-4 hidden space-y-0.5 border-l border-[var(--color-border)] pl-3 xl:block">
+        <ul className="ms-4 hidden space-y-0.5 border-s border-[var(--color-border)] ps-3 xl:block">
           {spec.children.map((child) => (
             <li key={child.key}>{renderItem(child, pathname, planningActive, collapsed)}</li>
           ))}
@@ -657,7 +657,7 @@ function NestedNavGroup({
         </button>
       ) : null}
       {!collapsed && open ? (
-        <ul className="mt-0.5 ml-3 space-y-0.5 border-l border-[var(--color-border)] pl-3">
+        <ul className="ms-3 mt-0.5 space-y-0.5 border-s border-[var(--color-border)] ps-3">
           {spec.items.map((it) => (
             <SidebarLinkRow key={it.key} spec={it} active={isActivePath(it.href, pathname)} />
           ))}

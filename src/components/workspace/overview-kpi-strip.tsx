@@ -39,11 +39,11 @@ export interface OverviewKpiStripProps {
 }
 
 const TONE_BORDER: Record<OverviewKpiStripTile["tone"], string> = {
-  default: "border-l-primary",
-  warning: "border-l-warning",
-  info: "border-l-info",
-  success: "border-l-success",
-  muted: "border-l-fg-muted",
+  default: "border-s-primary",
+  warning: "border-s-warning",
+  info: "border-s-info",
+  success: "border-s-success",
+  muted: "border-s-fg-muted",
 };
 
 const TONE_ICON: Record<OverviewKpiStripTile["tone"], string> = {
@@ -69,7 +69,7 @@ export function OverviewKpiStrip({ tiles, className }: OverviewKpiStripProps) {
             href={t.href}
             data-testid={t.testId ?? `overview-kpi-${t.label.toLowerCase().replace(/\s+/g, "-")}`}
             className={cn(
-              "border-border bg-surface hover:border-primary focus-visible:ring-focus-ring flex flex-col gap-1.5 rounded-[var(--radius-card)] border border-l-4 p-3.5 transition-colors focus:outline-none focus-visible:ring-2",
+              "border-border bg-surface hover:border-primary focus-visible:ring-focus-ring flex flex-col gap-1.5 rounded-[var(--radius-card)] border border-s-4 p-3.5 transition-colors focus:outline-none focus-visible:ring-2",
               TONE_BORDER[t.tone],
             )}
             aria-label={`${t.label}: ${t.value}. ${t.description ?? ""}`.trim()}

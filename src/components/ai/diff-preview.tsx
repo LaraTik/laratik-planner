@@ -21,7 +21,8 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, FileText, Sparkles } from "lucide-react";
+import { FileText, Sparkles } from "lucide-react";
+import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 
 export function DiffPreview({
   before,
@@ -80,7 +81,7 @@ export function DiffPreview({
         className="text-label text-fg-muted flex flex-wrap items-center gap-2"
         data-testid={`${testIdPrefix}-summary`}
       >
-        <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         {lineDelta === 0 && charDelta === 0
           ? "No size change."
           : `${lineDelta > 0 ? "+" : ""}${lineDelta} line${Math.abs(lineDelta) === 1 ? "" : "s"}, ${charDelta > 0 ? "+" : ""}${charDelta} character${Math.abs(charDelta) === 1 ? "" : "s"}.`}

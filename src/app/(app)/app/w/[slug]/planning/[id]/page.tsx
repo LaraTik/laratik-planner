@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Clock, Eye, Sparkles } from "lucide-react";
+import { Clock, Eye, Sparkles } from "lucide-react";
+import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 
 /**
  * Localised platform name. We render the raw platform key in
@@ -477,7 +478,7 @@ export default async function ContentDetailPage({
   ) : (
     <Button variant="ghost" asChild>
       <Link href={`/app/w/${slug}/planning`} data-testid="planning-back-link">
-        <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+        <DirAwareArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
         Back to planning
       </Link>
     </Button>

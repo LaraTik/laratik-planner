@@ -89,7 +89,7 @@ export function SidebarGroup({
         // preserved for the nested `<li>` children. Previously this
         // element had `role="group"`, which axe's `listitem` rule
         // rejected because list-items require a list-role parent.
-        <ul className="ml-4 hidden space-y-0.5 border-l border-[var(--color-border)] pl-3 xl:block">
+        <ul className="ms-4 hidden space-y-0.5 border-s border-[var(--color-border)] ps-3 xl:block">
           {React.Children.toArray(children).filter(Boolean)}
         </ul>
       ) : null}
@@ -149,7 +149,7 @@ export function NestedSidebarGroup({
         />
       </button>
       {open ? (
-        <ul className="mt-0.5 ml-3 space-y-0.5 border-l border-[var(--color-border)] pl-3">
+        <ul className="ms-3 mt-0.5 space-y-0.5 border-s border-[var(--color-border)] ps-3">
           {/* Each child is a SidebarSubLink (<li>) or a NestedSidebarGroup
               (<li>). Both already render their own <li>, so the children
               pass through as siblings — but only because they all wrap

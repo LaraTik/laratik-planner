@@ -87,7 +87,7 @@ export function ApprovalTimeline({
               {new Date(a.requestedAt).toLocaleString()}
             </span>
             {canAct ? (
-              <div className="ml-auto flex gap-2">
+              <div className="ms-auto flex gap-2">
                 <Button
                   size="sm"
                   disabled={disabled}

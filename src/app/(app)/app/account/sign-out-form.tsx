@@ -28,7 +28,7 @@ export function SignOutForm({ variant = "button" }: { variant?: "button" | "menu
           type="submit"
           role="menuitem"
           data-testid="sign-out-menuitem"
-          className="text-body text-fg-primary hover:bg-surface-subtle flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 text-left font-semibold"
+          className="text-body text-fg-primary hover:bg-surface-subtle flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 text-start font-semibold"
         >
           <LogOut className="text-fg-secondary h-4 w-4" aria-hidden="true" />
           Sign out

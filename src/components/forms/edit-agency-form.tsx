@@ -116,7 +116,7 @@ export function EditAgencyForm({
           <div className="space-y-1.5">
             <Label htmlFor="agency-edit-name">
               Name
-              <span aria-hidden="true" className="text-danger ml-0.5">
+              <span aria-hidden="true" className="text-danger ms-0.5">
                 *
               </span>
             </Label>
@@ -135,7 +135,7 @@ export function EditAgencyForm({
           <div className="space-y-1.5">
             <Label htmlFor="agency-edit-slug">
               Slug
-              <span aria-hidden="true" className="text-danger ml-0.5">
+              <span aria-hidden="true" className="text-danger ms-0.5">
                 *
               </span>
             </Label>

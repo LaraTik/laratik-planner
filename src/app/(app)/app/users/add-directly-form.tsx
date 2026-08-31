@@ -175,7 +175,7 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
                 data-testid="add-directly-generate"
               >
                 <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                <span className="ml-1">Generate</span>
+                <span className="ms-1">Generate</span>
               </Button>
             </div>
             <PasswordStrengthMeter
@@ -201,7 +201,7 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
             />
             Force password change on first login
           </label>
-          <p id="add-must-change-help" className="text-fg-muted text-label pl-6">
+          <p id="add-must-change-help" className="text-fg-muted text-label ps-6">
             The user will be sent to a set-password screen the first time they sign in. Recommended
             — keeps admin-supplied passwords from being a permanent backdoor.
           </p>
@@ -219,7 +219,7 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
             />
             Grant agency admin
           </label>
-          <p id="add-grants-admin-help" className="text-fg-muted text-label pl-6">
+          <p id="add-grants-admin-help" className="text-fg-muted text-label ps-6">
             Agency admins can manage members, workspaces, and all agency settings. Only grant to
             people you trust with full access.
           </p>
@@ -285,7 +285,7 @@ function RevealPassword({ password }: { password: string }) {
         data-testid="add-directly-copy"
       >
         <Copy className="h-4 w-4" aria-hidden="true" />
-        <span className="ml-1">{copied ? "Copied" : "Copy"}</span>
+        <span className="ms-1">{copied ? "Copied" : "Copy"}</span>
       </Button>
     </div>
   );

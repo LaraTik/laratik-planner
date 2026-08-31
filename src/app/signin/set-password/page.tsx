@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
@@ -165,7 +166,7 @@ export default async function SetPasswordPage({
 
       <Button asChild variant="ghost" size="sm">
         <Link href="/signin">
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Back to sign in
+          <DirAwareArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Back to sign in
         </Link>
       </Button>
     </main>

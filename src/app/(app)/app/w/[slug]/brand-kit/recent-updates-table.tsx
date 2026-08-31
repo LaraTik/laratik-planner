@@ -58,13 +58,13 @@ export function RecentUpdatesTable({ rows }: RecentUpdatesTableProps) {
   }
   return (
     <div className="overflow-x-auto">
-      <table className="text-body w-full text-left">
+      <table className="text-body w-full text-start">
         <thead>
           <tr className="text-label text-fg-muted">
-            <th className="pr-3 pb-2 font-semibold" scope="col">
+            <th className="pe-3 pb-2 font-semibold" scope="col">
               When
             </th>
-            <th className="pr-3 pb-2 font-semibold" scope="col">
+            <th className="pe-3 pb-2 font-semibold" scope="col">
               What
             </th>
             <th className="pb-2 font-semibold" scope="col">
@@ -77,7 +77,7 @@ export function RecentUpdatesTable({ rows }: RecentUpdatesTableProps) {
             const key = `${row.kind}-${row.updatedAt.toString()}-${index}`;
             return (
               <tr key={key} data-testid="brand-recent-row">
-                <td className="text-fg-secondary py-2 pr-3">
+                <td className="text-fg-secondary py-2 pe-3">
                   <time
                     dateTime={row.updatedAt.toISOString()}
                     title={absoluteDateLabel(row.updatedAt)}
@@ -85,7 +85,7 @@ export function RecentUpdatesTable({ rows }: RecentUpdatesTableProps) {
                     {formatRelativeDate(row.updatedAt)}
                   </time>
                 </td>
-                <td className="text-fg-primary py-2 pr-3">{row.description}</td>
+                <td className="text-fg-primary py-2 pe-3">{row.description}</td>
                 <td className="py-2">
                   {row.actor ? (
                     <span className="inline-flex items-center gap-2">

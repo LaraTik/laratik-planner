@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, AlertCircle, Info, Sparkles, ArrowRight } from "lucide-react";
+import { CheckCircle2, AlertCircle, Info, Sparkles } from "lucide-react";
+import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { Card, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -225,10 +226,10 @@ export function SettingsHealth({ section, slug, metrics }: SettingsHealthProps) 
           </span>
           <Link
             href={`/app/w/${slug}/settings`}
-            className="text-label text-primary ml-auto inline-flex items-center gap-1 font-semibold hover:underline"
+            className="text-label text-primary ms-auto inline-flex items-center gap-1 font-semibold hover:underline"
           >
             Settings overview
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         </div>
         <p className="text-label text-fg-muted">{SECTION_BLURB[section]}</p>

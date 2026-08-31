@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRight, FileEdit, ClipboardCheck, Paintbrush, Send } from "lucide-react";
+import { FileEdit, ClipboardCheck, Paintbrush, Send } from "lucide-react";
+import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { cn } from "@/lib/utils";
 import { DashboardPanel } from "./dashboard-panel";
 import type { WorkflowStage } from "@/lib/dashboard/kpis";
@@ -83,7 +84,7 @@ export function WorkflowPipeline({ stages, buildHref, className }: WorkflowPipel
                       {s.label}
                     </span>
                   </div>
-                  <ArrowRight
+                  <DirAwareArrowRight
                     className="text-fg-muted h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
                     aria-hidden="true"
                   />

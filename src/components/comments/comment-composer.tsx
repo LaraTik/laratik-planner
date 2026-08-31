@@ -501,7 +501,7 @@ export function CommentComposer({
             </option>
           ))}
         </select>
-        <div className="flex items-center gap-2 sm:ml-auto">
+        <div className="flex items-center gap-2 sm:ms-auto">
           {onCancel ? (
             <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={pending}>
               <X className="h-3.5 w-3.5" aria-hidden="true" />

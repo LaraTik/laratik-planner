@@ -71,7 +71,7 @@ export default function DataDeletionPage() {
               <h3 className="text-title-card text-fg-primary mt-5 font-semibold">
                 Option 1 — Self-service in the app
               </h3>
-              <ol className="list-decimal space-y-2 pl-6">
+              <ol className="list-decimal space-y-2 ps-6">
                 <li>
                   Sign in to{" "}
                   <Link
@@ -120,7 +120,7 @@ export default function DataDeletionPage() {
                 What we delete
               </h2>
               <p>On a complete account deletion, we permanently remove:</p>
-              <ul className="list-disc space-y-1 pl-6">
+              <ul className="list-disc space-y-1 ps-6">
                 <li>Your user account, profile, and sign-in credentials.</li>
                 <li>All social connections, encrypted access tokens, and OAuth state rows.</li>
                 <li>
@@ -150,7 +150,7 @@ export default function DataDeletionPage() {
                 Meta may send us a signed deletion request on your behalf via the callback
                 configured in our Meta app. When this happens, we automatically:
               </p>
-              <ol className="list-decimal space-y-2 pl-6">
+              <ol className="list-decimal space-y-2 ps-6">
                 <li>Verify the request signature against Meta&apos;s public key.</li>
                 <li>
                   Look up the user / Page that the signed request refers to and mark it for
@@ -278,12 +278,12 @@ function Toc({ sections }: { sections: readonly (typeof SECTIONS)[number][] }) {
     <nav aria-label="Table of contents" className="hidden lg:block">
       <div className="sticky top-8">
         <p className="text-label text-fg-muted mb-3 tracking-wide uppercase">On this page</p>
-        <ul className="border-border space-y-1 border-l">
+        <ul className="border-border space-y-1 border-s">
           {sections.map((s) => (
             <li key={s.id}>
               <a
                 href={`#${s.id}`}
-                className="text-body text-fg-secondary hover:text-primary hover:border-primary -ml-px block border-l py-1.5 pl-4 transition-colors"
+                className="text-body text-fg-secondary hover:text-primary hover:border-primary -ms-px block border-s py-1.5 ps-4 transition-colors"
               >
                 {s.title}
               </a>
@@ -384,7 +384,7 @@ function Callout({
   }[tone];
   return (
     <div
-      className={`text-body mt-3 rounded-[var(--radius-control)] border-l-4 px-4 py-3 leading-relaxed ${toneClass}`}
+      className={`text-body mt-3 rounded-[var(--radius-control)] border-s-4 px-4 py-3 leading-relaxed ${toneClass}`}
     >
       {children}
     </div>

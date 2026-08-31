@@ -1,6 +1,17 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────────────────
+ * RTL variant — opt-in custom variant for the `rtl:` utility prefix.
+ * Tailwind 4 ships directional utilities (`ps-3`, `ms-1`, `start-2`,
+ * etc.) but the `rtl:` / `ltr:` conditional prefix is not on by
+ * default. This is the one-line registration; everything else is
+ * just a CSS `rotate-180` that mirrors a Lucide icon when the
+ * document is `dir="rtl"`. See `src/components/ui/dir-aware-icon.tsx`.
+ * ──────────────────────────────────────────────────────────────────────── */
+@custom-variant rtl (&:where([dir="rtl"], [dir="rtl"] *));
+@custom-variant ltr (&:where([dir="ltr"], [dir="ltr"] *));
+
+/* ─────────────────────────────────────────────────────────────────────────
  * StudioFlow design tokens — ported from STUDIOFLOW_MASTER_PROMPT.md §3.
  * Bound to Tailwind 4's @theme so they appear as utility classes
  * (bg-canvas, text-fg-primary, border-border, etc.) automatically.

@@ -338,7 +338,7 @@ function Row({
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <dt className="text-body text-fg-secondary">{label}</dt>
-      <dd className={`text-body text-right font-semibold ${valueClass}`}>{value}</dd>
+      <dd className={`text-body text-end font-semibold ${valueClass}`}>{value}</dd>
     </div>
   );
 }

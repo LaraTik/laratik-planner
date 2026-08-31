@@ -134,13 +134,13 @@ export function ChannelEditDrawer({
         // Sheet (drawer) styling: right-anchored, full height, 520px
         // max width. The base DialogContent centers itself; we reset
         // every centering offset here. The built-in X close button
-        // (rendered by DialogContent at `top-4 right-4`) lands in the
+        // (rendered by DialogContent at `top-4 end-4`) lands in the
         // top-right corner, matching the Stitch header.
-        className="bg-surface inset-y-0 top-0 right-0 left-auto m-0 h-screen w-screen max-w-[520px] translate-x-0 translate-y-0 overflow-hidden p-0 sm:rounded-none"
+        className="bg-surface inset-y-0 end-0 top-0 left-auto m-0 h-screen w-screen max-w-[520px] translate-x-0 translate-y-0 overflow-hidden p-0 sm:rounded-none"
         data-testid={`channel-edit-drawer-${channel.id}`}
       >
         <form action={formAction} className="flex h-full flex-col">
-          <DialogHeader className="border-border shrink-0 border-b px-6 py-4 pr-14">
+          <DialogHeader className="border-border shrink-0 border-b px-6 py-4 pe-14">
             <DialogTitle className="text-title-section text-fg-primary font-semibold">
               Edit social channel
             </DialogTitle>
@@ -196,7 +196,7 @@ export function ChannelEditDrawer({
             <div className="space-y-2">
               <Label htmlFor={`edit-accountName-${channel.id}`}>
                 Account name
-                <span aria-hidden="true" className="text-danger ml-0.5">
+                <span aria-hidden="true" className="text-danger ms-0.5">
                   *
                 </span>
               </Label>

@@ -181,9 +181,15 @@ describe("listSwitcherWorkspaces", () => {
         if (seen.has(value as object)) return "[Circular]";
         seen.add(value as object);
         // Drop the Drizzle table reference (the cycle source).
+        // We can't `delete` the key on the input (it's frozen by the
+        // logger's structural-sharing pool), so build a new object
+        // without the `table` key and return that.
         if ((value as { table?: unknown }).table !== undefined) {
-          const { table: _table, ...rest } = value as Record<string, unknown>;
-          return rest;
+          const withoutTable: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+            if (k !== "table") withoutTable[k] = v;
+          }
+          return withoutTable;
         }
       }
       return value;

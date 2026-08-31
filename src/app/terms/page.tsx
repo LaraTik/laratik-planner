@@ -120,7 +120,7 @@ export default function TermsPage() {
                 4. Acceptable use
               </h2>
               <p>You agree not to:</p>
-              <ul className="list-disc space-y-1 pl-6">
+              <ul className="list-disc space-y-1 ps-6">
                 <li>
                   Use the Service to violate any applicable law or the terms of any third-party
                   platform you connect (Meta, TikTok, etc.).
@@ -383,12 +383,12 @@ function Toc({ sections }: { sections: readonly (typeof SECTIONS)[number][] }) {
     <nav aria-label="Table of contents" className="hidden lg:block">
       <div className="sticky top-8">
         <p className="text-label text-fg-muted mb-3 tracking-wide uppercase">On this page</p>
-        <ul className="border-border space-y-1 border-l">
+        <ul className="border-border space-y-1 border-s">
           {sections.map((s) => (
             <li key={s.id}>
               <a
                 href={`#${s.id}`}
-                className="text-body text-fg-secondary hover:text-primary hover:border-primary -ml-px block border-l py-1.5 pl-4 transition-colors"
+                className="text-body text-fg-secondary hover:text-primary hover:border-primary -ms-px block border-s py-1.5 ps-4 transition-colors"
               >
                 {s.title}
               </a>

@@ -155,7 +155,7 @@ function createColumns(relativeNow: Date): DataTableColumnDef<PlatformAgencyRow>
       key: "actions",
       header: "",
       headerClassName: "w-12",
-      cellClassName: "text-right",
+      cellClassName: "text-end",
       cell: (r) => (
         <Link
           href={`/app/platform/agencies/${r.id}#identity`}

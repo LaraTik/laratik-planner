@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
-import { AlertOctagon, AlertTriangle, Info, ArrowRight, ShieldAlert } from "lucide-react";
+import { AlertOctagon, AlertTriangle, Info, ShieldAlert } from "lucide-react";
+import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { cn } from "@/lib/utils";
 
 /**
@@ -131,7 +132,7 @@ export function AttentionBanner({
         >
           <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
           Review attention items
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
         {approvalsCount > 0 && approvalsHref ? (
           <Link
@@ -146,7 +147,7 @@ export function AttentionBanner({
             )}
           >
             Approvals
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         ) : null}
       </div>

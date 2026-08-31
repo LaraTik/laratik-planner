@@ -1,5 +1,6 @@
 import * as React from "react";
-import { ArrowRight } from "lucide-react";
+
+import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { cn } from "@/lib/utils";
 import type { NextAction } from "@/lib/content/next-action";
 
@@ -45,7 +46,7 @@ export function NextActionChip({ action, detailHref, className }: NextActionChip
       )}
     >
       <span className="truncate">{action.label}</span>
-      {isActionable ? <ArrowRight className="h-3 w-3 shrink-0" aria-hidden="true" /> : null}
+      {isActionable ? <DirAwareArrowRight className="h-3 w-3 shrink-0" aria-hidden="true" /> : null}
     </a>
   );
 }

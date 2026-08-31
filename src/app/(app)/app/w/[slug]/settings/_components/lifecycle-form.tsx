@@ -141,7 +141,7 @@ export function LifecycleForm({
                     {targetPreview} / month
                   </span>
                   {targetOriginal !== "" ? (
-                    <span className="text-fg-muted ml-2 font-normal">(was {targetOriginal})</span>
+                    <span className="text-fg-muted ms-2 font-normal">(was {targetOriginal})</span>
                   ) : null}
                 </p>
                 <p className="text-label text-fg-secondary">

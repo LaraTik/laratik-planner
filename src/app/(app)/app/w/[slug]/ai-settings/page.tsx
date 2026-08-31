@@ -76,7 +76,7 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
         description={
           <>
             Environment-managed assistance with human-controlled insert and replace.
-            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
             </span>
@@ -186,7 +186,7 @@ function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <dt className="text-body text-fg-secondary">{label}</dt>
-      <dd className="text-body text-right font-semibold">{value}</dd>
+      <dd className="text-body text-end font-semibold">{value}</dd>
     </div>
   );
 }

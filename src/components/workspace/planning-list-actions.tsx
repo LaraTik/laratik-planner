@@ -94,12 +94,12 @@ export function PlanningListActions({
         <DropdownMenuItem disabled data-testid="row-action-duplicate">
           <Copy className="h-3.5 w-3.5" aria-hidden="true" />
           Duplicate
-          <span className="text-label text-fg-muted ml-auto text-[10px]">soon</span>
+          <span className="text-label text-fg-muted ms-auto text-[10px]">soon</span>
         </DropdownMenuItem>
         <DropdownMenuItem disabled data-testid="row-action-change-owner">
           <UserCog className="h-3.5 w-3.5" aria-hidden="true" />
           Change owner
-          <span className="text-label text-fg-muted ml-auto text-[10px]">soon</span>
+          <span className="text-label text-fg-muted ms-auto text-[10px]">soon</span>
         </DropdownMenuItem>
         {canSubmit && isSubmittable ? (
           <DropdownMenuItem asChild>
@@ -119,7 +119,7 @@ export function PlanningListActions({
             <DropdownMenuItem disabled data-testid="row-action-archive">
               <Archive className="h-3.5 w-3.5" aria-hidden="true" />
               Archive
-              <span className="text-label text-fg-muted ml-auto text-[10px]">soon</span>
+              <span className="text-label text-fg-muted ms-auto text-[10px]">soon</span>
             </DropdownMenuItem>
           </>
         ) : null}

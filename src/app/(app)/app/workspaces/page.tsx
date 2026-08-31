@@ -324,7 +324,7 @@ function workspacesColumns(props: {
       key: "actions",
       header: "",
       headerClassName: "w-12",
-      cellClassName: "text-right",
+      cellClassName: "text-end",
       cell: (ws) => (
         <WorkspaceRowActions
           slug={ws.slug}

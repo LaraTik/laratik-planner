@@ -39,7 +39,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed top-1/2 left-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4",
+        "fixed start-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4",
         "border-border bg-surface rounded-[var(--radius-card)] border p-6 shadow-lg",
         "focus:outline-none",
         className,
@@ -48,7 +48,7 @@ const DialogContent = React.forwardRef<
     >
       {children}
       <DialogPrimitive.Close
-        className="focus-visible:ring-focus-ring absolute top-2 right-2 flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[var(--radius-control)] opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2"
+        className="focus-visible:ring-focus-ring absolute end-2 top-2 flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[var(--radius-control)] opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2"
         aria-label="Close"
       >
         <X className="h-4 w-4" />
@@ -59,7 +59,7 @@ const DialogContent = React.forwardRef<
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col gap-1.5 text-left", className)} {...props} />
+  <div className={cn("flex flex-col gap-1.5 text-start", className)} {...props} />
 );
 DialogHeader.displayName = "DialogHeader";
 

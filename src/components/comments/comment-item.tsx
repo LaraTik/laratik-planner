@@ -71,7 +71,7 @@ export function CommentItem({
     <div
       className={[
         "border-border bg-surface rounded-[var(--radius-card)] border p-3",
-        isReply ? "mt-2 sm:ml-6" : "",
+        isReply ? "mt-2 sm:ms-6" : "",
         c.resolvedAt ? "opacity-60" : "",
         c.currentUserMentioned ? "border-primary/40 bg-primary-subtle/30" : "",
       ].join(" ")}
@@ -114,7 +114,7 @@ export function CommentItem({
               onClick={onReply}
               className="text-label text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-1.5 py-0.5 hover:underline focus:outline-none focus-visible:ring-2"
             >
-              <Reply className="mr-1 inline h-3 w-3" aria-hidden="true" /> Reply
+              <Reply className="me-1 inline h-3 w-3" aria-hidden="true" /> Reply
             </button>
             {canResolve ? (
               <form

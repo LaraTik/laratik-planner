@@ -213,7 +213,7 @@ export function ProviderConfigCard({
               aria-label="Copy callback URL"
               data-testid={`provider-config-callback-copy-${provider}`}
             >
-              <Copy className="mr-1.5 h-3.5 w-3.5" aria-hidden={true} />
+              <Copy className="me-1.5 h-3.5 w-3.5" aria-hidden={true} />
               {copied ? "Copied" : "Copy"}
             </Button>
           </div>
@@ -237,7 +237,7 @@ export function ProviderConfigCard({
             </summary>
             <div className="border-border mt-2 space-y-3 border-t pt-3">
               {provider === "meta" ? (
-                <ol className="list-decimal space-y-1.5 pl-5">
+                <ol className="list-decimal space-y-1.5 ps-5">
                   <li>
                     Sign in to <span className="font-mono">developers.facebook.com</span> with this
                     agency&apos;s developer account.
@@ -267,7 +267,7 @@ export function ProviderConfigCard({
                   </li>
                 </ol>
               ) : (
-                <ol className="list-decimal space-y-1.5 pl-5">
+                <ol className="list-decimal space-y-1.5 ps-5">
                   <li>
                     Sign in to <span className="font-mono">developers.tiktok.com</span> with this
                     agency&apos;s developer account.
@@ -334,12 +334,12 @@ export function ProviderConfigCard({
               placeholder="••••••••"
               autoComplete="off"
               required={!existing}
-              className="pr-10"
+              className="pe-10"
             />
             <button
               type="button"
               onClick={() => setShowSecret((s) => !s)}
-              className="text-fg-muted hover:text-fg-primary absolute inset-y-0 right-0 flex items-center px-3"
+              className="text-fg-muted hover:text-fg-primary absolute inset-y-0 end-0 flex items-center px-3"
               aria-label={showSecret ? "Hide app secret" : "Show app secret"}
             >
               {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

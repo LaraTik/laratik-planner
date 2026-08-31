@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+
+import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 
 /**
  * SettingsBackLink — small "← Back to Settings" link for the
@@ -14,7 +15,7 @@ export function SettingsBackLink({ slug }: { slug: string }) {
       className="text-label text-fg-secondary hover:text-fg-primary inline-flex items-center gap-1 font-semibold transition-colors"
       data-testid="settings-back-link"
     >
-      <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+      <DirAwareArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
       Back to Settings
     </Link>
   );

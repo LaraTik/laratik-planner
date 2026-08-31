@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, ChevronRight, ListChecks, X } from "lucide-react";
+import { Check, ListChecks, X } from "lucide-react";
+import { DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
@@ -191,8 +192,8 @@ export function MetaAccountPicker({
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1">
-                            <ChevronRight className="h-3 w-3" aria-hidden={true} /> Will link to{" "}
-                            {candidate.accountName}
+                            <DirAwareChevronRight className="h-3 w-3" aria-hidden={true} /> Will
+                            link to {candidate.accountName}
                           </span>
                         )
                       ) : (
@@ -210,7 +211,7 @@ export function MetaAccountPicker({
 
         {error ? (
           <div role="alert" className="text-body text-danger" data-testid="picker-error">
-            <X className="mr-1 inline h-4 w-4" aria-hidden={true} /> {error}
+            <X className="me-1 inline h-4 w-4" aria-hidden={true} /> {error}
           </div>
         ) : null}
 

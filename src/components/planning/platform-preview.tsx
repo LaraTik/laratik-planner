@@ -159,7 +159,7 @@ export function PlatformPreview({
       )}
       {format === "reel" ? (
         <span
-          className="absolute right-2 bottom-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white"
+          className="absolute end-2 bottom-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white"
           aria-hidden="true"
         >
           <Play className="h-3 w-3" />
@@ -205,7 +205,7 @@ export function PlatformPreview({
           ))}
           {contentFormat === "carousel" ? (
             <span
-              className="text-label text-fg-muted ml-auto inline-flex items-center gap-1 px-2 font-semibold tracking-wide uppercase"
+              className="text-label text-fg-muted ms-auto inline-flex items-center gap-1 px-2 font-semibold tracking-wide uppercase"
               data-testid="platform-preview-carousel-label"
             >
               Carousel preview

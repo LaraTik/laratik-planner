@@ -138,7 +138,7 @@ export default async function SocialAnalyticsPage({
           <>
             Daily follower totals, growth windows, and connection health for the channels in this
             workspace.
-            <span className="text-label text-fg-muted border-border bg-surface-subtle ml-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               {workspace.timezone}
             </span>
           </>

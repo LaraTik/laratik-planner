@@ -124,7 +124,7 @@ export function PlanningFiltersBar({
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
           <Search
-            className="text-fg-muted pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2"
+            className="text-fg-muted pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
             aria-hidden="true"
           />
           <input
@@ -141,7 +141,7 @@ export function PlanningFiltersBar({
             }}
             placeholder="Search title or brief"
             maxLength={80}
-            className={cn(selectClass, "w-48 pl-7")}
+            className={cn(selectClass, "w-48 ps-7")}
             data-testid="planning-search-input"
           />
         </div>

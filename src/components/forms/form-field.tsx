@@ -48,7 +48,7 @@ export function FormField({
       <Label htmlFor={id}>
         {label}
         {required ? (
-          <span aria-hidden="true" className="text-danger ml-0.5">
+          <span aria-hidden="true" className="text-danger ms-0.5">
             *
           </span>
         ) : null}

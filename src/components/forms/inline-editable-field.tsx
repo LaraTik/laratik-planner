@@ -183,7 +183,7 @@ export function InlineEditableField<TValue>({
               Cancel
             </Button>
             {extraActions}
-            <span className="text-label text-fg-muted ml-auto inline-flex items-center gap-1">
+            <span className="text-label text-fg-muted ms-auto inline-flex items-center gap-1">
               <kbd className="border-border bg-canvas rounded border px-1.5 py-0.5 font-mono text-[10px]">
                 ⌘↵
               </kbd>{" "}

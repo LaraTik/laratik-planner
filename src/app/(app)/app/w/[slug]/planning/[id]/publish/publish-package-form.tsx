@@ -380,9 +380,9 @@ export function PublishPackageForm({
               data-testid={`publish-channel-tab-${ch.socialChannelId}`}
             >
               <span>{ch.accountName}</span>
-              <span className="text-label text-fg-muted ml-2 uppercase">{ch.platform}</span>
+              <span className="text-label text-fg-muted ms-2 uppercase">{ch.platform}</span>
               {blockers > 0 ? (
-                <Badge variant="danger" className="ml-2">
+                <Badge variant="danger" className="ms-2">
                   {blockers}
                 </Badge>
               ) : null}
@@ -683,7 +683,7 @@ export function PublishPackageForm({
             className="min-h-11"
             data-testid="publish-save-draft"
           >
-            <Save className="mr-1 h-4 w-4" aria-hidden="true" />
+            <Save className="me-1 h-4 w-4" aria-hidden="true" />
             Save draft
           </Button>
           <Button
@@ -693,7 +693,7 @@ export function PublishPackageForm({
             className="min-h-11"
             data-testid="publish-ready"
           >
-            <Send className="mr-1 h-4 w-4" aria-hidden="true" />
+            <Send className="me-1 h-4 w-4" aria-hidden="true" />
             Ready for publishing
           </Button>
         </div>

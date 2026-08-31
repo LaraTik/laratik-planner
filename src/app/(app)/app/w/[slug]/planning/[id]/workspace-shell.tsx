@@ -134,7 +134,7 @@ export function WorkspaceShell({
           onValueChange={setActiveId}
           className="static border-b-0"
         />
-        <div className="flex items-center gap-1.5 pr-1">
+        <div className="flex items-center gap-1.5 pe-1">
           <DiscussionTrigger
             count={openCommentCount}
             mentionCount={mentionCount}
@@ -189,14 +189,14 @@ function OverflowMenu({ onReset }: { onReset: () => void; contentItemId: string 
         <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
       </summary>
       <div
-        className="border-border bg-surface absolute right-0 z-30 mt-1 w-56 rounded-[var(--radius-control)] border p-1 shadow-lg"
+        className="border-border bg-surface absolute end-0 z-30 mt-1 w-56 rounded-[var(--radius-control)] border p-1 shadow-lg"
         role="menu"
         data-testid="workspace-overflow-content"
       >
         <button
           type="button"
           disabled
-          className="text-body text-fg-muted flex w-full cursor-not-allowed items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-left"
+          className="text-body text-fg-muted flex w-full cursor-not-allowed items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-start"
           title="Coming soon"
         >
           <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
@@ -205,7 +205,7 @@ function OverflowMenu({ onReset }: { onReset: () => void; contentItemId: string 
         <button
           type="button"
           disabled
-          className="text-body text-fg-muted flex w-full cursor-not-allowed items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-left"
+          className="text-body text-fg-muted flex w-full cursor-not-allowed items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-start"
           title="Coming soon"
         >
           <Archive className="h-3.5 w-3.5" aria-hidden="true" />
@@ -215,7 +215,7 @@ function OverflowMenu({ onReset }: { onReset: () => void; contentItemId: string 
         <button
           type="button"
           onClick={onReset}
-          className="text-body text-danger hover:bg-danger-subtle focus-visible:ring-focus-ring flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-left focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+          className="text-body text-danger hover:bg-danger-subtle focus-visible:ring-focus-ring flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-start focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
           role="menuitem"
           data-testid="workspace-overflow-reset"
         >

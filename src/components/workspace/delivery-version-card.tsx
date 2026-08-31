@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   ChevronDown,
-  ChevronRight,
   ExternalLink,
   Eye,
   CheckCircle2,
@@ -13,6 +12,7 @@ import {
   Link as LinkIcon,
   PenSquare,
 } from "lucide-react";
+import { DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 import { humanize } from "@/lib/content/status";
 
 /**
@@ -221,7 +221,7 @@ export function DeliveryVersionCard({
 
       {/* Designer note — hidden for client viewers. */}
       {!viewerIsClient && version.designerNote ? (
-        <blockquote className="border-border bg-surface-subtle mt-3 rounded-[var(--radius-control)] border-l-2 px-3 py-2">
+        <blockquote className="border-border bg-surface-subtle mt-3 rounded-[var(--radius-control)] border-s-2 px-3 py-2">
           <p className="text-label text-fg-muted mb-1 flex items-center gap-1 font-semibold">
             <PenSquare className="h-3 w-3" aria-hidden="true" />
             Designer note
@@ -275,13 +275,13 @@ export function DeliveryVersionCard({
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
           aria-controls={`delivery-version-details-${version.versionNumber}`}
-          className="text-label text-fg-muted hover:text-fg-primary focus-visible:ring-focus-ring ml-auto inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 focus-visible:ring-2 focus-visible:outline-none"
+          className="text-label text-fg-muted hover:text-fg-primary focus-visible:ring-focus-ring ms-auto inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 focus-visible:ring-2 focus-visible:outline-none"
           data-testid={`delivery-version-toggle-${version.versionNumber}`}
         >
           {expanded ? (
             <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
           ) : (
-            <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+            <DirAwareChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
           )}
           {expanded ? "Hide details" : "View all links"}
         </button>

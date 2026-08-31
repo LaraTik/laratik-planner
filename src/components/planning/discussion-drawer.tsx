@@ -102,7 +102,7 @@ export function DiscussionDrawer({
       />
       <aside
         className={cn(
-          "bg-surface absolute top-0 right-0 flex h-full w-full max-w-md flex-col border-l shadow-xl",
+          "bg-surface absolute end-0 top-0 flex h-full w-full max-w-md flex-col border-s shadow-xl",
           "sm:max-w-md md:max-w-lg",
         )}
         data-testid="discussion-drawer"
@@ -160,7 +160,7 @@ export function DiscussionDrawer({
                     />
                   ))}
                   {replyingTo === c.id ? (
-                    <div className="mt-2 sm:ml-6">
+                    <div className="mt-2 sm:ms-6">
                       <CommentForm
                         workspaceSlug={workspaceSlug}
                         contentItemId={contentItemId}

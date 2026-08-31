@@ -92,7 +92,7 @@ export function VoiceRuleSuggestions({ slug, ruleType, onPick }: VoiceRuleSugges
                 type="button"
                 onClick={() => onPick(s)}
                 data-testid={`voice-suggest-${ruleType}-option-${i}`}
-                className="border-border bg-surface hover:border-primary hover:bg-primary-subtle focus-visible:ring-focus-ring text-body text-fg-primary block w-full rounded-[var(--radius-control)] border px-3 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                className="border-border bg-surface hover:border-primary hover:bg-primary-subtle focus-visible:ring-focus-ring text-body text-fg-primary block w-full rounded-[var(--radius-control)] border px-3 py-2 text-start transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 {s}
               </button>

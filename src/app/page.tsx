@@ -1,13 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  ArrowRight,
-  CalendarDays,
-  CheckCircle2,
-  KeyRound,
-  MessagesSquare,
-  Workflow,
-} from "lucide-react";
+import { CalendarDays, CheckCircle2, KeyRound, MessagesSquare, Workflow } from "lucide-react";
+import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth/config";
@@ -41,7 +35,7 @@ export default async function HomePage() {
     >
       <div
         aria-hidden="true"
-        className="bg-primary-subtle absolute top-[-12rem] left-1/2 -z-10 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full blur-3xl"
+        className="bg-primary-subtle absolute start-1/2 top-[-12rem] -z-10 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full blur-3xl"
       />
       <div className="mx-auto flex w-full max-w-5xl flex-col justify-center gap-10">
         <div className="flex flex-col items-center gap-5 text-center">
@@ -68,7 +62,7 @@ export default async function HomePage() {
             <Button asChild size="lg" className="min-w-52">
               <Link href={entryHref}>
                 {entryLabel}
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                <DirAwareArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </Button>
             <p className="text-label text-fg-muted inline-flex items-center gap-1.5">

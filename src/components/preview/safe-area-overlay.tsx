@@ -59,7 +59,7 @@ export function SafeAreaOverlay({
   const regions = SAFE_AREA_REGIONS[shape];
   return (
     <div className="relative">
-      <div className="absolute top-1 right-1 z-10">
+      <div className="absolute end-1 top-1 z-10">
         <Button
           type="button"
           size="sm"

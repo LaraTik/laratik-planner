@@ -98,7 +98,7 @@ export function ChannelPublishingCard({
         <div className="flex flex-wrap items-center gap-2">
           {!channel.configured ? (
             <Badge variant="warning" data-testid="channel-card-setup">
-              <AlertTriangle className="mr-1 h-3 w-3" aria-hidden="true" />
+              <AlertTriangle className="me-1 h-3 w-3" aria-hidden="true" />
               In setup
             </Badge>
           ) : null}

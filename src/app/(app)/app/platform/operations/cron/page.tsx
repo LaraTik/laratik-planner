@@ -191,14 +191,14 @@ export default async function PlatformCronHealthPage() {
             <table className="w-full text-sm" data-testid="platform-cron-log-tail-table">
               <thead className="border-border bg-surface-subtle text-label text-fg-secondary">
                 <tr>
-                  <th className="px-3 py-2 text-left font-semibold">When</th>
-                  <th className="px-3 py-2 text-left font-semibold">Cron</th>
-                  <th className="px-3 py-2 text-left font-semibold">Outcome</th>
-                  <th className="px-3 py-2 text-right font-semibold">Claimed</th>
-                  <th className="px-3 py-2 text-right font-semibold">Ok</th>
-                  <th className="px-3 py-2 text-right font-semibold">Failed</th>
-                  <th className="px-3 py-2 text-left font-semibold">Trigger</th>
-                  <th className="px-3 py-2 text-left font-semibold">Note</th>
+                  <th className="px-3 py-2 text-start font-semibold">When</th>
+                  <th className="px-3 py-2 text-start font-semibold">Cron</th>
+                  <th className="px-3 py-2 text-start font-semibold">Outcome</th>
+                  <th className="px-3 py-2 text-end font-semibold">Claimed</th>
+                  <th className="px-3 py-2 text-end font-semibold">Ok</th>
+                  <th className="px-3 py-2 text-end font-semibold">Failed</th>
+                  <th className="px-3 py-2 text-start font-semibold">Trigger</th>
+                  <th className="px-3 py-2 text-start font-semibold">Note</th>
                 </tr>
               </thead>
               <tbody className="divide-border divide-y">
@@ -217,13 +217,13 @@ export default async function PlatformCronHealthPage() {
                     <td className="px-3 py-2">
                       <OutcomeBadge outcome={row.outcome} />
                     </td>
-                    <td className="text-body text-fg-primary px-3 py-2 text-right tabular-nums">
+                    <td className="text-body text-fg-primary px-3 py-2 text-end tabular-nums">
                       {row.claimed}
                     </td>
-                    <td className="text-body text-fg-primary px-3 py-2 text-right tabular-nums">
+                    <td className="text-body text-fg-primary px-3 py-2 text-end tabular-nums">
                       {row.succeeded}
                     </td>
-                    <td className="text-body text-fg-primary px-3 py-2 text-right tabular-nums">
+                    <td className="text-body text-fg-primary px-3 py-2 text-end tabular-nums">
                       {row.failed}
                     </td>
                     <td className="text-label text-fg-muted px-3 py-2 font-mono">
@@ -498,28 +498,28 @@ function OutcomeBadge({ outcome }: { outcome: "success" | "soft_deadline" | "err
     case "success":
       return (
         <Badge variant="success" data-testid="outcome-success">
-          <CheckCircle2 className="mr-1 h-3 w-3" aria-hidden={true} />
+          <CheckCircle2 className="me-1 h-3 w-3" aria-hidden={true} />
           success
         </Badge>
       );
     case "soft_deadline":
       return (
         <Badge variant="warning" data-testid="outcome-soft-deadline">
-          <Clock className="mr-1 h-3 w-3" aria-hidden={true} />
+          <Clock className="me-1 h-3 w-3" aria-hidden={true} />
           soft_deadline
         </Badge>
       );
     case "error":
       return (
         <Badge variant="danger" data-testid="outcome-error">
-          <AlertTriangle className="mr-1 h-3 w-3" aria-hidden={true} />
+          <AlertTriangle className="me-1 h-3 w-3" aria-hidden={true} />
           error
         </Badge>
       );
     case "skipped":
       return (
         <Badge variant="outline" data-testid="outcome-skipped">
-          <Database className="mr-1 h-3 w-3" aria-hidden={true} />
+          <Database className="me-1 h-3 w-3" aria-hidden={true} />
           skipped
         </Badge>
       );

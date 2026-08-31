@@ -298,7 +298,7 @@ export function Combobox({
           disabled={disabled}
           data-testid={triggerTestId}
           className={cn(
-            "border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring flex h-10 w-full items-center justify-between gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-left font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none",
+            "border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring flex h-10 w-full items-center justify-between gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-start font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none",
             "hover:bg-surface-subtle",
             disabled && "cursor-not-allowed opacity-60",
             triggerClassName,
@@ -351,7 +351,7 @@ export function Combobox({
                 role="option"
                 aria-selected={false}
                 onClick={commitFreeText}
-                className="text-body text-fg-primary hover:bg-surface-subtle flex w-full items-center gap-2 px-3 py-2 text-left font-semibold"
+                className="text-body text-fg-primary hover:bg-surface-subtle flex w-full items-center gap-2 px-3 py-2 text-start font-semibold"
               >
                 <span className="bg-primary-subtle text-primary text-label rounded px-1.5 py-0.5 font-bold">
                   Use
@@ -391,7 +391,7 @@ export function Combobox({
                       onClick={() => commit(opt)}
                       data-testid={inputTestId ? `${inputTestId}-option-${opt.value}` : undefined}
                       className={cn(
-                        "text-body text-fg-primary flex w-full items-center gap-2 px-3 py-2 text-left transition-colors",
+                        "text-body text-fg-primary flex w-full items-center gap-2 px-3 py-2 text-start transition-colors",
                         isFocused && "bg-surface-subtle",
                         opt.disabled && "cursor-not-allowed opacity-50",
                       )}

@@ -71,6 +71,6 @@ describe("OverviewKpiStrip", () => {
   it("uses tone classes for the visual accent (left border + icon colour)", () => {
     render(<OverviewKpiStrip tiles={tiles} />);
     const atRisk = screen.getByRole("link", { name: /At risk: 23/i });
-    expect(atRisk.className).toContain("border-l-warning");
+    expect(atRisk.className).toContain("border-s-warning");
   });
 });
