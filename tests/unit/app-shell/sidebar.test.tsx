@@ -544,3 +544,92 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
     expect(screen.queryByRole("link", { name: "Social Channels" })).toBeNull();
   });
 });
+
+/**
+ * Workspace switcher — detail-suffix behaviour (M1.5 + fix).
+ *
+ * The pre-fix switcher hard-coded `/planning/<id>` as the only
+ * "detail section" and used `pathname.replace(...)` for every
+ * other suffix. The result: a new detail route under any other
+ * section (e.g. `/app/w/old/reviews/<id>`) would silently carry
+ * the stale id into the new workspace, producing a confusing
+ * cross-tenant 404.
+ *
+ * The post-fix switcher treats the first segment after the
+ * section as either (a) a known workspace-scoped sub-action
+ * (`new` / `batch` / `edit`) or (b) a detail id. (a) is kept,
+ * (b) is stripped to the section index. This makes the rule
+ * section-agnostic — adding a new detail route under any
+ * section works without touching the switcher.
+ *
+ * The cases below pin the contract: detail routes are stripped,
+ * sub-action routes are kept, and the section index is
+ * preserved.
+ */
+describe("Sidebar (workspace switcher — detail-suffix behaviour)", () => {
+  beforeEach(() => {
+    usePathnameMock.mockReset();
+    pushMock.mockReset();
+  });
+
+  async function chooseOtherWorkspace() {
+    const trigger = screen.getByTestId("sidebar-workspace-switcher-trigger");
+    const user = userEvent.setup();
+    await user.click(trigger);
+    const autumn = await screen.findByRole("option", { name: /Autumn Blend/ });
+    await user.click(autumn);
+  }
+
+  it("strips a detail id from /app/w/<old>/planning/<id> to the section index in the new workspace", async () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning/abc-123-uuid");
+    render(<Sidebar {...baseProps} />);
+    await chooseOtherWorkspace();
+    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning");
+  });
+
+  it("strips a nested detail sub-path /app/w/<old>/planning/<id>/edit to the section index", async () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning/abc-123-uuid/edit");
+    render(<Sidebar {...baseProps} />);
+    await chooseOtherWorkspace();
+    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning");
+  });
+
+  it("keeps a known sub-action /app/w/<old>/planning/batch across the slug swap", async () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning/batch");
+    render(<Sidebar {...baseProps} />);
+    await chooseOtherWorkspace();
+    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning/batch");
+  });
+
+  it("keeps /app/w/<old>/planning/new across the slug swap", async () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning/new");
+    render(<Sidebar {...baseProps} />);
+    await chooseOtherWorkspace();
+    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning/new");
+  });
+
+  it("strips the id but keeps the sub-action /app/w/<old>/planning/edit/<id> → /app/w/<new>/planning/edit", async () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning/edit/abc-123-uuid");
+    render(<Sidebar {...baseProps} />);
+    await chooseOtherWorkspace();
+    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning/edit");
+  });
+
+  it("strips a detail id from a NEW section (reviews) — section-agnostic generalisation", async () => {
+    // The pre-fix switcher only knew about `planning` as a detail
+    // section. A future route under a different section would
+    // leak a stale id. The new switcher treats any non-sub-action
+    // segment as a detail id and strips it.
+    usePathnameMock.mockReturnValue("/app/w/northstar/reviews/abc-123-uuid");
+    render(<Sidebar {...baseProps} />);
+    await chooseOtherWorkspace();
+    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/reviews");
+  });
+
+  it("keeps a same-section path that has no detail id (/app/w/<old>/planning)", async () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(<Sidebar {...baseProps} />);
+    await chooseOtherWorkspace();
+    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning");
+  });
+});

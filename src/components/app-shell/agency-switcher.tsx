@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronsUpDown, Plus, Shield } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { switchActiveAgencyAndRedirect } from "@/lib/auth/agency-actions";
@@ -88,12 +89,21 @@ export function AgencySwitcher({
       // a browser-back could resurrect a cross-tenant URL.
       const result = await switchActiveAgencyAndRedirect(a.id);
       if (!result.ok) {
-        // The server action refused (membership check failed or the
-        // session expired). We keep the user on the current page;
-        // the popover is already closed. A real production version
-        // would surface a toast here. The state machine is left
-        // simple for M1.5: the action's fail-closed contract is the
-        // important guarantee.
+        // The server action refused (membership check failed, the
+        // session expired, or the cookie secret is missing). We
+        // keep the user on the current page; the popover is already
+        // closed. A toast surfaces the failure so the user can tell
+        // why their selection had no effect. The fail-closed
+        // contract of the action (no cookie write, no URL change)
+        // is unchanged — the toast is a UX layer over the same
+        // contract.
+        toast.error(
+          result.reason === "not-a-member"
+            ? "You're no longer a member of that agency."
+            : result.reason === "unauthenticated"
+              ? "Your session expired. Please sign in again."
+              : "Couldn't switch agencies. Please try again or contact support.",
+        );
         return;
       }
       const nextHref = result.firstWorkspaceSlug ? `/app/w/${result.firstWorkspaceSlug}` : "/app";

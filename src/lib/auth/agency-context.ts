@@ -319,10 +319,22 @@ export async function clearActiveAgencyCookie(): Promise<void> {
 export type ResolveActiveAgencyContextInput = {
   actor: Actor;
   /**
-   * Explicit override, typically from `?agency=<id>` or a path
-   * segment. Empty string, `null`, and `undefined` are all treated
-   * as "not provided" and the resolver falls through to the cookie
-   * / fallback paths.
+   * Explicit override hook. Currently no layout or action
+   * populates this from `searchParams` — the resolver reads the
+   * signed `laratik_active_agency` cookie as the canonical
+   * context, and the agency switcher writes that cookie via
+   * `switchActiveAgencyAndRedirect` before navigating. The
+   * field is retained as a future-facing escape hatch: a
+   * server action or middleware that wants to pass
+   * `?agency=<id>` through can do so by passing
+   * `requestedAgencyId: id` to the resolver directly.
+   *
+   * Empty string, `null`, and `undefined` are all treated as
+   * "not provided" and the resolver falls through to the cookie
+   * / fallback paths. Membership is re-checked against `actor`
+   * even on the override path; a non-member `requestedAgencyId`
+   * returns `null` and the route layer turns that into 404
+   * (anti-IDOR).
    */
   requestedAgencyId?: string | null;
 };

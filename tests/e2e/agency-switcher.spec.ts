@@ -135,7 +135,14 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
       .getByRole("option", { name: /Selectable Agency One/ })
       .click();
 
-    await expect(page).toHaveURL(/\/app$/);
+    // Atomic-navigation contract (M1.5 + ADR 0008): the switch
+    // navigates to the new agency's first workspace, NOT to `/app`.
+    // The v1 behavior (push to `/app`) left the old workspace
+    // slug in the address bar and a browser-back could resurrect
+    // a cross-tenant 404. Pin the new contract here so a future
+    // refactor that re-introduces the `/app` push fails this test.
+    await expect(page).toHaveURL(/\/app\/w\/selectable-workspace-one/);
+    await expect(page).not.toHaveURL(/selectable-workspace-two/);
     await expect(trigger).toHaveAttribute("aria-label", /Active agency: Selectable Agency One/);
     const after = await page.context().cookies();
     const activeCookie = after.find((cookie) => cookie.name === "laratik_active_agency");
