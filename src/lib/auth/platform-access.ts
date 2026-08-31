@@ -11,6 +11,12 @@ import { PLATFORM_ROLE_VALUES, type PlatformRole } from "@/lib/auth/platform-acc
 
 export const PLATFORM_PERMISSIONS = [
   "platform.console.read",
+  // M4.7 / Phase 3 of the social-cron-admin plan: the right
+  // to trigger a manual Run-now for an in-app cron from the
+  // platform-admin Cron health page. Distinct from
+  // `console.read` so read-only platform auditors cannot
+  // trigger writes against the provider.
+  "platform.console.manage",
   "platform.agency.read",
   "platform.agency.create",
   "platform.agency.update",
