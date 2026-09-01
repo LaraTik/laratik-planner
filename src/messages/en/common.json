@@ -1184,7 +1184,8 @@
     "cancel": "Cancel",
     "errorExists": "A workspace with that slug already exists.",
     "errorNameRequired": "Workspace name is required.",
-    "errorSlugInvalid": "Slug must be lowercase letters, digits, and hyphens."
+    "errorSlugInvalid": "Slug must be lowercase letters, digits, and hyphens.",
+    "slugPlaceholder": "acme-coffee"
   },
   "team": {
     "title": "Team and access",

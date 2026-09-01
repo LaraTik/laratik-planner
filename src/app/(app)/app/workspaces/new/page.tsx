@@ -171,7 +171,7 @@ export default async function NewWorkspacePage() {
               minLength={2}
               maxLength={60}
               pattern="^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$"
-              placeholder="acme-coffee"
+              placeholder={t("workspaceNew.slugPlaceholder")}
             />
           </FormField>
           <FormField
