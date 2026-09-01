@@ -453,7 +453,14 @@
       "blockConfirm": "Block item",
       "railCollapsed": "Workflow rail (collapsed)",
       "railExpand": "Expand workflow rail",
-      "railStagesCollapsed": "Workflow stages (collapsed)"
+      "railStagesCollapsed": "Workflow stages (collapsed)",
+      "railCollapse": "Collapse workflow rail",
+      "railStages": "Workflow stages",
+      "stageComplete": "Complete",
+      "stageCurrent": "Current",
+      "stageCurrentStep": "Current step",
+      "stageBlocked": "Blocked",
+      "stageUpcoming": "Upcoming"
     }
   },
   "formatEditor": {

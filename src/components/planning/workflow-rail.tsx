@@ -286,7 +286,7 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
                 data-active={state.kind === "current" || undefined}
                 title={STAGE_LABEL[stage]}
               >
-                <StageIcon kind={state.kind} compact />
+                <StageIcon kind={state.kind} compact {...(props.t ? { t: props.t } : {})} />
               </li>
             );
           })}
@@ -306,7 +306,7 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
           type="button"
           onClick={toggle}
           className="text-fg-secondary hover:text-fg-primary focus-visible:ring-focus-ring inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-control)] focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-          aria-label="Collapse workflow rail"
+          aria-label={tr("contentDetail.workflow.railCollapse", "Collapse workflow rail")}
           data-testid="workflow-rail-collapse"
         >
           <DirAwareChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -375,6 +375,7 @@ function WorkflowRailBody({
   designers: { id: string; label: string }[];
   t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const [pending, start] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -469,7 +470,7 @@ function WorkflowRailBody({
       </div>
       <ol
         className="relative px-3 py-2"
-        aria-label="Workflow stages"
+        aria-label={tr("contentDetail.workflow.railStages", "Workflow stages")}
         data-testid="workflow-rail-stages"
       >
         {/* Vertical process line — a single hairline that connects
@@ -493,7 +494,7 @@ function WorkflowRailBody({
               data-stage-id={stage}
               data-active={expanded || undefined}
             >
-              <RailStageRow stage={stage} label={label} status={status} />
+              <RailStageRow stage={stage} label={label} status={status} {...(t ? { t } : {})} />
               {expanded ? (
                 <div
                   className="border-border bg-surface-subtle ms-7 mt-1 space-y-2 rounded-[var(--radius-control)] border p-2"
@@ -689,10 +690,12 @@ function RailStageRow({
   stage,
   label,
   status,
+  t,
 }: {
   stage: RailStage;
   label: string;
   status: string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const state = railStageState(stage, status);
   return (
@@ -701,7 +704,7 @@ function RailStageRow({
       aria-current={state.kind === "current" ? "step" : undefined}
       data-testid={`workflow-rail-stage-${stage}`}
     >
-      <RailStageIcon kind={state.kind} />
+      <RailStageIcon kind={state.kind} {...(t ? { t } : {})} />
       <span
         className={cn(
           "text-body font-semibold",
@@ -768,12 +771,19 @@ function railStageState(stage: RailStage, status: string): StageState {
  * covers the line behind the icon so the line doesn't poke
  * through the marker.
  */
-function RailStageIcon({ kind }: { kind: StageState["kind"] }) {
+function RailStageIcon({
+  kind,
+  t,
+}: {
+  kind: StageState["kind"];
+  t?: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   if (kind === "complete") {
     return (
       <span
         className="border-success/40 bg-success-subtle text-success relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
-        aria-label="Complete"
+        aria-label={tr("contentDetail.workflow.stageComplete", "Complete")}
         data-state="complete"
       >
         <Check className="h-3.5 w-3.5" aria-hidden="true" />
@@ -784,7 +794,7 @@ function RailStageIcon({ kind }: { kind: StageState["kind"] }) {
     return (
       <span
         className="border-danger/40 bg-danger-subtle text-danger relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
-        aria-label="Blocked"
+        aria-label={tr("contentDetail.workflow.stageBlocked", "Blocked")}
         data-state="blocked"
       >
         <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
@@ -795,7 +805,7 @@ function RailStageIcon({ kind }: { kind: StageState["kind"] }) {
     return (
       <span
         className="border-primary bg-primary text-primary-foreground relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 shadow-sm"
-        aria-label="Current"
+        aria-label={tr("contentDetail.workflow.stageCurrent", "Current")}
         data-state="current"
       >
         <Circle className="h-2.5 w-2.5 fill-current" aria-hidden="true" />
@@ -806,7 +816,7 @@ function RailStageIcon({ kind }: { kind: StageState["kind"] }) {
   return (
     <span
       className="border-border bg-surface text-fg-muted relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
-      aria-label="Upcoming"
+      aria-label={tr("contentDetail.workflow.stageUpcoming", "Upcoming")}
       data-state="upcoming"
     >
       <Circle className="h-2 w-2" aria-hidden="true" />
@@ -814,7 +824,16 @@ function RailStageIcon({ kind }: { kind: StageState["kind"] }) {
   );
 }
 
-function StageIcon({ kind, compact = false }: { kind: StageState["kind"]; compact?: boolean }) {
+function StageIcon({
+  kind,
+  compact = false,
+  t,
+}: {
+  kind: StageState["kind"];
+  compact?: boolean;
+  t?: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   // Compact variant is used inside the collapsed rail
   // (~56 px wide) and inside the mobile trigger. The full
   // variant is used in the expanded rail's stage list.
@@ -827,7 +846,7 @@ function StageIcon({ kind, compact = false }: { kind: StageState["kind"]; compac
           "border-success/40 bg-success-subtle text-success inline-flex items-center justify-center rounded-full border",
           size,
         )}
-        aria-label="Complete"
+        aria-label={tr("contentDetail.workflow.stageComplete", "Complete")}
       >
         <CheckCircle className={iconClass} aria-hidden="true" />
       </span>
@@ -840,7 +859,7 @@ function StageIcon({ kind, compact = false }: { kind: StageState["kind"]; compac
           "border-primary bg-primary text-primary-foreground inline-flex items-center justify-center rounded-full border",
           size,
         )}
-        aria-label="Current step"
+        aria-label={tr("contentDetail.workflow.stageCurrentStep", "Current step")}
       >
         <DirAwareChevronRight className={iconClass} aria-hidden="true" />
       </span>
@@ -853,7 +872,7 @@ function StageIcon({ kind, compact = false }: { kind: StageState["kind"]; compac
           "border-danger/40 bg-danger-subtle text-danger inline-flex items-center justify-center rounded-full border",
           size,
         )}
-        aria-label="Blocked"
+        aria-label={tr("contentDetail.workflow.stageBlocked", "Blocked")}
       >
         <XCircle className={iconClass} aria-hidden="true" />
       </span>
@@ -865,7 +884,7 @@ function StageIcon({ kind, compact = false }: { kind: StageState["kind"]; compac
         "border-border bg-surface text-fg-muted inline-flex items-center justify-center rounded-full border",
         size,
       )}
-      aria-label="Upcoming"
+      aria-label={tr("contentDetail.workflow.stageUpcoming", "Upcoming")}
     >
       <span className="h-2 w-2 rounded-full bg-current" />
     </span>

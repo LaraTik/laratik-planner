@@ -453,7 +453,14 @@
       "blockConfirm": "حظر العنصر",
       "railCollapsed": "سير العمل (مطوي)",
       "railExpand": "توسيع سير العمل",
-      "railStagesCollapsed": "مراحل سير العمل (مطوية)"
+      "railStagesCollapsed": "مراحل سير العمل (مطوية)",
+      "railCollapse": "طي سير العمل",
+      "railStages": "مراحل سير العمل",
+      "stageComplete": "مكتمل",
+      "stageCurrent": "حالي",
+      "stageCurrentStep": "الخطوة الحالية",
+      "stageBlocked": "محظور",
+      "stageUpcoming": "قادم"
     }
   },
   "formatEditor": {
