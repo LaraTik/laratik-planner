@@ -337,14 +337,28 @@ job ran for 4.5 min on the previous 8 successful deploys).
 #### Local E2E recipes
 
 ```bash
-# One-time setup (Mac + Linux). Postgres + dev server + Playwright.
+# One-time setup (Mac + Linux). Postgres + disposable test database + Playwright.
 docker compose -f docker-compose.dev.yml up -d postgres
+docker exec laratik-planner-pg-dev pg_isready -U planner -d planner
+# Create planner_test once. The first command is idempotent; the second runs
+# only when the database does not already exist.
+docker exec laratik-planner-pg-dev psql -U planner -d postgres -tAc \
+  "SELECT 1 FROM pg_database WHERE datname = 'planner_test'" | grep -q 1 || \
+  docker exec laratik-planner-pg-dev psql -U planner -d postgres \
+  -c "CREATE DATABASE planner_test"
 pnpm install --frozen-lockfile
-pnpm db:migrate
 pnpm exec playwright install --with-deps chromium firefox webkit
 
+# Keep this in the shell that runs the checks (or add it to direnv/.env.test).
+export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@localhost:5432/planner_test
+
+# Verify the disposable database and migration pipeline before browser tests.
+NODE_ENV=test pnpm migration-drill
+pnpm test:integration
+
 # Pre-push: critical subset (chromium + visual-chromium). Runs in
-# .husky/pre-push automatically; ~10 min on a Mac.
+# .husky/pre-push automatically; the isolated runner applies migrations
+# and supplies test-only AUTH_* values; ~10 min on a Mac.
 pnpm test:e2e:critical
 
 # Pre-merge: full 5-browser matrix. ~45 min on Linux CI, ~30-60 min
@@ -353,10 +367,18 @@ pnpm test:e2e:critical
 pnpm test:e2e:isolated
 
 # Pre-merge: full visual matrix (assert mode against committed
-# baselines). ~10 min. Use `pnpm test:visual:update` to refresh
+# baselines). ~10 min. The command uses the same isolated runner and
+# therefore needs TEST_DATABASE_URL. Use `pnpm test:visual:update` to refresh
 # baselines after a deliberate UI change.
 pnpm test:visual
 ```
+
+`pnpm test:e2e:isolated`, `pnpm test:e2e:critical`, and `pnpm test:visual`
+all run through `scripts/run-e2e-tests.ts`. The runner refuses a URL that does
+not contain `test` or `ci`, applies migrations before starting Playwright, and
+injects deterministic test-only `AUTH_SECRET`, `AGENCY_COOKIE_SECRET`,
+`AUTH_URL`, and `NEXTAUTH_URL` values. This is why a missing
+`TEST_DATABASE_URL` is a configuration error rather than a test skip.
 
 If a dev's pre-push `pnpm test:e2e:critical` is taking too long on
 trivial pushes, set `SKIP_E2E=1` in the env (or `git push --no-verify`
@@ -377,9 +399,13 @@ contains the substring `test` or `ci` in the URL
 local Postgres is fine; the only extra step is a second database:
 
 ```bash
-# One-time: create a disposable test database on your dev Postgres.
+# One-time: create a disposable test database on your dev Postgres. The Docker
+# command works even when the host has no `psql` binary installed.
 docker compose -f docker-compose.dev.yml up -d postgres
-psql -h localhost -U planner -d planner -c "CREATE DATABASE planner_test;"
+docker exec laratik-planner-pg-dev psql -U planner -d postgres -tAc \
+  "SELECT 1 FROM pg_database WHERE datname = 'planner_test'" | grep -q 1 || \
+  docker exec laratik-planner-pg-dev psql -U planner -d postgres \
+  -c "CREATE DATABASE planner_test"
 
 # Then set the test URL in your shell rc (or .env / direnv). The
 # .env.example template includes this line for reference.
@@ -388,6 +414,12 @@ export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@localhost:5432/pl
 # Verify locally before relying on the pre-push gate:
 pnpm test:integration
 ```
+
+The same `TEST_DATABASE_URL` is required by `pnpm migration-drill` and the
+isolated/visual Playwright commands. If the database is unavailable, check
+`docker compose -f docker-compose.dev.yml ps postgres` and
+`docker exec laratik-planner-pg-dev pg_isready -U planner -d planner` before
+rerunning the checks.
 
 If `TEST_DATABASE_URL` is not set, `.husky/pre-push` skips
 integration with a hint to set it up — it does not fail. This

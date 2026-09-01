@@ -73,6 +73,14 @@ regression can be diagnosed from the run page without a local repro.
 
 - Integration tests accept only `TEST_DATABASE_URL` values containing `test` or `ci`.
 - The integration runner applies migrations automatically and exits non-zero when configuration is missing.
+- Local integration, migration-drill, isolated E2E, and visual checks share the
+  disposable `planner_test` database. Provision it with the Docker recipe in
+  [`../operations/runbook.md`](../operations/runbook.md); do not use the normal
+  `planner` database or any production URL.
+- `pnpm test:e2e:isolated`, `pnpm test:e2e:critical`, and `pnpm test:visual`
+  use the isolated runner, which applies migrations and supplies deterministic
+  test-only Auth.js secrets. A missing `TEST_DATABASE_URL` is an actionable
+  setup failure, not a valid passing/skip state.
 - Required tests may not use conditional assertions or configuration-based skips.
 - E2E support routes return 404 in production.
 - Dynamic visual values must be masked before baseline comparison.

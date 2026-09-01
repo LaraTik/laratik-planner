@@ -36,6 +36,29 @@
 ./scripts/deploy.sh <sha>         # pulls specific commit
 ```
 
+## Local disposable test database
+
+Integration tests, the migration drill, isolated Playwright E2E, and the
+visual suite all use a separate `planner_test` database. Start the dev
+Postgres container and provision it once (the Docker command works even when
+the host does not have `psql` installed):
+
+```bash
+docker compose -f docker-compose.dev.yml up -d postgres
+docker exec laratik-planner-pg-dev pg_isready -U planner -d planner
+docker exec laratik-planner-pg-dev psql -U planner -d postgres -tAc \
+  "SELECT 1 FROM pg_database WHERE datname = 'planner_test'" | grep -q 1 || \
+  docker exec laratik-planner-pg-dev psql -U planner -d postgres \
+  -c "CREATE DATABASE planner_test"
+export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test
+```
+
+Run `NODE_ENV=test pnpm migration-drill` and `pnpm test:integration` before
+browser checks. The `test:e2e:isolated`, `test:e2e:critical`, and `test:visual`
+scripts all use `scripts/run-e2e-tests.ts`; it refuses non-test URLs, applies
+migrations, and injects deterministic test-only Auth.js secrets. Never point
+`TEST_DATABASE_URL` at `planner` or a production database.
+
 ## Design source — Google Stitch
 
 The visual target is the **StudioFlow** design system on Google Stitch

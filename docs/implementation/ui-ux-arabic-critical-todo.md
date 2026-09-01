@@ -1,6 +1,6 @@
 # UI/UX + Arabic critical findings — implementation TODO
 
-> Handoff for a fixing agent. Review snapshot: `3aea1f4` on `feat/ui-ux-arabic-2026-09-01`, 2026-09-01. The branch is active; re-confirm each path against the current HEAD before editing.
+> Handoff for a fixing agent. Review snapshot: `cd99538` on `feat/ui-ux-arabic-2026-09-01`, 2026-09-01. The branch is active; re-confirm each path against the current HEAD before editing.
 
 ## Objective
 
@@ -25,7 +25,7 @@ Canonical rules:
 
 ## P0 — I18N-001: migration 0025 is invalid and unregistered
 
-Status: In progress — implementation fixed; disposable-database drill and deployment evidence remain
+Status: In progress — implementation and disposable-database drill fixed; production evidence remains
 
 Evidence:
 
@@ -51,12 +51,12 @@ backup/rollback evidence and owner sign-off remain required.
 
 Acceptance criteria:
 
-- [ ] Fresh database applies every migration exactly once.
-- [ ] Supported pre-0025 database upgrades successfully.
-- [ ] Drizzle ledger count and ordered SQL file count match.
-- [ ] Authenticated `/app` loads notifications without compatibility columns added by hand.
+- [x] Fresh database applies every migration exactly once (migration drill 1, 2026-09-01).
+- [x] Supported pre-0025 database upgrades successfully (migration drill 2, 2026-09-01).
+- [x] Drizzle ledger count and ordered SQL file count match (26/26, migration drill 1).
+- [x] Authenticated `/app` loads notifications without compatibility columns added by hand (authenticated route sweep).
 - [ ] Forward, compatibility, backup, and rollback evidence is recorded.
-- [ ] `pnpm migration-drill` exits 0 without skipped or weakened checks.
+- [x] `pnpm migration-drill` exits 0 without skipped or weakened checks (5/5, 2026-09-01).
 
 ## P1 — I18N-002: translator functions cross Server/Client boundaries
 
@@ -91,11 +91,17 @@ Acceptance criteria:
 - [ ] English and Arabic interactive states still translate after client updates.
 - [ ] Focused unit tests and authenticated E2E cover at least account, users, planning detail, and settings.
 
-Authenticated accessibility sweep (2026-09-01) also found seven serious
-violations that remain release blockers: invalid `aria-label` usage on
-non-semantic progress/status wrappers, invalid `<dl>` child structure on Team,
-and a workflow-stepper text contrast/semantics issue. Track fixes with the
-route-level axe suite before release.
+The seven serious violations found by the initial authenticated accessibility
+sweep were fixed in `cd99538` (decorative progress labels, status semantics,
+workflow markers, and nested navigation list structure). The focused route-level
+axe sweep now passes 7/7 routes on Chromium (2026-09-01). Keep the static RSC
+boundary guard and the route-level axe suite in the release checklist.
+
+The visual runner is now configuration-safe: `test:e2e:critical` and
+`test:visual` provision migrations and deterministic test-only Auth.js settings
+through `scripts/run-e2e-tests.ts`. A focused sign-in visual run confirmed the
+database/auth setup, but four sign-in screenshots still differ from committed
+baselines; those are visual review work, not environment failures.
 
 ## P1 — I18N-003: profile language switching is blocked and profile copy is English
 
