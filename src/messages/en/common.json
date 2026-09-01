@@ -2259,7 +2259,8 @@
       "setTargetHint": "No monthly target — set one to see coverage progress.",
       "coverageAria": "{percent} percent of monthly target"
     },
-    "overviewKpiAria": "Workspace KPIs"
+    "overviewKpiAria": "Workspace KPIs",
+    "planningKpiAria": "Planning KPIs"
   },
   "planningFilters": {
     "searchAria": "Search by title or brief",

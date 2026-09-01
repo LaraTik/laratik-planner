@@ -25,6 +25,12 @@ export interface PlanningKpiBarProps {
   notStarted: number;
   baseHref: string;
   currentQuery: URLSearchParams;
+  /**
+   * Optional translator. When provided, the section aria-label renders
+   * from `workspaceOverviewDashboard.planningKpiAria`; when omitted,
+   * the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 function buildHref(
@@ -49,7 +55,9 @@ export function PlanningKpiBar({
   notStarted,
   baseHref,
   currentQuery,
+  t,
 }: PlanningKpiBarProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const tiles: {
     label: string;
     value: number;
@@ -96,7 +104,7 @@ export function PlanningKpiBar({
 
   return (
     <section
-      aria-label="Planning KPIs"
+      aria-label={tr("workspaceOverviewDashboard.planningKpiAria", "Planning KPIs")}
       className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
     >
       {tiles.map((tile) => {

@@ -2259,7 +2259,8 @@
       "setTargetHint": "لا يوجد هدف شهري — عيّن هدفًا لرؤية تقدم التغطية.",
       "coverageAria": "{percent} بالمئة من الهدف الشهري"
     },
-    "overviewKpiAria": "مؤشرات أداء المساحة"
+    "overviewKpiAria": "مؤشرات أداء المساحة",
+    "planningKpiAria": "مؤشرات أداء التخطيط"
   },
   "planningFilters": {
     "searchAria": "البحث حسب العنوان أو الوصف",

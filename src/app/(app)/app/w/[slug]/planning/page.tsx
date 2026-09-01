@@ -337,6 +337,7 @@ export default async function PlanningPage({
             ][],
           )
         }
+        t={t}
       />
 
       <div className="border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-card)] border p-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
