@@ -398,3 +398,66 @@ documents (intentionally English per master prompt §21) and (b) the
 `t` plumbed from their parent server pages (deferred to a follow-up
 batch). The dev-only `/dev/signin` route is not in the production
 inventory.
+
+## Follow-up verification round 3 (9c3a61d → b854b26; 8 atomic commits)
+
+A third pass of bilingualisation targeted the remaining deferred
+drawer / popover sub-components, the workspace-overview chrome
+components, every top-level production page's `generateMetadata`,
+and the brand-kit per-section form internals. The work also added
+the canonical `tr(key, fallback, params?)` helper with `{name}`
+interpolation on the fallback path, the `condition ? {t} : {}`
+conditional-spread pattern for `exactOptionalPropertyTypes: true`,
+and the plural pair (`{One,Many}`) catalog pattern for the
+hand-rolled translator.
+
+| #   | SHA       | Scope                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 34  | `1ab6789` | `planning-kpi-bar` (5 tile labels: Total Planned / At Risk / Needs Review / Ready / Not started) + `planning-list-item` (3 sr-only column labels + 2 aria-labels) + `planning-list-grouped` (5 date group headers with `{start}`/`{end}` placeholder interpolation). The E2E data-testid hook in planning-kpi-bar is now derived from a stable `id` field rather than the translated label so the hook is consistent across English and Arabic sessions.                                                                                                                                                                                                                                                                                                                    |
+| 35  | `c09c607` | `owner-badge` (the "Unassigned" pill) + `planning-list-actions` (8 dropdown labels: Open / Edit / Duplicate / Change owner / Submit for review / Resubmit for review / Archive / "soon" badge + the "Actions for {title}" trigger aria-label with `{title}` interpolation). 10 new en/ar keys.                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 36  | `dfc920d` | `people-cell` (Owner / Designer role labels + Unassigned empty state) + `readiness-indicator` (10 health bucket labels: ready/overdue/at_risk/blocked/needs_review/in_progress/not_started/published/cancelled/scheduled + 2 inline plural messages). 16 new en/ar keys.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 37  | `7f2827a` | `stage-pill` (4 stage labels: Planning / Review / Design / Publish + the "Current stage: {label} ({position} of {total})" title attribute with 3 placeholders). 5 new en/ar keys.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 38  | `87afc4f` | `member-edit-drawer` (DialogTitle `Edit {name}` + DialogDescription + 3 read-only fields + 3 status badges + the `Current effective roles` plural message using the `none/one/many` adjacent keys with `{count}` + `{workspaces}` placeholders + the agency admin section + the workspace roles fieldset + the "What does each role do?" disclosure + Cancel + Save changes + Saving…) + `team/member-edit-trigger` (the per-row Edit button + its aria-label). 20 new en/ar keys.                                                                                                                                                                                                                                                                                          |
+| 39  | `43723f0` | `channel-form` (Card title + description + 4 field labels + 2 hints + 2 placeholders + submit button + pending label) + `channel-edit-drawer` (~30 strings: drawer title + description, the 5 form fields, the inner `ConnectionHealthSection` with 5 status labels + the 5 humanized error codes, the kebab menu + the archive-confirm dialog + the destructive toast) + `connection-actions` (Re-test / Sync now / Disconnect / Revoke + the Revoke-confirm dialog). 60 new en/ar keys.                                                                                                                                                                                                                                                                                   |
+| 40  | `6bb4b1b` | `color-form` (4 field labels + 4 role labels + 4 role descriptions + 2 placeholders + picker aria-label + submit button + pending label) + `typography-form` (4 field labels + family hint + 4 role options + 2 placeholders + the "Preview — {family} {weight} ({role})" live preview label with 3 placeholders + submit button + pending label) + `logo-form` (fieldset aria-label + sr-only legend + 2 mode buttons + 2 field labels + 2 hints + 2 placeholders + the upload status row with the "{name} ({size})" interpolation + submit button + pending label). 49 new en/ar keys.                                                                                                                                                                                    |
+| 41  | `b854b26` | `pillar-form` + `publishing-rule-form` (5 rule-type options: Alt text / Hashtags / Compliance / Channel-specific / General) + `voice-form` (3 sub-forms: Tone / Do / Don't, with field labels, placeholders, and submit buttons) + `voice-rule-suggestions` (the AI suggest button labels + the pick-a-suggestion hint + the empty state + the error fallback) + `linked-resource-list` (5 provider labels: Google Drive / Figma / Canva / Dropbox / Other + the resource link's "Open {name} on {provider} in a new tab" aria-label with 2 placeholders) + `add-asset-menu` (6 dropdown items: Logo / Color / Typography / Voice rule / Publishing rule / Linked resource + their descriptions + the trigger aria-label + trigger label + menu label). ~50 new en/ar keys. |
+
+Across these eight commits: 27 source files, +1100/-200. Branch
+`feat/ui-ux-arabic-2026-09-01` now at `b854b26` (141 atomic commits
+since `b1d08ce`).
+
+Full `pnpm verify` re-run on `b854b26`:
+
+- `pnpm format:check` — clean
+- `pnpm lint` — 0/0 warnings
+- `pnpm typecheck` — clean
+- `pnpm test:unit` — 2962/2962 passing (4 todo)
+- `pnpm build` — clean (every route in the inventory compiles)
+- `tests/unit/i18n/catalogs.test.ts` — 7/7 passing (en + ar key parity)
+
+The deferred list from round 2 is now complete. Every user-visible
+string on the 8 brand-kit per-section create forms + the 5
+drawer/popover sub-components is now routed through the active
+locale. The remaining non-bilingual production surfaces are:
+
+1. A small handful of mostly-presentational workspace components
+   (`delivery-version-card`, `format-distribution-bars`,
+   `workflow-mini-progress`, `planning-list-skeleton` [dead-code
+   prepared for Suspense]) — these don't have user-visible text
+   or have only a single aria-label that's not user-facing.
+2. The `/privacy`, `/terms`, and `/data-deletion` legal
+   documents (intentionally English per master prompt §21).
+3. The dev-only `/dev/signin` route is not in the production
+   inventory.
+
+Net translation work since the original master prompt §1 baseline
+(`b1d08ce`): 65 surface pages + 50+ client sub-components +
+~150 catalog namespaces, all driven through the `tForActive()` +
+`tr(key, fallback, params?)` helper + the optional-`t` +
+English-fallback pattern that gracefully degrades for un-translated
+callers and the unit test surface. The catalog now contains ~700
+en/ar keys, and the parity test (`tests/unit/i18n/catalogs.test.ts`)
+confirms structural identity between the two languages.
+
+Independent review (master prompt §22 `Verified` status) is the
+next gate. The branch is in a clean, shippable state.
