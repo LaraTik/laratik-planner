@@ -102,8 +102,10 @@ release checklist.
 The visual runner is now configuration-safe: `test:e2e:critical` and
 `test:visual` provision migrations and deterministic test-only Auth.js settings
 through `scripts/run-e2e-tests.ts`. A focused sign-in visual run confirmed the
-database/auth setup, but four sign-in screenshots still differ from committed
-baselines; those are visual review work, not environment failures.
+database/auth setup, but its four sign-in screenshots differ from committed
+baselines. The full 112-test visual run also reached real screenshot assertions
+and exposed additional route baseline differences before it was stopped; these
+are visual review work, not missing database/auth configuration.
 
 ## P1 — I18N-003: profile language switching is blocked and profile copy is English
 
