@@ -23,6 +23,7 @@ export function ReasonDialog({
   confirmLabel = "Confirm",
   destructive = false,
   disabled = false,
+  closeAriaLabel,
   onConfirm,
 }: {
   trigger: ReactElement;
@@ -32,6 +33,13 @@ export function ReasonDialog({
   confirmLabel?: string;
   destructive?: boolean;
   disabled?: boolean;
+  /**
+   * Localised aria-label for the built-in close button. Defaults
+   * to the dialog primitive's English "Close" so the dialog still
+   * works without a translator. Pass t("common.dialogCloseAria")
+   * when a translator is in scope.
+   */
+  closeAriaLabel?: string;
   onConfirm: (value: string) => void | Promise<unknown>;
 }) {
   const fieldId = useId();
@@ -71,7 +79,7 @@ export function ReasonDialog({
       <DialogTrigger asChild disabled={disabled}>
         {trigger}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent {...(closeAriaLabel ? { closeAriaLabel } : {})}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
