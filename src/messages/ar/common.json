@@ -151,6 +151,16 @@
     "upcoming": "القادم هذا الأسبوع",
     "upcomingEmpty": "لا توجد عناصر مُخطّطة خلال الأيام السبعة القادمة."
   },
+  "workspaceOverview": {
+    "title": "نظرة عامة",
+    "description": "متابعة التخطيط وصحة سير العمل وجاهزية النشر لشهر {month}.",
+    "previousMonth": "الشهر السابق، {month}",
+    "nextMonth": "الشهر التالي، {month}",
+    "selectedMonth": "الشهر المُختار",
+    "today": "اليوم",
+    "batchAdd": "إضافة أفكار دفعة",
+    "createContent": "إنشاء محتوى"
+  },
   "auth": {
     "appName": "laratik-planner",
     "productName": "StudioFlow",

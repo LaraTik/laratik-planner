@@ -18,6 +18,7 @@ import { AttentionBanner } from "@/components/workspace/attention-banner";
 import { OverviewKpiStrip, OVERVIEW_KPI_ICONS } from "@/components/workspace/overview-kpi-strip";
 import { calculateOverviewDashboardMetrics } from "@/lib/dashboard/kpis";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 /**
  * Workspace Overview — refactored dashboard (ADR-0007).
@@ -69,6 +70,7 @@ export default async function WorkspaceOverviewPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ month?: string }>;
 }) {
+  const { t } = await tForActive();
   const { slug } = await params;
   const filters = await searchParams;
   const session = await auth();
@@ -294,7 +296,7 @@ export default async function WorkspaceOverviewPage({
         eyebrow={ws.name}
         title={
           <span className="inline-flex items-center gap-3">
-            Overview
+            {t("workspaceOverview.title")}
             <span className="border-border bg-surface text-fg-primary inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2.5 py-1 text-sm font-semibold">
               {monthLabel}
             </span>
@@ -302,9 +304,7 @@ export default async function WorkspaceOverviewPage({
         }
         description={
           <span className="inline-flex flex-wrap items-center gap-2">
-            <span>
-              Monitor planning, workflow health and publishing readiness for {monthLabel}.
-            </span>
+            <span>{t("workspaceOverview.description", { month: monthLabel })}</span>
             <span className="text-label text-fg-muted border-border bg-surface-subtle inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {ws.timezone}
@@ -315,20 +315,20 @@ export default async function WorkspaceOverviewPage({
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={buildMonthHref(-1)}
-              aria-label={`Previous month, ${previousMonthLabel}`}
+              aria-label={t("workspaceOverview.previousMonth", { month: previousMonthLabel })}
               className="border-border bg-surface focus-visible:ring-focus-ring hover:bg-surface-subtle inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2"
             >
               <DirAwareChevronLeft className="h-4 w-4" aria-hidden="true" />
             </Link>
             <span
-              aria-label="Selected month"
+              aria-label={t("workspaceOverview.selectedMonth")}
               className="text-body min-w-32 text-center font-semibold sm:min-w-36"
             >
               {monthLabel}
             </span>
             <Link
               href={buildMonthHref(1)}
-              aria-label={`Next month, ${nextMonthLabel}`}
+              aria-label={t("workspaceOverview.nextMonth", { month: nextMonthLabel })}
               className="border-border bg-surface focus-visible:ring-focus-ring hover:bg-surface-subtle inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2"
             >
               <DirAwareChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -338,19 +338,19 @@ export default async function WorkspaceOverviewPage({
                 href={`/app/w/${slug}`}
                 className="text-label text-primary inline-flex min-h-9 items-center rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline"
               >
-                Today
+                {t("workspaceOverview.today")}
               </Link>
             ) : null}
             <Button variant="outline" asChild>
               <Link href={`/app/w/${slug}/planning/batch`}>
                 <ListChecks className="h-4 w-4" aria-hidden="true" />
-                Batch add ideas
+                {t("workspaceOverview.batchAdd")}
               </Link>
             </Button>
             <Button asChild>
               <Link href={`/app/w/${slug}/planning/new`}>
                 <Plus className="h-4 w-4" aria-hidden="true" />
-                Create content
+                {t("workspaceOverview.createContent")}
               </Link>
             </Button>
           </div>
