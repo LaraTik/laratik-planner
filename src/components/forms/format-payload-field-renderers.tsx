@@ -124,7 +124,6 @@ function TextFieldRenderer({
   editable,
   aiEnabled,
   contentItemId,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   t,
   onField,
   onTranslation,
@@ -144,6 +143,7 @@ function TextFieldRenderer({
             translations={readTranslationsFor(translations, fieldKey)}
             contentItemId={contentItemId}
             aiEnabled={aiEnabled}
+            t={t}
             onChange={(next) => writeTranslationsFor(onTranslation, fieldKey, next)}
           />
         ) : null}
@@ -164,6 +164,7 @@ function TextFieldRenderer({
           field={fieldKey as PerFieldAiField}
           currentValue={value}
           enabled={aiEnabled}
+          t={t}
           onApply={(text, mode) => {
             if (mode === "replace") {
               onField(fieldKey, text);
@@ -188,7 +189,6 @@ function LongTextFieldRenderer({
   editable,
   aiEnabled,
   contentItemId,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   t,
   onField,
   onTranslation,
@@ -208,6 +208,7 @@ function LongTextFieldRenderer({
             translations={readTranslationsFor(translations, fieldKey)}
             contentItemId={contentItemId}
             aiEnabled={aiEnabled}
+            t={t}
             onChange={(next) => writeTranslationsFor(onTranslation, fieldKey, next)}
           />
         ) : null}
@@ -229,6 +230,7 @@ function LongTextFieldRenderer({
           field={fieldKey as PerFieldAiField}
           currentValue={value}
           enabled={aiEnabled}
+          t={t}
           onApply={(text, mode) => {
             if (mode === "replace") {
               onField(fieldKey, text);
@@ -273,6 +275,7 @@ function TagFieldRenderer({
             translations={readTranslationsFor(translations, fieldKey)}
             contentItemId={contentItemId}
             aiEnabled={aiEnabled}
+            t={t}
             onChange={(next) => writeTranslationsFor(onTranslation, fieldKey, next)}
           />
         ) : null}
@@ -298,6 +301,7 @@ function TagFieldRenderer({
           field={fieldKey as PerFieldAiField}
           currentValue={value}
           enabled={aiEnabled}
+          t={t}
           onApply={(text, _mode, parsed) => {
             if (parsed && parsed.length > 0) {
               onField(fieldKey, parsed);

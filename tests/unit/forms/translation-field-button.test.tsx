@@ -2,10 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TranslationFieldButton } from "@/components/forms/translation-field-button";
+import { tFor } from "@/messages";
 
 vi.mock("@/components/forms/per-field-ai-suggest", () => ({
   PerFieldAiSuggest: () => null,
 }));
+
+const t = tFor("en");
 
 describe("TranslationFieldButton", () => {
   it("renders 'Translations' with no count badge when no translations exist", () => {
@@ -17,6 +20,7 @@ describe("TranslationFieldButton", () => {
         translations={{}}
         contentItemId="ci-1"
         onChange={vi.fn()}
+        t={t}
       />,
     );
     const button = screen.getByTestId("translation-button-caption");
@@ -35,6 +39,7 @@ describe("TranslationFieldButton", () => {
         translations={{ ar: "مرحبا" }}
         contentItemId="ci-1"
         onChange={vi.fn()}
+        t={t}
       />,
     );
     const button = screen.getByTestId("translation-button-caption");
@@ -50,6 +55,7 @@ describe("TranslationFieldButton", () => {
         translations={{ ar: "مرحبا", de: "   ", es: "Hola" }}
         contentItemId="ci-1"
         onChange={vi.fn()}
+        t={t}
       />,
     );
     const button = screen.getByTestId("translation-button-caption");
@@ -71,6 +77,7 @@ describe("TranslationFieldButton", () => {
         translations={{ ar: "مرحبا" }}
         contentItemId="ci-1"
         onChange={onChange}
+        t={t}
       />,
     );
     await userEvent.click(screen.getByTestId("translation-button-caption"));
@@ -95,6 +102,7 @@ describe("TranslationFieldButton", () => {
         translations={{}}
         contentItemId="ci-1"
         onChange={vi.fn()}
+        t={t}
       />,
     );
     await userEvent.click(screen.getByTestId("translation-button-caption"));
@@ -113,6 +121,7 @@ describe("TranslationFieldButton", () => {
         translations={{ ar: "مرحبا" }}
         contentItemId="ci-1"
         onChange={onChange}
+        t={t}
       />,
     );
     await userEvent.click(screen.getByTestId("translation-button-caption"));

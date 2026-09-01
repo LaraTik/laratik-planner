@@ -72,6 +72,18 @@ export interface TranslationFieldButtonProps {
   aiEnabled?: boolean | undefined;
   /** Called when a translation value changes. */
   onChange: (next: Record<string, string>) => void;
+  /**
+   * Bound translator from the parent field renderer. Threaded
+   * through to the per-row `<PerFieldAiSuggest>` so the AI
+   * button chrome (Suggest / Drafting / Insert / Replace /
+   * Try again / Dismiss + aria-labels) resolves through
+   * `formatEditor.editor.ai.*` in the active catalog.
+   * (The TranslationFieldButton's own chrome — the
+   * "Translations" label, aria-label, and empty state —
+   * stays English for now; that work belongs to a
+   * dedicated translations-tab commit.)
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 function countFilledTranslations(translations: Record<string, string>): number {
@@ -91,6 +103,7 @@ export function TranslationFieldButton({
   contentItemId,
   aiEnabled = true,
   onChange,
+  t,
 }: TranslationFieldButtonProps) {
   const [open, setOpen] = React.useState(false);
   // Locales the user has activated in this popover. Seeded from
@@ -179,6 +192,7 @@ export function TranslationFieldButton({
               value={value}
               contentItemId={contentItemId}
               aiEnabled={aiEnabled}
+              t={t}
               onChange={(v) => setValue(code, v)}
               onRemove={() => removeLocale(code)}
             />
@@ -254,6 +268,7 @@ function TranslationFieldRow({
   value,
   contentItemId,
   aiEnabled,
+  t,
   onChange,
   onRemove,
 }: {
@@ -264,6 +279,7 @@ function TranslationFieldRow({
   value: string;
   contentItemId: string;
   aiEnabled: boolean;
+  t: (key: string, params?: Record<string, string | number>) => string;
   onChange: (next: string) => void;
   onRemove: () => void;
 }) {
@@ -322,6 +338,7 @@ function TranslationFieldRow({
         currentValue={value}
         contentLanguage={desc.code}
         enabled={aiEnabled}
+        t={t}
         onApply={(text, mode, parsed) => {
           // The AI suggestion replaces or appends the
           // translation in *this* locale. Insert/Replace is

@@ -83,6 +83,15 @@ export interface PerFieldAiSuggestProps {
    * a tooltip on the button so the planner knows why.
    */
   disabledReason?: string | null | undefined;
+  /**
+   * Bound translator from the parent field renderer. Resolves
+   * the "AI suggest" button label, the "Drafting…" spinner,
+   * the preview header, the Insert / Replace / Try again /
+   * Dismiss buttons + their aria-labels, the Replace
+   * confirm dialog, and the empty-draft error through the
+   * `formatEditor.editor.ai.*` catalog keys.
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 type SuggestState =
@@ -102,6 +111,7 @@ export function PerFieldAiSuggest({
   onApply,
   enabled = true,
   disabledReason = null,
+  t,
 }: PerFieldAiSuggestProps) {
   const [state, setState] = React.useState<SuggestState>({ kind: "idle" });
   const inFlight = React.useRef<AbortController | null>(null);
@@ -127,6 +137,7 @@ export function PerFieldAiSuggest({
   if (!enabled) return null;
 
   const isHashtag = HASHTAG_FIELDS.has(field);
+  const suggestAria = t("formatEditor.editor.ai.suggestFieldAria", { field });
 
   async function suggest() {
     if (state.kind === "loading") return;
@@ -149,7 +160,10 @@ export function PerFieldAiSuggest({
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setState({ kind: "error", message: data.error ?? `Request failed (${res.status})` });
+        setState({
+          kind: "error",
+          message: data.error ?? t("formatEditor.editor.ai.requestFailed", { status: res.status }),
+        });
         return;
       }
       const data = (await res.json()) as {
@@ -158,7 +172,7 @@ export function PerFieldAiSuggest({
       };
       const text = (data.text ?? "").trim();
       if (!text) {
-        setState({ kind: "error", message: "AI returned an empty draft." });
+        setState({ kind: "error", message: t("formatEditor.editor.ai.emptyDraft") });
         return;
       }
       setState({ kind: "ready", text, parsed: data.parsed ?? null });
@@ -166,7 +180,7 @@ export function PerFieldAiSuggest({
       if ((err as { name?: string }).name === "AbortError") return;
       setState({
         kind: "error",
-        message: (err as Error).message ?? "Unknown error",
+        message: (err as Error).message ?? t("formatEditor.editor.ai.unknownError"),
       });
     }
   }
@@ -180,19 +194,19 @@ export function PerFieldAiSuggest({
           size="sm"
           onClick={suggest}
           disabled={Boolean(disabledReason)}
-          aria-label={disabledReason ?? `Suggest ${field} with AI`}
-          title={disabledReason ?? `Suggest ${field} with AI`}
+          aria-label={disabledReason ?? suggestAria}
+          title={disabledReason ?? suggestAria}
           className="text-primary hover:bg-primary-subtle"
         >
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          AI suggest
+          {t("formatEditor.editor.ai.suggest")}
         </Button>
       ) : null}
 
       {state.kind === "loading" ? (
         <div className="text-label text-fg-muted inline-flex items-center gap-2">
           <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-          Drafting…
+          {t("formatEditor.editor.ai.drafting")}
         </div>
       ) : null}
 
@@ -205,8 +219,11 @@ export function PerFieldAiSuggest({
       {state.kind === "ready" ? (
         <div className="border-primary-subtle bg-primary-subtle/40 space-y-2 rounded-[var(--radius-control)] border p-2">
           <p className="text-label text-fg-secondary font-semibold">
-            AI suggestion
-            {contentLanguage ? ` · ${contentLanguage}` : ""}
+            {contentLanguage
+              ? t("formatEditor.editor.ai.suggestionHeaderWithLanguage", {
+                  language: contentLanguage,
+                })
+              : t("formatEditor.editor.ai.suggestionHeader")}
           </p>
           {isHashtag && state.parsed ? (
             <ul className="flex flex-wrap gap-1.5">
@@ -234,9 +251,10 @@ export function PerFieldAiSuggest({
               size="sm"
               variant="default"
               onClick={() => onApply(state.text, "insert", state.parsed)}
-              aria-label="Insert AI suggestion after current value"
+              aria-label={t("formatEditor.editor.ai.insertAria")}
             >
-              <Check className="h-3.5 w-3.5" aria-hidden="true" /> Insert
+              <Check className="h-3.5 w-3.5" aria-hidden="true" />{" "}
+              {t("formatEditor.editor.ai.insert")}
             </Button>
             <Button
               type="button"
@@ -245,33 +263,34 @@ export function PerFieldAiSuggest({
               onClick={() => {
                 if (
                   typeof window !== "undefined" &&
-                  !window.confirm("Replace the current value with the AI suggestion?")
+                  !window.confirm(t("formatEditor.editor.ai.replaceConfirm"))
                 ) {
                   return;
                 }
                 onApply(state.text, "replace", state.parsed);
               }}
-              aria-label="Replace current value with AI suggestion"
+              aria-label={t("formatEditor.editor.ai.replaceAria")}
             >
-              Replace
+              {t("formatEditor.editor.ai.replace")}
             </Button>
             <Button
               type="button"
               size="sm"
               variant="ghost"
               onClick={suggest}
-              aria-label="Try again — generate a new suggestion"
+              aria-label={t("formatEditor.editor.ai.tryAgainAria")}
             >
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Try again
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />{" "}
+              {t("formatEditor.editor.ai.tryAgain")}
             </Button>
             <Button
               type="button"
               size="sm"
               variant="ghost"
               onClick={() => setState({ kind: "idle" })}
-              aria-label="Dismiss AI suggestion"
+              aria-label={t("formatEditor.editor.ai.dismissAria")}
             >
-              <X className="h-3.5 w-3.5" aria-hidden="true" /> Dismiss
+              <X className="h-3.5 w-3.5" aria-hidden="true" /> {t("formatEditor.editor.ai.dismiss")}
             </Button>
           </div>
         </div>
