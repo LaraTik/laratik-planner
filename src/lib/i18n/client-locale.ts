@@ -19,10 +19,18 @@
  * follows the authenticated user's profile. This file is for
  * error boundaries + other client components where the server
  * context is unavailable.
+ *
+ * Note: the cookie name is duplicated here instead of imported
+ * from `./cookie` so this module is `server-only`-free. Importing
+ * the server-side cookie module would pull `next/headers` into
+ * the client bundle and break the (app) error boundary build.
  */
 import { tFor } from "@/messages";
-import { PUBLIC_LOCALE_COOKIE_NAME } from "./cookie";
 import type { LocaleCode } from "@/lib/i18n/locales";
+
+// Mirror of `PUBLIC_LOCALE_COOKIE_NAME` in `cookie.ts`. If the
+// cookie name ever changes, update this constant too.
+const PUBLIC_LOCALE_COOKIE_NAME = "laratik_locale";
 
 const SUPPORTED: ReadonlySet<LocaleCode> = new Set(["en", "ar"]);
 
