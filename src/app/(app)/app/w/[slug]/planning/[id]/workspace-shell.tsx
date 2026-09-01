@@ -8,7 +8,6 @@ import {
   DiscussionTrigger,
   WorkspacePanels,
   WorkspaceTabs,
-  initialActiveTabFromHash,
   type WorkspaceTab,
   type WorkspaceTabId,
 } from "@/components/planning/workspace-tabs";
@@ -97,9 +96,11 @@ export function WorkspaceShell({
   mentionCount,
 }: WorkspaceShellProps) {
   const t = useLocaleT();
-  const [activeId, setActiveId] = React.useState<WorkspaceTabId>(() =>
-    initialActiveTabFromHash(tabs),
-  );
+  // Keep the first render identical on the server and client. The URL hash is
+  // browser-only, so reading it in the state initializer causes hydration
+  // mismatches for deep links such as `#publishing`. The first effect below
+  // adopts the hash after hydration, before syncing it back to history.
+  const [activeId, setActiveId] = React.useState<WorkspaceTabId>(() => tabs[0]?.id ?? "overview");
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [resetOpen, setResetOpen] = React.useState(false);
 
@@ -111,16 +112,24 @@ export function WorkspaceShell({
   const isFirstHashSyncRef = React.useRef(true);
   React.useEffect(() => {
     if (typeof window === "undefined") return;
+    const isInitialSync = isFirstHashSyncRef.current;
+    if (isInitialSync) {
+      isFirstHashSyncRef.current = false;
+      const hash = window.location.hash.replace(/^#/, "") as WorkspaceTabId;
+      if (hash && tabs.some((tab) => tab.id === hash) && hash !== activeId) {
+        React.startTransition(() => setActiveId(hash));
+        return;
+      }
+    }
     const target = `#${activeId}`;
     if (window.location.hash !== target) {
-      if (isFirstHashSyncRef.current) {
+      if (isInitialSync) {
         window.history.replaceState(null, "", target);
-        isFirstHashSyncRef.current = false;
       } else {
         window.history.pushState(null, "", target);
       }
     }
-  }, [activeId]);
+  }, [activeId, tabs]);
 
   // Hash → state (back/forward button, manual hash edit).
   React.useEffect(() => {
