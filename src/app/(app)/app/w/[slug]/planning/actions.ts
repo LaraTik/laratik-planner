@@ -370,6 +370,11 @@ export async function decideApprovalAction(input: {
     return { error: error instanceof Error ? error.message : "The approval action failed." };
   }
   revalidatePath(`/app/w/${input.workspaceSlug}/planning`);
+  // Publication outcomes change the workflow status rendered by the
+  // planning detail page as well as the list. Revalidate the dynamic
+  // detail route so a publisher's next visit cannot see a stale
+  // ready-to-publish snapshot.
+  revalidatePath(`/app/w/${input.workspaceSlug}/planning/[id]`, "page");
   return {};
 }
 

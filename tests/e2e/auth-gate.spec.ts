@@ -141,7 +141,7 @@ test.describe("auth gate: callbackUrl edge cases", () => {
     // not-found); both are valid responses for a masked tenant.
     expect([200, 404]).toContain(res?.status() ?? 0);
     await expect(page).not.toHaveURL(/\/setup/);
-    await expect(page.getByRole("heading", { name: /Page not found/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Workspace unavailable/i })).toBeVisible();
     await expect(page.getByTestId("workspace-overview")).toHaveCount(0);
   });
 });

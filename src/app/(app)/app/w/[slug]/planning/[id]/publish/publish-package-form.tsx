@@ -76,13 +76,18 @@ type ChannelSummary = {
   payload: PlatformPayload | null;
 };
 
-function defaultPayloadFor(platform: string): PlatformPayload {
+function defaultPayloadFor(platform: string, socialChannelId: string): PlatformPayload {
   // Build a per-platform minimal default. The schema is the
   // gate; if a key is missing the Zod discriminated union will
   // fill it with the documented default. This is the initial
   // state for a channel that has never been saved.
   const base = {
     schemaVersion: 1 as const,
+    // The content-item channel is the selected destination profile. Keep
+    // this relationship in the first draft so saving a package configures
+    // the channel instead of leaving the publishing card permanently in
+    // its unconfigured state.
+    selectedDestinationProfile: { socialChannelId },
     hashtags: [] as string[],
     mentions: [] as { handle: string }[],
     collaborators: [] as { handle: string; role: "tagged" | "co_author" | "invited" }[],
@@ -238,7 +243,7 @@ export function PublishPackageForm({
       // the More details editor sees their caption /
       // hashtags / location in the publish form on first
       // open, before any manual save.
-      const base = ch.payload ?? defaultPayloadFor(ch.platform);
+      const base = ch.payload ?? defaultPayloadFor(ch.platform, ch.socialChannelId);
       if (ch.payload || !formatPayloadPreFill) {
         initial[ch.id] = base;
         continue;
@@ -285,7 +290,10 @@ export function PublishPackageForm({
     setDrafts((prev) => {
       const base =
         prev[channelId] ??
-        defaultPayloadFor(channels.find((c) => c.id === channelId)?.platform ?? "other");
+        defaultPayloadFor(
+          channels.find((c) => c.id === channelId)?.platform ?? "other",
+          channels.find((c) => c.id === channelId)?.socialChannelId ?? channelId,
+        );
       // Cast through unknown — the form patches across platform
       // variants and the discriminated union narrows at the
       // server-side Zod parse.

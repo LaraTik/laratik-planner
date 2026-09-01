@@ -1,6 +1,6 @@
 # UI/UX + Arabic critical findings — implementation TODO
 
-> Handoff for a fixing agent. Review snapshot: `fd2616a` on `feat/ui-ux-arabic-2026-09-01`, 2026-09-01. The branch is active; re-confirm each path against the current HEAD before editing.
+> Handoff for a fixing agent. Review snapshot: `91184bc` on `feat/ui-ux-arabic-2026-09-01`, 2026-09-02. The branch is active; re-confirm each path against the current HEAD before editing.
 
 ## Objective
 
@@ -101,15 +101,18 @@ release checklist.
 
 The visual runner is now configuration-safe: `test:e2e:critical` and
 `test:visual` provision migrations and deterministic test-only Auth.js settings
-through `scripts/run-e2e-tests.ts`. On 2026-09-01 the complete visual matrix
-passed **112/112** against refreshed candidate baselines. Four stale error-page
-captures (channels, batch planning, new planning, and planning detail) were
-replaced after a dev-manifest/JSON race; the focused rerun and the full suite
-both pass. The account-menu capture now scans the underlying page before the
-Radix focus trap opens, avoiding a false `aria-hidden-focus` axe result while
-still preserving the open-menu visual state. Human Stitch comparison and
-independent reviewer approval remain required; these are review obligations,
-not missing database/auth configuration.
+through `scripts/run-e2e-tests.ts`. At candidate snapshot `f702b46` on
+2026-09-01, the visual suite passed **112/112** (39 exact-reference and 73
+scoped responsive assertions) against refreshed candidate baselines. Four stale
+error-page captures (channels, batch planning, new planning, and planning
+detail) were replaced after a dev-manifest/JSON race; the focused rerun and the
+full suite both passed at that snapshot. The account-menu capture now scans the
+underlying page before the Radix focus trap opens, avoiding a false
+`aria-hidden-focus` axe result while still preserving the open menu state.
+Because source and E2E changes landed after that snapshot, rerun the visual
+suite at the final exact HEAD before treating this as release evidence. Human
+Stitch comparison and independent reviewer approval remain required; these are
+review obligations, not missing database/auth configuration.
 
 ## P1 — I18N-003: profile language switching is blocked and profile copy is English
 

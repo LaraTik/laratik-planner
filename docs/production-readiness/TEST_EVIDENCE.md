@@ -52,24 +52,27 @@ The per-glob **regression floor** in `vitest.config.ts` is set at the current pe
 
 ## Browser evidence
 
-### Local rebaseline — 2026-09-01
+### Local rebaseline — 2026-09-01 (candidate snapshot `f702b46`)
 
 The Docker Postgres service `laratik-planner-pg-dev` was healthy with the
 disposable `planner_test` database. The isolated runner applied migrations and
 injected deterministic test-only Auth.js settings. Migration drill passed 5/5,
 integration passed 22 files / 187 tests, the authenticated Chromium axe sweep
 passed 24/24 routes, and the complete visual suite passed **112/112** after
-refreshing the candidate PNGs. This supersedes the historical pending-baseline
-note below; human Stitch comparison and the five-browser functional matrix are
-still independent release gates.
+refreshing the candidate PNGs (39 exact-reference + 73 scoped responsive
+assertions). This supersedes the historical pending-baseline note below;
+human Stitch comparison and the five-browser functional matrix are still
+independent release gates. Because subsequent source and E2E changes landed
+after this snapshot, the final release candidate must rerun the visual suite
+at its exact HEAD before this evidence is treated as current.
 
-| Suite                                        | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Source                                                                                      |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Playwright `chromium`                        | 144 pass, 10 skip                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `pnpm test:e2e:run` (split into `e2e.yml` so the slow suite does not gate deploy)           |
-| Playwright `chromium` + `firefox` + `webkit` | Green on `main`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `tests/e2e/`; see `tests/e2e/mobile-safari.spec.ts` and the `playwright.config.ts` projects |
-| Playwright `mobile-chrome` + `mobile-safari` | Green on `main`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Pixel 7 viewport; mobile-only spec gating via `test.skip(({ isMobile }) => isMobile, ...)`  |
-| axe-core per route                           | No serious/critical issue on canonical authenticated routes                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `tests/e2e/a11y-routes.spec.ts` (M3b `23706b1`)                                             |
-| Visual regression (QA-004)                   | **PENDING** — harness wired (177 visual tests in `visual-chromium` project), `test.skip` removed, no committed baselines. The 39 route-backed exact-reference + 138 responsive baselines must be re-captured on the CI runner (Linux, portable filenames) via `TEST_DATABASE_URL=... pnpm test:visual:update` and then reviewed against the 51-case `STITCH_CASES` manifest. A 2026-08-22 commit (`f406fbc`) untracked 122 darwin-path snapshot files that were accidentally committed and were not portable to the Ubuntu CI runner. |
+| Suite                                        | Result                                                                                                                                                                                                                                                                                                                                                | Source                                                                                      |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Playwright `chromium`                        | 144 pass, 10 skip                                                                                                                                                                                                                                                                                                                                     | `pnpm test:e2e:run` (split into `e2e.yml` so the slow suite does not gate deploy)           |
+| Playwright `chromium` + `firefox` + `webkit` | Green on `main`                                                                                                                                                                                                                                                                                                                                       | `tests/e2e/`; see `tests/e2e/mobile-safari.spec.ts` and the `playwright.config.ts` projects |
+| Playwright `mobile-chrome` + `mobile-safari` | Green on `main`                                                                                                                                                                                                                                                                                                                                       | Pixel 7 viewport; mobile-only spec gating via `test.skip(({ isMobile }) => isMobile, ...)`  |
+| axe-core per route                           | No serious/critical issue on canonical authenticated routes                                                                                                                                                                                                                                                                                           | `tests/e2e/a11y-routes.spec.ts` (M3b `23706b1`)                                             |
+| Visual regression (QA-004)                   | **Candidate baselines present; final exact-HEAD rerun and human review pending** — snapshot `f702b46` passed 112/112 in assert mode (39 route-backed exact-reference + 73 scoped responsive assertions) with disposable Postgres/Auth.js setup. Review all candidate PNGs against the 51-case `STITCH_CASES` manifest; rerun after any source change. |
 
 ## Critical baseline weaknesses — pre-M3, all closed
 
@@ -83,7 +86,7 @@ The pre-M3 baseline called out five weaknesses. Each is now resolved:
 
 ## Known residual gaps (not regressions, planned)
 
-- **Visual regression baselines (QA-004)** — first capture needs a stable UI render + `playwright test --update-snapshots`. The spec is `test.skip` by default; once the UI is stable enough to capture, the baselines are reviewed and locked.
+- **Visual regression baselines (QA-004)** — candidate PNGs exist and passed 112/112 at snapshot `f702b46` (39 exact-reference + 73 scoped responsive assertions). The final exact-HEAD rerun and human comparison against Stitch remain open; the matrix must not move to `Tested` from automation alone.
 - **Manual a11y checklist (QA-005)** — automated axe-core is green; the screen-reader / zoom / reduced-motion manual sign-off is an owner action.
 - **Coverage "critical / services" target** — currently the regression floor is the measured number; the next coverage lift is folding the integration tests into the vitest run, then raising the floors toward 95/90 / 85/80.
 - **Integration test run** — requires a running Postgres + `TEST_DATABASE_URL`. CI runs it on every PR; the latest local re-baseline of unit + coverage is captured above. Integration results from the most recent `main` run are in the CI artifacts.
@@ -456,7 +459,7 @@ above remain authoritative.
 | `pnpm build`            | **Skipped: symlinked node_modules not supported by Turbopack** | Worktree-only limitation. Re-run in the main checkout. The Task 9 change set adds no application code. |
 | `pnpm test:integration` | **Skipped: no DB in this env** (`TEST_DATABASE_URL` unset)     | Guard correctly refuses to run; CI runs this gate separately.                                          |
 
-## 2026-08-22 — Documentation reconciliation (plan Task 11)
+## 2026-08-22 — Documentation reconciliation (plan Task 11; counts reconciled 2026-09-02)
 
 All status documents (this file, `PRODUCTION_READINESS_TRACKER.md`,
 `SCREEN_PARITY.md`, `UAT_RELEASE.md`, `DESIGN_AUDIT.md`,
@@ -465,10 +468,10 @@ now use the same shared definitions and the same shared release verdict.
 
 - **51 captured Stitch references** (PNG + HTML each, 102 files + `DESIGN.md`).
 - **27 canonical route/surface rows** including `/signin/forgot-password`.
-- **23 unique routes** deduped from the 27 canonical cases (the responsive matrix iterates over these).
+- **23 unique route surfaces** deduped from the 27 canonical cases (the responsive matrix iterates over these).
 - **41 active references** (27 canonical + 11 responsive + 3 supporting) at the Stitch capture viewport; 39 are route-backed exact-reference comparisons and two are shared-state evidence groups.
 - **10 historical/superseded exclusions** with successors (3 historical + 7 superseded).
-- **138 responsive baselines** (23 unique routes × 6 viewports: 360, 390, 768, 1024, 1280, 1440).
+- **73 responsive baselines** under the current scoped harness: 19 non-planning surfaces × 3 viewports (360, 768, 1440) plus four planning surfaces × 4 viewports (375, 768, 1024, 1440).
 
 **Shared release verdict:** `READY FOR INDEPENDENT REVIEW` (2026-08-21). The
 `PRODUCTION_READINESS_TRACKER.md` top-of-file verdict and the

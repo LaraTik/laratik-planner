@@ -11,7 +11,7 @@
 - `.github/workflows/deploy.yml` — `workflow_run: workflows: [CI], types: [completed]` + `if: github.event.workflow_run.conclusion == 'success'`; builds `ghcr.io/laratik/laratik-planner:<sha>` and `ghcr.io/laratik/laratik-planner-migrator:<sha>`; pulls previous image; runs `scripts/deploy.sh` via `appleboy/ssh-action` on the VPS.
 - `scripts/deploy.sh` — backups the local Postgres (`scripts/vps/backup.sh`), runs the migrator (aborts on failure), recreates the app container pinned to the new SHA, hits `/api/health`, rolls back on any failure.
 - `src/app/api/health/route.ts` — reports the real release SHA at container runtime.
-- `docs/production-readiness/MIGRATION_DRILL_RESULTS.md` — 4 / 4 migration drills PASS (forward-only, rollback drill deferred).
+- `docs/production-readiness/MIGRATION_DRILL_RESULTS.md` — 5 / 5 migration checks PASS through migration 0025 (forward-only, destructive rollback drill deferred); the disposable `planner_test` recovery recipe is documented in `docs/operations/runbook.md`.
 - `src/lib/validation/env.ts` + `src/lib/validation/provider-configuration.ts` — fail-fast on missing or non-production provider config at container start.
 
 ## What you must add (the OPS-001 closure)

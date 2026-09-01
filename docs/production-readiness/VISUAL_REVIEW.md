@@ -4,8 +4,8 @@
 > candidate baselines ship in Task 7; rows below are filled in
 > during the actual sign-off pass.
 
-Every active `STITCH_CASES` entry (27 canonical + 11 responsive + 1
-supporting = 39 reference captures) is compared against its candidate
+Every active `STITCH_CASES` entry (27 canonical + 11 responsive + 3
+supporting = 41 reference captures) is compared against its candidate
 PNG and the captured `designs/stitch/<id>_<slug>.html`. Every
 historical/superseded capture (10 entries) is reviewed against its
 named successor; we record the canonical successor rather than
@@ -13,16 +13,20 @@ making the product match obsolete work.
 
 ## Process
 
-### Automated capture evidence (2026-09-01)
+### Automated capture evidence (2026-09-01; candidate snapshot `f702b46`)
 
 The isolated runner created `planner_test`, applied migrations, and supplied
 deterministic test-only Auth.js settings before starting Playwright. The full
 visual suite completed **112/112** in assert mode on Chromium (`pnpm
-test:visual`). Four stale runtime-error baselines caused by a development
+test:visual`): 39 exact-reference assertions plus 73 scoped responsive
+assertions. Four stale runtime-error baselines caused by a development
 manifest/JSON race were recaptured individually and then verified again in the
 full run. The account-menu state is intentionally scanned before its Radix
 focus trap opens because axe otherwise reports the expected `aria-hidden`
 background as focusable; the open menu is still included in the screenshot.
+The branch advanced after this candidate snapshot, so the final release
+candidate must rerun the visual suite at its exact HEAD before this evidence
+is treated as current.
 
 This proves the automated gate and candidate-file portability. It does not
 replace the reviewer comparison against the Stitch PNG/HTML or the manual
@@ -35,9 +39,10 @@ For every active `STITCH_CASES` entry:
 2. Check typography, spacing, layout, tokens, icons, imagery,
    overflow, responsive behavior, and interactive state.
 3. For the responsive matrix (`tests/e2e/visual-regression.spec.ts`
-   → `visual regression (responsive matrix)`), repeat the comparison
-   at every regression viewport (360 / 390 / 768 / 1024 / 1280 /
-   1440).
+   → `visual regression (responsive matrix)`), repeat the comparison at
+   every viewport selected by `viewportsForSurface()`: 19 non-planning
+   surfaces at 360 / 768 / 1440, and four planning surfaces at 375 / 768 /
+   1024 / 1440 (73 baselines total).
 4. Mark each row with a result and a link to the diff / follow-up
    issue / approved-deviation commit.
 5. A baseline may be approved only after every dimension above
@@ -58,7 +63,7 @@ For every historical/superseded entry:
 | --------- | -------------- | ------------- | -------- | -------- | ---- | ------ | ------------------- |
 | _pending_ |                |               |          |          |      |        |                     |
 
-## Reference table (responsive matrix: 23 routes × 6 viewports)
+## Reference table (responsive matrix: 23 surfaces, 73 scoped baselines)
 
 | Surface   | Viewport | Reviewer | Date | Result | Issue / commit link |
 | --------- | -------- | -------- | ---- | ------ | ------------------- |
@@ -107,8 +112,9 @@ Baselines are stored under
 `tests/e2e/visual-regression.spec.ts-snapshots/reference/` (one
 capture per active Stitch case) and
 `tests/e2e/visual-regression.spec.ts-snapshots/responsive/`
-(23 routes × 6 viewports = 138 baselines). The CI pipeline uploads
-visual diffs on failure (artifact `visual-diffs`).
+(73 baselines: 19 non-planning surfaces × 3 viewports plus four planning
+surfaces × 4 viewports). The CI pipeline uploads visual diffs on failure
+(artifact `visual-diffs`).
 
 ## How to add a new Stitch case
 

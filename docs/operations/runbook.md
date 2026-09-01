@@ -245,7 +245,7 @@ ssh laratik-vps 'cd /opt/laratik-planner && docker image prune -f'
 
 ## End-to-end tests
 
-The Playwright suite in `tests/e2e/` runs against a real Next.js dev server + Postgres. The most recent CI run on the `head_sha` reports **144 pass / 10 skip**; current numbers and per-spec evidence are kept in [`../production-readiness/TEST_EVIDENCE.md`](../production-readiness/TEST_EVIDENCE.md). CI invokes `pnpm test:e2e:isolated` on Chromium, Firefox, WebKit, and mobile Chrome. Mobile Safari and per-viewport visual baselines remain under UI-010 (Partial) in the production tracker.
+The Playwright suite in `tests/e2e/` runs against a real Next.js dev server + Postgres. Historical CI counts and current per-spec evidence are kept in [`../production-readiness/TEST_EVIDENCE.md`](../production-readiness/TEST_EVIDENCE.md). The release-candidate command runs the five functional projects (Chromium, Firefox, WebKit, mobile Chrome, and mobile Safari) locally. The visual harness currently has 39 exact-reference plus 73 scoped responsive assertions; candidate baselines passed 112/112 at snapshot `f702b46`, while final exact-HEAD rerun and human review remain required (see UI-010 in the production tracker).
 
 ### Spec files
 

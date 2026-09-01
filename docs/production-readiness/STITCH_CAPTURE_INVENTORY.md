@@ -27,8 +27,8 @@ Stitch manifest exported by `tests/e2e/stitch-cases.ts` and asserted by
 
 Viewports used by Stitch: desktop 1440×900, mobile 390×844,
 tablet 768×1024. These three sizes are the only widths Stitch emits;
-the visual-regression harness maps each canonical route to a wider
-six-viewport matrix (see `SCREEN_PARITY.md`).
+the visual-regression harness maps each canonical surface to the
+scoped viewport contract in `SCREEN_PARITY.md` (73 baselines total).
 
 ## Inventory
 

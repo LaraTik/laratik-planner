@@ -27,11 +27,12 @@ import {
  *      capture in `designs/stitch/`.
  *
  *   2. **Responsive matrix** — one screenshot per canonical surface
- *      (unique route from the 27 canonical cases) at every regression
- *      viewport. 23 routes × 6 viewports = 138 baselines that lock in
- *      the responsive layout the Stitch captures only sample at three
- *      widths. The `operational-states` evidence group is not a route
- *      and is reviewed directly against the captured PNG/HTML.
+ *      (unique route from the 27 canonical cases) at the viewports
+ *      selected by `viewportsForSurface()`: 19 non-planning surfaces
+ *      use 360 / 768 / 1440, while four planning surfaces use 375 /
+ *      768 / 1024 / 1440 (73 scoped baselines total). The
+ *      `operational-states` evidence group is not a route and is
+ *      reviewed directly against the captured PNG/HTML.
  *
  * Dynamic data (timestamps, IDs, hash-like strings) is masked via
  * injected CSS so baselines stay stable across runs.

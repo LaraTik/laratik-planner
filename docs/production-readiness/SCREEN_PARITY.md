@@ -20,23 +20,20 @@ math that the matrix has to satisfy going forward:
   (capture `793a08d8`). The previous "approved deviation" note for
   that screen is obsolete — password reset now exists as a parity
   target, brought online by `c46fc21`.
-- **23 unique routes deduped from the 27 canonical cases** (the
+- **23 unique route surfaces deduped from the 27 canonical cases** (the
   `operational-states` evidence group is not a route, and four
-  routes host multiple canonical rows). 23 × 6 viewports
-  (mobile-s 360, mobile-m 390, tablet 768, laptop 1024, desktop
-  1280, wide 1440) = **138 responsive baselines** that the
-  `tests/e2e/visual-regression.spec.ts` responsive matrix
-  **must capture** (status: PENDING — no baselines are committed
-  yet; see `TEST_EVIDENCE.md` and the `Captured` flag in
-  `tests/unit/stitch-cases.test.ts`). The Stitch captures
-  themselves only ship at the three viewport sizes that Google
-  Stitch emits (desktop 1440×900, mobile 390×844, tablet
-  768×1024); the harness is the bridge between the two.
+  routes host multiple canonical rows). The current harness uses a
+  scoped viewport contract: 19 non-planning surfaces use the legacy
+  3-viewport set (mobile-s 360, tablet 768, wide 1440), while the four
+  planning surfaces use the M5 4-viewport set (mobile-s 375, tablet 768,
+  laptop 1024, wide 1440). That is **73 responsive baselines**
+  (19 × 3 + 4 × 4), not the historical six-viewport proposal.
+  `tests/e2e/visual-regression.spec.ts` and `viewportsForSurface()` are
+  the executable source of truth for this count.
 - **41 active reference-state comparisons** (27 canonical + 11
   responsive + 3 supporting) at their captured viewport. The 39
   route-backed cases are exact-reference screenshots; the two
-  shared-state evidence groups remain capture-review evidence. Status:
-  PENDING — no baselines are committed yet.
+  shared-state evidence groups remain capture-review evidence.
 - **10 historical/superseded captures with successors** (3
   historical + 7 superseded) — kept for traceability, never
   implemented against. Each one names its successor `screenId` in
@@ -87,7 +84,7 @@ batch (`c46fc21`–`96a256a`).
 
 ## 2026-08-20 update (superseded by 2026-08-21 entries above and below)
 
-The M0–M4 visual refactor (`docs/visual-parity/PLAN.md`) delivered a **Stitch-aligned PageHeader** (eyebrow / title / description / `workspace.timezone` pill), a **`PlanningViewToggle`** (List/Board/Calendar) where it makes sense, per-card or per-row **status colour-code**, and `data-testid` hooks for visual regression on every workspace-scoped page. The visual-regression harness that this update commissioned was later extended by the 2026-08-24 Build Identity references: 39 route-backed exact-reference snapshots + 138 responsive baselines (23 unique routes × 6 viewports), with the deploy gate now depending on the critical visual tests.
+The M0–M4 visual refactor (`docs/visual-parity/PLAN.md`) delivered a **Stitch-aligned PageHeader** (eyebrow / title / description / `workspace.timezone` pill), a **`PlanningViewToggle`** (List/Board/Calendar) where it makes sense, per-card or per-row **status colour-code**, and `data-testid` hooks for visual regression on every workspace-scoped page. The historical six-viewport proposal is superseded by the current scoped harness: 39 route-backed exact-reference snapshots + 73 responsive baselines (23 unique surfaces; 19 × 3 legacy viewports and 4 planning × 4 M5 viewports). The deploy gate continues to depend on the critical visual tests.
 
 ## 2026-08-19 update
 
@@ -100,15 +97,18 @@ M3b (PR #1) closed the Goal 3–10 product gaps and shipped all 27 canonical rou
 
 The `Missing` and `Partial` statuses from the prior revision were pre-M3b and are no longer accurate. The prior file is kept in git history (`docs/production-readiness/SCREEN_PARITY.md` before this commit).
 
-## Automated evidence update — 2026-09-01
+## Automated evidence update — 2026-09-01 (candidate snapshot `f702b46`)
 
 The candidate baseline set is now present in the worktree and the full
 `visual-chromium` suite passes 112/112 in assert mode against the disposable
-Postgres/Auth.js setup. Four development-error captures were recaptured after a
+Postgres/Auth.js setup: 39 exact-reference assertions plus 73 scoped responsive
+assertions. Four development-error captures were recaptured after a
 manifest/JSON race. This changes the automated status from “no baselines” to
 “candidate baselines ready for review”; the matrix below intentionally remains
 pending until a human reviewer compares each PNG/HTML pair and records the
-result.
+result. Because the branch advanced after this snapshot, the final release
+candidate must rerun the suite at its exact HEAD before this evidence is treated
+as current.
 
 ## Matrix
 
@@ -149,8 +149,8 @@ result.
 `Tested` is reserved for rows whose "Required proof" is **captured in the repository** (visual baseline, behavioral log, signed manual checklist). The current state:
 
 - **Behavioral evidence** (axe-core per route, role-by-route matrix, E2E happy paths) — captured in `tests/e2e/`. Re-runs on `main` are green per `docs/production-readiness/TEST_EVIDENCE.md`.
-- **Visual baselines (QA-004)** — **PENDING**. The harness is wired (177 visual tests in the `visual-chromium` Playwright project, `test.skip` removed) but **no baselines are committed**. The 39 route-backed exact-reference + 138 responsive baselines must be re-captured on the CI runner (Linux, portable filenames) via `TEST_DATABASE_URL=... pnpm test:visual:update` and then reviewed against the 51-case `STITCH_CASES` manifest. A 2026-08-22 commit (`f406fbc`) untracked 122 darwin-path snapshot files that were accidentally committed and were not portable to the Ubuntu CI runner. Deploy now gates on the critical visual tests via `.github/workflows/ci.yml` + `.github/workflows/deploy.yml` (Task 7 commit `3d40183`) — the gate will fail the first deploy until baselines are committed.
-- **Manual a11y checklist (QA-005)** — automated a11y sweep found a real `meta-refresh` WCAG 2.2.2 violation on authenticated routes (`issues.md` P1 entry #3); manual screen-reader / zoom / reduced-motion sign-off is pending the fix and an owner action.
+- **Visual baselines (QA-004)** — **candidate baselines present; final exact-HEAD rerun and human review pending**. The 2026-09-01 snapshot (`f702b46`) contains 39 route-backed exact-reference + 73 scoped responsive baselines and passed 112/112 in the disposable Postgres/Auth.js setup. Rerun `TEST_DATABASE_URL=... pnpm test:visual` after the current branch's source changes, then review every candidate against the 51-case `STITCH_CASES` manifest. Deploy still gates on the critical visual tests via `.github/workflows/ci.yml` + `.github/workflows/deploy.yml`.
+- **Manual a11y checklist (QA-005)** — the automated Chromium route sweep is green (24/24 on 2026-09-01); manual screen-reader / zoom / reduced-motion sign-off remains pending in `ACCESSIBILITY_CHECKLIST.md`.
 
 The matrix ladder is therefore: every row `Implemented` (today) → `Tested` after the visual baselines are captured on CI AND QA-005 is signed off → `Verified` after independent review of the captured baselines.
 

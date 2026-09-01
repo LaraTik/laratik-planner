@@ -3,15 +3,15 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows DEP-001 / DEP-002 / OPS-001).
 > Drill results: [`MIGRATION_DRILL_RESULTS.md`](./MIGRATION_DRILL_RESULTS.md).
 
-## Status
+## Status (current evidence: 2026-09-01)
 
-| Item                                | Status as of 2026-08-19                      |
+| Item                                | Current status                               |
 | ----------------------------------- | -------------------------------------------- |
-| From-zero migration                 | **PASS** (drill 1/4, 2026-08-19)             |
-| In-place upgrade                    | **PASS** (drill 2/4, 2026-08-19)             |
-| Backup verification                 | **PASS** (drill 3/4, 2026-08-19)             |
-| Disposable restore                  | **PASS** (drill 3/4, 2026-08-19)             |
-| Failed-migration abort              | **PASS** (drill 4/4, 2026-08-19)             |
+| From-zero migration                 | **PASS** (drill 1/5, 2026-09-01)             |
+| Skipped-migration repair            | **PASS** (drill 2/5, 2026-09-01)             |
+| In-place upgrade                    | **PASS** (drill 3/5, 2026-09-01)             |
+| Backup verification + restore       | **PASS** (drill 4/5, 2026-09-01)             |
+| Failed-migration abort              | **PASS** (drill 5/5, 2026-09-01)             |
 | Release health / version            | **PASS** (real release SHA in `/api/health`) |
 | Rollback drill                      | **Deferred** (forward-only migrations)       |
 | Encrypted offsite backup + rotation | **Blocked on OPS-001** (owner-supplied)      |
@@ -73,6 +73,11 @@ ledger 18/18; skipped-migration repair restored all four tables and the 0012
 ledger row; backup/restore preserved 18/18 ledger rows; failed migration left
 the schema unchanged.
 
+This 2026-08-24 capture is historical. The current 2026-09-01 run, after the
+0025 notification-message migration was registered and the disposable database
+was recreated, passes all five checks with a 26/26 Drizzle ledger; the exact
+output is maintained in [`MIGRATION_DRILL_RESULTS.md`](./MIGRATION_DRILL_RESULTS.md).
+
 The first deployment of `79ff927` applied the repair successfully and created a
 verified pre-migration backup, but the new app was rolled back because the
 initial readiness implementation required all 18 ledger rows. Production was
@@ -87,7 +92,7 @@ The pre-M3a baseline listed four release blockers. Each is now closed:
 
 - ~~Deployment runs independently from the CI quality workflow.~~ **Fixed** — `.github/workflows/deploy.yml` is gated on `workflow_run: workflows: [CI], types: [completed]` with `if: github.event.workflow_run.conclusion == 'success'`. CI must be green before deploy fires.
 - ~~The production runner image does not provide a reliable migration runtime.~~ **Fixed** — `laratik-planner-migrator` is a separate image, built and pushed alongside the app image, and is invoked by `scripts/deploy.sh` as the migration runtime.
-- ~~`scripts/deploy.sh` explicitly continues when migration fails.~~ **Fixed** — `scripts/deploy.sh` aborts on any migration failure (no more swallowed exit). Backed by drill 4/4 PASS (failed-migration abort preserves the schema).
+- ~~`scripts/deploy.sh` explicitly continues when migration fails.~~ **Fixed** — `scripts/deploy.sh` aborts on any migration failure (no more swallowed exit). Backed by the current drill 5/5 PASS (failed-migration abort preserves the schema).
 - ~~Production health reports version `0.0.0` and checks database reachability rather than schema readiness.~~ **Fixed** — `src/app/api/health/route.ts` reports the real release SHA at container runtime; `scripts/deploy.sh` hits `/api/health` and rolls back on non-200.
 
 ## Required deployment sequence (current, M3a)
@@ -95,7 +100,7 @@ The pre-M3a baseline listed four release blockers. Each is now closed:
 1. CI quality, database, browser, security and image jobs pass (`pnpm verify` + `pnpm test:integration` + `pnpm test:e2e` + `pnpm audit --prod` + `docker build`).
 2. Build and publish an immutable SHA-tagged app image and matching migrator (`ghcr.io/laratik/laratik-planner:<sha>` + `ghcr.io/laratik/laratik-planner-migrator:<sha>`, plus `:latest`).
 3. Verify disk space and run the local Postgres backup (`scripts/vps/backup.sh`).
-4. Run the migrator with the captured previous image retained for rollback; **abort on any migration failure** (drill 4/4 proves the migrator surfaces the error and leaves the schema unchanged).
+4. Run the migrator with the captured previous image retained for rollback; **abort on any migration failure** (the current drill 5/5 proves the migrator surfaces the error and leaves the schema unchanged).
 5. Deploy the app image (`docker compose up -d --no-deps app` after `image:` is pinned to the new SHA).
 6. Check schema readiness, app health and release SHA (curl `/api/health` for the new SHA + DB up).
 7. Run the authenticated smoke tests (Playwright `public.spec.ts` + `auth-gate.spec.ts` + `health.spec.ts`).
