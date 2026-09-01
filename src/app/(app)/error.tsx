@@ -522,8 +522,8 @@ export default function AppError({
 
       <EmptyState
         icon={<AlertTriangle className="h-6 w-6" />}
-        title="Need to share this with support?"
-        description={`Copy the full report (button at the top) and paste it into a support ticket. The reference above is the fastest way for the team to find the matching event in Sentry / the in-app mirror at /app/platform/errors.`}
+        title={t("errors.shareWithSupportTitle")}
+        description={t("errors.shareWithSupportDescription")}
       />
     </div>
   );

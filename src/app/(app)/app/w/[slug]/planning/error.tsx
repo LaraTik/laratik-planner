@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { AlertTriangle } from "lucide-react";
+import { getClientT } from "@/lib/i18n/client-locale";
 
 /**
  * Per-route error boundary for /app/w/[slug]/planning/*.
@@ -25,6 +26,12 @@ export default function PlanningError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // Error boundary copy uses the public `laratik_locale` cookie
+  // (set by the profile-save action and the public locale
+  // switcher). On the server this returns the English translator;
+  // on the client it resolves to the visitor's most recent
+  // preference.
+  const t = getClientT();
   const params = useParams<{ slug: string }>();
   const planningHref = params?.slug ? `/app/w/${params.slug}/planning` : "/app";
 
@@ -36,18 +43,18 @@ export default function PlanningError({
     <div className="mx-auto w-full max-w-2xl px-4 py-12">
       <EmptyState
         icon={<AlertTriangle className="h-10 w-10" aria-hidden="true" />}
-        title="We hit an error rendering Planning"
-        description="Try again, or head back to the Planning list. The error has been logged — share the reference below with support if it keeps happening."
+        title={t("errors.planningTitle")}
+        description={t("errors.planningDescription")}
         action={
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Button onClick={reset} variant="default">
-              Try again
+              {t("errors.tryAgain")}
             </Button>
             <Button asChild variant="secondary">
-              <Link href={planningHref}>Back to Planning</Link>
+              <Link href={planningHref}>{t("errors.backToPlanning")}</Link>
             </Button>
             <Button asChild variant="ghost">
-              <Link href="/app">Back to My Work</Link>
+              <Link href="/app">{t("errors.backToMyWork")}</Link>
             </Button>
           </div>
         }
@@ -57,7 +64,7 @@ export default function PlanningError({
           data-testid="planning-error-digest"
           className="text-label text-fg-muted mt-4 text-center"
         >
-          Reference:{" "}
+          {t("errors.referenceLabel")}{" "}
           <code className="bg-surface-subtle rounded px-1.5 py-0.5 font-mono">{error.digest}</code>
         </p>
       ) : null}

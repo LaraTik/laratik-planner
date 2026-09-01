@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { AlertTriangle } from "lucide-react";
+import { getClientT } from "@/lib/i18n/client-locale";
 
 /**
  * Top-level error boundary (Next.js 13+ App Router).
@@ -27,6 +28,12 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // Error boundary copy uses the public `laratik_locale` cookie
+  // (set by the profile-save action and the public locale
+  // switcher). On the server this returns the English translator;
+  // on the client it resolves to whatever the visitor's most
+  // recent preference was.
+  const t = getClientT();
   React.useEffect(() => {
     Sentry.captureException(error);
   }, [error]);
@@ -35,25 +42,25 @@ export default function GlobalError({
     <div className="mx-auto w-full max-w-2xl px-4 py-12">
       <EmptyState
         icon={<AlertTriangle className="h-10 w-10" aria-hidden="true" />}
-        title="Something went wrong"
-        description="We hit an unexpected error rendering this page. Please try again — if the problem keeps happening, share the reference below with support."
+        title={t("errors.globalTitle")}
+        description={t("errors.globalDescription")}
         action={
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Button onClick={reset} variant="default">
-              Try again
+              {t("errors.tryAgain")}
             </Button>
             <Button asChild variant="secondary">
-              <Link href="/signin">Back to sign in</Link>
+              <Link href="/signin">{t("errors.backToSignIn")}</Link>
             </Button>
             <Button asChild variant="ghost">
-              <Link href="/app">Go to My Work</Link>
+              <Link href="/app">{t("errors.goToMyWork")}</Link>
             </Button>
           </div>
         }
       />
       {error.digest ? (
         <p data-testid="error-digest" className="text-label text-fg-muted mt-4 text-center">
-          Reference:{" "}
+          {t("errors.referenceLabel")}{" "}
           <code className="bg-surface-subtle rounded px-1.5 py-0.5 font-mono">{error.digest}</code>
         </p>
       ) : null}
