@@ -6,6 +6,8 @@ import { platformEditAgencyAction, type PlatformEditAgencyActionState } from "./
 
 const initial: PlatformEditAgencyActionState = {};
 
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
 /**
  * Platform-scoped wrapper around the shared EditAgencyForm
  * (M3.4 — agency CRUD). The wrapper:
@@ -16,6 +18,9 @@ const initial: PlatformEditAgencyActionState = {};
  *   - Prepends a "platform" prefix to the data-testids so the
  *     same component can be used in the agency-settings surface
  *     without collision
+ *   - Threads an optional `t` translator from the page so the
+ *     shared form renders bilingual copy on the platform
+ *     surface (the agency-settings surface passes its own `t`)
  */
 export function PlatformEditAgencyForm({
   agencyId,
@@ -23,12 +28,14 @@ export function PlatformEditAgencyForm({
   initialSlug,
   initialLocale,
   initialTimezone,
+  t,
 }: {
   agencyId: string;
   initialName: string;
   initialSlug: string;
   initialLocale: string;
   initialTimezone: string;
+  t?: Translator;
 }) {
   // useActionState returns a (prev, formData) => Promise<state>
   // action. EditAgencyForm expects a (formData) => Promise<void>
@@ -48,6 +55,7 @@ export function PlatformEditAgencyForm({
       formAction={formAction}
       actionState={state}
       hiddenFields={{ agencyId }}
+      {...(t ? { t } : {})}
     />
   );
 }

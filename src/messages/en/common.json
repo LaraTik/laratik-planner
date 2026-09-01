@@ -1845,7 +1845,19 @@
     "serviceConfigured": "Configured",
     "serviceDisabled": "Disabled",
     "servicePartial": "Partially configured",
-    "credentialsNote": "Credentials are managed by the deployment environment and are never shown here."
+    "credentialsNote": "Credentials are managed by the deployment environment and are never shown here.",
+    "identityTitle": "Agency identity",
+    "identityDescription": "The shared identity for every workspace in your agency. The slug is the unique identifier used in URLs.",
+    "identityName": "Name",
+    "identitySlug": "Slug",
+    "identityLocaleLabel": "Locale",
+    "identityLocaleHelp": "BCP 47 tag (e.g. en, en-US, pt-BR)",
+    "identityTimezoneLabel": "Timezone",
+    "identityTimezoneHelp": "IANA timezone (e.g. UTC, Europe/Berlin)",
+    "identitySave": "Save identity",
+    "identitySavePending": "Saving…",
+    "identitySavedChanged": "Agency identity saved ({fields}).",
+    "identitySavedNoChange": "Agency identity saved (no changes)."
   },
   "brandKit": {
     "title": "Brand Kit",

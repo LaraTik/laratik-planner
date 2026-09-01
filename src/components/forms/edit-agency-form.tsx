@@ -52,6 +52,30 @@ const COMMON_LOCALES: { code: string; label: string }[] = [
   { code: "nl", label: "Nederlands" },
 ];
 
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+const EN_FALLBACK: Translator = (key, params) => {
+  const lookup: Record<string, string> = {
+    "agencySettings.identityTitle": "Agency identity",
+    "agencySettings.identityDescription":
+      "The shared identity for every workspace in your agency. The slug is the unique identifier used in URLs.",
+    "agencySettings.identityName": "Name",
+    "agencySettings.identitySlug": "Slug",
+    "agencySettings.identityLocaleLabel": "Locale",
+    "agencySettings.identityLocaleHelp": "BCP 47 tag (e.g. en, en-US, pt-BR)",
+    "agencySettings.identityTimezoneLabel": "Timezone",
+    "agencySettings.identityTimezoneHelp": "IANA timezone (e.g. UTC, Europe/Berlin)",
+    "agencySettings.identitySave": "Save identity",
+    "agencySettings.identitySavePending": "Saving…",
+    "agencySettings.identitySavedChanged": "Agency identity saved ({fields}).",
+    "agencySettings.identitySavedNoChange": "Agency identity saved (no changes).",
+  };
+  const v = lookup[key];
+  if (!v) return key;
+  if (params?.fields) return v.replace("{fields}", String(params.fields));
+  return v;
+};
+
 const subscribeToHydration = () => () => undefined;
 
 export function EditAgencyForm({
@@ -69,6 +93,7 @@ export function EditAgencyForm({
   formAction,
   actionState,
   hiddenFields = {},
+  t,
 }: {
   initialName: string;
   initialSlug: string;
@@ -78,7 +103,9 @@ export function EditAgencyForm({
   formAction?: (formData: FormData) => void | Promise<void>;
   actionState?: EditAgencyActionState;
   hiddenFields?: Record<string, string>;
+  t?: Translator;
 }) {
+  const tr: Translator = t ?? EN_FALLBACK;
   const [localState, defaultAction, pending] = useActionState(editAgencyAction, initial);
   const state = actionState ?? localState;
   void pending; // pending is read by FormSubmitButton via useFormStatus
@@ -97,12 +124,9 @@ export function EditAgencyForm({
     <Card data-testid={`${testIdPrefix}-edit-identity-card`}>
       <div className="flex items-center gap-2">
         <Building2 className="text-primary h-5 w-5" aria-hidden="true" />
-        <CardTitle>Agency identity</CardTitle>
+        <CardTitle>{tr("agencySettings.identityTitle")}</CardTitle>
       </div>
-      <CardDescription className="mt-2">
-        The shared identity for every workspace in your agency. The slug is the unique identifier
-        used in URLs.
-      </CardDescription>
+      <CardDescription className="mt-2">{tr("agencySettings.identityDescription")}</CardDescription>
 
       <form
         action={action}
@@ -115,7 +139,7 @@ export function EditAgencyForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="agency-edit-name">
-              Name
+              {tr("agencySettings.identityName")}
               <span aria-hidden="true" className="text-danger ms-0.5">
                 *
               </span>
@@ -134,7 +158,7 @@ export function EditAgencyForm({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="agency-edit-slug">
-              Slug
+              {tr("agencySettings.identitySlug")}
               <span aria-hidden="true" className="text-danger ms-0.5">
                 *
               </span>
@@ -156,8 +180,10 @@ export function EditAgencyForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="agency-edit-locale">Locale</Label>
-            <p className="text-label text-fg-muted -mt-0.5">BCP 47 tag (e.g. en, en-US, pt-BR)</p>
+            <Label htmlFor="agency-edit-locale">{tr("agencySettings.identityLocaleLabel")}</Label>
+            <p className="text-label text-fg-muted -mt-0.5">
+              {tr("agencySettings.identityLocaleHelp")}
+            </p>
             <Input
               id="agency-edit-locale"
               name="locale"
@@ -179,9 +205,11 @@ export function EditAgencyForm({
             </datalist>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="agency-edit-timezone">Timezone</Label>
+            <Label htmlFor="agency-edit-timezone">
+              {tr("agencySettings.identityTimezoneLabel")}
+            </Label>
             <p className="text-label text-fg-muted -mt-0.5">
-              IANA timezone (e.g. UTC, Europe/Berlin)
+              {tr("agencySettings.identityTimezoneHelp")}
             </p>
             <Input
               id="agency-edit-timezone"
@@ -219,15 +247,17 @@ export function EditAgencyForm({
             className="text-body text-success font-semibold"
           >
             {state.changedFields && state.changedFields.length > 0
-              ? `Agency identity saved (${state.changedFields.join(", ")}).`
-              : "Agency identity saved (no changes)."}
+              ? tr("agencySettings.identitySavedChanged", {
+                  fields: state.changedFields.join(", "),
+                })
+              : tr("agencySettings.identitySavedNoChange")}
           </p>
         ) : null}
 
         <div className="flex justify-end">
           <FormSubmitButton
-            label="Save identity"
-            pendingLabel="Saving…"
+            label={tr("agencySettings.identitySave")}
+            pendingLabel={tr("agencySettings.identitySavePending")}
             data-testid={`${testIdPrefix}-edit-submit`}
           />
         </div>

@@ -181,6 +181,7 @@ export default async function AgencySettingsPage() {
         initialSlug={agency.slug}
         initialLocale={agency.locale}
         initialTimezone={agency.timezone}
+        t={t}
       />
     </div>
   );
