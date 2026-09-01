@@ -406,7 +406,9 @@
       "kindBulkArchive": "bulk-archived items",
       "kindCreate": "created the item",
       "kindUpdate": "updated the item",
-      "kindSystem": "ran a system action"
+      "kindSystem": "ran a system action",
+      "emptyTitle": "No activity yet",
+      "emptyBody": "Activity appears here as this item moves through creation, review and publishing."
     },
     "readiness": {
       "rowContent": "Content",

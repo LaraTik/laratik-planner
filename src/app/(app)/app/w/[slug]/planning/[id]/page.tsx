@@ -1030,11 +1030,10 @@ export default async function ContentDetailPage({
                   >
                     <Clock className="text-fg-muted h-10 w-10" aria-hidden="true" />
                     <h3 className="text-title-card text-fg-primary font-semibold">
-                      No activity yet
+                      {t("contentDetail.activity.emptyTitle")}
                     </h3>
                     <p className="text-body text-fg-secondary max-w-sm">
-                      Activity appears here as this item moves through creation, review and
-                      publishing.
+                      {t("contentDetail.activity.emptyBody")}
                     </p>
                   </div>
                 )}
