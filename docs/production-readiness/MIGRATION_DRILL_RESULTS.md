@@ -17,8 +17,14 @@
 3. in-place upgrade         PASS  marker add/drop cycle
 4. backup + restore         PASS  ledger 26 before / 26 after; restore verified
 5. failed-migration abort   PASS  60 tables before / after; missing=0; added=0
-total: 4.6s
+total: 5.0s
 ```
+
+The 2026-09-01 run was repeated after repairing an interrupted disposable
+database reset; `planner_test` was recreated inside the Docker Postgres
+container and all five drills passed again. If a drill is cancelled during
+the drop/recreate phase, follow the invalid-database recovery procedure in
+`docs/operations/runbook.md` before retrying.
 
 The 2026-08-26 4/5 capture below is retained as historical evidence; it is no
 longer the current status.

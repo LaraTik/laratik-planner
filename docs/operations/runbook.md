@@ -421,6 +421,24 @@ isolated/visual Playwright commands. If the database is unavailable, check
 `docker exec laratik-planner-pg-dev pg_isready -U planner -d planner` before
 rerunning the checks.
 
+If PostgreSQL reports `cannot connect to invalid database "planner_test"`
+after an interrupted migration drill, the disposable database was left in
+the catalog while its storage was being dropped. Repair only that test
+database (never a production database), then rerun the drill:
+
+```bash
+docker exec laratik-planner-pg-dev psql -U planner -d postgres \
+  -c 'DROP DATABASE IF EXISTS planner_test;'
+docker exec laratik-planner-pg-dev psql -U planner -d postgres \
+  -c 'CREATE DATABASE planner_test;'
+docker exec laratik-planner-pg-dev pg_isready -U planner -d planner_test
+NODE_ENV=test pnpm migration-drill
+```
+
+Do not cancel the drill while it is executing its drop/recreate step unless
+the target is definitely `planner_test`; a cancelled production migration
+must be handled through the backup/rollback runbook instead.
+
 If `TEST_DATABASE_URL` is not set, `.husky/pre-push` skips
 integration with a hint to set it up — it does not fail. This
 keeps the hook friendly to dev machines that haven't been
