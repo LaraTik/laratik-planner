@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/workspace/page-header";
 import Link from "next/link";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { QuickCreateForm } from "./quick-create-form";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   return { title: `Quick Create · ${(await params).slug}` };
@@ -22,6 +23,7 @@ export default async function QuickCreatePage({ params }: { params: Promise<{ sl
 
   const ws = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!ws) notFound();
+  const { t } = await tForActive();
   if (
     !(await hasWorkspaceRole({ id: session.user.id }, ws.id, [
       "workspace_manager",
@@ -31,11 +33,11 @@ export default async function QuickCreatePage({ params }: { params: Promise<{ sl
     return (
       <div className="space-y-4">
         <PageHeader
-          title="Creation access required"
-          description="Only workspace managers and content planners can create ideas."
+          title={t("quickCreate.deniedTitle")}
+          description={t("quickCreate.deniedDescription")}
         />
         <Button asChild variant="ghost">
-          <Link href={`/app/w/${slug}/planning`}>← Back to Planning</Link>
+          <Link href={`/app/w/${slug}/planning`}>{t("quickCreate.backToPlanning")}</Link>
         </Button>
       </div>
     );
@@ -59,10 +61,10 @@ export default async function QuickCreatePage({ params }: { params: Promise<{ sl
   return (
     <div className="mx-auto max-w-2xl space-y-6" data-testid="workspace-planning-new">
       <PageHeader
-        title="Quick Create"
+        title={t("quickCreate.title")}
         description={
           <>
-            Four fields, a draft is born. Edit anything later.
+            {t("quickCreate.description")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {ws.timezone}

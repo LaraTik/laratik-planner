@@ -210,6 +210,17 @@
     "today": "اليوم",
     "todayAriaLabel": "اليوم، {date}"
   },
+  "quickCreate": {
+    "title": "إنشاء سريع",
+    "description": "أربعة حقول، وتُولد المسودة. يمكنك تعديل أي شيء لاحقًا.",
+    "deniedTitle": "صلاحية الإنشاء مطلوبة",
+    "deniedDescription": "يمكن لمشرفي مساحة العمل ومخطّطي المحتوى فقط إنشاء الأفكار.",
+    "backToPlanning": "← العودة إلى التخطيط"
+  },
+  "batchAdd": {
+    "title": "إضافة دفعة",
+    "description": "الصق حتى 50 فكرة. تُطبَّق جميع القنوات النشطة وإعدادات مساحة العمل تلقائيًا. الدفعة ذرّية."
+  },
   "auth": {
     "appName": "laratik-planner",
     "productName": "StudioFlow",

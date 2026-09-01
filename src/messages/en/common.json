@@ -210,6 +210,17 @@
     "today": "Today",
     "todayAriaLabel": "Today, {date}"
   },
+  "quickCreate": {
+    "title": "Quick Create",
+    "description": "Four fields, a draft is born. Edit anything later.",
+    "deniedTitle": "Creation access required",
+    "deniedDescription": "Only workspace managers and content planners can create ideas.",
+    "backToPlanning": "← Back to Planning"
+  },
+  "batchAdd": {
+    "title": "Batch add",
+    "description": "Paste up to 50 ideas. All active channels and workspace defaults are applied automatically. The batch is atomic."
+  },
   "auth": {
     "appName": "laratik-planner",
     "productName": "StudioFlow",

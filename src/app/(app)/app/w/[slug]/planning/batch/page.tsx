@@ -5,6 +5,7 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { PageHeader } from "@/components/workspace/page-header";
 import { BatchForm } from "./batch-form";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 export default async function BatchAddPage({ params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();
@@ -19,15 +20,15 @@ export default async function BatchAddPage({ params }: { params: Promise<{ slug:
     ]))
   )
     notFound();
+  const { t } = await tForActive();
   return (
     <div className="mx-auto max-w-3xl space-y-6" data-testid="workspace-planning-batch">
       <PageHeader
         eyebrow={workspace.name}
-        title="Batch add"
+        title={t("batchAdd.title")}
         description={
           <>
-            Paste up to 50 ideas. All active channels and workspace defaults are applied
-            automatically. The batch is atomic.
+            {t("batchAdd.description")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
