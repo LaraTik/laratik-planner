@@ -25,7 +25,7 @@ Canonical rules:
 
 ## P0 — I18N-001: migration 0025 is invalid and unregistered
 
-Status: [ ] Not started
+Status: In progress — implementation fixed; disposable-database drill and deployment evidence remain
 
 Evidence:
 
@@ -43,6 +43,12 @@ Required fix:
 - Update the migration drill's expected post-repair sequence without weakening its assertions.
 - Preserve additive compatibility: nullable new columns, legacy `title` / `body` fallback, and a safe rollback story.
 
+Implemented in `ad26213`: the migration targets the singular tables, is registered
+in the Drizzle journal, and the migration drill now replays the latest additive
+migration without stale 0012/0018 timestamp assumptions. The disposable
+`planner_test` database was unavailable in this worktree, so runtime drill proof
+is still pending.
+
 Acceptance criteria:
 
 - [ ] Fresh database applies every migration exactly once.
@@ -54,7 +60,7 @@ Acceptance criteria:
 
 ## P1 — I18N-002: translator functions cross Server/Client boundaries
 
-Status: [ ] Not started
+Status: In progress — account boundary fixed; remaining route inventory is still open
 
 Evidence:
 
@@ -69,6 +75,11 @@ Required fix:
 - Do not serialize the entire catalog per page and do not silence the React error.
 - Add a regression guard that fails when a Server Component passes a function-valued translator prop into a Client Component.
 
+Implemented in `ad26213`: account forms and the channels create form no longer
+receive server translator functions; the root `LocaleProvider` creates the
+translator in the client tree. The full repository still contains legacy
+`t={t}` call sites in other routes, which remain a follow-up blocker.
+
 Acceptance criteria:
 
 - [ ] `/app/account` and every inventoried route render without RSC serialization errors.
@@ -78,7 +89,7 @@ Acceptance criteria:
 
 ## P1 — I18N-003: profile language switching is blocked and profile copy is English
 
-Status: [ ] Not started
+Status: In progress — profile surface localized; action-code and E2E proof remain
 
 Evidence:
 
@@ -93,6 +104,11 @@ Required fix:
 - Preserve the ordered save contract: DB success → cookie synchronization → revalidation → refresh.
 - Surface and recover from a cookie-sync failure without rolling back or hiding a successful database update.
 
+Implemented in `ad26213`: profile, password, notification-preference, and
+sign-out forms use the active client locale and the profile language picker
+continues to save `en` / `ar`. Stable action-error mapping and authenticated
+refresh/deep-link E2E coverage are still pending.
+
 Acceptance criteria:
 
 - [ ] English → Arabic and Arabic → English profile saves repaint immediately.
@@ -102,7 +118,7 @@ Acceptance criteria:
 
 ## P1 — I18N-004: public switcher conflicts with authenticated locale
 
-Status: [ ] Not started
+Status: Implemented — requires authenticated E2E verification
 
 Evidence:
 
@@ -117,6 +133,10 @@ Required fix:
 - Initialize any client switcher from the server-resolved locale and synchronize it when props change.
 - Keep return-path validation and server-only cookie mutation.
 
+Implemented in `ad26213`: the public switcher is rendered only for signed-out
+surfaces and initializes from the server-resolved locale; authenticated users
+use Account as the source of truth.
+
 Acceptance criteria:
 
 - [ ] No public switcher appears in the authenticated shell.
@@ -126,7 +146,7 @@ Acceptance criteria:
 
 ## P1 — I18N-005: client error localization cannot read the HttpOnly cookie
 
-Status: [ ] Not started
+Status: Implemented — requires deliberate locale error-boundary E2E verification
 
 Evidence:
 
@@ -142,6 +162,10 @@ Required fix:
 - Move every user-visible recovery label, button, hint, and accessible name into the catalog.
 - Keep technical details technical and avoid exposing secrets or private data.
 
+Implemented in `ad26213`: client error boundaries resolve locale from the
+server-rendered `<html lang>` / `dir` attributes, and visible operational labels
+are catalog-backed in English and Arabic. The HttpOnly cookie remains untouched.
+
 Acceptance criteria:
 
 - [ ] Root and nested error boundaries render Arabic copy under Arabic locale and English under English locale.
@@ -151,7 +175,7 @@ Acceptance criteria:
 
 ## P1 — I18N-006: localized notification email branch is unreachable
 
-Status: [ ] Not started
+Status: Implemented — requires opted-in dispatch integration coverage
 
 Evidence:
 
@@ -165,6 +189,11 @@ Required fix:
 - Fall back to stored `title` / `body` only for legacy rows or unavailable keys.
 - Resolve email locale from the recipient profile; pre-account invitations use agency content locale, then English.
 - Isolate mixed-direction parameters and keep user content unmodified.
+
+Implemented in `ad26213`: email rendering is isolated in a pure helper, prefers
+`messageKey` translations for the recipient profile locale, and safely falls
+back to persisted legacy copy. A live opted-in Arabic dispatch test and digest /
+invitation locale coverage remain pending.
 
 Acceptance criteria:
 
