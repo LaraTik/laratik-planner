@@ -30,6 +30,7 @@ import {
   getMultiCronLogTail,
   type CronHealth,
 } from "@/lib/cron/health";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { cn } from "@/lib/utils";
 
@@ -67,13 +68,23 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE_LOG_TAIL = 30;
 
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+function formatCadenceI18n(ms: number, t: Translator): string {
+  if (ms < 60_000) return t("platform.cronCadenceSeconds", { value: Math.round(ms / 1000) });
+  if (ms < 3_600_000) return t("platform.cronCadenceMinutes", { value: Math.round(ms / 60_000) });
+  if (ms < 86_400_000) return t("platform.cronCadenceHours", { value: Math.round(ms / 3_600_000) });
+  return t("platform.cronCadenceDays", { value: Math.round(ms / 86_400_000) });
+}
+
 export default async function PlatformCronHealthPage() {
+  const { t } = await tForActive();
   const actor = await currentActor();
   if (!actor) {
     return (
       <PermissionNotice
-        title="Sign in required"
-        description="Sign in to view the platform cron health page."
+        title={t("platform.signInRequired")}
+        description={t("platform.cronSignInBody")}
       />
     );
   }
@@ -82,8 +93,8 @@ export default async function PlatformCronHealthPage() {
   } catch {
     return (
       <PermissionNotice
-        title="Cron health unavailable"
-        description="Your platform role does not include the console.read permission."
+        title={t("platform.cronUnavailable")}
+        description={t("platform.cronUnavailableBody")}
       />
     );
   }
@@ -110,16 +121,16 @@ export default async function PlatformCronHealthPage() {
   return (
     <div className="space-y-6" data-testid="platform-cron-health">
       <PageHeader
-        eyebrow="Platform / Operations"
-        title="Cron health"
-        description="Heartbeat of every cron that writes to cron_tick_history. The 15-min social-metrics cron is the headline card; the rest follow the same pattern."
+        eyebrow={t("platform.cronEyebrow")}
+        title={t("platform.cronTitle")}
+        description={t("platform.cronDescription")}
         action={
           <Link
             href="/app/platform/overview"
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
             data-testid="platform-cron-back"
           >
-            Back to overview
+            {t("platform.cronBackOverview")}
           </Link>
         }
       />
@@ -128,18 +139,19 @@ export default async function PlatformCronHealthPage() {
         socialSyncEnabled={socialSyncEnabled}
         platformKekAvailable={platformKekAvailable}
         cronSecretConfigured={cronSecretConfigured}
+        t={t}
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="platform-cron-kpis">
         <KpiTile
           icon={<Activity className="h-4 w-4" aria-hidden={true} />}
-          label="Active crons"
+          label={t("platform.cronKpiActive")}
           value={crons.length}
           data-testid="platform-cron-kpi-active"
         />
         <KpiTile
           icon={<AlertTriangle className="h-4 w-4" aria-hidden={true} />}
-          label="Errors in last 24h"
+          label={t("platform.cronKpiErrors")}
           value={crons.reduce((acc, c) => acc + c.rollup24h.errorCount, 0)}
           tone={
             crons.reduce((acc, c) => acc + c.rollup24h.errorCount, 0) > 0 ? "warning" : "default"
@@ -148,7 +160,7 @@ export default async function PlatformCronHealthPage() {
         />
         <KpiTile
           icon={<Timer className="h-4 w-4" aria-hidden={true} />}
-          label="Ticks in last 24h"
+          label={t("platform.cronKpiTicks")}
           value={crons.reduce((acc, c) => acc + c.rollup24h.ticks, 0)}
           data-testid="platform-cron-kpi-ticks"
         />
@@ -158,32 +170,29 @@ export default async function PlatformCronHealthPage() {
         <Card padding="lg" data-testid="platform-cron-empty">
           <EmptyState
             icon={<ServerOff className="h-8 w-8" aria-hidden={true} />}
-            title="No cron ticks recorded yet"
-            description="The cron routes write one row per tick to cron_tick_history. After the next 15-minute tick lands, this page will populate."
+            title={t("platform.cronEmptyTitle")}
+            description={t("platform.cronEmptyBody")}
           />
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4" data-testid="platform-cron-cards">
           {crons.map((c) => (
-            <CronCard key={c.cronName} cron={c} now={now} />
+            <CronCard key={c.cronName} cron={c} now={now} t={t} />
           ))}
         </div>
       )}
 
       <Card padding="none" data-testid="platform-cron-log-tail">
         <header className="border-border border-b px-4 py-3">
-          <CardTitle>Recent ticks (last 30)</CardTitle>
-          <CardDescription>
-            Newest first across every active cron. Each row is one tick; the outcome column is the
-            raw enum (`success` / `soft_deadline` / `error` / `skipped`).
-          </CardDescription>
+          <CardTitle>{t("platform.cronLogTailTitle")}</CardTitle>
+          <CardDescription>{t("platform.cronLogTailDescription")}</CardDescription>
         </header>
         {logTail.length === 0 ? (
           <div className="p-6" data-testid="platform-cron-log-tail-empty">
             <EmptyState
               icon={<Clock className="h-6 w-6" aria-hidden={true} />}
-              title="No ticks yet"
-              description="Once a cron ticks, the latest row will appear here."
+              title={t("platform.cronLogTailEmptyTitle")}
+              description={t("platform.cronLogTailEmptyBody")}
             />
           </div>
         ) : (
@@ -191,14 +200,28 @@ export default async function PlatformCronHealthPage() {
             <table className="w-full text-sm" data-testid="platform-cron-log-tail-table">
               <thead className="border-border bg-surface-subtle text-label text-fg-secondary">
                 <tr>
-                  <th className="px-3 py-2 text-start font-semibold">When</th>
-                  <th className="px-3 py-2 text-start font-semibold">Cron</th>
-                  <th className="px-3 py-2 text-start font-semibold">Outcome</th>
-                  <th className="px-3 py-2 text-end font-semibold">Claimed</th>
-                  <th className="px-3 py-2 text-end font-semibold">Ok</th>
-                  <th className="px-3 py-2 text-end font-semibold">Failed</th>
-                  <th className="px-3 py-2 text-start font-semibold">Trigger</th>
-                  <th className="px-3 py-2 text-start font-semibold">Note</th>
+                  <th className="px-3 py-2 text-start font-semibold">
+                    {t("platform.cronColWhen")}
+                  </th>
+                  <th className="px-3 py-2 text-start font-semibold">
+                    {t("platform.cronColCron")}
+                  </th>
+                  <th className="px-3 py-2 text-start font-semibold">
+                    {t("platform.cronColOutcome")}
+                  </th>
+                  <th className="px-3 py-2 text-end font-semibold">
+                    {t("platform.cronColClaimed")}
+                  </th>
+                  <th className="px-3 py-2 text-end font-semibold">{t("platform.cronColOk")}</th>
+                  <th className="px-3 py-2 text-end font-semibold">
+                    {t("platform.cronColFailed")}
+                  </th>
+                  <th className="px-3 py-2 text-start font-semibold">
+                    {t("platform.cronColTrigger")}
+                  </th>
+                  <th className="px-3 py-2 text-start font-semibold">
+                    {t("platform.cronColNote")}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-border divide-y">
@@ -215,7 +238,7 @@ export default async function PlatformCronHealthPage() {
                       {row.cronName}
                     </td>
                     <td className="px-3 py-2">
-                      <OutcomeBadge outcome={row.outcome} />
+                      <OutcomeBadge outcome={row.outcome} t={t} />
                     </td>
                     <td className="text-body text-fg-primary px-3 py-2 text-end tabular-nums">
                       {row.claimed}
@@ -247,20 +270,8 @@ export default async function PlatformCronHealthPage() {
       </Card>
 
       <Card padding="lg" variant="subtle" data-testid="platform-cron-explainer">
-        <CardTitle>What this shows</CardTitle>
-        <CardDescription>
-          Every cron route (`/api/cron/social-metrics`, `/api/cron/outbox`, etc.) writes one row to{" "}
-          <code className="text-label bg-surface mx-1 rounded px-1.5 py-0.5 font-mono">
-            cron_tick_history
-          </code>{" "}
-          at the end of every tick — success, soft deadline, flag-off short-circuit, or exception.
-          The last-tick dot is green when the age is within 2× the cron&apos;s expected cadence,
-          amber inside 4×, red beyond that. Retention is 30 days (
-          <code className="text-label bg-surface mx-1 rounded px-1.5 py-0.5 font-mono">
-            CRON_TICK_RETENTION_DAYS
-          </code>
-          ).
-        </CardDescription>
+        <CardTitle>{t("platform.cronExplainerTitle")}</CardTitle>
+        <CardDescription>{t("platform.cronExplainerBody")}</CardDescription>
       </Card>
     </div>
   );
@@ -272,10 +283,12 @@ function EnvSwitchesStrip({
   socialSyncEnabled,
   platformKekAvailable,
   cronSecretConfigured,
+  t,
 }: {
   socialSyncEnabled: boolean;
   platformKekAvailable: boolean;
   cronSecretConfigured: boolean;
+  t: Translator;
 }) {
   return (
     <div
@@ -285,24 +298,30 @@ function EnvSwitchesStrip({
       <EnvSwitch
         label="SOCIAL_SYNC_ENABLED"
         ok={socialSyncEnabled}
-        okText="on"
-        badText="off"
+        okText={t("platform.cronEnvOn")}
+        badText={t("platform.cronEnvOff")}
+        badgeOk={t("platform.cronEnvOkBadge")}
+        badgeBad={t("platform.cronEnvAlertBadge")}
         icon={<PlayCircle className="h-4 w-4" aria-hidden={true} />}
         testId="platform-cron-env-social-sync"
       />
       <EnvSwitch
         label="SOCIAL_TOKEN_ENCRYPTION_KEY"
         ok={platformKekAvailable}
-        okText="set"
-        badText="missing"
+        okText={t("platform.cronEnvSet")}
+        badText={t("platform.cronEnvMissing")}
+        badgeOk={t("platform.cronEnvOkBadge")}
+        badgeBad={t("platform.cronEnvAlertBadge")}
         icon={<KeyRound className="h-4 w-4" aria-hidden={true} />}
         testId="platform-cron-env-kek"
       />
       <EnvSwitch
         label="CRON_SECRET"
         ok={cronSecretConfigured}
-        okText="set"
-        badText="missing"
+        okText={t("platform.cronEnvSet")}
+        badText={t("platform.cronEnvMissing")}
+        badgeOk={t("platform.cronEnvOkBadge")}
+        badgeBad={t("platform.cronEnvAlertBadge")}
         icon={<ShieldCheck className="h-4 w-4" aria-hidden={true} />}
         testId="platform-cron-env-cron-secret"
       />
@@ -315,6 +334,8 @@ function EnvSwitch({
   ok,
   okText,
   badText,
+  badgeOk,
+  badgeBad,
   icon,
   testId,
 }: {
@@ -322,6 +343,8 @@ function EnvSwitch({
   ok: boolean;
   okText: string;
   badText: string;
+  badgeOk: string;
+  badgeBad: string;
   icon: React.ReactNode;
   testId: string;
 }) {
@@ -335,19 +358,19 @@ function EnvSwitch({
         <p className="text-body text-fg-primary font-semibold">{ok ? okText : badText}</p>
       </div>
       <Badge variant={ok ? "success" : "danger"} data-testid={`${testId}-badge`}>
-        {ok ? "ok" : "alert"}
+        {ok ? badgeOk : badgeBad}
       </Badge>
     </div>
   );
 }
 
-function CronCard({ cron, now }: { cron: CronHealth; now: Date }) {
+function CronCard({ cron, now, t }: { cron: CronHealth; now: Date; t: Translator }) {
   const ageMs = cron.latest
     ? now.getTime() - cron.latest.startedAt.getTime()
     : Number.POSITIVE_INFINITY;
   const tone = cron.latest ? ageTone(ageMs, cron.cronName) : "red";
   const expectedCadenceMs = EXPECTED_CADENCE_MS[cron.cronName] ?? 15 * 60_000;
-  const cadenceLabel = formatCadence(expectedCadenceMs);
+  const cadenceLabel = formatCadenceI18n(expectedCadenceMs, t);
 
   return (
     <Card padding="lg" data-testid={`platform-cron-card-${cron.cronName}`}>
@@ -369,8 +392,8 @@ function CronCard({ cron, now }: { cron: CronHealth; now: Date }) {
               <code className="font-mono text-base">{cron.cronName}</code>
             </CardTitle>
             <CardDescription>
-              Expected cadence: every {cadenceLabel}.{" "}
-              {tone === "red" && cron.latest ? "Last tick is overdue — investigate." : null}
+              {t("platform.cronExpectedCadence", { cadence: cadenceLabel })}{" "}
+              {tone === "red" && cron.latest ? t("platform.cronOverdue") : null}
             </CardDescription>
           </div>
         </div>
@@ -380,8 +403,10 @@ function CronCard({ cron, now }: { cron: CronHealth; now: Date }) {
             data-testid={`platform-cron-card-${cron.cronName}-last`}
           >
             {cron.latest
-              ? `last tick ${formatRelativeDate(cron.latest.startedAt, now)}`
-              : "no ticks recorded"}
+              ? t("platform.cronLastTickAt", {
+                  date: formatRelativeDate(cron.latest.startedAt, now),
+                })
+              : t("platform.cronNoTicksRecorded")}
           </p>
           <p className="text-label text-fg-muted">
             {cron.latest ? new Date(cron.latest.startedAt).toISOString().slice(0, 19) + "Z" : "—"}
@@ -393,16 +418,20 @@ function CronCard({ cron, now }: { cron: CronHealth; now: Date }) {
         className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4"
         data-testid={`platform-cron-card-${cron.cronName}-counts`}
       >
-        <CountCell label="24h ticks" value={cron.rollup24h.ticks} testId="ticks" />
-        <CountCell label="24h claimed" value={cron.rollup24h.claimed} testId="claimed" />
+        <CountCell label={t("platform.cron24hTicks")} value={cron.rollup24h.ticks} testId="ticks" />
         <CountCell
-          label="24h failed"
+          label={t("platform.cron24hClaimed")}
+          value={cron.rollup24h.claimed}
+          testId="claimed"
+        />
+        <CountCell
+          label={t("platform.cron24hFailed")}
           value={cron.rollup24h.failed}
           testId="failed"
           danger={cron.rollup24h.failed > 0}
         />
         <CountCell
-          label="24h needs-reauth"
+          label={t("platform.cron24hNeedsReauth")}
           value={cron.rollup24h.needsReauth}
           testId="needs-reauth"
           danger={cron.rollup24h.needsReauth > 0}
@@ -410,10 +439,11 @@ function CronCard({ cron, now }: { cron: CronHealth; now: Date }) {
       </div>
 
       <div className="mt-4">
-        <p className="text-label text-fg-muted mb-1">Last 24 ticks (claim count per tick)</p>
+        <p className="text-label text-fg-muted mb-1">{t("platform.cronSparklineLabel")}</p>
         <Sparkline
           values={cron.recent24.map((r) => r.claimed).reverse()}
           testId={`platform-cron-card-${cron.cronName}-sparkline`}
+          t={t}
         />
       </div>
 
@@ -424,7 +454,7 @@ function CronCard({ cron, now }: { cron: CronHealth; now: Date }) {
         >
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden={true} />
           <div className="min-w-0">
-            <p className="text-body font-semibold">Last error</p>
+            <p className="text-body font-semibold">{t("platform.cronLastError")}</p>
             <p className="text-label text-fg-secondary mt-0.5 break-all">
               {cron.rollup24h.lastErrorText}
             </p>
@@ -444,16 +474,14 @@ function CronCard({ cron, now }: { cron: CronHealth; now: Date }) {
           }}
           className="mt-4 flex flex-wrap items-center justify-between gap-2"
         >
-          <p className="text-label text-fg-muted">
-            Trigger a synchronous social-metrics tick. Audit-logged.
-          </p>
+          <p className="text-label text-fg-muted">{t("platform.cronRunNowHelp")}</p>
           <button
             type="submit"
             className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
             data-testid="platform-cron-run-now-social-metrics"
           >
             <RefreshCcw className="h-4 w-4" aria-hidden={true} />
-            Run now
+            {t("platform.cronRunNow")}
           </button>
         </form>
       ) : null}
@@ -493,44 +521,50 @@ function CountCell({
   );
 }
 
-function OutcomeBadge({ outcome }: { outcome: "success" | "soft_deadline" | "error" | "skipped" }) {
+function OutcomeBadge({
+  outcome,
+  t,
+}: {
+  outcome: "success" | "soft_deadline" | "error" | "skipped";
+  t: Translator;
+}) {
   switch (outcome) {
     case "success":
       return (
         <Badge variant="success" data-testid="outcome-success">
           <CheckCircle2 className="me-1 h-3 w-3" aria-hidden={true} />
-          success
+          {t("platform.cronOutcomeSuccess")}
         </Badge>
       );
     case "soft_deadline":
       return (
         <Badge variant="warning" data-testid="outcome-soft-deadline">
           <Clock className="me-1 h-3 w-3" aria-hidden={true} />
-          soft_deadline
+          {t("platform.cronOutcomeSoftDeadline")}
         </Badge>
       );
     case "error":
       return (
         <Badge variant="danger" data-testid="outcome-error">
           <AlertTriangle className="me-1 h-3 w-3" aria-hidden={true} />
-          error
+          {t("platform.cronOutcomeError")}
         </Badge>
       );
     case "skipped":
       return (
         <Badge variant="outline" data-testid="outcome-skipped">
           <Database className="me-1 h-3 w-3" aria-hidden={true} />
-          skipped
+          {t("platform.cronOutcomeSkipped")}
         </Badge>
       );
   }
 }
 
-function Sparkline({ values, testId }: { values: number[]; testId: string }) {
+function Sparkline({ values, testId, t }: { values: number[]; testId: string; t: Translator }) {
   if (values.length === 0) {
     return (
       <p className="text-label text-fg-muted" data-testid={testId} data-empty="true">
-        No ticks in the last 24h.
+        {t("platform.cronSparklineEmpty")}
       </p>
     );
   }
@@ -541,7 +575,7 @@ function Sparkline({ values, testId }: { values: number[]; testId: string }) {
   return (
     <svg
       role="img"
-      aria-label={`Claim count over the last ${values.length} ticks`}
+      aria-label={t("platform.cronSparklineAria", { count: values.length })}
       data-testid={testId}
       viewBox={`0 0 ${width} ${height}`}
       className="block w-full max-w-full"
@@ -567,11 +601,4 @@ function Sparkline({ values, testId }: { values: number[]; testId: string }) {
       })}
     </svg>
   );
-}
-
-function formatCadence(ms: number): string {
-  if (ms < 60_000) return `${Math.round(ms / 1000)}s`;
-  if (ms < 3_600_000) return `${Math.round(ms / 60_000)} min`;
-  if (ms < 86_400_000) return `${Math.round(ms / 3_600_000)}h`;
-  return `${Math.round(ms / 86_400_000)}d`;
 }
