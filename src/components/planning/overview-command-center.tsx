@@ -59,6 +59,16 @@ export interface OverviewCommandCenterProps {
   plannedPublishAt: string;
   workspaceTimezone: string;
   channels: OverviewSummaryChannel[];
+  /**
+   * Bound translator from the parent (planning detail page).
+   * Threaded to the embedded `<ActivityTimeline>` so the
+   * activity tab's title / empty state / kind-based
+   * humanised phrases render in the active locale.
+   * (The overview command center's own chrome — KPI labels,
+   * status pills, etc. — stays English for now; that work
+   * belongs to a dedicated overview-tab commit.)
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
   /** Name of the content owner, when present. */
   ownerName?: string | null;
   /** Total blockers from the readiness service. */
@@ -119,6 +129,7 @@ export function OverviewCommandCenter({
   onReadinessNavigate,
   primaryActionLabel,
   reviewChangesHref,
+  t,
 }: OverviewCommandCenterProps) {
   return (
     <div className="space-y-6" data-testid="overview-command-center">
@@ -155,6 +166,7 @@ export function OverviewCommandCenter({
         totalCount={totalActivityCount}
         workspaceSlug={workspaceSlug}
         contentItemId={contentItemId}
+        t={t}
       />
     </div>
   );
@@ -557,11 +569,13 @@ function RecentActivity({
   totalCount,
   workspaceSlug,
   contentItemId,
+  t,
 }: {
   events: ActivityEventView[];
   totalCount: number;
   workspaceSlug: string;
   contentItemId: string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   return (
     <section
@@ -590,7 +604,7 @@ function RecentActivity({
       </header>
       {events.length > 0 ? (
         <div className="border-border bg-surface rounded-[var(--radius-control)] border px-2 py-1">
-          <ActivityTimeline events={events} title="" maxEvents={events.length} />
+          <ActivityTimeline events={events} title="" maxEvents={events.length} t={t} />
         </div>
       ) : (
         <Card padding="md" data-testid="overview-recent-activity-empty">

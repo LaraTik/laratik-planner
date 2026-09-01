@@ -45,6 +45,13 @@ export interface ActivityTimelineProps {
   /** Maximum events to render. Older events fall off the
    *  bottom — the parent decides the cut. */
   maxEvents?: number;
+  /**
+   * Bound translator from the parent. Resolves the section
+   * title, the empty state, the "older events" truncation
+   * note, and every `kind`-based humanised phrase through
+   * the active message catalog.
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const ICON_BY_KIND: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -91,23 +98,25 @@ const TONE_BY_KIND: Record<string, string> = {
   system: "border-border bg-surface text-fg-secondary",
 };
 
-export function ActivityTimeline({
-  events,
-  title = "Activity",
-  maxEvents = 25,
-}: ActivityTimelineProps) {
+export function ActivityTimeline({ events, title, maxEvents = 25, t }: ActivityTimelineProps) {
   const visible = events.slice(0, maxEvents);
+  // Default title comes from the catalog; callers can still
+  // override (the planning detail's overview-command-center
+  // passes `title=""` to suppress the heading).
+  const resolvedTitle = title ?? t("contentDetail.activity.title");
   if (visible.length === 0) {
     return (
       <Card padding="md" data-testid="activity-timeline">
-        <CardTitle className="text-body text-fg-primary font-semibold">{title}</CardTitle>
-        <p className="text-body text-fg-muted mt-2">No activity yet.</p>
+        <CardTitle className="text-body text-fg-primary font-semibold">{resolvedTitle}</CardTitle>
+        <p className="text-body text-fg-muted mt-2">{t("contentDetail.activity.emptyState")}</p>
       </Card>
     );
   }
   return (
     <Card padding="md" data-testid="activity-timeline">
-      <CardTitle className="text-body text-fg-primary mb-3 font-semibold">{title}</CardTitle>
+      <CardTitle className="text-body text-fg-primary mb-3 font-semibold">
+        {resolvedTitle}
+      </CardTitle>
       <ol className="space-y-2">
         {visible.map((e) => {
           const Icon = ICON_BY_KIND[e.kind] ?? MessageCircle;
@@ -128,7 +137,7 @@ export function ActivityTimeline({
               <div className="min-w-0 flex-1">
                 <p className="text-body text-fg-primary">
                   <span className="font-semibold">{e.actorName}</span>{" "}
-                  <span className="text-fg-secondary">{humanizeKind(e.kind, e.summary)}</span>
+                  <span className="text-fg-secondary">{humanizeKind(t, e.kind, e.summary)}</span>
                 </p>
                 <p className="text-label text-fg-muted">
                   <time dateTime={e.occurredAt}>{new Date(e.occurredAt).toLocaleString()}</time>
@@ -139,53 +148,59 @@ export function ActivityTimeline({
         })}
       </ol>
       {events.length > maxEvents ? (
-        <p className="text-label text-fg-muted mt-2">+{events.length - maxEvents} older events</p>
+        <p className="text-label text-fg-muted mt-2">
+          {t("contentDetail.activity.olderEvents", { count: events.length - maxEvents })}
+        </p>
       ) : null}
     </Card>
   );
 }
 
-function humanizeKind(kind: string, summary: string): string {
+function humanizeKind(
+  t: (key: string, params?: Record<string, string | number>) => string,
+  kind: string,
+  summary: string,
+): string {
   if (summary) return summary;
   switch (kind) {
     case "status_transition":
-      return "moved the workflow forward";
+      return t("contentDetail.activity.kindStatusTransition");
     case "brief_updated":
-      return "updated the brief";
+      return t("contentDetail.activity.kindBriefUpdated");
     case "title_updated":
-      return "updated the title";
+      return t("contentDetail.activity.kindTitleUpdated");
     case "date_updated":
-      return "updated the planned publish date";
+      return t("contentDetail.activity.kindDateUpdated");
     case "content_updated":
-      return "updated content details";
+      return t("contentDetail.activity.kindContentUpdated");
     case "delivery_submitted":
-      return "submitted a delivery version";
+      return t("contentDetail.activity.kindDeliverySubmitted");
     case "comment_added":
-      return "commented on the item";
+      return t("contentDetail.activity.kindCommentAdded");
     case "mention":
-      return "mentioned someone in a comment";
+      return t("contentDetail.activity.kindMention");
     case "ai_draft_applied":
-      return "applied an AI suggestion";
+      return t("contentDetail.activity.kindAiDraftApplied");
     case "publication_recorded":
-      return "recorded a publication outcome";
+      return t("contentDetail.activity.kindPublicationRecorded");
     case "publication":
-      return "marked the item as published";
+      return t("contentDetail.activity.kindPublication");
     case "blocked":
-      return "blocked the item";
+      return t("contentDetail.activity.kindBlocked");
     case "claimed":
-      return "claimed the design task";
+      return t("contentDetail.activity.kindClaimed");
     case "assignment":
-      return "was assigned to the item";
+      return t("contentDetail.activity.kindAssignment");
     case "schedule_change":
-      return "changed the schedule";
+      return t("contentDetail.activity.kindScheduleChange");
     case "bulk_archive":
-      return "bulk-archived items";
+      return t("contentDetail.activity.kindBulkArchive");
     case "create":
-      return "created the item";
+      return t("contentDetail.activity.kindCreate");
     case "update":
-      return "updated the item";
+      return t("contentDetail.activity.kindUpdate");
     case "system":
-      return "ran a system action";
+      return t("contentDetail.activity.kindSystem");
     default:
       // Last-resort fallback: turn `creative_internal_decision` into
       // "creative internal decision" so we never render raw enum

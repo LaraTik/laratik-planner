@@ -6,6 +6,9 @@ import {
   type ActivityFilterId,
 } from "@/components/planning/activity-with-filters";
 import type { ActivityEventView } from "@/components/planning/activity-timeline";
+import { tFor } from "@/messages";
+
+const t = tFor("en");
 
 const baseEvent: ActivityEventView = {
   id: "e-1",
@@ -33,7 +36,7 @@ const events: ActivityEventView[] = [
 
 describe("ActivityWithFilters", () => {
   it("renders all five filter chips with counts", () => {
-    render(<ActivityWithFilters events={events} />);
+    render(<ActivityWithFilters events={events} t={t} />);
     const toolbar = screen.getByTestId("activity-filter-chips");
     const chips = within(toolbar).getAllByRole("button");
     expect(chips).toHaveLength(5);
@@ -58,7 +61,7 @@ describe("ActivityWithFilters", () => {
   });
 
   it("renders every event by default (All filter)", () => {
-    render(<ActivityWithFilters events={events} />);
+    render(<ActivityWithFilters events={events} t={t} />);
     const timeline = screen.getByTestId("activity-timeline");
     const items = within(timeline).getAllByTestId("activity-event");
     expect(items).toHaveLength(8);
@@ -66,7 +69,7 @@ describe("ActivityWithFilters", () => {
 
   it("switches to the Workflow filter when its chip is clicked", async () => {
     const user = userEvent.setup();
-    render(<ActivityWithFilters events={events} />);
+    render(<ActivityWithFilters events={events} t={t} />);
     await user.click(screen.getByTestId("activity-filter-workflow"));
     const timeline = screen.getByTestId("activity-timeline");
     const items = within(timeline).getAllByTestId("activity-event");
@@ -78,7 +81,7 @@ describe("ActivityWithFilters", () => {
 
   it("switches to the Publishing filter and only shows publishing events", async () => {
     const user = userEvent.setup();
-    render(<ActivityWithFilters events={events} />);
+    render(<ActivityWithFilters events={events} t={t} />);
     await user.click(screen.getByTestId("activity-filter-publishing"));
     const items = within(screen.getByTestId("activity-timeline")).getAllByTestId("activity-event");
     expect(items).toHaveLength(3);
@@ -91,7 +94,7 @@ describe("ActivityWithFilters", () => {
   it("renders the empty-filtered state when a bucket has no events", async () => {
     const user = userEvent.setup();
     const commentsOnly: ActivityEventView[] = [makeEvent("comment", "c-1")];
-    render(<ActivityWithFilters events={commentsOnly} />);
+    render(<ActivityWithFilters events={commentsOnly} t={t} />);
     // Comments has 1, Workflow has 0 — switch to Workflow.
     await user.click(screen.getByTestId("activity-filter-workflow"));
     const empty = screen.getByTestId("activity-filter-empty");
@@ -100,7 +103,9 @@ describe("ActivityWithFilters", () => {
   });
 
   it("respects a custom default filter", () => {
-    render(<ActivityWithFilters events={events} defaultFilter={"comments" as ActivityFilterId} />);
+    render(
+      <ActivityWithFilters events={events} defaultFilter={"comments" as ActivityFilterId} t={t} />,
+    );
     expect(screen.getByTestId("activity-filter-comments")).toHaveAttribute("aria-pressed", "true");
     const items = within(screen.getByTestId("activity-timeline")).getAllByTestId("activity-event");
     expect(items).toHaveLength(1);

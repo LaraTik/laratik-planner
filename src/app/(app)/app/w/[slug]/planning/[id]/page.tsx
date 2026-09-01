@@ -655,6 +655,7 @@ export default async function ContentDetailPage({
                   editHref={editHref}
                   primaryActionLabel={primaryActionLabel}
                   reviewChangesHref={reviewChangesHref}
+                  t={t}
                 />
               </section>
             ),
@@ -1017,7 +1018,7 @@ export default async function ContentDetailPage({
                   useful content area rather than stretching to
                   fill the entire viewport. */}
                 {activityEvents.length > 0 ? (
-                  <ActivityWithFilters events={activityEvents} />
+                  <ActivityWithFilters events={activityEvents} t={t} />
                 ) : (
                   <div
                     className="border-border bg-surface-subtle mx-auto flex max-w-md flex-col items-center gap-3 rounded-[var(--radius-card)] border border-dashed px-6 py-10 text-center"

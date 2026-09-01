@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ActivityTimeline, type ActivityEventView } from "@/components/planning/activity-timeline";
+import { tFor } from "@/messages";
+
+const t = tFor("en");
 
 const EVENTS: ActivityEventView[] = [
   {
@@ -21,7 +24,7 @@ const EVENTS: ActivityEventView[] = [
 
 describe("ActivityTimeline", () => {
   it("renders each event with actor, summary, and time", () => {
-    render(<ActivityTimeline events={EVENTS} />);
+    render(<ActivityTimeline events={EVENTS} t={t} />);
     const items = screen.getAllByTestId("activity-event");
     expect(items).toHaveLength(2);
     expect(items[0]).toHaveTextContent("Ada Lovelace");
@@ -32,6 +35,7 @@ describe("ActivityTimeline", () => {
   it("falls back to a kind-based humanised string when no summary is given", () => {
     render(
       <ActivityTimeline
+        t={t}
         events={[
           {
             id: "ev-1",
@@ -47,7 +51,7 @@ describe("ActivityTimeline", () => {
   });
 
   it("renders an empty state when no events are passed", () => {
-    render(<ActivityTimeline events={[]} />);
+    render(<ActivityTimeline events={[]} t={t} />);
     expect(screen.getByText(/No activity yet/i)).toBeInTheDocument();
   });
 
@@ -59,7 +63,7 @@ describe("ActivityTimeline", () => {
       actorName: "Ada",
       occurredAt: "2026-08-29T10:00:00.000Z",
     }));
-    render(<ActivityTimeline events={many} maxEvents={10} />);
+    render(<ActivityTimeline events={many} maxEvents={10} t={t} />);
     expect(screen.getAllByTestId("activity-event")).toHaveLength(10);
     expect(screen.getByText(/\+20 older events/i)).toBeInTheDocument();
   });
@@ -99,7 +103,7 @@ describe("ActivityTimeline", () => {
       actorName: "Ada",
       occurredAt: `2026-08-29T10:00:0${i}.000Z`,
     }));
-    render(<ActivityTimeline events={events} />);
+    render(<ActivityTimeline events={events} t={t} />);
     const rendered = screen.getAllByTestId("activity-event");
     expect(rendered).toHaveLength(knownKinds.length);
     rendered.forEach((node, idx) => {

@@ -34,28 +34,34 @@ import { cn } from "@/lib/utils";
 
 export type ActivityFilterId = "all" | "comments" | "workflow" | "publishing" | "system";
 
+/** Map from filter id to its catalog key. Used to resolve the
+ *  chip label and the empty-state placeholder at render time. */
+const FILTER_LABEL_KEYS: Record<ActivityFilterId, string> = {
+  all: "contentDetail.activity.filterAll",
+  comments: "contentDetail.activity.filterComments",
+  workflow: "contentDetail.activity.filterWorkflow",
+  publishing: "contentDetail.activity.filterPublishing",
+  system: "contentDetail.activity.filterSystem",
+};
+
 const FILTERS: ReadonlyArray<{
   id: ActivityFilterId;
-  label: string;
   /** Predicate that decides whether an event belongs in this bucket. */
   match: (kind: string) => boolean;
 }> = [
-  { id: "all", label: "All", match: () => true },
-  { id: "comments", label: "Comments", match: (k) => k === "comment" },
+  { id: "all", match: () => true },
+  { id: "comments", match: (k) => k === "comment" },
   {
     id: "workflow",
-    label: "Workflow",
     match: (k) =>
       k === "status_transition" || k === "review" || k === "approval_reset" || k === "assignment",
   },
   {
     id: "publishing",
-    label: "Publishing",
     match: (k) => k === "delivery" || k === "publication" || k === "schedule_change",
   },
   {
     id: "system",
-    label: "System",
     match: (k) =>
       k === "create" ||
       k === "update" ||
@@ -70,9 +76,22 @@ export interface ActivityWithFiltersProps {
   events: ActivityEventView[];
   /** Optional default filter; defaults to "all". */
   defaultFilter?: ActivityFilterId;
+  /**
+   * Bound translator from the parent. Resolves the five
+   * filter chip labels, the toolbar aria-label, and the
+   * per-bucket empty state through the active message
+   * catalog. Also threaded to the embedded
+   * `<ActivityTimeline>` so its kind-based humanised
+   * phrases render in the active locale.
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
-export function ActivityWithFilters({ events, defaultFilter = "all" }: ActivityWithFiltersProps) {
+export function ActivityWithFilters({
+  events,
+  defaultFilter = "all",
+  t,
+}: ActivityWithFiltersProps) {
   const [filter, setFilter] = React.useState<ActivityFilterId>(defaultFilter);
 
   const counts = React.useMemo(() => {
@@ -95,18 +114,20 @@ export function ActivityWithFilters({ events, defaultFilter = "all" }: ActivityW
 
   const active = FILTERS.find((f) => f.id === filter) ?? FILTERS[0]!;
   const visible = events.filter((e) => active.match(e.kind));
+  const activeLabel = t(FILTER_LABEL_KEYS[active.id]);
 
   return (
     <div className="space-y-3" data-testid="activity-with-filters" data-filter={filter}>
       <div
         role="toolbar"
-        aria-label="Filter activity"
+        aria-label={t("contentDetail.activity.filterToolbarAria")}
         className="flex flex-wrap items-center gap-1.5"
         data-testid="activity-filter-chips"
       >
         {FILTERS.map((f) => {
           const isActive = f.id === filter;
           const count = counts[f.id];
+          const label = t(FILTER_LABEL_KEYS[f.id]);
           return (
             <button
               key={f.id}
@@ -123,7 +144,7 @@ export function ActivityWithFilters({ events, defaultFilter = "all" }: ActivityW
                   : "border-border bg-surface text-fg-secondary hover:bg-surface-subtle",
               )}
             >
-              <span>{f.label}</span>
+              <span>{label}</span>
               <span
                 className={cn(
                   "rounded-full px-1.5 tabular-nums",
@@ -138,15 +159,14 @@ export function ActivityWithFilters({ events, defaultFilter = "all" }: ActivityW
       </div>
 
       {visible.length > 0 ? (
-        <ActivityTimeline events={visible} maxEvents={visible.length} />
+        <ActivityTimeline events={visible} maxEvents={visible.length} t={t} />
       ) : (
         <p
           className="text-body text-fg-muted border-border bg-surface rounded-[var(--radius-control)] border px-3 py-3"
           role="status"
           data-testid="activity-filter-empty"
         >
-          No <span className="text-fg-primary font-semibold">{active.label.toLowerCase()}</span>{" "}
-          activity yet.
+          {t("contentDetail.activity.filterEmpty", { label: activeLabel.toLowerCase() })}
         </p>
       )}
     </div>

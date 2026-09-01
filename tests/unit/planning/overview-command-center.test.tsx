@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { OverviewCommandCenter } from "@/components/planning/overview-command-center";
+import { tFor } from "@/messages";
+
+const t = tFor("en");
 
 /**
  * The OverviewCommandCenter is the at-a-glance summary that
@@ -76,6 +79,7 @@ const baseProps = {
   totalActivityCount: 0,
   canEdit: true,
   editHref: "/app/w/acme/planning/edit/ci-1",
+  t,
 };
 
 describe("OverviewCommandCenter", () => {

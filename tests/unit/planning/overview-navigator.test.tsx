@@ -2,6 +2,9 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { OverviewNavigator } from "@/components/planning/overview-navigator";
 import type { OverviewReadinessLine } from "@/components/planning/overview-command-center";
+import { tFor } from "@/messages";
+
+const t = tFor("en");
 
 /**
  * OverviewNavigator — client wrapper that wires the readiness
@@ -42,6 +45,7 @@ const baseProps = {
   totalActivityCount: 0,
   canEdit: true,
   editHref: "/app/w/acme/planning/edit/ci-1",
+  t,
 };
 
 function buildReadinessLines(): OverviewReadinessLine[] {
