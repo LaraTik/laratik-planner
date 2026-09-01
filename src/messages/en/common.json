@@ -2238,5 +2238,16 @@
       "setTargetHint": "No monthly target — set one to see coverage progress.",
       "coverageAria": "{percent} percent of monthly target"
     }
+  },
+  "planningFilters": {
+    "searchAria": "Search by title or brief",
+    "searchPlaceholder": "Search title or brief",
+    "statusAria": "Filter by status",
+    "formatAria": "Filter by format",
+    "stageAria": "Filter by workflow stage",
+    "channelAria": "Filter by channel",
+    "ownerAria": "Filter by owner",
+    "healthAria": "Filter by health",
+    "densityAria": "List density"
   }
 }

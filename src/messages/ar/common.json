@@ -2238,5 +2238,16 @@
       "setTargetHint": "لا يوجد هدف شهري — عيّن هدفًا لرؤية تقدم التغطية.",
       "coverageAria": "{percent} بالمئة من الهدف الشهري"
     }
+  },
+  "planningFilters": {
+    "searchAria": "البحث حسب العنوان أو الوصف",
+    "searchPlaceholder": "ابحث في العنوان أو الوصف",
+    "statusAria": "تصفية حسب الحالة",
+    "formatAria": "تصفية حسب التنسيق",
+    "stageAria": "تصفية حسب مرحلة سير العمل",
+    "channelAria": "تصفية حسب القناة",
+    "ownerAria": "تصفية حسب المالك",
+    "healthAria": "تصفية حسب الحالة الصحية",
+    "densityAria": "كثافة القائمة"
   }
 }

@@ -31,6 +31,12 @@ export interface PlanningFiltersBarProps {
   members: { id: string; label: string }[];
   /** Channels for the channel filter (sourced server-side). */
   channels?: { id: string; platform: string; accountName: string }[];
+  /**
+   * Optional translator. When provided, the 7 filter aria-labels +
+   * the search placeholder render from `planningFilters.*`; when
+   * omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const HEALTH_LABEL: Record<HealthSnapshot, string> = {
@@ -63,7 +69,9 @@ export function PlanningFiltersBar({
   monthParam,
   members,
   channels = [],
+  t,
 }: PlanningFiltersBarProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -130,7 +138,7 @@ export function PlanningFiltersBar({
           <input
             type="search"
             name="search"
-            aria-label="Search by title or brief"
+            aria-label={tr("planningFilters.searchAria", "Search by title or brief")}
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             onFocus={() => {
@@ -139,7 +147,7 @@ export function PlanningFiltersBar({
             onBlur={() => {
               isFocusedRef.current = false;
             }}
-            placeholder="Search title or brief"
+            placeholder={tr("planningFilters.searchPlaceholder", "Search title or brief")}
             maxLength={80}
             className={cn(selectClass, "w-48 ps-7")}
             data-testid="planning-search-input"
@@ -147,7 +155,7 @@ export function PlanningFiltersBar({
         </div>
 
         <select
-          aria-label="Filter by status"
+          aria-label={tr("planningFilters.statusAria", "Filter by status")}
           value={searchParams.get("status") ?? ""}
           onChange={(e) => pushParam("status", e.target.value || null)}
           className={selectClass}
@@ -162,7 +170,7 @@ export function PlanningFiltersBar({
         </select>
 
         <select
-          aria-label="Filter by format"
+          aria-label={tr("planningFilters.formatAria", "Filter by format")}
           value={searchParams.get("format") ?? ""}
           onChange={(e) => pushParam("format", e.target.value || null)}
           className={selectClass}
@@ -177,7 +185,7 @@ export function PlanningFiltersBar({
         </select>
 
         <select
-          aria-label="Filter by workflow stage"
+          aria-label={tr("planningFilters.stageAria", "Filter by workflow stage")}
           value={searchParams.get("stage") ?? ""}
           onChange={(e) => pushParam("stage", e.target.value || null)}
           className={selectClass}
@@ -192,7 +200,7 @@ export function PlanningFiltersBar({
         </select>
 
         <select
-          aria-label="Filter by channel"
+          aria-label={tr("planningFilters.channelAria", "Filter by channel")}
           value={searchParams.get("channel") ?? ""}
           onChange={(e) => pushParam("channel", e.target.value || null)}
           className={selectClass}
@@ -207,7 +215,7 @@ export function PlanningFiltersBar({
         </select>
 
         <select
-          aria-label="Filter by owner"
+          aria-label={tr("planningFilters.ownerAria", "Filter by owner")}
           value={searchParams.get("owner") ?? ""}
           onChange={(e) => pushParam("owner", e.target.value || null)}
           className={selectClass}
@@ -222,7 +230,7 @@ export function PlanningFiltersBar({
         </select>
 
         <select
-          aria-label="Filter by health"
+          aria-label={tr("planningFilters.healthAria", "Filter by health")}
           value={healthFilter[0] ?? ""}
           onChange={(e) => pushParam("health", e.target.value || null)}
           className={selectClass}
@@ -240,7 +248,7 @@ export function PlanningFiltersBar({
         </select>
 
         <select
-          aria-label="List density"
+          aria-label={tr("planningFilters.densityAria", "List density")}
           value={searchParams.get("density") ?? "comfortable"}
           onChange={(e) =>
             pushParam("density", e.target.value === "comfortable" ? null : e.target.value)
