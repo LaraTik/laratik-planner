@@ -17,6 +17,8 @@ export type LeadTimeTemplate = {
   id: string;
   name: string;
   blurb: string;
+  nameKey?: string;
+  blurbKey?: string;
   /** True when the preset is designed for the 2-step
    *  (internal + client) approval flow. The Apply action
    *  flips the approvalMode automatically. */
@@ -41,6 +43,8 @@ export const leadTimeTemplates: readonly LeadTimeTemplate[] = [
       creativeApprovalLeadDays: 0,
       readyToPublishLeadDays: 2,
     },
+    nameKey: "settings.templates.leadFast.name",
+    blurbKey: "settings.templates.leadFast.blurb",
   },
   {
     id: "lead-standard",
@@ -54,6 +58,8 @@ export const leadTimeTemplates: readonly LeadTimeTemplate[] = [
       creativeApprovalLeadDays: 0,
       readyToPublishLeadDays: 3,
     },
+    nameKey: "settings.templates.leadStandard.name",
+    blurbKey: "settings.templates.leadStandard.blurb",
   },
   {
     id: "lead-relaxed",
@@ -66,6 +72,8 @@ export const leadTimeTemplates: readonly LeadTimeTemplate[] = [
       creativeApprovalLeadDays: 4,
       readyToPublishLeadDays: 3,
     },
+    nameKey: "settings.templates.leadRelaxed.name",
+    blurbKey: "settings.templates.leadRelaxed.blurb",
   },
   {
     id: "lead-client",
@@ -78,6 +86,8 @@ export const leadTimeTemplates: readonly LeadTimeTemplate[] = [
       creativeApprovalLeadDays: 4,
       readyToPublishLeadDays: 6,
     },
+    nameKey: "settings.templates.leadClient.name",
+    blurbKey: "settings.templates.leadClient.blurb",
   },
 ];
 
@@ -85,6 +95,8 @@ export type ApprovalTemplate = {
   id: "simple" | "internal_then_client";
   label: string;
   blurb: string;
+  labelKey: string;
+  blurbKey: string;
 };
 
 export const approvalTemplates: readonly ApprovalTemplate[] = [
@@ -92,11 +104,15 @@ export const approvalTemplates: readonly ApprovalTemplate[] = [
     id: "simple",
     label: "Internal approval only",
     blurb: "One approver. Faster cycle. Best for in-house content or single-stakeholder brands.",
+    labelKey: "settings.approvals.modeSimple.label",
+    blurbKey: "settings.templates.approvalSimple.blurb",
   },
   {
     id: "internal_then_client",
     label: "Internal, then client",
     blurb: "Two approvers. Use when an external stakeholder signs off before publish.",
+    labelKey: "settings.approvals.modeInternalThenClient.label",
+    blurbKey: "settings.templates.approvalClient.blurb",
   },
 ];
 
@@ -105,6 +121,8 @@ export type MonthlyTargetTemplate = {
   name: string;
   blurb: string;
   value: number;
+  nameKey: string;
+  blurbKey: string;
 };
 
 export const monthlyTargetTemplates: readonly MonthlyTargetTemplate[] = [
@@ -113,19 +131,32 @@ export const monthlyTargetTemplates: readonly MonthlyTargetTemplate[] = [
     name: "3 / week",
     blurb: "12 posts per month. A solid weekly cadence.",
     value: 12,
+    nameKey: "settings.templates.monthly12.name",
+    blurbKey: "settings.templates.monthly12.blurb",
   },
   {
     id: "monthly-20",
     name: "5 / week",
     blurb: "20 posts per month. A common agency target.",
     value: 20,
+    nameKey: "settings.templates.monthly20.name",
+    blurbKey: "settings.templates.monthly20.blurb",
   },
-  { id: "monthly-30", name: "Daily", blurb: "30 posts per month. A high-volume brand.", value: 30 },
+  {
+    id: "monthly-30",
+    name: "Daily",
+    blurb: "30 posts per month. A high-volume brand.",
+    value: 30,
+    nameKey: "settings.templates.monthly30.name",
+    blurbKey: "settings.templates.monthly30.blurb",
+  },
   {
     id: "monthly-60",
     name: "2 / day",
     blurb: "60 posts per month. Multi-channel or always-on brand.",
     value: 60,
+    nameKey: "settings.templates.monthly60.name",
+    blurbKey: "settings.templates.monthly60.blurb",
   },
 ];
 

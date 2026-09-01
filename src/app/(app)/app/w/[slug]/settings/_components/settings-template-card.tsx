@@ -33,6 +33,7 @@ export interface SettingsTemplateCardProps {
   /** Optional "current vs preset" delta badge (Phase D). */
   delta?: React.ReactNode;
   testId?: string;
+  t: (key: string) => string;
 }
 
 type Status = "idle" | "loading" | "added" | "error";
@@ -48,6 +49,7 @@ export function SettingsTemplateCard({
   hint,
   delta,
   testId,
+  t,
 }: SettingsTemplateCardProps) {
   const [status, setStatus] = React.useState<Status>("idle");
   const [error, setError] = React.useState<string | null>(null);
@@ -69,7 +71,7 @@ export function SettingsTemplateCard({
     }
     if (!res?.ok) {
       setStatus("error");
-      setError(res?.error ?? "Could not apply preset.");
+      setError(res?.error ?? t("settings.templates.applyError"));
       return;
     }
     setStatus("added");
@@ -109,7 +111,7 @@ export function SettingsTemplateCard({
             data-testid={`settings-template-card-${test}-added`}
           >
             <Check className="h-3.5 w-3.5" aria-hidden="true" />
-            Preset applied.
+            {t("settings.templates.applied")}
           </span>
         ) : status === "error" ? (
           <span
@@ -137,7 +139,7 @@ export function SettingsTemplateCard({
           ) : (
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
           )}
-          {status === "added" ? "Applied" : "Apply preset"}
+          {status === "added" ? t("settings.templates.applied") : t("settings.templates.apply")}
         </Button>
       </div>
     </div>

@@ -988,12 +988,70 @@
       "saved": "Approval mode saved."
     },
     "templates": {
-      "title": "Templates",
-      "description": "Pre-baked workspace presets. Apply a template to copy lifecycle, lead-times, and defaults in one click.",
+      "title": "Settings presets",
+      "description": "Curated preset values for the four numbers every new workspace has to set. Each card shows the delta against your current settings so you can see what changes before applying.",
       "empty": "No templates available yet.",
-      "apply": "Apply template",
-      "applied": "Template applied.",
-      "cardAriaLabel": "Template: {name}"
+      "apply": "Apply preset",
+      "applied": "Preset applied.",
+      "applyError": "Could not apply preset.",
+      "cardAriaLabel": "Template: {name}",
+      "managerRequired": "You need workspace-manager access to apply presets.",
+      "sameAsCurrent": "Same as your current",
+      "diffFromCurrent": "Different from your current",
+      "setForFirstTime": "Set for the first time",
+      "postsPerMonth": "posts / month",
+      "days": "days",
+      "leadTimesSection": {
+        "title": "Lead time presets",
+        "blurb": "Curated 4-number presets for common agency cadences. Applying a lead-time preset also adjusts the approval mode when the preset is designed for a client-approval workflow."
+      },
+      "approvalsSection": {
+        "title": "Approval mode presets",
+        "blurb": "The two approval flows the workspace supports."
+      },
+      "monthlyTargetSection": {
+        "title": "Monthly target presets",
+        "blurb": "Common post-per-month targets the planning KPI bar uses to colour on-track / at-risk / off-track."
+      },
+      "leadClientHint": "This preset flips approval mode to 'Internal, then client'.",
+      "leadFast": {
+        "name": "Fast (8 days)",
+        "blurb": "Lean team, daily cadence, low review depth. Use when speed > polish."
+      },
+      "leadStandard": {
+        "name": "Standard (14 days)",
+        "blurb": "Most agencies. Two weeks end-to-end. Room for the writer's first pass + a creative pass."
+      },
+      "leadRelaxed": {
+        "name": "Relaxed (24 days)",
+        "blurb": "Monthly cadence, deep review, multiple stakeholders. Use when quality > speed."
+      },
+      "leadClient": {
+        "name": "Agency + client (22 days)",
+        "blurb": "Internal review + client review. The most common external-stakeholder workflow."
+      },
+      "approvalSimple": {
+        "blurb": "One approver. Faster cycle. Best for in-house content or single-stakeholder brands."
+      },
+      "approvalClient": {
+        "blurb": "Two approvers. Use when an external stakeholder signs off before publish."
+      },
+      "monthly12": {
+        "name": "3 / week",
+        "blurb": "12 posts per month. A solid weekly cadence."
+      },
+      "monthly20": {
+        "name": "5 / week",
+        "blurb": "20 posts per month. A common agency target."
+      },
+      "monthly30": {
+        "name": "Daily",
+        "blurb": "30 posts per month. A high-volume brand."
+      },
+      "monthly60": {
+        "name": "2 / day",
+        "blurb": "60 posts per month. Multi-channel or always-on brand."
+      }
     },
     "health": {
       "title": "Settings Health",

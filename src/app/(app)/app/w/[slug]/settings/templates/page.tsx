@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { workspaceSettings as workspaceSettingsTable } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SettingsTemplateCard } from "../_components/settings-template-card";
 import {
@@ -41,6 +42,7 @@ export default async function SettingsTemplatesPage({
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
+  const { t } = await tForActive();
   const canManage = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
     "workspace_manager",
   ]);
@@ -62,52 +64,54 @@ export default async function SettingsTemplatesPage({
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Settings presets"
-        description="Curated preset values for the four numbers every new workspace has to set. Each card shows the delta against your current settings so you can see what changes before applying."
+        title={t("settings.templates.title")}
+        description={t("settings.templates.description")}
       />
 
       <TemplateSection
         icon={Clock}
-        title="Lead time presets"
-        blurb="Curated 4-number presets for common agency cadences. Applying a lead-time preset also adjusts the approval mode when the preset is designed for a client-approval workflow."
+        title={t("settings.templates.leadTimesSection.title")}
+        blurb={t("settings.templates.leadTimesSection.blurb")}
         testId="settings-template-section-lead-times"
       >
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {leadTimeTemplates.map((t) => {
+          {leadTimeTemplates.map((tpl) => {
             const total =
-              t.values.contentApprovalLeadDays +
-              t.values.designCompleteLeadDays +
-              t.values.creativeApprovalLeadDays +
-              t.values.readyToPublishLeadDays;
+              tpl.values.contentApprovalLeadDays +
+              tpl.values.designCompleteLeadDays +
+              tpl.values.creativeApprovalLeadDays +
+              tpl.values.readyToPublishLeadDays;
             const delta = total - currentLeadTotal;
             return (
-              <li key={t.id}>
+              <li key={tpl.id}>
                 <SettingsTemplateCard
                   kind="lead-times"
                   slug={slug}
-                  templateId={t.id}
-                  title={t.name}
-                  blurb={t.blurb}
+                  templateId={tpl.id}
+                  title={tpl.nameKey ? t(tpl.nameKey) : tpl.name}
+                  blurb={tpl.blurbKey ? t(tpl.blurbKey) : tpl.blurb}
                   preview={
                     <ul className="text-label text-fg-muted flex flex-wrap gap-x-3 gap-y-1">
-                      <li>Content {t.values.contentApprovalLeadDays}d</li>
-                      <li>Design {t.values.designCompleteLeadDays}d</li>
-                      <li>Creative {t.values.creativeApprovalLeadDays}d</li>
-                      <li>Publish {t.values.readyToPublishLeadDays}d</li>
+                      <li>Content {tpl.values.contentApprovalLeadDays}d</li>
+                      <li>Design {tpl.values.designCompleteLeadDays}d</li>
+                      <li>Creative {tpl.values.creativeApprovalLeadDays}d</li>
+                      <li>Publish {tpl.values.readyToPublishLeadDays}d</li>
                     </ul>
                   }
                   meta={`${total} business days total`}
                   delta={
                     <DeltaBadge
                       delta={delta}
-                      label="days"
+                      label={t("settings.templates.days")}
                       currentTotal={currentLeadTotal}
                       presetTotal={total}
+                      sameLabel={t("settings.templates.sameAsCurrent")}
                     />
                   }
-                  {...(t.forClientApproval
-                    ? { hint: "This preset flips approval mode to 'Internal, then client'." }
+                  {...(tpl.forClientApproval
+                    ? { hint: t("settings.templates.leadClientHint") }
                     : {})}
+                  t={t}
                 />
               </li>
             );
@@ -117,30 +121,31 @@ export default async function SettingsTemplatesPage({
 
       <TemplateSection
         icon={CheckCircle2}
-        title="Approval mode presets"
-        blurb="The two approval flows the workspace supports."
+        title={t("settings.templates.approvalsSection.title")}
+        blurb={t("settings.templates.approvalsSection.blurb")}
         testId="settings-template-section-approvals"
       >
         <ul className="grid gap-3 sm:grid-cols-2">
-          {approvalTemplates.map((t) => (
-            <li key={t.id}>
+          {approvalTemplates.map((tpl) => (
+            <li key={tpl.id}>
               <SettingsTemplateCard
                 kind="approvals"
                 slug={slug}
-                templateId={t.id}
-                title={t.label}
-                blurb={t.blurb}
+                templateId={tpl.id}
+                title={t(tpl.labelKey)}
+                blurb={t(tpl.blurbKey)}
                 delta={
                   <DeltaBadge
-                    delta={t.id === currentApprovalMode ? 0 : 1}
+                    delta={tpl.id === currentApprovalMode ? 0 : 1}
                     label={
-                      t.id === currentApprovalMode
-                        ? "Same as your current"
-                        : "Different from your current"
+                      tpl.id === currentApprovalMode
+                        ? t("settings.templates.sameAsCurrent")
+                        : t("settings.templates.diffFromCurrent")
                     }
                     kind="badge"
                   />
                 }
+                t={t}
               />
             </li>
           ))}
@@ -149,47 +154,57 @@ export default async function SettingsTemplatesPage({
 
       <TemplateSection
         icon={Hash}
-        title="Monthly target presets"
-        blurb="Common post-per-month targets the planning KPI bar uses to colour on-track / at-risk / off-track."
+        title={t("settings.templates.monthlyTargetSection.title")}
+        blurb={t("settings.templates.monthlyTargetSection.blurb")}
         testId="settings-template-section-monthly-target"
       >
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {monthlyTargetTemplates.map((t) => {
-            const delta = currentMonthlyTarget === null ? null : t.value - currentMonthlyTarget;
+          {monthlyTargetTemplates.map((tpl) => {
+            const delta = currentMonthlyTarget === null ? null : tpl.value - currentMonthlyTarget;
             return (
-              <li key={t.id}>
+              <li key={tpl.id}>
                 <SettingsTemplateCard
                   kind="monthly-target"
                   slug={slug}
-                  templateId={t.id}
-                  title={t.name}
-                  blurb={t.blurb}
+                  templateId={tpl.id}
+                  title={tpl.nameKey ? t(tpl.nameKey) : tpl.name}
+                  blurb={tpl.blurbKey ? t(tpl.blurbKey) : tpl.blurb}
                   preview={
                     <span
                       className={cn(
                         "border-border text-label rounded-full border px-2.5 py-0.5 font-bold",
-                        currentMonthlyTarget === t.value
+                        currentMonthlyTarget === tpl.value
                           ? "bg-success/15 text-success border-success/30"
                           : "bg-primary-subtle text-primary",
                       )}
                     >
-                      {t.value} / month
+                      {tpl.value} / month
                     </span>
                   }
                   delta={
                     delta === null ? (
-                      <DeltaBadge delta={1} kind="badge" label="Set for the first time" />
+                      <DeltaBadge
+                        delta={1}
+                        kind="badge"
+                        label={t("settings.templates.setForFirstTime")}
+                      />
                     ) : delta === 0 ? (
-                      <DeltaBadge delta={0} kind="badge" label="Same as your current" />
+                      <DeltaBadge
+                        delta={0}
+                        kind="badge"
+                        label={t("settings.templates.sameAsCurrent")}
+                      />
                     ) : (
                       <DeltaBadge
                         delta={delta}
-                        label="posts / month"
+                        label={t("settings.templates.postsPerMonth")}
                         currentTotal={currentMonthlyTarget ?? 0}
-                        presetTotal={t.value}
+                        presetTotal={tpl.value}
+                        sameLabel={t("settings.templates.sameAsCurrent")}
                       />
                     )
                   }
+                  t={t}
                 />
               </li>
             );
@@ -199,7 +214,7 @@ export default async function SettingsTemplatesPage({
 
       {!canManage ? (
         <p className="text-label text-fg-muted text-center" role="status">
-          You need workspace-manager access to apply presets.
+          {t("settings.templates.managerRequired")}
         </p>
       ) : null}
     </div>
@@ -212,12 +227,14 @@ function DeltaBadge({
   currentTotal,
   presetTotal,
   kind,
+  sameLabel,
 }: {
   delta: number;
   label?: string;
   currentTotal?: number;
   presetTotal?: number;
   kind?: "badge";
+  sameLabel?: string;
 }) {
   // Label-only badge (approval mode, "set for the first time").
   if (kind === "badge" && label) {
@@ -252,7 +269,7 @@ function DeltaBadge({
     >
       <Icon className="h-3 w-3" aria-hidden="true" />
       {delta === 0
-        ? "Same as your current"
+        ? sameLabel
         : `${delta > 0 ? "+" : ""}${delta} ${label ?? ""} (${presetTotal} from ${currentTotal})`}
     </span>
   );
