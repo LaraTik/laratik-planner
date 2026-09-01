@@ -37,16 +37,41 @@ type UserMenuUser = {
   isPlatformAdmin?: boolean;
 };
 
+/**
+ * Localized copy bundle for the user menu. The Server Component
+ * parent (`/app/(app)/layout.tsx`) resolves every string through
+ * the message catalog and hands the bundle to the client. The
+ * client never reaches for the catalog itself.
+ */
+export type UserMenuCopy = {
+  account: string;
+  agencySettings: string;
+  help: string;
+  platformAdmin: string;
+  platformAdminTitle: string;
+  activeAgencyTitle: string;
+  adminSuffix: string;
+  menuAriaLabel: string;
+  avatarAriaLabel: string;
+};
+
 const AvatarTrigger = React.forwardRef<
   HTMLButtonElement,
-  { user: UserMenuUser; compact?: boolean } & React.ComponentPropsWithoutRef<"button">
->(function AvatarTrigger({ user, compact = false, className, ...buttonProps }, ref) {
+  {
+    user: UserMenuUser;
+    compact?: boolean;
+    avatarAriaLabel: string;
+  } & React.ComponentPropsWithoutRef<"button">
+>(function AvatarTrigger(
+  { user, compact = false, avatarAriaLabel, className, ...buttonProps },
+  ref,
+) {
   return (
     <button
       {...buttonProps}
       ref={ref}
       type="button"
-      aria-label={`Account menu for ${user.name}`}
+      aria-label={avatarAriaLabel}
       data-testid={compact ? "user-menu-trigger-mobile" : "user-menu-trigger"}
       className={cn(
         "border-border bg-surface text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-11 cursor-pointer items-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2",
@@ -82,11 +107,13 @@ const AvatarTrigger = React.forwardRef<
 export function UserMenu({
   user,
   buildInfo,
+  copy,
   variant = "desktop",
   activeAgency,
 }: {
   user: UserMenuUser;
   buildInfo: BuildInfo;
+  copy: UserMenuCopy;
   variant?: "desktop" | "mobile";
   activeAgency?: { name: string; isAdmin: boolean } | null | undefined;
 }) {
@@ -94,7 +121,11 @@ export function UserMenu({
     return (
       <Dialog>
         <DialogTrigger asChild>
-          <AvatarTrigger user={user} compact />
+          <AvatarTrigger
+            user={user}
+            compact
+            avatarAriaLabel={copy.avatarAriaLabel.replace("{name}", user.name)}
+          />
         </DialogTrigger>
         <DialogContent
           data-testid="user-menu-mobile"
@@ -107,10 +138,10 @@ export function UserMenu({
                 <span
                   className="text-label text-info border-info/30 bg-info-subtle inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-semibold"
                   data-testid="user-menu-platform-admin-chip"
-                  title="This account can reach /app/platform/* (manage agencies, plans, support access)"
+                  title={copy.platformAdminTitle}
                 >
                   <ShieldCheck className="h-3 w-3" aria-hidden="true" />
-                  Platform Admin
+                  {copy.platformAdmin}
                 </span>
               ) : null}
             </div>
@@ -119,21 +150,21 @@ export function UserMenu({
               <p
                 className="text-label text-fg-muted truncate"
                 data-testid="user-menu-active-agency"
-                title={`Active agency: ${activeAgency.name}`}
+                title={copy.activeAgencyTitle.replace("{name}", activeAgency.name)}
               >
                 {activeAgency.name}
-                {activeAgency.isAdmin ? " · admin" : ""}
+                {activeAgency.isAdmin ? copy.adminSuffix : ""}
               </p>
             ) : null}
           </DialogHeader>
-          <div role="menu" aria-label="Account" className="space-y-1 p-2 pb-4">
+          <div role="menu" aria-label={copy.menuAriaLabel} className="space-y-1 p-2 pb-4">
             <DialogClose asChild>
               <Link
                 href="/app/account"
                 role="menuitem"
                 className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 font-semibold focus:outline-none focus-visible:ring-2"
               >
-                <UserIcon className="text-fg-secondary h-4 w-4" aria-hidden="true" /> Account
+                <UserIcon className="text-fg-secondary h-4 w-4" aria-hidden="true" /> {copy.account}
               </Link>
             </DialogClose>
             {user.isAdmin ? (
@@ -143,8 +174,8 @@ export function UserMenu({
                   role="menuitem"
                   className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 font-semibold focus:outline-none focus-visible:ring-2"
                 >
-                  <Settings className="text-fg-secondary h-4 w-4" aria-hidden="true" /> Agency
-                  Settings
+                  <Settings className="text-fg-secondary h-4 w-4" aria-hidden="true" />{" "}
+                  {copy.agencySettings}
                 </Link>
               </DialogClose>
             ) : null}
@@ -161,12 +192,15 @@ export function UserMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <AvatarTrigger user={user} />
+        <AvatarTrigger
+          user={user}
+          avatarAriaLabel={copy.avatarAriaLabel.replace("{name}", user.name)}
+        />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
         data-testid="user-menu"
-        aria-label="Account"
+        aria-label={copy.menuAriaLabel}
         className="w-64"
       >
         <DropdownMenuLabel className="normal-case">
@@ -176,10 +210,10 @@ export function UserMenu({
               <span
                 className="text-label text-info border-info/30 bg-info-subtle inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 font-semibold"
                 data-testid="user-menu-platform-admin-chip"
-                title="This account can reach /app/platform/* (manage agencies, plans, support access)"
+                title={copy.platformAdminTitle}
               >
                 <ShieldCheck className="h-3 w-3" aria-hidden="true" />
-                Platform Admin
+                {copy.platformAdmin}
               </span>
             ) : null}
           </span>
@@ -190,29 +224,30 @@ export function UserMenu({
             <span
               className="text-label text-fg-muted mt-0.5 block truncate font-normal tracking-normal"
               data-testid="user-menu-active-agency"
-              title={`Active agency: ${activeAgency.name}`}
+              title={copy.activeAgencyTitle.replace("{name}", activeAgency.name)}
             >
               {activeAgency.name}
-              {activeAgency.isAdmin ? " · admin" : ""}
+              {activeAgency.isAdmin ? copy.adminSuffix : ""}
             </span>
           ) : null}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild className="min-h-11 cursor-pointer">
           <Link href="/app/account">
-            <UserIcon className="text-fg-secondary h-4 w-4" aria-hidden="true" /> Account
+            <UserIcon className="text-fg-secondary h-4 w-4" aria-hidden="true" /> {copy.account}
           </Link>
         </DropdownMenuItem>
         {user.isAdmin ? (
           <DropdownMenuItem asChild className="min-h-11 cursor-pointer">
             <Link href="/app/agency-settings">
-              <Settings className="text-fg-secondary h-4 w-4" aria-hidden="true" /> Agency Settings
+              <Settings className="text-fg-secondary h-4 w-4" aria-hidden="true" />{" "}
+              {copy.agencySettings}
             </Link>
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem asChild className="min-h-11 cursor-pointer">
           <Link href="https://github.com/LaraTik/laratik-planner">
-            <HelpCircle className="text-fg-secondary h-4 w-4" aria-hidden="true" /> Help
+            <HelpCircle className="text-fg-secondary h-4 w-4" aria-hidden="true" /> {copy.help}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

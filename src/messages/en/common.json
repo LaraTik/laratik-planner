@@ -216,6 +216,27 @@
       "goToMyWork": "Go to My Work",
       "signOut": "Not you? Sign out instead"
     },
+    "chrome": {
+      "userMenu": {
+        "account": "Account",
+        "agencySettings": "Agency Settings",
+        "help": "Help",
+        "platformAdmin": "Platform Admin",
+        "platformAdminTitle": "This account can reach /app/platform/* (manage agencies, plans, support access)",
+        "activeAgencyTitle": "Active agency: {name}",
+        "adminSuffix": " · admin",
+        "menuAriaLabel": "Account",
+        "avatarAriaLabel": "Account menu for {name}"
+      },
+      "notifications": {
+        "triggerAriaLabel": "Notifications",
+        "triggerAriaLabelUnread": "Notifications ({count} unread)",
+        "dialogAriaLabel": "Notifications",
+        "title": "Notifications",
+        "markAllRead": "Mark all read",
+        "empty": "No notifications yet."
+      }
+    },
     "errorCodes": {
       "Configuration": "Sign-in is not configured correctly on the server. Please contact support if this keeps happening.",
       "AccessDenied": "Access to this account was denied. Ask an admin to grant you access.",

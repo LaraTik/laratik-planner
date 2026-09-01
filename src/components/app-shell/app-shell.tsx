@@ -1,15 +1,28 @@
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { MobileNav } from "./mobile-nav";
-import { NotificationsBell } from "./notifications-bell";
+import { NotificationsBell, type NotificationsCopy } from "./notifications-bell";
 import { RouteScrollReset } from "./route-scroll-reset";
 import { SupportSessionBanner } from "./support-session-banner";
-import { UserMenu } from "./user-menu";
+import { UserMenu, type UserMenuCopy } from "./user-menu";
 import { MobileContextHeader } from "./mobile-context-header";
 import type { AgencyRow } from "./agency-switcher";
 import type { BuildInfo } from "@/lib/build-info";
 import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
 import { cn } from "@/lib/utils";
+
+/**
+ * The chrome copy bundle AppShell forwards to its client
+ * children. The Server Component parent (`/app/(app)/layout.tsx`)
+ * resolves every string through the message catalog and hands
+ * the bundle to the AppShell. The AppShell itself does no
+ * translation work — it just wires the bundle through to the
+ * NotificationsBell, UserMenu, and (eventually) the sidebar.
+ */
+export type AppShellChrome = {
+  userMenu: UserMenuCopy;
+  notifications: NotificationsCopy;
+};
 
 /**
  * App shell — sidebar (left, persistent on desktop) + topbar (right
@@ -50,6 +63,7 @@ export function AppShell({
   workspaceBadges,
   unreadAppErrors = 0,
   sidebarCollapsed = false,
+  chrome,
   children,
 }: {
   user: {
@@ -90,6 +104,7 @@ export function AppShell({
   workspaceBadges?: Record<string, { approvals: number; designQueue: number }>;
   unreadAppErrors?: number;
   sidebarCollapsed?: boolean;
+  chrome: AppShellChrome;
   children: React.ReactNode;
 }) {
   // The active workspace is the one whose slug is currently in the
@@ -147,6 +162,7 @@ export function AppShell({
           notifications={notifications}
           unreadCount={unreadCount}
           activeAgency={agencySwitcher.active}
+          chrome={chrome}
         />
       </header>
 
@@ -158,6 +174,7 @@ export function AppShell({
             initial={notifications}
             initialUnread={unreadCount}
             badgeTestId="unread-badge-mobile"
+            copy={chrome.notifications}
           />
           <UserMenu
             user={{
@@ -167,6 +184,7 @@ export function AppShell({
             buildInfo={buildInfo}
             variant="mobile"
             activeAgency={agencySwitcher.active}
+            copy={chrome.userMenu}
           />
         </div>
       </header>

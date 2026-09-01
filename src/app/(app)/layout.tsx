@@ -25,6 +25,8 @@ import { createBuildInfo } from "@/lib/build-info";
 import { serverEnv } from "@/lib/validation/env";
 import { getWorkspaceBadges, getGlobalBadges } from "@/lib/nav/badges";
 import { readSidebarCollapsed } from "@/lib/nav/sidebar-preference";
+import { tForActive } from "@/lib/i18n/t-for-active";
+import type { AppShellChrome } from "@/components/app-shell/app-shell";
 
 /**
  * Authenticated app shell — wraps every page under (app)/*.
@@ -40,6 +42,7 @@ import { readSidebarCollapsed } from "@/lib/nav/sidebar-preference";
  * `usePathname()` and render the workspace-scoped nav.
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/signin");
@@ -187,6 +190,34 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const workspaceBadgesMap: Record<string, { approvals: number; designQueue: number }> =
     Object.fromEntries(workspaceBadges);
 
+  // Resolved chrome copy. Every label the user sees in the
+  // notifications bell, the user menu, the mobile topbar, and
+  // (in a follow-up commit) the sidebar navigation is sourced
+  // from the message catalog here. The translators are
+  // interpolated at the top of the request so the per-render
+  // cost is one DB read + one cookie read, not one per child.
+  const chrome: AppShellChrome = {
+    userMenu: {
+      account: t("navigation.account"),
+      agencySettings: t("navigation.agencySettings"),
+      help: t("auth.chrome.userMenu.help"),
+      platformAdmin: t("auth.chrome.userMenu.platformAdmin"),
+      platformAdminTitle: t("auth.chrome.userMenu.platformAdminTitle"),
+      activeAgencyTitle: t("auth.chrome.userMenu.activeAgencyTitle"),
+      adminSuffix: t("auth.chrome.userMenu.adminSuffix"),
+      menuAriaLabel: t("auth.chrome.userMenu.menuAriaLabel"),
+      avatarAriaLabel: t("auth.chrome.userMenu.avatarAriaLabel"),
+    },
+    notifications: {
+      triggerAriaLabel: t("auth.chrome.notifications.triggerAriaLabel"),
+      triggerAriaLabelUnread: t("auth.chrome.notifications.triggerAriaLabelUnread"),
+      dialogAriaLabel: t("auth.chrome.notifications.dialogAriaLabel"),
+      title: t("auth.chrome.notifications.title"),
+      markAllRead: t("auth.chrome.notifications.markAllRead"),
+      empty: t("auth.chrome.notifications.empty"),
+    },
+  };
+
   return (
     <AppShell
       buildInfo={buildInfo}
@@ -218,6 +249,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       workspaceBadges={workspaceBadgesMap}
       unreadAppErrors={globalBadges.unreadAppErrors}
       sidebarCollapsed={sidebarCollapsed}
+      chrome={chrome}
     >
       {children}
     </AppShell>

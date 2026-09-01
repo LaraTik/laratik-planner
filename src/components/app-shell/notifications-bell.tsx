@@ -13,6 +13,21 @@ import {
 type NotificationRow = NotificationListItem;
 
 /**
+ * Localized copy bundle for the notifications bell. The Server
+ * Component parent resolves every string through the message
+ * catalog and hands the bundle to the client. The client never
+ * reaches for the catalog itself.
+ */
+export type NotificationsCopy = {
+  triggerAriaLabel: string;
+  triggerAriaLabelUnread: string;
+  dialogAriaLabel: string;
+  title: string;
+  markAllRead: string;
+  empty: string;
+};
+
+/**
  * Notifications bell — bell icon with unread badge, plus a popover
  * listing the latest 10 in-app notifications.
  *
@@ -29,10 +44,12 @@ export function NotificationsBell({
   initial,
   initialUnread,
   badgeTestId,
+  copy,
 }: {
   initial: NotificationRow[];
   initialUnread: number;
   badgeTestId?: string;
+  copy: NotificationsCopy;
 }) {
   const [open, setOpen] = React.useState(false);
   const [items, setItems] = React.useState<NotificationRow[]>(initial);
@@ -132,7 +149,11 @@ export function NotificationsBell({
         ref={triggerRef}
         variant="ghost"
         size="icon"
-        aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ""}`}
+        aria-label={
+          unread > 0
+            ? copy.triggerAriaLabelUnread.replace("{count}", String(unread))
+            : copy.triggerAriaLabel
+        }
         aria-haspopup="true"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
@@ -154,21 +175,21 @@ export function NotificationsBell({
           ref={dialogRef}
           role="dialog"
           aria-modal="false"
-          aria-label="Notifications"
+          aria-label={copy.dialogAriaLabel}
           tabIndex={-1}
           className="border-border bg-surface fixed inset-x-2 top-14 z-50 max-h-[calc(100vh-4rem)] overflow-hidden rounded-[var(--radius-card)] border shadow-lg focus:outline-none sm:absolute sm:inset-auto sm:end-0 sm:top-auto sm:left-auto sm:mt-2 sm:w-96 sm:max-w-[calc(100vw-2rem)]"
         >
           <header className="border-border flex items-center justify-between border-b px-3 py-2">
-            <h3 className="text-body text-fg-primary font-semibold">Notifications</h3>
+            <h3 className="text-body text-fg-primary font-semibold">{copy.title}</h3>
             {unread > 0 ? (
               <Button ref={firstActionRef} variant="ghost" size="sm" onClick={markAllRead}>
                 <CheckCheck className="h-3 w-3" aria-hidden="true" />
-                Mark all read
+                {copy.markAllRead}
               </Button>
             ) : null}
           </header>
           {items.length === 0 ? (
-            <p className="text-body text-fg-muted p-4 text-center">No notifications yet.</p>
+            <p className="text-body text-fg-muted p-4 text-center">{copy.empty}</p>
           ) : (
             <ul
               className="max-h-[calc(100vh-8rem)] divide-y overflow-y-auto sm:max-h-96"

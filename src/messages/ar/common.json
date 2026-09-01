@@ -216,6 +216,27 @@
       "goToMyWork": "الانتقال إلى «عملي»",
       "signOut": "لست أنت؟ سجّل الخروج بدلاً من ذلك"
     },
+    "chrome": {
+      "userMenu": {
+        "account": "الحساب",
+        "agencySettings": "إعدادات الوكالة",
+        "help": "المساعدة",
+        "platformAdmin": "مسؤول المنصة",
+        "platformAdminTitle": "هذا الحساب يمكنه الوصول إلى /app/platform/* (إدارة الوكالات والخطط وصلاحيات الدعم)",
+        "activeAgencyTitle": "الوكالة النشطة: {name}",
+        "adminSuffix": " · مسؤول",
+        "menuAriaLabel": "الحساب",
+        "avatarAriaLabel": "قائمة الحساب لـ {name}"
+      },
+      "notifications": {
+        "triggerAriaLabel": "الإشعارات",
+        "triggerAriaLabelUnread": "الإشعارات ({count} غير مقروءة)",
+        "dialogAriaLabel": "الإشعارات",
+        "title": "الإشعارات",
+        "markAllRead": "وضع علامة على الكل كمقروء",
+        "empty": "لا توجد إشعارات بعد."
+      }
+    },
     "errorCodes": {
       "Configuration": "تسجيل الدخول غير مهيأ بشكل صحيح على الخادم. يُرجى التواصل مع الدعم إذا تكرّر ذلك.",
       "AccessDenied": "تم رفض الوصول إلى هذا الحساب. اطلب من المسؤول منحك الصلاحية.",
