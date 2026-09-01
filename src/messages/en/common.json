@@ -269,6 +269,11 @@
     "editMetaTitle": "Edit idea · {id}",
     "descriptionOne": "{month} · {count} item",
     "descriptionMany": "{month} · {count} items",
+    "groupToday": "Today",
+    "groupTomorrow": "Tomorrow",
+    "groupThisWeek": "This week · {start}–{end}",
+    "groupNextWeek": "Next week · {start}–{end}",
+    "groupOverdue": "Overdue",
     "batchAdd": "Batch add",
     "quickCreate": "Quick Create",
     "boardView": "Board view",
@@ -2348,7 +2353,18 @@
       "coverageAria": "{percent} percent of monthly target"
     },
     "overviewKpiAria": "Workspace KPIs",
-    "planningKpiAria": "Planning KPIs"
+    "planningKpiAria": "Planning KPIs",
+    "planningKpiTotal": "Total Planned",
+    "planningKpiAtRisk": "At Risk",
+    "planningKpiNeedsReview": "Needs Review",
+    "planningKpiReady": "Ready",
+    "planningKpiNotStarted": "Not started",
+    "rowScheduleAria": "Schedule",
+    "rowPeopleAria": "People",
+    "rowOwnerDesignerAria": "Owner + Designer",
+    "rowStageAria": "Stage",
+    "rowCommentsAria": "{count} comments",
+    "rowAssetsAria": "{count} assets"
   },
   "planningFilters": {
     "searchAria": "Search by title or brief",

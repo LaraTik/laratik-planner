@@ -269,6 +269,11 @@
     "editMetaTitle": "تعديل الفكرة · {id}",
     "descriptionOne": "{month} · عنصر واحد",
     "descriptionMany": "{month} · {count} عناصر",
+    "groupToday": "اليوم",
+    "groupTomorrow": "غدًا",
+    "groupThisWeek": "هذا الأسبوع · {start}–{end}",
+    "groupNextWeek": "الأسبوع القادم · {start}–{end}",
+    "groupOverdue": "متأخر",
     "batchAdd": "إضافة دفعة",
     "quickCreate": "إنشاء سريع",
     "boardView": "عرض اللوحة",
@@ -2348,7 +2353,18 @@
       "coverageAria": "{percent} بالمئة من الهدف الشهري"
     },
     "overviewKpiAria": "مؤشرات أداء المساحة",
-    "planningKpiAria": "مؤشرات أداء التخطيط"
+    "planningKpiAria": "مؤشرات أداء التخطيط",
+    "planningKpiTotal": "إجمالي المُخطَّط",
+    "planningKpiAtRisk": "في خطر",
+    "planningKpiNeedsReview": "يحتاج مراجعة",
+    "planningKpiReady": "جاهز",
+    "planningKpiNotStarted": "لم يبدأ",
+    "rowScheduleAria": "الجدول",
+    "rowPeopleAria": "الأشخاص",
+    "rowOwnerDesignerAria": "المالك والمصمم",
+    "rowStageAria": "المرحلة",
+    "rowCommentsAria": "{count} تعليق",
+    "rowAssetsAria": "{count} أصل"
   },
   "planningFilters": {
     "searchAria": "البحث حسب العنوان أو الوصف",

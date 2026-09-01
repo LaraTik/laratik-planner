@@ -31,18 +31,25 @@ function fmtDate(d: Date): string {
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
 }
 
-function groupKey(d: Date, now: Date): { key: string; label: string } {
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+function groupKey(d: Date, now: Date, t: Translator | undefined): { key: string; label: string } {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   const start = startOfDay(d).getTime();
   const today = startOfDay(now).getTime();
   const daysAhead = Math.round((start - today) / MS_PER_DAY);
-  if (daysAhead === 0) return { key: "today", label: "Today" };
-  if (daysAhead === 1) return { key: "tomorrow", label: "Tomorrow" };
+  if (daysAhead === 0) return { key: "today", label: tr("planning.groupToday", "Today") };
+  if (daysAhead === 1) return { key: "tomorrow", label: tr("planning.groupTomorrow", "Tomorrow") };
   if (daysAhead > 1 && daysAhead <= 7) {
     const weekStart = isoWeekStart(d);
     const weekEnd = new Date(weekStart.getTime() + 6 * MS_PER_DAY);
     return {
       key: `week-${weekStart.toISOString()}`,
-      label: `This week · ${fmtDate(weekStart)}–${fmtDate(weekEnd)}`,
+      label: tr("planning.groupThisWeek", `This week · ${fmtDate(weekStart)}–${fmtDate(weekEnd)}`, {
+        start: fmtDate(weekStart),
+        end: fmtDate(weekEnd),
+      }),
     };
   }
   if (daysAhead > 7 && daysAhead <= 14) {
@@ -50,11 +57,14 @@ function groupKey(d: Date, now: Date): { key: string; label: string } {
     const weekEnd = new Date(weekStart.getTime() + 6 * MS_PER_DAY);
     return {
       key: `week-${weekStart.toISOString()}`,
-      label: `Next week · ${fmtDate(weekStart)}–${fmtDate(weekEnd)}`,
+      label: tr("planning.groupNextWeek", `Next week · ${fmtDate(weekStart)}–${fmtDate(weekEnd)}`, {
+        start: fmtDate(weekStart),
+        end: fmtDate(weekEnd),
+      }),
     };
   }
   if (daysAhead < 0) {
-    return { key: `overdue-${start}`, label: "Overdue" };
+    return { key: `overdue-${start}`, label: tr("planning.groupOverdue", "Overdue") };
   }
   // > 14 days: group by month-day
   return {
@@ -72,6 +82,13 @@ export interface PlanningListGroupedProps {
   /** When true, render with sticky date headers; when false, render flat. */
   grouped: boolean;
   actions?: (item: EnrichedContentItem) => React.ReactNode;
+  /**
+   * Optional translator. When provided, the date group headers
+   * (Today / Tomorrow / This week · / Next week · / Overdue) and
+   * the inner PlanningListItem rows render from the active locale;
+   * when omitted, the stored English copy is used.
+   */
+  t?: Translator;
 }
 
 export function PlanningListGrouped({
@@ -82,6 +99,7 @@ export function PlanningListGrouped({
   now,
   grouped,
   actions,
+  t,
 }: PlanningListGroupedProps) {
   if (!grouped) {
     return (
@@ -95,6 +113,7 @@ export function PlanningListGrouped({
             density={density}
             now={now}
             actions={actions?.(it)}
+            {...(t !== undefined ? { t } : {})}
           />
         ))}
       </PlanningListItemList>
@@ -104,7 +123,7 @@ export function PlanningListGrouped({
   // Group by date header, preserving sort order (plannedPublishAt ASC).
   const groups: { key: string; label: string; items: EnrichedContentItem[] }[] = [];
   for (const it of items) {
-    const g = groupKey(it.plannedPublishAt, now);
+    const g = groupKey(it.plannedPublishAt, now, t);
     const last = groups[groups.length - 1];
     if (last && last.key === g.key) {
       last.items.push(it);
@@ -134,6 +153,7 @@ export function PlanningListGrouped({
                 density={density}
                 now={now}
                 actions={actions?.(it)}
+                {...(t !== undefined ? { t } : {})}
               />
             ))}
           </PlanningListItemList>

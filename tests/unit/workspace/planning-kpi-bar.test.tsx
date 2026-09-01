@@ -85,7 +85,7 @@ describe("PlanningKpiBar", () => {
         currentQuery={new URLSearchParams("month=2026-08&risk=at_risk")}
       />,
     );
-    const totalLink = screen.getByTestId("planning-kpi-total-planned");
+    const totalLink = screen.getByTestId("planning-kpi-total");
     expect(totalLink.getAttribute("href")).not.toContain("risk=at_risk");
   });
 });

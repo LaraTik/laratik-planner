@@ -452,6 +452,7 @@ export default async function PlanningPage({
             density={density}
             now={nowRef}
             grouped={!hasFilter}
+            t={t}
             actions={(it) => (
               <PlanningListActions
                 workspaceSlug={slug}

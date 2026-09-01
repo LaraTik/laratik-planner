@@ -82,6 +82,14 @@ export interface PlanningListItemProps {
    *  page wires a DropdownMenu in here. The component itself
    *  doesn't render a menu to keep the row presentational. */
   actions?: React.ReactNode;
+  /**
+   * Optional translator. When provided, the row's column
+   * screen-reader labels (Schedule / People / Stage) and the
+   * comment / asset counter aria-labels render from
+   * `workspaceOverviewDashboard.row*` keys; when omitted, the
+   * stored English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 function FormatIcon({ format }: { format: string }) {
@@ -116,7 +124,10 @@ export function PlanningListItem({
   density = "comfortable",
   now,
   actions,
+  t,
 }: PlanningListItemProps) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   const detailHref = `/app/w/${workspaceSlug}/planning/${item.id}`;
   const opDate = formatOperationalDate(item.plannedPublishAt, now, workspaceTimezone);
   const padding = density === "compact" ? "py-2" : "py-3";
@@ -170,7 +181,7 @@ export function PlanningListItem({
         {/* SCHEDULE */}
         <div className="text-label flex items-center gap-2 lg:flex-col lg:items-start lg:gap-0.5">
           <span className="text-fg-muted font-semibold tracking-wide uppercase lg:sr-only">
-            Schedule
+            {tr("workspaceOverviewDashboard.rowScheduleAria", "Schedule")}
           </span>
           <span
             className={cn(
@@ -196,10 +207,10 @@ export function PlanningListItem({
             stable on tablet. */}
         <div className="flex items-center gap-2 lg:flex-col lg:items-start lg:gap-0.5">
           <span className="text-fg-muted text-label hidden font-semibold tracking-wide uppercase lg:inline">
-            People
+            {tr("workspaceOverviewDashboard.rowPeopleAria", "People")}
           </span>
           <span className="text-fg-muted font-semibold tracking-wide uppercase lg:sr-only">
-            Owner + Designer
+            {tr("workspaceOverviewDashboard.rowOwnerDesignerAria", "Owner + Designer")}
           </span>
           <PeopleCell owner={item.owner} designer={item.designer} />
         </div>
@@ -209,7 +220,7 @@ export function PlanningListItem({
             workflow inspector. See AGENTS.md §B + §C for the rule. */}
         <div className="text-label flex items-center gap-2 lg:flex-col lg:items-start lg:gap-0.5">
           <span className="text-fg-muted font-semibold tracking-wide uppercase lg:sr-only">
-            Stage
+            {tr("workspaceOverviewDashboard.rowStageAria", "Stage")}
           </span>
           <StagePill status={item.status} />
         </div>
@@ -231,7 +242,11 @@ export function PlanningListItem({
               <Link
                 href={`${detailHref}#activity`}
                 className="hover:text-fg-primary inline-flex items-center gap-1"
-                aria-label={`${item.commentCount} comments`}
+                aria-label={tr(
+                  "workspaceOverviewDashboard.rowCommentsAria",
+                  `${item.commentCount} comments`,
+                  { count: item.commentCount },
+                )}
                 data-testid="row-comment-count"
               >
                 <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
@@ -242,7 +257,11 @@ export function PlanningListItem({
               <Link
                 href={`${detailHref}#content`}
                 className="hover:text-fg-primary inline-flex items-center gap-1"
-                aria-label={`${item.assetCount} assets`}
+                aria-label={tr(
+                  "workspaceOverviewDashboard.rowAssetsAria",
+                  `${item.assetCount} assets`,
+                  { count: item.assetCount },
+                )}
                 data-testid="row-asset-count"
               >
                 <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
@@ -263,7 +282,11 @@ export function PlanningListItem({
               <Link
                 href={`${detailHref}#activity`}
                 className="hover:text-fg-primary inline-flex items-center gap-1"
-                aria-label={`${item.commentCount} comments`}
+                aria-label={tr(
+                  "workspaceOverviewDashboard.rowCommentsAria",
+                  `${item.commentCount} comments`,
+                  { count: item.commentCount },
+                )}
                 data-testid="row-comment-count"
               >
                 <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
@@ -274,7 +297,11 @@ export function PlanningListItem({
               <Link
                 href={`${detailHref}#content`}
                 className="hover:text-fg-primary inline-flex items-center gap-1"
-                aria-label={`${item.assetCount} assets`}
+                aria-label={tr(
+                  "workspaceOverviewDashboard.rowAssetsAria",
+                  `${item.assetCount} assets`,
+                  { count: item.assetCount },
+                )}
                 data-testid="row-asset-count"
               >
                 <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />

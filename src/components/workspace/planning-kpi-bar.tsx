@@ -58,7 +58,11 @@ export function PlanningKpiBar({
   t,
 }: PlanningKpiBarProps) {
   const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
+  // The label is locale-dependent so the E2E hook derives from a
+  // stable `id` rather than the translated label. This keeps the
+  // data-testid consistent across English and Arabic sessions.
   const tiles: {
+    id: string;
     label: string;
     value: number;
     icon: React.ComponentType<{ className?: string }>;
@@ -66,35 +70,40 @@ export function PlanningKpiBar({
     accent: "default" | "warning" | "info" | "success" | "muted";
   }[] = [
     {
-      label: "Total Planned",
+      id: "total",
+      label: tr("workspaceOverviewDashboard.planningKpiTotal", "Total Planned"),
       value: total,
       icon: ListTodo,
       href: buildHref(baseHref, currentQuery, { risk: null }),
       accent: "default",
     },
     {
-      label: "At Risk",
+      id: "at-risk",
+      label: tr("workspaceOverviewDashboard.planningKpiAtRisk", "At Risk"),
       value: atRisk,
       icon: Clock,
       href: buildHref(baseHref, currentQuery, { risk: "at_risk" }),
       accent: "warning",
     },
     {
-      label: "Needs Review",
+      id: "needs-review",
+      label: tr("workspaceOverviewDashboard.planningKpiNeedsReview", "Needs Review"),
       value: needsReview,
       icon: ClipboardCheck,
       href: buildHref(baseHref, currentQuery, { status: "content_review" }),
       accent: "info",
     },
     {
-      label: "Ready",
+      id: "ready",
+      label: tr("workspaceOverviewDashboard.planningKpiReady", "Ready"),
       value: ready,
       icon: Rocket,
       href: buildHref(baseHref, currentQuery, { status: "ready_to_publish" }),
       accent: "success",
     },
     {
-      label: "Not started",
+      id: "not-started",
+      label: tr("workspaceOverviewDashboard.planningKpiNotStarted", "Not started"),
       value: notStarted,
       icon: FileEdit,
       href: buildHref(baseHref, currentQuery, { status: "draft" }),
@@ -111,12 +120,12 @@ export function PlanningKpiBar({
         const Icon = tile.icon;
         return (
           <a
-            key={tile.label}
+            key={tile.id}
             href={tile.href}
             className={cn(
               "border-border bg-surface hover:border-primary focus-visible:ring-focus-ring flex flex-col gap-2 rounded-[var(--radius-card)] border p-4 transition-colors focus:outline-none focus-visible:ring-2",
             )}
-            data-testid={`planning-kpi-${tile.label.toLowerCase().replace(/\s+/g, "-")}`}
+            data-testid={`planning-kpi-${tile.id}`}
           >
             <div
               className={cn(
