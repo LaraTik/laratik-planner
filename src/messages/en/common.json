@@ -388,6 +388,31 @@
       "noApprovedDelivery": "No approved version yet — block from readiness.",
       "noChannelsBody": "No channels selected. Add a channel first, then configure the publishing setup."
     },
+    "publishingCard": {
+      "status": {
+        "pending": "Pending",
+        "published": "Published",
+        "failed": "Failed",
+        "skipped": "Skipped"
+      },
+      "inSetup": "In setup",
+      "notePrefix": "Note: {note}",
+      "failurePrefix": "Failure: {reason}",
+      "publishedUrlAria": "Open published post in a new tab",
+      "configurePublishPackage": "Configure publish package",
+      "recordOutcome": "Record outcome",
+      "updateOutcome": "Update outcome",
+      "saveOutcome": "Save outcome",
+      "savingOutcome": "Saving…",
+      "cancel": "Cancel",
+      "outcomeLabel": "Outcome",
+      "outcomePublished": "Published",
+      "outcomeSkipped": "Skipped",
+      "outcomeFailed": "Failed",
+      "publishedUrlLabel": "Published URL",
+      "noteLabel": "Note (optional)",
+      "failureReasonLabel": "Failure reason"
+    },
     "comments": {
       "drawer": {
         "backdropAria": "Close discussion",

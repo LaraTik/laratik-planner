@@ -388,6 +388,31 @@
       "noApprovedDelivery": "لا توجد نسخة معتمدة بعد — يمنع الجاهزية.",
       "noChannelsBody": "لم يتم اختيار قنوات. أضف قناة أولاً، ثم اضبط إعدادات النشر."
     },
+    "publishingCard": {
+      "status": {
+        "pending": "قيد الانتظار",
+        "published": "منشور",
+        "failed": "فشل",
+        "skipped": "تم تخطيه"
+      },
+      "inSetup": "قيد الإعداد",
+      "notePrefix": "ملاحظة: {note}",
+      "failurePrefix": "سبب الفشل: {reason}",
+      "publishedUrlAria": "فتح المنشور في تبويب جديد",
+      "configurePublishPackage": "ضبط حزمة النشر",
+      "recordOutcome": "تسجيل النتيجة",
+      "updateOutcome": "تحديث النتيجة",
+      "saveOutcome": "حفظ النتيجة",
+      "savingOutcome": "جارٍ الحفظ…",
+      "cancel": "إلغاء",
+      "outcomeLabel": "النتيجة",
+      "outcomePublished": "منشور",
+      "outcomeSkipped": "تم تخطيه",
+      "outcomeFailed": "فشل",
+      "publishedUrlLabel": "رابط المنشور",
+      "noteLabel": "ملاحظة (اختياري)",
+      "failureReasonLabel": "سبب الفشل"
+    },
     "comments": {
       "drawer": {
         "backdropAria": "إغلاق المناقشة",

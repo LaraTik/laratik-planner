@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { recordPublicationAction } from "@/app/(app)/app/w/[slug]/planning/actions";
 import { PlatformIcon } from "@/components/workspace/platform-icon";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * ChannelPublishingCard — per-channel publishing card. Shows the
@@ -24,6 +25,16 @@ import { PlatformIcon } from "@/components/workspace/platform-icon";
  *  - Each card can hold its own "configure publish package"
  *    affordance (caption / disclosures / first-comment) as
  *    the package grows, without the user navigating away.
+ *
+ * Bilingual copy:
+ *   The status badge, setup badge, note / failure prefixes,
+ *   button labels, and inline form labels are all routed
+ *   through `contentDetail.publishingCard.*` keys. The card
+ *   reads its translator from the active `LocaleProvider`
+ *   via `useLocaleT()`; isolated previews and unit tests
+ *   that render the card outside a provider fall back to
+ *   the English catalog (the provider's documented
+ *   "no-context" default).
  */
 
 export interface ChannelPublishingCardProps {
@@ -51,16 +62,6 @@ export interface ChannelPublishingCardProps {
   publishPackageHref?: string;
 }
 
-const STATUS_LABEL: Record<
-  NonNullable<ChannelPublishingCardProps["publication"]>["status"],
-  string
-> = {
-  pending: "Pending",
-  published: "Published",
-  failed: "Failed",
-  skipped: "Skipped",
-};
-
 const STATUS_VARIANT: Record<
   NonNullable<ChannelPublishingCardProps["publication"]>["status"],
   "default" | "info" | "success" | "warning" | "danger"
@@ -78,6 +79,7 @@ export function ChannelPublishingCard({
   isPublisher,
   publishPackageHref,
 }: ChannelPublishingCardProps) {
+  const t = useLocaleT();
   const [open, setOpen] = React.useState(false);
   const [pending, start] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
@@ -99,11 +101,11 @@ export function ChannelPublishingCard({
           {!channel.configured ? (
             <Badge variant="warning" data-testid="channel-card-setup">
               <AlertTriangle className="me-1 h-3 w-3" aria-hidden="true" />
-              In setup
+              {t("contentDetail.publishingCard.inSetup")}
             </Badge>
           ) : null}
           <Badge variant={STATUS_VARIANT[status]} data-testid="channel-card-status">
-            {STATUS_LABEL[status]}
+            {t(`contentDetail.publishingCard.status.${status}`)}
           </Badge>
         </div>
       </div>
@@ -115,6 +117,7 @@ export function ChannelPublishingCard({
             href={publication.publishedUrl}
             target="_blank"
             rel="noreferrer"
+            aria-label={t("contentDetail.publishingCard.publishedUrlAria")}
             className="text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
             data-testid="channel-card-published-url"
           >
@@ -124,11 +127,13 @@ export function ChannelPublishingCard({
         </p>
       ) : null}
       {publication?.note ? (
-        <p className="text-label text-fg-muted mt-1">Note: {publication.note}</p>
+        <p className="text-label text-fg-muted mt-1">
+          {t("contentDetail.publishingCard.notePrefix", { note: publication.note })}
+        </p>
       ) : null}
       {publication?.failureReason ? (
         <p className="text-label text-danger mt-1" data-testid="channel-card-failure">
-          Failure: {publication.failureReason}
+          {t("contentDetail.publishingCard.failurePrefix", { reason: publication.failureReason })}
         </p>
       ) : null}
 
@@ -167,7 +172,7 @@ export function ChannelPublishingCard({
                   htmlFor={`publication-status-${channel.id}`}
                   className="text-label mb-1 block font-medium"
                 >
-                  Outcome
+                  {t("contentDetail.publishingCard.outcomeLabel")}
                 </label>
                 <select
                   id={`publication-status-${channel.id}`}
@@ -176,9 +181,13 @@ export function ChannelPublishingCard({
                   className="border-border bg-surface text-body min-h-9 w-full rounded-[var(--radius-control)] border px-2 py-1"
                   data-testid="channel-card-outcome-select"
                 >
-                  <option value="published">Published</option>
-                  <option value="skipped">Skipped</option>
-                  <option value="failed">Failed</option>
+                  <option value="published">
+                    {t("contentDetail.publishingCard.outcomePublished")}
+                  </option>
+                  <option value="skipped">
+                    {t("contentDetail.publishingCard.outcomeSkipped")}
+                  </option>
+                  <option value="failed">{t("contentDetail.publishingCard.outcomeFailed")}</option>
                 </select>
               </div>
               <div className="md:col-span-3">
@@ -186,7 +195,7 @@ export function ChannelPublishingCard({
                   htmlFor={`published-url-${channel.id}`}
                   className="text-label mb-1 block font-medium"
                 >
-                  Published URL
+                  {t("contentDetail.publishingCard.publishedUrlLabel")}
                 </label>
                 <input
                   id={`published-url-${channel.id}`}
@@ -204,7 +213,7 @@ export function ChannelPublishingCard({
                   htmlFor={`publication-note-${channel.id}`}
                   className="text-label mb-1 block font-medium"
                 >
-                  Note (optional)
+                  {t("contentDetail.publishingCard.noteLabel")}
                 </label>
                 <input
                   id={`publication-note-${channel.id}`}
@@ -218,7 +227,7 @@ export function ChannelPublishingCard({
                   htmlFor={`publication-failure-${channel.id}`}
                   className="text-label mb-1 block font-medium"
                 >
-                  Failure reason
+                  {t("contentDetail.publishingCard.failureReasonLabel")}
                 </label>
                 <input
                   id={`publication-failure-${channel.id}`}
@@ -240,7 +249,9 @@ export function ChannelPublishingCard({
                 ) : (
                   <Check className="h-3.5 w-3.5" aria-hidden="true" />
                 )}
-                {pending ? "Saving…" : "Save outcome"}
+                {pending
+                  ? t("contentDetail.publishingCard.savingOutcome")
+                  : t("contentDetail.publishingCard.saveOutcome")}
               </Button>
               <Button
                 type="button"
@@ -249,7 +260,7 @@ export function ChannelPublishingCard({
                 onClick={() => setOpen(false)}
                 disabled={pending}
               >
-                Cancel
+                {t("contentDetail.publishingCard.cancel")}
               </Button>
             </div>
           </form>
@@ -262,12 +273,14 @@ export function ChannelPublishingCard({
               data-testid="channel-card-record-outcome"
             >
               <Send className="h-3.5 w-3.5" aria-hidden="true" />
-              {publication ? "Update outcome" : "Record outcome"}
+              {publication
+                ? t("contentDetail.publishingCard.updateOutcome")
+                : t("contentDetail.publishingCard.recordOutcome")}
             </Button>
             {!channel.configured && publishPackageHref ? (
               <Button size="sm" variant="ghost" asChild>
                 <a href={publishPackageHref} data-testid="channel-card-configure">
-                  Configure publish package
+                  {t("contentDetail.publishingCard.configurePublishPackage")}
                 </a>
               </Button>
             ) : null}
