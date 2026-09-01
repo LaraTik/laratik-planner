@@ -857,7 +857,7 @@ export default async function ContentDetailPage({
                     data-testid="preview-empty"
                   >
                     <h3 className="text-title-card text-fg-primary mb-1 font-semibold">
-                      No channels to preview
+                      {t("contentDetail.preview.noChannelsTitle")}
                     </h3>
                     <p className="text-body">
                       Add at least one channel to the content item to see how the post will render
@@ -941,7 +941,7 @@ export default async function ContentDetailPage({
               */}
                 {item.channels.length === 0 ? (
                   <p className="text-body text-fg-muted">
-                    No channels selected. Add a channel first, then configure the publishing setup.
+                    {t("contentDetail.publish.noChannelsBody")}
                   </p>
                 ) : (
                   <div className="space-y-3" data-testid="publishing-cards">

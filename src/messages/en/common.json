@@ -328,7 +328,8 @@
       "lastSaved": "Last saved {time}",
       "saveDraft": "Save draft",
       "readyForPublishing": "Ready for publishing",
-      "noApprovedDelivery": "No approved version yet — block from readiness."
+      "noApprovedDelivery": "No approved version yet — block from readiness.",
+      "noChannelsBody": "No channels selected. Add a channel first, then configure the publishing setup."
     },
     "comments": {
       "drawer": {
@@ -474,6 +475,12 @@
       "stageCurrentStep": "Current step",
       "stageBlocked": "Blocked",
       "stageUpcoming": "Upcoming"
+    },
+    "deliveries": {
+      "emptyBody": "No deliveries yet. Submit at least one https link to advance to creative review."
+    },
+    "preview": {
+      "noChannelsTitle": "No channels to preview"
     }
   },
   "formatEditor": {

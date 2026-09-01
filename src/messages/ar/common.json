@@ -328,7 +328,8 @@
       "lastSaved": "آخر حفظ {time}",
       "saveDraft": "حفظ المسودة",
       "readyForPublishing": "جاهز للنشر",
-      "noApprovedDelivery": "لا توجد نسخة معتمدة بعد — يمنع الجاهزية."
+      "noApprovedDelivery": "لا توجد نسخة معتمدة بعد — يمنع الجاهزية.",
+      "noChannelsBody": "لم يتم اختيار قنوات. أضف قناة أولاً، ثم اضبط إعدادات النشر."
     },
     "comments": {
       "drawer": {
@@ -474,6 +475,12 @@
       "stageCurrentStep": "الخطوة الحالية",
       "stageBlocked": "محظور",
       "stageUpcoming": "قادم"
+    },
+    "deliveries": {
+      "emptyBody": "لا توجد تسليمات بعد. أرسل رابط https واحد على الأقل للمتابعة إلى المراجعة الإبداعية."
+    },
+    "preview": {
+      "noChannelsTitle": "لا توجد قنوات للمعاينة"
     }
   },
   "formatEditor": {
