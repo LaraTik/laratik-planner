@@ -30,9 +30,16 @@ type Item = {
 
 export interface SettingsSetupChecklistProps {
   items: Item[];
+  /**
+   * Optional translator. When provided, the section aria-label +
+   * the "Setup checklist" heading render from `settings.checklist.*`;
+   * when omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
-export function SettingsSetupChecklist({ items }: SettingsSetupChecklistProps) {
+export function SettingsSetupChecklist({ items, t }: SettingsSetupChecklistProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const total = items.length;
   const configured = items.filter((i) => i.configured).length;
   const remaining = total - configured;
@@ -41,12 +48,14 @@ export function SettingsSetupChecklist({ items }: SettingsSetupChecklistProps) {
   return (
     <section
       className="border-border bg-surface rounded-[var(--radius-card)] border p-4 sm:p-6"
-      aria-label="Settings setup checklist"
+      aria-label={tr("settings.checklist.ariaLabel", "Settings setup checklist")}
       data-testid="settings-setup-checklist"
     >
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-section-title text-fg-primary font-semibold">Setup checklist</h2>
+          <h2 className="text-section-title text-fg-primary font-semibold">
+            {tr("settings.checklist.heading", "Setup checklist")}
+          </h2>
           <p className="text-body text-fg-secondary">
             <span
               className="text-fg-primary font-bold"

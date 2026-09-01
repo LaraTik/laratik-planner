@@ -886,10 +886,8 @@
       "twoSteps": "2 steps"
     },
     "checklist": {
-      "title": "Set up this workspace",
-      "blurb": "Complete these items to make the planner work for your team.",
-      "done": "Done",
-      "configure": "Configure"
+      "ariaLabel": "Settings setup checklist",
+      "heading": "Setup checklist"
     },
     "items": {
       "lifecycle": {
