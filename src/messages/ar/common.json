@@ -2022,6 +2022,13 @@
     "platformExistingAdminNotify": {
       "subject": "أصبحت مسؤولًا لـ {agencyName}",
       "body": "أصبحت مسؤولًا لـ {agencyName}. سجّل الدخول من {signInUrl}"
+    },
+    "magicLink": {
+      "subject": "تسجيل الدخول إلى {host}",
+      "text": "تسجيل الدخول إلى {host}\n{url}\n\n",
+      "htmlHeading": "تسجيل الدخول إلى <strong>{host}</strong>",
+      "htmlButton": "تسجيل الدخول",
+      "htmlFooter": "إذا لم تطلب هذا البريد، يمكنك تجاهله بأمان."
     }
   }
 }

@@ -8,8 +8,53 @@
 import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import { serverEnv } from "@/lib/validation/env";
+import { tFor } from "@/messages";
+import { SUPPORTED_LOCALES, type LocaleCode } from "@/lib/i18n/locales";
+
+// STUDIOFLOW_MASTER_PROMPT.md §1 — system-generated email
+// copy. The magic-link verification email is sent before
+// the recipient has a `users.locale` row, so the locale source
+// is the public `laratik_locale` cookie set on the signin
+// page. The cookie name is inlined (rather than imported from
+// `@/lib/i18n/cookie`) so the static import chain doesn't pull
+// in next-auth via the resolve-active-locale path — vitest's
+// Node env can't resolve `next/server` from next-auth's
+// env.js loader. The client-locale module inlines the same
+// constant.
+const PUBLIC_LOCALE_COOKIE_NAME = "laratik_locale";
 
 // ─── Typed SMTP-failure error ───────────────────────────────────────────────
+
+/**
+ * Resolve the recipient's chosen locale for pre-account emails
+ * (magic-link verification). The recipient has not yet signed in
+ * so `users.locale` is unavailable; the public `laratik_locale`
+ * cookie set on the signin page is the only signal. Falls back
+ * to English when the cookie is missing, invalid, or the call
+ * is made outside a request scope (cron / scripts / tests).
+ */
+async function magicLinkLocaleCode(): Promise<LocaleCode> {
+  let raw: string | undefined;
+  try {
+    // Lazy import so vitest's Node env (no request scope) doesn't
+    // try to resolve `next/headers` at module load. The
+    // `cookies()` call throws outside a request scope; we
+    // catch + fall back to English.
+    const { cookies } = await import("next/headers");
+    raw = (await cookies()).get(PUBLIC_LOCALE_COOKIE_NAME)?.value;
+  } catch {
+    return "en";
+  }
+  if (!raw) return "en";
+  // SUPPORTED_LOCALES is a small fixed set; validate the cookie
+  // value rather than trust it. `resolveActiveLocale` reads the
+  // session + user row, so we re-implement the validation here
+  // for the cookie-only path.
+  if ((SUPPORTED_LOCALES as unknown as readonly string[]).includes(raw)) {
+    return raw as LocaleCode;
+  }
+  return "en";
+}
 
 /**
  * `@auth/core@0.41.3`'s catch block (`lib/index.js:131`) re-classifies any
@@ -121,13 +166,21 @@ function renderVerificationEmail(params: {
   url: string;
   host: string;
   theme?: VerificationEmailTheme;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }): { subject: string; text: string; html: string } {
-  const { url, host, theme } = params;
+  const { url, host, theme, t } = params;
   const escapedHost = host.replace(/\./g, "&#8203;.");
   const brandColor = theme?.brandColor || "#346df1";
   const buttonText = theme?.buttonText || "#fff";
-  const subject = `Sign in to ${host}`;
-  const text = `Sign in to ${host}\n${url}\n\n`;
+  // STUDIOFLOW_MASTER_PROMPT.md §1 — system-generated email
+  // copy. The magic-link verification email is sent before
+  // the recipient has a `users.locale` row (their account
+  // gets created on first sign-in), so the locale source is
+  // the public `laratik_locale` cookie set on the signin
+  // page. The cookie is read by the call site and threaded
+  // in via the `t` translator.
+  const subject = t("emails.magicLink.subject", { host });
+  const text = t("emails.magicLink.text", { host, url });
   const html = `
 <body style="background: #f9f9f9;">
   <table width="100%" border="0" cellspacing="20" cellpadding="0"
@@ -135,7 +188,7 @@ function renderVerificationEmail(params: {
     <tr>
       <td align="center"
         style="padding: 10px 0px; font-size: 22px; font-family: Helvetica, Arial, sans-serif; color: #444;">
-        Sign in to <strong>${escapedHost}</strong>
+        ${t("emails.magicLink.htmlHeading", { host: escapedHost })}
       </td>
     </tr>
     <tr>
@@ -144,8 +197,7 @@ function renderVerificationEmail(params: {
           <tr>
             <td align="center" style="border-radius: 5px;" bgcolor="${brandColor}"><a href="${url}"
                 target="_blank"
-                style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${buttonText}; text-decoration: none; border-radius: 5px; padding: 10px 20px; border: 1px solid ${brandColor}; display: inline-block; font-weight: bold;">Sign
-                in</a></td>
+                style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${buttonText}; text-decoration: none; border-radius: 5px; padding: 10px 20px; border: 1px solid ${brandColor}; display: inline-block; font-weight: bold;">${t("emails.magicLink.htmlButton")}</a></td>
           </tr>
         </table>
       </td>
@@ -153,7 +205,7 @@ function renderVerificationEmail(params: {
     <tr>
       <td align="center"
         style="padding: 0px 0px 10px 0px; font-size: 16px; line-height: 22px; font-family: Helvetica, Arial, sans-serif; color: #444;">
-        If you did not request this email you can safely ignore it.
+        ${t("emails.magicLink.htmlFooter")}
       </td>
     </tr>
   </table>
@@ -191,6 +243,11 @@ export async function sendVerificationEmail(params: SendVerificationRequestParam
   const { subject, text, html } = renderVerificationEmail({
     url: params.url,
     host,
+    // Magic-link emails render in the recipient's chosen
+    // locale (public cookie) — the user has not yet signed in
+    // so the profile-locale path is unavailable. English is
+    // the catalog fallback.
+    t: tFor(await magicLinkLocaleCode()),
     ...(params.theme ? { theme: params.theme } : {}),
   });
   try {
