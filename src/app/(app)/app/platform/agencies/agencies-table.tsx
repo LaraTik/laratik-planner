@@ -36,12 +36,14 @@ export type PlatformAgencyRow = {
 export function AgenciesTable({
   rows,
   relativeNow,
+  t,
 }: {
   rows: readonly PlatformAgencyRow[];
   relativeNow: string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const [query, setQuery] = React.useState("");
-  const columns = React.useMemo(() => createColumns(new Date(relativeNow)), [relativeNow]);
+  const columns = React.useMemo(() => createColumns(new Date(relativeNow), t), [relativeNow, t]);
 
   // Wire up to the page-level search input (rendered above the table
   // by the server component). The input is server-rendered; this
@@ -74,8 +76,11 @@ export function AgenciesTable({
           className="text-body text-fg-muted border-border rounded-[var(--radius-control)] border border-dashed px-4 py-6 text-center"
           data-testid="platform-agencies-empty"
         >
-          No agencies match{" "}
-          <span className="text-fg-primary font-semibold">{query || "your filter"}</span>.
+          {t("platform.tableEmpty")}{" "}
+          <span className="text-fg-primary font-semibold">
+            {query || t("platform.tableEmptyFallback")}
+          </span>
+          .
         </p>
       ) : (
         <DataTable
@@ -87,17 +92,24 @@ export function AgenciesTable({
         />
       )}
       <p className="text-label text-fg-muted" data-testid="platform-agencies-visible-count">
-        Showing {filtered.length} of {rows.length} {rows.length === 1 ? "agency" : "agencies"}
+        {t("platform.tableVisibleCount", {
+          visible: filtered.length,
+          total: rows.length,
+          agencyWord: t(rows.length === 1 ? "platform.tableAgencyOne" : "platform.tableAgencyMany"),
+        })}
       </p>
     </div>
   );
 }
 
-function createColumns(relativeNow: Date): DataTableColumnDef<PlatformAgencyRow>[] {
+function createColumns(
+  relativeNow: Date,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): DataTableColumnDef<PlatformAgencyRow>[] {
   return [
     {
       key: "name",
-      header: "Agency",
+      header: t("platform.colAgency"),
       headerClassName: "w-1/3",
       cell: (r) => (
         <div className="flex items-center gap-3">
@@ -121,34 +133,35 @@ function createColumns(relativeNow: Date): DataTableColumnDef<PlatformAgencyRow>
     },
     {
       key: "members",
-      header: "Members",
+      header: t("platform.colMembers"),
       cell: (r) => (
         <span className="text-body text-fg-primary font-medium">
-          {r.memberCount} {r.memberCount === 1 ? "member" : "members"}
+          {r.memberCount} {r.memberCount === 1 ? t("platform.memberOne") : t("platform.memberMany")}
         </span>
       ),
     },
     {
       key: "workspaces",
-      header: "Workspaces",
+      header: t("platform.colWorkspaces"),
       cell: (r) => (
         <span className="text-body text-fg-primary font-medium">
-          {r.workspaceCount} {r.workspaceCount === 1 ? "workspace" : "workspaces"}
+          {r.workspaceCount}{" "}
+          {r.workspaceCount === 1 ? t("platform.workspaceOne") : t("platform.workspaceMany")}
         </span>
       ),
     },
     {
       key: "plan",
-      header: "Plan / status",
+      header: t("platform.colPlanStatus"),
       cell: (r) => (
         <span className="text-body text-fg-primary">
-          {r.planName} · {r.lifecycle}
+          {r.planName} · {t(`platform.lifecycle.${r.lifecycle}`)}
         </span>
       ),
     },
     {
       key: "created",
-      header: "Created",
+      header: t("platform.colCreated"),
       cell: (r) => formatRelativeDate(r.createdAt, relativeNow),
     },
     {
@@ -161,7 +174,7 @@ function createColumns(relativeNow: Date): DataTableColumnDef<PlatformAgencyRow>
           href={`/app/platform/agencies/${r.id}#identity`}
           className="text-primary focus-visible:ring-focus-ring text-body inline-block rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
         >
-          Open
+          {t("platform.colOpen")}
         </Link>
       ),
     },

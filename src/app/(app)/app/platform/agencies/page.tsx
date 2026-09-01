@@ -9,6 +9,7 @@ import {
   platformPlanTemplates,
   workspaces,
 } from "@/lib/db/schema";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
@@ -102,8 +103,14 @@ async function loadTotalAgencyCount(): Promise<number> {
 
 export default async function PlatformAgenciesPage() {
   const actor = await currentActor();
+  const { t } = await tForActive();
   if (!actor) {
-    return <PermissionNotice title="Sign in required" description="Sign in to view agencies." />;
+    return (
+      <PermissionNotice
+        title={t("platform.signInRequired")}
+        description={t("platform.signInRequiredAgenciesBody")}
+      />
+    );
   }
   let principal;
   try {
@@ -111,8 +118,8 @@ export default async function PlatformAgenciesPage() {
   } catch {
     return (
       <PermissionNotice
-        title="Agency access unavailable"
-        description="Your platform role does not include agency oversight."
+        title={t("platform.agenciesUnavailable")}
+        description={t("platform.agenciesUnavailableBody")}
       />
     );
   }
@@ -132,16 +139,16 @@ export default async function PlatformAgenciesPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Platform"
-        title="Agencies"
-        description="Every agency on the platform. Use search to narrow by name or slug."
+        eyebrow={t("platform.eyebrow")}
+        title={t("platform.agenciesTitle")}
+        description={t("platform.agenciesDescription")}
         action={canCreateAgency ? <AddAgencyDrawer plans={plans} /> : undefined}
       />
 
       {!canCreateAgency ? (
         <PermissionNotice
-          title="Read-only agency access"
-          description="You can inspect agencies, but your platform role cannot create them."
+          title={t("platform.readOnlyAccess")}
+          description={t("platform.readOnlyAccessBody")}
         />
       ) : null}
 
@@ -149,8 +156,8 @@ export default async function PlatformAgenciesPage() {
         <Card padding="none">
           <EmptyState
             icon={<Building2 className="h-8 w-8" aria-hidden="true" />}
-            title="No agencies on the platform"
-            description="Platform bootstrap creates the singleton agency on first run. If this list is empty in production, check the bootstrap endpoint."
+            title={t("platform.emptyAgenciesTitle")}
+            description={t("platform.emptyAgenciesBody")}
           />
         </Card>
       ) : (
@@ -160,7 +167,7 @@ export default async function PlatformAgenciesPage() {
               <span className="text-fg-primary font-semibold" data-testid="platform-agencies-total">
                 {total}
               </span>{" "}
-              {total === 1 ? "agency" : "agencies"} on the platform
+              {t("platform.agenciesCount", { count: total })}
             </div>
             <div className="relative w-full sm:w-72">
               <Search
@@ -169,26 +176,26 @@ export default async function PlatformAgenciesPage() {
               />
               <input
                 type="search"
-                placeholder="Search by name or slug"
-                aria-label="Search agencies"
+                placeholder={t("platform.agenciesSearchPlaceholder")}
+                aria-label={t("platform.agenciesSearchAria")}
                 className="border-border bg-surface text-fg-primary placeholder:text-fg-muted focus-visible:ring-focus-ring w-full rounded-[var(--radius-control)] border py-2 ps-9 pe-3 focus:outline-none focus-visible:ring-2"
                 data-testid="platform-agencies-search"
               />
             </div>
           </div>
-          <AgenciesTable rows={rows} relativeNow={new Date().toISOString()} />
+          <AgenciesTable rows={rows} relativeNow={new Date().toISOString()} t={t} />
         </Card>
       )}
 
       <p className="text-label text-fg-muted">
-        Need to investigate a specific agency? Open its{" "}
+        {t("platform.investigateHelp")}{" "}
         <Link
           href="/app/platform/agencies"
           className="text-primary underline-offset-4 hover:underline"
         >
-          detail page
+          {t("platform.detailPageLink")}
         </Link>{" "}
-        for plan, usage, AI, and lifecycle controls.
+        {t("platform.investigateHelpSuffix")}
       </p>
     </>
   );
