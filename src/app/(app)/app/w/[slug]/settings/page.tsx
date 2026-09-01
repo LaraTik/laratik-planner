@@ -10,6 +10,7 @@ import { hasPlatformPermission } from "@/lib/auth/platform-access";
 import { getResetAllIdeasCounts, EMPTY_RESET_ALL_COUNTS } from "@/lib/content/reset-all-ideas";
 import { PageHeader } from "@/components/workspace/page-header";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { BulkResetSection } from "./bulk-reset-section";
 import { SettingsSetupChecklist } from "./_components/settings-setup-checklist";
 import { currentActor } from "@/lib/auth/current-actor";
@@ -45,6 +46,7 @@ export default async function WorkspaceSettingsPage({
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
+  const { t } = await tForActive();
   const actor = await currentActor();
   const [canBulkReset, bulkCounts] = await Promise.all([
     actor ? hasPlatformPermission(actor, "platform.destructive.execute") : Promise.resolve(false),
@@ -94,47 +96,49 @@ export default async function WorkspaceSettingsPage({
   const checklistItems = [
     {
       id: "lifecycle",
-      label: "Pick a workspace timezone",
+      label: t("settings.items.lifecycle.label"),
       blurb:
         workspace.timezone && workspace.timezone !== "UTC"
-          ? `Timezone set to ${workspace.timezone}.`
-          : "Defaults to UTC; pick the team's timezone so lead-time math matches the calendar.",
+          ? t("settings.items.lifecycle.configuredBlurb", { timezone: workspace.timezone })
+          : t("settings.items.lifecycle.unconfiguredBlurb"),
       href: `${wsBase}/lifecycle`,
       configured: !!workspace.timezone && workspace.timezone !== "UTC",
     },
     {
       id: "monthly-target",
-      label: "Set a monthly content target",
+      label: t("settings.items.monthlyTarget.label"),
       blurb: values.monthlyTarget
-        ? `Planning target: ${values.monthlyTarget} posts / month.`
-        : "The planning KPI bar colours on-track / at-risk / off-track against this number.",
+        ? t("settings.items.monthlyTarget.configuredBlurb", { count: values.monthlyTarget })
+        : t("settings.items.monthlyTarget.unconfiguredBlurb"),
       href: `${wsBase}/lifecycle`,
       configured: values.monthlyTarget !== null && values.monthlyTarget > 0,
     },
     {
       id: "lead-times",
-      label: "Tune the lead-time buffers",
+      label: t("settings.items.leadTimes.label"),
       blurb:
         leadTotal === 18
-          ? "Lead times are at the 10/5/2/1 default — adjust to match your team's cadence."
-          : `Current cycle: ${leadTotal} business days.`,
+          ? t("settings.items.leadTimes.configuredBlurb")
+          : t("settings.items.leadTimes.unconfiguredBlurb", { count: leadTotal }),
       href: `${wsBase}/lead-times`,
       configured: leadTotal !== 18, // non-default = user has touched it
     },
     {
       id: "defaults",
-      label: "Set default assignees",
+      label: t("settings.items.defaults.label"),
       blurb:
         defaultsCount === 4
-          ? "All four roles have a default assignee."
-          : `${defaultsCount} of 4 roles have a default assignee.`,
+          ? t("settings.items.defaults.configuredBlurb")
+          : t("settings.items.defaults.unconfiguredBlurb", { count: defaultsCount }),
       href: `${wsBase}/defaults`,
       configured: defaultsCount === 4,
     },
     {
       id: "approvals",
-      label: "Pick an approval mode",
-      blurb: `Current: ${humanize(values.approvalMode)}.`,
+      label: t("settings.items.approvals.label"),
+      blurb: t("settings.items.approvals.configuredBlurb", {
+        mode: humanize(values.approvalMode),
+      }),
       href: `${wsBase}/approvals`,
       configured: true, // always configured (has a DB default)
     },
@@ -144,10 +148,10 @@ export default async function WorkspaceSettingsPage({
     <div className="space-y-6" data-testid="settings-overview">
       <PageHeader
         eyebrow={workspace.name}
-        title="Workspace settings"
+        title={t("settings.title")}
         description={
           <>
-            Defaults reduce setup work while keeping every idea editable.
+            {t("settings.checklist.blurb")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
@@ -162,7 +166,7 @@ export default async function WorkspaceSettingsPage({
               className="border-border bg-surface hover:bg-surface-subtle text-body text-fg-primary inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 font-semibold transition-colors"
             >
               <Sparkles className="h-4 w-4" aria-hidden="true" />
-              Browse presets
+              {t("settings.browsePresets")}
             </a>
           </div>
         }
@@ -177,39 +181,60 @@ export default async function WorkspaceSettingsPage({
         <KpiCard
           href={`${wsBase}/lifecycle`}
           icon={CalendarDays}
-          label="Lifecycle"
-          summary={`Timezone: ${workspace.timezone}`}
-          badge={values.monthlyTarget ? `${values.monthlyTarget} posts / month` : "No target"}
+          label={t("settings.kpi.lifecycle")}
+          summary={t("settings.kpiSummary.lifecycle", { timezone: workspace.timezone })}
+          badge={
+            values.monthlyTarget
+              ? t("settings.kpiBadge.postsPerMonth", { count: values.monthlyTarget })
+              : t("settings.kpiBadge.noTarget")
+          }
           testId="settings-kpi-lifecycle"
         />
         <KpiCard
           href={`${wsBase}/lead-times`}
           icon={Clock}
-          label="Lead times"
-          summary={`${leadTotal} business days end-to-end`}
-          badge={leadTotal < 5 ? "Short" : leadTotal > 30 ? "Long" : "Balanced"}
+          label={t("settings.kpi.leadTimes")}
+          summary={t("settings.kpiSummary.leadTimes", { count: leadTotal })}
+          badge={
+            leadTotal < 5
+              ? t("settings.kpiBadge.short")
+              : leadTotal > 30
+                ? t("settings.kpiBadge.long")
+                : t("settings.kpiBadge.balanced")
+          }
           testId="settings-kpi-lead-times"
         />
         <KpiCard
           href={`${wsBase}/defaults`}
           icon={UserCog}
-          label="Default assignments"
-          summary={`${defaultsCount} of 4 roles configured`}
-          badge={defaultsCount === 4 ? "Complete" : "Partial"}
+          label={t("settings.kpi.defaults")}
+          summary={t("settings.kpiSummary.defaults", { count: defaultsCount })}
+          badge={
+            defaultsCount === 4 ? t("settings.kpiBadge.complete") : t("settings.kpiBadge.partial")
+          }
           testId="settings-kpi-defaults"
         />
         <KpiCard
           href={`${wsBase}/approvals`}
           icon={CheckCircle2}
-          label="Approval mode"
-          summary={humanize(values.approvalMode)}
-          badge={values.approvalMode === "simple" ? "1 step" : "2 steps"}
+          label={t("settings.kpi.approvals")}
+          summary={t("settings.kpiSummary.approvals", { mode: humanize(values.approvalMode) })}
+          badge={
+            values.approvalMode === "simple"
+              ? t("settings.kpiBadge.oneStep")
+              : t("settings.kpiBadge.twoSteps")
+          }
           testId="settings-kpi-approvals"
         />
       </ul>
 
       {canBulkReset ? (
-        <BulkResetSection workspaceSlug={slug} workspaceName={workspace.name} counts={bulkCounts} />
+        <BulkResetSection
+          workspaceSlug={slug}
+          workspaceName={workspace.name}
+          counts={bulkCounts}
+          t={t}
+        />
       ) : null}
     </div>
   );

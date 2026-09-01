@@ -28,6 +28,7 @@ import {
   EMPTY_RESET_ALL_COUNTS,
   type ResetAllIdeasCounts,
 } from "@/lib/content/reset-all-ideas";
+import { tFor } from "@/messages";
 
 const SAMPLE_WORKSPACE_NAME = "Acme Studio";
 
@@ -61,6 +62,7 @@ function renderDialog() {
       workspaceSlug="acme"
       workspaceName={SAMPLE_WORKSPACE_NAME}
       counts={countsWith()}
+      t={tFor("en")}
     />,
   );
 }

@@ -21,10 +21,12 @@ export function LifecycleForm({
   slug,
   timezone,
   monthlyTarget,
+  t,
 }: {
   slug: string;
   timezone: string;
   monthlyTarget: number | null;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const action = updateLifecycleSettingsAction.bind(null, slug);
   const [state, formAction] = useActionState<SettingsActionState, FormData>(action, {});
@@ -68,9 +70,9 @@ export function LifecycleForm({
         <div className="grid gap-4 md:grid-cols-2">
           <FormField
             id="settings-timezone"
-            label="Timezone"
+            label={t("settings.lifecycle.timezoneLabel")}
             required
-            hint="Used for the calendar, lead-time math, and any 'X days from now' view."
+            hint={t("settings.lifecycle.timezoneHint")}
           >
             <TimezoneCombobox
               id="settings-timezone"
@@ -83,8 +85,8 @@ export function LifecycleForm({
           <div className="space-y-2">
             <FormField
               id="settings-monthly-target"
-              label="Monthly content target"
-              hint="Optional. The planning KPI bar uses this to colour on-track / at risk / off-track."
+              label={t("settings.lifecycle.monthlyTargetLabel")}
+              hint={t("settings.lifecycle.monthlyTargetHint")}
             >
               <input
                 id="settings-monthly-target"
@@ -94,7 +96,7 @@ export function LifecycleForm({
                 max={10000}
                 value={target}
                 onChange={(e) => setTarget(e.target.value === "" ? "" : Number(e.target.value))}
-                placeholder="e.g. 24"
+                placeholder={t("settings.lifecycle.monthlyTargetPlaceholder")}
                 className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-10 w-full rounded-[var(--radius-control)] border px-3 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
               />
             </FormField>
@@ -111,7 +113,7 @@ export function LifecycleForm({
                 ) : (
                   <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                 )}
-                Suggest a target
+                {t("settings.lifecycle.suggest")}
               </button>
               {targetStatus === "applied" ? (
                 <span
@@ -119,7 +121,7 @@ export function LifecycleForm({
                   data-testid="lifecycle-ai-applied"
                 >
                   <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                  Suggestion applied. Edit any number before saving.
+                  {t("settings.lifecycle.applied")}
                 </span>
               ) : null}
               {targetStatus === "error" && targetError ? (
@@ -133,19 +135,18 @@ export function LifecycleForm({
                 className="border-border bg-primary-subtle space-y-2 rounded-[var(--radius-control)] border p-3"
                 data-testid="lifecycle-ai-preview"
                 role="region"
-                aria-label="AI monthly-target preview"
+                aria-label={t("settings.lifecycle.previewAria")}
               >
                 <p className="text-body text-fg-primary font-semibold">
-                  AI suggests{" "}
-                  <span className="text-primary" data-testid="lifecycle-ai-preview-value">
-                    {targetPreview} / month
-                  </span>
+                  {t("settings.lifecycle.previewHeading", { count: targetPreview })}
                   {targetOriginal !== "" ? (
-                    <span className="text-fg-muted ms-2 font-normal">(was {targetOriginal})</span>
+                    <span className="text-fg-muted ms-2 font-normal">
+                      {t("settings.lifecycle.previewWas", { count: targetOriginal })}
+                    </span>
                   ) : null}
                 </p>
                 <p className="text-label text-fg-secondary">
-                  Anchored to your lead-time cycle so the team can sustain the cadence.
+                  {t("settings.lifecycle.previewBlurb")}
                 </p>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <Button
@@ -155,7 +156,7 @@ export function LifecycleForm({
                     onClick={onDiscardPreview}
                     data-testid="lifecycle-ai-discard"
                   >
-                    Discard
+                    {t("settings.lifecycle.discard")}
                   </Button>
                   <Button
                     type="button"
@@ -164,7 +165,7 @@ export function LifecycleForm({
                     data-testid="lifecycle-ai-apply"
                   >
                     <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                    Apply
+                    {t("settings.lifecycle.apply")}
                   </Button>
                 </div>
               </div>
@@ -186,11 +187,14 @@ export function LifecycleForm({
             data-testid="lifecycle-form-saved"
             className="text-body text-success font-semibold"
           >
-            Lifecycle settings saved.
+            {t("settings.lifecycle.saved")}
           </p>
         ) : null}
         <div className="flex justify-end">
-          <FormSubmitButton label="Save lifecycle" pendingLabel="Saving…" />
+          <FormSubmitButton
+            label={t("settings.lifecycle.submit")}
+            pendingLabel={t("common.saving")}
+          />
         </div>
       </form>
     </Card>

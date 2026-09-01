@@ -24,6 +24,7 @@ vi.mock("@/app/(app)/app/w/[slug]/settings/ai-suggestions", () => ({
 import { useFormStatus } from "react-dom";
 import { LeadTimesForm } from "@/app/(app)/app/w/[slug]/settings/_components/lead-times-form";
 import { suggestLeadTimesAction } from "@/app/(app)/app/w/[slug]/settings/ai-suggestions";
+import { tFor } from "@/messages";
 
 const mockedUseFormStatus = vi.mocked(useFormStatus);
 const mockedSuggest = vi.mocked(suggestLeadTimesAction);
@@ -43,6 +44,7 @@ function renderForm() {
       values={baseValues}
       approvalMode="simple"
       timezone="Europe/Vienna"
+      t={tFor("en")}
     />,
   );
 }

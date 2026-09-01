@@ -30,6 +30,7 @@ export function DefaultsForm({
   internalCreativeReviewers,
   clientReviewers,
   values,
+  t,
 }: {
   slug: string;
   designers: PersonOption[];
@@ -42,6 +43,7 @@ export function DefaultsForm({
     defaultInternalCreativeReviewerId: string | null;
     defaultClientReviewerId: string | null;
   };
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const action = updateDefaultsSettingsAction.bind(null, slug);
   const [state, formAction] = useActionState<SettingsActionState, FormData>(action, {});
@@ -49,50 +51,51 @@ export function DefaultsForm({
   return (
     <Card padding="md" data-testid="defaults-form-card">
       <form action={formAction} className="space-y-6">
-        <p className="text-body text-fg-secondary max-w-3xl">
-          Pre-fill these people on every new idea. Override per idea at any time — the default is a
-          shortcut, not a rule.
-        </p>
+        <p className="text-body text-fg-secondary max-w-3xl">{t("settings.defaults.formBlurb")}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <PersonField
             slug={slug}
             id="settings-default-designer"
             name="defaultDesignerId"
-            label="Designer"
-            help="Pre-fills the designer field on the Quick Create form."
+            label={t("settings.defaults.designerLabel")}
+            help={t("settings.defaults.designerHint")}
             value={values.defaultDesignerId}
             options={designers}
             roleSlug="designer"
+            t={t}
           />
           <PersonField
             slug={slug}
             id="settings-default-content-reviewer"
             name="defaultContentReviewerId"
-            label="Content reviewer"
-            help="The first-pass reviewer on the brief. Usually the content lead."
+            label={t("settings.defaults.contentReviewerLabel")}
+            help={t("settings.defaults.contentReviewerHint")}
             value={values.defaultContentReviewerId}
             options={contentReviewers}
             roleSlug="content_reviewer"
+            t={t}
           />
           <PersonField
             slug={slug}
             id="settings-default-internal-creative"
             name="defaultInternalCreativeReviewerId"
-            label="Internal creative reviewer"
-            help="The creative director. Only used when approval mode is 'Internal, then client'."
+            label={t("settings.defaults.internalCreativeLabel")}
+            help={t("settings.defaults.internalCreativeHint")}
             value={values.defaultInternalCreativeReviewerId}
             options={internalCreativeReviewers}
             roleSlug="creative_director"
+            t={t}
           />
           <PersonField
             slug={slug}
             id="settings-default-client-reviewer"
             name="defaultClientReviewerId"
-            label="Client reviewer"
-            help="The client's primary approver. Appears in the 'Client review' step."
+            label={t("settings.defaults.clientReviewerLabel")}
+            help={t("settings.defaults.clientReviewerHint")}
             value={values.defaultClientReviewerId}
             options={clientReviewers}
             roleSlug="client_reviewer"
+            t={t}
           />
         </div>
         {state.error ? (
@@ -110,11 +113,14 @@ export function DefaultsForm({
             data-testid="defaults-form-saved"
             className="text-body text-success font-semibold"
           >
-            Default assignments saved.
+            {t("settings.defaults.saved")}
           </p>
         ) : null}
         <div className="flex justify-end">
-          <FormSubmitButton label="Save defaults" pendingLabel="Saving…" />
+          <FormSubmitButton
+            label={t("settings.defaults.submit")}
+            pendingLabel={t("common.saving")}
+          />
         </div>
       </form>
     </Card>
@@ -130,6 +136,7 @@ function PersonField({
   value,
   options,
   roleSlug,
+  t,
 }: {
   slug: string;
   id: string;
@@ -139,15 +146,16 @@ function PersonField({
   value: string | null;
   options: PersonOption[];
   roleSlug: string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const empty = options.length === 0;
   const count = options.length;
   const countLabel =
     count === 0
-      ? "No one on this workspace"
+      ? t("settings.defaults.emptyCount")
       : count === 1
-        ? "1 person on this workspace"
-        : `${count} people on this workspace`;
+        ? t("settings.defaults.oneCount")
+        : t("settings.defaults.manyCount", { count });
   return (
     <div className="space-y-1.5">
       <FormField id={id} label={label} hint={help}>
@@ -159,10 +167,10 @@ function PersonField({
           className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-10 w-full rounded-[var(--radius-control)] border px-3 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
         >
           {empty ? (
-            <option value="">No {label.toLowerCase()}s yet</option>
+            <option value="">{t("settings.defaults.emptyOption")}</option>
           ) : (
             <>
-              <option value="">No default</option>
+              <option value="">{t("settings.defaults.noDefault")}</option>
               {options.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.label}
@@ -178,17 +186,18 @@ function PersonField({
           data-testid={`defaults-empty-${roleSlug}`}
         >
           <AlertCircle className="text-warning h-3 w-3" aria-hidden="true" />
-          No {label.toLowerCase()}s on this workspace.{" "}
+          {t("settings.defaults.emptyHint", { role: label.toLowerCase() })}{" "}
           <Link
             href={`/app/w/${slug}/team?role=${roleSlug}`}
             className="text-primary font-semibold hover:underline"
           >
-            Add one in Team settings →
+            {t("settings.defaults.addOneLink")}
           </Link>
         </p>
       ) : (
         <p className="text-label text-fg-muted" data-testid={`defaults-count-${roleSlug}`}>
-          {countLabel}. {value ? "Current default applied on new ideas." : "No default set yet."}
+          {countLabel}.{" "}
+          {value ? t("settings.defaults.currentDefault") : t("settings.defaults.noDefaultYet")}
         </p>
       )}
     </div>

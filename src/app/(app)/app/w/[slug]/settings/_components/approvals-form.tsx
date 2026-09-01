@@ -26,52 +26,7 @@ import { updateApprovalsSettingsAction, type SettingsActionState } from "../acti
  */
 type ApprovalMode = "simple" | "internal_then_client";
 
-const MODES: {
-  value: ApprovalMode;
-  label: string;
-  blurb: string;
-  steps: { label: string; hint: string; icon: typeof Check }[];
-  days: string;
-}[] = [
-  {
-    value: "simple",
-    label: "Internal approval only",
-    blurb: "One approver. Faster cycle. Best for in-house or single-stakeholder content.",
-    steps: [
-      {
-        label: "Internal review",
-        hint: "Content lead signs off.",
-        icon: Check,
-      },
-    ],
-    days: "Single-step. ~ 1-3 business days from brief to publish.",
-  },
-  {
-    value: "internal_then_client",
-    label: "Internal, then client",
-    blurb:
-      "Two approvers. Adds a client-review stage. Use when the brand has an external stakeholder.",
-    steps: [
-      {
-        label: "Internal review",
-        hint: "Content lead + creative director sign off.",
-        icon: Users,
-      },
-      {
-        label: "Client review",
-        hint: "Client approver signs off before publish-ready.",
-        icon: MessageSquare,
-      },
-    ],
-    days: "Two-step. ~ 5-10 business days from brief to publish.",
-  },
-];
-
-export function ApprovalsForm({
-  slug,
-  currentMode,
-  leadTimes,
-}: {
+type ApprovalsFormProps = {
   slug: string;
   currentMode: ApprovalMode;
   leadTimes: {
@@ -80,11 +35,54 @@ export function ApprovalsForm({
     creativeApprovalLeadDays: number;
     readyToPublishLeadDays: number;
   };
-}) {
+  t: (key: string, params?: Record<string, string | number>) => string;
+};
+
+export function ApprovalsForm(props: ApprovalsFormProps) {
+  const { slug, currentMode, leadTimes, t } = props;
+  const MODES: {
+    value: ApprovalMode;
+    label: string;
+    blurb: string;
+    steps: { label: string; hint: string; icon: typeof Check }[];
+    days: string;
+  }[] = [
+    {
+      value: "simple",
+      label: t("settings.approvals.modeSimple.label"),
+      blurb: t("settings.approvals.modeSimple.blurb"),
+      steps: [
+        {
+          label: t("settings.approvals.stepInternalReviewLabel"),
+          hint: t("settings.approvals.stepInternalReviewHint"),
+          icon: Check,
+        },
+      ],
+      days: t("settings.approvals.modeSimple.days"),
+    },
+    {
+      value: "internal_then_client",
+      label: t("settings.approvals.modeInternalThenClient.label"),
+      blurb: t("settings.approvals.modeInternalThenClient.blurb"),
+      steps: [
+        {
+          label: t("settings.approvals.stepInternalReviewLabel"),
+          hint: t("settings.approvals.stepInternalReviewTwoHint"),
+          icon: Users,
+        },
+        {
+          label: t("settings.approvals.stepClientReviewLabel"),
+          hint: t("settings.approvals.stepClientReviewHint"),
+          icon: MessageSquare,
+        },
+      ],
+      days: t("settings.approvals.modeInternalThenClient.days"),
+    },
+  ];
   const action = updateApprovalsSettingsAction.bind(null, slug);
   const [state, formAction] = useActionState<SettingsActionState, FormData>(action, {});
   const [mode, setMode] = React.useState<ApprovalMode>(currentMode);
-  const impact = impactFor(mode, leadTimes);
+  const impact = impactFor(mode, leadTimes, t);
   const dirty = mode !== currentMode;
 
   return (
@@ -92,8 +90,8 @@ export function ApprovalsForm({
       <form action={formAction} className="space-y-6">
         <FormField
           id="settings-approval-mode"
-          label="Approval mode"
-          hint="How many approval steps a piece of content needs before publish."
+          label={t("settings.approvals.fieldLabel")}
+          hint={t("settings.approvals.fieldHint")}
         >
           <div className="grid gap-3 md:grid-cols-2">
             {MODES.map((m) => {
@@ -127,7 +125,7 @@ export function ApprovalsForm({
                           data-testid="approvals-current-mode-badge"
                         >
                           <Check className="h-3 w-3" aria-hidden="true" />
-                          Currently selected
+                          {t("settings.approvals.currentBadge")}
                         </span>
                       ) : null}
                     </div>
@@ -156,18 +154,19 @@ export function ApprovalsForm({
             className="border-border bg-primary-subtle space-y-2 rounded-[var(--radius-control)] border p-4"
             data-testid="approvals-impact-panel"
             role="region"
-            aria-label="Approval mode change impact"
+            aria-label={t("settings.approvals.impactTitle")}
           >
             <div className="flex items-center gap-2">
               <Info className="text-primary h-4 w-4" aria-hidden="true" />
               <h3 className="text-section-title text-fg-primary font-semibold">
-                What changes when you save
+                {t("settings.approvals.impactTitle")}
               </h3>
             </div>
             <p className="text-body text-fg-secondary">
-              Approval mode switches from{" "}
-              <span className="text-fg-primary font-bold">{labelFor(currentMode)}</span> to{" "}
-              <span className="text-fg-primary font-bold">{labelFor(mode)}</span>.
+              {t("settings.approvals.impactDescription", {
+                from: labelFor(currentMode, t),
+                to: labelFor(mode, t),
+              })}
             </p>
             {impact.kind === "ok" ? (
               <p
@@ -175,7 +174,7 @@ export function ApprovalsForm({
                 data-testid="approvals-impact-ok"
               >
                 <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                Your current lead times look right for this mode.
+                {t("settings.approvals.impactOk")}
               </p>
             ) : (
               <ul className="space-y-1" data-testid="approvals-impact-warnings">
@@ -196,7 +195,7 @@ export function ApprovalsForm({
               className="text-label text-primary inline-flex items-center gap-1 font-semibold hover:underline"
               data-testid="approvals-impact-lead-times-link"
             >
-              Open lead times
+              {t("settings.approvals.openLeadTimes")}
               <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           </div>
@@ -204,8 +203,8 @@ export function ApprovalsForm({
           <p className="text-label text-fg-muted" data-testid="approvals-impact-stable">
             <Info className="h-3 w-3" aria-hidden="true" />
             {currentMode === mode
-              ? "Currently selected. No changes pending."
-              : "Switch modes above to see what changes across the other settings."}
+              ? t("settings.approvals.impactStable")
+              : t("settings.approvals.impactIdle")}
           </p>
         )}
 
@@ -224,19 +223,26 @@ export function ApprovalsForm({
             data-testid="approvals-form-saved"
             className="text-body text-success font-semibold"
           >
-            Approval mode saved.
+            {t("settings.approvals.saved")}
           </p>
         ) : null}
         <div className="flex justify-end">
-          <FormSubmitButton label={dirty ? "Save approval mode" : "Saved"} pendingLabel="Saving…" />
+          <FormSubmitButton
+            label={t("settings.approvals.submit")}
+            pendingLabel={t("common.saving")}
+          />
         </div>
       </form>
     </Card>
   );
 }
 
-function labelFor(mode: ApprovalMode): string {
-  return MODES.find((m) => m.value === mode)?.label ?? mode;
+function labelFor(mode: ApprovalMode, t: (key: string) => string): string {
+  const labels: Record<ApprovalMode, string> = {
+    simple: t("settings.approvals.modeSimple.label"),
+    internal_then_client: t("settings.approvals.modeInternalThenClient.label"),
+  };
+  return labels[mode] ?? mode;
 }
 
 type Impact = { kind: "ok" } | { kind: "warn"; warnings: string[] };
@@ -249,27 +255,28 @@ function impactFor(
     creativeApprovalLeadDays: number;
     readyToPublishLeadDays: number;
   },
+  t: (key: string, params?: Record<string, string | number>) => string,
 ): Impact {
   const warnings: string[] = [];
   if (mode === "internal_then_client") {
     if (leadTimes.creativeApprovalLeadDays < 1) {
-      warnings.push(
-        "Your creative_approval_lead_days is 0. The creative review step won't have a buffer; set it on the Lead times page (try 2-4 days).",
-      );
+      warnings.push(t("settings.approvals.impactWarnNoCreativeBuffer"));
     }
     if (leadTimes.readyToPublishLeadDays < 2) {
       warnings.push(
-        "Your ready_to_publish_lead_days is " +
-          leadTimes.readyToPublishLeadDays +
-          " day(s). The client review cycle usually needs 3-6 days.",
+        leadTimes.readyToPublishLeadDays === 1
+          ? t("settings.approvals.impactWarnPublishShortOne")
+          : t("settings.approvals.impactWarnPublishShortMany", {
+              count: leadTimes.readyToPublishLeadDays,
+            }),
       );
     }
   } else {
     if (leadTimes.creativeApprovalLeadDays > 0) {
       warnings.push(
-        "Your creative_approval_lead_days is " +
-          leadTimes.creativeApprovalLeadDays +
-          " day(s). The simple mode has no creative review step, so this number has no effect.",
+        t("settings.approvals.impactWarnCreativeUnused", {
+          count: leadTimes.creativeApprovalLeadDays,
+        }),
       );
     }
   }

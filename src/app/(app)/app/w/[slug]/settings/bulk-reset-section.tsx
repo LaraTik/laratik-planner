@@ -21,10 +21,12 @@ export function BulkResetSection({
   workspaceSlug,
   workspaceName,
   counts,
+  t,
 }: {
   workspaceSlug: string;
   workspaceName: string;
   counts: ResetAllIdeasCounts;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const [open, setOpen] = React.useState(false);
   return (
@@ -34,13 +36,12 @@ export function BulkResetSection({
     >
       <div className="text-danger mb-2 flex items-center gap-2">
         <AlertOctagon className="h-5 w-5" aria-hidden="true" />
-        <h2 className="text-title-card text-fg-primary font-semibold">Bulk reset</h2>
+        <h2 className="text-title-card text-fg-primary font-semibold">
+          {t("settings.bulkReset.title")}
+        </h2>
       </div>
       <p className="text-body text-fg-secondary mb-3 max-w-3xl">
-        Hard-deletes every idea in this workspace (and all 8 cascade children per idea). The 3
-        set-null tables (attachments, AI usage, activity) keep their rows with the link cleared. By
-        default, live published ideas are skipped — the confirm dialog has an opt-in toggle for the
-        dangerous case.
+        {t("settings.bulkReset.blurb", { hours: 72 })}
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button
@@ -50,11 +51,11 @@ export function BulkResetSection({
           onClick={() => setOpen(true)}
           data-testid="bulk-reset-trigger"
         >
-          Reset all ideas
+          {t("settings.bulkReset.submit")}
         </Button>
         <p className="text-label text-fg-muted max-w-md">
-          Currently {counts.totalAllIdeas} idea{counts.totalAllIdeas === 1 ? "" : "s"} in this
-          workspace, {counts.totalLive} of which are live (published or partially-published).
+          {t("settings.bulkReset.ideasCount", { count: counts.totalAllIdeas })} · {counts.totalLive}{" "}
+          live
         </p>
       </div>
       <BulkResetConfirmDialog
@@ -63,6 +64,7 @@ export function BulkResetSection({
         workspaceSlug={workspaceSlug}
         workspaceName={workspaceName}
         counts={counts}
+        t={t}
       />
     </section>
   );

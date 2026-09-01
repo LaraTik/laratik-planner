@@ -11,6 +11,7 @@ import {
 } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { SettingsHealth } from "../_components/settings-health";
@@ -32,6 +33,7 @@ export default async function SettingsDefaultsPage({
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
+  const { t } = await tForActive();
   const canManage = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
     "workspace_manager",
   ]);
@@ -68,10 +70,10 @@ export default async function SettingsDefaultsPage({
         title={
           <span className="inline-flex items-center gap-2">
             <UserCog className="text-fg-muted h-6 w-6" aria-hidden="true" />
-            Default assignments
+            {t("settings.defaults.title")}
           </span>
         }
-        description="The four people pre-filled on every new content item. Per-item overrides always win — the default is a shortcut, not a rule."
+        description={t("settings.defaults.description")}
       />
       <SettingsSectionNav
         slug={slug}
@@ -84,6 +86,7 @@ export default async function SettingsDefaultsPage({
             settings?.defaultClientReviewerId
           ),
         }}
+        t={t}
       />
       <SettingsHealth
         slug={slug}
@@ -97,9 +100,9 @@ export default async function SettingsDefaultsPage({
       />
       <SectionCard
         id="defaults"
-        title="Default assignees"
+        title={t("settings.defaults.cardTitle")}
         fullWidth
-        aria-label="Default assignees"
+        aria-label={t("settings.defaults.cardTitle")}
         data-testid="settings-section-defaults"
       >
         {canManage ? (
@@ -116,11 +119,10 @@ export default async function SettingsDefaultsPage({
                 settings?.defaultInternalCreativeReviewerId ?? null,
               defaultClientReviewerId: settings?.defaultClientReviewerId ?? null,
             }}
+            t={t}
           />
         ) : (
-          <p className="text-label text-fg-muted">
-            Read-only. Workspace manager access is required to edit these settings.
-          </p>
+          <p className="text-label text-fg-muted">{t("settings.defaults.readOnly")}</p>
         )}
         <div className="border-border mt-6 border-t pt-4">
           <LastSaved at={settings?.updatedAt ?? null} />

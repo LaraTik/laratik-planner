@@ -48,12 +48,14 @@ export function BulkResetConfirmDialog({
   workspaceSlug,
   workspaceName,
   counts,
+  t,
 }: {
   open: boolean;
   onOpenChange: (next: boolean) => void;
   workspaceSlug: string;
   workspaceName: string;
   counts: ResetAllIdeasCounts;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const action = resetAllIdeasAction.bind(null, workspaceSlug);
   const [state, formAction, pending] = useActionState<ResetAllIdeasActionState, FormData>(action, {
@@ -101,13 +103,10 @@ export function BulkResetConfirmDialog({
         <DialogHeader>
           <div className="text-danger flex items-center gap-2">
             <AlertOctagon className="h-5 w-5" aria-hidden="true" />
-            <DialogTitle>Reset every idea in this workspace</DialogTitle>
+            <DialogTitle>{t("settings.bulkReset.dialogTitle")}</DialogTitle>
           </div>
           <DialogDescription>
-            Permanently deletes every idea in{" "}
-            <span className="text-fg-primary font-semibold">{workspaceName}</span> plus all 8
-            cascade children. Workspace settings, channels, the brand kit, and other workspaces in
-            the agency are not affected.
+            {t("settings.bulkReset.dialogBody", { name: workspaceName })}
           </DialogDescription>
         </DialogHeader>
 
@@ -128,13 +127,13 @@ export function BulkResetConfirmDialog({
               id="bulk-reset-counts-heading"
               className="text-body text-fg-primary mb-2 font-semibold"
             >
-              What will be deleted
+              {t("settings.bulkReset.countsHeading")}
             </h3>
             <p className="text-label text-fg-secondary mb-3">
-              {previewTotal} idea{previewTotal === 1 ? "" : "s"} will be deleted
-              {previewExcluded > 0
-                ? ` (${previewExcluded} live idea${previewExcluded === 1 ? "" : "s"} skipped because 'Include published' is off).`
-                : "."}
+              {t("settings.bulkReset.countsPreview", {
+                count: previewTotal,
+                excluded: previewExcluded,
+              })}
             </p>
             <dl className="grid gap-1 sm:grid-cols-2">
               {ALL_CONTENT_STATUSES.map((status) => {
@@ -182,13 +181,10 @@ export function BulkResetConfirmDialog({
               />
               <div className="space-y-1">
                 <Label htmlFor="bulk-reset-include-published" className="cursor-pointer">
-                  Include published ideas
+                  {t("settings.bulkReset.includePublishedLabel")}
                 </Label>
                 <p className="text-label text-fg-muted">
-                  Off by default. When ON, also deletes ideas in <code>published</code> and{" "}
-                  <code>partially_published</code> status. Those ideas have at least one live post
-                  on a social network — deleting them here removes the LaraTik record, but the
-                  public post is not retracted.
+                  {t("settings.bulkReset.includePublishedHint")}
                 </p>
               </div>
             </div>
@@ -202,24 +198,17 @@ export function BulkResetConfirmDialog({
                   className="text-warning mt-0.5 h-4 w-4 shrink-0"
                   aria-hidden="true"
                 />
-                <span>
-                  You are about to delete{" "}
-                  <strong>
-                    {counts.totalLive} live idea{counts.totalLive === 1 ? "" : "s"}
-                  </strong>
-                  . The LaraTik record will be gone; any public social posts will remain unless you
-                  retract them separately.
-                </span>
+                <span>{t("settings.bulkReset.liveWarning", { count: counts.totalLive })}</span>
               </p>
             ) : null}
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="bulk-reset-typed-phrase">
-              Type the workspace&apos;s name to confirm
+              {t("settings.bulkReset.typedPhraseLabel")}
             </Label>
             <p id="bulk-reset-typed-phrase-help" className="text-label text-fg-muted -mt-0.5">
-              Type <span className="text-fg-primary font-mono">{workspaceName}</span> exactly.
+              {t("settings.bulkReset.typedPhraseHelp", { name: workspaceName })}
             </p>
             <Input
               id="bulk-reset-typed-phrase"
@@ -245,10 +234,9 @@ export function BulkResetConfirmDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="bulk-reset-reason">Reason</Label>
+            <Label htmlFor="bulk-reset-reason">{t("settings.bulkReset.reasonLabel")}</Label>
             <p id="bulk-reset-reason-help" className="text-label text-fg-muted -mt-0.5">
-              At least 8 characters. Saved to the platform audit log alongside the full list of idea
-              IDs that were removed.
+              {t("settings.bulkReset.reasonHelp")}
             </p>
             <Textarea
               id="bulk-reset-reason"
@@ -289,7 +277,7 @@ export function BulkResetConfirmDialog({
               disabled={pending}
               data-testid="bulk-reset-cancel"
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               type="submit"
@@ -299,11 +287,11 @@ export function BulkResetConfirmDialog({
               data-testid="bulk-reset-submit"
             >
               {pending ? (
-                "Resetting…"
+                t("settings.bulkReset.submitting")
               ) : (
                 <>
                   <Check className="h-4 w-4" aria-hidden="true" />
-                  Reset {previewTotal} idea{previewTotal === 1 ? "" : "s"}
+                  {t("settings.bulkReset.submitCount", { count: previewTotal })}
                 </>
               )}
             </Button>

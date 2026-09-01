@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { workspaceSettings as workspaceSettingsTable } from "@/lib/db/schema/workspaces";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { SettingsHealth } from "../_components/settings-health";
@@ -27,6 +28,7 @@ export default async function SettingsLifecyclePage({
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
+  const { t } = await tForActive();
   const canManage = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
     "workspace_manager",
   ]);
@@ -43,10 +45,10 @@ export default async function SettingsLifecyclePage({
         title={
           <span className="inline-flex items-center gap-2">
             <CalendarDays className="text-fg-muted h-6 w-6" aria-hidden="true" />
-            Lifecycle
+            {t("settings.lifecycle.title")}
           </span>
         }
-        description="The workspace identity for scheduling. The timezone drives the calendar, lead-time math, and every 'X days from now' view; the monthly target is the planning KPI bar's reference."
+        description={t("settings.lifecycle.description")}
       />
       <SettingsSectionNav
         slug={slug}
@@ -54,6 +56,7 @@ export default async function SettingsLifecyclePage({
         configured={{
           lifecycle: !!workspace.timezone && workspace.timezone !== "UTC" && monthlyTarget !== null,
         }}
+        t={t}
       />
       <SettingsHealth
         slug={slug}
@@ -66,17 +69,20 @@ export default async function SettingsLifecyclePage({
       />
       <SectionCard
         id="lifecycle"
-        title="Lifecycle settings"
+        title={t("settings.lifecycle.cardTitle")}
         fullWidth
-        aria-label="Lifecycle settings"
+        aria-label={t("settings.lifecycle.cardTitle")}
         data-testid="settings-section-lifecycle"
       >
         {canManage ? (
-          <LifecycleForm slug={slug} timezone={workspace.timezone} monthlyTarget={monthlyTarget} />
+          <LifecycleForm
+            slug={slug}
+            timezone={workspace.timezone}
+            monthlyTarget={monthlyTarget}
+            t={t}
+          />
         ) : (
-          <p className="text-label text-fg-muted">
-            Read-only. Workspace manager access is required to edit these settings.
-          </p>
+          <p className="text-label text-fg-muted">{t("settings.lifecycle.readOnly")}</p>
         )}
         <div className="border-border mt-6 border-t pt-4">
           <LastSaved at={settings?.updatedAt ?? null} />

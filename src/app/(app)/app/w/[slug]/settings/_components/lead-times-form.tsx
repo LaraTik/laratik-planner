@@ -46,11 +46,13 @@ export function LeadTimesForm({
   values,
   approvalMode,
   timezone,
+  t,
 }: {
   slug: string;
   values: LeadTimeValues;
   approvalMode: "simple" | "internal_then_client";
   timezone: string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   // `today` is captured once at component mount so the AI
   // preview's deadline-impact line is stable while the user
@@ -111,9 +113,7 @@ export function LeadTimesForm({
     <Card padding="md" data-testid="lead-times-form-card">
       <form action={formAction} className="space-y-6">
         <p className="text-body text-fg-secondary max-w-3xl" data-testid="lead-times-total">
-          Total cycle time: <span className="text-fg-primary font-bold">{total} business days</span>{" "}
-          from brief to publish-ready. Each lead time is the buffer between an adjacent pair of
-          workflow stages.
+          {t("settings.leadTimes.total", { count: total })}
         </p>
         <LeadTimeTimeline values={draft} />
         <LeadTimeDeadline totalDays={total} today={new Date()} timezone={timezone} live />
@@ -139,7 +139,7 @@ export function LeadTimesForm({
               data-testid="lead-times-ai-applied"
             >
               <Check className="h-3.5 w-3.5" aria-hidden="true" />
-              Suggestion applied. Edit any number before saving.
+              {t("settings.lifecycle.applied")}
             </span>
           ) : null}
           {suggestStatus === "error" && suggestError ? (
@@ -155,7 +155,7 @@ export function LeadTimesForm({
               className="text-label text-fg-secondary hover:text-fg-primary inline-flex items-center gap-1 font-semibold transition-colors"
             >
               <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-              Revert
+              {t("common.cancel")}
             </button>
           ) : null}
         </div>
@@ -277,34 +277,38 @@ export function LeadTimesForm({
           <LeadTimeField
             id="settings-lead-content"
             name="contentApprovalLeadDays"
-            label="Content approval"
-            help="Brief → Content review. Time for the writer's first pass to be reviewed by the content lead."
+            label={t("settings.leadTimes.contentApprovalLabel")}
+            help={t("settings.leadTimes.contentApprovalHint")}
             value={draft.contentApprovalLeadDays}
             onChange={(v) => setDraft({ ...draft, contentApprovalLeadDays: v })}
+            t={t}
           />
           <LeadTimeField
             id="settings-lead-design"
             name="designCompleteLeadDays"
-            label="Design complete"
-            help="Design → Creative review. Time for the designer to produce first-pass art for the brief."
+            label={t("settings.leadTimes.designCompleteLabel")}
+            help={t("settings.leadTimes.designCompleteHint")}
             value={draft.designCompleteLeadDays}
             onChange={(v) => setDraft({ ...draft, designCompleteLeadDays: v })}
+            t={t}
           />
           <LeadTimeField
             id="settings-lead-creative"
             name="creativeApprovalLeadDays"
-            label="Creative approval"
-            help="Creative review &rarr; Client review. Time for the creative director to sign off."
+            label={t("settings.leadTimes.creativeApprovalLabel")}
+            help={t("settings.leadTimes.creativeApprovalHint")}
             value={draft.creativeApprovalLeadDays}
             onChange={(v) => setDraft({ ...draft, creativeApprovalLeadDays: v })}
+            t={t}
           />
           <LeadTimeField
             id="settings-lead-publish"
             name="readyToPublishLeadDays"
-            label="Ready to publish"
-            help="Client review → publish-ready. Last-pass polish + copy review."
+            label={t("settings.leadTimes.readyToPublishLabel")}
+            help={t("settings.leadTimes.readyToPublishHint")}
             value={draft.readyToPublishLeadDays}
             onChange={(v) => setDraft({ ...draft, readyToPublishLeadDays: v })}
+            t={t}
           />
         </div>
         {state.error ? (
@@ -322,11 +326,14 @@ export function LeadTimesForm({
             data-testid="lead-times-form-saved"
             className="text-body text-success font-semibold"
           >
-            Lead times saved.
+            {t("settings.leadTimes.saved")}
           </p>
         ) : null}
         <div className="flex justify-end">
-          <FormSubmitButton label="Save lead times" pendingLabel="Saving…" />
+          <FormSubmitButton
+            label={t("settings.leadTimes.submit")}
+            pendingLabel={t("common.saving")}
+          />
         </div>
       </form>
     </Card>
@@ -340,6 +347,7 @@ function LeadTimeField({
   help,
   value,
   onChange,
+  t,
 }: {
   id: string;
   name: string;
@@ -347,6 +355,7 @@ function LeadTimeField({
   help: string;
   value: number;
   onChange: (next: number) => void;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   // Render the field manually (without FormField) so the
   // <label htmlFor> targets the input directly. FormField's
@@ -375,7 +384,7 @@ function LeadTimeField({
           onChange={(e) => onChange(Number(e.target.value))}
           className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-10 w-full rounded-[var(--radius-control)] border px-3 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
         />
-        <span className="text-label text-fg-muted shrink-0">days</span>
+        <span className="text-label text-fg-muted shrink-0">{t("settings.leadTimes.days")}</span>
       </div>
     </div>
   );

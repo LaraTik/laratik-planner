@@ -20,10 +20,10 @@ import { cn } from "@/lib/utils";
  * shortcut surface, not a setup step.
  */
 export const SETTINGS_SECTIONS = [
-  { id: "lifecycle", label: "Lifecycle", href: "" },
-  { id: "lead-times", label: "Lead times", href: "" },
-  { id: "defaults", label: "Defaults", href: "" },
-  { id: "approvals", label: "Approval mode", href: "" },
+  { id: "lifecycle", labelKey: "settings.kpi.lifecycle" },
+  { id: "lead-times", labelKey: "settings.kpi.leadTimes" },
+  { id: "defaults", labelKey: "settings.kpi.defaults" },
+  { id: "approvals", labelKey: "settings.kpi.approvals" },
 ] as const;
 
 export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number]["id"];
@@ -49,10 +49,12 @@ export function SettingsSectionNav({
   slug,
   current,
   configured,
+  t,
 }: {
   slug: string;
   current: SettingsSectionId;
   configured?: SettingsConfiguredMap;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const currentIndex = SETTINGS_SECTIONS.findIndex((s) => s.id === current);
   const prev = currentIndex > 0 ? SETTINGS_SECTIONS[currentIndex - 1] : null;
@@ -66,7 +68,10 @@ export function SettingsSectionNav({
       className="border-border bg-surface-subtle flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border p-3"
       data-testid="settings-section-nav"
     >
-      <ol className="flex items-center gap-1" aria-label={`Step ${stepNumber} of ${totalSteps}`}>
+      <ol
+        className="flex items-center gap-1"
+        aria-label={t("settings.stepAria", { current: stepNumber, total: totalSteps })}
+      >
         {SETTINGS_SECTIONS.map((s, i) => {
           const isConfigured = configured?.[s.id] === true;
           const done = isConfigured || i < currentIndex;
@@ -99,7 +104,7 @@ export function SettingsSectionNav({
                     <Circle className="h-2 w-2 fill-current opacity-40" />
                   )}
                 </span>
-                <span>{s.label}</span>
+                <span>{t(s.labelKey)}</span>
               </Link>
             </li>
           );
@@ -113,12 +118,12 @@ export function SettingsSectionNav({
             className="text-label text-fg-secondary hover:text-fg-primary hover:border-border inline-flex items-center gap-1 rounded-[var(--radius-control)] border border-transparent px-2 py-1 font-semibold transition-colors"
           >
             <DirAwareArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-            {prev.label}
+            {t(prev.labelKey)}
           </Link>
         ) : (
           <span className="text-label text-fg-muted inline-flex items-center gap-1 px-2 py-1">
             <DirAwareArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-            No previous section
+            {t("settings.sectionNav.noPrevious")}
           </span>
         )}
         {next ? (
@@ -127,12 +132,12 @@ export function SettingsSectionNav({
             data-testid="settings-section-nav-next"
             className="text-label text-primary border-border bg-surface hover:bg-primary-subtle inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2.5 py-1 font-semibold transition-colors"
           >
-            Next: {next.label}
+            {t("settings.sectionNav.next", { label: t(next.labelKey) })}
             <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         ) : (
           <span className="text-label text-fg-muted inline-flex items-center gap-1 px-2 py-1 font-semibold">
-            Last step
+            {t("settings.sectionNav.lastStep")}
             <Check className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
         )}
