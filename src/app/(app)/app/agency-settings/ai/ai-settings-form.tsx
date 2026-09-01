@@ -42,6 +42,7 @@ export function AiSettingsForm({
   lastTestAt,
   lastTestOk,
   usage,
+  t,
 }: {
   initialEnabled: boolean;
   initialModel: string;
@@ -56,7 +57,9 @@ export function AiSettingsForm({
   lastTestAt: string | null;
   lastTestOk: boolean | null;
   usage: MonthlyUsage;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const [state, formAction] = useActionState(saveAiSettingsAction, initial);
   const [testState, setTestState] = React.useState<AiSettingsActionState>({});
   const [testing, setTesting] = React.useState(false);
@@ -82,7 +85,7 @@ export function AiSettingsForm({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Bot className="text-primary h-5 w-5" aria-hidden="true" />
-            <CardTitle>Provider environment</CardTitle>
+            <CardTitle>{tr("agencyAi.providerEnvTitle", "Provider environment")}</CardTitle>
           </div>
           <Badge variant={envEnabled && envHasKey ? "success" : "outline"}>
             {envEnabled && envHasKey ? "Configured" : "Not configured"}
@@ -108,7 +111,9 @@ export function AiSettingsForm({
 
       <form action={formAction} className="space-y-4" data-testid="ai-settings-form">
         <Card data-testid="ai-feature-card">
-          <CardTitle className="mb-1">Feature settings</CardTitle>
+          <CardTitle className="mb-1">
+            {tr("agencyAi.featureSettingsTitle", "Feature settings")}
+          </CardTitle>
           <CardDescription>
             The toggle below is the master switch. When disabled, every AI capability stops working
             across the agency — even if a capability is individually toggled on.
@@ -223,7 +228,7 @@ export function AiSettingsForm({
 
       <Card data-testid="ai-test-connection-card">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle>Test connection</CardTitle>
+          <CardTitle>{tr("agencyAi.testConnectionTitle", "Test connection")}</CardTitle>
           <Button
             type="button"
             variant="outline"
@@ -307,7 +312,9 @@ export function AiSettingsForm({
             data-testid="ai-usage-empty"
           >
             <Sparkles className="text-fg-muted h-5 w-5" aria-hidden="true" />
-            <p className="text-body text-fg-secondary font-semibold">No usage yet</p>
+            <p className="text-body text-fg-secondary font-semibold">
+              {tr("agencyAi.noUsageYet", "No usage yet")}
+            </p>
             <p className="text-label text-fg-muted max-w-sm">
               Run your first AI request from a content brief to see this card fill in.
             </p>
