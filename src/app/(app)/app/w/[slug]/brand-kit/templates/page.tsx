@@ -3,6 +3,7 @@ import { Tag, MessageCircle, Palette, Type, BookOpen } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { BrandKitBackLink } from "../_components/brand-kit-back-link";
 import { TemplateCard } from "../_components/template-card";
@@ -29,6 +30,7 @@ export default async function BrandKitTemplatesPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -46,8 +48,8 @@ export default async function BrandKitTemplatesPage({
     <div className="space-y-8">
       <BrandKitBackLink slug={slug} />
       <PageHeader
-        title="Brand kit templates"
-        description="Curated seeds for every section of your brand kit. Pick what fits and one-click add — your brand kit grows without you having to write every rule from scratch."
+        title={t("brandKit.templatesTitle")}
+        description={t("brandKit.templatesDescription")}
       />
 
       <TemplateSection

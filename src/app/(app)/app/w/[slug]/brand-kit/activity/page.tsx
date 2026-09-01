@@ -3,6 +3,7 @@ import { History } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { listRecentBrandUpdates } from "@/lib/brand/service";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { BrandKitBackLink } from "../_components/brand-kit-back-link";
@@ -23,6 +24,7 @@ export default async function BrandKitActivityPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -35,8 +37,8 @@ export default async function BrandKitActivityPage({
     <div className="space-y-6">
       <BrandKitBackLink slug={slug} />
       <PageHeader
-        title="Activity"
-        description="The latest changes to the brand kit — assets, voice rules, publishing rules, and linked resources. As the team edits, the feed updates here."
+        title={t("brandKit.activityTitle")}
+        description={t("brandKit.activityDescription")}
       />
 
       <SectionCard

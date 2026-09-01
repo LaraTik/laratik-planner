@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { brandAssets } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { BrandKitHealth } from "../_components/brand-kit-health";
@@ -34,6 +35,7 @@ export default async function BrandKitTypographyPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -69,9 +71,9 @@ export default async function BrandKitTypographyPage({
     <div className="space-y-6">
       <BrandKitBackLink slug={slug} />
       <PageHeader
-        eyebrow="Identity"
-        title="Typography"
-        description="The headline, body, accent, and mono faces that every asset should ship in. Each entry renders a live sample."
+        eyebrow={t("brandKit.typographyEyebrow")}
+        title={t("brandKit.typographyTitle")}
+        description={t("brandKit.typographyDescription")}
       />
       <BrandKitHealth section="typography" slug={slug} count={fonts.length} breakdown={breakdown} />
 

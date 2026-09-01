@@ -1915,7 +1915,20 @@
     "publishingDescription": "Editorial guardrails — alt text conventions, hashtag norms, compliance reminders, per-channel guidance.",
     "logosEyebrow": "Identity",
     "logosTitle": "Logos",
-    "logosDescription": "The primary mark, secondary marks, and reference logos that every designer, planner, and reviewer should ship in."
+    "logosDescription": "The primary mark, secondary marks, and reference logos that every designer, planner, and reviewer should ship in.",
+    "activityTitle": "Activity",
+    "activityDescription": "The latest changes to the brand kit — assets, voice rules, publishing rules, and linked resources. As the team edits, the feed updates here.",
+    "pillarsEyebrow": "Voice",
+    "pillarsTitle": "Content pillars",
+    "pillarsDescription": "The recurring topics every plan and post should align to. The AI uses pillar names + blurbs as context for caption drafts.",
+    "linkedEyebrow": "Resources",
+    "linkedTitle": "Linked resources",
+    "linkedDescription": "The Figma, Drive, Canva, and Dropbox libraries the team uses to source on-brand material.",
+    "typographyEyebrow": "Identity",
+    "typographyTitle": "Typography",
+    "typographyDescription": "The headline, body, accent, and mono faces that every asset should ship in. Each entry renders a live sample.",
+    "templatesTitle": "Brand kit templates",
+    "templatesDescription": "Curated seeds for every section of your brand kit. Pick what fits and one-click add — your brand kit grows without you having to write every rule from scratch."
   },
   "notifications": {
     "kind": {

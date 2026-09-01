@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { listContentPillars } from "@/lib/brand/service";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { BrandKitHealth } from "../_components/brand-kit-health";
@@ -26,6 +27,7 @@ export default async function BrandKitPillarsPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -42,9 +44,9 @@ export default async function BrandKitPillarsPage({
     <div className="space-y-6">
       <BrandKitBackLink slug={slug} />
       <PageHeader
-        eyebrow="Voice"
-        title="Content pillars"
-        description="The recurring topics every plan and post should align to. The AI uses pillar names + blurbs as context for caption drafts."
+        eyebrow={t("brandKit.pillarsEyebrow")}
+        title={t("brandKit.pillarsTitle")}
+        description={t("brandKit.pillarsDescription")}
       />
       <BrandKitHealth section="pillars" slug={slug} count={pillars.length} />
 
