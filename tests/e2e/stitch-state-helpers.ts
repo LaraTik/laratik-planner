@@ -187,7 +187,10 @@ export async function setupDecisionState(page: Page, seed: SeedResultLike): Prom
   const slug = workspaceSlug(seed as SeedResultLike & { workspaceSlug?: string });
   await page.goto(`/app/w/${slug}/reviews`);
   await page.waitForLoadState("domcontentloaded");
-  await page.getByRole("heading", { name: /Reviews queue/i }).waitFor({ state: "visible" });
+  // The page title is catalog-backed and currently reads "Approvals" in
+  // English ("الموافقات" in Arabic), so assert the semantic level rather
+  // than coupling the visual setup to one copy string.
+  await page.getByRole("heading", { level: 1 }).waitFor({ state: "visible" });
 }
 
 /**
