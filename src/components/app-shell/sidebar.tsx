@@ -68,6 +68,7 @@ export function Sidebar({
   unreadAppErrors = 0,
   collapsed = false,
   onCollapsedChange,
+  labels = {},
 }: {
   user: { name: string; isAdmin: boolean };
   workspaces: { id: string; slug: string; name: string }[];
@@ -81,8 +82,20 @@ export function Sidebar({
   unreadAppErrors?: number;
   collapsed?: boolean;
   onCollapsedChange?: ((next: boolean) => void) | undefined;
+  /**
+   * Localized label map. Keys match the navigation-model spec
+   * `key` (e.g. `my-work`, `workspaces`, `planning`, `brand`,
+   * `settings`) plus three chrome keys: `sidebarAriaLabel`,
+   * `studioFlowHome`, `createContent`. The English `label`
+   * baked into each spec is the fallback when a key is missing.
+   */
+  labels?: Record<string, string>;
 }) {
   const pathname = usePathname();
+  const labelFor = React.useCallback(
+    (key: string, fallback: string) => labels[key] ?? fallback,
+    [labels],
+  );
 
   // Detect workspace context from the URL. /app/w/[slug]/* means we
   // are inside a workspace; everything else under /app is global.
@@ -131,7 +144,11 @@ export function Sidebar({
   const createContentHref = workspaceNav?.createContentHref ?? null;
 
   return (
-    <nav className="flex h-full flex-col" aria-label="Primary" data-testid="app-sidebar">
+    <nav
+      className="flex h-full flex-col"
+      aria-label={labelFor("sidebarAriaLabel", "Primary")}
+      data-testid="app-sidebar"
+    >
       {/* Brand + workspace switcher (top) */}
       <SidebarHeader
         collapsed={collapsed}
@@ -140,6 +157,7 @@ export function Sidebar({
         canCreateWorkspace={canCreateWorkspace}
         agencySwitcher={agencySwitcher}
         onCollapsedChange={onCollapsedChange}
+        labels={labels}
       />
 
       {/* Top section: workspace tabs OR global items */}
@@ -151,9 +169,10 @@ export function Sidebar({
             pathname={pathname}
             planningActive={planningActive}
             collapsed={collapsed}
+            labels={labels}
           />
         ) : clientNav ? (
-          <ClientNavTree top={clientNav.top} pathname={pathname} />
+          <ClientNavTree top={clientNav.top} pathname={pathname} labels={labels} />
         ) : agencyNav ? (
           <AgencyNavTree
             top={agencyNav.top}
@@ -163,6 +182,7 @@ export function Sidebar({
             platformAccess={platformAccess}
             collapsed={collapsed}
             onCollapsedChange={onCollapsedChange}
+            labels={labels}
           />
         ) : null}
       </div>
@@ -177,6 +197,7 @@ export function Sidebar({
         canCreateWorkspace={canCreateWorkspace}
         agencySwitcher={agencySwitcher}
         platformAccess={platformAccess}
+        labels={labels}
       />
     </nav>
   );
@@ -191,6 +212,7 @@ function SidebarHeader({
   canCreateWorkspace,
   agencySwitcher,
   onCollapsedChange,
+  labels = {},
 }: {
   collapsed: boolean;
   currentWorkspace: { id: string; name: string; slug: string } | null;
@@ -198,7 +220,10 @@ function SidebarHeader({
   canCreateWorkspace: boolean;
   agencySwitcher?: { active: AgencyRow | null; options: AgencyRow[] };
   onCollapsedChange?: ((next: boolean) => void) | undefined;
+  labels?: Record<string, string>;
 }) {
+  const brand = labels["studioFlowHome"] ?? "StudioFlow home";
+  const brandTitle = labels["agencyLabelFallback"] ?? "StudioFlow";
   // Header is a stacked Agency → Workspace context strip so the
   // user always sees "I am in agency X, workspace Y" without
   // having to dig into a switcher. The agency label is small
@@ -214,8 +239,8 @@ function SidebarHeader({
             "focus-visible:ring-focus-ring flex items-center gap-2 rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2",
             collapsed ? "justify-center" : "flex-1",
           )}
-          aria-label="StudioFlow home"
-          title="StudioFlow"
+          aria-label={brand}
+          title={brandTitle}
         >
           <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] font-bold text-white">
             S
@@ -268,6 +293,7 @@ function SidebarFooter({
   canCreateWorkspace,
   agencySwitcher,
   platformAccess,
+  labels = {},
 }: {
   collapsed: boolean;
   inWorkspace: boolean;
@@ -277,7 +303,9 @@ function SidebarFooter({
   canCreateWorkspace: boolean;
   agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   platformAccess: PlatformNavigationAccess;
+  labels?: Record<string, string>;
 }) {
+  const createContentLabel = labels["createContent"] ?? "Create content";
   return (
     <div className="border-border mt-auto space-y-1 border-t p-2 xl:p-3">
       {inWorkspace && createContentHref ? (
@@ -287,12 +315,12 @@ function SidebarFooter({
             "bg-primary hover:bg-primary-hover text-button flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] px-3 py-2 font-semibold text-white transition-colors",
             collapsed ? "" : "",
           )}
-          aria-label="Create content"
-          title="Create content"
+          aria-label={createContentLabel}
+          title={createContentLabel}
           data-testid="sidebar-create-content"
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
-          <span className="hidden xl:inline">Create content</span>
+          <span className="hidden xl:inline">{createContentLabel}</span>
         </Link>
       ) : null}
 
@@ -359,12 +387,14 @@ function WorkspaceNavTree({
   pathname,
   planningActive,
   collapsed,
+  labels = {},
 }: {
   top: SidebarLinkSpec[];
   groups: SidebarGroupSpec[];
   pathname: string;
   planningActive: boolean;
   collapsed: boolean;
+  labels?: Record<string, string>;
 }) {
   return (
     <div className="space-y-1">
@@ -374,6 +404,7 @@ function WorkspaceNavTree({
           spec={item}
           active={isActivePath(item.href, pathname, { exact: true })}
           collapsed={collapsed}
+          labels={labels}
         />
       ))}
       {groups.map((group) => (
@@ -383,13 +414,22 @@ function WorkspaceNavTree({
           pathname={pathname}
           planningActive={planningActive}
           collapsed={collapsed}
+          labels={labels}
         />
       ))}
     </div>
   );
 }
 
-function ClientNavTree({ top, pathname }: { top: SidebarLinkSpec[]; pathname: string }) {
+function ClientNavTree({
+  top,
+  pathname,
+  labels = {},
+}: {
+  top: SidebarLinkSpec[];
+  pathname: string;
+  labels?: Record<string, string>;
+}) {
   return (
     <div className="space-y-1">
       {top.map((item) => (
@@ -397,6 +437,7 @@ function ClientNavTree({ top, pathname }: { top: SidebarLinkSpec[]; pathname: st
           key={item.key}
           spec={item}
           active={isActivePath(item.href, pathname, { exact: item.key === "client-review" })}
+          labels={labels}
         />
       ))}
     </div>
@@ -407,6 +448,7 @@ function AgencyNavTree({
   top,
   groups,
   pathname,
+  labels = {},
 }: {
   top: SidebarLinkSpec[];
   groups: SidebarGroupSpec[];
@@ -415,6 +457,7 @@ function AgencyNavTree({
   platformAccess: PlatformNavigationAccess;
   collapsed: boolean;
   onCollapsedChange?: ((next: boolean) => void) | undefined;
+  labels?: Record<string, string>;
 }) {
   return (
     <div className="space-y-1">
@@ -423,6 +466,7 @@ function AgencyNavTree({
           key={item.key}
           spec={item}
           active={isActivePath(item.href, pathname, { exact: true })}
+          labels={labels}
         />
       ))}
       {groups.map((group) => (
@@ -432,6 +476,7 @@ function AgencyNavTree({
           pathname={pathname}
           planningActive={false}
           collapsed={false}
+          labels={labels}
         />
       ))}
     </div>
@@ -443,20 +488,23 @@ function NavGroup({
   pathname,
   planningActive,
   collapsed,
+  labels = {},
 }: {
   group: SidebarGroupSpec;
   pathname: string;
   planningActive: boolean;
   collapsed: boolean;
+  labels?: Record<string, string>;
 }) {
+  const groupLabel = labels[group.key] ?? group.label;
   return (
     <div className="space-y-1">
       {group.heading ? (
         <div className="text-label text-fg-muted hidden px-2 pt-3 pb-1 font-semibold tracking-wide uppercase xl:block">
-          {group.label}
+          {groupLabel}
         </div>
       ) : null}
-      {group.items.map((item) => renderItem(item, pathname, planningActive, collapsed))}
+      {group.items.map((item) => renderItem(item, pathname, planningActive, collapsed, labels))}
     </div>
   );
 }
@@ -466,6 +514,7 @@ function renderItem(
   pathname: string,
   planningActive: boolean,
   collapsed: boolean,
+  labels: Record<string, string>,
 ): React.ReactNode {
   switch (item.kind) {
     case "link":
@@ -475,6 +524,7 @@ function renderItem(
           spec={item}
           active={isActivePath(item.href, pathname)}
           collapsed={collapsed}
+          labels={labels}
         />
       );
     case "expandable":
@@ -485,6 +535,7 @@ function renderItem(
           pathname={pathname}
           planningActive={planningActive}
           collapsed={collapsed}
+          labels={labels}
         />
       );
     case "group":
@@ -495,11 +546,18 @@ function renderItem(
           pathname={pathname}
           planningActive={planningActive}
           collapsed={collapsed}
+          labels={labels}
         />
       );
     case "nested-group":
       return (
-        <NestedNavGroup key={item.key} spec={item} pathname={pathname} collapsed={collapsed} />
+        <NestedNavGroup
+          key={item.key}
+          spec={item}
+          pathname={pathname}
+          collapsed={collapsed}
+          labels={labels}
+        />
       );
   }
 }
@@ -508,14 +566,18 @@ function SidebarLinkRow({
   spec,
   active,
   collapsed = false,
+  labels = {},
 }: {
   spec: SidebarLinkSpec;
   active: boolean;
   collapsed?: boolean;
+  labels?: Record<string, string>;
 }) {
   const Icon = spec.icon;
   const badge = spec.badge && spec.badge > 0 ? spec.badge : null;
-  const ariaLabel = spec.label;
+  const label = labels[spec.key] ?? spec.label;
+  const ariaLabel = label;
+  const pendingTemplate = labels["pendingBadge"] ?? "{label}: {count} pending";
   return (
     <Link
       href={spec.href}
@@ -535,11 +597,11 @@ function SidebarLinkRow({
       >
         <Icon className="h-4 w-4" />
       </span>
-      {!collapsed ? <span className="min-w-0 flex-1 truncate">{spec.label}</span> : null}
+      {!collapsed ? <span className="min-w-0 flex-1 truncate">{label}</span> : null}
       {badge !== null && !collapsed ? (
         <span
           className="bg-warning-subtle text-warning text-label inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-1.5 font-semibold"
-          aria-label={`${spec.label}: ${badge} pending`}
+          aria-label={pendingTemplate.replace("{label}", label).replace("{count}", String(badge))}
           data-testid={`sidebar-badge-${spec.key}`}
         >
           {badge > 99 ? "99+" : badge}
@@ -554,11 +616,13 @@ function ExpandableNavGroup({
   pathname,
   planningActive,
   collapsed,
+  labels = {},
 }: {
   spec: SidebarExpandableGroupSpec;
   pathname: string;
   planningActive: boolean;
   collapsed: boolean;
+  labels?: Record<string, string>;
 }) {
   const Icon = spec.icon;
   const active = spec.activePrefixes.some((p) => isActivePath(p, pathname));
@@ -567,6 +631,9 @@ function ExpandableNavGroup({
   // for other groups we follow the spec's defaultOpen semantics.
   const defaultOpen = spec.key === "planning" ? planningActive : active;
   const open = forcedOpen ?? defaultOpen;
+  const label = labels[spec.key] ?? spec.label;
+  const collapseTemplate = labels["collapseGroup"] ?? "Collapse {label}";
+  const expandTemplate = labels["expandGroup"] ?? "Expand {label}";
   return (
     <div className="space-y-1">
       <div
@@ -578,8 +645,8 @@ function ExpandableNavGroup({
         <Link
           href={spec.href}
           aria-current={active ? "page" : undefined}
-          aria-label={spec.label}
-          title={spec.label}
+          aria-label={label}
+          title={label}
           className={cn(
             "text-body focus-visible:ring-focus-ring flex min-h-11 flex-1 items-center gap-3 rounded-[var(--radius-control)] px-3 focus:outline-none focus-visible:ring-2",
             collapsed ? "justify-center" : "justify-start",
@@ -598,7 +665,11 @@ function ExpandableNavGroup({
           <button
             type="button"
             onClick={() => setForcedOpen((v) => (v === null ? !open : !v))}
-            aria-label={open ? `Collapse ${spec.label}` : `Expand ${spec.label}`}
+            aria-label={
+              open
+                ? collapseTemplate.replace("{label}", label)
+                : expandTemplate.replace("{label}", label)
+            }
             aria-expanded={open}
             className="text-fg-secondary hover:text-fg-primary focus-visible:ring-focus-ring hidden min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2 xl:flex"
           >
@@ -612,7 +683,9 @@ function ExpandableNavGroup({
       {!collapsed && open ? (
         <ul className="ms-4 hidden space-y-0.5 border-s border-[var(--color-border)] ps-3 xl:block">
           {spec.children.map((child) => (
-            <li key={child.key}>{renderItem(child, pathname, planningActive, collapsed)}</li>
+            <li key={child.key}>
+              {renderItem(child, pathname, planningActive, collapsed, labels)}
+            </li>
           ))}
         </ul>
       ) : null}
@@ -624,28 +697,37 @@ function NestedNavGroup({
   spec,
   pathname,
   collapsed,
+  labels = {},
 }: {
   spec: SidebarNestedItemSpec;
   pathname: string;
   collapsed: boolean;
+  labels?: Record<string, string>;
 }) {
   const Icon = spec.icon;
   const activeChild = spec.items.some((it) => isActivePath(it.href, pathname));
   const [forcedOpen, setForcedOpen] = React.useState<boolean | null>(null);
   const open = forcedOpen ?? activeChild;
+  const label = labels[spec.key] ?? spec.label;
+  const collapseTemplate = labels["collapseGroup"] ?? "Collapse {label}";
+  const expandTemplate = labels["expandGroup"] ?? "Expand {label}";
   return (
     <li>
       {!collapsed ? (
         <button
           type="button"
           onClick={() => setForcedOpen((v) => (v === null ? !open : !v))}
-          aria-label={open ? `Collapse ${spec.label}` : `Expand ${spec.label}`}
+          aria-label={
+            open
+              ? collapseTemplate.replace("{label}", label)
+              : expandTemplate.replace("{label}", label)
+          }
           aria-expanded={open}
           className="text-body text-fg-secondary hover:text-fg-primary focus-visible:ring-focus-ring flex min-h-9 w-full items-center justify-between gap-2 rounded-[var(--radius-control)] px-3 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
           <span className="flex min-w-0 items-center gap-2">
             <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="truncate">{spec.label}</span>
+            <span className="truncate">{label}</span>
           </span>
           <ChevronDown
             className={cn(
@@ -659,7 +741,12 @@ function NestedNavGroup({
       {!collapsed && open ? (
         <ul className="ms-3 mt-0.5 space-y-0.5 border-s border-[var(--color-border)] ps-3">
           {spec.items.map((it) => (
-            <SidebarLinkRow key={it.key} spec={it} active={isActivePath(it.href, pathname)} />
+            <SidebarLinkRow
+              key={it.key}
+              spec={it}
+              active={isActivePath(it.href, pathname)}
+              labels={labels}
+            />
           ))}
         </ul>
       ) : null}

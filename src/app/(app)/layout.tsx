@@ -192,10 +192,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   // Resolved chrome copy. Every label the user sees in the
   // notifications bell, the user menu, the mobile topbar, and
-  // (in a follow-up commit) the sidebar navigation is sourced
-  // from the message catalog here. The translators are
-  // interpolated at the top of the request so the per-render
-  // cost is one DB read + one cookie read, not one per child.
+  // the sidebar navigation is sourced from the message catalog
+  // here. The translators are interpolated at the top of the
+  // request so the per-render cost is one DB read + one cookie
+  // read, not one per child.
   const chrome: AppShellChrome = {
     userMenu: {
       account: t("navigation.account"),
@@ -215,6 +215,84 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       title: t("auth.chrome.notifications.title"),
       markAllRead: t("auth.chrome.notifications.markAllRead"),
       empty: t("auth.chrome.notifications.empty"),
+    },
+    // Sidebar labels: flat key→string map indexed by the
+    // navigation-model spec `key`. The sidebar component
+    // resolves each spec's labelKey through this map; missing
+    // keys fall through to the English `label` baked into the
+    // spec (so the product never goes untranslated for
+    // anything the v1 catalog covers).
+    sidebar: {
+      // Chrome keys (used by SidebarHeader, SidebarFooter, and
+      // the aria-labels of groups / badges).
+      sidebarAriaLabel: t("sidebar.sidebarAriaLabel"),
+      studioFlowHome: t("sidebar.studioFlowHome"),
+      agencyLabelFallback: t("sidebar.agencyLabelFallback"),
+      createContent: t("sidebar.createContent"),
+      pendingBadge: t("sidebar.pendingBadge"),
+      collapseGroup: t("sidebar.collapseGroup"),
+      expandGroup: t("sidebar.expandGroup"),
+
+      // Workspace navigation (matches the `key` field of each
+      // buildWorkspaceNavigation spec).
+      "workspace-overview": t("sidebar.workspaceOverview"),
+      content: t("sidebar.workspaceContent"),
+      planning: t("sidebar.planning"),
+      "planning-list": t("sidebar.planningList"),
+      "planning-board": t("sidebar.planningBoard"),
+      "planning-calendar": t("sidebar.planningCalendar"),
+      approvals: t("sidebar.approvals"),
+      "design-queue": t("sidebar.designQueue"),
+      library: t("sidebar.library"),
+      performance: t("sidebar.performance"),
+      channels: t("sidebar.channels"),
+      analytics: t("sidebar.analytics"),
+      brand: t("sidebar.brand"),
+      "brand-kit": t("sidebar.brandKit"),
+      "brand-overview": t("sidebar.brandOverview"),
+      identity: t("sidebar.brandIdentity"),
+      logos: t("sidebar.brandLogos"),
+      colors: t("sidebar.brandColors"),
+      typography: t("sidebar.brandTypography"),
+      voice: t("sidebar.brandVoice"),
+      "voice-tone": t("sidebar.brandVoiceTone"),
+      pillars: t("sidebar.brandPillars"),
+      "brand-publishing": t("sidebar.brandPublishing"),
+      linked: t("sidebar.brandLinked"),
+      "brand-templates": t("sidebar.brandTemplates"),
+      manage: t("sidebar.manage"),
+      activity: t("sidebar.activity"),
+      team: t("sidebar.team"),
+      settings: t("sidebar.settings"),
+      "settings-lifecycle": t("sidebar.settingsLifecycle"),
+      "settings-lead-times": t("sidebar.settingsLeadTimes"),
+      "settings-assignment-defaults": t("sidebar.settingsAssignmentDefaults"),
+      "settings-approval-mode": t("sidebar.settingsApprovalMode"),
+      "settings-ai-assistance": t("sidebar.settingsAiAssistance"),
+      "settings-presets": t("sidebar.settingsPresets"),
+
+      // Agency navigation (matches the `key` field of each
+      // buildAgencyNavigation spec).
+      "my-work": t("sidebar.myWork"),
+      agency: t("sidebar.agencyGroup"),
+      workspaces: t("sidebar.agencyWorkspaces"),
+      admin: t("sidebar.adminGroup"),
+      users: t("sidebar.users"),
+      "agency-settings": t("sidebar.agencySettings"),
+      "agency-settings-general": t("sidebar.settingsGeneral"),
+      "agency-settings-plan": t("sidebar.settingsPlan"),
+      "agency-settings-ai": t("sidebar.settingsAiConfiguration"),
+      "platform-overview": t("sidebar.platformOverview"),
+      "platform-agencies": t("sidebar.platformAgencies"),
+      "platform-security": t("sidebar.platformSecurity"),
+      "platform-access": t("sidebar.platformAccess"),
+      "app-errors": t("sidebar.appErrors"),
+      platform: t("sidebar.platformGroup"),
+
+      // Client-reviewer navigation (matches the `key` field of
+      // each buildClientReviewerNavigation spec).
+      "client-review": t("sidebar.clientReview"),
+      calendar: t("sidebar.clientCalendar"),
     },
   };
 

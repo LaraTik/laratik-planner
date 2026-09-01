@@ -52,12 +52,18 @@ export type IconComponent = typeof LayoutDashboard;
 
 export type SidebarLinkSpec = {
   kind: "link";
-  /** Stable key — used as React key and as the test-id suffix. */
+  /** Stable key — used as React key, the test-id suffix, and the labels-map lookup. */
   key: string;
   /** Resolved href (workspace links are prefixed by the caller). */
   href: string;
-  /** Human label. */
+  /** English fallback label — used when the catalog lookup misses the active locale. */
   label: string;
+  /**
+   * Catalog key (e.g. `sidebar.workspaceOverview`). The Sidebar
+   * component resolves this through the per-request labels map;
+   * the English `label` is the fallback for missing keys.
+   */
+  labelKey: string;
   /** lucide-react icon component (rendered with h-4 w-4). */
   icon: IconComponent;
   /** Optional badge count (actionable only). */
@@ -70,6 +76,7 @@ export type SidebarExpandableGroupSpec = {
   kind: "expandable";
   key: string;
   label: string;
+  labelKey: string;
   href: string;
   icon: IconComponent;
   /** Active when any of these prefixes matches the current pathname. */
@@ -82,6 +89,7 @@ export type SidebarGroupSpec = {
   kind: "group";
   key: string;
   label: string;
+  labelKey: string;
   /** Section heading style (uppercase / muted). */
   heading: boolean;
   /** Group items — links, nested groups, or expandable parents. */
@@ -95,6 +103,7 @@ export type SidebarNestedItemSpec = {
   kind: "nested-group";
   key: string;
   label: string;
+  labelKey: string;
   icon: IconComponent;
   items: SidebarLinkSpec[];
 };
@@ -127,6 +136,7 @@ export function buildWorkspaceNavigation(input: {
       key: "overview",
       href: wsBase,
       label: "Overview",
+      labelKey: "sidebar.workspaceOverview",
       icon: LayoutDashboard,
     },
   ];
@@ -136,12 +146,14 @@ export function buildWorkspaceNavigation(input: {
       kind: "group",
       key: "content",
       label: "Content",
+      labelKey: "sidebar.workspaceContent",
       heading: true,
       items: [
         {
           kind: "expandable",
           key: "planning",
           label: "Planning",
+          labelKey: "sidebar.planning",
           href: `${wsBase}/planning`,
           icon: ClipboardList,
           activePrefixes: [`${wsBase}/planning`, `${wsBase}/board`, `${wsBase}/calendar`],
@@ -152,6 +164,7 @@ export function buildWorkspaceNavigation(input: {
               key: "planning-list",
               href: `${wsBase}/planning`,
               label: "List",
+              labelKey: "sidebar.planningList",
               icon: ClipboardList,
             },
             {
@@ -159,6 +172,7 @@ export function buildWorkspaceNavigation(input: {
               key: "planning-board",
               href: `${wsBase}/board`,
               label: "Board",
+              labelKey: "sidebar.planningBoard",
               icon: Kanban,
             },
             {
@@ -166,6 +180,7 @@ export function buildWorkspaceNavigation(input: {
               key: "planning-calendar",
               href: `${wsBase}/calendar`,
               label: "Calendar",
+              labelKey: "sidebar.planningCalendar",
               icon: CalendarDays,
             },
           ],
@@ -175,6 +190,7 @@ export function buildWorkspaceNavigation(input: {
           key: "approvals",
           href: `${wsBase}/reviews`,
           label: "Approvals",
+          labelKey: "sidebar.approvals",
           icon: MessageSquare,
           badge: badges.approvals,
         },
@@ -183,6 +199,7 @@ export function buildWorkspaceNavigation(input: {
           key: "design-queue",
           href: `${wsBase}/design-queue`,
           label: "Design queue",
+          labelKey: "sidebar.designQueue",
           icon: Palette,
           badge: badges.designQueue,
         },
@@ -191,6 +208,7 @@ export function buildWorkspaceNavigation(input: {
           key: "library",
           href: `${wsBase}/library`,
           label: "Library",
+          labelKey: "sidebar.library",
           icon: Library,
         },
       ],
@@ -199,6 +217,7 @@ export function buildWorkspaceNavigation(input: {
       kind: "group",
       key: "performance",
       label: "Performance",
+      labelKey: "sidebar.performance",
       heading: true,
       items: [
         {
@@ -206,6 +225,7 @@ export function buildWorkspaceNavigation(input: {
           key: "channels",
           href: `${wsBase}/channels`,
           label: "Channels",
+          labelKey: "sidebar.channels",
           icon: Share2,
         },
         {
@@ -213,6 +233,7 @@ export function buildWorkspaceNavigation(input: {
           key: "analytics",
           href: `${wsBase}/analytics/social`,
           label: "Analytics",
+          labelKey: "sidebar.analytics",
           icon: BarChart3,
         },
       ],
@@ -221,12 +242,14 @@ export function buildWorkspaceNavigation(input: {
       kind: "group",
       key: "brand",
       label: "Brand",
+      labelKey: "sidebar.brand",
       heading: true,
       items: [
         {
           kind: "expandable",
           key: "brand-kit",
           label: "Brand kit",
+          labelKey: "sidebar.brandKit",
           href: `${wsBase}/brand-kit`,
           icon: Package,
           activePrefixes: [`${wsBase}/brand-kit`],
@@ -237,12 +260,14 @@ export function buildWorkspaceNavigation(input: {
               key: "brand-kit-overview",
               href: `${wsBase}/brand-kit`,
               label: "Overview",
+              labelKey: "sidebar.workspaceOverview",
               icon: Sparkles,
             },
             {
               kind: "nested-group",
               key: "brand-kit-identity",
               label: "Identity",
+              labelKey: "sidebar.brandIdentity",
               icon: ImageIcon,
               items: [
                 {
@@ -250,6 +275,7 @@ export function buildWorkspaceNavigation(input: {
                   key: "brand-kit-logos",
                   href: `${wsBase}/brand-kit/logos`,
                   label: "Logos",
+                  labelKey: "sidebar.brandLogos",
                   icon: ImageIcon,
                 },
                 {
@@ -257,6 +283,7 @@ export function buildWorkspaceNavigation(input: {
                   key: "brand-kit-colors",
                   href: `${wsBase}/brand-kit/colors`,
                   label: "Colors",
+                  labelKey: "sidebar.brandColors",
                   icon: Palette,
                 },
                 {
@@ -264,6 +291,7 @@ export function buildWorkspaceNavigation(input: {
                   key: "brand-kit-typography",
                   href: `${wsBase}/brand-kit/typography`,
                   label: "Typography",
+                  labelKey: "sidebar.brandTypography",
                   icon: BookOpen,
                 },
               ],
@@ -272,6 +300,7 @@ export function buildWorkspaceNavigation(input: {
               kind: "nested-group",
               key: "brand-kit-voice",
               label: "Voice",
+              labelKey: "sidebar.brandVoice",
               icon: MessageCircle,
               items: [
                 {
@@ -279,6 +308,7 @@ export function buildWorkspaceNavigation(input: {
                   key: "brand-kit-voice",
                   href: `${wsBase}/brand-kit/voice`,
                   label: "Voice & tone",
+                  labelKey: "sidebar.brandVoiceTone",
                   icon: MessageCircle,
                 },
                 {
@@ -286,6 +316,7 @@ export function buildWorkspaceNavigation(input: {
                   key: "brand-kit-pillars",
                   href: `${wsBase}/brand-kit/pillars`,
                   label: "Pillars",
+                  labelKey: "sidebar.brandPillars",
                   icon: Tag,
                 },
                 {
@@ -293,6 +324,7 @@ export function buildWorkspaceNavigation(input: {
                   key: "brand-kit-publishing",
                   href: `${wsBase}/brand-kit/publishing`,
                   label: "Publishing",
+                  labelKey: "sidebar.brandPublishing",
                   icon: BookOpen,
                 },
               ],
@@ -302,6 +334,7 @@ export function buildWorkspaceNavigation(input: {
               key: "brand-kit-linked",
               href: `${wsBase}/brand-kit/linked`,
               label: "Linked",
+              labelKey: "sidebar.brandLinked",
               icon: LinkIcon,
             },
           ],
@@ -311,6 +344,7 @@ export function buildWorkspaceNavigation(input: {
           key: "templates",
           href: `${wsBase}/brand-kit/templates`,
           label: "Templates",
+          labelKey: "sidebar.brandTemplates",
           icon: Sparkles,
           testId: "sidebar-brand-kit-templates",
         },
@@ -323,6 +357,7 @@ export function buildWorkspaceNavigation(input: {
       kind: "group",
       key: "manage",
       label: "Manage",
+      labelKey: "sidebar.manage",
       heading: true,
       items: [
         {
@@ -330,6 +365,7 @@ export function buildWorkspaceNavigation(input: {
           key: "activity",
           href: `${wsBase}/brand-kit/activity`,
           label: "Activity",
+          labelKey: "sidebar.activity",
           icon: History,
         },
         {
@@ -337,12 +373,14 @@ export function buildWorkspaceNavigation(input: {
           key: "team",
           href: `${wsBase}/team`,
           label: "Team",
+          labelKey: "sidebar.team",
           icon: Users,
         },
         {
           kind: "expandable",
           key: "settings",
           label: "Settings",
+          labelKey: "sidebar.settings",
           href: `${wsBase}/settings`,
           icon: Settings,
           activePrefixes: [`${wsBase}/settings`, `${wsBase}/ai-settings`],
@@ -353,6 +391,7 @@ export function buildWorkspaceNavigation(input: {
               key: "settings-lifecycle",
               href: `${wsBase}/settings#lifecycle`,
               label: "Lifecycle",
+              labelKey: "sidebar.settingsLifecycle",
               icon: History,
             },
             {
@@ -360,6 +399,7 @@ export function buildWorkspaceNavigation(input: {
               key: "settings-lead-times",
               href: `${wsBase}/settings#lead-times`,
               label: "Lead times",
+              labelKey: "sidebar.settingsLeadTimes",
               icon: Clock,
             },
             {
@@ -367,6 +407,7 @@ export function buildWorkspaceNavigation(input: {
               key: "settings-defaults",
               href: `${wsBase}/settings#defaults`,
               label: "Assignment defaults",
+              labelKey: "sidebar.settingsAssignmentDefaults",
               icon: Users,
             },
             {
@@ -374,6 +415,7 @@ export function buildWorkspaceNavigation(input: {
               key: "settings-approvals",
               href: `${wsBase}/settings#approvals`,
               label: "Approval mode",
+              labelKey: "sidebar.settingsApprovalMode",
               icon: MessageSquare,
             },
             {
@@ -381,6 +423,7 @@ export function buildWorkspaceNavigation(input: {
               key: "settings-ai",
               href: `${wsBase}/ai-settings`,
               label: "AI assistance",
+              labelKey: "sidebar.settingsAiAssistance",
               icon: Bot,
             },
             {
@@ -388,6 +431,7 @@ export function buildWorkspaceNavigation(input: {
               key: "settings-templates",
               href: `${wsBase}/settings/templates`,
               label: "Presets",
+              labelKey: "sidebar.settingsPresets",
               icon: Sparkles,
             },
           ],
@@ -422,7 +466,14 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
   const { isAdmin, platformAccess, unreadAppErrors } = input;
 
   const top: SidebarLinkSpec[] = [
-    { kind: "link", key: "my-work", href: "/app", label: "My work", icon: Home },
+    {
+      kind: "link",
+      key: "my-work",
+      href: "/app",
+      label: "My work",
+      labelKey: "sidebar.myWork",
+      icon: Home,
+    },
   ];
 
   const groups: SidebarGroupSpec[] = [
@@ -430,6 +481,7 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
       kind: "group",
       key: "agency",
       label: "Agency",
+      labelKey: "sidebar.agencyGroup",
       heading: true,
       items: [
         {
@@ -437,6 +489,7 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
           key: "workspaces",
           href: "/app/workspaces",
           label: "Workspaces",
+          labelKey: "sidebar.agencyWorkspaces",
           icon: Briefcase,
         },
       ],
@@ -448,13 +501,22 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
       kind: "group",
       key: "admin",
       label: "Admin",
+      labelKey: "sidebar.adminGroup",
       heading: true,
       items: [
-        { kind: "link", key: "users", href: "/app/users", label: "User management", icon: Users },
+        {
+          kind: "link",
+          key: "users",
+          href: "/app/users",
+          label: "User management",
+          labelKey: "sidebar.users",
+          icon: Users,
+        },
         {
           kind: "expandable",
           key: "agency-settings",
           label: "Agency settings",
+          labelKey: "sidebar.agencySettings",
           href: "/app/agency-settings",
           icon: Shield,
           activePrefixes: ["/app/agency-settings"],
@@ -465,6 +527,7 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
               key: "agency-settings-general",
               href: "/app/agency-settings",
               label: "General",
+              labelKey: "sidebar.settingsGeneral",
               icon: Settings,
             },
             {
@@ -472,6 +535,7 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
               key: "agency-settings-plan",
               href: "/app/agency-settings/plan",
               label: "Plan and usage",
+              labelKey: "sidebar.settingsPlan",
               icon: Gauge,
             },
             {
@@ -479,6 +543,7 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
               key: "agency-settings-ai",
               href: "/app/agency-settings/ai",
               label: "AI configuration",
+              labelKey: "sidebar.settingsAiConfiguration",
               icon: Bot,
             },
           ],
@@ -494,6 +559,7 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
         key: "platform-overview",
         href: "/app/platform/overview",
         label: "Platform overview",
+        labelKey: "sidebar.platformOverview",
         icon: LayoutDashboard,
       },
     ];
@@ -503,6 +569,7 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
         key: "platform-agencies",
         href: "/app/platform/agencies",
         label: "Agencies",
+        labelKey: "sidebar.platformAgencies",
         icon: Shield,
       });
     }
@@ -512,6 +579,7 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
         key: "platform-security",
         href: "/app/platform/security",
         label: "Security & support",
+        labelKey: "sidebar.platformSecurity",
         icon: Lock,
       });
     }
@@ -521,6 +589,7 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
         key: "platform-access",
         href: "/app/platform/access",
         label: "Platform access",
+        labelKey: "sidebar.platformAccess",
         icon: ShieldCheck,
       });
     }
@@ -529,6 +598,7 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
       key: "platform-errors",
       href: "/app/platform/errors",
       label: "App errors",
+      labelKey: "sidebar.appErrors",
       icon: AlertOctagon,
       badge: unreadAppErrors,
       testId: "sidebar-platform-errors",
@@ -538,6 +608,7 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
       kind: "group",
       key: "platform",
       label: "Platform",
+      labelKey: "sidebar.platformGroup",
       heading: true,
       items: platformItems,
     });
@@ -563,6 +634,7 @@ export function buildClientReviewerNavigation(input: { wsBase: string }): {
         key: "client-review",
         href: `${wsBase}/client`,
         label: "Client review",
+        labelKey: "sidebar.clientReview",
         icon: MessageSquare,
       },
       {
@@ -570,6 +642,7 @@ export function buildClientReviewerNavigation(input: { wsBase: string }): {
         key: "client-calendar",
         href: `${wsBase}/client/calendar`,
         label: "Calendar",
+        labelKey: "sidebar.planningCalendar",
         icon: CalendarDays,
       },
     ],

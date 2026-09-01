@@ -17,11 +17,20 @@ import { cn } from "@/lib/utils";
  * resolves every string through the message catalog and hands
  * the bundle to the AppShell. The AppShell itself does no
  * translation work — it just wires the bundle through to the
- * NotificationsBell, UserMenu, and (eventually) the sidebar.
+ * NotificationsBell, UserMenu, and the sidebar.
+ *
+ * `sidebar` is a flat key→string map indexed by the
+ * navigation-model spec `key` (e.g. `my-work`, `planning`,
+ * `settings`) plus three chrome keys: `sidebarAriaLabel`,
+ * `studioFlowHome`, `agencyLabelFallback`, `createContent`,
+ * `pendingBadge`, `collapseGroup`, `expandGroup`. Missing
+ * keys fall through to the English `label` baked into each
+ * spec.
  */
 export type AppShellChrome = {
   userMenu: UserMenuCopy;
   notifications: NotificationsCopy;
+  sidebar: Record<string, string>;
 };
 
 /**
@@ -146,6 +155,7 @@ export function AppShell({
           workspaceBadgesByWorkspaceId={workspaceBadges ?? {}}
           unreadAppErrors={unreadAppErrors}
           collapsed={sidebarCollapsed}
+          labels={chrome.sidebar}
         />
       </aside>
 
