@@ -1332,5 +1332,20 @@
       "member": "Member",
       "empty": "No members yet."
     }
+  },
+  "brandKit": {
+    "title": "Brand Kit",
+    "breadcrumbAria": "Brand kit breadcrumb",
+    "section": {
+      "voice": "Voice",
+      "pillars": "Pillars",
+      "logos": "Logos",
+      "colors": "Colors",
+      "typography": "Typography",
+      "templates": "Templates",
+      "publishing": "Publishing",
+      "linked": "Linked accounts",
+      "activity": "Activity"
+    }
   }
 }

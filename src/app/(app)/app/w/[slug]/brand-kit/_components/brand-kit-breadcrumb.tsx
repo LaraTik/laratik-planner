@@ -18,7 +18,25 @@ import { isActivePath } from "@/lib/utils";
  * trailing section label is a non-link `<span>` (you can't click
  * the page you're already on).
  */
-export function BrandKitBreadcrumb({ workspaceName }: { workspaceName: string }) {
+const BRAND_KIT_SECTION_KEYS: Record<string, string> = {
+  voice: "brandKit.section.voice",
+  pillars: "brandKit.section.pillars",
+  logos: "brandKit.section.logos",
+  colors: "brandKit.section.colors",
+  typography: "brandKit.section.typography",
+  templates: "brandKit.section.templates",
+  publishing: "brandKit.section.publishing",
+  linked: "brandKit.section.linked",
+  activity: "brandKit.section.activity",
+};
+
+export function BrandKitBreadcrumb({
+  workspaceName,
+  t,
+}: {
+  workspaceName: string;
+  t: (key: string) => string;
+}) {
   const pathname = usePathname();
   // The current section is the segment after `/brand-kit/`. Empty
   // string means we're on the overview (`/brand-kit` itself).
@@ -28,15 +46,12 @@ export function BrandKitBreadcrumb({ workspaceName }: { workspaceName: string })
   const wsBase = pathname.split("/brand-kit")[0] ?? "";
 
   const sectionLabel = currentSection
-    ? currentSection
-        .split("-")
-        .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-        .join(" ")
+    ? t(BRAND_KIT_SECTION_KEYS[currentSection] ?? currentSection)
     : null;
 
   return (
     <nav
-      aria-label="Brand kit breadcrumb"
+      aria-label={t("brandKit.breadcrumbAria")}
       data-testid="brand-kit-breadcrumb"
       className="text-label text-fg-muted flex items-center gap-1"
     >
@@ -55,7 +70,7 @@ export function BrandKitBreadcrumb({ workspaceName }: { workspaceName: string })
         }
         className="hover:text-fg-primary font-semibold transition-colors"
       >
-        Brand Kit
+        {t("brandKit.title")}
       </Link>
       {sectionLabel ? (
         <>

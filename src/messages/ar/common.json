@@ -1298,5 +1298,20 @@
       "member": "العضو",
       "empty": "لا يوجد أعضاء بعد."
     }
+  },
+  "brandKit": {
+    "title": "هوية العلامة",
+    "breadcrumbAria": "مسار تنقل هوية العلامة",
+    "section": {
+      "voice": "الصوت",
+      "pillars": "الأعمدة",
+      "logos": "الشعارات",
+      "colors": "الألوان",
+      "typography": "الخطوط",
+      "templates": "القوالب",
+      "publishing": "النشر",
+      "linked": "الحسابات المرتبطة",
+      "activity": "النشاط"
+    }
   }
 }
