@@ -8,6 +8,7 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { hasAgencyProviderConfig } from "@/lib/social/provider-config";
 import { findPendingConnectionForWorkspace } from "@/lib/social/repository";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
@@ -38,11 +39,12 @@ function channelsColumns(props: {
     string,
     Array<{ id: string; accountName: string; platform: "instagram" | "facebook" | "tiktok" }>
   >;
+  t: (key: string) => string;
 }): DataTableColumnDef<ChannelRow>[] {
   return [
     {
       key: "platform",
-      header: "Platform",
+      header: props.t("channels.colPlatform"),
       cell: (row) => (
         <div className="flex items-center gap-3">
           <PlatformIcon platform={row.platform} tile />
@@ -54,7 +56,7 @@ function channelsColumns(props: {
     },
     {
       key: "account",
-      header: "Account",
+      header: props.t("channels.colAccount"),
       cell: (row) => (
         <div className="text-body text-fg-primary flex flex-col">
           <span className="font-medium">{row.accountName}</span>
@@ -64,7 +66,7 @@ function channelsColumns(props: {
     },
     {
       key: "url",
-      header: "Profile URL",
+      header: props.t("channels.colUrl"),
       hideOn: "lg",
       cellClassName: "text-body text-fg-muted hidden max-w-[200px] truncate lg:table-cell",
       cell: (row) =>
@@ -84,7 +86,7 @@ function channelsColumns(props: {
     },
     {
       key: "state",
-      header: "State",
+      header: props.t("channels.colState"),
       cell: (row) => (
         <ConnectionStatusBadge
           status={
@@ -97,13 +99,13 @@ function channelsColumns(props: {
     },
     {
       key: "owner",
-      header: "Owner / Contact",
+      header: props.t("channels.colOwner"),
       hideOn: "md",
       cell: (row) => row.accountType || <span className="text-fg-muted">&mdash;</span>,
     },
     {
       key: "updated",
-      header: "Last updated",
+      header: props.t("channels.colUpdated"),
       hideOn: "xl",
       cell: (row) => formatRelativeDate(row.updatedAt),
     },
@@ -194,6 +196,7 @@ export default async function ChannelsPage({
   const sp = await searchParams;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
+  const { t } = await tForActive();
   const canManage = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
     "workspace_manager",
   ]);
@@ -265,28 +268,25 @@ export default async function ChannelsPage({
   const metaErrorDescription = Array.isArray(metaErrorDescRaw)
     ? metaErrorDescRaw[0]
     : metaErrorDescRaw;
-  const META_ERROR_COPY: Record<string, string> = {
-    access_denied: "Meta authorization was cancelled. Click Connect Meta to try again.",
-    not_configured:
-      "This agency has no Meta provider configured. An admin must add Meta app credentials first.",
-    missing_code: "Meta returned without an authorization code. Try again.",
-    provider_error:
-      "The Meta authorization exchange failed. Check the app credentials and try again.",
-    exchange_failed: "The Meta authorization exchange failed. Try again.",
-    invalid_state: "The OAuth state token was missing or already used. Try again.",
+  const META_ERROR_KEY: Record<string, string> = {
+    access_denied: "channels.metaErrorAccessDenied",
+    not_configured: "channels.metaErrorNotConfigured",
+    missing_code: "channels.metaErrorMissingCode",
+    provider_error: "channels.metaErrorProviderError",
+    exchange_failed: "channels.metaErrorExchangeFailed",
+    invalid_state: "channels.metaErrorInvalidState",
   };
   const metaErrorMessage = metaError
-    ? (META_ERROR_COPY[metaError] ?? `Meta authorization failed (${metaError}).`)
+    ? t(META_ERROR_KEY[metaError] ?? "channels.metaErrorGeneric", { code: metaError })
     : null;
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow={workspace.name}
-        title="Channels"
+        title={t("channels.title")}
         description={
           <>
-            Keep the brand&rsquo;s account information in one place. Connections and analytics are
-            planned for a future version.
+            {t("channels.description")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
@@ -335,16 +335,18 @@ export default async function ChannelsPage({
           <Card padding="md" data-testid="connect-meta-card">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h3 className="text-body text-fg-primary font-semibold">Connect a Meta account</h3>
+                <h3 className="text-body text-fg-primary font-semibold">
+                  {t("channels.connectMetaTitle")}
+                </h3>
                 <p className="text-label text-fg-muted mt-1">
-                  Authorize Facebook Pages and any linked Instagram professional accounts. Read-only
-                  — no publishing, no ads.
+                  {t("channels.connectMetaDescription")}
                 </p>
               </div>
               <form action="/api/social/meta/connect" method="POST">
                 <input type="hidden" name="slug" value={slug} />
                 <Button type="submit" variant="secondary" data-testid="connect-meta-button">
-                  <PlugZap className="h-4 w-4" aria-hidden={true} /> Connect Meta
+                  <PlugZap className="h-4 w-4" aria-hidden={true} />{" "}
+                  {t("channels.connectMetaButton")}
                 </Button>
               </form>
             </div>
@@ -353,10 +355,11 @@ export default async function ChannelsPage({
           <Card padding="md" data-testid="setup-meta-card">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h3 className="text-body text-fg-primary font-semibold">Connect a Meta account</h3>
+                <h3 className="text-body text-fg-primary font-semibold">
+                  {t("channels.connectMetaTitle")}
+                </h3>
                 <p className="text-label text-fg-muted mt-1">
-                  An agency admin needs to add Meta app credentials before the workspace can connect
-                  a Meta account. The setup is per-agency and takes one minute.
+                  {t("channels.setupMetaDescription")}
                 </p>
               </div>
               <a
@@ -364,7 +367,7 @@ export default async function ChannelsPage({
                 className="border-border bg-surface text-fg-primary text-body hover:bg-surface-subtle inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-4 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                 data-testid="setup-meta-cta"
               >
-                <PlugZap className="h-4 w-4" aria-hidden={true} /> Set up Meta
+                <PlugZap className="h-4 w-4" aria-hidden={true} /> {t("channels.setupMetaButton")}
               </a>
             </div>
           </Card>
@@ -385,6 +388,7 @@ export default async function ChannelsPage({
                 slug,
                 canManage,
                 affectedByConnection: affectedByConnection,
+                t,
               })}
             />
           </div>
@@ -393,12 +397,8 @@ export default async function ChannelsPage({
         <Card variant="dashed" padding="lg" data-testid="channels-empty-state">
           <EmptyState
             icon={<Radio className="h-8 w-8" />}
-            title="No channels yet"
-            description={
-              canManage
-                ? "A workspace manager can add the brand’s accounts here."
-                : "Once a workspace manager adds accounts, they will appear in this list."
-            }
+            title={t("channels.emptyTitle")}
+            description={canManage ? t("channels.adminEmpty") : t("channels.memberEmpty")}
           />
         </Card>
       )}
