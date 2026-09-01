@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { isAgencyAdmin } from "@/lib/auth/policy";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { db } from "@/lib/db";
 import { agencyEntitlements, platformPlanTemplates } from "@/lib/db/schema";
 import { getUsage } from "@/lib/usage";
@@ -22,6 +23,7 @@ export default async function AgencyPlanPage() {
   const context = await resolveActiveAgencyContext({ actor });
   if (!context) redirect("/setup");
   if (!(await isAgencyAdmin(actor, context.agencyId))) redirect("/app");
+  const { t } = await tForActive();
   const [entitlement, usage] = await Promise.all([
     db
       .select({
@@ -41,34 +43,29 @@ export default async function AgencyPlanPage() {
   if (!entitlement)
     return (
       <PageHeader
-        title="Plan not configured"
-        description="Ask the platform administrator to assign a plan."
+        title={t("agencyPlan.planNotConfigured")}
+        description={t("agencyPlan.planNotConfiguredBody")}
       />
     );
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Agency Settings"
-        title="Plan and usage"
-        description={`Read-only limits for the ${entitlement.planName} plan. Existing work remains available if a limit is reduced.`}
+        eyebrow={t("agencyPlan.eyebrow")}
+        title={t("agencyPlan.title")}
+        description={t("agencyPlan.description", { plan: entitlement.planName })}
         action={
           <Link
             href={
               "mailto:support@laratik.com" +
               "?subject=" +
-              encodeURIComponent("Planner limit change request") +
+              encodeURIComponent(t("agencyPlan.requestSubject")) +
               "&body=" +
-              encodeURIComponent(
-                "Hello,\n\nI'd like to request a limit change for my agency.\n\n" +
-                  "Agency name:\nWorkspace: " +
-                  (typeof window !== "undefined" ? window.location.pathname : "") +
-                  "\n\nCurrent limits / usage: see /app/agency-settings/plan\n\nReason:\n",
-              )
+              encodeURIComponent(t("agencyPlan.requestBody"))
             }
             className="bg-primary text-primary-foreground text-button rounded-[var(--radius-control)] px-3 py-2 font-semibold"
           >
-            Request limit change
+            {t("agencyPlan.requestLimitChange")}
           </Link>
         }
       />
@@ -78,8 +75,9 @@ export default async function AgencyPlanPage() {
           <CardTitle>{entitlement.planName}</CardTitle>
         </div>
         <CardDescription>
-          Effective since {entitlement.effectiveSince.toISOString().slice(0, 10)}. New allocations
-          stop at 100%; nothing is deleted automatically.
+          {t("agencyPlan.effectiveSince", {
+            date: entitlement.effectiveSince.toISOString().slice(0, 10),
+          })}
         </CardDescription>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {Object.entries(usage.thresholds).map(([resource, snapshot]) => (
@@ -92,7 +90,7 @@ export default async function AgencyPlanPage() {
               </p>
               <p className="text-title-card text-fg-primary font-semibold">
                 {(usage.counters[resource] ?? 0).toLocaleString()} /{" "}
-                {snapshot.limit?.toLocaleString() ?? "Unlimited"}
+                {snapshot.limit?.toLocaleString() ?? t("agencyPlan.unlimited")}
               </p>
               <Badge
                 variant={
@@ -110,13 +108,8 @@ export default async function AgencyPlanPage() {
         </div>
       </Card>
       <Card padding="lg">
-        <CardTitle>How limits work</CardTitle>
-        <CardDescription className="mt-2">
-          Workspaces cover active brand workspaces. Users include active members and pending
-          administrator invitations. Social profiles have both an agency-wide total and an
-          individual cap for each network. AI requests and tokens reset monthly; storage is
-          cumulative.
-        </CardDescription>
+        <CardTitle>{t("agencyPlan.howLimitsWork")}</CardTitle>
+        <CardDescription className="mt-2">{t("agencyPlan.howLimitsWorkBody")}</CardDescription>
       </Card>
 
       <SupportAccessRequestsCard agencyId={context.agencyId} />

@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth/config";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { db } from "@/lib/db";
 import { agencies, agencySocialProviderConfig } from "@/lib/db/schema";
@@ -41,19 +42,20 @@ export default async function AgencySocialProvidersPage() {
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) redirect("/setup");
+  const { t } = await tForActive();
   if (!(await isAgencyAdmin(actor, agencyId))) {
     return (
       <div className="space-y-4" data-testid="agency-providers-forbidden">
         <PageHeader
-          title="Social provider config"
-          description="Only agency admins can configure provider credentials."
+          title={t("agencyProviders.title")}
+          description={t("agencyProviders.forbiddenBody")}
         />
         <Link
           href="/app/agency-settings/social"
           className="text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
         >
           <DirAwareArrowLeft className="h-4 w-4" aria-hidden={true} />
-          Back to Social analytics
+          {t("agencyProviders.backToSocial")}
         </Link>
       </div>
     );
@@ -100,15 +102,13 @@ export default async function AgencySocialProvidersPage() {
   return (
     <div className="space-y-6" data-testid="agency-providers-page">
       <PageHeader
-        title="Social provider config"
+        title={t("agencyProviders.title")}
         description={
           <>
-            Per-agency credentials for the social analytics pipeline. Each agency brings its own
-            Meta and TikTok app — your tokens never leave your tenant. The app secret is sealed with
-            the same key we use for OAuth tokens, then re-fetched only when the cron or a Re-test
-            needs it.
+            {t("agencyProviders.description")}
             <span className="text-label text-fg-muted ms-2 inline-flex items-center gap-1">
-              <KeyRound className="h-3 w-3" aria-hidden={true} /> Sealed at rest.
+              <KeyRound className="h-3 w-3" aria-hidden={true} />{" "}
+              {t("agencyProviders.sealedAtRest")}
             </span>
           </>
         }
@@ -117,13 +117,11 @@ export default async function AgencySocialProvidersPage() {
       <section className="space-y-3">
         <header className="flex items-center gap-2">
           <PlugZap className="h-4 w-4" aria-hidden={true} />
-          <h2 className="text-title-card text-fg-primary font-semibold">Providers</h2>
+          <h2 className="text-title-card text-fg-primary font-semibold">
+            {t("agencyProviders.providersHeading")}
+          </h2>
         </header>
-        <p className="text-body text-fg-secondary">
-          Save a row to enable the provider for every workspace in this agency. The first save takes
-          about a minute; you can rotate the secret any time by re-pasting — the existing OAuth
-          connections keep working until you remove the row.
-        </p>
+        <p className="text-body text-fg-secondary">{t("agencyProviders.providersBody")}</p>
         <div className="grid gap-4 md:grid-cols-2">
           <ProviderConfigCard
             provider="meta"

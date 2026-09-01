@@ -1358,6 +1358,48 @@
     "notFoundBody": "The page you tried to reach doesn't exist, or you don't have access to it.",
     "backToMyWork": "Back to My Work"
   },
+  "agencyProviders": {
+    "title": "Social provider config",
+    "description": "Per-agency credentials for the social analytics pipeline. Each agency brings its own Meta and TikTok app — your tokens never leave your tenant. The app secret is sealed with the same key we use for OAuth tokens, then re-fetched only when the cron or a Re-test needs it.",
+    "forbiddenBody": "Only agency admins can configure provider credentials.",
+    "backToSocial": "Back to Social analytics",
+    "sealedAtRest": "Sealed at rest.",
+    "providersHeading": "Providers",
+    "providersBody": "Save a row to enable the provider for every workspace in this agency. The first save takes about a minute; you can rotate the secret any time by re-pasting — the existing OAuth connections keep working until you remove the row."
+  },
+  "agencyPlan": {
+    "title": "Plan and usage",
+    "eyebrow": "Agency Settings",
+    "description": "Read-only limits for the {plan} plan. Existing work remains available if a limit is reduced.",
+    "planNotConfigured": "Plan not configured",
+    "planNotConfiguredBody": "Ask the platform administrator to assign a plan.",
+    "effectiveSince": "Effective since {date}. New allocations stop at 100%; nothing is deleted automatically.",
+    "unlimited": "Unlimited",
+    "howLimitsWork": "How limits work",
+    "howLimitsWorkBody": "Workspaces cover active brand workspaces. Users include active members and pending administrator invitations. Social profiles have both an agency-wide total and an individual cap for each network. AI requests and tokens reset monthly; storage is cumulative.",
+    "requestLimitChange": "Request limit change",
+    "requestSubject": "Planner limit change request",
+    "requestBody": "Hello,\n\nI'd like to request a limit change for my agency.\n\nAgency name:\nWorkspace: /app/agency-settings/plan\n\nCurrent limits / usage: see /app/agency-settings/plan\n\nReason:\n"
+  },
+  "agencyAi": {
+    "title": "AI configuration",
+    "eyebrow": "Agency Settings",
+    "description": "Control {vendor} access, capability toggles, and usage visibility for every workspace in this agency.",
+    "forbiddenBody": "Only agency admins can change AI settings.",
+    "backToAgencySettings": "Back to Agency Settings",
+    "secretBlurb": "The full API key is never displayed after the initial paste. The UI only stores a 4-character masked suffix. Rotation is done by replacing the managed secret below.",
+    "baseBlurb": "The current {vendor} base is {base} ({compat}). Change it via the deployment environment ({env}).",
+    "workspaceManagerBlurb": "Workspace managers see a read-only status card at /w/<slug>/ai-settings — they can't change anything here, only see what the agency has configured."
+  },
+  "agencySocial": {
+    "title": "Social analytics",
+    "eyebrow": "Agency Settings",
+    "description": "Connect Meta (Facebook / Instagram) and TikTok to track follower counts, reach, and engagement for every channel in this agency. Tokens are encrypted at rest with a per-agency key.",
+    "forbiddenBody": "Only agency admins can change social analytics settings.",
+    "backToAgencySettings": "Back to Agency Settings",
+    "dekBlurb": "The agency DEK is wrapped by the platform KEK ({kek}) and stored in agency_social_dek. The plaintext DEK is shown to the agency admin exactly once at enable / rotate time and is never persisted or logged.",
+    "rotateBlurb": "If the platform operator rotates the KEK, run pnpm tsx scripts/rotate-social-kek.ts --new-kek \"$(openssl rand -base64 32)\" to re-wrap every agency DEK."
+  },
   "agencySettings": {
     "title": "Agency Settings",
     "description": "Agency identity, access footprint, and environment-managed services.",

@@ -7,6 +7,7 @@ import { isAgencyAdmin } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { serverEnv } from "@/lib/validation/env";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { AiDiagnosticPanel } from "@/components/ai/ai-diagnostic-panel";
 import { AiSettingsForm } from "./ai-settings-form";
@@ -40,19 +41,17 @@ export default async function AgencyAiSettingsPage() {
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) redirect("/setup");
+  const { t } = await tForActive();
   if (!(await isAgencyAdmin(actor, agencyId))) {
     return (
       <div className="space-y-4" data-testid="agency-ai-forbidden">
-        <PageHeader
-          title="AI configuration"
-          description="Only agency admins can change AI settings."
-        />
+        <PageHeader title={t("agencyAi.title")} description={t("agencyAi.forbiddenBody")} />
         <Link
           href="/app/agency-settings"
           className="text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
         >
           <DirAwareArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to Agency Settings
+          {t("agencyAi.backToAgencySettings")}
         </Link>
       </div>
     );
@@ -96,21 +95,16 @@ export default async function AgencyAiSettingsPage() {
   return (
     <div className="space-y-6" data-testid="agency-ai-settings">
       <PageHeader
-        eyebrow="Agency Settings"
-        title="AI configuration"
-        description={
-          <>
-            Control {AI_PROVIDER.vendor} access, capability toggles, and usage visibility for every
-            workspace in this agency.
-          </>
-        }
+        eyebrow={t("agencyAi.eyebrow")}
+        title={t("agencyAi.title")}
+        description={t("agencyAi.description", { vendor: AI_PROVIDER.vendor })}
         action={
           <Link
             href="/app/agency-settings"
             className="text-primary focus-visible:ring-focus-ring text-body inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
           >
             <DirAwareArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Back to Agency Settings
+            {t("agencyAi.backToAgencySettings")}
           </Link>
         }
       />
@@ -126,18 +120,18 @@ export default async function AgencyAiSettingsPage() {
 
       <div className="border-border bg-surface-subtle text-body text-fg-secondary flex flex-wrap items-start gap-2 rounded-[var(--radius-control)] border p-3">
         <KeyRound className="text-fg-muted mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        <p>
-          The full API key is never displayed after the initial paste. The UI only stores a
-          4-character masked suffix. Rotation is done by replacing the managed secret below.
-        </p>
+        <p>{t("agencyAi.secretBlurb")}</p>
       </div>
 
       <div className="border-border bg-surface-subtle text-body text-fg-secondary flex flex-wrap items-start gap-2 rounded-[var(--radius-control)] border p-3">
         <Server className="text-fg-muted mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <p>
-          The current {AI_PROVIDER.vendor} base is{" "}
-          <span className="font-semibold">{serverEnv.MINIMAX_BASE_URL}</span> ({AI_PROVIDER.compat}
-          ). Change it via the deployment environment (<code>{AI_PROVIDER.baseUrlEnv}</code>).
+          {t("agencyAi.baseBlurb", {
+            vendor: AI_PROVIDER.vendor,
+            base: serverEnv.MINIMAX_BASE_URL,
+            compat: AI_PROVIDER.compat,
+            env: AI_PROVIDER.baseUrlEnv,
+          })}
         </p>
       </div>
 
@@ -169,13 +163,7 @@ export default async function AgencyAiSettingsPage() {
 
       <div className="border-border bg-surface-subtle text-body text-fg-secondary flex flex-wrap items-start gap-2 rounded-[var(--radius-control)] border p-3">
         <Bot className="text-fg-muted mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        <p>
-          Workspace managers see a read-only status card at
-          <code className="bg-surface text-label ms-1 rounded px-1.5 py-0.5 font-semibold">
-            /w/&lt;slug&gt;/ai-settings
-          </code>
-          — they can&apos;t change anything here, only see what the agency has configured.
-        </p>
+        <p>{t("agencyAi.workspaceManagerBlurb")}</p>
       </div>
     </div>
   );
