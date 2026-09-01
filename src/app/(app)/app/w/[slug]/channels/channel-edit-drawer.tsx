@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { archiveChannelAction, testChannelConnectionAction, updateChannelAction } from "./actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Channel edit form fields are kept inline here rather than extracted
@@ -103,8 +104,9 @@ export function ChannelEditDrawer({
    */
   t?: Translator;
 }) {
+  const localeT = useLocaleT();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
-    t ? t(key, params) : fallback;
+    t ? t(key, params) : localeT(key, params) || fallback;
   const boundAction = React.useMemo(
     () => updateChannelAction.bind(null, slug, channel.id),
     [slug, channel.id],
@@ -343,8 +345,9 @@ export function ChannelRowActions({
    */
   t?: Translator;
 }) {
+  const localeT = useLocaleT();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
-    t ? t(key, params) : fallback;
+    t ? t(key, params) : localeT(key, params) || fallback;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isArchiving, startArchiveTransition] = useTransition();

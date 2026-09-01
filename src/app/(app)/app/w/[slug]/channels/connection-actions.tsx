@@ -17,6 +17,7 @@ import {
   testChannelConnectionAction,
 } from "./actions";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * M4 — connection lifecycle client component.
@@ -86,8 +87,9 @@ export function ConnectionActions({
    */
   t?: Translator;
 }) {
+  const localeT = useLocaleT();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
-    t ? t(key, params) : fallback;
+    t ? t(key, params) : localeT(key, params) || fallback;
   const [pending, startTransition] = useTransition();
   const [flash, setFlash] = useState<TestFlash | null>(null);
   const [error, setError] = useState<string | null>(null);

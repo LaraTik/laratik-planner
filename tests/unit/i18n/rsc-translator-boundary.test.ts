@@ -37,7 +37,7 @@ function clientBoundaryOffenders(): string[] {
   const offenders: string[] = [];
   for (const file of sourceFiles(SRC_ROOT)) {
     const source = fs.readFileSync(file, "utf8");
-    if (/^\s*["']use client["']/.test(source) || !source.includes("t={t}")) continue;
+    if (/^\s*["']use client["']/.test(source)) continue;
     const syntax = ts.createSourceFile(
       file,
       source,
@@ -75,7 +75,9 @@ function clientBoundaryOffenders(): string[] {
               attribute.name.text === "t" &&
               !!attribute.initializer &&
               ts.isJsxExpression(attribute.initializer) &&
-              attribute.initializer.expression?.getText(syntax) === "t",
+              /^(?:t|(?:[A-Za-z_$][\w$]*\.)+t)$/.test(
+                attribute.initializer.expression?.getText(syntax) ?? "",
+              ),
           );
           if (hasTranslatorProp) {
             offenders.push(

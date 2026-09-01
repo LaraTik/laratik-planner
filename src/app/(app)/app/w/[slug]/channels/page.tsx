@@ -143,7 +143,6 @@ function channelsColumns(props: {
                     "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected") ??
                   "manual",
               }}
-              t={props.t}
             />
           );
         }
@@ -162,7 +161,6 @@ function channelsColumns(props: {
                 "connected",
             }}
             affectedChannels={affected}
-            t={props.t}
           />
         );
       },

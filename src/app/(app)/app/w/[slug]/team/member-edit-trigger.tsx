@@ -8,6 +8,7 @@ import {
   type MemberEditSubject,
   type MemberEditWorkspace,
 } from "@/app/(app)/app/users/member-edit-drawer";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Per-row Edit trigger for the workspace Team page. Each row owns its
@@ -37,9 +38,10 @@ export function MemberEditTrigger({
    */
   t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const localeT = useLocaleT();
   const [open, setOpen] = useState(false);
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
-    t ? t(key, params) : fallback;
+    t ? t(key, params) : localeT(key, params) || fallback;
   const subject: MemberEditSubject | null = open
     ? {
         id: member.id,
