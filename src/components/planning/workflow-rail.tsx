@@ -966,6 +966,7 @@ function ActionButtons({
             confirmLabel={tr("contentDetail.workflow.requestChangesConfirm", "Request changes")}
             disabled={pending}
             onConfirm={(reason) => onExecuteTransition("request_content_changes", reason)}
+            {...(t ? { closeAriaLabel: t("common.dialogCloseAria") } : {})}
           />
         </>
       ) : null}
@@ -1026,6 +1027,7 @@ function ActionButtons({
           destructive
           disabled={pending}
           onConfirm={(reason) => onExecuteTransition("cancel", reason)}
+          {...(t ? { closeAriaLabel: t("common.dialogCloseAria") } : {})}
         />
       ) : null}
       {[
@@ -1050,6 +1052,7 @@ function ActionButtons({
           confirmLabel={tr("contentDetail.workflow.blockConfirm", "Block item")}
           disabled={pending}
           onConfirm={(reason) => onExecuteTransition("block", reason)}
+          {...(t ? { closeAriaLabel: t("common.dialogCloseAria") } : {})}
         />
       ) : null}
     </div>

@@ -127,6 +127,7 @@ export function ApprovalTimeline({
                     "workspaceOverviewDashboard.workflow.sendRequest",
                     "Send request",
                   )}
+                  {...(t ? { closeAriaLabel: t("common.dialogCloseAria") } : {})}
                   disabled={disabled}
                   onConfirm={(feedback) => onRequestChanges(a.id, feedback)}
                 />
