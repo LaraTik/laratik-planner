@@ -11,6 +11,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PlanAiSections } from "./plan-ai-sections";
 import { SupportAccessSection } from "./support-section";
 import { PlatformEditAgencyForm } from "./edit-agency-form";
@@ -44,6 +45,8 @@ type AgencyDetail = {
   totalAiCalls: number;
   recentWorkspaces: Array<{ id: string; name: string; slug: string; updatedAt: Date }>;
 };
+
+type Translator = (key: string, params?: Record<string, string | number>) => string;
 
 async function loadAgencyDetail(agencyId: string): Promise<AgencyDetail | null> {
   const [agency] = await db
@@ -110,9 +113,15 @@ export default async function PlatformAgencyDetailPage({
 }: {
   params: Promise<{ agencyId: string }>;
 }) {
+  const { t } = await tForActive();
   const actor = await currentActor();
   if (!actor) {
-    return <PermissionNotice title="Sign in required" description="Sign in to view this agency." />;
+    return (
+      <PermissionNotice
+        title={t("platform.signInRequired")}
+        description={t("platform.agencySignInBody")}
+      />
+    );
   }
   let principal;
   try {
@@ -120,8 +129,8 @@ export default async function PlatformAgencyDetailPage({
   } catch {
     return (
       <PermissionNotice
-        title="Agency access unavailable"
-        description="Your platform role does not include agency oversight."
+        title={t("platform.agenciesUnavailable")}
+        description={t("platform.agenciesUnavailableBody")}
       />
     );
   }
@@ -138,18 +147,27 @@ export default async function PlatformAgencyDetailPage({
         data-testid="platform-agency-back"
       >
         <DirAwareArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Back to agencies
+        {t("platform.agencyBackToList")}
       </Link>
 
       <PageHeader
-        eyebrow="Platform · Agency"
+        eyebrow={t("platform.agencyDetailEyebrow")}
         title={detail.name}
         description={
           <>
-            Slug <span className="text-fg-primary font-semibold">{detail.slug}</span> · created{" "}
-            {formatRelativeDate(detail.createdAt)}
+            {t("platform.agencyDetailSlugLabel")}{" "}
+            <span className="text-fg-primary font-semibold">{detail.slug}</span>
+            {" · "}
+            {t("platform.agencyDetailCreated", {
+              date: formatRelativeDate(detail.createdAt),
+            })}
             {detail.bootstrapCompletedAt ? (
-              <> · bootstrap completed {formatRelativeDate(detail.bootstrapCompletedAt)}</>
+              <>
+                {" · "}
+                {t("platform.agencyDetailBootstrap", {
+                  date: formatRelativeDate(detail.bootstrapCompletedAt),
+                })}
+              </>
             ) : null}
           </>
         }
@@ -159,7 +177,7 @@ export default async function PlatformAgencyDetailPage({
             className="border-border bg-surface text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring text-button inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 font-semibold focus:outline-none focus-visible:ring-2"
             data-testid="platform-agency-view-plan"
           >
-            View plan
+            {t("platform.agencyViewPlan")}
           </Link>
         }
       />
@@ -170,19 +188,19 @@ export default async function PlatformAgencyDetailPage({
       >
         <KpiTile
           icon={<Users2 className="h-4 w-4" aria-hidden="true" />}
-          label="Active members"
+          label={t("platform.agencyKpiMembers")}
           value={detail.memberCount}
           data-testid="platform-agency-kpi-members"
         />
         <KpiTile
           icon={<Workflow className="h-4 w-4" aria-hidden="true" />}
-          label="Workspaces"
+          label={t("platform.colWorkspaces")}
           value={detail.workspaceCount}
           data-testid="platform-agency-kpi-workspaces"
         />
         <KpiTile
           icon={<Sparkles className="h-4 w-4" aria-hidden="true" />}
-          label="AI usage (calls)"
+          label={t("platform.agencyKpiAiCalls")}
           value={detail.totalAiCalls}
           tone="success"
           data-testid="platform-agency-kpi-ai"
@@ -199,16 +217,16 @@ export default async function PlatformAgencyDetailPage({
           URL hash, and the nav strip keeps the affordance
           discoverable. */}
       <nav
-        aria-label="Agency detail sections"
+        aria-label={t("platform.agencySectionNavAria")}
         className="border-border bg-surface-subtle flex flex-wrap items-center gap-1 rounded-[var(--radius-control)] border p-1"
         data-testid="platform-agency-section-nav"
       >
         {[
-          { href: "identity", label: "Identity" },
-          { href: "workspaces", label: "Workspaces" },
-          { href: "plan", label: "Plan and usage" },
-          { href: "ai", label: "AI" },
-          { href: "security", label: "Security" },
+          { href: "identity", label: t("platform.agencySectionIdentity") },
+          { href: "workspaces", label: t("platform.agencySectionWorkspaces") },
+          { href: "plan", label: t("platform.agencySectionPlan") },
+          { href: "ai", label: t("platform.agencySectionAi") },
+          { href: "security", label: t("platform.agencySectionSecurity") },
         ].map((s) => (
           <a
             key={s.href}
@@ -232,8 +250,8 @@ export default async function PlatformAgencyDetailPage({
           />
         ) : (
           <PermissionNotice
-            title="Identity is read-only"
-            description="Your platform role can inspect this agency but cannot change its identity."
+            title={t("platform.agencyIdentityReadOnly")}
+            description={t("platform.agencyIdentityReadOnlyBody")}
           />
         )}
       </div>
@@ -241,24 +259,22 @@ export default async function PlatformAgencyDetailPage({
       <Card id="workspaces" padding="lg" className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle>Workspaces in this agency</CardTitle>
-            <CardDescription>
-              The 10 most recently updated workspaces in this tenant.
-            </CardDescription>
+            <CardTitle>{t("platform.agencyWorkspacesTitle")}</CardTitle>
+            <CardDescription>{t("platform.agencyWorkspacesDescription")}</CardDescription>
           </div>
           <span
             className="text-fg-muted text-label"
             data-testid="platform-agency-workspace-total"
-            title="Total non-archived workspaces"
+            title={t("platform.agencyWorkspacesTotalTitle")}
           >
-            {detail.workspaceCount} total
+            {t("platform.agencyWorkspacesTotal", { count: detail.workspaceCount })}
           </span>
         </div>
         {detail.recentWorkspaces.length === 0 ? (
           <EmptyState
             icon={<Building2 className="h-8 w-8" aria-hidden="true" />}
-            title="No workspaces yet"
-            description="The agency has not created any workspaces. Workspace creation happens inside the agency, not from the platform console."
+            title={t("platform.agencyWorkspacesEmpty")}
+            description={t("platform.agencyWorkspacesEmptyBody")}
           />
         ) : (
           <DataTable
@@ -266,7 +282,7 @@ export default async function PlatformAgencyDetailPage({
             getRowKey={(w) => w.id}
             getRowTestId={(w) => `platform-agency-ws-row-${w.id}`}
             rows={detail.recentWorkspaces}
-            columns={workspaceColumns()}
+            columns={workspaceColumns(t)}
           />
         )}
       </Card>
@@ -293,7 +309,7 @@ export default async function PlatformAgencyDetailPage({
   );
 }
 
-function workspaceColumns(): DataTableColumnDef<{
+function workspaceColumns(t: Translator): DataTableColumnDef<{
   id: string;
   name: string;
   slug: string;
@@ -302,7 +318,7 @@ function workspaceColumns(): DataTableColumnDef<{
   return [
     {
       key: "name",
-      header: "Workspace",
+      header: t("platform.agencyWsColName"),
       headerClassName: "w-1/2",
       cell: (w) => (
         <div className="min-w-0">
@@ -313,7 +329,7 @@ function workspaceColumns(): DataTableColumnDef<{
     },
     {
       key: "updated",
-      header: "Last activity",
+      header: t("platform.agencyWsColLastActivity"),
       cell: (w) => formatRelativeDate(w.updatedAt),
     },
     {
@@ -323,9 +339,9 @@ function workspaceColumns(): DataTableColumnDef<{
       cell: () => (
         <span
           className="bg-surface-subtle text-fg-muted text-label rounded-[var(--radius-control)] px-2 py-0.5"
-          title="Cross-tenant navigation is restricted; M2 will provide a safe deep-link."
+          title={t("platform.agencyWsColTenantOnlyTitle")}
         >
-          tenant-only
+          {t("platform.agencyWsColTenantOnly")}
         </span>
       ),
     },
