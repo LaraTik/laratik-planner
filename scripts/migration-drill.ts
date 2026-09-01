@@ -325,79 +325,47 @@ async function drillFromZero(): Promise<void> {
 async function drillSkippedMigrationRepair(): Promise<void> {
   const start = Date.now();
   const detail: string[] = [];
-  const skippedTimestamp = 1787544999872;
-  const repairTimestamp = 1788500000000;
-  const platformRolesTimestamp = 1788600000000;
+  const migrationTag = "0025_notification_message_key";
+  const migrationTimestamp = 1789100000000;
   const required = [
-    "support_access_request",
-    "support_access_grant",
-    "support_access_audit",
-    "ai_daily_budget_usage",
-  ];
+    ["notification", "message_key"],
+    ["notification", "message_params"],
+    ["activity_event", "message_key"],
+    ["activity_event", "message_params"],
+  ] as const;
 
   try {
     await withClient(TEST_DB_URL, async (c) => {
-      const laterMigrations = await c.query<{ created_at: string }>(
-        "SELECT created_at::text AS created_at FROM drizzle.__drizzle_migrations WHERE created_at > $1 ORDER BY created_at",
-        [repairTimestamp],
-      );
-      const unexpectedTimestamps = laterMigrations.rows
-        .map((row) => Number(row.created_at))
-        .filter((timestamp) => timestamp !== platformRolesTimestamp);
-      if (unexpectedTimestamps.length > 0) {
-        throw new Error(
-          `unexpected post-repair migration timestamps: ${unexpectedTimestamps.join(", ")}; update the historical rewind before running this drill`,
-        );
-      }
-
-      // Reproduce the schema as it existed immediately before the repair
-      // migration. Drizzle only migrates forward from the newest ledger row,
-      // so every known post-repair migration must be rewound as a unit.
-      await c.query('DROP INDEX IF EXISTS "platform_administrator_active_role_idx"');
-      await c.query(
-        'ALTER TABLE "platform_administrator" DROP CONSTRAINT IF EXISTS "platform_administrator_role_check"',
-      );
-      await c.query('ALTER TABLE "platform_administrator" DROP COLUMN IF EXISTS "role"');
-      await c.query('ALTER TABLE "platform_administrator" DROP COLUMN IF EXISTS "updated_at"');
-      await c.query('DROP TABLE IF EXISTS "support_access_audit" CASCADE');
-      await c.query('DROP TABLE IF EXISTS "support_access_grant" CASCADE');
-      await c.query('DROP TABLE IF EXISTS "support_access_request" CASCADE');
-      await c.query('DROP TABLE IF EXISTS "ai_daily_budget_usage" CASCADE');
-      await c.query(
-        "DELETE FROM drizzle.__drizzle_migrations WHERE created_at = ANY($1::bigint[])",
-        [[skippedTimestamp, repairTimestamp, platformRolesTimestamp]],
-      );
+      // Reproduce a skipped migration by removing only the latest additive
+      // columns and its ledger row. This remains valid as new migrations are
+      // appended because no later schema needs to be rewound.
+      await c.query('ALTER TABLE "notification" DROP COLUMN IF EXISTS "message_key"');
+      await c.query('ALTER TABLE "notification" DROP COLUMN IF EXISTS "message_params"');
+      await c.query('ALTER TABLE "activity_event" DROP COLUMN IF EXISTS "message_key"');
+      await c.query('ALTER TABLE "activity_event" DROP COLUMN IF EXISTS "message_params"');
+      await c.query("DELETE FROM drizzle.__drizzle_migrations WHERE created_at = $1", [
+        migrationTimestamp,
+      ]);
     });
-    detail.push("reproduced missing 0012 tables and rewound 0018 role schema + ledger rows");
+    detail.push(`reproduced missing ${migrationTag} columns and rewound its ledger row`);
 
     runOfficialMigrations();
     detail.push("real Drizzle migrator completed");
 
     await withClient(TEST_DB_URL, async (c) => {
-      const tables = await listTables(c);
-      const missing = required.filter((table) => !tables.includes(table));
+      const missing = required.filter(([table, column]) => !tableHasColumn(c, table, column));
       const ledgerResult = await c.query<{ count: string }>(
         "SELECT count(*)::text AS count FROM drizzle.__drizzle_migrations WHERE created_at = $1",
-        [skippedTimestamp],
+        [migrationTimestamp],
       );
       const repairedLedgerRows = Number(ledgerResult.rows[0]?.count ?? "0");
-      const platformRoleLedgerResult = await c.query<{ count: string }>(
-        "SELECT count(*)::text AS count FROM drizzle.__drizzle_migrations WHERE created_at = $1",
-        [platformRolesTimestamp],
+      const ok = missing.length === 0 && repairedLedgerRows === 1;
+      detail.push(
+        missing.length
+          ? `missing: ${missing.map(([t, c]) => `${t}.${c}`).join(", ")}`
+          : "all message columns restored",
       );
-      const platformRoleLedgerRows = Number(platformRoleLedgerResult.rows[0]?.count ?? "0");
-      const roleRestored = await tableHasColumn(c, "platform_administrator", "role");
-      const updatedAtRestored = await tableHasColumn(c, "platform_administrator", "updated_at");
-      const ok =
-        missing.length === 0 &&
-        repairedLedgerRows === 1 &&
-        platformRoleLedgerRows === 1 &&
-        roleRestored &&
-        updatedAtRestored;
-      detail.push(missing.length ? `missing: ${missing.join(", ")}` : "all M3 tables restored");
-      detail.push(`0012 ledger rows=${repairedLedgerRows}`);
-      detail.push(`0018 ledger rows=${platformRoleLedgerRows}`);
-      detail.push(`role columns=${roleRestored && updatedAtRestored ? "restored" : "missing"}`);
+      detail.push(`${migrationTag} ledger rows=${repairedLedgerRows}`);
       record(
         "2. skipped migration repair",
         ok,

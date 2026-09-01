@@ -119,7 +119,6 @@ export default async function AccountPage() {
             image: profile.image ?? "",
             locale: profile.locale,
           }}
-          t={t}
         />
       </Card>
 
@@ -130,7 +129,7 @@ export default async function AccountPage() {
         <p className="text-body text-fg-muted mb-5">
           {hasPassword.hasPassword ? t("account.passwordChange") : t("account.passwordSet")}
         </p>
-        <PasswordForm hasPassword={hasPassword.hasPassword} t={t} />
+        <PasswordForm hasPassword={hasPassword.hasPassword} />
       </Card>
 
       <Card
@@ -145,7 +144,6 @@ export default async function AccountPage() {
         <NotificationPreferencesForm
           initialEmailOnMention={notificationPrefs.emailOnMention}
           initialDailyDigest={notificationPrefs.dailyDigest}
-          t={t}
         />
       </Card>
 
@@ -183,7 +181,7 @@ export default async function AccountPage() {
           {t("account.signOut")}
         </CardTitle>
         <p className="text-body text-fg-muted mb-4">{t("account.signOutBlurb")}</p>
-        <SignOutForm variant="button" t={t} />
+        <SignOutForm variant="button" />
       </Card>
     </div>
   );

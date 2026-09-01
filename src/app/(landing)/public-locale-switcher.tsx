@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Languages } from "lucide-react";
 
 import { setPublicLocaleAction } from "@/app/(landing)/public-locale-actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 import { SUPPORTED_LOCALES, type LocaleCode } from "@/lib/i18n/locales";
 
 /**
@@ -23,27 +24,16 @@ import { SUPPORTED_LOCALES, type LocaleCode } from "@/lib/i18n/locales";
  *   - the active state is exposed through `aria-pressed` so
  *     screen readers announce "selected".
  *
- * The current locale is read from the document's
- * `<html lang>` on mount; the client component does not
- * subscribe to it. After a successful switch, the action
+ * The current locale is passed from the server-rendered root
+ * layout. After a successful switch, the action
  * returns the new locale and the client calls
  * `router.refresh()` so the root layout repaints the
  * `lang` / `dir` / font / page copy without a full reload.
  */
-export function PublicLocaleSwitcher() {
+export function PublicLocaleSwitcher({ locale = "en" }: { locale?: LocaleCode }) {
   const router = useRouter();
-  // Read the initial active locale from the document's
-  // `<html lang>` on first render. The initializer runs
-  // once (the first client render after hydration); it
-  // deliberately does NOT use an effect because the lang
-  // attribute is set by the root server layout and never
-  // changes from underneath us during the lifetime of
-  // the switcher. The SSR fallback is `"en"`.
-  const [active, setActive] = React.useState<LocaleCode>(() => {
-    if (typeof document === "undefined") return "en";
-    const fromHtml = document.documentElement.lang;
-    return fromHtml === "ar" || fromHtml === "en" ? fromHtml : "en";
-  });
+  const t = useLocaleT();
+  const [active, setActive] = React.useState<LocaleCode>(locale);
   const [pending, startTransition] = React.useTransition();
 
   const switchTo = React.useCallback(
@@ -71,7 +61,7 @@ export function PublicLocaleSwitcher() {
   return (
     <div
       role="group"
-      aria-label="Interface language"
+      aria-label={t("languageSwitcher.label")}
       data-testid="public-locale-switcher"
       className="border-border bg-surface/95 supports-[backdrop-filter]:bg-surface/80 pointer-events-auto fixed end-3 top-3 z-40 flex items-center gap-1 rounded-full border p-1 shadow-sm backdrop-blur"
     >

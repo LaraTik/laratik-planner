@@ -66,8 +66,8 @@ export default function AppError({
   reset: () => void;
 }) {
   // The boundary is the only client render that runs when the
-  // server is broken. Read the public locale cookie so the hero
-  // copy is bilingual; fall back to English (see client-locale.ts).
+  // server is broken. Resolve the locale from the root document
+  // language so HttpOnly preference cookies are never exposed.
   const t = getClientT();
   const [copied, setCopied] = React.useState<"digest" | "report" | null>(null);
   const [stackOpen, setStackOpen] = React.useState(false);
@@ -314,10 +314,10 @@ export default function AppError({
             happened" cell. */}
         <Card padding="md" data-testid="app-error-context" className="md:col-span-2">
           <div className="flex items-center gap-2">
-            <CardTitle className="text-base">Where & when</CardTitle>
+            <CardTitle className="text-base">{t("errors.whereWhen")}</CardTitle>
           </div>
           <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <ContextRow label="Reference">
+            <ContextRow label={t("errors.reference")}>
               <div className="flex items-center gap-2">
                 <code
                   data-testid="app-error-digest"
@@ -343,7 +343,7 @@ export default function AppError({
                 </Button>
               </div>
             </ContextRow>
-            <ContextRow label="Route">
+            <ContextRow label={t("errors.route")}>
               <code
                 data-testid="app-error-route"
                 className="text-fg-primary bg-surface-subtle rounded px-1.5 py-0.5 font-mono text-sm break-all"
@@ -351,7 +351,7 @@ export default function AppError({
                 {route || "(unknown)"}
               </code>
             </ContextRow>
-            <ContextRow label="Error class">
+            <ContextRow label={t("errors.errorClass")}>
               <code
                 data-testid="app-error-name"
                 className="text-fg-primary bg-surface-subtle rounded px-1.5 py-0.5 font-mono text-sm"
@@ -359,7 +359,7 @@ export default function AppError({
                 {errorName || "(unknown)"}
               </code>
             </ContextRow>
-            <ContextRow label="Build">
+            <ContextRow label={t("errors.build")}>
               <code
                 data-testid="app-error-build"
                 className="text-fg-primary bg-surface-subtle rounded px-1.5 py-0.5 font-mono text-sm break-all"
@@ -368,7 +368,7 @@ export default function AppError({
               </code>
             </ContextRow>
             {causeMessage ? (
-              <ContextRow label="Cause" className="sm:col-span-2">
+              <ContextRow label={t("errors.cause")} className="sm:col-span-2">
                 <p
                   data-testid="app-error-cause"
                   className="text-body text-fg-secondary break-words"
@@ -378,7 +378,7 @@ export default function AppError({
               </ContextRow>
             ) : null}
             {error.message ? (
-              <ContextRow label="Message" className="sm:col-span-2">
+              <ContextRow label={t("errors.message")} className="sm:col-span-2">
                 <p
                   data-testid="app-error-message"
                   className="text-body text-fg-secondary break-words"
@@ -393,24 +393,24 @@ export default function AppError({
         {/* Environment — the "I need to know who / what" cell. */}
         <Card padding="md" data-testid="app-error-environment">
           <div className="flex items-center gap-2">
-            <CardTitle className="text-base">Environment</CardTitle>
+            <CardTitle className="text-base">{t("errors.environment")}</CardTitle>
           </div>
           <dl className="mt-3 space-y-2">
             <EnvRow
               icon={<Monitor className="h-3.5 w-3.5" aria-hidden="true" />}
-              label="Viewport"
+              label={t("errors.viewport")}
               value={
                 envSnapshot ? `${envSnapshot.viewport.width}×${envSnapshot.viewport.height}` : "…"
               }
             />
             <EnvRow
               icon={<Smartphone className="h-3.5 w-3.5" aria-hidden="true" />}
-              label="Locale"
+              label={t("errors.locale")}
               value={envSnapshot?.locale ?? "…"}
             />
             <EnvRow
               icon={<Wifi className="h-3.5 w-3.5" aria-hidden="true" />}
-              label="User agent"
+              label={t("errors.userAgent")}
               value={envSnapshot?.userAgent ?? "…"}
               truncate
             />
@@ -436,7 +436,7 @@ export default function AppError({
           </p>
           <div className="mt-3">
             <p className="text-label text-fg-muted font-semibold tracking-wide uppercase">
-              What to do next
+              {t("errors.whatToDoNext")}
             </p>
             <ol
               className="text-body text-fg-primary mt-2 list-decimal space-y-1 ps-5"
@@ -468,7 +468,7 @@ export default function AppError({
                 ) : (
                   <DirAwareChevronRight className="h-4 w-4" aria-hidden="true" />
                 )}
-                Stack trace
+                {t("errors.stackTrace")}
                 <span className="text-label text-fg-muted font-normal">
                   ({stack.split("\n").length} frames)
                 </span>
@@ -501,7 +501,7 @@ export default function AppError({
                 ) : (
                   <DirAwareChevronRight className="h-4 w-4" aria-hidden="true" />
                 )}
-                Component stack
+                {t("errors.componentStack")}
                 <span className="text-label text-fg-muted font-normal">
                   ({componentStack.split("\n").filter(Boolean).length} frames)
                 </span>

@@ -11,6 +11,7 @@ import {
 import { type Actor } from "@/lib/auth/policy";
 import { sendEmail } from "@/lib/email";
 import { tFor } from "@/messages";
+import { renderNotificationEmailCopy } from "@/lib/notifications/email-copy";
 import { z } from "zod";
 
 /**
@@ -332,9 +333,15 @@ export async function dispatchEmailOnce(
         .where(eq(users.id, userId))
         .limit(1)
         .then((rows) => rows[0]?.locale)) ?? "en";
-    const t = tFor(recipientLocale as Parameters<typeof tFor>[0]);
-    const subject = messageKey && !title ? t(`${messageKey}.title`, messageParams) : title;
-    const emailBody = messageKey && !body ? t(`${messageKey}.body`, messageParams) : body;
+    const { subject, text: emailBody } = renderNotificationEmailCopy(
+      {
+        title,
+        body,
+        ...(messageKey ? { messageKey } : {}),
+        ...(messageParams ? { messageParams } : {}),
+      },
+      recipientLocale,
+    );
     try {
       await sendEmail({ to: user.email, subject, text: emailBody });
       await db

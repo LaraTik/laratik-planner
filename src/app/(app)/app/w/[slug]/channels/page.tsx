@@ -376,7 +376,7 @@ export default async function ChannelsPage({
         )
       ) : null}
 
-      {canManage ? <ChannelForm slug={slug} t={t} /> : null}
+      {canManage ? <ChannelForm slug={slug} /> : null}
 
       {rows.length ? (
         <Card padding="none" className="overflow-hidden">

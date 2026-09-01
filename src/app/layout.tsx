@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/lib/auth/config";
 import { resolveActiveLocale } from "@/lib/i18n/resolve-active-locale";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { PublicLocaleSwitcher } from "@/app/(landing)/public-locale-switcher";
 import "./globals.css";
 
@@ -68,26 +69,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       className={`${inter.variable} ${notoArabic.variable} h-full`}
     >
       <body className="bg-canvas text-fg-primary min-h-full">
-        <SessionProvider session={session}>{children}</SessionProvider>
-        {/*
-          The public locale switcher is mounted at the root so
-          it is reachable from any page that has not yet
-          committed to a header / sidebar (the landing, the
-          sign-in surfaces, the legal pages). Once a workspace
-          chrome is in place the switcher moves into the
-          account/profile surface and the root instance is
-          suppressed (it is a no-op when the user is signed in
-          and the workspace chrome renders).
-        */}
-        <PublicLocaleSwitcher />
-        {/*
-          Sonner toaster. Mounted once at the root so any client
-          component (forms, archive buttons) can call `toast(...)`
-          without owning its own host. `richColors` keeps
-          success/error/warning visually distinct; `closeButton`
-          makes the undo affordance reachable on touch.
-        */}
-        <Toaster richColors closeButton position="bottom-right" />
+        <LocaleProvider locale={activeLocale.code}>
+          <SessionProvider session={session}>
+            {children}
+            {!session?.user ? <PublicLocaleSwitcher locale={activeLocale.code} /> : null}
+          </SessionProvider>
+          <Toaster richColors closeButton position="bottom-right" />
+        </LocaleProvider>
       </body>
     </html>
   );

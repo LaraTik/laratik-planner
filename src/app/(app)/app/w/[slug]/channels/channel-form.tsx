@@ -6,6 +6,7 @@ import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { FormField } from "@/components/forms/form-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Inline "Add social channel" form. Renders at the top of the channels
@@ -25,21 +26,12 @@ import { Label } from "@/components/ui/label";
  * create-vs-edit layouts are different enough to make the abstraction
  * net negative. See `channel-edit-drawer.tsx` for the drawer form.
  */
-export function ChannelForm({
-  slug,
-  t,
-}: {
-  slug: string;
-  /**
-   * Optional translator. When provided, every user-visible string
-   * (card title + description, field labels, placeholders, hints,
-   * submit button + pending label) renders from
-   * `users.channelsAdd.*`; when omitted, the stored English copy
-   * is used.
-   */
-  t?: (key: string) => string;
-}) {
-  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
+export function ChannelForm({ slug }: { slug: string }) {
+  const t = useLocaleT();
+  const tr = (key: string, fallback: string) => {
+    const translated = t(key);
+    return translated.startsWith("[") ? fallback : translated;
+  };
   const [state, action] = useActionState(
     createChannelAction.bind(null, slug),
     {} as { error?: string; success?: boolean },

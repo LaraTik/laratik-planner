@@ -8,6 +8,7 @@ import {
   setNotificationPreferencesAction,
   type NotificationPreferencesActionState,
 } from "./actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * FEAT-08 (GAP-FULL-REVIEW-2026-08-25) — the two notification
@@ -33,8 +34,8 @@ export function NotificationPreferencesForm({
 }: {
   initialEmailOnMention: boolean;
   initialDailyDigest: boolean;
-  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const t = useLocaleT();
   const [state, formAction] = useActionState<NotificationPreferencesActionState, FormData>(
     setNotificationPreferencesAction,
     initialState,
@@ -70,7 +71,7 @@ export function NotificationPreferencesForm({
           className="border-success/20 bg-success-subtle text-success flex items-start gap-3 rounded-[var(--radius-control)] border p-3"
         >
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className="text-body">Notification preferences saved.</span>
+          <span className="text-body">{t("account.notificationPreferencesSaved")}</span>
         </div>
       ) : null}
 
@@ -91,10 +92,10 @@ export function NotificationPreferencesForm({
           <span className="space-y-0.5">
             <span className="text-body text-fg-primary flex items-center gap-2 font-semibold">
               <Bell className="h-3.5 w-3.5" aria-hidden="true" />
-              Email me when I&apos;m mentioned
+              {t("account.emailOnMentionLabel")}
             </span>
             <span className="text-label text-fg-muted block">
-              Sends a one-off email when someone @mentions you in a comment. Off by default.
+              {t("account.emailOnMentionHint")}
             </span>
           </span>
         </label>
@@ -110,17 +111,15 @@ export function NotificationPreferencesForm({
           <span className="space-y-0.5">
             <span className="text-body text-fg-primary flex items-center gap-2 font-semibold">
               <Bell className="h-3.5 w-3.5" aria-hidden="true" />
-              Send me a daily digest
+              {t("account.dailyDigestLabel")}
             </span>
-            <span className="text-label text-fg-muted block">
-              A morning summary of assignments, approvals, and unanswered mentions. Off by default.
-            </span>
+            <span className="text-label text-fg-muted block">{t("account.dailyDigestHint")}</span>
           </span>
         </label>
 
         <FormSubmitButton
-          label="Save preferences"
-          pendingLabel="Saving…"
+          label={t("account.savePreferences")}
+          pendingLabel={t("account.savingProfile")}
           data-testid="notification-preferences-submit"
         />
       </form>

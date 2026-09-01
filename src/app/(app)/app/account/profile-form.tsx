@@ -8,6 +8,7 @@ import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { updateProfileAction, type ProfileActionState } from "./actions";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Profile editor — display name, name, avatar URL, locale.
@@ -48,8 +49,8 @@ export function ProfileForm({
     image: string;
     locale: string;
   };
-  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const t = useLocaleT();
   const [state, formAction] = useActionState<ProfileActionState, FormData>(
     updateProfileAction,
     initialState,
@@ -89,7 +90,7 @@ export function ProfileForm({
           className="border-success/20 bg-success-subtle text-success flex items-start gap-3 rounded-[var(--radius-control)] border p-3"
         >
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className="text-body">Profile saved.</span>
+          <span className="text-body">{t("account.profileSaved")}</span>
         </div>
       ) : null}
 
@@ -101,8 +102,8 @@ export function ProfileForm({
       >
         <FormField
           id="profile-display-name"
-          label="Display name"
-          hint="Shown next to your avatar across the app."
+          label={t("account.displayNameLabel")}
+          hint={t("account.displayNameHint")}
           required
           {...(fieldError === "displayName" && errorMessage ? { error: errorMessage } : {})}
         >
@@ -119,8 +120,8 @@ export function ProfileForm({
 
         <FormField
           id="profile-name"
-          label="Full name"
-          hint="Used in invitations and exports."
+          label={t("account.fullNameLabel")}
+          hint={t("account.fullNameHint")}
           {...(fieldError === "name" && errorMessage ? { error: errorMessage } : {})}
         >
           <Input
@@ -135,8 +136,8 @@ export function ProfileForm({
 
         <FormField
           id="profile-image"
-          label="Avatar URL"
-          hint="Paste a link to a hosted image (https://…). Leave blank to use your initials."
+          label={t("account.avatarUrlLabel")}
+          hint={t("account.avatarUrlHint")}
           {...(fieldError === "image" && errorMessage ? { error: errorMessage } : {})}
           className="md:col-span-2"
         >
@@ -153,8 +154,8 @@ export function ProfileForm({
 
         <FormField
           id="profile-locale"
-          label="Language"
-          hint="More languages ship as the app is translated."
+          label={t("account.languageLabel")}
+          hint={t("account.languageHint")}
           {...(fieldError === "locale" && errorMessage ? { error: errorMessage } : {})}
         >
           <select
@@ -175,8 +176,8 @@ export function ProfileForm({
 
         <div className="md:col-span-2">
           <FormSubmitButton
-            label="Save profile"
-            pendingLabel="Saving…"
+            label={t("account.saveProfile")}
+            pendingLabel={t("account.savingProfile")}
             data-testid="profile-submit"
           />
         </div>

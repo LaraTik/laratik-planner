@@ -30,15 +30,15 @@
 -- test idempotent.)
 --
 -- ROLLBACK:
---   ALTER TABLE "notifications" DROP COLUMN IF EXISTS "message_key";
---   ALTER TABLE "notifications" DROP COLUMN IF EXISTS "message_params";
---   ALTER TABLE "activity_events" DROP COLUMN IF EXISTS "message_key";
---   ALTER TABLE "activity_events" DROP COLUMN IF EXISTS "message_params";
-ALTER TABLE "notifications"
+--   ALTER TABLE "notification" DROP COLUMN IF EXISTS "message_key";
+--   ALTER TABLE "notification" DROP COLUMN IF EXISTS "message_params";
+--   ALTER TABLE "activity_event" DROP COLUMN IF EXISTS "message_key";
+--   ALTER TABLE "activity_event" DROP COLUMN IF EXISTS "message_params";
+ALTER TABLE "notification"
   ADD COLUMN IF NOT EXISTS "message_key" text;--> statement-breakpoint
-ALTER TABLE "notifications"
+ALTER TABLE "notification"
   ADD COLUMN IF NOT EXISTS "message_params" jsonb;--> statement-breakpoint
-ALTER TABLE "activity_events"
+ALTER TABLE "activity_event"
   ADD COLUMN IF NOT EXISTS "message_key" text;--> statement-breakpoint
-ALTER TABLE "activity_events"
+ALTER TABLE "activity_event"
   ADD COLUMN IF NOT EXISTS "message_params" jsonb;

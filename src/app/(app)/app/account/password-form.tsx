@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { changePasswordAction, type PasswordActionState } from "./actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Password card — adapts to whether the user has a password set.
@@ -34,12 +35,8 @@ import { changePasswordAction, type PasswordActionState } from "./actions";
 
 const initialState: PasswordActionState = {};
 
-export function PasswordForm({
-  hasPassword,
-}: {
-  hasPassword: boolean;
-  t?: (key: string, params?: Record<string, string | number>) => string;
-}) {
+export function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
+  const t = useLocaleT();
   const [state, formAction] = useActionState<PasswordActionState, FormData>(
     changePasswordAction,
     initialState,
@@ -80,7 +77,9 @@ export function PasswordForm({
         >
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="text-body">
-            {successMode === "set" ? "Password set." : "Password changed."}
+            {successMode === "set"
+              ? t("account.passwordSetSuccess")
+              : t("account.passwordChangedSuccess")}
           </span>
         </div>
       ) : null}
@@ -94,7 +93,7 @@ export function PasswordForm({
         {hasPassword ? (
           <FormField
             id="password-current"
-            label="Current password"
+            label={t("account.currentPasswordLabel")}
             required
             className="md:col-span-2"
             {...(fieldError === "current" && errorMessage ? { error: errorMessage } : {})}
@@ -111,8 +110,8 @@ export function PasswordForm({
 
         <FormField
           id="password-new"
-          label={hasPassword ? "New password" : "Choose a password"}
-          hint="At least 8 characters, with a letter and a digit."
+          label={hasPassword ? t("account.newPasswordLabel") : t("account.choosePasswordLabel")}
+          hint={t("account.passwordHint")}
           required
           {...(fieldError === "next" && errorMessage ? { error: errorMessage } : {})}
         >
@@ -129,7 +128,7 @@ export function PasswordForm({
 
         <FormField
           id="password-confirm"
-          label="Confirm new password"
+          label={t("account.confirmPasswordLabel")}
           required
           {...(fieldError === "confirm" && errorMessage ? { error: errorMessage } : {})}
         >
@@ -146,8 +145,10 @@ export function PasswordForm({
 
         <div className="flex flex-wrap items-center gap-3 md:col-span-2">
           <FormSubmitButton
-            label={hasPassword ? "Change password" : "Set password"}
-            pendingLabel={hasPassword ? "Changing…" : "Setting…"}
+            label={hasPassword ? t("account.changePassword") : t("account.setPassword")}
+            pendingLabel={
+              hasPassword ? t("account.changingPassword") : t("account.settingPassword")
+            }
             data-testid="password-submit"
           />
           {!hasPassword ? (
@@ -156,7 +157,7 @@ export function PasswordForm({
               className="text-label text-fg-muted hover:text-fg-secondary font-semibold underline-offset-2 hover:underline"
               data-testid="password-forgot-link"
             >
-              Forgot your password? Email me a reset link.
+              {t("account.forgotPasswordLink")}
             </Link>
           ) : null}
         </div>

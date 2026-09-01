@@ -5,6 +5,7 @@ import * as Sentry from "@sentry/nextjs";
 import { AlertTriangle, LifeBuoy, RotateCcw } from "lucide-react";
 import { recordErrorBoundaryAction } from "./(app)/error-actions";
 import { matchErrorHint } from "@/lib/observability/error-hints";
+import { getClientLocale, getClientT } from "@/lib/i18n/client-locale";
 
 /**
  * Root-layout failure boundary — Next.js + Sentry.
@@ -37,6 +38,8 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const locale = getClientLocale();
+  const t = getClientT();
   const route = typeof window !== "undefined" ? window.location.pathname : "";
   const method = typeof window !== "undefined" ? (document.body?.dataset.method ?? "GET") : "GET";
   const reference = error.digest ?? "no-digest";
@@ -120,7 +123,7 @@ export default function GlobalError({
   })();
 
   return (
-    <html lang="en">
+    <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
       <body>
         <main
           className="bg-canvas text-fg-primary mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-4 px-6 py-12 text-center"
@@ -129,12 +132,8 @@ export default function GlobalError({
           <span className="text-danger" aria-hidden="true">
             <AlertTriangle className="h-10 w-10" />
           </span>
-          <h1 className="text-title-page font-semibold">StudioFlow could not load</h1>
-          <p className="text-body text-fg-secondary max-w-md">
-            An unexpected error stopped the app shell from rendering. Try again, or sign in to a
-            fresh session if the problem keeps happening. The reference below is already in our
-            error log.
-          </p>
+          <h1 className="text-title-page font-semibold">{t("errors.globalTitle")}</h1>
+          <p className="text-body text-fg-secondary max-w-md">{t("errors.globalDescription")}</p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <button
               type="button"
@@ -143,14 +142,14 @@ export default function GlobalError({
               data-testid="global-error-reset"
             >
               <RotateCcw className="h-4 w-4" aria-hidden="true" />
-              Try again
+              {t("errors.tryAgain")}
             </button>
             <a
               href="/signin"
               className="border-border hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-5 py-2 font-semibold focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline"
               data-testid="global-error-signin"
             >
-              Back to sign in
+              {t("errors.backToSignIn")}
             </a>
             <a
               href={supportHref}
@@ -158,11 +157,12 @@ export default function GlobalError({
               data-testid="global-error-report"
             >
               <LifeBuoy className="h-4 w-4" aria-hidden="true" />
-              Report this
+              {t("errors.reportThis")}
             </a>
           </div>
           <p data-testid="global-error-digest" className="text-label text-fg-muted font-mono">
-            Reference: <code className="bg-surface-subtle rounded px-1.5 py-0.5">{reference}</code>
+            {t("errors.referenceLabel")}{" "}
+            <code className="bg-surface-subtle rounded px-1.5 py-0.5">{reference}</code>
           </p>
         </main>
       </body>
