@@ -233,7 +233,7 @@ export function SocialCard({
       <Card data-testid="agency-social-card">
         <div className="text-primary mb-2 flex items-center gap-2">
           <Activity className="h-5 w-5" aria-hidden="true" />
-          <CardTitle>Social analytics</CardTitle>
+          <CardTitle>{tr("agencySocial.title", "Social analytics")}</CardTitle>
           {status.enabled ? (
             <Badge variant="success" data-testid="agency-social-enabled-badge">
               Enabled
