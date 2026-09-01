@@ -65,10 +65,18 @@ const initial: SocialActionState = {};
 export function SocialCard({
   agencyId,
   initialStatus,
+  t,
 }: {
   agencyId: string;
   initialStatus: SocialStatus;
+  /**
+   * Optional translator. When provided, the destructive-modal titles +
+   * bodies render from `agencySocial.{disableTitle,disableBody,recoveryTitle,recoveryBody}`;
+   * when omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const [status, setStatus] = React.useState<SocialStatus>(initialStatus);
   const [recoveryKey, setRecoveryKey] = React.useState<{
     key: string;
@@ -301,8 +309,11 @@ export function SocialCard({
       {showDisableModal && (
         <ConfirmDestructiveModal
           testId="agency-social-disable-modal"
-          title="Disable social analytics?"
-          body="All Meta and TikTok connections for this agency will be disconnected. Audit and metric history are preserved. This cannot be undone — you will need to re-onboard every connection to use social analytics again."
+          title={tr("agencySocial.disableTitle", "Disable social analytics?")}
+          body={tr(
+            "agencySocial.disableBody",
+            "All Meta and TikTok connections for this agency will be disconnected. Audit and metric history are preserved. This cannot be undone — you will need to re-onboard every connection to use social analytics again.",
+          )}
           confirmLabel="Disable social analytics"
           agencyId={agencyId}
           action={disableAction}
@@ -314,8 +325,11 @@ export function SocialCard({
       {showResetModal && (
         <ConfirmDestructiveModal
           testId="agency-social-reset-recovery-modal"
-          title="Lost your recovery key?"
-          body="This will disconnect every Meta and TikTok connection for this agency and generate a fresh DEK. Audit and metric history are preserved. You will need to reconnect every account after. This cannot be undone."
+          title={tr("agencySocial.recoveryTitle", "Lost your recovery key?")}
+          body={tr(
+            "agencySocial.recoveryBody",
+            "This will disconnect every Meta and TikTok connection for this agency and generate a fresh DEK. Audit and metric history are preserved. You will need to reconnect every account after. This cannot be undone.",
+          )}
           confirmLabel="Disconnect all and reset DEK"
           agencyId={agencyId}
           action={resetAction}

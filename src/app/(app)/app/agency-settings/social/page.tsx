@@ -101,6 +101,7 @@ export default async function AgencySocialSettingsPage() {
           connectionCount: status.connectionCount,
           platformKekAvailable: status.platformKekAvailable,
         }}
+        t={t}
       />
 
       <div className="border-border bg-surface-subtle text-body text-fg-secondary flex flex-wrap items-start gap-2 rounded-[var(--radius-control)] border p-3">

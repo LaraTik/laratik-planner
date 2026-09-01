@@ -20,7 +20,10 @@
     "all": "All",
     "language": "Language",
     "english": "English",
-    "arabic": "Arabic"
+    "arabic": "Arabic",
+    "moveUpShortcut": "Move up (Alt+ArrowUp)",
+    "moveDownShortcut": "Move down (Alt+ArrowDown)",
+    "duplicateShortcut": "Duplicate (Ctrl/Cmd+D)"
   },
   "navigation": {
     "myWork": "My Work",
@@ -257,7 +260,8 @@
     "frozenStatusTitle": "This idea can no longer be edited",
     "frozenStatusDescription": "It is currently in {status} — once an idea moves past draft / changes requested, its title, format, schedule and channels are frozen so reviewers can rely on them.",
     "editIdeaTitle": "Edit idea",
-    "editIdeaDescription": "Make changes to a draft or changes-requested idea."
+    "editIdeaDescription": "Make changes to a draft or changes-requested idea.",
+    "comingSoon": "Coming soon"
   },
   "board": {
     "title": "Workflow board",
@@ -430,6 +434,21 @@
       "publishing": "Open Publishing",
       "blocked": "Open workflow",
       "published": "View Publishing"
+    },
+    "internalNote": {
+      "title": "Add internal note",
+      "description": "Internal notes are administrative and do not reset approvals or revisions."
+    },
+    "workflow": {
+      "requestChangesTitle": "Request content changes",
+      "requestChangesDescription": "Describe the revision needed before this content can move forward.",
+      "requestChangesConfirm": "Request changes",
+      "cancelTitle": "Cancel content item",
+      "cancelDescription": "This removes the item from the active workflow. Record why it is being cancelled.",
+      "cancelConfirm": "Cancel item",
+      "blockTitle": "Block content item",
+      "blockDescription": "Explain what is preventing progress so the team can resolve it.",
+      "blockConfirm": "Block item"
     }
   },
   "formatEditor": {
@@ -1875,7 +1894,11 @@
     "forbiddenBody": "Only agency admins can change social analytics settings.",
     "backToAgencySettings": "Back to Agency Settings",
     "dekBlurb": "The agency DEK is wrapped by the platform KEK ({kek}) and stored in agency_social_dek. The plaintext DEK is shown to the agency admin exactly once at enable / rotate time and is never persisted or logged.",
-    "rotateBlurb": "If the platform operator rotates the KEK, run pnpm tsx scripts/rotate-social-kek.ts --new-kek \"$(openssl rand -base64 32)\" to re-wrap every agency DEK."
+    "rotateBlurb": "If the platform operator rotates the KEK, run pnpm tsx scripts/rotate-social-kek.ts --new-kek \"$(openssl rand -base64 32)\" to re-wrap every agency DEK.",
+    "disableTitle": "Disable social analytics?",
+    "disableBody": "All Meta and TikTok connections for this agency will be disconnected. Audit and metric history are preserved. This cannot be undone — you will need to re-onboard every connection to use social analytics again.",
+    "recoveryTitle": "Lost your recovery key?",
+    "recoveryBody": "This will disconnect every Meta and TikTok connection for this agency and generate a fresh DEK. Audit and metric history are preserved. You will need to reconnect every account after. This cannot be undone."
   },
   "agencySettings": {
     "title": "Agency Settings",

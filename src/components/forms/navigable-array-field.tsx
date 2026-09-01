@@ -88,6 +88,14 @@ export interface NavigableArrayFieldProps {
    * 1 of 4" — `entity` is the noun. Default: "Entry".
    */
   entity?: string | undefined;
+  /**
+   * Optional translator. When provided, the per-row toolbar
+   * button tooltips ("Move up (Alt+ArrowUp)", "Move down
+   * (Alt+ArrowDown)", "Duplicate (Ctrl/Cmd+D)") render from
+   * `common.{moveUpShortcut,moveDownShortcut,duplicateShortcut}`;
+   * when omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
   onField: (key: string, value: unknown) => void;
 }
 
@@ -102,8 +110,10 @@ export function NavigableArrayField({
   layout,
   entity,
   onField,
+  t,
 }: NavigableArrayFieldProps) {
   const [activeIndex, setActiveIndex] = React.useState(0);
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
 
   // Clamp the active index when the row count changes
   // (e.g. the user removed the active row, or initial
@@ -430,7 +440,7 @@ export function NavigableArrayField({
                       disabled={activeIndex === 0}
                       aria-label={`Move ${noun.toLowerCase()} ${activeIndex + 1} up`}
                       data-testid={`${fieldKey}-move-up`}
-                      title="Move up (Alt+ArrowUp)"
+                      title={tr("common.moveUpShortcut", "Move up (Alt+ArrowUp)")}
                     >
                       <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
                     </Button>
@@ -442,7 +452,7 @@ export function NavigableArrayField({
                       disabled={activeIndex >= rows.length - 1}
                       aria-label={`Move ${noun.toLowerCase()} ${activeIndex + 1} down`}
                       data-testid={`${fieldKey}-move-down`}
-                      title="Move down (Alt+ArrowDown)"
+                      title={tr("common.moveDownShortcut", "Move down (Alt+ArrowDown)")}
                     >
                       <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
                     </Button>
@@ -453,7 +463,7 @@ export function NavigableArrayField({
                       onClick={() => duplicateAt(activeIndex)}
                       aria-label={`Duplicate ${noun.toLowerCase()} ${activeIndex + 1}`}
                       data-testid={`${fieldKey}-duplicate`}
-                      title="Duplicate (Ctrl/Cmd+D)"
+                      title={tr("common.duplicateShortcut", "Duplicate (Ctrl/Cmd+D)")}
                     >
                       <Copy className="h-3.5 w-3.5" aria-hidden="true" />
                     </Button>

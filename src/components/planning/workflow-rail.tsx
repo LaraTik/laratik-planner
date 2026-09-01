@@ -336,6 +336,12 @@ export interface WorkflowRailBodyProps {
     deliveryVersionId: string | null;
   }[];
   designers: { id: string; label: string }[];
+  /**
+   * Optional translator. When provided, the workflow dialog titles
+   * + descriptions render from `contentDetail.workflow.*`; when
+   * omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 function WorkflowRailBody({
@@ -347,6 +353,7 @@ function WorkflowRailBody({
   roles,
   approvals,
   designers,
+  t,
 }: {
   workspaceSlug: string;
   contentItemId: string;
@@ -362,6 +369,7 @@ function WorkflowRailBody({
     deliveryVersionId: string | null;
   }[];
   designers: { id: string; label: string }[];
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const [pending, start] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -558,6 +566,7 @@ function WorkflowRailBody({
                           });
                           if (result?.error) setActionError(result.error);
                         }}
+                        {...(t ? { t } : {})}
                       />
 
                       {!hasAnyButton && currentEligibleRoles.length > 0 ? (
@@ -876,6 +885,7 @@ function ActionButtons({
   onClaim,
   onAssignDesigner,
   designers,
+  t,
 }: {
   status: string;
   roles: Record<Role, boolean>;
@@ -893,7 +903,9 @@ function ActionButtons({
   ) => Promise<void>;
   onClaim: () => Promise<void>;
   onAssignDesigner: (designerId: string) => Promise<void>;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const can = (allowed: Role[]) => allowed.some((r) => roles[r]);
   return (
     <div className="flex flex-col gap-1.5" data-testid="workflow-rail-actions">
@@ -923,9 +935,12 @@ function ActionButtons({
                 <XCircle className="h-3.5 w-3.5" aria-hidden="true" /> Request changes
               </Button>
             }
-            title="Request content changes"
-            description="Describe the revision needed before this content can move forward."
-            confirmLabel="Request changes"
+            title={tr("contentDetail.workflow.requestChangesTitle", "Request content changes")}
+            description={tr(
+              "contentDetail.workflow.requestChangesDescription",
+              "Describe the revision needed before this content can move forward.",
+            )}
+            confirmLabel={tr("contentDetail.workflow.requestChangesConfirm", "Request changes")}
             disabled={pending}
             onConfirm={(reason) => onExecuteTransition("request_content_changes", reason)}
           />
@@ -979,9 +994,12 @@ function ActionButtons({
               <Ban className="h-3.5 w-3.5" aria-hidden="true" /> Cancel
             </Button>
           }
-          title="Cancel content item"
-          description="This removes the item from the active workflow. Record why it is being cancelled."
-          confirmLabel="Cancel item"
+          title={tr("contentDetail.workflow.cancelTitle", "Cancel content item")}
+          description={tr(
+            "contentDetail.workflow.cancelDescription",
+            "This removes the item from the active workflow. Record why it is being cancelled.",
+          )}
+          confirmLabel={tr("contentDetail.workflow.cancelConfirm", "Cancel item")}
           destructive
           disabled={pending}
           onConfirm={(reason) => onExecuteTransition("cancel", reason)}
@@ -1001,9 +1019,12 @@ function ActionButtons({
               Block
             </Button>
           }
-          title="Block content item"
-          description="Explain what is preventing progress so the team can resolve it."
-          confirmLabel="Block item"
+          title={tr("contentDetail.workflow.blockTitle", "Block content item")}
+          description={tr(
+            "contentDetail.workflow.blockDescription",
+            "Explain what is preventing progress so the team can resolve it.",
+          )}
+          confirmLabel={tr("contentDetail.workflow.blockConfirm", "Block item")}
           disabled={pending}
           onConfirm={(reason) => onExecuteTransition("block", reason)}
         />

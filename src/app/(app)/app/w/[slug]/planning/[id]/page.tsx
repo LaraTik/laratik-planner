@@ -561,6 +561,7 @@ export default async function ContentDetailPage({
                   deliveryVersionId: a.deliveryVersionId,
                 }))}
                 designers={designers}
+                t={t}
               />
             </div>
             {/* Compact header — answers the four questions at a
@@ -602,6 +603,7 @@ export default async function ContentDetailPage({
             deliveryVersionId: a.deliveryVersionId,
           })),
           designers,
+          t,
         }}
         workspace={{
           workspaceSlug: slug,

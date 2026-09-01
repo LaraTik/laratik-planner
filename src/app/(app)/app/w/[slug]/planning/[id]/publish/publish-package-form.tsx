@@ -680,8 +680,8 @@ export function PublishPackageForm({
                 Add internal note
               </Button>
             }
-            title="Add internal note"
-            description="Internal notes are administrative and do not reset approvals or revisions."
+            title={t("contentDetail.internalNote.title")}
+            description={t("contentDetail.internalNote.description")}
             label="Note"
             confirmLabel="Add note"
             onConfirm={handleInternalNote}

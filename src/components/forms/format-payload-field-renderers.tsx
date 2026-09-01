@@ -447,6 +447,7 @@ function ScenesFieldRenderer({ label, payload, locale, editable, t, onField }: F
         layout="slider"
         entity={t("formatEditor.editor.structuredArraySceneEntity")}
         onField={onField}
+        t={t}
       />
     </div>
   );
@@ -478,6 +479,7 @@ function SlideOutlineFieldRenderer({
         layout="slider"
         entity={t("formatEditor.editor.structuredArraySlideEntity")}
         onField={onField}
+        t={t}
       />
     </div>
   );
@@ -509,6 +511,7 @@ function VisualSlidesFieldRenderer({
         layout="slider"
         entity={t("formatEditor.editor.structuredArraySlideEntity")}
         onField={onField}
+        t={t}
       />
     </div>
   );
@@ -544,6 +547,7 @@ function ChaptersFieldRenderer({
         layout="slider"
         entity={t("formatEditor.editor.structuredArrayChapterEntity")}
         onField={onField}
+        t={t}
       />
     </div>
   );

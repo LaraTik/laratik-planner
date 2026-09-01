@@ -152,7 +152,7 @@ export function WorkspaceShell({
             onClick={() => setDrawerOpen(true)}
           />
           {canResetIdea ? (
-            <OverflowMenu onReset={() => setResetOpen(true)} contentItemId={contentItemId} />
+            <OverflowMenu onReset={() => setResetOpen(true)} contentItemId={contentItemId} t={t} />
           ) : null}
         </div>
       </div>
@@ -186,7 +186,14 @@ export function WorkspaceShell({
   );
 }
 
-function OverflowMenu({ onReset }: { onReset: () => void; contentItemId: string }) {
+function OverflowMenu({
+  onReset,
+  t,
+}: {
+  onReset: () => void;
+  contentItemId: string;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
   // Native <details>/<summary> — accessible, no JS focus
   // management, closes on outside click via the standard browser
   // behaviour. The menu is intentionally small (operator-only
@@ -209,7 +216,7 @@ function OverflowMenu({ onReset }: { onReset: () => void; contentItemId: string 
           type="button"
           disabled
           className="text-body text-fg-muted flex w-full cursor-not-allowed items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-start"
-          title="Coming soon"
+          title={t("planning.comingSoon")}
         >
           <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
           Duplicate
@@ -218,7 +225,7 @@ function OverflowMenu({ onReset }: { onReset: () => void; contentItemId: string 
           type="button"
           disabled
           className="text-body text-fg-muted flex w-full cursor-not-allowed items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-start"
-          title="Coming soon"
+          title={t("planning.comingSoon")}
         >
           <Archive className="h-3.5 w-3.5" aria-hidden="true" />
           Archive
