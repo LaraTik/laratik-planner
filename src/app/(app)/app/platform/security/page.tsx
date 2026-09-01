@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { loadPlatformSecurityOverview } from "./actions";
 import { PermissionNotice } from "@/components/platform/permission-notice";
 
@@ -64,11 +65,12 @@ type RequestRow = {
 };
 
 export default async function PlatformSecurityPage() {
+  const { t } = await tForActive();
   const actor = await currentActor();
   if (!actor) {
     return (
       <div className="p-8">
-        <p className="text-body text-fg-muted">Sign in to access the platform security console.</p>
+        <p className="text-body text-fg-muted">{t("platform.securitySignInBody")}</p>
       </div>
     );
   }
@@ -78,8 +80,8 @@ export default async function PlatformSecurityPage() {
   } catch {
     return (
       <PermissionNotice
-        title="Security view unavailable"
-        description="Your platform role does not include audit oversight or support access."
+        title={t("platform.securityUnavailable")}
+        description={t("platform.securityUnavailableBody")}
       />
     );
   }
@@ -87,7 +89,7 @@ export default async function PlatformSecurityPage() {
   const grantColumns: DataTableColumnDef<GrantRow>[] = [
     {
       key: "agency",
-      header: "Agency",
+      header: t("platform.securityColAgency"),
       cell: (row) => (
         <Link
           href={`/app/platform/agencies/${row.targetAgencyId}`}
@@ -99,32 +101,36 @@ export default async function PlatformSecurityPage() {
     },
     {
       key: "scope",
-      header: "Scope",
+      header: t("platform.securityColScope"),
       cell: (row) =>
         row.scopeMetadataOnly
-          ? "Metadata only"
+          ? t("platform.securityScopeMetadata")
           : row.scopeWorkspaceId
-            ? `Workspace: ${row.scopeWorkspaceId.slice(0, 8)}…`
-            : "Agency-wide",
+            ? t("platform.securityScopeWorkspace", { prefix: row.scopeWorkspaceId.slice(0, 8) })
+            : t("platform.securityScopeAgency"),
     },
     {
       key: "downloads",
-      header: "Downloads",
-      cell: (row) => (row.downloadsAllowed ? "Allowed" : "Off"),
+      header: t("platform.securityColDownloads"),
+      cell: (row) => (row.downloadsAllowed ? t("platform.commonAllowed") : t("platform.commonOff")),
     },
     {
       key: "expires",
-      header: "Expires",
+      header: t("platform.securityColExpires"),
       cell: (row) => formatRelativeDate(row.expiresAt),
     },
   ];
 
   const auditColumns: DataTableColumnDef<AuditRow>[] = [
-    { key: "action", header: "Action", cell: (row) => row.action },
-    { key: "targetType", header: "Target type", cell: (row) => row.targetType },
+    { key: "action", header: t("platform.securityColAction"), cell: (row) => row.action },
+    {
+      key: "targetType",
+      header: t("platform.securityColTargetType"),
+      cell: (row) => row.targetType,
+    },
     {
       key: "outcome",
-      header: "Outcome",
+      header: t("platform.securityColOutcome"),
       cell: (row) => (
         <span
           className={
@@ -139,28 +145,29 @@ export default async function PlatformSecurityPage() {
         </span>
       ),
     },
-    { key: "createdAt", header: "When", cell: (row) => formatRelativeDate(row.createdAt) },
+    {
+      key: "createdAt",
+      header: t("platform.securityColWhen"),
+      cell: (row) => formatRelativeDate(row.createdAt),
+    },
   ];
 
   return (
     <div className="space-y-6" data-testid="platform-security-root">
       <PageHeader
-        title="Security & support access"
-        description="Ticketed, approved, time-limited access to tenant content. Every view through an active grant is audited."
+        title={t("platform.securityTitle")}
+        description={t("platform.securityDescription")}
       />
 
       {overview.canRequestSupport ? (
         <Card>
-          <CardTitle>My active grants</CardTitle>
-          <CardDescription>
-            The time-bound grants you currently hold. A grant unlocks tenant content for the listed
-            scope; the audit log records every view.
-          </CardDescription>
+          <CardTitle>{t("platform.securityActiveGrantsTitle")}</CardTitle>
+          <CardDescription>{t("platform.securityActiveGrantsDescription")}</CardDescription>
           <div className="mt-4">
             {overview.activeGrants.length === 0 ? (
               <EmptyState
-                title="No active grants"
-                description="File a support access request from the agency detail page to get started."
+                title={t("platform.securityEmptyGrants")}
+                description={t("platform.securityEmptyGrantsBody")}
                 data-testid="platform-security-no-active-grants"
               />
             ) : (
@@ -175,17 +182,21 @@ export default async function PlatformSecurityPage() {
       ) : null}
 
       <Card>
-        <CardTitle>{overview.canAudit ? "Recent support activity" : "My recent views"}</CardTitle>
+        <CardTitle>
+          {overview.canAudit
+            ? t("platform.securityAuditTitle")
+            : t("platform.securityRecentViewsTitle")}
+        </CardTitle>
         <CardDescription>
           {overview.canAudit
-            ? "The latest platform-wide support audit summaries. Tenant content is never included."
-            : "The last 50 audit rows where you are the viewer. Only action, target type, and outcome are shown."}
+            ? t("platform.securityAuditDescription")
+            : t("platform.securityRecentViewsDescription")}
         </CardDescription>
         <div className="mt-4">
           {overview.recentAudit.length === 0 ? (
             <EmptyState
-              title="No recent views"
-              description="Tenant views you make through an active grant appear here."
+              title={t("platform.securityEmptyRecentViews")}
+              description={t("platform.securityEmptyRecentViewsBody")}
               data-testid="platform-security-no-recent-views"
             />
           ) : (
@@ -200,16 +211,13 @@ export default async function PlatformSecurityPage() {
 
       {overview.canRequestSupport ? (
         <Card>
-          <CardTitle>Open requests</CardTitle>
-          <CardDescription>
-            Pending support access requests across every agency. Agency admins decide from the
-            agency detail page.
-          </CardDescription>
+          <CardTitle>{t("platform.securityRequestsTitle")}</CardTitle>
+          <CardDescription>{t("platform.securityRequestsDescription")}</CardDescription>
           <div className="mt-4 space-y-3">
             {overview.requestsByAgency.length === 0 ? (
               <EmptyState
-                title="No open requests"
-                description="No agency has a pending support access request right now."
+                title={t("platform.securityEmptyRequests")}
+                description={t("platform.securityEmptyRequestsBody")}
                 data-testid="platform-security-no-requests"
               />
             ) : (
@@ -227,7 +235,9 @@ export default async function PlatformSecurityPage() {
                       {row.agency.name}
                     </Link>
                     <Button asChild variant="ghost" size="sm">
-                      <Link href={`/app/platform/agencies/${row.agency.id}`}>Open agency</Link>
+                      <Link href={`/app/platform/agencies/${row.agency.id}`}>
+                        {t("platform.securityOpenAgency")}
+                      </Link>
                     </Button>
                   </div>
                   <ul className="space-y-2">
