@@ -20,19 +20,42 @@ export interface ReviewsFiltersProps {
   selectedSort: "requested_desc" | "due_asc" | "due_desc";
   /** Whether any filter is active (controls whether Clear shows). */
   hasFilter: boolean;
+  /**
+   * Bound translator from the parent. Resolves the toolbar
+   * aria-label, the two select aria-labels, the "All gates"
+   * placeholder option, the three sort option labels, the
+   * Apply / Clear buttons, and the per-gate label table.
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
-const SORT_OPTIONS: { value: ReviewsFiltersProps["selectedSort"]; label: string }[] = [
-  { value: "requested_desc", label: "Newest first" },
-  { value: "due_asc", label: "Due soonest" },
-  { value: "due_desc", label: "Due latest" },
+const SORT_VALUES: ReadonlyArray<ReviewsFiltersProps["selectedSort"]> = [
+  "requested_desc",
+  "due_asc",
+  "due_desc",
 ];
 
-const GATE_LABEL: Record<"content" | "creative_internal" | "creative_client", string> = {
-  content: "Content review",
-  creative_internal: "Creative (internal)",
-  creative_client: "Creative (client)",
-};
+function sortKey(value: ReviewsFiltersProps["selectedSort"]): string {
+  switch (value) {
+    case "requested_desc":
+      return "reviews.sortNewest";
+    case "due_asc":
+      return "reviews.sortDueSoonest";
+    case "due_desc":
+      return "reviews.sortDueLatest";
+  }
+}
+
+function gateKey(value: "content" | "creative_internal" | "creative_client"): string {
+  switch (value) {
+    case "content":
+      return "reviews.gateContent";
+    case "creative_internal":
+      return "reviews.gateCreativeInternal";
+    case "creative_client":
+      return "reviews.gateCreativeClient";
+  }
+}
 
 const controlClass =
   "border-border bg-surface text-body h-10 rounded-[var(--radius-control)] border px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1";
@@ -49,47 +72,48 @@ export function ReviewsFilters({
   selectedGate,
   selectedSort,
   hasFilter,
+  t,
 }: ReviewsFiltersProps) {
   return (
     <form
       action={`/app/w/${slug}/reviews`}
       method="get"
       className="flex flex-wrap items-center gap-2"
-      aria-label="Filter and sort reviews"
+      aria-label={t("reviews.filtersAria")}
     >
       <select
         name="gate"
-        aria-label="Filter by review gate"
+        aria-label={t("reviews.gateAria")}
         defaultValue={selectedGate ?? ""}
         className={controlClass}
         data-testid="reviews-gate-filter"
       >
-        <option value="">All gates</option>
+        <option value="">{t("reviews.allGates")}</option>
         {gates.map((g) => (
           <option key={g} value={g}>
-            {GATE_LABEL[g] ?? g}
+            {t(gateKey(g))}
           </option>
         ))}
       </select>
       <select
         name="sort"
-        aria-label="Sort reviews"
+        aria-label={t("reviews.sortAria")}
         defaultValue={selectedSort}
         className={controlClass}
         data-testid="reviews-sort"
       >
-        {SORT_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
+        {SORT_VALUES.map((value) => (
+          <option key={value} value={value}>
+            {t(sortKey(value))}
           </option>
         ))}
       </select>
       <button type="submit" className={applyClass}>
-        Apply
+        {t("reviews.apply")}
       </button>
       {hasFilter ? (
         <Link href={`/app/w/${slug}/reviews`} className={clearClass}>
-          Clear
+          {t("reviews.clear")}
         </Link>
       ) : null}
     </form>

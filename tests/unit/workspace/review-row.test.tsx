@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { ReviewRow, type ReviewRowItem } from "@/components/workspace/review-row";
+import { tFor } from "@/messages";
+
+const t = tFor("en");
 
 const baseItem: ReviewRowItem = {
   id: "r-1",
@@ -18,7 +21,7 @@ function renderRow(
 ) {
   return render(
     <ul>
-      <ReviewRow item={{ ...baseItem, ...overrides }} workspaceSlug="acme" nowMs={nowMs} />
+      <ReviewRow item={{ ...baseItem, ...overrides }} workspaceSlug="acme" nowMs={nowMs} t={t} />
     </ul>,
   );
 }
@@ -57,10 +60,13 @@ describe("ReviewRow", () => {
     expect(link).toBeInTheDocument();
   });
 
-  it("humanizes the gate name (underscores → spaces, title case)", () => {
+  it("uses the curated catalog label for the gate badge", () => {
     renderRow({ gate: "creative_client" });
-    // humanize() capitalises each word: "creative_client" → "Creative Client"
-    expect(screen.getByText("Creative Client")).toBeInTheDocument();
+    // Phase 6b: the row's gate badge uses the catalog's
+    // `reviews.gateCreativeClient` label, which matches the
+    // filter dropdown's curated value (was inconsistent with
+    // `humanize(gate)`'s "Creative Client" in v1).
+    expect(screen.getByText("Creative (client)")).toBeInTheDocument();
   });
 
   it("marks the row as overdue when dueAt is in the past", () => {
@@ -103,7 +109,13 @@ describe("ReviewRow", () => {
     const nowMs = Date.parse("2026-09-01T00:00:00.000Z");
     const { container } = render(
       <ul>
-        <ReviewRow item={baseItem} workspaceSlug="acme" nowMs={nowMs} overdueVariant="warning" />
+        <ReviewRow
+          item={baseItem}
+          workspaceSlug="acme"
+          nowMs={nowMs}
+          overdueVariant="warning"
+          t={t}
+        />
       </ul>,
     );
     // The Badge component for "warning" uses the text-warning class

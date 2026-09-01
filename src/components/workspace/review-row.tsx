@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { humanFormat, humanize } from "@/lib/content/status";
+import { humanFormat } from "@/lib/content/status";
 
 /**
  * Minimal shape the review queue row needs. The page supplies the DB
@@ -27,6 +27,13 @@ export interface ReviewRowProps {
   nowMs: number;
   /** Optional override for the "overdue" badge variant. */
   overdueVariant?: "danger" | "warning";
+  /**
+   * Bound translator from the parent. Resolves the "Requested
+   * {date}" and "due {date}" string templates and the gate
+   * label (Content review / Creative (internal) /
+   * Creative (client)).
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 /**
@@ -43,6 +50,7 @@ export function ReviewRow({
   workspaceSlug,
   nowMs,
   overdueVariant = "danger",
+  t,
 }: ReviewRowProps) {
   const dueMs = item.dueAt
     ? item.dueAt instanceof Date
@@ -63,12 +71,29 @@ export function ReviewRow({
         <div className="min-w-0 flex-1">
           <p className="text-body text-fg-primary truncate font-semibold">{item.title}</p>
           <p className="text-label text-fg-muted mt-1">
-            {humanFormat(item.format)} · Requested {requested.toLocaleDateString()}
-            {due ? ` · due ${due.toLocaleDateString()}` : ""}
+            {humanFormat(item.format)} ·{" "}
+            {t("reviews.rowRequested", { date: requested.toLocaleDateString() })}
+            {due ? ` · ${t("reviews.rowDue", { date: due.toLocaleDateString() })}` : ""}
           </p>
         </div>
-        <Badge variant={isOverdue ? overdueVariant : "info"}>{humanize(item.gate)}</Badge>
+        <Badge variant={isOverdue ? overdueVariant : "info"}>{t(gateKey(item.gate))}</Badge>
       </Link>
     </li>
   );
+}
+
+function gateKey(gate: string): string {
+  switch (gate) {
+    case "content":
+      return "reviews.gateContent";
+    case "creative_internal":
+      return "reviews.gateCreativeInternal";
+    case "creative_client":
+      return "reviews.gateCreativeClient";
+    default:
+      // Unknown gate — fall back to the generic title-cased form
+      // (matches the previous `humanize(gate)` behaviour so an
+      // unmapped enum still renders something readable).
+      return gate;
+  }
 }

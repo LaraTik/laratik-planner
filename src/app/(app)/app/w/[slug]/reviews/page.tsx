@@ -120,6 +120,7 @@ export default async function ReviewsQueuePage({
         selectedGate={activeGate}
         selectedSort={sort}
         hasFilter={Boolean(activeGate) || sort !== "requested_desc"}
+        t={t}
       />
 
       {sortedRows.length ? (
@@ -141,6 +142,7 @@ export default async function ReviewsQueuePage({
                 }
                 workspaceSlug={slug}
                 nowMs={nowMs}
+                t={t}
               />
             ))}
           </ul>
