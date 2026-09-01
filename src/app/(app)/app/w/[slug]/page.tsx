@@ -358,7 +358,7 @@ export default async function WorkspaceOverviewPage({
       />
 
       {/* Executive summary strip (master prompt §5) */}
-      <OverviewKpiStrip tiles={kpiTiles} />
+      <OverviewKpiStrip tiles={kpiTiles} t={t} />
 
       {/* Plan Coverage + Delivery Health — 7-col / 5-col on desktop */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">

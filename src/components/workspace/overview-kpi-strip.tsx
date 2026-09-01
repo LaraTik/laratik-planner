@@ -36,6 +36,12 @@ export interface OverviewKpiStripTile {
 export interface OverviewKpiStripProps {
   tiles: OverviewKpiStripTile[];
   className?: string;
+  /**
+   * Optional translator. When provided, the section aria-label renders
+   * from `workspaceOverviewDashboard.overviewKpiAria`; when omitted,
+   * the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const TONE_BORDER: Record<OverviewKpiStripTile["tone"], string> = {
@@ -54,10 +60,11 @@ const TONE_ICON: Record<OverviewKpiStripTile["tone"], string> = {
   muted: "text-fg-muted",
 };
 
-export function OverviewKpiStrip({ tiles, className }: OverviewKpiStripProps) {
+export function OverviewKpiStrip({ tiles, className, t }: OverviewKpiStripProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   return (
     <section
-      aria-label="Workspace KPIs"
+      aria-label={tr("workspaceOverviewDashboard.overviewKpiAria", "Workspace KPIs")}
       data-testid="overview-kpi-strip"
       className={cn("grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5", className)}
     >
