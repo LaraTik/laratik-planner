@@ -27,11 +27,24 @@ import type { ContentStatus } from "@/lib/content/status";
  */
 type Stage = "planning" | "review" | "design" | "publish";
 
-const STAGE_ORDER: readonly { stage: Stage; label: string; position: number }[] = [
-  { stage: "planning", label: "Planning", position: 1 },
-  { stage: "review", label: "Review", position: 2 },
-  { stage: "design", label: "Design", position: 3 },
-  { stage: "publish", label: "Publish", position: 4 },
+const STAGE_KEY: Record<Stage, string> = {
+  planning: "common.stagePlanning",
+  review: "common.stageReview",
+  design: "common.stageDesign",
+  publish: "common.stagePublish",
+};
+const STAGE_FALLBACK: Record<Stage, string> = {
+  planning: "Planning",
+  review: "Review",
+  design: "Design",
+  publish: "Publish",
+};
+
+const STAGE_ORDER: readonly { stage: Stage; position: number }[] = [
+  { stage: "planning", position: 1 },
+  { stage: "review", position: 2 },
+  { stage: "design", position: 3 },
+  { stage: "publish", position: 4 },
 ] as const;
 
 const TOTAL_STAGES = STAGE_ORDER.length;
@@ -59,13 +72,24 @@ export function StagePill({
   status,
   className,
   testId = "stage-pill",
+  t,
 }: {
   status: ContentStatus;
   className?: string;
   testId?: string;
+  /**
+   * Optional translator. When provided, the stage label
+   * (Planning / Review / Design / Publish) and the
+   * `Current stage: ...` title render from the active locale;
+   * when omitted, the stored English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   const stage = stageForStatus(status);
   const entry = STAGE_ORDER.find((s) => s.stage === stage) ?? STAGE_ORDER[0]!;
+  const label = tr(STAGE_KEY[entry.stage], STAGE_FALLBACK[entry.stage]);
   return (
     <span
       data-testid={testId}
@@ -75,10 +99,14 @@ export function StagePill({
         "text-label text-fg-primary inline-flex items-center gap-1.5 font-semibold",
         className,
       )}
-      title={`Current stage: ${entry.label} (${entry.position} of ${TOTAL_STAGES})`}
+      title={tr(
+        "common.stageCurrentTitle",
+        `Current stage: ${label} (${entry.position} of ${TOTAL_STAGES})`,
+        { label, position: entry.position, total: TOTAL_STAGES },
+      )}
     >
       <span aria-hidden="true" className="bg-primary h-1.5 w-1.5 rounded-full" />
-      <span>{entry.label}</span>
+      <span>{label}</span>
       <span className="text-fg-muted font-normal">
         {entry.position}/{TOTAL_STAGES}
       </span>

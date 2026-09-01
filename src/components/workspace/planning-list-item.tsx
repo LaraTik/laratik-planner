@@ -222,7 +222,7 @@ export function PlanningListItem({
           <span className="text-fg-muted font-semibold tracking-wide uppercase lg:sr-only">
             {tr("workspaceOverviewDashboard.rowStageAria", "Stage")}
           </span>
-          <StagePill status={item.status} />
+          <StagePill status={item.status} {...(t ? { t } : {})} />
         </div>
 
         {/* HEALTH + NEXT ACTION */}
