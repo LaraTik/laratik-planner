@@ -33,7 +33,8 @@
     "pageX": "صفحة {p}",
     "nextPageAria": "الصفحة التالية",
     "nextPageText": "التالي",
-    "lastPageAria": "الصفحة الأخيرة"
+    "lastPageAria": "الصفحة الأخيرة",
+    "dialogCloseAria": "إغلاق"
   },
   "navigation": {
     "myWork": "عملي",

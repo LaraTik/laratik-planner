@@ -32,8 +32,17 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    /**
+     * Localised aria-label for the built-in close button. Defaults
+     * to "Close" so the primitive is still usable without a
+     * translator. Thread the active locale's value from feature
+     * code so screen readers announce the close control in the
+     * active language.
+     */
+    closeAriaLabel?: string;
+  }
+>(({ className, children, closeAriaLabel = "Close", ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -49,7 +58,7 @@ const DialogContent = React.forwardRef<
       {children}
       <DialogPrimitive.Close
         className="focus-visible:ring-focus-ring absolute end-2 top-2 flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[var(--radius-control)] opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2"
-        aria-label="Close"
+        aria-label={closeAriaLabel}
       >
         <X className="h-4 w-4" />
       </DialogPrimitive.Close>

@@ -33,7 +33,8 @@
     "pageX": "Page {p}",
     "nextPageAria": "Next page",
     "nextPageText": "Next",
-    "lastPageAria": "Last page"
+    "lastPageAria": "Last page",
+    "dialogCloseAria": "Close"
   },
   "navigation": {
     "myWork": "My Work",
