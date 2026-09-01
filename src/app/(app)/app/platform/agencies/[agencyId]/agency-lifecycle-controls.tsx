@@ -42,6 +42,7 @@ const EN_FALLBACK: Translator = (key, params) => {
     "platform.lifecycleArchiveBodyAction":
       "The agency will leave normal operations. Tenant data is preserved, and only a Platform Owner can reverse this action.",
     "platform.lifecycleCannotArchive": "Your role cannot archive this agency.",
+    "common.dialogCloseAria": "Close",
   };
   return lookup[key] ?? key;
 };
@@ -103,6 +104,7 @@ export function AgencyLifecycleControls({
               description={tr("platform.lifecycleSuspendBody")}
               confirmLabel={tr("platform.lifecycleSuspend")}
               onConfirm={(reason) => submit("suspend", reason)}
+              closeAriaLabel={tr("common.dialogCloseAria")}
             />
           ) : (
             <ReasonDialog
@@ -116,6 +118,7 @@ export function AgencyLifecycleControls({
               description={tr("platform.lifecycleRestoreBody")}
               confirmLabel={tr("platform.lifecycleRestore")}
               onConfirm={(reason) => submit("restore", reason)}
+              closeAriaLabel={tr("common.dialogCloseAria")}
             />
           )
         ) : (
@@ -143,6 +146,7 @@ export function AgencyLifecycleControls({
               description={tr("platform.lifecycleUnarchiveBody")}
               confirmLabel={tr("platform.lifecycleUnarchive")}
               onConfirm={(reason) => submit("unarchive", reason)}
+              closeAriaLabel={tr("common.dialogCloseAria")}
             />
           ) : (
             <ReasonDialog
@@ -157,6 +161,7 @@ export function AgencyLifecycleControls({
               confirmLabel={tr("platform.lifecycleArchive")}
               destructive
               onConfirm={(reason) => submit("archive", reason)}
+              closeAriaLabel={tr("common.dialogCloseAria")}
             />
           )
         ) : (

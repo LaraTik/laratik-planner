@@ -685,6 +685,7 @@ export function PublishPackageForm({
             label="Note"
             confirmLabel="Add note"
             onConfirm={handleInternalNote}
+            closeAriaLabel={t("common.dialogCloseAria")}
           />
           {Object.keys(savedAt).length > 0 ? (
             <span className="text-label text-fg-muted" data-testid="publish-last-saved">
