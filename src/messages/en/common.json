@@ -327,7 +327,8 @@
       "statusConfirmedReadyOne": "Publish package confirmed ready at revision {revision}.",
       "lastSaved": "Last saved {time}",
       "saveDraft": "Save draft",
-      "readyForPublishing": "Ready for publishing"
+      "readyForPublishing": "Ready for publishing",
+      "noApprovedDelivery": "No approved version yet — block from readiness."
     },
     "comments": {
       "drawer": {

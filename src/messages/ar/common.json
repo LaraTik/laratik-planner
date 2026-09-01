@@ -327,7 +327,8 @@
       "statusConfirmedReadyOne": "تم تأكيد جاهزية حزمة النشر عند المراجعة {revision}.",
       "lastSaved": "آخر حفظ {time}",
       "saveDraft": "حفظ المسودة",
-      "readyForPublishing": "جاهز للنشر"
+      "readyForPublishing": "جاهز للنشر",
+      "noApprovedDelivery": "لا توجد نسخة معتمدة بعد — يمنع الجاهزية."
     },
     "comments": {
       "drawer": {

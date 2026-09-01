@@ -607,7 +607,7 @@ export function PublishPackageForm({
                   className="text-label text-warning mt-1"
                   data-testid="publish-no-approved-delivery"
                 >
-                  No approved version yet — block from readiness.
+                  {t("contentDetail.publish.noApprovedDelivery")}
                 </p>
               ) : (
                 <ul className="mt-2 space-y-1 text-sm" data-testid="publish-approved-deliveries">
