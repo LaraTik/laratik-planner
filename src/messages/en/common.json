@@ -161,6 +161,27 @@
     "batchAdd": "Batch add ideas",
     "createContent": "Create content"
   },
+  "planning": {
+    "title": "Planning",
+    "descriptionOne": "{month} · {count} item",
+    "descriptionMany": "{month} · {count} items",
+    "batchAdd": "Batch add",
+    "quickCreate": "Quick Create",
+    "boardView": "Board view",
+    "boardViewTitle": "Switch to the board view with the same filters applied",
+    "exportCsv": "Export CSV",
+    "emptyFilterTitle": "No items match your filters",
+    "emptyFilterDescription": "No items match {filter}. Try clearing the filter to see everything planned for this month.",
+    "emptyNothingTitle": "Nothing planned for this month",
+    "emptyNothingDescription": "Use Quick Create to add a draft — it'll show up here ready to schedule.",
+    "clearFilters": "Clear filters",
+    "outOfRangeTitle": "Page {page} is past the end of the list",
+    "outOfRangeDescriptionOne": "The current filters match {count} item across {pages} page. Jump back to the first page to keep browsing.",
+    "outOfRangeDescriptionMany": "The current filters match {count} items across {pages} pages. Jump back to the first page to keep browsing.",
+    "goToPageOne": "Go to page 1",
+    "noAtRiskTitle": "No at-risk items on this page",
+    "noAtRiskDescription": "The at-risk filter only shows items that are overdue and still in flight. Try the next page, or clear the filter to see everything."
+  },
   "auth": {
     "appName": "laratik-planner",
     "productName": "StudioFlow",

@@ -161,6 +161,27 @@
     "batchAdd": "إضافة أفكار دفعة",
     "createContent": "إنشاء محتوى"
   },
+  "planning": {
+    "title": "التخطيط",
+    "descriptionOne": "{month} · عنصر واحد",
+    "descriptionMany": "{month} · {count} عناصر",
+    "batchAdd": "إضافة دفعة",
+    "quickCreate": "إنشاء سريع",
+    "boardView": "عرض اللوحة",
+    "boardViewTitle": "التبديل إلى عرض اللوحة مع تطبيق المرشّحات نفسها",
+    "exportCsv": "تصدير CSV",
+    "emptyFilterTitle": "لا توجد عناصر تطابق المرشّحات",
+    "emptyFilterDescription": "لا توجد عناصر تطابق {filter}. جرّب مسح المرشّح لرؤية كل ما هو مُخطّط لهذا الشهر.",
+    "emptyNothingTitle": "لا يوجد شيء مُخطّط لهذا الشهر",
+    "emptyNothingDescription": "استخدم الإنشاء السريع لإضافة مسودة — ستظهر هنا جاهزة للجدولة.",
+    "clearFilters": "مسح المرشّحات",
+    "outOfRangeTitle": "الصفحة {page} تتجاوز نهاية القائمة",
+    "outOfRangeDescriptionOne": "المرشّحات الحالية تطابق {count} عنصر عبر {pages} صفحة. ارجع إلى الصفحة الأولى لمتابعة التصفّح.",
+    "outOfRangeDescriptionMany": "المرشّحات الحالية تطابق {count} عناصر عبر {pages} صفحات. ارجع إلى الصفحة الأولى لمتابعة التصفّح.",
+    "goToPageOne": "الانتقال إلى الصفحة 1",
+    "noAtRiskTitle": "لا توجد عناصر في خطر في هذه الصفحة",
+    "noAtRiskDescription": "يعرض مرشّح «في خطر» فقط العناصر المتأخرة والجارية. جرّب الصفحة التالية، أو امسح المرشّح لرؤية كل شيء."
+  },
   "auth": {
     "appName": "laratik-planner",
     "productName": "StudioFlow",

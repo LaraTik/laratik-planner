@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { tFor } from "@/messages";
 
 /**
  * UX-04 (GAP-FULL-REVIEW-2026-08-25) — the Planning list used to
@@ -17,12 +18,16 @@ import { join } from "node:path";
  *   - references the active filter via `describeActiveFilter` so the
  *     user knows which filter is suppressing the result
  *
- * Because the page is a server component that requires a real DB +
- * auth context, we keep this guard as a structural test: if a future
- * polish pass removes the conditional render, the test fails at CI.
+ * The page is a server component that requires a real DB + auth
+ * context, so we keep this guard as a structural test: if a future
+ * polish pass removes the conditional render or the catalog wiring,
+ * the test fails at CI.
  *
- * The helper itself is covered by
- * `tests/unit/workspace/planning-filter-describe.test.ts`.
+ * The hard-coded English copy that this test originally locked
+ * (UX-04) has since been moved to the message catalog under the
+ * `planning.*` namespace. The structural test now locks the
+ * catalog keys instead of the English strings — the English
+ * values are still pinned by `tests/unit/i18n/catalogs.test.ts`.
  */
 describe("planning page empty-state structure (UX-04)", () => {
   const source = readFileSync(
@@ -30,24 +35,48 @@ describe("planning page empty-state structure (UX-04)", () => {
     "utf8",
   );
 
-  it("renders the filter-aware empty state when hasFilter is true", () => {
-    expect(source).toMatch(/hasFilter\s*\?\s*"No items match your filters"/);
+  // Lock the catalog strings the empty state must use. The English
+  // values come from `tFor("en")` so the test fails when a
+  // catalog refactor drops a key or breaks the JSON shape.
+  const en = tFor("en");
+  const filterTitle = en("planning.emptyFilterTitle");
+  const nothingTitle = en("planning.emptyNothingTitle");
+  const clearFilters = en("planning.clearFilters");
+  const quickCreate = en("planning.quickCreate");
+
+  it("renders the filter-aware empty state title when hasFilter is true", () => {
+    expect(source).toMatch(
+      new RegExp(`hasFilter\\s*\\?\\s*t\\(["']planning\\.emptyFilterTitle["']`),
+    );
+    expect(filterTitle).toBe("No items match your filters");
   });
 
-  it("keeps the original empty state copy when no filter is active", () => {
-    expect(source).toMatch(
-      /hasFilter\s*\?\s*"No items match your filters"\s*:\s*"Nothing planned for this month"/,
-    );
+  it("keeps the original empty state title when no filter is active", () => {
+    // The ternary is on multiple lines; use a relaxed match
+    // that just confirms the two catalog keys coexist on the
+    // empty-state title line, regardless of how Prettier
+    // formatted the surrounding `?` / `:`.
+    expect(source).toMatch(/t\(["']planning\.emptyFilterTitle["']/);
+    expect(source).toMatch(/t\(["']planning\.emptyNothingTitle["']/);
+    expect(nothingTitle).toBe("Nothing planned for this month");
   });
 
   it("renders a Clear filters button as the empty-state action when hasFilter is true", () => {
     expect(source).toMatch(
-      /hasFilter\s*\?\s*\(\s*[\s\S]*?data-testid="planning-empty-clear-filters"[\s\S]*?Clear filters/,
+      new RegExp(
+        `hasFilter\\s*\\?\\s*\\([\\s\\S]*?data-testid="planning-empty-clear-filters"[\\s\\S]*?t\\(["']planning\\.clearFilters["']`,
+      ),
     );
+    expect(clearFilters).toBe("Clear filters");
   });
 
   it("shows Quick Create only when no filter is active", () => {
-    expect(source).toMatch(/hasFilter\s*\?[\s\S]*?:\s*canCreate\s*\?[\s\S]*?Quick Create/);
+    expect(source).toMatch(
+      new RegExp(
+        `hasFilter[\\s\\S]*?:\\s*canCreate\\s*\\?[\\s\\S]*?t\\(["']planning\\.quickCreate["']`,
+      ),
+    );
+    expect(quickCreate).toBe("Quick Create");
   });
 
   it("wires the empty-state description through describeActiveFilter", () => {

@@ -26,6 +26,7 @@ import {
 import { aggregateHealth } from "@/lib/dashboard/health";
 import { db } from "@/lib/db";
 import { users, workspaceMemberships } from "@/lib/db/schema";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 /**
  * Planning list (Goal 6 master prompt §3 Monthly Planning List).
@@ -79,6 +80,7 @@ export default async function PlanningPage({
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
 
+  const { t, dir } = await tForActive();
   const ws = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!ws) notFound();
   const canCreate = await hasWorkspaceRole({ id: session.user.id }, ws.id, [
@@ -238,11 +240,18 @@ export default async function PlanningPage({
     <div className="mx-auto w-full max-w-[1440px] space-y-6" data-testid="workspace-planning">
       <PageHeader
         eyebrow={ws.name}
-        title="Planning"
+        title={t("planning.title")}
         description={
           <>
-            {now.toLocaleString("default", { month: "long", year: "numeric" })} · {totalCount} item
-            {totalCount === 1 ? "" : "s"}
+            <span>
+              {t(totalCount === 1 ? "planning.descriptionOne" : "planning.descriptionMany", {
+                count: totalCount,
+                month: new Intl.DateTimeFormat(dir === "rtl" ? "ar" : "en", {
+                  month: "long",
+                  year: "numeric",
+                }).format(now),
+              })}
+            </span>
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {ws.timezone}
@@ -256,13 +265,13 @@ export default async function PlanningPage({
                 <Button variant="outline" asChild>
                   <Link href={`/app/w/${slug}/planning/batch`}>
                     <Files className="h-4 w-4" />
-                    Batch add
+                    {t("planning.batchAdd")}
                   </Link>
                 </Button>
                 <Button asChild>
                   <Link href={`/app/w/${slug}/planning/new`}>
                     <Plus className="h-4 w-4" aria-hidden="true" />
-                    Quick Create
+                    {t("planning.quickCreate")}
                   </Link>
                 </Button>
               </>
@@ -277,7 +286,7 @@ export default async function PlanningPage({
               variant="outline"
               asChild
               data-testid="planning-switch-to-board"
-              title="Switch to the board view with the same filters applied"
+              title={t("planning.boardViewTitle")}
             >
               <Link
                 href={(() => {
@@ -291,7 +300,7 @@ export default async function PlanningPage({
                 })()}
               >
                 <LayoutGrid className="h-4 w-4" aria-hidden="true" />
-                Board view
+                {t("planning.boardView")}
               </Link>
             </Button>
             {/* FEAT-15 (GAP-FULL-REVIEW-2026-08-25) — CSV export
@@ -306,7 +315,7 @@ export default async function PlanningPage({
                 download
               >
                 <Download className="h-4 w-4" aria-hidden="true" />
-                Export CSV
+                {t("planning.exportCsv")}
               </a>
             </Button>
           </div>
@@ -346,21 +355,23 @@ export default async function PlanningPage({
       {totalCount === 0 ? (
         <EmptyState
           icon={<FileText className="h-8 w-8" aria-hidden="true" />}
-          title={hasFilter ? "No items match your filters" : "Nothing planned for this month"}
+          title={hasFilter ? t("planning.emptyFilterTitle") : t("planning.emptyNothingTitle")}
           description={
             hasFilter
-              ? `No items match ${describeActiveFilter(
-                  Object.fromEntries(
-                    Object.entries({
-                      status: selectedStatus,
-                      format: selectedFormat,
-                      ownerId: ownerFilter,
-                      search: searchTerm,
-                      risk: filters.risk,
-                    }).filter(([, v]) => v != null),
-                  ) as Parameters<typeof describeActiveFilter>[0],
-                )}. Try clearing the filter to see everything planned for this month.`
-              : "Use Quick Create to add a draft — it'll show up here ready to schedule."
+              ? t("planning.emptyFilterDescription", {
+                  filter: describeActiveFilter(
+                    Object.fromEntries(
+                      Object.entries({
+                        status: selectedStatus,
+                        format: selectedFormat,
+                        ownerId: ownerFilter,
+                        search: searchTerm,
+                        risk: filters.risk,
+                      }).filter(([, v]) => v != null),
+                    ) as Parameters<typeof describeActiveFilter>[0],
+                  ),
+                })
+              : t("planning.emptyNothingDescription")
           }
           action={
             hasFilter ? (
@@ -369,14 +380,14 @@ export default async function PlanningPage({
                   href={`/app/w/${slug}/planning?month=${monthParam(0)}`}
                   data-testid="planning-empty-clear-filters"
                 >
-                  Clear filters
+                  {t("planning.clearFilters")}
                 </Link>
               </Button>
             ) : canCreate ? (
               <Button asChild>
                 <Link href={`/app/w/${slug}/planning/new`}>
                   <Plus className="h-4 w-4" aria-hidden="true" />
-                  Quick Create
+                  {t("planning.quickCreate")}
                 </Link>
               </Button>
             ) : undefined
@@ -392,17 +403,20 @@ export default async function PlanningPage({
             <div className="flex items-center gap-2">
               <AlertTriangle className="text-warning h-5 w-5" aria-hidden="true" />
               <p className="text-body text-fg-primary font-semibold">
-                Page {requestedPage} is past the end of the list
+                {t("planning.outOfRangeTitle", { page: requestedPage })}
               </p>
             </div>
             <p className="text-body text-fg-secondary">
-              The current filters match {totalCount} item{totalCount === 1 ? "" : "s"} across{" "}
-              {totalPages} page{totalPages === 1 ? "" : "s"}. Jump back to the first page to keep
-              browsing.
+              {t(
+                totalCount === 1
+                  ? "planning.outOfRangeDescriptionOne"
+                  : "planning.outOfRangeDescriptionMany",
+                { count: totalCount, pages: totalPages },
+              )}
             </p>
             <div>
               <Button asChild variant="outline" size="sm">
-                <Link href={buildPageHref(1)}>Go to page 1</Link>
+                <Link href={buildPageHref(1)}>{t("planning.goToPageOne")}</Link>
               </Button>
             </div>
           </div>
@@ -412,15 +426,15 @@ export default async function PlanningPage({
         // `risk=at_risk` filter eliminated every row on this page.
         <EmptyState
           icon={<FileText className="h-8 w-8" aria-hidden="true" />}
-          title="No at-risk items on this page"
-          description="The at-risk filter only shows items that are overdue and still in flight. Try the next page, or clear the filter to see everything."
+          title={t("planning.noAtRiskTitle")}
+          description={t("planning.noAtRiskDescription")}
           action={
             <Button variant="outline" asChild>
               <Link
                 href={`/app/w/${slug}/planning?month=${monthParam(0)}`}
                 data-testid="planning-empty-clear-filters"
               >
-                Clear filters
+                {t("planning.clearFilters")}
               </Link>
             </Button>
           }
