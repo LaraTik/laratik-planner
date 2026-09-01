@@ -387,6 +387,7 @@ export function FormatAwareContentEditor({
       editable,
       aiEnabled,
       contentItemId,
+      t,
       onField: setField,
       onTranslation: setFieldTranslation,
     } as FieldRendererProps);
@@ -481,6 +482,7 @@ export function FormatAwareContentEditor({
                         editable,
                         aiEnabled,
                         contentItemId,
+                        t,
                         onField: setField,
                         onTranslation: setFieldTranslation,
                       } as FieldRendererProps);

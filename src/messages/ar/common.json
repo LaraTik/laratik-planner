@@ -309,6 +309,57 @@
       "keyVisualHook": "الخطاف البصري الرئيسي",
       "ratio": "النسبة",
       "duration": "المدة",
+      "startSeconds": "البدء (ث)",
+      "level": "المستوى",
+      "keyTakeawaysMeta": {
+        "hint": "عنصر واحد في كل سطر",
+        "placeholder": "3-5 نتائج"
+      },
+      "talkingPointsMeta": {
+        "hint": "عنصر واحد في كل سطر",
+        "placeholder": "3-7 نقاط حديث"
+      },
+      "qaPromptsMeta": {
+        "hint": "عنصر واحد في كل سطر",
+        "placeholder": "ابدأ النقاش بسؤال..."
+      },
+      "referencesMeta": {
+        "hint": "رابط واحد في كل سطر",
+        "placeholder": "https://…"
+      },
+      "hashtagsMeta": {
+        "placeholder": "#وسم1 #وسم2"
+      },
+      "locationMeta": {
+        "hint": "مكان / مدينة (اختياري)",
+        "namePlaceholder": "دبي مول",
+        "externalIdPlaceholder": "fb-123 (اختياري)"
+      },
+      "scheduledStartMeta": {
+        "hint": "التوقيت المحلي"
+      },
+      "objectiveMeta": {
+        "hint": "الوعي / التفكير / التحويل / الاحتفاظ",
+        "placeholder": "الوعي"
+      },
+      "audienceMeta": {
+        "placeholder": "لمن هذا المحتوى؟"
+      },
+      "scenesMeta": {
+        "hint": "الموضع · الملخص · المدة (بالثواني)"
+      },
+      "slideOutlineMeta": {
+        "hint": "الموضع · الملخص · التوجيه البصري"
+      },
+      "visualSlidesMeta": {
+        "hint": "توجيه بصري لكل شريحة (منشورات الصورة الواحدة)"
+      },
+      "chaptersMeta": {
+        "hint": "الموضع · العنوان · وقت البدء (بالثواني)"
+      },
+      "outlineMeta": {
+        "hint": "مستوى العنوان · العنوان"
+      },
       "primaryText": "النص الأساسي",
       "headline": "العنوان الرئيسي",
       "subhead": "العنوان الفرعي",
@@ -354,8 +405,19 @@
       "objectiveLabel": "الهدف",
       "structuredArraySlideOutline": "الشرائح",
       "structuredArrayScenes": "المشاهد",
+      "structuredArrayVisualSlides": "الشرائح البصرية",
+      "structuredArrayChapters": "الفصول",
+      "structuredArrayOutline": "المخطط",
+      "structuredArrayKeyTakeaways": "النتائج الرئيسية",
       "structuredArraySlideEntity": "شريحة",
       "structuredArraySceneEntity": "مشهد",
+      "structuredArrayChapterEntity": "فصل",
+      "structuredArrayKeyTakeawaysHint": "عنصر واحد في كل سطر",
+      "structuredArrayScenesHint": "الموضع · الملخص · المدة (بالثواني)",
+      "structuredArraySlideOutlineHint": "الموضع · الملخص · التوجيه البصري",
+      "structuredArrayVisualSlidesHint": "توجيه بصري لكل شريحة (منشورات الصورة الواحدة)",
+      "structuredArrayChaptersHint": "الموضع · العنوان · وقت البدء (بالثواني)",
+      "structuredArrayOutlineHint": "مستوى العنوان · العنوان",
       "structuredArrayHint": "اسحب الرقائق لإعادة الترتيب، أو ركّز واضغط Alt + ↑ / ↓. ⌘D للنسخ، Delete للحذف.",
       "structuredArrayCarouselHint": "أضف الشرائح وأعد ترتيبها وعدّلها. اسحب الرقائق أو استخدم Alt + ↑ / ↓ لإعادة الترتيب؛ ⌘D للنسخ.",
       "structuredArrayReelHint": "المشاهد والغلاف والنص على الشاشة والتعليق الصوتي والمرجع الصوتي. استخدم Alt + ↑ / ↓ لإعادة ترتيب المشاهد."

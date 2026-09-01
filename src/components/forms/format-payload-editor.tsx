@@ -172,6 +172,7 @@ export function FormatPayloadEditor({
       editable,
       aiEnabled,
       contentItemId,
+      t,
       onField: setField,
       onTranslation: setFieldTranslation,
     } as FieldRendererProps);
@@ -193,6 +194,7 @@ export function FormatPayloadEditor({
       editable,
       aiEnabled,
       contentItemId,
+      t,
       onField: setField,
       onTranslation: setFieldTranslation,
     } as FieldRendererProps);

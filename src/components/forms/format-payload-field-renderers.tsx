@@ -40,6 +40,18 @@ export interface FieldRendererProps {
   editable: boolean;
   aiEnabled: boolean;
   contentItemId: string;
+  /**
+   * Bound translator from the parent editor (`tForActive()`).
+   * The simple text/long-text renderers receive the
+   * already-resolved `label` + `hint` from the parent and
+   * don't use `t` directly. The specialized renderers
+   * (KeyTakeaways, TalkingPoints, QaPrompts, References,
+   * ScheduledStart, Location, ObjectiveAudience, Scenes,
+   * SlideOutline, VisualSlides, Chapters, Outline) resolve
+   * their placeholder, entity name, and column labels
+   * through this translator.
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
   onField: (key: string, value: unknown) => void;
   onTranslation: (key: string, locale: LocaleCode, value: string) => void;
 }
@@ -112,6 +124,8 @@ function TextFieldRenderer({
   editable,
   aiEnabled,
   contentItemId,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  t,
   onField,
   onTranslation,
 }: FieldRendererProps) {
@@ -174,6 +188,8 @@ function LongTextFieldRenderer({
   editable,
   aiEnabled,
   contentItemId,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  t,
   onField,
   onTranslation,
 }: FieldRendererProps) {
@@ -237,6 +253,7 @@ function TagFieldRenderer({
   editable,
   aiEnabled,
   contentItemId,
+  t,
   onField,
   onTranslation,
 }: FieldRendererProps) {
@@ -272,7 +289,7 @@ function TagFieldRenderer({
             .filter((s) => s.length > 0);
           onField(fieldKey, next.length > 0 ? next : undefined);
         }}
-        placeholder="#tag1 #tag2"
+        placeholder={t("formatEditor.fields.hashtagsMeta.placeholder")}
       />
       {editable ? (
         <PerFieldAiSuggest
@@ -306,6 +323,8 @@ function PlainTextFieldRenderer({
   payload,
   locale,
   editable,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  t,
   onField,
 }: FieldRendererProps) {
   const value = stringField(payload, fieldKey);
@@ -400,114 +419,151 @@ function NumberFieldRenderer({
 
 // ─── Composite / array fields ──────────────────────────────────────
 
-function ScenesFieldRenderer({ payload, locale, editable, onField }: FieldRendererProps) {
+function ScenesFieldRenderer({ label, payload, locale, editable, t, onField }: FieldRendererProps) {
   const scenes = Array.isArray(payload.scenes) ? (payload.scenes as unknown[]) : [];
   return (
     <div data-testid="field-scenes">
       <NavigableArrayField
         fieldKey="scenes"
-        label="Scenes"
-        hint="Position · summary · duration (seconds)"
+        label={label}
+        hint={t("formatEditor.fields.scenesMeta.hint")}
         rows={scenes}
         columns={[
-          { key: "position", label: "#", kind: "number" },
-          { key: "summary", label: "Summary", kind: "text" },
-          { key: "durationSeconds", label: "Sec", kind: "number", optional: true },
+          { key: "position", label: t("formatEditor.fields.positionTag"), kind: "number" },
+          { key: "summary", label: t("formatEditor.fields.summary"), kind: "text" },
+          {
+            key: "durationSeconds",
+            label: t("formatEditor.fields.durationSeconds"),
+            kind: "number",
+            optional: true,
+          },
         ]}
         locale={locale}
         editable={editable}
         layout="slider"
-        entity="Scene"
+        entity={t("formatEditor.editor.structuredArraySceneEntity")}
         onField={onField}
       />
     </div>
   );
 }
 
-function SlideOutlineFieldRenderer({ payload, locale, editable, onField }: FieldRendererProps) {
+function SlideOutlineFieldRenderer({
+  label,
+  payload,
+  locale,
+  editable,
+  t,
+  onField,
+}: FieldRendererProps) {
   const slides = Array.isArray(payload.slideOutline) ? (payload.slideOutline as unknown[]) : [];
   return (
     <div data-testid="field-slideOutline">
       <NavigableArrayField
         fieldKey="slideOutline"
-        label="Slide outline"
-        hint="Position · summary · visual direction"
+        label={label}
+        hint={t("formatEditor.fields.slideOutlineMeta.hint")}
         rows={slides}
         columns={[
-          { key: "position", label: "#", kind: "number" },
-          { key: "summary", label: "Summary", kind: "text" },
-          { key: "visual", label: "Visual", kind: "text", optional: true },
+          { key: "position", label: t("formatEditor.fields.positionTag"), kind: "number" },
+          { key: "summary", label: t("formatEditor.fields.summary"), kind: "text" },
+          { key: "visual", label: t("formatEditor.fields.visual"), kind: "text", optional: true },
         ]}
         locale={locale}
         editable={editable}
         layout="slider"
-        entity="Slide"
+        entity={t("formatEditor.editor.structuredArraySlideEntity")}
         onField={onField}
       />
     </div>
   );
 }
 
-function VisualSlidesFieldRenderer({ payload, locale, editable, onField }: FieldRendererProps) {
+function VisualSlidesFieldRenderer({
+  label,
+  payload,
+  locale,
+  editable,
+  t,
+  onField,
+}: FieldRendererProps) {
   const slides = Array.isArray(payload.visualSlides) ? (payload.visualSlides as unknown[]) : [];
   return (
     <div data-testid="field-visualSlides">
       <NavigableArrayField
         fieldKey="visualSlides"
-        label="Visual slides"
-        hint="Per-slide visual direction (single-image posts)"
+        label={label}
+        hint={t("formatEditor.fields.visualSlidesMeta.hint")}
         rows={slides}
         columns={[
-          { key: "position", label: "#", kind: "number" },
-          { key: "summary", label: "Summary", kind: "text" },
-          { key: "visual", label: "Visual", kind: "text", optional: true },
+          { key: "position", label: t("formatEditor.fields.positionTag"), kind: "number" },
+          { key: "summary", label: t("formatEditor.fields.summary"), kind: "text" },
+          { key: "visual", label: t("formatEditor.fields.visual"), kind: "text", optional: true },
         ]}
         locale={locale}
         editable={editable}
         layout="slider"
-        entity="Slide"
+        entity={t("formatEditor.editor.structuredArraySlideEntity")}
         onField={onField}
       />
     </div>
   );
 }
 
-function ChaptersFieldRenderer({ payload, locale, editable, onField }: FieldRendererProps) {
+function ChaptersFieldRenderer({
+  label,
+  payload,
+  locale,
+  editable,
+  t,
+  onField,
+}: FieldRendererProps) {
   const rows = Array.isArray(payload.chapters) ? (payload.chapters as unknown[]) : [];
   return (
     <div data-testid="field-chapters">
       <NavigableArrayField
         fieldKey="chapters"
-        label="Chapters"
-        hint="Position · title · starts at (seconds)"
+        label={label}
+        hint={t("formatEditor.fields.chaptersMeta.hint")}
         rows={rows}
         columns={[
-          { key: "position", label: "#", kind: "number" },
-          { key: "title", label: "Title", kind: "text" },
-          { key: "startsAtSeconds", label: "Start (s)", kind: "number" },
+          { key: "position", label: t("formatEditor.fields.positionTag"), kind: "number" },
+          { key: "title", label: t("formatEditor.fields.title"), kind: "text" },
+          {
+            key: "startsAtSeconds",
+            label: t("formatEditor.fields.startSeconds"),
+            kind: "number",
+          },
         ]}
         locale={locale}
         editable={editable}
         layout="slider"
-        entity="Chapter"
+        entity={t("formatEditor.editor.structuredArrayChapterEntity")}
         onField={onField}
       />
     </div>
   );
 }
 
-function OutlineFieldRenderer({ payload, locale, editable, onField }: FieldRendererProps) {
+function OutlineFieldRenderer({
+  label,
+  payload,
+  locale,
+  editable,
+  t,
+  onField,
+}: FieldRendererProps) {
   const rows = Array.isArray(payload.outline) ? (payload.outline as unknown[]) : [];
   return (
     <div data-testid="field-outline">
       <NavigableArrayField
         fieldKey="outline"
-        label="Outline"
-        hint="Heading level · title"
+        label={label}
+        hint={t("formatEditor.fields.outlineMeta.hint")}
         rows={rows}
         columns={[
-          { key: "level", label: "Level", kind: "number" },
-          { key: "title", label: "Title", kind: "text" },
+          { key: "level", label: t("formatEditor.fields.level"), kind: "number" },
+          { key: "title", label: t("formatEditor.fields.title"), kind: "text" },
         ]}
         locale={locale}
         editable={editable}
@@ -518,12 +574,23 @@ function OutlineFieldRenderer({ payload, locale, editable, onField }: FieldRende
   );
 }
 
-function KeyTakeawaysFieldRenderer({ payload, locale, editable, onField }: FieldRendererProps) {
+function KeyTakeawaysFieldRenderer({
+  label,
+  payload,
+  locale,
+  editable,
+  t,
+  onField,
+}: FieldRendererProps) {
   const arr = Array.isArray(payload.keyTakeaways) ? (payload.keyTakeaways as unknown[]) : [];
   const value = arr.filter((x): x is string => typeof x === "string").join("\n");
   return (
     <div className="space-y-1.5" data-testid="field-keyTakeaways">
-      <LabeledField fieldKey="keyTakeaways" label="Key takeaways" hint="One per line" />
+      <LabeledField
+        fieldKey="keyTakeaways"
+        label={label}
+        hint={t("formatEditor.fields.keyTakeawaysMeta.hint")}
+      />
       <DirAwareTextarea
         id="keyTakeaways"
         locale={locale}
@@ -537,18 +604,29 @@ function KeyTakeawaysFieldRenderer({ payload, locale, editable, onField }: Field
           onField("keyTakeaways", next.length > 0 ? next : undefined);
         }}
         rows={Math.min(8, Math.max(2, value.split("\n").length + 1))}
-        placeholder="3-5 takeaways"
+        placeholder={t("formatEditor.fields.keyTakeawaysMeta.placeholder")}
       />
     </div>
   );
 }
 
-function TalkingPointsFieldRenderer({ payload, locale, editable, onField }: FieldRendererProps) {
+function TalkingPointsFieldRenderer({
+  label,
+  payload,
+  locale,
+  editable,
+  t,
+  onField,
+}: FieldRendererProps) {
   const arr = Array.isArray(payload.talkingPoints) ? (payload.talkingPoints as unknown[]) : [];
   const value = arr.filter((x): x is string => typeof x === "string").join("\n");
   return (
     <div className="space-y-1.5" data-testid="field-talkingPoints">
-      <LabeledField fieldKey="talkingPoints" label="Talking points" hint="One per line" />
+      <LabeledField
+        fieldKey="talkingPoints"
+        label={label}
+        hint={t("formatEditor.fields.talkingPointsMeta.hint")}
+      />
       <DirAwareTextarea
         id="talkingPoints"
         locale={locale}
@@ -562,18 +640,29 @@ function TalkingPointsFieldRenderer({ payload, locale, editable, onField }: Fiel
           onField("talkingPoints", next.length > 0 ? next : undefined);
         }}
         rows={Math.min(8, Math.max(2, value.split("\n").length + 1))}
-        placeholder="3-7 talking points"
+        placeholder={t("formatEditor.fields.talkingPointsMeta.placeholder")}
       />
     </div>
   );
 }
 
-function QaPromptsFieldRenderer({ payload, locale, editable, onField }: FieldRendererProps) {
+function QaPromptsFieldRenderer({
+  label,
+  payload,
+  locale,
+  editable,
+  t,
+  onField,
+}: FieldRendererProps) {
   const arr = Array.isArray(payload.qaPrompts) ? (payload.qaPrompts as unknown[]) : [];
   const value = arr.filter((x): x is string => typeof x === "string").join("\n");
   return (
     <div className="space-y-1.5" data-testid="field-qaPrompts">
-      <LabeledField fieldKey="qaPrompts" label="Q&A prompts" hint="One per line" />
+      <LabeledField
+        fieldKey="qaPrompts"
+        label={label}
+        hint={t("formatEditor.fields.qaPromptsMeta.hint")}
+      />
       <DirAwareTextarea
         id="qaPrompts"
         locale={locale}
@@ -587,19 +676,30 @@ function QaPromptsFieldRenderer({ payload, locale, editable, onField }: FieldRen
           onField("qaPrompts", next.length > 0 ? next : undefined);
         }}
         rows={Math.min(6, Math.max(2, value.split("\n").length + 1))}
-        placeholder="Open the floor with..."
+        placeholder={t("formatEditor.fields.qaPromptsMeta.placeholder")}
       />
     </div>
   );
 }
 
-function ScheduledStartFieldRenderer({ payload, locale, editable, onField }: FieldRendererProps) {
+function ScheduledStartFieldRenderer({
+  label,
+  payload,
+  locale,
+  editable,
+  t,
+  onField,
+}: FieldRendererProps) {
   const v = payload.scheduledStart;
   const value =
     typeof v === "string" ? v.slice(0, 16) : v instanceof Date ? v.toISOString().slice(0, 16) : "";
   return (
     <div className="space-y-1.5" data-testid="field-scheduledStart">
-      <LabeledField fieldKey="scheduledStart" label="Scheduled start" hint="Local time" />
+      <LabeledField
+        fieldKey="scheduledStart"
+        label={label}
+        hint={t("formatEditor.fields.scheduledStartMeta.hint")}
+      />
       <DirAwareInput
         id="scheduledStart"
         locale={locale}
@@ -612,12 +712,23 @@ function ScheduledStartFieldRenderer({ payload, locale, editable, onField }: Fie
   );
 }
 
-function ReferencesFieldRenderer({ payload, locale, editable, onField }: FieldRendererProps) {
+function ReferencesFieldRenderer({
+  label,
+  payload,
+  locale,
+  editable,
+  t,
+  onField,
+}: FieldRendererProps) {
   const arr = Array.isArray(payload.references) ? (payload.references as unknown[]) : [];
   const value = arr.filter((x): x is string => typeof x === "string").join("\n");
   return (
     <div className="space-y-1.5" data-testid="field-references">
-      <LabeledField fieldKey="references" label="References" hint="One URL per line" />
+      <LabeledField
+        fieldKey="references"
+        label={label}
+        hint={t("formatEditor.fields.referencesMeta.hint")}
+      />
       <DirAwareTextarea
         id="references"
         locale={locale}
@@ -631,13 +742,20 @@ function ReferencesFieldRenderer({ payload, locale, editable, onField }: FieldRe
           onField("references", next.length > 0 ? next : undefined);
         }}
         rows={Math.min(6, Math.max(2, value.split("\n").length + 1))}
-        placeholder="https://…"
+        placeholder={t("formatEditor.fields.referencesMeta.placeholder")}
       />
     </div>
   );
 }
 
-function LocationFieldRenderer({ payload, locale, editable, onField }: FieldRendererProps) {
+function LocationFieldRenderer({
+  label,
+  payload,
+  locale,
+  editable,
+  t,
+  onField,
+}: FieldRendererProps) {
   const loc =
     payload.location && typeof payload.location === "object" && !Array.isArray(payload.location)
       ? (payload.location as Record<string, unknown>)
@@ -646,7 +764,11 @@ function LocationFieldRenderer({ payload, locale, editable, onField }: FieldRend
   const externalId = typeof loc?.externalId === "string" ? loc.externalId : "";
   return (
     <fieldset className="space-y-1.5" data-testid="field-location">
-      <LabeledField fieldKey="location" label="Location" hint="Optional venue / city" />
+      <LabeledField
+        fieldKey="location"
+        label={label}
+        hint={t("formatEditor.fields.locationMeta.hint")}
+      />
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         <DirAwareInput
           id="location-name"
@@ -661,7 +783,7 @@ function LocationFieldRenderer({ payload, locale, editable, onField }: FieldRend
             }
             onField("location", { name: v, ...(externalId ? { externalId } : {}) });
           }}
-          placeholder="Dubai Mall"
+          placeholder={t("formatEditor.fields.locationMeta.namePlaceholder")}
         />
         <DirAwareInput
           id="location-externalId"
@@ -673,14 +795,14 @@ function LocationFieldRenderer({ payload, locale, editable, onField }: FieldRend
             if (!name) return;
             onField("location", v ? { name, externalId: v } : { name });
           }}
-          placeholder="fb-123 (optional)"
+          placeholder={t("formatEditor.fields.locationMeta.externalIdPlaceholder")}
         />
       </div>
     </fieldset>
   );
 }
 
-function ObjectiveAudienceRenderer({ payload, locale, editable, onField }: FieldRendererProps) {
+function ObjectiveAudienceRenderer({ payload, locale, editable, t, onField }: FieldRendererProps) {
   const objective = typeof payload.objective === "string" ? payload.objective : "";
   const audience = typeof payload.audience === "string" ? payload.audience : "";
   return (
@@ -688,8 +810,8 @@ function ObjectiveAudienceRenderer({ payload, locale, editable, onField }: Field
       <div className="space-y-1.5">
         <LabeledField
           fieldKey="objective"
-          label="Objective"
-          hint="awareness / consideration / conversion / retention"
+          label={t("formatEditor.fields.objective")}
+          hint={t("formatEditor.fields.objectiveMeta.hint")}
         />
         <DirAwareInput
           id="objective"
@@ -697,18 +819,18 @@ function ObjectiveAudienceRenderer({ payload, locale, editable, onField }: Field
           value={objective}
           readOnly={!editable}
           onChange={(e) => onField("objective", e.target.value || undefined)}
-          placeholder="awareness"
+          placeholder={t("formatEditor.fields.objectiveMeta.placeholder")}
         />
       </div>
       <div className="space-y-1.5">
-        <LabeledField fieldKey="audience" label="Audience" />
+        <LabeledField fieldKey="audience" label={t("formatEditor.fields.audience")} />
         <DirAwareInput
           id="audience"
           locale={locale}
           value={audience}
           readOnly={!editable}
           onChange={(e) => onField("audience", e.target.value || undefined)}
-          placeholder="Who is this for?"
+          placeholder={t("formatEditor.fields.audienceMeta.placeholder")}
         />
       </div>
     </div>
@@ -804,6 +926,12 @@ export function rendererFor(key: string): FieldRenderer {
       locale,
       editable,
       onField,
+      // t is unused in the fallback (the parent already resolved
+      // the label); we accept it in the destructure so the type
+      // is satisfied without a rest-spread that would shadow
+      // the rest of the props.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      t,
     }) => (
       <div className="space-y-1.5" data-testid={`field-${fieldKey}-fallback`}>
         <LabeledField fieldKey={fieldKey} label={label} />
