@@ -68,7 +68,9 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string; id: string }>;
 }) {
-  return { title: `Content · ${(await params).id.slice(0, 8)}` };
+  const { id } = await params;
+  const { t } = await tForActive();
+  return { title: t("contentDetail.metaTitle", { id: id.slice(0, 8) }) };
 }
 
 /**

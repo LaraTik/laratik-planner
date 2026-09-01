@@ -248,6 +248,8 @@
   },
   "planning": {
     "title": "Planning",
+    "metaTitle": "Planning · {slug}",
+    "editMetaTitle": "Edit idea · {id}",
     "descriptionOne": "{month} · {count} item",
     "descriptionMany": "{month} · {count} items",
     "batchAdd": "Batch add",
@@ -308,13 +310,15 @@
     "description": "Four fields, a draft is born. Edit anything later.",
     "deniedTitle": "Creation access required",
     "deniedDescription": "Only workspace managers and content planners can create ideas.",
-    "backToPlanning": "← Back to Planning"
+    "backToPlanning": "← Back to Planning",
+    "metaTitle": "Quick Create · {slug}"
   },
   "batchAdd": {
     "title": "Batch add",
     "description": "Paste up to 50 ideas. All active channels and workspace defaults are applied automatically. The batch is atomic."
   },
   "contentDetail": {
+    "metaTitle": "Content · {id}",
     "publish": {
       "redirectFallbackMessage": "The publishing setup is now part of the planning detail page. This workspace can't be resolved; ask your manager for a fresh link.",
       "redirectFallbackBack": "Back to content",

@@ -13,7 +13,9 @@ import { QuickCreateForm } from "./quick-create-form";
 import { tForActive } from "@/lib/i18n/t-for-active";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  return { title: `Quick Create · ${(await params).slug}` };
+  const { slug } = await params;
+  const { t } = await tForActive();
+  return { title: t("quickCreate.metaTitle", { slug }) };
 }
 
 export default async function QuickCreatePage({ params }: { params: Promise<{ slug: string }> }) {

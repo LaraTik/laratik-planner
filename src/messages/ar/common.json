@@ -248,6 +248,8 @@
   },
   "planning": {
     "title": "التخطيط",
+    "metaTitle": "التخطيط · {slug}",
+    "editMetaTitle": "تعديل الفكرة · {id}",
     "descriptionOne": "{month} · عنصر واحد",
     "descriptionMany": "{month} · {count} عناصر",
     "batchAdd": "إضافة دفعة",
@@ -308,13 +310,15 @@
     "description": "أربعة حقول، وتُولد المسودة. يمكنك تعديل أي شيء لاحقًا.",
     "deniedTitle": "صلاحية الإنشاء مطلوبة",
     "deniedDescription": "يمكن لمشرفي مساحة العمل ومخطّطي المحتوى فقط إنشاء الأفكار.",
-    "backToPlanning": "← العودة إلى التخطيط"
+    "backToPlanning": "← العودة إلى التخطيط",
+    "metaTitle": "إنشاء سريع · {slug}"
   },
   "batchAdd": {
     "title": "إضافة دفعة",
     "description": "الصق حتى 50 فكرة. تُطبَّق جميع القنوات النشطة وإعدادات مساحة العمل تلقائيًا. الدفعة ذرّية."
   },
   "contentDetail": {
+    "metaTitle": "المحتوى · {id}",
     "publish": {
       "redirectFallbackMessage": "إعداد النشر أصبح الآن جزءًا من صفحة تفاصيل التخطيط. لا يمكن العثور على مساحة العمل هذه؛ اطلب رابطًا جديدًا من مديرك.",
       "redirectFallbackBack": "العودة إلى المحتوى",

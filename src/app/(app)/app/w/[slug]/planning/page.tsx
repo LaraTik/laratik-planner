@@ -53,7 +53,9 @@ import { tForActive } from "@/lib/i18n/t-for-active";
  *    preserved on every page link.
  */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  return { title: `Planning · ${(await params).slug}` };
+  const { slug } = await params;
+  const { t } = await tForActive();
+  return { title: t("planning.metaTitle", { slug }) };
 }
 
 export default async function PlanningPage({

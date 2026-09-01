@@ -19,7 +19,9 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string; id: string }>;
 }) {
-  return { title: `Edit idea · ${(await params).id.slice(0, 8)}` };
+  const { id } = await params;
+  const { t } = await tForActive();
+  return { title: t("planning.editMetaTitle", { id: id.slice(0, 8) }) };
 }
 
 /**
