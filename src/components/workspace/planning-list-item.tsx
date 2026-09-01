@@ -212,7 +212,7 @@ export function PlanningListItem({
           <span className="text-fg-muted font-semibold tracking-wide uppercase lg:sr-only">
             {tr("workspaceOverviewDashboard.rowOwnerDesignerAria", "Owner + Designer")}
           </span>
-          <PeopleCell owner={item.owner} designer={item.designer} />
+          <PeopleCell owner={item.owner} designer={item.designer} {...(t ? { t } : {})} />
         </div>
 
         {/* WORKFLOW — stage pill replaces the full inline stepper.
@@ -231,6 +231,7 @@ export function PlanningListItem({
             health={item.health}
             overdueDays={opDate.overdueDays}
             openApprovalCount={item.openApprovalCount}
+            {...(t ? { t } : {})}
           />
           <NextActionChip action={item.nextAction} detailHref={detailHref} />
         </div>

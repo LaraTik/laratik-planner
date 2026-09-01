@@ -28,6 +28,13 @@ export interface PeopleCellProps {
   owner: EnrichedOwner | null;
   designer: EnrichedOwner | null;
   className?: string;
+  /**
+   * Optional translator. When provided, the role labels
+   * (Owner / Designer) and the unassigned pill render from
+   * `common.peopleRole{Owner,Designer}` + `common.ownerUnassigned`;
+   * when omitted, the stored English copy is used.
+   */
+  t?: (key: string) => string;
 }
 
 function initials(displayName: string): string {
@@ -82,23 +89,24 @@ function PersonRow({
   );
 }
 
-export function PeopleCell({ owner, designer, className }: PeopleCellProps) {
+export function PeopleCell({ owner, designer, className, t }: PeopleCellProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   return (
     <div className={cn("flex min-w-0 flex-col gap-0.5", className)} data-testid="people-cell">
       <PersonRow
         icon={User}
-        roleLabel="Owner"
+        roleLabel={tr("common.peopleRoleOwner", "Owner")}
         person={owner}
         testId="people-cell-owner"
-        emptyLabel="Unassigned"
+        emptyLabel={tr("common.ownerUnassigned", "Unassigned")}
         roleAccent="primary"
       />
       <PersonRow
         icon={Palette}
-        roleLabel="Designer"
+        roleLabel={tr("common.peopleRoleDesigner", "Designer")}
         person={designer}
         testId="people-cell-designer"
-        emptyLabel="Unassigned"
+        emptyLabel={tr("common.ownerUnassigned", "Unassigned")}
         roleAccent="warning"
       />
     </div>

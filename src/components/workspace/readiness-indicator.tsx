@@ -21,34 +21,70 @@ export interface ReadinessIndicatorProps {
   /** Open approval count. Shown alongside ready_to_publish when > 0. */
   openApprovalCount?: number;
   className?: string;
+  /**
+   * Optional translator. When provided, every health label and the
+   * inline "{count} day(s) overdue" / "{count} approval(s) pending"
+   * string render from the active locale; when omitted, the stored
+   * English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
-function visualProps(health: HealthSnapshot): {
+const HEALTH_LABEL_KEY: Record<HealthSnapshot, string> = {
+  ready: "common.healthReady",
+  overdue: "common.healthOverdue",
+  at_risk: "common.healthAtRisk",
+  blocked: "common.healthBlocked",
+  needs_review: "common.healthNeedsReview",
+  in_progress: "common.healthInDesign",
+  not_started: "common.healthNotStarted",
+  published: "common.healthPublished",
+  cancelled: "common.healthCancelled",
+  scheduled: "common.healthScheduled",
+};
+const HEALTH_LABEL_FALLBACK: Record<HealthSnapshot, string> = {
+  ready: "Ready",
+  overdue: "Overdue",
+  at_risk: "At risk",
+  blocked: "Blocked",
+  needs_review: "Needs review",
+  in_progress: "In design",
+  not_started: "Not started",
+  published: "Published",
+  cancelled: "Cancelled",
+  scheduled: "Scheduled",
+};
+
+function visualProps(
+  health: HealthSnapshot,
+  t?: ReadinessIndicatorProps["t"],
+): {
   icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
   tone: "success" | "warning" | "danger" | "muted" | "info";
   label: string;
 } {
+  const label = t ? t(HEALTH_LABEL_KEY[health]) : HEALTH_LABEL_FALLBACK[health];
   switch (health) {
     case "ready":
-      return { icon: CheckCircle2, tone: "success", label: "Ready" };
+      return { icon: CheckCircle2, tone: "success", label };
     case "overdue":
-      return { icon: AlertTriangle, tone: "warning", label: "Overdue" };
+      return { icon: AlertTriangle, tone: "warning", label };
     case "at_risk":
-      return { icon: AlertTriangle, tone: "warning", label: "At risk" };
+      return { icon: AlertTriangle, tone: "warning", label };
     case "blocked":
-      return { icon: AlertTriangle, tone: "danger", label: "Blocked" };
+      return { icon: AlertTriangle, tone: "danger", label };
     case "needs_review":
-      return { icon: Eye, tone: "info", label: "Needs review" };
+      return { icon: Eye, tone: "info", label };
     case "in_progress":
-      return { icon: Clock, tone: "info", label: "In design" };
+      return { icon: Clock, tone: "info", label };
     case "not_started":
-      return { icon: Clock, tone: "muted", label: "Not started" };
+      return { icon: Clock, tone: "muted", label };
     case "published":
-      return { icon: CheckCircle2, tone: "success", label: "Published" };
+      return { icon: CheckCircle2, tone: "success", label };
     case "cancelled":
-      return { icon: AlertTriangle, tone: "muted", label: "Cancelled" };
+      return { icon: AlertTriangle, tone: "muted", label };
     case "scheduled":
-      return { icon: Clock, tone: "muted", label: "Scheduled" };
+      return { icon: Clock, tone: "muted", label };
   }
 }
 
@@ -68,8 +104,11 @@ export function ReadinessIndicator({
   overdueDays = 0,
   openApprovalCount = 0,
   className,
+  t,
 }: ReadinessIndicatorProps) {
-  const v = visualProps(health);
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
+  const v = visualProps(health, t);
   const Icon = v.icon;
   const tone = TONE_CLASS[v.tone];
   // Build the inline label. Overdue + past-due count wins over the
@@ -77,13 +116,23 @@ export function ReadinessIndicator({
   // than the bucket alone.
   let label = v.label;
   if ((health === "overdue" || health === "at_risk") && overdueDays > 0) {
-    label = `${overdueDays} day${overdueDays === 1 ? "" : "s"} overdue`;
+    label = tr(
+      overdueDays === 1 ? "common.healthDaysOverdueOne" : "common.healthDaysOverdueMany",
+      `${overdueDays} day${overdueDays === 1 ? "" : "s"} overdue`,
+      { count: overdueDays },
+    );
   }
   if (
     openApprovalCount > 0 &&
     (health === "ready" || health === "in_progress" || health === "needs_review")
   ) {
-    label = `${openApprovalCount} approval${openApprovalCount === 1 ? "" : "s"} pending`;
+    label = tr(
+      openApprovalCount === 1
+        ? "common.healthApprovalsPendingOne"
+        : "common.healthApprovalsPendingMany",
+      `${openApprovalCount} approval${openApprovalCount === 1 ? "" : "s"} pending`,
+      { count: openApprovalCount },
+    );
   }
   return (
     <span
