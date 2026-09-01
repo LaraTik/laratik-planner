@@ -52,10 +52,12 @@ export function DesignQueueList({
   workspaceId,
   items,
   canBulkArchive,
+  t,
 }: {
   workspaceId: string;
   items: DesignQueueListItem[];
   canBulkArchive: boolean;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const router = useRouter();
@@ -82,8 +84,8 @@ export function DesignQueueList({
       <Card variant="dashed" padding="lg">
         <EmptyState
           icon={<Paintbrush className="h-8 w-8" />}
-          title="No unassigned work"
-          description="Approved ideas with no designer will appear here."
+          title={t("sidebar.designQueuePage.emptyTitle")}
+          description={t("sidebar.designQueuePage.emptyDescription")}
         />
       </Card>
     );
@@ -98,6 +100,7 @@ export function DesignQueueList({
           selected={selected}
           onChange={setSelected}
           onArchived={onArchived}
+          t={t}
         />
       ) : null}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" data-testid="design-queue-grid">
@@ -114,7 +117,7 @@ export function DesignQueueList({
                 <input
                   type="checkbox"
                   className="absolute start-3 top-3 h-4 w-4 cursor-pointer accent-[var(--color-primary,#4f46e5)]"
-                  aria-label={`Select ${item.title}`}
+                  aria-label={t("sidebar.designQueuePage.selectItem", { title: item.title })}
                   data-testid="design-queue-row-checkbox"
                   checked={isSelected}
                   onChange={() => toggleOne(item.id)}
@@ -136,7 +139,9 @@ export function DesignQueueList({
                     className="text-label text-fg-muted my-3"
                     data-testid="design-queue-row-required-by"
                   >
-                    Required by {new Date(item.plannedPublishAtIso).toLocaleDateString()}
+                    {t("sidebar.designQueuePage.rowRequiredBy", {
+                      date: new Date(item.plannedPublishAtIso).toLocaleDateString(),
+                    })}
                   </p>
                   <p
                     className="text-body text-fg-secondary line-clamp-2"
@@ -144,7 +149,7 @@ export function DesignQueueList({
                   >
                     {item.briefIsEmpty ? (
                       <span className="text-fg-muted italic">
-                        Brief not ready — open the item to add a Hook / Main message / CTA.
+                        {t("sidebar.designQueuePage.briefNotReady")}
                       </span>
                     ) : (
                       item.briefExcerpt
@@ -155,10 +160,14 @@ export function DesignQueueList({
                       <span
                         className="text-label text-fg-muted inline-flex items-center gap-1"
                         data-testid="design-queue-row-owner"
-                        title={`Owner: ${item.ownerDisplayName}`}
+                        title={t("sidebar.designQueuePage.ownerTitle", {
+                          name: item.ownerDisplayName,
+                        })}
                       >
                         <User className="h-3 w-3" aria-hidden="true" />
-                        <span className="font-semibold">Owner</span>
+                        <span className="font-semibold">
+                          {t("sidebar.designQueuePage.ownerLabel")}
+                        </span>
                         <span className="text-fg-primary font-medium">{item.ownerDisplayName}</span>
                       </span>
                     ) : (
@@ -168,8 +177,10 @@ export function DesignQueueList({
                         data-empty="true"
                       >
                         <User className="h-3 w-3" aria-hidden="true" />
-                        <span className="font-semibold">Owner</span>
-                        <span className="italic">Unassigned</span>
+                        <span className="font-semibold">
+                          {t("sidebar.designQueuePage.ownerLabel")}
+                        </span>
+                        <span className="italic">{t("sidebar.designQueuePage.unassigned")}</span>
                       </span>
                     )}
                     {item.briefIsEmpty ? (
@@ -182,7 +193,7 @@ export function DesignQueueList({
                         data-brief-ready="false"
                       >
                         <FileText className="h-3 w-3" aria-hidden="true" />
-                        Brief needed
+                        {t("sidebar.designQueuePage.briefNeeded")}
                       </span>
                     ) : (
                       <span
@@ -194,7 +205,7 @@ export function DesignQueueList({
                         data-brief-ready="true"
                       >
                         <FileText className="h-3 w-3" aria-hidden="true" />
-                        Brief ready
+                        {t("sidebar.designQueuePage.briefReady")}
                       </span>
                     )}
                     <StatusBadge status={item.status} />
@@ -217,8 +228,13 @@ export function DesignQueueList({
       {canBulkArchive ? (
         <div className="text-label text-fg-muted">
           {allChecked || someChecked
-            ? `${selected.size} of ${items.length} selected`
-            : `${items.length} item${items.length === 1 ? "" : "s"}`}
+            ? t("sidebar.designQueuePage.selectedCountOf", {
+                selected: selected.size,
+                total: items.length,
+              })
+            : items.length === 1
+              ? t("sidebar.designQueuePage.itemCountOne", { count: items.length })
+              : t("sidebar.designQueuePage.itemCountMany", { count: items.length })}
         </div>
       ) : null}
     </div>

@@ -19,12 +19,14 @@ export function DesignQueueBulkToolbar({
   selected,
   onChange,
   onArchived,
+  t,
 }: {
   workspaceId: string;
   itemIds: string[];
   selected: Set<string>;
   onChange: (next: Set<string>) => void;
   onArchived: () => void;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -51,7 +53,7 @@ export function DesignQueueBulkToolbar({
       }
       onArchived();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Archive failed");
+      setError(err instanceof Error ? err.message : t("sidebar.designQueuePage.archiveFailed"));
     } finally {
       setPending(false);
     }
@@ -66,7 +68,7 @@ export function DesignQueueBulkToolbar({
         <input
           type="checkbox"
           className="h-4 w-4 cursor-pointer accent-[var(--color-primary,#4f46e5)]"
-          aria-label="Select all"
+          aria-label={t("sidebar.designQueuePage.selectAll")}
           data-testid="design-queue-select-all"
           checked={allChecked}
           ref={(el) => {
@@ -79,7 +81,7 @@ export function DesignQueueBulkToolbar({
         ) : (
           <Square className="h-4 w-4" aria-hidden="true" />
         )}
-        {selected.size} selected
+        {t("sidebar.designQueuePage.selectedCount", { count: selected.size })}
       </label>
       <Button
         type="button"
@@ -91,10 +93,10 @@ export function DesignQueueBulkToolbar({
       >
         <Archive className="h-4 w-4" aria-hidden="true" />
         {pending
-          ? "Archiving…"
+          ? t("sidebar.designQueuePage.archiving")
           : selected.size > 0
-            ? `Archive (${selected.size})`
-            : "Archive selected"}
+            ? t("sidebar.designQueuePage.archiveCount", { count: selected.size })
+            : t("sidebar.designQueuePage.archiveSelected")}
       </Button>
       {error ? (
         <p className="text-label text-danger-fg" role="alert">

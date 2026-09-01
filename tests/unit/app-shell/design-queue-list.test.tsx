@@ -4,6 +4,9 @@ import {
   DesignQueueList,
   type DesignQueueListItem,
 } from "@/app/(app)/app/w/[slug]/design-queue/design-queue-list";
+import { tFor } from "@/messages";
+
+const t = tFor("en");
 
 // The list component calls `useRouter()` so the bulk-archive
 // toolbar can `router.refresh()` after a successful mutation.
@@ -57,7 +60,7 @@ function makeItem(overrides: Partial<DesignQueueListItem> = {}): DesignQueueList
 
 describe("DesignQueueList — designer-facing context (P3.2)", () => {
   it("renders format + title + 'Required by' + brief + owner + status for a brief-ready item", () => {
-    render(<DesignQueueList workspaceId="ws" items={[makeItem()]} canBulkArchive={false} />);
+    render(<DesignQueueList workspaceId="ws" items={[makeItem()]} canBulkArchive={false} t={t} />);
     const card = screen.getByTestId("design-queue-row");
     expect(within(card).getByTestId("design-queue-row-format")).toHaveTextContent("Carousel");
     expect(within(card).getByTestId("design-queue-row-required-by")).toHaveTextContent(
@@ -86,6 +89,7 @@ describe("DesignQueueList — designer-facing context (P3.2)", () => {
           }),
         ]}
         canBulkArchive={false}
+        t={t}
       />,
     );
     const card = screen.getByTestId("design-queue-row");
@@ -101,6 +105,7 @@ describe("DesignQueueList — designer-facing context (P3.2)", () => {
         workspaceId="ws"
         items={[makeItem({ ownerDisplayName: null })]}
         canBulkArchive={false}
+        t={t}
       />,
     );
     const owner = screen.getByTestId("design-queue-row-owner");
@@ -115,6 +120,7 @@ describe("DesignQueueList — designer-facing context (P3.2)", () => {
         workspaceId="ws"
         items={[makeItem({ briefExcerpt: "A real brief" })]}
         canBulkArchive={false}
+        t={t}
       />,
     );
     const brief = screen.getByTestId("design-queue-row-brief");

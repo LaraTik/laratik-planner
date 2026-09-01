@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/config";
 import { listUnassignedDesignWork } from "@/lib/content/service";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { Clock } from "lucide-react";
 import { db } from "@/lib/db";
@@ -26,6 +27,7 @@ function briefExcerpt(brief: string | null | undefined): string | null {
 }
 
 export default async function DesignQueuePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -83,10 +85,10 @@ export default async function DesignQueuePage({ params }: { params: Promise<{ sl
     <div className="space-y-6" data-testid="workspace-design-queue">
       <PageHeader
         eyebrow={workspace.name}
-        title="Unassigned design queue"
+        title={t("sidebar.designQueuePage.title")}
         description={
           <>
-            Approved ideas waiting for a designer to claim or be assigned.
+            {t("sidebar.designQueuePage.subtitle")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
@@ -94,7 +96,12 @@ export default async function DesignQueuePage({ params }: { params: Promise<{ sl
           </>
         }
       />
-      <DesignQueueList workspaceId={workspace.id} items={items} canBulkArchive={canBulkArchive} />
+      <DesignQueueList
+        workspaceId={workspace.id}
+        items={items}
+        canBulkArchive={canBulkArchive}
+        t={t}
+      />
     </div>
   );
 }
