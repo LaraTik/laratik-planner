@@ -69,7 +69,7 @@ export default async function BrandKitVoicePage({ params }: { params: Promise<{ 
         }
         count={rules.length}
         fullWidth
-        aria-label="Voice and tone"
+        aria-label={t("brandKit.voiceAria")}
         data-testid="brand-kit-section-voice"
       >
         {canManage ? <VoiceForm slug={slug} /> : null}

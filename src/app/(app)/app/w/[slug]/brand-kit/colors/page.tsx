@@ -94,7 +94,7 @@ export default async function BrandKitColorsPage({
         }
         count={colors.length}
         fullWidth
-        aria-label="Color palette"
+        aria-label={t("brandKit.colorsAria")}
         data-testid="brand-kit-section-colors"
       >
         {canManage ? <ColorForm slug={slug} /> : null}

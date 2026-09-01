@@ -59,7 +59,7 @@ export default async function BrandKitLinkedPage({
         }
         count={resources.length}
         fullWidth
-        aria-label="Linked resources"
+        aria-label={t("brandKit.linkedAria")}
         data-testid="brand-kit-section-linked"
       >
         {canEditBrand ? <LinkedResourceForm slug={slug} /> : null}

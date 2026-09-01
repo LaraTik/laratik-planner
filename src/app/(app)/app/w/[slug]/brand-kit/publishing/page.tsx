@@ -59,7 +59,7 @@ export default async function BrandKitPublishingPage({
         }
         count={rules.length}
         fullWidth
-        aria-label="Publishing rules"
+        aria-label={t("brandKit.publishingAria")}
         data-testid="brand-kit-section-publishing"
       >
         {canEditBrand ? <PublishingRuleForm slug={slug} /> : null}

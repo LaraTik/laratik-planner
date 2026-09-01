@@ -87,7 +87,7 @@ export default async function BrandKitTypographyPage({
         }
         count={fonts.length}
         fullWidth
-        aria-label="Typography"
+        aria-label={t("brandKit.typographyAria")}
         data-testid="brand-kit-section-typography"
       >
         {canManage ? <TypographyForm slug={slug} /> : null}

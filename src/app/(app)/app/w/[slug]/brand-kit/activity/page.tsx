@@ -51,7 +51,7 @@ export default async function BrandKitActivityPage({
         }
         count={recent.length}
         fullWidth
-        aria-label="Recent updates"
+        aria-label={t("brandKit.recentUpdatesAria")}
         data-testid="brand-kit-section-activity"
       >
         <RecentUpdatesTable rows={recent} />

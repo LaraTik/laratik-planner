@@ -2025,7 +2025,22 @@
       "linkedDescription": "اربط مكتبة من Google Drive أو Figma أو Canva أو Dropbox ليعرف الفريق من أين يستخرج المواد المتوافقة مع الهوية.",
       "recentTitle": "لا توجد تحديثات حديثة بعد",
       "recentDescription": "مع إضافة الفريق للشعارات والألوان والخطوط وقواعد الصوت وإرشادات النشر، ستظهر آخر التغييرات هنا."
-    }
+    },
+    "logosAria": "أصول الشعار",
+    "colorsAria": "لوحة الألوان",
+    "typographyAria": "الخطوط",
+    "voiceAria": "الصوت والنبرة",
+    "pillarsAria": "المحاور",
+    "publishingAria": "قواعد النشر",
+    "linkedAria": "الموارد المرتبطة",
+    "activityAria": "التحديثات الأخيرة",
+    "brandKitAria": "هوية العلامة",
+    "voiceSourceAria": "مصدر الشعار",
+    "pillarColorAria": "اختر لون المحور",
+    "pickColorAria": "اختر لونًا",
+    "livePreviewAria": "معاينة حية",
+    "addToBrandKitAria": "أضف إلى الهوية",
+    "recentUpdatesAria": "التحديثات الأخيرة"
   },
   "notifications": {
     "kind": {

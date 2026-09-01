@@ -2025,7 +2025,22 @@
       "linkedDescription": "Link a Google Drive, Figma, Canva, or Dropbox library so the team knows where to source on-brand material.",
       "recentTitle": "No recent updates yet",
       "recentDescription": "As the team adds logos, colors, fonts, voice rules, and publishing guidelines, the latest changes will appear here."
-    }
+    },
+    "logosAria": "Logo assets",
+    "colorsAria": "Color palette",
+    "typographyAria": "Typography",
+    "voiceAria": "Voice and tone",
+    "pillarsAria": "Pillars",
+    "publishingAria": "Publishing rules",
+    "linkedAria": "Linked resources",
+    "activityAria": "Recent updates",
+    "brandKitAria": "Brand identity",
+    "voiceSourceAria": "Logo source",
+    "pillarColorAria": "Pick a pillar color",
+    "pickColorAria": "Pick a color",
+    "livePreviewAria": "Live preview",
+    "addToBrandKitAria": "Add to the brand kit",
+    "recentUpdatesAria": "Recent updates"
   },
   "notifications": {
     "kind": {

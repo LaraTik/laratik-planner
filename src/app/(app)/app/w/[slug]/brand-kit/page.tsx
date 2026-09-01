@@ -228,7 +228,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
 
       <section
         className="border-border bg-surface rounded-[var(--radius-card)] border p-4 sm:p-6"
-        aria-label="Recent updates"
+        aria-label={t("brandKit.recentUpdatesAria")}
         data-testid="brand-kit-recent-section"
       >
         <header className="mb-3 flex items-center justify-between gap-2">

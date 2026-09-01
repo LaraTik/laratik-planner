@@ -67,7 +67,7 @@ export default async function BrandKitLogosPage({ params }: { params: Promise<{ 
         }
         count={logos.length}
         fullWidth
-        aria-label="Logo assets"
+        aria-label={t("brandKit.logosAria")}
         data-testid="brand-kit-section-logos"
       >
         {canManage ? <LogoForm slug={slug} workspaceId={workspace.id} /> : null}
