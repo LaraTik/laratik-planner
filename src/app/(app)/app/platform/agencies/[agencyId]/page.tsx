@@ -293,6 +293,7 @@ export default async function PlatformAgencyDetailPage({
         canManagePlan={capabilities.canManagePlan}
         canManageLifecycle={capabilities.canManageLifecycle}
         canArchive={capabilities.canArchive}
+        t={t}
       />
 
       {capabilities.canRequestSupport || capabilities.canAuditSupport ? (

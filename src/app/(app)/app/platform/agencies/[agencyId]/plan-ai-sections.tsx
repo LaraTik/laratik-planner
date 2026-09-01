@@ -18,19 +18,67 @@ import { PermissionNotice } from "@/components/platform/permission-notice";
 import { AgencyLifecycleControls } from "./agency-lifecycle-controls";
 import { AI_PROVIDER, getAiCapabilityMetadata } from "@/lib/ai/capabilities";
 
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+const EN_USAGE_RESOURCE_LABELS: Record<string, string> = {
+  workspaces: "Workspaces",
+  users: "Users",
+  total_social_profiles: "Social profiles total",
+  storage_bytes: "Storage bytes",
+  monthly_ai_requests: "AI requests / month",
+  monthly_ai_input_tokens: "AI input tokens / month",
+  monthly_ai_output_tokens: "AI output tokens / month",
+  daily_ai_requests_per_user: "AI requests / user / day",
+  max_output_tokens_per_request: "Output tokens / request",
+};
+
+const EN_USAGE_LEVEL_LABELS: Record<string, string> = {
+  healthy: "healthy",
+  warning: "warning",
+  urgent: "urgent",
+  over_limit: "over limit",
+};
+
+function resourceLabel(resource: string, t: Translator): string {
+  const key = `platform.usageResource.${resource}`;
+  const value = t(key);
+  return value.startsWith("[") ? (EN_USAGE_RESOURCE_LABELS[resource] ?? resource) : value;
+}
+
+function levelLabel(level: string, t: Translator): string {
+  const key = `platform.usageLevel.${level}`;
+  const value = t(key);
+  return value.startsWith("[") ? (EN_USAGE_LEVEL_LABELS[level] ?? level) : value;
+}
+
+function capabilityLabel(capability: string, t: Translator): string {
+  const key = `platform.aiCapability.${capability}`;
+  const value = t(key);
+  return value.startsWith("[") ? capability.replaceAll("_", " ") : value;
+}
+
+function platformLabel(platform: string, t: Translator): string {
+  const key = `platform.platformKey.${platform}`;
+  const value = t(key);
+  return value.startsWith("[") ? platform : value;
+}
+
 export async function PlanAiSections({
   agencyId,
   agencyName,
   canManagePlan,
   canManageLifecycle,
   canArchive,
+  t,
 }: {
   agencyId: string;
   agencyName: string;
   canManagePlan: boolean;
   canManageLifecycle: boolean;
   canArchive: boolean;
+  t?: Translator;
 }) {
+  const tr: Translator = t ?? ((key) => key);
   const monthStart = new Date();
   monthStart.setUTCDate(1);
   monthStart.setUTCHours(0, 0, 0, 0);
@@ -89,7 +137,12 @@ export async function PlanAiSections({
   const enabledCapabilities = [...effective.enabledAiCapabilities].filter(
     (capability) => aiSettings?.enabled && configuredCapabilities.has(capability),
   );
-  const lifecycle = agency.archivedAt ? "Archived" : agency.suspendedAt ? "Suspended" : "Active";
+  const lifecycleKey = agency.archivedAt
+    ? "platform.lifecycleArchived"
+    : agency.suspendedAt
+      ? "platform.lifecycleSuspended"
+      : "platform.lifecycleActive";
+  const lifecycle = tr(lifecycleKey);
   const overrides = OverrideShapeSchema.parse(entitlement.overrides ?? {});
 
   return (
@@ -97,12 +150,12 @@ export async function PlanAiSections({
       <Card id="plan" padding="lg" className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle>Plan and lifecycle</CardTitle>
-            <CardDescription>
-              Platform-owned limits. Plan changes never delete existing tenant data.
-            </CardDescription>
+            <CardTitle>{tr("platform.planTitle")}</CardTitle>
+            <CardDescription>{tr("platform.planDescription")}</CardDescription>
           </div>
-          <Badge variant={lifecycle === "Active" ? "success" : "warning"}>{lifecycle}</Badge>
+          <Badge variant={lifecycleKey === "platform.lifecycleActive" ? "success" : "warning"}>
+            {lifecycle}
+          </Badge>
         </div>
         {canManagePlan ? (
           <form action={changePlanAction} className="grid gap-4">
@@ -110,7 +163,7 @@ export async function PlanAiSections({
             <input type="hidden" name="overrideForm" value="1" />
             <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
               <select
-                aria-label="Plan template"
+                aria-label={tr("platform.planAriaTemplate")}
                 name="planTemplateId"
                 defaultValue={entitlement.planTemplateId}
                 className="border-border bg-surface rounded-[var(--radius-control)] border px-3 py-2"
@@ -122,70 +175,75 @@ export async function PlanAiSections({
                 ))}
               </select>
               <input
-                aria-label="Reason for plan change"
+                aria-label={tr("platform.planAriaReason")}
                 name="reason"
                 required
                 minLength={3}
-                placeholder="Reason for plan change"
+                placeholder={tr("platform.planPlaceholderReason")}
                 className="border-border bg-surface rounded-[var(--radius-control)] border px-3 py-2"
               />
-              <Button type="submit">Save plan</Button>
+              <Button type="submit">{tr("platform.planSave")}</Button>
             </div>
             <details className="border-border rounded-[var(--radius-control)] border p-4">
               <summary className="text-body text-fg-primary cursor-pointer font-semibold">
-                Agency-specific overrides
+                {tr("platform.planOverridesSummary")}
               </summary>
-              <p className="text-label text-fg-muted mt-2">
-                Leave a value blank to inherit the selected plan. Saving replaces the previous
-                override set.
-              </p>
+              <p className="text-label text-fg-muted mt-2">{tr("platform.planOverridesHelp")}</p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <LimitInput label="Workspaces" field="workspaces" value={overrides.workspaces} />
-                <LimitInput label="Users" field="users" value={overrides.users} />
                 <LimitInput
-                  label="Social profiles total"
+                  label={tr("platform.usageResource.workspaces")}
+                  field="workspaces"
+                  value={overrides.workspaces}
+                />
+                <LimitInput
+                  label={tr("platform.usageResource.users")}
+                  field="users"
+                  value={overrides.users}
+                />
+                <LimitInput
+                  label={tr("platform.usageResource.total_social_profiles")}
                   field="total_social_profiles"
                   value={overrides.total_social_profiles}
                 />
                 <LimitInput
-                  label="Storage bytes"
+                  label={tr("platform.usageResource.storage_bytes")}
                   field="storage_bytes"
                   value={overrides.storage_bytes}
                 />
                 <LimitInput
-                  label="AI requests / month"
+                  label={tr("platform.usageResource.monthly_ai_requests")}
                   field="monthly_ai_requests"
                   value={overrides.monthly_ai_requests}
                 />
                 <LimitInput
-                  label="AI input tokens / month"
+                  label={tr("platform.usageResource.monthly_ai_input_tokens")}
                   field="monthly_ai_input_tokens"
                   value={overrides.monthly_ai_input_tokens}
                 />
                 <LimitInput
-                  label="AI output tokens / month"
+                  label={tr("platform.usageResource.monthly_ai_output_tokens")}
                   field="monthly_ai_output_tokens"
                   value={overrides.monthly_ai_output_tokens}
                 />
                 <LimitInput
-                  label="AI requests / user / day"
+                  label={tr("platform.usageResource.daily_ai_requests_per_user")}
                   field="daily_ai_requests_per_user"
                   value={overrides.daily_ai_requests_per_user}
                 />
                 <LimitInput
-                  label="Output tokens / request"
+                  label={tr("platform.usageResource.max_output_tokens_per_request")}
                   field="max_output_tokens_per_request"
                   value={overrides.max_output_tokens_per_request}
                 />
               </div>
               <fieldset className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 <legend className="text-label text-fg-secondary mb-2 font-semibold">
-                  Social profiles by network
+                  {tr("platform.planSocialProfilesLegend")}
                 </legend>
                 {ALL_PLATFORM_KEYS.map((platform) => (
                   <LimitInput
                     key={platform}
-                    label={platform}
+                    label={platformLabel(platform, tr)}
                     socialPlatform={platform}
                     value={overrides.social_profiles_by_platform?.[platform]}
                   />
@@ -193,7 +251,7 @@ export async function PlanAiSections({
               </fieldset>
               <fieldset className="mt-4 flex flex-wrap gap-3">
                 <legend className="text-label text-fg-secondary mb-2 font-semibold">
-                  AI capability ceiling
+                  {tr("platform.planAiCeilingLegend")}
                 </legend>
                 {ALL_AI_CAPABILITIES.map((capability) => (
                   <label
@@ -209,7 +267,7 @@ export async function PlanAiSections({
                         effective.enabledAiCapabilities.has(capability)
                       }
                     />
-                    {capability.replaceAll("_", " ")}
+                    {capabilityLabel(capability, tr)}
                   </label>
                 ))}
               </fieldset>
@@ -217,8 +275,8 @@ export async function PlanAiSections({
           </form>
         ) : (
           <PermissionNotice
-            title="Plan settings are read-only"
-            description="Your platform role can inspect plan and usage data but cannot change entitlements."
+            title={tr("platform.planReadOnlyTitle")}
+            description={tr("platform.planReadOnlyBody")}
           />
         )}
         <AgencyLifecycleControls
@@ -227,15 +285,14 @@ export async function PlanAiSections({
           lifecycle={agency.archivedAt ? "archived" : agency.suspendedAt ? "suspended" : "active"}
           canManageLifecycle={canManageLifecycle}
           canArchive={canArchive}
+          t={tr}
         />
       </Card>
 
       <Card id="usage" padding="lg" className="space-y-4">
         <div>
-          <CardTitle>Current usage</CardTitle>
-          <CardDescription>
-            Healthy, warning, urgent, and over-limit states are calculated from live counters.
-          </CardDescription>
+          <CardTitle>{tr("platform.usageTitle")}</CardTitle>
+          <CardDescription>{tr("platform.usageDescription")}</CardDescription>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {Object.entries(usage.thresholds).map(([resource, snapshot]) => (
@@ -243,7 +300,7 @@ export async function PlanAiSections({
               key={resource}
               className="border-border rounded-[var(--radius-control)] border p-3"
             >
-              <p className="text-label text-fg-muted">{resource.replaceAll("_", " ")}</p>
+              <p className="text-label text-fg-muted">{resourceLabel(resource, tr)}</p>
               <p className="text-title-card text-fg-primary font-semibold">
                 {usage.counters[resource] ?? 0} / {snapshot.limit ?? "∞"}
               </p>
@@ -256,7 +313,7 @@ export async function PlanAiSections({
                       : "warning"
                 }
               >
-                {snapshot.level.replaceAll("_", " ")}
+                {levelLabel(snapshot.level, tr)}
               </Badge>
             </div>
           ))}
@@ -265,20 +322,22 @@ export async function PlanAiSections({
 
       <Card id="ai" padding="lg" className="space-y-4">
         <div>
-          <CardTitle>AI usage and controls</CardTitle>
-          <CardDescription>
-            Monthly usage, provider status, and the plan ceiling ∩ agency capability selection.
-          </CardDescription>
+          <CardTitle>{tr("platform.aiTitle")}</CardTitle>
+          <CardDescription>{tr("platform.aiDescription")}</CardDescription>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
-          <Metric label="Requests this month" value={ai.requests} />
-          <Metric label="Input tokens" value={ai.inputTokens} />
-          <Metric label="Output tokens" value={ai.outputTokens} />
+          <Metric label={tr("platform.aiMetricRequests")} value={ai.requests} />
+          <Metric label={tr("platform.aiMetricInputTokens")} value={ai.inputTokens} />
+          <Metric label={tr("platform.aiMetricOutputTokens")} value={ai.outputTokens} />
         </div>
         <p className="text-body text-fg-secondary">
-          {AI_PROVIDER.vendor} · model: {aiSettings?.model ?? "Not configured"} · compat:{" "}
-          {AI_PROVIDER.compat} · reset: {resetAt.toISOString().slice(0, 10)} UTC · estimated cost:
-          unavailable until provider pricing is configured.
+          {tr("platform.aiProviderLine", {
+            vendor: AI_PROVIDER.vendor,
+            model: aiSettings?.model ?? tr("platform.aiModelNotConfigured"),
+            compat: AI_PROVIDER.compat,
+            resetDate: resetAt.toISOString().slice(0, 10),
+            costNote: tr("platform.aiCostNote"),
+          })}
         </p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {capabilityRows.length > 0 ? (
@@ -290,14 +349,14 @@ export async function PlanAiSections({
                   className="border-border flex items-center justify-between rounded-[var(--radius-control)] border px-3 py-2"
                 >
                   <span className="text-label text-fg-secondary">
-                    {meta?.label ?? row.capability.replaceAll("_", " ")}
+                    {meta?.label ?? capabilityLabel(row.capability, tr)}
                   </span>
                   <span className="text-body text-fg-primary font-semibold">{row.requests}</span>
                 </div>
               );
             })
           ) : (
-            <p className="text-body text-fg-muted">No AI requests this month.</p>
+            <p className="text-body text-fg-muted">{tr("platform.aiEmptyMonth")}</p>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -306,7 +365,7 @@ export async function PlanAiSections({
               key={capability}
               variant={enabledCapabilities.includes(capability) ? "success" : "outline"}
             >
-              {capability.replaceAll("_", " ")}
+              {capabilityLabel(capability, tr)}
             </Badge>
           ))}
         </div>
@@ -338,7 +397,7 @@ function LimitInput({
   const name = socialPlatform ? `override_social_${socialPlatform}` : `override_${field}`;
   return (
     <label className="text-label text-fg-secondary grid gap-1 capitalize">
-      {label.replaceAll("_", " ")}
+      {label}
       <input
         name={name}
         type="number"

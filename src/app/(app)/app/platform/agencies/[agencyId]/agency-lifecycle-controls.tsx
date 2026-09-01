@@ -9,19 +9,59 @@ import { changeLifecycleAction } from "../actions";
 type AgencyLifecycle = "active" | "suspended" | "archived";
 type LifecycleAction = "suspend" | "restore" | "archive" | "unarchive";
 
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+const EN_FALLBACK: Translator = (key, params) => {
+  const lookup: Record<string, string> = {
+    "platform.lifecycleReadOnlyTitle": "Lifecycle is read-only",
+    "platform.lifecycleReadOnlyBody":
+      "Your platform role can inspect agency status but cannot change it.",
+    "platform.lifecycleOperationalTitle": "Operational status",
+    "platform.lifecycleOperationalBody":
+      "Suspension pauses normal agency activity without archiving the account.",
+    "platform.lifecycleArchivedHint":
+      "This agency is archived. Only a Platform Owner can unarchive it.",
+    "platform.lifecycleSuspend": "Suspend agency",
+    "platform.lifecycleRestore": "Restore agency",
+    "platform.lifecycleSuspendTitle": `Suspend ${params?.name ?? ""}?`,
+    "platform.lifecycleRestoreTitle": `Restore ${params?.name ?? ""}?`,
+    "platform.lifecycleSuspendBody":
+      "Members will temporarily lose normal agency access. Data and configuration remain intact.",
+    "platform.lifecycleRestoreBody":
+      "Normal agency access will resume. This action cannot unarchive an archived agency.",
+    "platform.lifecycleCannotChange": "Your role cannot change operational status.",
+    "platform.lifecycleArchiveTitle": "Archive boundary",
+    "platform.lifecycleArchiveBody":
+      "Archiving and unarchiving are reserved for Platform Owners and always require a reason.",
+    "platform.lifecycleUnarchive": "Unarchive agency",
+    "platform.lifecycleArchive": "Archive agency",
+    "platform.lifecycleUnarchiveTitle": `Unarchive ${params?.name ?? ""}?`,
+    "platform.lifecycleArchiveTitleAction": `Archive ${params?.name ?? ""}?`,
+    "platform.lifecycleUnarchiveBody":
+      "The agency will return in a restored state and normal access can resume.",
+    "platform.lifecycleArchiveBodyAction":
+      "The agency will leave normal operations. Tenant data is preserved, and only a Platform Owner can reverse this action.",
+    "platform.lifecycleCannotArchive": "Your role cannot archive this agency.",
+  };
+  return lookup[key] ?? key;
+};
+
 export function AgencyLifecycleControls({
   agencyId,
   agencyName,
   lifecycle,
   canManageLifecycle,
   canArchive,
+  t,
 }: {
   agencyId: string;
   agencyName: string;
   lifecycle: AgencyLifecycle;
   canManageLifecycle: boolean;
   canArchive: boolean;
+  t?: Translator;
 }) {
+  const tr: Translator = t ?? EN_FALLBACK;
   async function submit(action: LifecycleAction, reason: string) {
     const formData = new FormData();
     formData.set("agencyId", agencyId);
@@ -33,8 +73,8 @@ export function AgencyLifecycleControls({
   if (!canManageLifecycle && !canArchive) {
     return (
       <PermissionNotice
-        title="Lifecycle is read-only"
-        description="Your platform role can inspect agency status but cannot change it."
+        title={tr("platform.lifecycleReadOnlyTitle")}
+        description={tr("platform.lifecycleReadOnlyBody")}
       />
     );
   }
@@ -42,26 +82,26 @@ export function AgencyLifecycleControls({
   return (
     <div className="grid gap-3 lg:grid-cols-2" data-testid="platform-agency-lifecycle-controls">
       <section className="border-border rounded-[var(--radius-control)] border p-4">
-        <h3 className="text-body text-fg-primary font-semibold">Operational status</h3>
+        <h3 className="text-body text-fg-primary font-semibold">
+          {tr("platform.lifecycleOperationalTitle")}
+        </h3>
         <p className="text-label text-fg-secondary mt-1 mb-3">
-          Suspension pauses normal agency activity without archiving the account.
+          {tr("platform.lifecycleOperationalBody")}
         </p>
         {lifecycle === "archived" ? (
-          <p className="text-body text-fg-muted">
-            This agency is archived. Only a Platform Owner can unarchive it.
-          </p>
+          <p className="text-body text-fg-muted">{tr("platform.lifecycleArchivedHint")}</p>
         ) : canManageLifecycle ? (
           lifecycle === "active" ? (
             <ReasonDialog
               trigger={
                 <Button type="button" variant="outline" size="lg">
                   <CirclePause className="h-4 w-4" aria-hidden="true" />
-                  Suspend agency
+                  {tr("platform.lifecycleSuspend")}
                 </Button>
               }
-              title={`Suspend ${agencyName}?`}
-              description="Members will temporarily lose normal agency access. Data and configuration remain intact."
-              confirmLabel="Suspend agency"
+              title={tr("platform.lifecycleSuspendTitle", { name: agencyName })}
+              description={tr("platform.lifecycleSuspendBody")}
+              confirmLabel={tr("platform.lifecycleSuspend")}
               onConfirm={(reason) => submit("suspend", reason)}
             />
           ) : (
@@ -69,24 +109,26 @@ export function AgencyLifecycleControls({
               trigger={
                 <Button type="button" variant="outline" size="lg">
                   <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                  Restore agency
+                  {tr("platform.lifecycleRestore")}
                 </Button>
               }
-              title={`Restore ${agencyName}?`}
-              description="Normal agency access will resume. This action cannot unarchive an archived agency."
-              confirmLabel="Restore agency"
+              title={tr("platform.lifecycleRestoreTitle", { name: agencyName })}
+              description={tr("platform.lifecycleRestoreBody")}
+              confirmLabel={tr("platform.lifecycleRestore")}
               onConfirm={(reason) => submit("restore", reason)}
             />
           )
         ) : (
-          <p className="text-body text-fg-muted">Your role cannot change operational status.</p>
+          <p className="text-body text-fg-muted">{tr("platform.lifecycleCannotChange")}</p>
         )}
       </section>
 
       <section className="border-danger/30 bg-danger-subtle rounded-[var(--radius-control)] border p-4">
-        <h3 className="text-body text-fg-primary font-semibold">Archive boundary</h3>
+        <h3 className="text-body text-fg-primary font-semibold">
+          {tr("platform.lifecycleArchiveTitle")}
+        </h3>
         <p className="text-label text-fg-secondary mt-1 mb-3">
-          Archiving and unarchiving are reserved for Platform Owners and always require a reason.
+          {tr("platform.lifecycleArchiveBody")}
         </p>
         {canArchive ? (
           lifecycle === "archived" ? (
@@ -94,12 +136,12 @@ export function AgencyLifecycleControls({
               trigger={
                 <Button type="button" variant="outline" size="lg">
                   <ArchiveRestore className="h-4 w-4" aria-hidden="true" />
-                  Unarchive agency
+                  {tr("platform.lifecycleUnarchive")}
                 </Button>
               }
-              title={`Unarchive ${agencyName}?`}
-              description="The agency will return in a restored state and normal access can resume."
-              confirmLabel="Unarchive agency"
+              title={tr("platform.lifecycleUnarchiveTitle", { name: agencyName })}
+              description={tr("platform.lifecycleUnarchiveBody")}
+              confirmLabel={tr("platform.lifecycleUnarchive")}
               onConfirm={(reason) => submit("unarchive", reason)}
             />
           ) : (
@@ -107,18 +149,18 @@ export function AgencyLifecycleControls({
               trigger={
                 <Button type="button" variant="destructive" size="lg">
                   <Archive className="h-4 w-4" aria-hidden="true" />
-                  Archive agency
+                  {tr("platform.lifecycleArchive")}
                 </Button>
               }
-              title={`Archive ${agencyName}?`}
-              description="The agency will leave normal operations. Tenant data is preserved, and only a Platform Owner can reverse this action."
-              confirmLabel="Archive agency"
+              title={tr("platform.lifecycleArchiveTitleAction", { name: agencyName })}
+              description={tr("platform.lifecycleArchiveBodyAction")}
+              confirmLabel={tr("platform.lifecycleArchive")}
               destructive
               onConfirm={(reason) => submit("archive", reason)}
             />
           )
         ) : (
-          <p className="text-body text-fg-muted">Your role cannot archive this agency.</p>
+          <p className="text-body text-fg-muted">{tr("platform.lifecycleCannotArchive")}</p>
         )}
       </section>
     </div>
