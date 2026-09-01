@@ -62,6 +62,19 @@ type SocialStatus = {
 
 const initial: SocialActionState = {};
 
+/**
+ * Minimal {name} placeholder interpolator used by `tr` on the
+ * fallback path. The translated path goes through `t(key, params)`
+ * from `next-intl` which already handles ICU substitution; this
+ * shim only runs when `t` is omitted (e.g. in vitest or in callers
+ * that have not yet threaded the translator down).
+ */
+function interpolate(template: string, params: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, name: string) =>
+    name in params ? String(params[name]) : match,
+  );
+}
+
 export function SocialCard({
   agencyId,
   initialStatus,
@@ -76,7 +89,8 @@ export function SocialCard({
    */
   t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
-  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : params ? interpolate(fallback, params) : fallback;
   const [status, setStatus] = React.useState<SocialStatus>(initialStatus);
   const [recoveryKey, setRecoveryKey] = React.useState<{
     key: string;
@@ -236,18 +250,19 @@ export function SocialCard({
           <CardTitle>{tr("agencySocial.title", "Social analytics")}</CardTitle>
           {status.enabled ? (
             <Badge variant="success" data-testid="agency-social-enabled-badge">
-              Enabled
+              {tr("agencySocial.enabledBadge", "Enabled")}
             </Badge>
           ) : (
             <Badge variant="outline" data-testid="agency-social-disabled-badge">
-              Not enabled
+              {tr("agencySocial.notEnabledBadge", "Not enabled")}
             </Badge>
           )}
         </div>
         <CardDescription className="mb-4">
-          Connect Meta (Facebook / Instagram) and TikTok to track follower counts, reach, and
-          engagement for every channel in this agency. Tokens are encrypted at rest with a
-          per-agency key.
+          {tr(
+            "agencySocial.description",
+            "Connect Meta (Facebook / Instagram) and TikTok to track follower counts, reach, and engagement for every channel in this agency. Tokens are encrypted at rest with a per-agency key.",
+          )}
         </CardDescription>
 
         {!status.platformKekAvailable && (
@@ -258,11 +273,14 @@ export function SocialCard({
           >
             <AlertTriangle className="text-warning mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <div>
-              <p className="font-semibold">Platform KEK not configured</p>
+              <p className="font-semibold">
+                {tr("agencySocial.kekMissingTitle", "Platform KEK not configured")}
+              </p>
               <p className="text-fg-secondary mt-1">
-                The platform administrator must set the <code>SOCIAL_TOKEN_ENCRYPTION_KEY</code>{" "}
-                environment variable before agencies can enable social analytics. Generate one with:{" "}
-                <code className="bg-surface rounded px-1.5 py-0.5">openssl rand -base64 32</code>
+                {tr(
+                  "agencySocial.kekMissingBody",
+                  "The platform administrator must set the SOCIAL_TOKEN_ENCRYPTION_KEY environment variable before agencies can enable social analytics. Generate one with: openssl rand -base64 32",
+                )}
               </p>
             </div>
           </div>
@@ -287,6 +305,7 @@ export function SocialCard({
             rotateAction={rotateAction}
             onDisableClick={() => setShowDisableModal(true)}
             onResetRecoveryClick={() => setShowResetModal(true)}
+            tr={tr}
           />
         ) : (
           <DisabledBody
@@ -294,6 +313,7 @@ export function SocialCard({
             kekAvailable={status.platformKekAvailable}
             enabling={enablePending}
             enableAction={enableAction}
+            tr={tr}
           />
         )}
       </Card>
@@ -303,6 +323,7 @@ export function SocialCard({
           recoveryKey={recoveryKey.key}
           dekKeyVersion={recoveryKey.version}
           onClose={() => setRecoveryKey(null)}
+          tr={tr}
         />
       )}
 
@@ -314,11 +335,12 @@ export function SocialCard({
             "agencySocial.disableBody",
             "All Meta and TikTok connections for this agency will be disconnected. Audit and metric history are preserved. This cannot be undone — you will need to re-onboard every connection to use social analytics again.",
           )}
-          confirmLabel="Disable social analytics"
+          confirmLabel={tr("agencySocial.disableConfirmLabel", "Disable social analytics")}
           agencyId={agencyId}
           action={disableAction}
           pending={disablePending}
           onClose={() => setShowDisableModal(false)}
+          tr={tr}
         />
       )}
 
@@ -330,11 +352,12 @@ export function SocialCard({
             "agencySocial.recoveryBody",
             "This will disconnect every Meta and TikTok connection for this agency and generate a fresh DEK. Audit and metric history are preserved. You will need to reconnect every account after. This cannot be undone.",
           )}
-          confirmLabel="Disconnect all and reset DEK"
+          confirmLabel={tr("agencySocial.resetConfirmLabel", "Disconnect all and reset DEK")}
           agencyId={agencyId}
           action={resetAction}
           pending={resetPending}
           onClose={() => setShowResetModal(false)}
+          tr={tr}
         />
       )}
     </>
@@ -348,18 +371,21 @@ function DisabledBody({
   kekAvailable,
   enabling,
   enableAction,
+  tr,
 }: {
   agencyId: string;
   kekAvailable: boolean;
   enabling: boolean;
   enableAction: React.FormEventHandler<HTMLFormElement>;
+  tr: (key: string, fallback: string, params?: Record<string, string | number>) => string;
 }) {
   return (
     <form onSubmit={enableAction} className="space-y-4">
       <p className="text-body text-fg-secondary">
-        Enabling social analytics generates a per-agency encryption key. You will be shown a
-        one-time recovery key to save in your password manager. The key is never shown again —
-        losing it requires reconnecting every account.
+        {tr(
+          "agencySocial.enableExplainer",
+          "Enabling social analytics generates a per-agency encryption key. You will be shown a one-time recovery key to save in your password manager. The key is never shown again — losing it requires reconnecting every account.",
+        )}
       </p>
       <div className="flex items-center gap-2">
         <Button
@@ -367,11 +393,16 @@ function DisabledBody({
           disabled={!kekAvailable || enabling}
           data-testid="agency-social-enable-button"
         >
-          {enabling ? "Enabling…" : "Enable social analytics"}
+          {enabling
+            ? tr("agencySocial.enablingLabel", "Enabling…")
+            : tr("agencySocial.enableLabel", "Enable social analytics")}
         </Button>
         {!kekAvailable && (
           <span className="text-label text-fg-muted">
-            Waiting for the platform administrator to set the KEK.
+            {tr(
+              "agencySocial.kekWaitingMessage",
+              "Waiting for the platform administrator to set the KEK.",
+            )}
           </span>
         )}
       </div>
@@ -387,6 +418,7 @@ function EnabledBody({
   rotateAction,
   onDisableClick,
   onResetRecoveryClick,
+  tr,
 }: {
   agencyId: string;
   status: SocialStatus;
@@ -394,30 +426,33 @@ function EnabledBody({
   rotateAction: React.FormEventHandler<HTMLFormElement>;
   onDisableClick: () => void;
   onResetRecoveryClick: () => void;
+  tr: (key: string, fallback: string, params?: Record<string, string | number>) => string;
 }) {
   return (
     <form onSubmit={rotateAction} className="space-y-4">
       <dl className="text-body space-y-2">
         {status.enabledAt && (
           <div className="flex justify-between gap-2">
-            <dt className="text-fg-secondary">Enabled since</dt>
+            <dt className="text-fg-secondary">
+              {tr("agencySocial.enabledSince", "Enabled since")}
+            </dt>
             <dd className="font-semibold">{new Date(status.enabledAt).toLocaleString()}</dd>
           </div>
         )}
         <div className="flex justify-between gap-2">
-          <dt className="text-fg-secondary">Key version</dt>
+          <dt className="text-fg-secondary">{tr("agencySocial.keyVersion", "Key version")}</dt>
           <dd className="font-semibold" data-testid="agency-social-dek-version">
             {status.dekKeyVersion ?? 1}
           </dd>
         </div>
         {status.lastRotatedAt && (
           <div className="flex justify-between gap-2">
-            <dt className="text-fg-secondary">Last rotated</dt>
+            <dt className="text-fg-secondary">{tr("agencySocial.lastRotated", "Last rotated")}</dt>
             <dd className="font-semibold">{new Date(status.lastRotatedAt).toLocaleString()}</dd>
           </div>
         )}
         <div className="flex justify-between gap-2">
-          <dt className="text-fg-secondary">Connections</dt>
+          <dt className="text-fg-secondary">{tr("agencySocial.connections", "Connections")}</dt>
           <dd className="font-semibold" data-testid="agency-social-connection-count">
             {status.connectionCount}
           </dd>
@@ -432,7 +467,9 @@ function EnabledBody({
           data-testid="agency-social-rotate-button"
         >
           <RotateCcw className="me-1.5 h-4 w-4" aria-hidden="true" />
-          {rotating ? "Rotating…" : "Rotate DEK"}
+          {rotating
+            ? tr("agencySocial.rotatingLabel", "Rotating…")
+            : tr("agencySocial.rotateLabel", "Rotate DEK")}
         </Button>
         <Button
           type="button"
@@ -440,7 +477,8 @@ function EnabledBody({
           onClick={onResetRecoveryClick}
           data-testid="agency-social-reset-recovery-button"
         >
-          <KeyRound className="me-1.5 h-4 w-4" aria-hidden="true" />I lost my recovery key
+          <KeyRound className="me-1.5 h-4 w-4" aria-hidden="true" />
+          {tr("agencySocial.lostRecoveryLabel", "I lost my recovery key")}
         </Button>
         <Button
           type="button"
@@ -449,7 +487,7 @@ function EnabledBody({
           data-testid="agency-social-disable-button"
         >
           <ShieldAlert className="me-1.5 h-4 w-4" aria-hidden="true" />
-          Disable
+          {tr("agencySocial.disableLabel", "Disable")}
         </Button>
       </div>
       <input type="hidden" name="agencyId" value={agencyId} />
@@ -461,10 +499,12 @@ function RecoveryKeyModal({
   recoveryKey,
   dekKeyVersion,
   onClose,
+  tr,
 }: {
   recoveryKey: string;
   dekKeyVersion: number;
   onClose: () => void;
+  tr: (key: string, fallback: string, params?: Record<string, string | number>) => string;
 }) {
   const [confirmed, setConfirmed] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -502,10 +542,14 @@ function RecoveryKeyModal({
         onPointerDownOutside={blockDismiss}
       >
         <DialogHeader>
-          <DialogTitle>Save your recovery key</DialogTitle>
+          <DialogTitle>
+            {tr("agencySocial.recoveryKeyModalTitle", "Save your recovery key")}
+          </DialogTitle>
           <DialogDescription>
-            This key decrypts your agency&apos;s social connection tokens. It will not be shown
-            again. Save it in your password manager before closing this dialog.
+            {tr(
+              "agencySocial.recoveryKeyModalDescription",
+              "This key decrypts your agency's social connection tokens. It will not be shown again. Save it in your password manager before closing this dialog.",
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="bg-surface-subtle border-border flex items-center gap-2 rounded-[var(--radius-control)] border p-3">
@@ -523,11 +567,17 @@ function RecoveryKeyModal({
             data-testid="agency-social-recovery-key-copy"
           >
             <Copy className="me-1.5 h-3.5 w-3.5" aria-hidden="true" />
-            {copied ? "Copied" : "Copy"}
+            {copied
+              ? tr("agencySocial.recoveryKeyCopied", "Copied")
+              : tr("agencySocial.recoveryKeyCopy", "Copy")}
           </Button>
         </div>
         <p className="text-label text-fg-muted">
-          Key version {dekKeyVersion}. The DEK is wrapped by the platform KEK at rest.
+          {tr(
+            "agencySocial.recoveryKeyVersion",
+            "Key version {version}. The DEK is wrapped by the platform KEK at rest.",
+            { version: dekKeyVersion },
+          )}
         </p>
         <div className="flex items-start gap-2">
           <input
@@ -539,7 +589,10 @@ function RecoveryKeyModal({
             className="border-border text-primary mt-1 h-4 w-4 rounded-[var(--radius-control)] border focus:ring-2 focus:ring-offset-1 focus:outline-none"
           />
           <Label htmlFor="agency-social-recovery-key-confirm" className="text-body">
-            I have saved the recovery key in my password manager.
+            {tr(
+              "agencySocial.recoveryKeyConfirmLabel",
+              "I have saved the recovery key in my password manager.",
+            )}
           </Label>
         </div>
         <DialogFooter>
@@ -549,7 +602,7 @@ function RecoveryKeyModal({
             onClick={onClose}
             data-testid="agency-social-recovery-key-close"
           >
-            Close
+            {tr("agencySocial.recoveryKeyClose", "Close")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -566,6 +619,7 @@ function ConfirmDestructiveModal({
   action,
   pending,
   onClose,
+  tr,
 }: {
   testId: string;
   title: string;
@@ -575,6 +629,7 @@ function ConfirmDestructiveModal({
   action: React.FormEventHandler<HTMLFormElement>;
   pending: boolean;
   onClose: () => void;
+  tr: (key: string, fallback: string, params?: Record<string, string | number>) => string;
 }) {
   const [typed, setTyped] = React.useState("");
   // Use the last 6 hex chars of the agency id as a weak
@@ -599,7 +654,11 @@ function ConfirmDestructiveModal({
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor={`${testId}-confirm`} className="text-body">
-              Type the last 6 characters of the agency id (<code>{expected}</code>) to confirm:
+              {tr(
+                "agencySocial.confirmTypeMessage",
+                "Type the last 6 characters of the agency id ({token}) to confirm:",
+                { token: expected },
+              )}
             </Label>
             <input
               id={`${testId}-confirm`}
@@ -618,7 +677,7 @@ function ConfirmDestructiveModal({
               onClick={onClose}
               data-testid={`${testId}-cancel`}
             >
-              Cancel
+              {tr("agencySocial.confirmCancel", "Cancel")}
             </Button>
             <Button
               type="submit"
@@ -626,7 +685,7 @@ function ConfirmDestructiveModal({
               disabled={!canConfirm || pending}
               data-testid={`${testId}-submit`}
             >
-              {pending ? "Working…" : confirmLabel}
+              {pending ? tr("agencySocial.confirmWorking", "Working…") : confirmLabel}
             </Button>
           </DialogFooter>
         </form>
