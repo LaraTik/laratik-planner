@@ -28,7 +28,10 @@ import { EditAgencyForm } from "@/components/forms/edit-agency-form";
  * Forbidden (signed in, not admin) shows a friendly page with
  * a back link to /app.
  */
-export const metadata = { title: "Agency Settings" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("agencySettings.title") };
+}
 
 export default async function AgencySettingsPage() {
   const session = await auth();

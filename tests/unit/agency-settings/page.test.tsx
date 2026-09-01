@@ -27,7 +27,12 @@ describe("agency-settings page structure", () => {
   );
 
   it("exports metadata and a default async component", () => {
-    expect(source).toMatch(/export const metadata\s*=\s*\{/);
+    // Either a static `export const metadata` or a `generateMetadata`
+    // function counts — the page switches to the latter form when the
+    // title needs to come from the active locale (UI_UX_REFINEMENT_2026-09-01).
+    expect(source).toMatch(
+      /(export const metadata\s*=\s*\{|export async function generateMetadata)/,
+    );
     expect(source).toMatch(/export default async function AgencySettingsPage/);
   });
 

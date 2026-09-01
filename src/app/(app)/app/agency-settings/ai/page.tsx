@@ -17,7 +17,10 @@ import { getManagedSecretStatus } from "@/lib/ai/provider-secret";
 import { getKekStatus } from "@/lib/security/secrets";
 import { AI_PROVIDER } from "@/lib/ai/capabilities";
 
-export const metadata = { title: "AI configuration" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("agencyAi.title") };
+}
 
 /**
  * Agency-level AI configuration (STUDIOFLOW_MASTER_PROMPT.md §15).

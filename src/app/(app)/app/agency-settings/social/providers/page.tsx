@@ -13,7 +13,10 @@ import { agencies, agencySocialProviderConfig } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { ProviderConfigCard } from "./provider-config-card";
 
-export const metadata = { title: "Social provider config" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("agencyProviders.title") };
+}
 
 /**
  * M4.6 — per-agency social provider config page.

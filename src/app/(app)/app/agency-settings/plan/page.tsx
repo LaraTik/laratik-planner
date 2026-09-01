@@ -14,7 +14,10 @@ import { agencyEntitlements, platformPlanTemplates } from "@/lib/db/schema";
 import { getUsage } from "@/lib/usage";
 import { SupportAccessRequestsCard } from "./support-requests-card";
 
-export const metadata = { title: "Plan and usage" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("agencyPlan.title") };
+}
 export const dynamic = "force-dynamic";
 
 export default async function AgencyPlanPage() {

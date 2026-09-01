@@ -11,7 +11,10 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { getSocialStatus, SocialServiceError } from "@/lib/social/service";
 import { SocialCard } from "./social-card";
 
-export const metadata = { title: "Social analytics" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("agencySocial.title") };
+}
 
 /**
  * M4.5 — agency admin social analytics page.
