@@ -790,6 +790,7 @@ function RailStageIcon({
       <span
         className="border-success/40 bg-success-subtle text-success relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
         aria-label={tr("contentDetail.workflow.stageComplete", "Complete")}
+        role="img"
         data-state="complete"
       >
         <Check className="h-3.5 w-3.5" aria-hidden="true" />
@@ -801,6 +802,7 @@ function RailStageIcon({
       <span
         className="border-danger/40 bg-danger-subtle text-danger relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
         aria-label={tr("contentDetail.workflow.stageBlocked", "Blocked")}
+        role="img"
         data-state="blocked"
       >
         <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
@@ -812,6 +814,7 @@ function RailStageIcon({
       <span
         className="border-primary bg-primary text-primary-foreground relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 shadow-sm"
         aria-label={tr("contentDetail.workflow.stageCurrent", "Current")}
+        role="img"
         data-state="current"
       >
         <Circle className="h-2.5 w-2.5 fill-current" aria-hidden="true" />
@@ -823,6 +826,7 @@ function RailStageIcon({
     <span
       className="border-border bg-surface text-fg-muted relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
       aria-label={tr("contentDetail.workflow.stageUpcoming", "Upcoming")}
+      role="img"
       data-state="upcoming"
     >
       <Circle className="h-2 w-2" aria-hidden="true" />
@@ -853,6 +857,7 @@ function StageIcon({
           size,
         )}
         aria-label={tr("contentDetail.workflow.stageComplete", "Complete")}
+        role="img"
       >
         <CheckCircle className={iconClass} aria-hidden="true" />
       </span>
@@ -866,6 +871,7 @@ function StageIcon({
           size,
         )}
         aria-label={tr("contentDetail.workflow.stageCurrentStep", "Current step")}
+        role="img"
       >
         <DirAwareChevronRight className={iconClass} aria-hidden="true" />
       </span>
@@ -879,6 +885,7 @@ function StageIcon({
           size,
         )}
         aria-label={tr("contentDetail.workflow.stageBlocked", "Blocked")}
+        role="img"
       >
         <XCircle className={iconClass} aria-hidden="true" />
       </span>
@@ -891,6 +898,7 @@ function StageIcon({
         size,
       )}
       aria-label={tr("contentDetail.workflow.stageUpcoming", "Upcoming")}
+      role="img"
     >
       <span className="h-2 w-2 rounded-full bg-current" />
     </span>

@@ -27,6 +27,7 @@ export function ChannelIcons({ channels, max = 3, className }: ChannelIconsProps
         className={cn("text-label text-fg-muted", className)}
         data-testid="channel-icons"
         data-empty="true"
+        role="status"
         aria-label="No channels"
       >
         No channels
@@ -46,6 +47,7 @@ export function ChannelIcons({ channels, max = 3, className }: ChannelIconsProps
           key={c.id}
           title={platformLabel(c.platform)}
           aria-label={platformLabel(c.platform)}
+          role="img"
           className="inline-flex"
         >
           <PlatformIcon platform={c.platform} />

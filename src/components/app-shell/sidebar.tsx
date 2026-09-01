@@ -708,7 +708,7 @@ function NestedNavGroup({
   const collapseTemplate = labels["collapseGroup"] ?? "Collapse {label}";
   const expandTemplate = labels["expandGroup"] ?? "Expand {label}";
   return (
-    <li>
+    <div>
       {!collapsed ? (
         <button
           type="button"
@@ -746,7 +746,7 @@ function NestedNavGroup({
           ))}
         </ul>
       ) : null}
-    </li>
+    </div>
   );
 }
 

@@ -127,33 +127,21 @@ export function DeliveryHealthCard({
                 <div
                   className="bg-success h-full"
                   style={{ width: `${onTrackPercent}%` }}
-                  aria-label={tr(
-                    "workspaceOverviewDashboard.deliveryHealth.bucketOnTrackAria",
-                    `On track: ${onTrackCount}`,
-                    { count: onTrackCount },
-                  )}
+                  aria-hidden="true"
                 />
               ) : null}
               {atRiskPercent > 0 ? (
                 <div
                   className="bg-warning h-full"
                   style={{ width: `${atRiskPercent}%` }}
-                  aria-label={tr(
-                    "workspaceOverviewDashboard.deliveryHealth.bucketAtRiskAria",
-                    `At risk: ${atRiskCount}`,
-                    { count: atRiskCount },
-                  )}
+                  aria-hidden="true"
                 />
               ) : null}
               {blockedPercent > 0 ? (
                 <div
                   className="bg-danger h-full"
                   style={{ width: `${blockedPercent}%` }}
-                  aria-label={tr(
-                    "workspaceOverviewDashboard.deliveryHealth.bucketBlockedAria",
-                    `Blocked: ${blockedCount}`,
-                    { count: blockedCount },
-                  )}
+                  aria-hidden="true"
                 />
               ) : null}
             </>

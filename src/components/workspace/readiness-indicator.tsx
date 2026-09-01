@@ -147,6 +147,7 @@ export function ReadinessIndicator({
       data-health={health}
       data-overdue-days={overdueDays}
       data-open-approvals={openApprovalCount}
+      role="status"
       aria-label={label}
     >
       <Icon className={cn("h-3 w-3", tone.ring)} aria-hidden="true" />

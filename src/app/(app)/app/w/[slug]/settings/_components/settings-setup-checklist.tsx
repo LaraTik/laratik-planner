@@ -68,6 +68,7 @@ export function SettingsSetupChecklist({ items, t }: SettingsSetupChecklistProps
         </div>
         <div
           className="text-label text-fg-muted flex items-center gap-1"
+          role="img"
           aria-label={`${configured} of ${total} configured`}
         >
           {items.map((i) => (
