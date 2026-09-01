@@ -20,7 +20,12 @@ import { signOutAction } from "./actions";
  *  - sign-out-button       the submit button
  *  - sign-out-menuitem     the menuitem variant's submit
  */
-export function SignOutForm({ variant = "button" }: { variant?: "button" | "menuitem" }) {
+export function SignOutForm({
+  variant = "button",
+}: {
+  variant?: "button" | "menuitem";
+  t?: (key: string, params?: Record<string, string | number>) => string;
+}) {
   if (variant === "menuitem") {
     return (
       <form action={signOutAction} data-testid="sign-out-form">

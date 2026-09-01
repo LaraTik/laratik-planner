@@ -33,6 +33,7 @@ export function NotificationPreferencesForm({
 }: {
   initialEmailOnMention: boolean;
   initialDailyDigest: boolean;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const [state, formAction] = useActionState<NotificationPreferencesActionState, FormData>(
     setNotificationPreferencesAction,

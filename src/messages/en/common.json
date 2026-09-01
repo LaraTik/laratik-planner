@@ -1333,6 +1333,26 @@
       "empty": "No members yet."
     }
   },
+  "account": {
+    "title": "Account",
+    "description": "Your profile, sign-in, and agency membership.",
+    "profile": "Profile",
+    "profileBlurb": "Update how you appear across the app.",
+    "agencyAdmin": "Agency admin",
+    "member": "Member",
+    "password": "Password",
+    "passwordChange": "Enter your current password to choose a new one.",
+    "passwordSet": "Set a password to also sign in with email + password.",
+    "notifications": "Notification preferences",
+    "notificationsBlurb": "Decide which notifications we email you about. Invitations and security events are always sent.",
+    "agency": "Agency",
+    "agencyNameLabel": "Name",
+    "agencyAdminLabel": "Admin",
+    "workspaceCount": "Workspaces",
+    "noAgencyYet": "You're not yet a member of any agency. If this is your first sign-in, the bootstrap flow will assign you as the agency admin on the next page load.",
+    "signOut": "Sign out",
+    "signOutBlurb": "End this session on this device. You can sign back in at any time."
+  },
   "brandKit": {
     "title": "Brand Kit",
     "breadcrumbAria": "Brand kit breadcrumb",

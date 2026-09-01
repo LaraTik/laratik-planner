@@ -34,7 +34,12 @@ import { changePasswordAction, type PasswordActionState } from "./actions";
 
 const initialState: PasswordActionState = {};
 
-export function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
+export function PasswordForm({
+  hasPassword,
+}: {
+  hasPassword: boolean;
+  t?: (key: string, params?: Record<string, string | number>) => string;
+}) {
   const [state, formAction] = useActionState<PasswordActionState, FormData>(
     changePasswordAction,
     initialState,

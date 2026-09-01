@@ -48,6 +48,7 @@ export function ProfileForm({
     image: string;
     locale: string;
   };
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const [state, formAction] = useActionState<ProfileActionState, FormData>(
     updateProfileAction,

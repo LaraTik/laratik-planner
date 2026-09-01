@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { agencyMemberships, agencies, users, workspaceMemberships } from "@/lib/db/schema";
 import { getPasswordState } from "@/lib/auth/profile";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -79,6 +80,7 @@ export default async function AccountPage() {
   if (!profile || hasPassword === null) {
     redirect("/signin?error=AccessDenied");
   }
+  const { t } = await tForActive();
   const agency = agencyRows[0];
   const buildInfo = createBuildInfo({
     version: serverEnv.APP_VERSION,
@@ -87,14 +89,14 @@ export default async function AccountPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6" data-testid="account-page">
-      <PageHeader title="Account" description="Your profile, sign-in, and agency membership." />
+      <PageHeader title={t("account.title")} description={t("account.description")} />
 
       <Card aria-labelledby="profile-heading" data-testid="profile-card">
         <CardTitle id="profile-heading" className="mb-1 flex items-center gap-2">
           <UserIcon className="h-4 w-4" aria-hidden="true" />
-          Profile
+          {t("account.profile")}
         </CardTitle>
-        <p className="text-body text-fg-muted mb-5">Update how you appear across the app.</p>
+        <p className="text-body text-fg-muted mb-5">{t("account.profileBlurb")}</p>
         <div className="border-border bg-surface-subtle text-body text-fg-secondary mb-5 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[var(--radius-control)] border px-3 py-2">
           <span className="flex items-center gap-1.5">
             <Mail className="h-3.5 w-3.5" aria-hidden="true" />
@@ -103,7 +105,7 @@ export default async function AccountPage() {
           <span className="flex items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
             <Badge variant={profile.role === "agency_admin" ? "primary" : "default"}>
-              {profile.role === "agency_admin" ? "Agency admin" : "Member"}
+              {profile.role === "agency_admin" ? t("account.agencyAdmin") : t("account.member")}
             </Badge>
           </span>
         </div>
@@ -114,19 +116,18 @@ export default async function AccountPage() {
             image: profile.image ?? "",
             locale: profile.locale,
           }}
+          t={t}
         />
       </Card>
 
       <Card aria-labelledby="password-heading" data-testid="password-card">
         <CardTitle id="password-heading" className="mb-1">
-          Password
+          {t("account.password")}
         </CardTitle>
         <p className="text-body text-fg-muted mb-5">
-          {hasPassword.hasPassword
-            ? "Enter your current password to choose a new one."
-            : "Set a password to also sign in with email + password."}
+          {hasPassword.hasPassword ? t("account.passwordChange") : t("account.passwordSet")}
         </p>
-        <PasswordForm hasPassword={hasPassword.hasPassword} />
+        <PasswordForm hasPassword={hasPassword.hasPassword} t={t} />
       </Card>
 
       <Card
@@ -135,41 +136,36 @@ export default async function AccountPage() {
       >
         <CardTitle id="notification-preferences-heading" className="mb-1 flex items-center gap-2">
           <Bell className="h-4 w-4" aria-hidden="true" />
-          Notification preferences
+          {t("account.notifications")}
         </CardTitle>
-        <p className="text-body text-fg-muted mb-5">
-          Decide which notifications we email you about. Invitations and security events are always
-          sent.
-        </p>
+        <p className="text-body text-fg-muted mb-5">{t("account.notificationsBlurb")}</p>
         <NotificationPreferencesForm
           initialEmailOnMention={notificationPrefs.emailOnMention}
           initialDailyDigest={notificationPrefs.dailyDigest}
+          t={t}
         />
       </Card>
 
       <Card aria-labelledby="agency-heading" data-testid="agency-card">
         <CardTitle id="agency-heading" className="mb-3 flex items-center gap-2">
           <Building2 className="h-4 w-4" aria-hidden="true" />
-          Agency
+          {t("account.agency")}
         </CardTitle>
         {agency ? (
           <dl className="grid grid-cols-1 gap-2 sm:grid-cols-[8rem_1fr]">
-            <dt className="text-body text-fg-muted">Name</dt>
+            <dt className="text-body text-fg-muted">{t("account.agencyNameLabel")}</dt>
             <dd className="text-body text-fg-primary font-semibold">{agency.agencyName}</dd>
-            <dt className="text-body text-fg-muted">Admin</dt>
+            <dt className="text-body text-fg-muted">{t("account.agencyAdminLabel")}</dt>
             <dd>
               <Badge variant={agency.isAgencyAdmin ? "success" : "default"}>
-                {agency.isAgencyAdmin ? "Yes" : "No"}
+                {agency.isAgencyAdmin ? t("common.yes") : t("common.no")}
               </Badge>
             </dd>
-            <dt className="text-body text-fg-muted">Workspaces</dt>
+            <dt className="text-body text-fg-muted">{t("account.workspaceCount")}</dt>
             <dd className="text-body text-fg-primary font-semibold">{agency.workspaceCount}</dd>
           </dl>
         ) : (
-          <p className="text-body text-fg-muted mt-2">
-            You&apos;re not yet a member of any agency. If this is your first sign-in, the bootstrap
-            flow will assign you as the agency admin on the next page load.
-          </p>
+          <p className="text-body text-fg-muted mt-2">{t("account.noAgencyYet")}</p>
         )}
       </Card>
 
@@ -181,12 +177,10 @@ export default async function AccountPage() {
         className="border-danger/20"
       >
         <CardTitle id="signout-heading" className="mb-1">
-          Sign out
+          {t("account.signOut")}
         </CardTitle>
-        <p className="text-body text-fg-muted mb-4">
-          End this session on this device. You can sign back in at any time.
-        </p>
-        <SignOutForm variant="button" />
+        <p className="text-body text-fg-muted mb-4">{t("account.signOutBlurb")}</p>
+        <SignOutForm variant="button" t={t} />
       </Card>
     </div>
   );
