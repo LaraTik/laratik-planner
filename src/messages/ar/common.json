@@ -1322,7 +1322,18 @@
   "errors": {
     "notFoundTitle": "الصفحة غير موجودة",
     "notFoundBody": "الصفحة التي حاولت الوصول إليها غير موجودة، أو ليس لديك صلاحية لعرضها.",
-    "backToMyWork": "العودة إلى My Work"
+    "backToMyWork": "العودة إلى My Work",
+    "appHeroTitle": "حدث خطأ غير متوقع",
+    "appHeroBody": "أوقف خطأ غير متوقع عرض هذه الصفحة. يعرض المربع أدناه السبب الأرجح وما يجب فعله لاحقًا — الفريق تلقى أيضًا التقرير الكامل.",
+    "tryAgain": "حاول مجددًا",
+    "copyFullReport": "نسخ التقرير الكامل",
+    "reportCopied": "تم نسخ التقرير",
+    "reportThis": "الإبلاغ عن هذا",
+    "openInPlatformErrors": "فتح في أخطاء المنصة",
+    "copyReference": "نسخ المرجع",
+    "referenceCopied": "تم نسخ المرجع",
+    "copy": "نسخ",
+    "copied": "تم النسخ"
   },
   "agencyProviders": {
     "title": "إعدادات مزود التواصل الاجتماعي",

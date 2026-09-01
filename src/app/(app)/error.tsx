@@ -23,6 +23,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { recordErrorBoundaryAction } from "./error-actions";
 import { cn } from "@/lib/utils";
 import { formatErrorReport, matchErrorHint, type ErrorHint } from "@/lib/observability/error-hints";
+import { getClientT } from "@/lib/i18n/client-locale";
 
 /**
  * Error boundary for the authenticated app shell.
@@ -64,6 +65,10 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // The boundary is the only client render that runs when the
+  // server is broken. Read the public locale cookie so the hero
+  // copy is bilingual; fall back to English (see client-locale.ts).
+  const t = getClientT();
   const [copied, setCopied] = React.useState<"digest" | "report" | null>(null);
   const [stackOpen, setStackOpen] = React.useState(false);
   const [componentStackOpen, setComponentStackOpen] = React.useState(false);
@@ -189,7 +194,7 @@ export default function AppError({
           const href = result.matchedId
             ? `/app/platform/errors?focus=${encodeURIComponent(result.matchedId)}`
             : "/app/platform/errors";
-          setPlatformLink({ href, label: "Open in platform errors" });
+          setPlatformLink({ href, label: t("errors.openInPlatformErrors") });
         }
       } catch {
         // Fail-silent on the capture path. The structured log + Sentry
@@ -258,20 +263,17 @@ export default function AppError({
             <AlertTriangle className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <CardTitle>We hit a snag</CardTitle>
-            <CardDescription>
-              An unexpected error stopped this page from rendering. The block below shows the most
-              likely cause and what to do next — the team has also received the full report.
-            </CardDescription>
+            <CardTitle>{t("errors.appHeroTitle")}</CardTitle>
+            <CardDescription>{t("errors.appHeroBody")}</CardDescription>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2" data-testid="app-error-actions">
           <Button onClick={reset} variant="default" data-testid="app-error-retry">
             <RotateCcw className="h-4 w-4" aria-hidden="true" />
-            Try again
+            {t("errors.tryAgain")}
           </Button>
           <Button asChild variant="secondary">
-            <Link href="/app">Back to My Work</Link>
+            <Link href="/app">{t("errors.backToMyWork")}</Link>
           </Button>
           <Button
             size="default"
@@ -284,7 +286,7 @@ export default function AppError({
             ) : (
               <Copy className="h-4 w-4" aria-hidden="true" />
             )}
-            {copied === "report" ? "Report copied" : "Copy full report"}
+            {copied === "report" ? t("errors.reportCopied") : t("errors.copyFullReport")}
           </Button>
           <a
             href={supportHref}
@@ -292,13 +294,13 @@ export default function AppError({
             data-testid="app-error-report"
           >
             <LifeBuoy className="h-4 w-4" aria-hidden="true" />
-            Report this
+            {t("errors.reportThis")}
           </a>
           {platformLink ? (
             <Button asChild variant="outline" data-testid="app-error-platform-link">
               <Link href={platformLink.href}>
                 <ClipboardList className="h-4 w-4" aria-hidden="true" />
-                {platformLink.label}
+                {t("errors.openInPlatformErrors")}
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
               </Link>
             </Button>
@@ -327,7 +329,9 @@ export default function AppError({
                   size="sm"
                   variant="ghost"
                   onClick={() => void copyToClipboard(reference, "digest")}
-                  aria-label={copied === "digest" ? "Reference copied" : "Copy reference"}
+                  aria-label={
+                    copied === "digest" ? t("errors.referenceCopied") : t("errors.copyReference")
+                  }
                   data-testid="app-error-copy-digest"
                 >
                   {copied === "digest" ? (
@@ -335,7 +339,7 @@ export default function AppError({
                   ) : (
                     <Copy className="h-3.5 w-3.5" aria-hidden="true" />
                   )}
-                  {copied === "digest" ? "Copied" : "Copy"}
+                  {copied === "digest" ? t("errors.copied") : t("errors.copy")}
                 </Button>
               </div>
             </ContextRow>

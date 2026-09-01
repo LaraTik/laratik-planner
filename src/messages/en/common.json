@@ -1356,7 +1356,18 @@
   "errors": {
     "notFoundTitle": "Page not found",
     "notFoundBody": "The page you tried to reach doesn't exist, or you don't have access to it.",
-    "backToMyWork": "Back to My Work"
+    "backToMyWork": "Back to My Work",
+    "appHeroTitle": "We hit a snag",
+    "appHeroBody": "An unexpected error stopped this page from rendering. The block below shows the most likely cause and what to do next — the team has also received the full report.",
+    "tryAgain": "Try again",
+    "copyFullReport": "Copy full report",
+    "reportCopied": "Report copied",
+    "reportThis": "Report this",
+    "openInPlatformErrors": "Open in platform errors",
+    "copyReference": "Copy reference",
+    "referenceCopied": "Reference copied",
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "agencyProviders": {
     "title": "Social provider config",
