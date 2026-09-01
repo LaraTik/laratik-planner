@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth/config";
 import { firstAgencyForBootstrap } from "@/lib/auth/policy";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 export const metadata = {
   title: "laratik-planner",
@@ -17,8 +18,15 @@ export const metadata = {
  * Public product entry point. Returning users skip this surface and go directly
  * to the app. Public account creation remains disabled; the one-time setup CTA
  * is shown only while no agency exists and routes through identity verification.
+ *
+ * All user-visible copy is sourced from the message catalog
+ * (`src/messages/{en,ar}/common.json` → `auth.landing`) so the
+ * same JSX renders in English or Arabic. The active locale is
+ * resolved once via `tForActive()` — see ADR 0009 for the
+ * precedence chain.
  */
 export default async function HomePage() {
+  const { t } = await tForActive();
   const session = await auth();
   if (session?.user?.id) {
     redirect("/app");
@@ -26,7 +34,8 @@ export default async function HomePage() {
 
   const isConfigured = !!(await firstAgencyForBootstrap());
   const entryHref = isConfigured ? "/signin" : "/signin?callbackUrl=%2Fsetup&method=magic";
-  const entryLabel = isConfigured ? "Sign in to StudioFlow" : "Set up StudioFlow";
+  const entryLabel = isConfigured ? t("auth.landing.entrySignIn") : t("auth.landing.entrySetup");
+  const note = isConfigured ? t("auth.landing.invitationNote") : t("auth.landing.setupNote");
 
   return (
     <main
@@ -39,22 +48,23 @@ export default async function HomePage() {
       />
       <div className="mx-auto flex w-full max-w-5xl flex-col justify-center gap-10">
         <div className="flex flex-col items-center gap-5 text-center">
-          <div className="flex items-center gap-2.5" aria-label="StudioFlow">
+          <div className="flex items-center gap-2.5" aria-label={t("auth.productName")}>
             <span className="bg-primary flex h-10 w-10 items-center justify-center rounded-[var(--radius-card)] text-base font-bold text-white">
               S
             </span>
-            <span className="text-title-card text-fg-primary font-semibold">StudioFlow</span>
+            <span className="text-title-card text-fg-primary font-semibold">
+              {t("auth.productName")}
+            </span>
           </div>
           <p className="border-primary/20 bg-primary-subtle text-label text-primary rounded-full border px-3 py-1 font-medium">
-            Social content operations, in one place
+            {t("auth.landing.tagline")}
           </p>
           <div className="max-w-2xl space-y-3">
             <h1 className="text-fg-primary text-4xl font-semibold tracking-tight sm:text-5xl">
-              Plan, review, and publish with clarity.
+              {t("auth.landing.headline")}
             </h1>
             <p className="text-body text-fg-secondary mx-auto max-w-prose sm:text-base">
-              Keep every brand, creative handoff, approval, and publishing record in one focused
-              workspace.
+              {t("auth.landing.subhead")}
             </p>
           </div>
 
@@ -67,9 +77,7 @@ export default async function HomePage() {
             </Button>
             <p className="text-label text-fg-muted inline-flex items-center gap-1.5">
               <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
-              {isConfigured
-                ? "Invitation-only access"
-                : "Administrator identity verification is required"}
+              {note}
             </p>
           </div>
         </div>
@@ -77,23 +85,23 @@ export default async function HomePage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Feature
             icon={<CalendarDays className="h-5 w-5" />}
-            title="Monthly planning"
-            text="Lists, boards, and calendars stay aligned."
+            title={t("auth.landing.featureMonthlyTitle")}
+            text={t("auth.landing.featureMonthlyText")}
           />
           <Feature
             icon={<Workflow className="h-5 w-5" />}
-            title="Clear workflow"
-            text="Every idea always has a next action."
+            title={t("auth.landing.featureWorkflowTitle")}
+            text={t("auth.landing.featureWorkflowText")}
           />
           <Feature
             icon={<MessagesSquare className="h-5 w-5" />}
-            title="Review together"
-            text="Internal and client feedback stays separated."
+            title={t("auth.landing.featureReviewTitle")}
+            text={t("auth.landing.featureReviewText")}
           />
           <Feature
             icon={<CheckCircle2 className="h-5 w-5" />}
-            title="Publish confidently"
-            text="Track every selected channel to completion."
+            title={t("auth.landing.featurePublishTitle")}
+            text={t("auth.landing.featurePublishText")}
           />
         </div>
       </div>

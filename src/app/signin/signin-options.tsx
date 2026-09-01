@@ -11,7 +11,40 @@ import { Input } from "@/components/ui/input";
 type SignInMethod = "password" | "magic";
 type FormAction = (formData: FormData) => void | Promise<void>;
 
+/**
+ * Localized copy bundle. The Server Component parent resolves
+ * every string through the message catalog and hands them to
+ * this client component as a single `copy` prop — the client
+ * never reaches for the catalog itself. Adding a new visible
+ * string is a two-step change: add the key to both catalogs,
+ * add the field to this interface, and read it from `copy` in
+ * the JSX. The unit test suite pins the interface shape.
+ */
+export type SignInCopy = {
+  emailLabel: string;
+  emailPlaceholder: string;
+  passwordLabel: string;
+  passwordPlaceholder: string;
+  showPassword: string;
+  hidePassword: string;
+  forgotPassword: string;
+  rememberMe: string;
+  submit: string;
+  submitPending: string;
+  magicEyebrow: string;
+  magicBody: string;
+  magicSubmit: string;
+  magicSubmitPending: string;
+  magicSwitchToPassword: string;
+  magicSwitchToMagic: string;
+  orSeparator: string;
+  otherMethodsSeparator: string;
+  googleSubmit: string;
+  googleSubmitPending: string;
+};
+
 export function SignInOptions({
+  copy,
   passwordAction,
   googleAction,
   magicLinkAction,
@@ -20,6 +53,7 @@ export function SignInOptions({
   passwordEnabled,
   initialMethod,
 }: {
+  copy: SignInCopy;
   passwordAction: FormAction;
   googleAction: FormAction;
   magicLinkAction: FormAction;
@@ -35,14 +69,14 @@ export function SignInOptions({
     <div className="space-y-5">
       {method === "password" && passwordEnabled ? (
         <form action={passwordAction} className="space-y-5" data-testid="password-signin-form">
-          <FormField id="signin-email" label="Email address" required>
+          <FormField id="signin-email" label={copy.emailLabel} required>
             <Input
               type="email"
               name="email"
               autoComplete="email"
               autoFocus
               required
-              placeholder="name@agency.com"
+              placeholder={copy.emailPlaceholder}
               className="h-11"
             />
           </FormField>
@@ -50,13 +84,13 @@ export function SignInOptions({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-3">
               <label htmlFor="signin-password" className="text-label text-fg-primary font-medium">
-                Password
+                {copy.passwordLabel}
               </label>
               <Link
                 href="/signin/forgot-password"
                 className="text-label text-primary hover:text-primary-hover focus-visible:ring-focus-ring rounded-sm font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
               >
-                Forgot password?
+                {copy.forgotPassword}
               </Link>
             </div>
             <div className="relative">
@@ -66,14 +100,14 @@ export function SignInOptions({
                 name="password"
                 autoComplete="current-password"
                 required
-                placeholder="Enter your password"
+                placeholder={copy.passwordPlaceholder}
                 className="h-11 pe-11"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((visible) => !visible)}
                 className="text-fg-muted hover:text-fg-primary focus-visible:ring-focus-ring absolute inset-y-0 end-0 flex min-w-11 cursor-pointer items-center justify-center rounded-e-[var(--radius-control)] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? copy.hidePassword : copy.showPassword}
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4" aria-hidden="true" />
@@ -95,12 +129,12 @@ export function SignInOptions({
               value="on"
               className="border-border text-primary focus-visible:ring-focus-ring bg-surface h-4 w-4 cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
             />
-            Keep me signed in for 30 days
+            {copy.rememberMe}
           </label>
 
           <FormSubmitButton
-            label="Sign in"
-            pendingLabel="Signing in…"
+            label={copy.submit}
+            pendingLabel={copy.submitPending}
             className="w-full"
             size="lg"
           />
@@ -112,28 +146,26 @@ export function SignInOptions({
               <Mail className="h-4 w-4" aria-hidden="true" />
             </span>
             <h2 className="text-title-card text-fg-primary pt-2 font-semibold">
-              Email sign-in link
+              {copy.magicEyebrow}
             </h2>
-            <p className="text-body text-fg-secondary">
-              We&apos;ll send a secure, one-time link to your work email.
-            </p>
+            <p className="text-body text-fg-secondary">{copy.magicBody}</p>
           </div>
 
           <form action={magicLinkAction} className="space-y-5">
-            <FormField id="magic-email" label="Email address" required>
+            <FormField id="magic-email" label={copy.emailLabel} required>
               <Input
                 type="email"
                 name="email"
                 autoComplete="email"
                 autoFocus
                 required
-                placeholder="name@agency.com"
+                placeholder={copy.emailPlaceholder}
                 className="h-11"
               />
             </FormField>
             <FormSubmitButton
-              label="Send sign-in link"
-              pendingLabel="Sending link…"
+              label={copy.magicSubmit}
+              pendingLabel={copy.magicSubmitPending}
               className="w-full"
               size="lg"
             />
@@ -149,10 +181,10 @@ export function SignInOptions({
                 <div
                   className="flex items-center gap-3"
                   role="separator"
-                  aria-label="Other sign-in options"
+                  aria-label={copy.otherMethodsSeparator}
                 >
                   <hr className="border-border flex-1" />
-                  <span className="text-label text-fg-muted">or</span>
+                  <span className="text-label text-fg-muted">{copy.orSeparator}</span>
                   <hr className="border-border flex-1" />
                 </div>
               )}
@@ -161,10 +193,10 @@ export function SignInOptions({
                   label={
                     <>
                       <GoogleIcon className="h-4 w-4" />
-                      Continue with Google
+                      {copy.googleSubmit}
                     </>
                   }
-                  pendingLabel="Opening Google…"
+                  pendingLabel={copy.googleSubmitPending}
                   variant={passwordEnabled || magicLinkEnabled ? "secondary" : "default"}
                   className="w-full"
                   size="lg"
@@ -181,7 +213,7 @@ export function SignInOptions({
               onClick={() => setMethod(method === "password" ? "magic" : "password")}
             >
               <KeyRound className="h-4 w-4" aria-hidden="true" />
-              {method === "password" ? "Use a sign-in link instead" : "Use password instead"}
+              {method === "password" ? copy.magicSwitchToMagic : copy.magicSwitchToPassword}
             </Button>
           ) : null}
         </div>

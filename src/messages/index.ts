@@ -20,6 +20,14 @@
  * break the page. The unit test suite asserts that
  * `en` and `ar` have identical key structure, so a missing
  * Arabic key is caught at test time, not at runtime.
+ *
+ * This module is **pure of any server-only or auth import**
+ * so it can be loaded from any context (Client Components,
+ * Server Components, vitest without the next-auth env.js
+ * shim, etc.). The server-only `tForActive()` helper that
+ * resolves the active locale and binds a translator lives in
+ * `src/lib/i18n/t-for-active.ts`; the split keeps the test
+ * surface small.
  */
 import en from "./en/common.json";
 import ar from "./ar/common.json";
@@ -32,7 +40,7 @@ const CATALOGS: Record<LocaleCode, Catalog> = {
   ar: ar as Catalog,
 };
 
-export type Namespaces = "common" | "navigation" | "languageSwitcher";
+export type Namespaces = "common" | "navigation" | "languageSwitcher" | "auth";
 
 /**
  * Read a dotted key from a catalog. Returns `undefined` when

@@ -1,12 +1,44 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { SignInOptions } from "@/app/signin/signin-options";
+import { SignInOptions, type SignInCopy } from "@/app/signin/signin-options";
 
 const noopAction = vi.fn(async () => undefined);
+
+/**
+ * `SignInOptions` is a Client Component. The Server Component
+ * parent (`/app/signin/page.tsx`) is the only place that
+ * resolves the message catalog; the client receives a
+ * pre-translated `copy` prop. The fixture below is the
+ * English shape — the Arabic shape is exercised by the
+ * bilingual E2E matrix in `tests/e2e/`.
+ */
+const copy: SignInCopy = {
+  emailLabel: "Email address",
+  emailPlaceholder: "name@agency.com",
+  passwordLabel: "Password",
+  passwordPlaceholder: "Enter your password",
+  showPassword: "Show password",
+  hidePassword: "Hide password",
+  forgotPassword: "Forgot password?",
+  rememberMe: "Keep me signed in for 30 days",
+  submit: "Sign in",
+  submitPending: "Signing in…",
+  magicEyebrow: "Email sign-in link",
+  magicBody: "We'll send a secure, one-time link to your work email.",
+  magicSubmit: "Send sign-in link",
+  magicSubmitPending: "Sending link…",
+  magicSwitchToPassword: "Use password instead",
+  magicSwitchToMagic: "Use a sign-in link instead",
+  orSeparator: "or",
+  otherMethodsSeparator: "Other sign-in options",
+  googleSubmit: "Continue with Google",
+  googleSubmitPending: "Opening Google…",
+};
 
 function renderOptions(props: Partial<React.ComponentProps<typeof SignInOptions>> = {}) {
   return render(
     <SignInOptions
+      copy={copy}
       passwordAction={noopAction}
       googleAction={noopAction}
       magicLinkAction={noopAction}
