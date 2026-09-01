@@ -18,16 +18,25 @@ import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { users, workspaceMemberships } from "@/lib/db/schema";
 import { describeActiveFilter } from "../planning/filter-describe";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
-const COLUMNS: readonly WorkflowBoardColumn[] = [
-  { label: "Ideas", statuses: ["draft", "changes_requested", "blocked"] },
-  { label: "Content review", statuses: ["content_review"] },
-  { label: "Approved", statuses: ["approved_for_design"] },
-  { label: "Design", statuses: ["in_design"] },
-  { label: "Creative review", statuses: ["creative_review"] },
-  { label: "Ready", statuses: ["ready_to_publish"] },
-  { label: "Published", statuses: ["partially_published", "published"] },
-];
+/**
+ * The board column set is defined inside the component so the
+ * `label` strings can be resolved through the message catalog
+ * at render time. The `statuses` are a code-set and stay
+ * stable across locales.
+ */
+function buildColumns(t: (key: string) => string): readonly WorkflowBoardColumn[] {
+  return [
+    { label: t("board.columnIdeas"), statuses: ["draft", "changes_requested", "blocked"] },
+    { label: t("board.columnContentReview"), statuses: ["content_review"] },
+    { label: t("board.columnApproved"), statuses: ["approved_for_design"] },
+    { label: t("board.columnDesign"), statuses: ["in_design"] },
+    { label: t("board.columnCreativeReview"), statuses: ["creative_review"] },
+    { label: t("board.columnReady"), statuses: ["ready_to_publish"] },
+    { label: t("board.columnPublished"), statuses: ["partially_published", "published"] },
+  ];
+}
 
 /**
  * Workflow Board page — 7-column kanban-style view of every content
@@ -61,7 +70,9 @@ export default async function WorkflowBoardPage({
     search?: string;
   }>;
 }) {
+  const { t } = await tForActive();
   const { slug } = await params;
+  const columns = buildColumns(t);
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
@@ -120,10 +131,10 @@ export default async function WorkflowBoardPage({
     <div className="space-y-6" data-testid="workspace-board">
       <PageHeader
         eyebrow={workspace.name}
-        title="Workflow board"
+        title={t("board.title")}
         description={
           <>
-            Every idea, grouped by its current production stage.
+            {t("board.description")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
@@ -136,11 +147,11 @@ export default async function WorkflowBoardPage({
               variant="outline"
               asChild
               data-testid="board-switch-to-list"
-              title="Switch to the list view with the same filters applied"
+              title={t("board.listViewTitle")}
             >
               <Link href={listHref}>
                 <List className="h-4 w-4" aria-hidden="true" />
-                List view
+                {t("board.listView")}
               </Link>
             </Button>
             <Button
@@ -152,7 +163,7 @@ export default async function WorkflowBoardPage({
             >
               <span>
                 <LayoutGrid className="h-4 w-4" aria-hidden="true" />
-                Board view
+                {t("board.boardView")}
               </span>
             </Button>
           </div>
@@ -180,31 +191,33 @@ export default async function WorkflowBoardPage({
       {items.length === 0 ? (
         <EmptyState
           icon={<LayoutGrid className="h-8 w-8" aria-hidden="true" />}
-          title={hasFilter ? "No items match your filters" : "Nothing on the board yet"}
+          title={hasFilter ? t("board.emptyFilterTitle") : t("board.emptyNothingTitle")}
           description={
             hasFilter
-              ? `No items match ${describeActiveFilter(
-                  Object.fromEntries(
-                    Object.entries({
-                      status: selectedStatus,
-                      format: selectedFormat,
-                      ownerId: ownerFilter,
-                      search: searchTerm,
-                    }).filter(([, v]) => v != null),
-                  ) as Parameters<typeof describeActiveFilter>[0],
-                )}. Try clearing the filter to see everything.`
-              : "Use Quick Create to add a draft — it'll show up here when it lands in the workflow."
+              ? t("board.emptyFilterDescription", {
+                  filter: describeActiveFilter(
+                    Object.fromEntries(
+                      Object.entries({
+                        status: selectedStatus,
+                        format: selectedFormat,
+                        ownerId: ownerFilter,
+                        search: searchTerm,
+                      }).filter(([, v]) => v != null),
+                    ) as Parameters<typeof describeActiveFilter>[0],
+                  ),
+                })
+              : t("board.emptyNothingDescription")
           }
           action={
             hasFilter ? (
               <Button variant="outline" asChild>
                 <Link href={`/app/w/${slug}/board`} data-testid="board-empty-clear-filters">
-                  Clear filters
+                  {t("board.clearFilters")}
                 </Link>
               </Button>
             ) : (
               <Button asChild>
-                <Link href={`/app/w/${slug}/planning/new`}>Quick Create</Link>
+                <Link href={`/app/w/${slug}/planning/new`}>{t("board.quickCreate")}</Link>
               </Button>
             )
           }
@@ -212,7 +225,7 @@ export default async function WorkflowBoardPage({
       ) : (
         <WorkflowBoard
           items={items}
-          columns={COLUMNS}
+          columns={columns}
           workspaceSlug={slug}
           memberDirectory={Object.fromEntries(
             memberRows.map((m) => [m.id, m satisfies BoardMemberEntry]),

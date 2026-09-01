@@ -182,6 +182,26 @@
     "noAtRiskTitle": "لا توجد عناصر في خطر في هذه الصفحة",
     "noAtRiskDescription": "يعرض مرشّح «في خطر» فقط العناصر المتأخرة والجارية. جرّب الصفحة التالية، أو امسح المرشّح لرؤية كل شيء."
   },
+  "board": {
+    "title": "لوحة سير العمل",
+    "description": "كل فكرة، مجمّعة حسب مرحلة الإنتاج الحالية.",
+    "listView": "عرض القائمة",
+    "listViewTitle": "التبديل إلى عرض القائمة مع تطبيق المرشّحات نفسها",
+    "boardView": "عرض اللوحة",
+    "emptyFilterTitle": "لا توجد عناصر تطابق المرشّحات",
+    "emptyFilterDescription": "لا توجد عناصر تطابق {filter}. جرّب مسح المرشّح لرؤية كل شيء.",
+    "emptyNothingTitle": "لا يوجد شيء على اللوحة بعد",
+    "emptyNothingDescription": "استخدم الإنشاء السريع لإضافة مسودة — ستظهر هنا عندما تصل إلى سير العمل.",
+    "clearFilters": "مسح المرشّحات",
+    "quickCreate": "إنشاء سريع",
+    "columnIdeas": "أفكار",
+    "columnContentReview": "مراجعة المحتوى",
+    "columnApproved": "معتمدة",
+    "columnDesign": "التصميم",
+    "columnCreativeReview": "المراجعة الإبداعية",
+    "columnReady": "جاهز",
+    "columnPublished": "منشور"
+  },
   "auth": {
     "appName": "laratik-planner",
     "productName": "StudioFlow",
