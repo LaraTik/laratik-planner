@@ -211,6 +211,7 @@ export function railStageForStatus(status: string): {
  *     opens a slide-up sheet that mounts `WorkflowRailBody`.
  */
 export function WorkflowRail(props: WorkflowRailBodyProps) {
+  const tr = (key: string, fallback: string) => (props.t ? props.t(key) : fallback);
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const [hydrated, setHydrated] = useState<boolean>(false);
 
@@ -256,20 +257,23 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
         className="border-border bg-surface w-14 overflow-hidden rounded-[var(--radius-control)] border"
         data-testid="workflow-rail"
         data-collapsed="true"
-        aria-label="Workflow rail (collapsed)"
+        aria-label={tr("contentDetail.workflow.railCollapsed", "Workflow rail (collapsed)")}
       >
         <button
           type="button"
           onClick={toggle}
           className="text-fg-secondary hover:text-fg-primary focus-visible:ring-focus-ring flex w-full items-center justify-center px-2 py-2 focus-visible:ring-2 focus-visible:outline-none"
-          aria-label="Expand workflow rail"
+          aria-label={tr("contentDetail.workflow.railExpand", "Expand workflow rail")}
           data-testid="workflow-rail-expand"
         >
           <DirAwareChevronLeft className="h-4 w-4" aria-hidden="true" />
         </button>
         <ol
           className="flex flex-col items-center gap-1 px-1 py-1"
-          aria-label="Workflow stages (collapsed)"
+          aria-label={tr(
+            "contentDetail.workflow.railStagesCollapsed",
+            "Workflow stages (collapsed)",
+          )}
           data-testid="workflow-rail-stages-collapsed"
         >
           {(["draft", "review", "design", "publish"] as const).map((stage) => {

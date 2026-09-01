@@ -450,7 +450,10 @@
       "cancelConfirm": "Cancel item",
       "blockTitle": "Block content item",
       "blockDescription": "Explain what is preventing progress so the team can resolve it.",
-      "blockConfirm": "Block item"
+      "blockConfirm": "Block item",
+      "railCollapsed": "Workflow rail (collapsed)",
+      "railExpand": "Expand workflow rail",
+      "railStagesCollapsed": "Workflow stages (collapsed)"
     }
   },
   "formatEditor": {

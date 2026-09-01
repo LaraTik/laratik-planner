@@ -450,7 +450,10 @@
       "cancelConfirm": "إلغاء العنصر",
       "blockTitle": "حظر عنصر المحتوى",
       "blockDescription": "اشرح ما يمنع التقدم حتى يحلّه الفريق.",
-      "blockConfirm": "حظر العنصر"
+      "blockConfirm": "حظر العنصر",
+      "railCollapsed": "سير العمل (مطوي)",
+      "railExpand": "توسيع سير العمل",
+      "railStagesCollapsed": "مراحل سير العمل (مطوية)"
     }
   },
   "formatEditor": {
