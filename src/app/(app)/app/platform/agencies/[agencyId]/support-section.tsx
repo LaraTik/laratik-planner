@@ -5,6 +5,30 @@ import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { listRequestsForAgency, type SupportAccessRequestRow } from "@/lib/support";
 import { SupportAccessRequestForm } from "../../security/request-access-form";
 
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+const EN_FALLBACK: Translator = (key, params) => {
+  const lookup: Record<string, string> = {
+    "platform.supportRequestTitle": "Request temporary support access",
+    "platform.supportRequestBody":
+      "Request only the scope needed for a ticket. Platform access alone never opens tenant content.",
+    "platform.supportRequestsTitle": "Support access requests",
+    "platform.supportRequestsBody":
+      "The most recent ticketed support access requests for this agency. Agency admins decide each request from the agency-settings Plan & Usage page.",
+    "platform.supportEmptyTitle": "No support access requests",
+    "platform.supportEmptyBody": "No support operator has filed a request for this agency yet.",
+    "platform.supportColTicket": "Ticket",
+    "platform.supportColStatus": "Status",
+    "platform.supportColHours": "Hours",
+    "platform.supportColScope": "Scope",
+    "platform.supportColWhen": "When",
+    "platform.supportScopeMetadata": "Metadata only",
+    "platform.supportScopeWorkspace": "Workspace {prefix}…",
+    "platform.supportScopeAgency": "Agency-wide",
+  };
+  return lookup[key]?.replace("{prefix}", String(params?.prefix ?? "")) ?? key;
+};
+
 /**
  * M3.4 — Agency detail support-access section.
  *
@@ -26,33 +50,44 @@ export async function SupportAccessSection({
   agencyName,
   workspaces,
   canRequestSupport,
+  t,
 }: {
   agencyId: string;
   agencyName: string;
   workspaces: ReadonlyArray<{ id: string; name: string }>;
   canRequestSupport: boolean;
+  t?: Translator;
 }) {
+  const tr: Translator = t ?? EN_FALLBACK;
   const requests = await listRequestsForAgency(agencyId, { limit: 10 });
 
   const columns: DataTableColumnDef<SupportAccessRequestRow>[] = [
-    { key: "ticketReference", header: "Ticket", cell: (row) => row.ticketReference },
-    { key: "status", header: "Status", cell: (row) => row.status },
+    {
+      key: "ticketReference",
+      header: tr("platform.supportColTicket"),
+      cell: (row) => row.ticketReference,
+    },
+    { key: "status", header: tr("platform.supportColStatus"), cell: (row) => row.status },
     {
       key: "duration",
-      header: "Hours",
+      header: tr("platform.supportColHours"),
       cell: (row) => `${row.requestedDurationHours}h`,
     },
     {
       key: "scope",
-      header: "Scope",
+      header: tr("platform.supportColScope"),
       cell: (row) =>
         row.scopeMetadataOnly
-          ? "Metadata only"
+          ? tr("platform.supportScopeMetadata")
           : row.scopeWorkspaceId
-            ? `Workspace ${row.scopeWorkspaceId.slice(0, 8)}…`
-            : "Agency-wide",
+            ? tr("platform.supportScopeWorkspace", { prefix: row.scopeWorkspaceId.slice(0, 8) })
+            : tr("platform.supportScopeAgency"),
     },
-    { key: "createdAt", header: "When", cell: (row) => formatRelativeDate(row.createdAt) },
+    {
+      key: "createdAt",
+      header: tr("platform.supportColWhen"),
+      cell: (row) => formatRelativeDate(row.createdAt),
+    },
   ];
 
   return (
@@ -60,32 +95,27 @@ export async function SupportAccessSection({
       {canRequestSupport ? (
         <Card padding="lg" className="space-y-4">
           <div>
-            <CardTitle>Request temporary support access</CardTitle>
-            <CardDescription>
-              Request only the scope needed for a ticket. Platform access alone never opens tenant
-              content.
-            </CardDescription>
+            <CardTitle>{tr("platform.supportRequestTitle")}</CardTitle>
+            <CardDescription>{tr("platform.supportRequestBody")}</CardDescription>
           </div>
           <SupportAccessRequestForm
             agencyId={agencyId}
             agencyName={agencyName}
             workspaces={workspaces}
+            t={tr}
           />
         </Card>
       ) : null}
 
       <Card padding="lg" className="space-y-4">
         <div>
-          <CardTitle>Support access requests</CardTitle>
-          <CardDescription>
-            The most recent ticketed support access requests for this agency. Agency admins decide
-            each request from the agency-settings Plan & Usage page.
-          </CardDescription>
+          <CardTitle>{tr("platform.supportRequestsTitle")}</CardTitle>
+          <CardDescription>{tr("platform.supportRequestsBody")}</CardDescription>
         </div>
         {requests.length === 0 ? (
           <EmptyState
-            title="No support access requests"
-            description="No support operator has filed a request for this agency yet."
+            title={tr("platform.supportEmptyTitle")}
+            description={tr("platform.supportEmptyBody")}
             data-testid="platform-agency-support-empty"
           />
         ) : (

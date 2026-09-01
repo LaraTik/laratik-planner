@@ -303,6 +303,7 @@ export default async function PlatformAgencyDetailPage({
             agencyName={detail.name}
             workspaces={detail.recentWorkspaces.map(({ id, name }) => ({ id, name }))}
             canRequestSupport={capabilities.canRequestSupport}
+            t={t}
           />
         </div>
       ) : null}

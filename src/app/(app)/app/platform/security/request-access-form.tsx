@@ -12,33 +12,61 @@ import {
 
 const initial: SupportAccessRequestActionState = {};
 
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+const EN_FALLBACK: Translator = (key, params) => {
+  const lookup: Record<string, string> = {
+    "platform.supportTicketLabel": "Ticket reference",
+    "platform.supportTicketPlaceholder": "SUP-12345",
+    "platform.supportDurationLabel": "Requested duration",
+    "platform.supportDurationHelp": "Hours, up to 7 days.",
+    "platform.supportScopeLabel": "Workspace scope",
+    "platform.supportScopeAgency": "Agency-wide",
+    "platform.supportMetadataTitle": "Metadata only",
+    "platform.supportMetadataBody": "Do not request access to tenant content.",
+    "platform.supportDownloadsTitle": "Request downloads",
+    "platform.supportDownloadsBody": "The agency administrator may still deny downloads.",
+    "platform.supportReasonLabel": "Reason for access",
+    "platform.supportReasonPlaceholder": `Describe the support task for ${params?.name ?? ""} and why this scope is necessary.`,
+    "platform.supportSubmitNote":
+      "Submitting does not grant access immediately. An agency administrator must approve the request, and any grant is temporary and audited.",
+    "platform.supportSuccess": "Request submitted for agency approval.",
+    "platform.supportSubmit": "Request temporary access",
+    "platform.supportSubmitPending": "Requesting…",
+  };
+  return lookup[key] ?? key;
+};
+
 export function SupportAccessRequestForm({
   agencyId,
   agencyName,
   workspaces,
+  t,
 }: {
   agencyId: string;
   agencyName: string;
   workspaces: ReadonlyArray<{ id: string; name: string }>;
+  t?: Translator;
 }) {
+  const tr: Translator = t ?? EN_FALLBACK;
   const [state, action] = useActionState(createSupportAccessRequestFormAction, initial);
   return (
     <form action={action} className="space-y-4" data-testid="platform-support-request-form">
       <input type="hidden" name="targetAgencyId" value={agencyId} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="support-ticket-reference">Ticket reference</Label>
+          <Label htmlFor="support-ticket-reference">{tr("platform.supportTicketLabel")}</Label>
           <Input
             id="support-ticket-reference"
             name="ticketReference"
             required
             minLength={3}
             maxLength={120}
-            placeholder="SUP-12345"
+            placeholder={tr("platform.supportTicketPlaceholder")}
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="support-duration">Requested duration</Label>
+          <Label htmlFor="support-duration">{tr("platform.supportDurationLabel")}</Label>
           <Input
             id="support-duration"
             name="requestedDurationHours"
@@ -48,19 +76,19 @@ export function SupportAccessRequestForm({
             max={168}
             defaultValue={2}
           />
-          <p className="text-label text-fg-muted">Hours, up to 7 days.</p>
+          <p className="text-label text-fg-muted">{tr("platform.supportDurationHelp")}</p>
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="support-workspace-scope">Workspace scope</Label>
+        <Label htmlFor="support-workspace-scope">{tr("platform.supportScopeLabel")}</Label>
         <select
           id="support-workspace-scope"
           name="scopeWorkspaceId"
           defaultValue=""
           className="border-border bg-surface focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 py-2 focus:outline-none focus-visible:ring-2"
         >
-          <option value="">Agency-wide</option>
+          <option value="">{tr("platform.supportScopeAgency")}</option>
           {workspaces.map((workspace) => (
             <option key={workspace.id} value={workspace.id}>
               {workspace.name}
@@ -73,21 +101,25 @@ export function SupportAccessRequestForm({
         <label className="border-border text-body text-fg-secondary flex min-h-11 items-start gap-3 rounded-[var(--radius-control)] border p-3">
           <input type="checkbox" name="scopeMetadataOnly" className="mt-1" />
           <span>
-            <span className="text-fg-primary block font-semibold">Metadata only</span>
-            Do not request access to tenant content.
+            <span className="text-fg-primary block font-semibold">
+              {tr("platform.supportMetadataTitle")}
+            </span>
+            {tr("platform.supportMetadataBody")}
           </span>
         </label>
         <label className="border-border text-body text-fg-secondary flex min-h-11 items-start gap-3 rounded-[var(--radius-control)] border p-3">
           <input type="checkbox" name="downloadsRequested" className="mt-1" />
           <span>
-            <span className="text-fg-primary block font-semibold">Request downloads</span>
-            The agency administrator may still deny downloads.
+            <span className="text-fg-primary block font-semibold">
+              {tr("platform.supportDownloadsTitle")}
+            </span>
+            {tr("platform.supportDownloadsBody")}
           </span>
         </label>
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="support-access-reason">Reason for access</Label>
+        <Label htmlFor="support-access-reason">{tr("platform.supportReasonLabel")}</Label>
         <Textarea
           id="support-access-reason"
           name="reason"
@@ -95,13 +127,12 @@ export function SupportAccessRequestForm({
           minLength={8}
           maxLength={2000}
           rows={4}
-          placeholder={`Describe the support task for ${agencyName} and why this scope is necessary.`}
+          placeholder={tr("platform.supportReasonPlaceholder", { name: agencyName })}
         />
       </div>
 
       <p className="border-info/30 bg-info-subtle text-body text-fg-secondary rounded-[var(--radius-control)] border p-3">
-        Submitting does not grant access immediately. An agency administrator must approve the
-        request, and any grant is temporary and audited.
+        {tr("platform.supportSubmitNote")}
       </p>
 
       {state.error ? (
@@ -111,11 +142,15 @@ export function SupportAccessRequestForm({
       ) : null}
       {state.ok ? (
         <p role="status" className="text-body text-success">
-          Request submitted for agency approval.
+          {tr("platform.supportSuccess")}
         </p>
       ) : null}
       <div className="flex justify-end">
-        <FormSubmitButton label="Request temporary access" pendingLabel="Requesting…" size="lg" />
+        <FormSubmitButton
+          label={tr("platform.supportSubmit")}
+          pendingLabel={tr("platform.supportSubmitPending")}
+          size="lg"
+        />
       </div>
     </form>
   );
