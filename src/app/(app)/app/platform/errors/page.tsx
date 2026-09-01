@@ -13,6 +13,7 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { requirePlatformPermission } from "@/lib/auth/platform-access";
 import { listAppErrors, type AppErrorRow } from "@/lib/observability/app-errors";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { cn } from "@/lib/utils";
 
 /**
@@ -55,16 +56,12 @@ function parsePage(raw: string | undefined): number {
   return n;
 }
 
-const SOURCE_LABEL: Record<string, string> = {
-  "app.error": "App error boundary",
-  "global.error": "Global error boundary",
-  server_action: "Server action",
-  "client.unhandled": "Client (unhandled)",
+const SOURCE_LABEL_KEY: Record<string, string> = {
+  "app.error": "platform.sourceAppError",
+  "global.error": "platform.sourceGlobalError",
+  server_action: "platform.sourceServerAction",
+  "client.unhandled": "platform.sourceClientUnhandled",
 };
-
-function sourceLabel(source: string): string {
-  return SOURCE_LABEL[source] ?? source;
-}
 
 export default async function PlatformErrorsPage({
   searchParams,
@@ -72,11 +69,12 @@ export default async function PlatformErrorsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const actor = await currentActor();
+  const { t } = await tForActive();
   if (!actor) {
     return (
       <PermissionNotice
-        title="Sign in required"
-        description="Sign in to view platform app errors."
+        title={t("platform.signInRequired")}
+        description={t("platform.signInRequiredErrorsBody")}
       />
     );
   }
@@ -85,8 +83,8 @@ export default async function PlatformErrorsPage({
   } catch {
     return (
       <PermissionNotice
-        title="Platform errors unavailable"
-        description="Your platform role does not include the console.read permission."
+        title={t("platform.errorsUnavailable")}
+        description={t("platform.errorsUnavailableBody")}
       />
     );
   }
@@ -123,7 +121,7 @@ export default async function PlatformErrorsPage({
   const errorColumns: DataTableColumnDef<AppErrorRow>[] = [
     {
       key: "time",
-      header: "When",
+      header: t("platform.colWhen"),
       cell: (row) => (
         <div className="text-body text-fg-secondary">
           <p>{formatRelativeDate(row.createdAt)}</p>
@@ -135,7 +133,7 @@ export default async function PlatformErrorsPage({
     },
     {
       key: "route",
-      header: "Route",
+      header: t("platform.colRoute"),
       cell: (row) => (
         <code className="text-label text-fg-primary bg-surface-subtle rounded px-1.5 py-0.5 font-mono">
           {row.method ? `${row.method} ` : ""}
@@ -145,13 +143,15 @@ export default async function PlatformErrorsPage({
     },
     {
       key: "source",
-      header: "Source",
+      header: t("platform.colSource"),
       hideOn: "md",
-      cell: (row) => <Badge variant="outline">{sourceLabel(row.source)}</Badge>,
+      cell: (row) => (
+        <Badge variant="outline">{t(SOURCE_LABEL_KEY[row.source] ?? row.source)}</Badge>
+      ),
     },
     {
       key: "digest",
-      header: "Digest",
+      header: t("platform.colDigest"),
       cell: (row) =>
         row.digest ? (
           <code className="text-label text-fg-secondary font-mono">{row.digest}</code>
@@ -161,7 +161,7 @@ export default async function PlatformErrorsPage({
     },
     {
       key: "message",
-      header: "Message",
+      header: t("platform.colMessage"),
       cell: (row) => (
         <p className="text-body text-fg-primary max-w-md truncate" title={row.message}>
           {row.message}
@@ -170,7 +170,7 @@ export default async function PlatformErrorsPage({
     },
     {
       key: "context",
-      header: "Context",
+      header: t("platform.colContext"),
       hideOn: "lg",
       cell: (row) => (
         <div className="text-label text-fg-muted space-y-0.5 font-mono">
@@ -185,30 +185,34 @@ export default async function PlatformErrorsPage({
   return (
     <div className="space-y-6" data-testid="platform-errors">
       <PageHeader
-        eyebrow="Platform"
-        title="App errors"
-        description="Recent render failures captured by the app-router error boundaries. Sentry remains the long-term archive; this is the in-app mirror."
+        eyebrow={t("platform.eyebrow")}
+        title={t("platform.appErrorsTitle")}
+        description={t("platform.appErrorsDescription")}
         action={
           <Link
             href="/app/platform/overview"
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
           >
             <DirAwareArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Back to overview
+            {t("platform.backToOverview")}
           </Link>
         }
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="platform-errors-kpis">
-        <KpiTile label="Total captured" value={total} icon={<AlertOctagon className="h-4 w-4" />} />
         <KpiTile
-          label={query ? "Matching" : "On this page"}
+          label={t("platform.kpiTotalCaptured")}
+          value={total}
+          icon={<AlertOctagon className="h-4 w-4" />}
+        />
+        <KpiTile
+          label={query ? t("platform.kpiMatching") : t("platform.kpiOnThisPage")}
           value={query ? matched : showingTo}
           tone={query ? "warning" : "default"}
           icon={<Search className="h-4 w-4" />}
         />
         <KpiTile
-          label="Last 7 days"
+          label={t("platform.kpiLast7Days")}
           value={last7Count}
           icon={<ExternalLink className="h-4 w-4" />}
         />
@@ -222,7 +226,7 @@ export default async function PlatformErrorsPage({
           data-testid="platform-errors-search"
         >
           <label htmlFor="platform-errors-search-input" className="sr-only">
-            Search app errors
+            {t("platform.searchAria")}
           </label>
           <div className="relative min-w-64 flex-1">
             <Search
@@ -234,7 +238,7 @@ export default async function PlatformErrorsPage({
               type="search"
               name={SEARCH_PARAM}
               defaultValue={query}
-              placeholder="Search by route or message…"
+              placeholder={t("platform.searchPlaceholder")}
               className="border-border bg-surface text-body text-fg-primary placeholder:text-fg-muted focus-visible:ring-focus-ring h-9 w-full rounded-[var(--radius-control)] border ps-8 pe-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
             />
           </div>
@@ -243,14 +247,14 @@ export default async function PlatformErrorsPage({
             type="submit"
             className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
           >
-            Search
+            {t("platform.searchSubmit")}
           </button>
           {query ? (
             <Link
               href="/app/platform/errors"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
             >
-              Clear
+              {t("platform.searchClear")}
             </Link>
           ) : null}
         </form>
@@ -259,12 +263,8 @@ export default async function PlatformErrorsPage({
           <div className="p-6" data-testid="platform-errors-empty">
             <EmptyState
               icon={<AlertOctagon className="h-8 w-8" />}
-              title={query ? "No errors match that search" : "No app errors captured yet"}
-              description={
-                query
-                  ? "Try a different route or message substring. The search is case-insensitive."
-                  : "Render failures captured by the app-router error boundaries will appear here. The mirror is in-app; Sentry is the long-term archive."
-              }
+              title={query ? t("platform.emptyNoMatch") : t("platform.emptyNoErrors")}
+              description={query ? t("platform.emptyNoMatchBody") : t("platform.emptyNoErrorsBody")}
             />
           </div>
         ) : (
@@ -284,8 +284,16 @@ export default async function PlatformErrorsPage({
             <div className="border-border text-label text-fg-secondary flex flex-wrap items-center justify-between gap-2 border-t px-4 py-3">
               <span data-testid="platform-errors-pagination-info">
                 {query
-                  ? `Showing ${showingFrom}–${showingTo} of ${matched} matching`
-                  : `Showing ${showingFrom}–${showingTo} of ${matched}`}
+                  ? t("platform.paginationMatching", {
+                      from: showingFrom,
+                      to: showingTo,
+                      total: matched,
+                    })
+                  : t("platform.paginationAll", {
+                      from: showingFrom,
+                      to: showingTo,
+                      total: matched,
+                    })}
               </span>
               <div className="flex items-center gap-2">
                 {page > 1 ? (
@@ -294,11 +302,11 @@ export default async function PlatformErrorsPage({
                     className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
                     data-testid="platform-errors-prev"
                   >
-                    ← Previous
+                    {t("platform.paginationPrev")}
                   </Link>
                 ) : null}
                 <span className="text-fg-muted font-mono">
-                  Page {page} / {totalPages}
+                  {t("platform.paginationPage", { page, total: totalPages })}
                 </span>
                 {page < totalPages ? (
                   <Link
@@ -306,7 +314,7 @@ export default async function PlatformErrorsPage({
                     className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
                     data-testid="platform-errors-next"
                   >
-                    Next →
+                    {t("platform.paginationNext")}
                   </Link>
                 ) : null}
               </div>
@@ -316,19 +324,8 @@ export default async function PlatformErrorsPage({
       </Card>
 
       <Card padding="lg" variant="subtle" data-testid="platform-errors-explainer">
-        <CardTitle>What this shows</CardTitle>
-        <CardDescription>
-          Every row was captured by an app-router error boundary. The
-          <code className="text-label bg-surface mx-1 rounded px-1.5 py-0.5 font-mono">digest</code>
-          is the Next.js error digest (stable across retries). The
-          <code className="text-label bg-surface mx-1 rounded px-1.5 py-0.5 font-mono">
-            request id
-          </code>
-          links to the structured log line for the same request. The
-          <code className="text-label bg-surface mx-1 rounded px-1.5 py-0.5 font-mono">build</code>
-          is the commit SHA at the time of capture. For the full payload (sourcemaps, breadcrumbs,
-          full stack) open the matching event in Sentry.
-        </CardDescription>
+        <CardTitle>{t("platform.explainerTitle")}</CardTitle>
+        <CardDescription>{t("platform.explainerBody")}</CardDescription>
       </Card>
     </div>
   );
