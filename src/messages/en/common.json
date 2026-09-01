@@ -1659,6 +1659,14 @@
     "agencyWsColTenantOnly": "tenant-only",
     "agencyWsColTenantOnlyTitle": "Cross-tenant navigation is restricted; M2 will provide a safe deep-link."
   },
+  "operational": {
+    "agencyUnavailableTitle": "Agency access is paused",
+    "agencyUnavailableBody": "This agency is suspended or archived. Its content is preserved, but new and existing tenant operations are unavailable until a platform administrator restores access.",
+    "agencyUnavailableCta": "Return to sign in",
+    "workspaceNotFoundTitle": "Workspace unavailable",
+    "workspaceNotFoundBody": "The workspace you tried to open does not exist, is archived, or has been moved. Check the workspace switcher, or return to My Work for a current list.",
+    "workspaceNotFoundCta": "Back to My Work"
+  },
   "agencyProviders": {
     "title": "Social provider config",
     "description": "Per-agency credentials for the social analytics pipeline. Each agency brings its own Meta and TikTok app — your tokens never leave your tenant. The app secret is sealed with the same key we use for OAuth tokens, then re-fetched only when the cron or a Re-test needs it.",
