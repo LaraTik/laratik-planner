@@ -63,7 +63,7 @@ export default async function BrandKitLinkedPage({
         data-testid="brand-kit-section-linked"
       >
         {canEditBrand ? <LinkedResourceForm slug={slug} /> : null}
-        <LinkedResourceList slug={slug} canManage={canEditBrand} resources={resources} />
+        <LinkedResourceList slug={slug} canManage={canEditBrand} resources={resources} t={t} />
       </SectionCard>
     </div>
   );

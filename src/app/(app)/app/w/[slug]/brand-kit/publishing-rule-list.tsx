@@ -20,6 +20,12 @@ export interface PublishingRuleListProps {
   slug: string;
   canManage: boolean;
   rules: BrandPublishingRuleRow[];
+  /**
+   * Optional translator. When provided, the empty state title +
+   * description render from `brandKit.empty.{publishingTitle,publishingDescription}`;
+   * when omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const RULE_TYPE_VARIANT: Record<string, "info" | "warning" | "default" | "primary" | "success"> = {
@@ -38,13 +44,17 @@ const RULE_TYPE_LABEL: Record<string, string> = {
   general: "General",
 };
 
-export function PublishingRuleList({ slug, canManage, rules }: PublishingRuleListProps) {
+export function PublishingRuleList({ slug, canManage, rules, t }: PublishingRuleListProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   if (rules.length === 0) {
     return (
       <SectionEmptyState
         icon={LinkIcon}
-        title="No publishing rules yet"
-        description="Add the first one to set editorial guardrails — alt text, hashtag norms, compliance reminders — for the team."
+        title={tr("brandKit.empty.publishingTitle", "No publishing rules yet")}
+        description={tr(
+          "brandKit.empty.publishingDescription",
+          "Add the first one to set editorial guardrails — alt text, hashtag norms, compliance reminders — for the team.",
+        )}
         testId="brand-kit-empty-publishing"
       />
     );

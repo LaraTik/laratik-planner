@@ -21,6 +21,12 @@ export interface VoiceRuleListProps {
   slug: string;
   canManage: boolean;
   rules: BrandVoiceRuleRow[];
+  /**
+   * Optional translator. When provided, the empty state title +
+   * description render from `brandKit.empty.{voiceTitle,voiceDescription}`;
+   * when omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const RULE_TYPE_VARIANT: Record<string, "success" | "danger" | "info"> = {
@@ -35,13 +41,17 @@ const RULE_TYPE_LABEL: Record<string, string> = {
   tone: "Tone",
 };
 
-export function VoiceRuleList({ slug, canManage, rules }: VoiceRuleListProps) {
+export function VoiceRuleList({ slug, canManage, rules, t }: VoiceRuleListProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   if (rules.length === 0) {
     return (
       <SectionEmptyState
         icon={Sparkles}
-        title="No voice guidance"
-        description="Add do/don't/tone rules so the team writes in one voice. The rules surface in the editor's draft-time hints."
+        title={tr("brandKit.empty.voiceTitle", "No voice guidance")}
+        description={tr(
+          "brandKit.empty.voiceDescription",
+          "Add do/don't/tone rules so the team writes in one voice. The rules surface in the editor's draft-time hints.",
+        )}
         testId="brand-kit-empty-voice"
       />
     );

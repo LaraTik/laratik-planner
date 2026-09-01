@@ -24,6 +24,12 @@ export interface LinkedResourceListProps {
   slug: string;
   canManage: boolean;
   resources: BrandLinkedResourceRow[];
+  /**
+   * Optional translator. When provided, the empty state title +
+   * description render from `brandKit.empty.{linkedTitle,linkedDescription}`;
+   * when omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const PROVIDER_LABEL: Record<string, string> = {
@@ -34,13 +40,17 @@ const PROVIDER_LABEL: Record<string, string> = {
   other: "Other",
 };
 
-export function LinkedResourceList({ slug, canManage, resources }: LinkedResourceListProps) {
+export function LinkedResourceList({ slug, canManage, resources, t }: LinkedResourceListProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   if (resources.length === 0) {
     return (
       <SectionEmptyState
         icon={Folder}
-        title="No linked resources yet"
-        description="Link a Google Drive, Figma, Canva, or Dropbox library so the team knows where to source on-brand material."
+        title={tr("brandKit.empty.linkedTitle", "No linked resources yet")}
+        description={tr(
+          "brandKit.empty.linkedDescription",
+          "Link a Google Drive, Figma, Canva, or Dropbox library so the team knows where to source on-brand material.",
+        )}
         testId="brand-kit-empty-linked"
       />
     );

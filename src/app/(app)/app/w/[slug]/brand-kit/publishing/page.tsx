@@ -63,7 +63,7 @@ export default async function BrandKitPublishingPage({
         data-testid="brand-kit-section-publishing"
       >
         {canEditBrand ? <PublishingRuleForm slug={slug} /> : null}
-        <PublishingRuleList slug={slug} canManage={canEditBrand} rules={rules} />
+        <PublishingRuleList slug={slug} canManage={canEditBrand} rules={rules} t={t} />
       </SectionCard>
     </div>
   );

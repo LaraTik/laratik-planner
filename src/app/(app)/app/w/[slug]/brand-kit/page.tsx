@@ -241,7 +241,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
             See all activity →
           </a>
         </header>
-        <RecentUpdatesTable rows={recent.slice(0, 5)} />
+        <RecentUpdatesTable rows={recent.slice(0, 5)} t={t} />
       </section>
     </div>
   );

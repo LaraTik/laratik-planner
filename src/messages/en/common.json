@@ -1962,7 +1962,25 @@
     "templatesSectionTypography": "Typography pairs",
     "templatesSectionTypographyBlurb": "Headline + body face pairings. Each click adds every face in the pair that isn't already catalogued.",
     "templatesSectionPublishing": "Publishing rules",
-    "templatesSectionPublishingBlurb": "Editorial guardrails for the team. Each click adds the rule to your publishing rules list."
+    "templatesSectionPublishingBlurb": "Editorial guardrails for the team. Each click adds the rule to your publishing rules list.",
+    "empty": {
+      "logosTitle": "No logo assets yet",
+      "logosDescription": "Upload a PNG, JPG, or SVG — or paste an external URL — so every planner, designer, and reviewer has the same starting point.",
+      "colorsTitle": "No color tokens yet",
+      "colorsDescription": "Add the brand's primary, secondary, and accent hexes. Designers and copywriters can grab the hex with one click.",
+      "typographyTitle": "No fonts catalogued yet",
+      "typographyDescription": "Document the headline, body, and accent faces so designers ship in one voice. Each entry gets a live sample.",
+      "voiceTitle": "No voice guidance",
+      "voiceDescription": "Add do/don't/tone rules so the team writes in one voice. The rules surface in the editor's draft-time hints.",
+      "pillarsTitle": "No content pillars yet",
+      "pillarsDescription": "Pillars are the recurring topics every plan and post should align to. The AI uses pillar names + blurbs as context for caption drafts.",
+      "publishingTitle": "No publishing rules yet",
+      "publishingDescription": "Add the first one to set editorial guardrails — alt text, hashtag norms, compliance reminders — for the team.",
+      "linkedTitle": "No linked resources yet",
+      "linkedDescription": "Link a Google Drive, Figma, Canva, or Dropbox library so the team knows where to source on-brand material.",
+      "recentTitle": "No recent updates yet",
+      "recentDescription": "As the team adds logos, colors, fonts, voice rules, and publishing guidelines, the latest changes will appear here."
+    }
   },
   "notifications": {
     "kind": {

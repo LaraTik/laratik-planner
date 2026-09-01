@@ -71,7 +71,7 @@ export default async function BrandKitLogosPage({ params }: { params: Promise<{ 
         data-testid="brand-kit-section-logos"
       >
         {canManage ? <LogoForm slug={slug} workspaceId={workspace.id} /> : null}
-        <LogoGrid slug={slug} canManage={canManage} assets={logos} />
+        <LogoGrid slug={slug} canManage={canManage} assets={logos} t={t} />
       </SectionCard>
     </div>
   );

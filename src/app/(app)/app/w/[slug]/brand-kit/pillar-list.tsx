@@ -17,15 +17,25 @@ export interface PillarListProps {
   slug: string;
   canManage: boolean;
   pillars: ContentPillarSummary[];
+  /**
+   * Optional translator. When provided, the empty state title +
+   * description render from `brandKit.empty.{pillarsTitle,pillarsDescription}`;
+   * when omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
-export function PillarList({ slug, canManage, pillars }: PillarListProps) {
+export function PillarList({ slug, canManage, pillars, t }: PillarListProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   if (pillars.length === 0) {
     return (
       <SectionEmptyState
         icon={Tag}
-        title="No content pillars yet"
-        description="Pillars are the recurring topics every plan and post should align to. The AI uses pillar names + blurbs as context for caption drafts."
+        title={tr("brandKit.empty.pillarsTitle", "No content pillars yet")}
+        description={tr(
+          "brandKit.empty.pillarsDescription",
+          "Pillars are the recurring topics every plan and post should align to. The AI uses pillar names + blurbs as context for caption drafts.",
+        )}
         testId="brand-kit-empty-pillars"
       />
     );

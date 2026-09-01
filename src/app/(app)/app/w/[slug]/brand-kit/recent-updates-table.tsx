@@ -33,6 +33,12 @@ import { UserAvatar } from "./user-avatar";
  */
 export interface RecentUpdatesTableProps {
   rows: BrandRecentUpdate[];
+  /**
+   * Optional translator. When provided, the empty state title +
+   * description render from `brandKit.empty.{recentTitle,recentDescription}`;
+   * when omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 function absoluteDateLabel(d: Date): string {
@@ -45,13 +51,17 @@ function absoluteDateLabel(d: Date): string {
   });
 }
 
-export function RecentUpdatesTable({ rows }: RecentUpdatesTableProps) {
+export function RecentUpdatesTable({ rows, t }: RecentUpdatesTableProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   if (rows.length === 0) {
     return (
       <SectionEmptyState
         icon={History}
-        title="No recent updates yet"
-        description="As the team adds logos, colors, fonts, voice rules, and publishing guidelines, the latest changes will appear here."
+        title={tr("brandKit.empty.recentTitle", "No recent updates yet")}
+        description={tr(
+          "brandKit.empty.recentDescription",
+          "As the team adds logos, colors, fonts, voice rules, and publishing guidelines, the latest changes will appear here.",
+        )}
         testId="brand-kit-empty-recent"
       />
     );

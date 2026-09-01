@@ -91,7 +91,7 @@ export default async function BrandKitTypographyPage({
         data-testid="brand-kit-section-typography"
       >
         {canManage ? <TypographyForm slug={slug} /> : null}
-        <TypographyCards slug={slug} canManage={canManage} assets={fonts} />
+        <TypographyCards slug={slug} canManage={canManage} assets={fonts} t={t} />
       </SectionCard>
     </div>
   );

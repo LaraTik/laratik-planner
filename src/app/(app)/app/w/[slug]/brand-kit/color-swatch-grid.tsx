@@ -31,6 +31,12 @@ export interface ColorSwatchGridProps {
   slug: string;
   canManage: boolean;
   assets: BrandAssetRow[];
+  /**
+   * Optional translator. When provided, the empty state title +
+   * description render from `brandKit.empty.{colorsTitle,colorsDescription}`;
+   * when omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 type ColorRole = "primary" | "secondary" | "accent" | "neutral";
@@ -88,13 +94,17 @@ function readRole(asset: BrandAssetRow): ColorRole | null {
   return null;
 }
 
-export function ColorSwatchGrid({ slug, canManage, assets }: ColorSwatchGridProps) {
+export function ColorSwatchGrid({ slug, canManage, assets, t }: ColorSwatchGridProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   if (assets.length === 0) {
     return (
       <SectionEmptyState
         icon={Palette}
-        title="No color tokens yet"
-        description="Add the brand's primary, secondary, and accent hexes. Designers and copywriters can grab the hex with one click."
+        title={tr("brandKit.empty.colorsTitle", "No color tokens yet")}
+        description={tr(
+          "brandKit.empty.colorsDescription",
+          "Add the brand's primary, secondary, and accent hexes. Designers and copywriters can grab the hex with one click.",
+        )}
         testId="brand-kit-empty-color"
       />
     );

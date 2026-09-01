@@ -98,7 +98,7 @@ export default async function BrandKitColorsPage({
         data-testid="brand-kit-section-colors"
       >
         {canManage ? <ColorForm slug={slug} /> : null}
-        <ColorSwatchGrid slug={slug} canManage={canManage} assets={colors} />
+        <ColorSwatchGrid slug={slug} canManage={canManage} assets={colors} t={t} />
       </SectionCard>
     </div>
   );

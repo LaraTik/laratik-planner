@@ -35,6 +35,12 @@ export interface LogoGridProps {
   slug: string;
   canManage: boolean;
   assets: BrandAssetRow[];
+  /**
+   * Optional translator. When provided, the empty state title +
+   * description render from `brandKit.empty.{logosTitle,logosDescription}`;
+   * when omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 function sourceLabel(asset: BrandAssetRow): string {
@@ -43,13 +49,17 @@ function sourceLabel(asset: BrandAssetRow): string {
   return "Reference";
 }
 
-export function LogoGrid({ slug, canManage, assets }: LogoGridProps) {
+export function LogoGrid({ slug, canManage, assets, t }: LogoGridProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   if (assets.length === 0) {
     return (
       <SectionEmptyState
         icon={ImageIcon}
-        title="No logo assets yet"
-        description="Upload a PNG, JPG, or SVG — or paste an external URL — so every planner, designer, and reviewer has the same starting point."
+        title={tr("brandKit.empty.logosTitle", "No logo assets yet")}
+        description={tr(
+          "brandKit.empty.logosDescription",
+          "Upload a PNG, JPG, or SVG — or paste an external URL — so every planner, designer, and reviewer has the same starting point.",
+        )}
         testId="brand-kit-empty-logo"
       />
     );

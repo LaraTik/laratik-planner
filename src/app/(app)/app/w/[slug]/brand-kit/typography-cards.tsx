@@ -29,6 +29,12 @@ export interface TypographyCardsProps {
   slug: string;
   canManage: boolean;
   assets: BrandAssetRow[];
+  /**
+   * Optional translator. When provided, the empty state title +
+   * description render from `brandKit.empty.{typographyTitle,typographyDescription}`;
+   * when omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 type Role = "headline" | "body" | "accent" | "mono";
@@ -61,13 +67,17 @@ const ROLE_VARIANT: Record<Role, "primary" | "info" | "warning" | "default"> = {
 const SAMPLE_TEXT_PRIMARY = "The quick brown fox jumps over the lazy dog";
 const SAMPLE_TEXT_NUMERIC = "0123456789  $1,234.56  100%";
 
-export function TypographyCards({ slug, canManage, assets }: TypographyCardsProps) {
+export function TypographyCards({ slug, canManage, assets, t }: TypographyCardsProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   if (assets.length === 0) {
     return (
       <SectionEmptyState
         icon={Type}
-        title="No fonts catalogued yet"
-        description="Document the headline, body, and accent faces so designers ship in one voice. Each entry gets a live sample."
+        title={tr("brandKit.empty.typographyTitle", "No fonts catalogued yet")}
+        description={tr(
+          "brandKit.empty.typographyDescription",
+          "Document the headline, body, and accent faces so designers ship in one voice. Each entry gets a live sample.",
+        )}
         testId="brand-kit-empty-typography"
       />
     );
