@@ -43,6 +43,12 @@ export interface PlanningListActionsProps {
   canArchive: boolean;
   /** Tailwind class additions. */
   className?: string;
+  /**
+   * Optional translator. When provided, every action label and
+   * the trigger's aria-label render from the `common.rowAction*`
+   * catalog; when omitted, the stored English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export function PlanningListActions({
@@ -54,7 +60,10 @@ export function PlanningListActions({
   canSubmit,
   canArchive,
   className,
+  t,
 }: PlanningListActionsProps) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   const detailHref = `/app/w/${workspaceSlug}/planning/${itemId}`;
   const isDraft = status === "draft";
   const isChangesRequested = status === "changes_requested";
@@ -64,7 +73,7 @@ export function PlanningListActions({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label={`Actions for ${itemTitle}`}
+          aria-label={tr("common.rowActionsAria", `Actions for ${itemTitle}`, { title: itemTitle })}
           data-testid="row-actions-trigger"
           className={cn(
             "border-border bg-surface text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2",
@@ -80,26 +89,30 @@ export function PlanningListActions({
         <DropdownMenuItem asChild>
           <Link href={detailHref} data-testid="row-action-open">
             <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-            Open
+            {tr("common.rowActionOpen", "Open")}
           </Link>
         </DropdownMenuItem>
         {canEdit ? (
           <DropdownMenuItem asChild>
             <Link href={`${detailHref}/edit`} data-testid="row-action-edit">
               <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
-              Edit
+              {tr("common.rowActionEdit", "Edit")}
             </Link>
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem disabled data-testid="row-action-duplicate">
           <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-          Duplicate
-          <span className="text-label text-fg-muted ms-auto text-[10px]">soon</span>
+          {tr("common.rowActionDuplicate", "Duplicate")}
+          <span className="text-label text-fg-muted ms-auto text-[10px]">
+            {tr("common.rowActionSoon", "soon")}
+          </span>
         </DropdownMenuItem>
         <DropdownMenuItem disabled data-testid="row-action-change-owner">
           <UserCog className="h-3.5 w-3.5" aria-hidden="true" />
-          Change owner
-          <span className="text-label text-fg-muted ms-auto text-[10px]">soon</span>
+          {tr("common.rowActionChangeOwner", "Change owner")}
+          <span className="text-label text-fg-muted ms-auto text-[10px]">
+            {tr("common.rowActionSoon", "soon")}
+          </span>
         </DropdownMenuItem>
         {canSubmit && isSubmittable ? (
           <DropdownMenuItem asChild>
@@ -109,7 +122,9 @@ export function PlanningListActions({
               data-action="submit-for-review"
             >
               <Send className="h-3.5 w-3.5" aria-hidden="true" />
-              {isChangesRequested ? "Resubmit for review" : "Submit for review"}
+              {isChangesRequested
+                ? tr("common.rowActionResubmit", "Resubmit for review")
+                : tr("common.rowActionSubmit", "Submit for review")}
             </Link>
           </DropdownMenuItem>
         ) : null}
@@ -118,8 +133,10 @@ export function PlanningListActions({
             <DropdownMenuSeparator />
             <DropdownMenuItem disabled data-testid="row-action-archive">
               <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-              Archive
-              <span className="text-label text-fg-muted ms-auto text-[10px]">soon</span>
+              {tr("common.rowActionArchive", "Archive")}
+              <span className="text-label text-fg-muted ms-auto text-[10px]">
+                {tr("common.rowActionSoon", "soon")}
+              </span>
             </DropdownMenuItem>
           </>
         ) : null}

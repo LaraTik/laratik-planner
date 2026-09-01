@@ -25,6 +25,12 @@ export interface OwnerBadgeProps {
   showName?: boolean;
   /** Optional aria-label override (e.g. for tooltip tests). */
   ariaLabel?: string;
+  /**
+   * Optional translator. When provided, the unassigned pill renders
+   * from `common.ownerUnassigned` (or the active locale's equivalent);
+   * when omitted, the stored English copy is used.
+   */
+  t?: (key: string) => string;
 }
 
 function initials(displayName: string): string {
@@ -33,7 +39,8 @@ function initials(displayName: string): string {
   return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
-export function OwnerBadge({ owner, className, showName = true, ariaLabel }: OwnerBadgeProps) {
+export function OwnerBadge({ owner, className, showName = true, ariaLabel, t }: OwnerBadgeProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   if (!owner) {
     return (
       <span
@@ -43,10 +50,10 @@ export function OwnerBadge({ owner, className, showName = true, ariaLabel }: Own
         )}
         data-testid="owner-badge"
         data-unassigned="true"
-        aria-label={ariaLabel ?? "Unassigned"}
+        aria-label={ariaLabel ?? tr("common.ownerUnassigned", "Unassigned")}
       >
         <User className="h-3 w-3" aria-hidden="true" />
-        <span>Unassigned</span>
+        <span>{tr("common.ownerUnassigned", "Unassigned")}</span>
       </span>
     );
   }
