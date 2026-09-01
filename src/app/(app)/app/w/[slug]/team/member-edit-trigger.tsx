@@ -24,13 +24,22 @@ export function MemberEditTrigger({
   actorId,
   actorIsAgencyAdmin,
   workspaces,
+  t,
 }: {
   member: { id: string; name: string; email: string; isAgencyAdmin: boolean };
   actorId: string;
   actorIsAgencyAdmin: boolean;
   workspaces: MemberEditWorkspace[];
+  /**
+   * Optional translator. When provided, the button's aria-label
+   * and visible text render from the `users.memberList.edit*`
+   * catalog keys; when omitted, the stored English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const [open, setOpen] = useState(false);
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   const subject: MemberEditSubject | null = open
     ? {
         id: member.id,
@@ -48,11 +57,11 @@ export function MemberEditTrigger({
         size="sm"
         variant="ghost"
         onClick={() => setOpen(true)}
-        aria-label={`Edit ${member.name}`}
+        aria-label={tr("users.memberList.editAria", `Edit ${member.name}`, { name: member.name })}
         data-testid={`team-member-edit-${member.id}`}
       >
         <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-        Edit
+        {tr("users.memberList.edit", "Edit")}
       </Button>
       <MemberEditDrawer
         subject={subject}
@@ -60,6 +69,7 @@ export function MemberEditTrigger({
         actorUserId={actorId}
         workspaces={workspaces}
         onOpenChange={setOpen}
+        {...(t ? { t } : {})}
       />
     </>
   );

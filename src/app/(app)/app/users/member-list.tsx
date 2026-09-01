@@ -156,6 +156,7 @@ export function MemberList({
         actorIsAgencyAdmin
         actorUserId={actorId}
         workspaces={editingWorkspaces}
+        t={t}
         onOpenChange={(open) => {
           if (!open) setEditing(null);
         }}

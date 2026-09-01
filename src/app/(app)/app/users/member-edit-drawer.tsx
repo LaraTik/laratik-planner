@@ -73,6 +73,14 @@ export type MemberEditDrawerProps = {
   actorUserId: string;
   workspaces: MemberEditWorkspace[];
   onOpenChange: (open: boolean) => void;
+  /**
+   * Optional translator. When provided, every user-visible string
+   * (drawer title + description, section labels, the role help,
+   * the action buttons, etc.) renders from the `users.memberEdit`
+   * and `team.role.*` catalog keys; when omitted, the stored
+   * English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -95,12 +103,23 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
   viewer: "Read-only access. Cannot mutate any workspace state.",
 };
 
+const ROLE_LABEL_KEY: Record<string, string> = {
+  workspace_manager: "team.role.workspaceManager",
+  content_planner: "team.role.contentPlanner",
+  designer: "team.role.designer",
+  internal_reviewer: "team.role.internalReviewer",
+  client_reviewer: "team.role.clientReviewer",
+  publisher: "team.role.publisher",
+  viewer: "team.role.viewer",
+};
+
 export function MemberEditDrawer({
   subject,
   actorIsAgencyAdmin,
   actorUserId,
   workspaces,
   onOpenChange,
+  t,
 }: MemberEditDrawerProps) {
   return (
     <Dialog
@@ -122,6 +141,7 @@ export function MemberEditDrawer({
             actorUserId={actorUserId}
             workspaces={workspaces}
             onClose={() => onOpenChange(false)}
+            {...(t !== undefined ? { t } : {})}
           />
         ) : null}
       </DialogContent>
@@ -135,6 +155,7 @@ type FormProps = {
   actorUserId: string;
   workspaces: MemberEditWorkspace[];
   onClose: () => void;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 };
 
 const initialState: MemberEditState = {};
@@ -145,7 +166,10 @@ function MemberEditForm({
   actorUserId,
   workspaces,
   onClose,
+  t,
 }: FormProps) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   // Seed-once on mount via lazy initialiser — the parent uses
   // key={subject.id} so a different member remounts this whole form.
   const defaultSelectedRoles = React.useMemo<Record<string, string[]>>(() => {
@@ -197,42 +221,66 @@ function MemberEditForm({
   return (
     <>
       <DialogHeader className="border-border bg-surface sticky top-0 z-10 border-b px-6 py-4">
-        <DialogTitle>{`Edit ${subject.name}`}</DialogTitle>
+        <DialogTitle>
+          {tr("users.memberEdit.title", `Edit ${subject.name}`, { name: subject.name })}
+        </DialogTitle>
         <DialogDescription>
-          Adjust agency-wide access and per-workspace roles. Each workspace can hold any number of
-          roles — pick the ones that match what this person actually does.
+          {tr(
+            "users.memberEdit.description",
+            "Adjust agency-wide access and per-workspace roles. Each workspace can hold any number of roles — pick the ones that match what this person actually does.",
+          )}
         </DialogDescription>
       </DialogHeader>
 
       <form action={rolesFormAction} className="flex flex-1 flex-col">
         <div className="flex-1 space-y-6 px-6 py-5">
-          <ReadOnlyField label="Email" value={subject.email} />
+          <ReadOnlyField label={tr("users.memberEdit.emailLabel", "Email")} value={subject.email} />
           <ReadOnlyField
-            label="Status"
-            value={subject.status === "active" ? "Active" : "Deactivated"}
+            label={tr("users.memberEdit.statusLabel", "Status")}
+            value={
+              subject.status === "active"
+                ? tr("users.memberEdit.statusActive", "Active")
+                : tr("users.memberEdit.statusDeactivated", "Deactivated")
+            }
             trailing={
               subject.status === "active" ? (
-                <Badge variant="success">Active</Badge>
+                <Badge variant="success">{tr("users.memberEdit.statusActive", "Active")}</Badge>
               ) : (
-                <Badge variant="default">Deactivated</Badge>
+                <Badge variant="default">
+                  {tr("users.memberEdit.statusDeactivated", "Deactivated")}
+                </Badge>
               )
             }
           />
           <ReadOnlyField
-            label="Current effective roles"
-            value={
-              effectiveRoles.length === 0
-                ? "No access in any workspace"
-                : `${effectiveRoles.length} role${effectiveRoles.length === 1 ? "" : "s"} across ${
-                    workspaces.filter((w) => w.currentRoles.length > 0).length
-                  } workspace${workspaces.filter((w) => w.currentRoles.length > 0).length === 1 ? "" : "s"}`
-            }
+            label={tr("users.memberEdit.currentEffectiveRolesLabel", "Current effective roles")}
+            value={(() => {
+              const withAccess = workspaces.filter((w) => w.currentRoles.length > 0).length;
+              if (effectiveRoles.length === 0) {
+                return tr(
+                  "users.memberEdit.currentEffectiveRolesNone",
+                  "No access in any workspace",
+                );
+              }
+              if (withAccess === 1) {
+                return tr(
+                  "users.memberEdit.currentEffectiveRolesOne",
+                  `${effectiveRoles.length} role across 1 workspace`,
+                  { count: effectiveRoles.length, workspaces: 1 },
+                );
+              }
+              return tr(
+                "users.memberEdit.currentEffectiveRolesMany",
+                `${effectiveRoles.length} roles across ${withAccess} workspaces`,
+                { count: effectiveRoles.length, workspaces: withAccess },
+              );
+            })()}
           />
 
           {showAdminToggle ? (
             <div className="space-y-2">
               <p className="text-label text-fg-secondary font-semibold tracking-wide uppercase">
-                Agency admin
+                {tr("users.memberEdit.agencyAdminTitle", "Agency admin")}
               </p>
               <label className="text-body text-fg-primary flex items-center gap-2">
                 <Checkbox
@@ -240,18 +288,21 @@ function MemberEditForm({
                   defaultChecked={subject.isAgencyAdmin}
                   data-testid="member-edit-is-agency-admin"
                 />
-                Grant agency administrator access
+                {tr("users.memberEdit.grantAdmin", "Grant agency administrator access")}
               </label>
               <p className="text-label text-fg-muted">
-                Submitting this section flips the flag. The role form below is unaffected.
+                {tr(
+                  "users.memberEdit.adminHelp",
+                  "Submitting this section flips the flag. The role form below is unaffected.",
+                )}
               </p>
               <div>
                 <FormSubmitButton
                   formAction={adminFormAction}
                   size="sm"
                   variant="secondary"
-                  label="Apply admin change"
-                  pendingLabel="Applying…"
+                  label={tr("users.memberEdit.applyAdminChange", "Apply admin change")}
+                  pendingLabel={tr("users.memberEdit.applyingAdmin", "Applying…")}
                 />
               </div>
             </div>
@@ -259,14 +310,18 @@ function MemberEditForm({
 
           <fieldset className="space-y-3">
             <legend className="text-label text-fg-secondary font-semibold tracking-wide uppercase">
-              Workspace roles
+              {tr("users.memberEdit.workspaceRolesTitle", "Workspace roles")}
             </legend>
             <p className="text-label text-fg-muted">
-              Each role grants a specific capability in that workspace. Hold a role with
-              responsibility for any of the workflow steps it controls.
+              {tr(
+                "users.memberEdit.workspaceRolesHelp",
+                "Each role grants a specific capability in that workspace. Hold a role with responsibility for any of the workflow steps it controls.",
+              )}
             </p>
             {workspaces.length === 0 ? (
-              <p className="text-body text-fg-muted">No workspaces in this agency yet.</p>
+              <p className="text-body text-fg-muted">
+                {tr("users.memberEdit.noWorkspacesInAgency", "No workspaces in this agency yet.")}
+              </p>
             ) : (
               <>
                 <WorkspaceRoleMatrix
@@ -280,13 +335,13 @@ function MemberEditForm({
                     <span aria-hidden="true" className="me-1 inline-block group-open:rotate-90">
                       ▸
                     </span>
-                    What does each role do?
+                    {tr("users.memberEdit.roleHelp", "What does each role do?")}
                   </summary>
                   <ul className="text-label text-fg-secondary mt-2 space-y-1 ps-4">
                     {workspaceRoleSchema.options.map((role) => (
                       <li key={role}>
                         <span className="text-fg-primary font-semibold">
-                          {ROLE_LABELS[role] ?? role}
+                          {tr(ROLE_LABEL_KEY[role] ?? role, ROLE_LABELS[role] ?? role)}
                         </span>
                         <span className="text-fg-muted mx-1">—</span>
                         <span>{ROLE_DESCRIPTIONS[role] ?? ""}</span>
@@ -310,11 +365,11 @@ function MemberEditForm({
 
         <DialogFooter className="border-border bg-surface sticky bottom-0 px-6 py-4">
           <Button type="button" variant="ghost" onClick={onClose} data-testid="member-edit-cancel">
-            Cancel
+            {tr("common.cancel", "Cancel")}
           </Button>
           <FormSubmitButton
-            label="Save changes"
-            pendingLabel="Saving…"
+            label={tr("users.memberEdit.saveChanges", "Save changes")}
+            pendingLabel={tr("users.memberEdit.saving", "Saving…")}
             data-testid="member-edit-save"
           />
         </DialogFooter>

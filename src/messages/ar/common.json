@@ -1415,6 +1415,29 @@
       "role": "الدور",
       "member": "العضو",
       "empty": "لا يوجد أعضاء بعد."
+    },
+    "memberEdit": {
+      "title": "تعديل {name}",
+      "description": "اضبط الوصول على مستوى الوكالة والأدوار لكل مساحة عمل. يمكن لكل مساحة عمل أن تحوي أي عدد من الأدوار — اختر الأدوار التي تعكس ما يقوم به هذا الشخص فعلًا.",
+      "emailLabel": "البريد الإلكتروني",
+      "statusLabel": "الحالة",
+      "statusActive": "نشِط",
+      "statusDeactivated": "معطّل",
+      "currentEffectiveRolesLabel": "الأدوار الفعّالة الحالية",
+      "currentEffectiveRolesNone": "لا يوجد وصول في أي مساحة عمل",
+      "currentEffectiveRolesOne": "دور واحد عبر مساحة عمل واحدة",
+      "currentEffectiveRolesMany": "{count} أدوار عبر {workspaces} مساحات عمل",
+      "agencyAdminTitle": "مسؤول الوكالة",
+      "grantAdmin": "منح صلاحية مسؤول الوكالة",
+      "adminHelp": "إرسال هذا القسم يقلب العلامة. نموذج الأدوار أدناه لا يتأثر.",
+      "applyAdminChange": "تطبيق تغيير المسؤول",
+      "applyingAdmin": "جارٍ التطبيق…",
+      "workspaceRolesTitle": "أدوار مساحات العمل",
+      "workspaceRolesHelp": "كل دور يمنح صلاحية محددة في مساحة العمل تلك. اعتمد دورًا يكون معك في مسؤولية أي من خطوات سير العمل التي يتحكم بها.",
+      "noWorkspacesInAgency": "لا توجد مساحات عمل في هذه الوكالة بعد.",
+      "roleHelp": "ماذا يفعل كل دور؟",
+      "saveChanges": "حفظ التغييرات",
+      "saving": "جارٍ الحفظ…"
     }
   },
   "account": {

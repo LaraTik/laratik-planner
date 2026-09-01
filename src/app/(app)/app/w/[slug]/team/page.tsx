@@ -118,6 +118,7 @@ function teamColumns(args: {
             name: w.name,
             currentRoles: args.memberRolesByWorkspace[member.id]?.[w.id] ?? [],
           }))}
+          t={args.t}
         />
       ),
     },

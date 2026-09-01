@@ -1415,6 +1415,29 @@
       "role": "Role",
       "member": "Member",
       "empty": "No members yet."
+    },
+    "memberEdit": {
+      "title": "Edit {name}",
+      "description": "Adjust agency-wide access and per-workspace roles. Each workspace can hold any number of roles — pick the ones that match what this person actually does.",
+      "emailLabel": "Email",
+      "statusLabel": "Status",
+      "statusActive": "Active",
+      "statusDeactivated": "Deactivated",
+      "currentEffectiveRolesLabel": "Current effective roles",
+      "currentEffectiveRolesNone": "No access in any workspace",
+      "currentEffectiveRolesOne": "{count} role across 1 workspace",
+      "currentEffectiveRolesMany": "{count} roles across {workspaces} workspaces",
+      "agencyAdminTitle": "Agency admin",
+      "grantAdmin": "Grant agency administrator access",
+      "adminHelp": "Submitting this section flips the flag. The role form below is unaffected.",
+      "applyAdminChange": "Apply admin change",
+      "applyingAdmin": "Applying…",
+      "workspaceRolesTitle": "Workspace roles",
+      "workspaceRolesHelp": "Each role grants a specific capability in that workspace. Hold a role with responsibility for any of the workflow steps it controls.",
+      "noWorkspacesInAgency": "No workspaces in this agency yet.",
+      "roleHelp": "What does each role do?",
+      "saveChanges": "Save changes",
+      "saving": "Saving…"
     }
   },
   "account": {
