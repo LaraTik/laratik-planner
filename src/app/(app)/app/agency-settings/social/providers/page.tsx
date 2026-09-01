@@ -129,6 +129,7 @@ export default async function AgencySocialProvidersPage() {
             agencySlug={agency?.slug ?? ""}
             actorId={actor.id}
             existing={metaRow ? toExistingSummary(metaRow) : null}
+            t={t}
           />
           <ProviderConfigCard
             provider="tiktok"
@@ -136,6 +137,7 @@ export default async function AgencySocialProvidersPage() {
             agencySlug={agency?.slug ?? ""}
             actorId={actor.id}
             existing={tiktokRow ? toExistingSummary(tiktokRow) : null}
+            t={t}
           />
         </div>
       </section>
