@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { campaigns, contentPillars, contentTemplates } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
@@ -54,6 +55,7 @@ export default async function PlanningLibraryPage({
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
+  const { t } = await tForActive();
   const [campaignRows, pillars, templates] = await Promise.all([
     db
       .select()
@@ -82,10 +84,10 @@ export default async function PlanningLibraryPage({
     <div className="space-y-6" data-testid="library-campaigns">
       <PageHeader
         eyebrow={workspace.name}
-        title="Planning library"
+        title={t("library.title")}
         description={
           <>
-            Reusable campaigns, content pillars, and templates for this workspace.
+            {t("library.description")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
@@ -100,7 +102,7 @@ export default async function PlanningLibraryPage({
             title={
               <span className="inline-flex items-center gap-2">
                 <Megaphone className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-                Campaigns
+                {t("library.campaigns")}
                 <Badge variant="info">{campaignRows.length}</Badge>
               </span>
             }
@@ -110,8 +112,8 @@ export default async function PlanningLibraryPage({
           <div className="px-4 py-6" data-testid="library-campaign-empty">
             <EmptyState
               icon={<Megaphone className="h-8 w-8" aria-hidden="true" />}
-              title="No campaigns yet"
-              description="Create one from the planning list to bundle related ideas."
+              title={t("library.campaignsEmpty")}
+              description={t("library.campaignsEmptyDescription")}
             />
           </div>
         ) : (
@@ -150,7 +152,7 @@ export default async function PlanningLibraryPage({
             title={
               <span className="inline-flex items-center gap-2">
                 <Layers className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-                Content pillars
+                {t("library.pillars")}
                 <Badge variant="info">{pillars.length}</Badge>
               </span>
             }
@@ -160,8 +162,8 @@ export default async function PlanningLibraryPage({
           <div className="px-4 py-6" data-testid="library-pillar-empty">
             <EmptyState
               icon={<Layers className="h-8 w-8" aria-hidden="true" />}
-              title="No content pillars yet"
-              description="Pillars group your ideas into recurring themes for the workspace."
+              title={t("library.pillarsEmpty")}
+              description={t("library.pillarsEmptyDescription")}
             />
           </div>
         ) : (
@@ -170,7 +172,7 @@ export default async function PlanningLibraryPage({
               getRowKey={(p) => p.id}
               getRowTestId={(p) => `library-pillar-${p.id}`}
               rows={pillars}
-              columns={pillarColumns(canEditLibrary, slug)}
+              columns={pillarColumns(canEditLibrary, slug, t)}
             />
           </div>
         )}
@@ -187,7 +189,7 @@ export default async function PlanningLibraryPage({
             title={
               <span className="inline-flex items-center gap-2">
                 <Layers className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-                Templates
+                {t("library.templates")}
                 <Badge variant="info">{templates.length}</Badge>
               </span>
             }
@@ -197,8 +199,8 @@ export default async function PlanningLibraryPage({
           <div className="px-4 py-6" data-testid="library-template-empty">
             <EmptyState
               icon={<Layers className="h-8 w-8" aria-hidden="true" />}
-              title="No templates yet"
-              description="Templates speed up drafting — save a proven format and reuse it for future ideas."
+              title={t("library.templatesEmpty")}
+              description={t("library.templatesEmptyDescription")}
             />
           </div>
         ) : (
@@ -241,16 +243,17 @@ function formatCampaignWindow(start: Date | string | null, end: Date | string | 
 function pillarColumns(
   canEditLibrary: boolean,
   slug: string,
+  t: (key: string) => string,
 ): DataTableColumnDef<typeof contentPillars.$inferSelect>[] {
   return [
     {
       key: "name",
-      header: "Pillar",
+      header: t("library.colPillar"),
       cell: (p) => <span className="text-body text-fg-primary font-medium">{p.name}</span>,
     },
     {
       key: "description",
-      header: "Description",
+      header: t("library.colDescription"),
       cell: (p) =>
         p.description ? (
           <span className="text-body text-fg-secondary">{p.description}</span>
@@ -262,7 +265,7 @@ function pillarColumns(
       ? [
           {
             key: "actions",
-            header: "Actions",
+            header: t("library.colActions"),
             cell: (p: typeof contentPillars.$inferSelect) => (
               <ArchivePillarButton slug={slug} id={p.id} />
             ),
