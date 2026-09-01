@@ -21,6 +21,9 @@ import { MemberList } from "@/app/(app)/app/users/member-list";
 import { SendInviteForm } from "@/app/(app)/app/users/send-invite-form";
 import { InvitationList } from "@/app/(app)/app/users/invitation-list";
 import { MemberEditTrigger } from "@/app/(app)/app/w/[slug]/team/member-edit-trigger";
+import { tFor } from "@/messages";
+
+const t = tFor("en");
 
 /**
  * Structural guard for the client components used on /app/users (and
@@ -110,7 +113,13 @@ describe("/app/users components — hooks order guard", () => {
     const cap = captureConsoleError();
     try {
       const { rerender } = render(
-        <MemberList actorId="actor-1" workspaces={baseWorkspaces} rolesByUser={{}} members={[]} />,
+        <MemberList
+          actorId="actor-1"
+          workspaces={baseWorkspaces}
+          rolesByUser={{}}
+          members={[]}
+          t={t}
+        />,
       );
       const err = runWithoutThrowing(() =>
         rerender(
@@ -119,6 +128,7 @@ describe("/app/users components — hooks order guard", () => {
             workspaces={baseWorkspaces}
             rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
             members={[baseMember]}
+            t={t}
           />,
         ),
       );
@@ -141,6 +151,7 @@ describe("/app/users components — hooks order guard", () => {
           workspaces={baseWorkspaces}
           rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
           members={[baseMember]}
+          t={t}
         />,
       );
       const member2 = {
@@ -157,6 +168,7 @@ describe("/app/users components — hooks order guard", () => {
             workspaces={baseWorkspaces}
             rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
             members={[baseMember, member2]}
+            t={t}
           />,
         ),
       );
@@ -182,6 +194,7 @@ describe("/app/users components — hooks order guard", () => {
           workspaces={baseWorkspaces}
           rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
           members={[baseMember]}
+          t={t}
         />,
       );
       // Open the drawer (mounts MemberEditForm, 7 hooks).
@@ -196,6 +209,7 @@ describe("/app/users components — hooks order guard", () => {
             workspaces={baseWorkspaces}
             rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
             members={[baseMember, member2]}
+            t={t}
           />,
         ),
       );
@@ -226,6 +240,7 @@ describe("/app/users components — hooks order guard", () => {
           workspaces={baseWorkspaces}
           rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
           members={[baseMember]}
+          t={t}
         />,
       );
       // Open the drawer (mounts MemberEditForm, 7 hooks).
@@ -238,6 +253,7 @@ describe("/app/users components — hooks order guard", () => {
             workspaces={baseWorkspaces}
             rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
             members={[]}
+            t={t}
           />,
         ),
       );
@@ -250,6 +266,7 @@ describe("/app/users components — hooks order guard", () => {
             workspaces={baseWorkspaces}
             rolesByUser={{ "user-1": { "ws-1": ["designer"] } }}
             members={[baseMember]}
+            t={t}
           />,
         ),
       );
@@ -268,9 +285,9 @@ describe("/app/users components — hooks order guard", () => {
     // both states.
     const cap = captureConsoleError();
     try {
-      const { rerender } = render(<SendInviteForm workspaces={[]} />);
+      const { rerender } = render(<SendInviteForm workspaces={[]} t={t} />);
       const err = runWithoutThrowing(() =>
-        rerender(<SendInviteForm workspaces={baseWorkspaces} />),
+        rerender(<SendInviteForm workspaces={baseWorkspaces} t={t} />),
       );
       cap.assertNoHooksOrderError();
       expect(err, err ? String(err) : "rerender threw").toBeNull();
@@ -285,9 +302,9 @@ describe("/app/users components — hooks order guard", () => {
     // (useTransition, useState) are at the top — count must stay at 2.
     const cap = captureConsoleError();
     try {
-      const { rerender } = render(<InvitationList invitations={[]} />);
+      const { rerender } = render(<InvitationList invitations={[]} t={t} />);
       const err = runWithoutThrowing(() =>
-        rerender(<InvitationList invitations={baseInvitations} />),
+        rerender(<InvitationList invitations={baseInvitations} t={t} />),
       );
       cap.assertNoHooksOrderError();
       expect(err, err ? String(err) : "rerender threw").toBeNull();

@@ -14,19 +14,19 @@ type InvitationRow = {
   workspaceGrants: { workspaceId: string; workspaceName: string; role: string }[];
 };
 
-// Human-readable label for each role value. Mirrors the
+// Human-readable key for each role value. Mirrors the
 // `WORKSPACE_ROLE_LABELS` map in
 // `app/(app)/app/users/_components/workspace-role-matrix.tsx`.
 // Kept in sync intentionally — duplicated here so the list
 // view doesn't pull a server component into a client component.
-const ROLE_LABEL: Record<string, string> = {
-  workspace_manager: "Manager",
-  content_planner: "Planner",
-  designer: "Designer",
-  internal_reviewer: "Internal reviewer",
-  client_reviewer: "Client reviewer",
-  publisher: "Publisher",
-  viewer: "Viewer",
+const ROLE_LABEL_KEY: Record<string, string> = {
+  workspace_manager: "team.role.workspaceManager",
+  content_planner: "team.role.contentPlanner",
+  designer: "team.role.designer",
+  internal_reviewer: "team.role.internalReviewer",
+  client_reviewer: "team.role.clientReviewer",
+  publisher: "team.role.publisher",
+  viewer: "team.role.viewer",
 };
 
 /**
@@ -38,14 +38,20 @@ const ROLE_LABEL: Record<string, string> = {
  * an inline alert next to the row that failed and clear any prior
  * success message for the row.
  */
-export function InvitationList({ invitations }: { invitations: InvitationRow[] }) {
+export function InvitationList({
+  invitations,
+  t,
+}: {
+  invitations: InvitationRow[];
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
   const [pending, start] = useTransition();
   const [rowMessages, setRowMessages] = useState<
     Record<string, { kind: "error" | "success"; text: string }>
   >({});
 
   if (invitations.length === 0) {
-    return <p className="text-body text-fg-muted">No pending invitations.</p>;
+    return <p className="text-body text-fg-muted">{t("users.invitationList.empty")}</p>;
   }
 
   return (
@@ -58,16 +64,20 @@ export function InvitationList({ invitations }: { invitations: InvitationRow[] }
               <Mail className="text-fg-muted h-4 w-4" aria-hidden="true" />
               <div className="min-w-0 flex-1">
                 <p className="text-fg-primary truncate font-semibold">{inv.email}</p>
-                <p className="text-label text-fg-muted">Expires {inv.expiresAt}</p>
+                <p className="text-label text-fg-muted">
+                  {t("users.invitationList.expires", { date: inv.expiresAt })}
+                </p>
               </div>
-              {inv.grantsAgencyAdmin ? <Badge variant="primary">Agency admin</Badge> : null}
+              {inv.grantsAgencyAdmin ? (
+                <Badge variant="primary">{t("users.invitationList.agencyAdmin")}</Badge>
+              ) : null}
               {inv.workspaceGrants.length === 0 ? (
                 <Badge
                   variant="outline"
                   data-testid={`users-invitation-no-access-${inv.id}`}
-                  title="On accept this person will be added to the agency but cannot access any workspace until you grant a role."
+                  title={t("users.invitationList.noAccessTitle")}
                 >
-                  No workspace access yet
+                  {t("users.invitationList.noAccess")}
                 </Badge>
               ) : null}
               <Button
@@ -90,7 +100,7 @@ export function InvitationList({ invitations }: { invitations: InvitationRow[] }
                     } else {
                       setRowMessages((m) => ({
                         ...m,
-                        [inv.id]: { kind: "success", text: "Invitation re-sent." },
+                        [inv.id]: { kind: "success", text: t("users.invitationList.resent") },
                       }));
                     }
                   });
@@ -98,7 +108,7 @@ export function InvitationList({ invitations }: { invitations: InvitationRow[] }
                 data-testid={`users-invitation-resend-${inv.id}`}
               >
                 <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                Resend
+                {t("users.invitationList.resend")}
               </Button>
               <Button
                 size="sm"
@@ -120,16 +130,16 @@ export function InvitationList({ invitations }: { invitations: InvitationRow[] }
                     } else {
                       setRowMessages((m) => ({
                         ...m,
-                        [inv.id]: { kind: "success", text: "Invitation revoked." },
+                        [inv.id]: { kind: "success", text: t("users.invitationList.revoked") },
                       }));
                     }
                   });
                 }}
-                aria-label={`Revoke invitation for ${inv.email}`}
+                aria-label={t("users.invitationList.revokeAria", { email: inv.email })}
                 data-testid={`users-invitation-revoke-${inv.id}`}
               >
                 <X className="h-3.5 w-3.5" aria-hidden="true" />
-                Revoke
+                {t("users.invitationList.revoke")}
               </Button>
             </div>
             {inv.workspaceGrants.length > 0 ? (
@@ -142,7 +152,7 @@ export function InvitationList({ invitations }: { invitations: InvitationRow[] }
                     <Building2 className="h-3 w-3" aria-hidden="true" />
                     <span className="font-semibold">{g.workspaceName}</span>
                     <span aria-hidden="true">·</span>
-                    <span>{ROLE_LABEL[g.role] ?? g.role}</span>
+                    <span>{t(ROLE_LABEL_KEY[g.role] ?? g.role)}</span>
                   </li>
                 ))}
               </ul>

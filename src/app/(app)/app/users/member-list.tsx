@@ -22,6 +22,7 @@ export function MemberList({
   workspaces,
   rolesByUser,
   members,
+  t,
 }: {
   actorId: string;
   workspaces: { id: string; name: string }[];
@@ -32,6 +33,7 @@ export function MemberList({
    */
   rolesByUser: Record<string, Record<string, string[]>>;
   members: MemberRow[];
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export function MemberList({
       ) : null}
       {members.length === 0 ? (
         <p className="text-body text-fg-muted" data-testid="users-empty-state">
-          No members yet.
+          {t("users.memberList.empty")}
         </p>
       ) : (
         <ul className="divide-border divide-y" data-testid="users-member-list">
@@ -95,23 +97,25 @@ export function MemberList({
                 <div className="min-w-0 flex-1">
                   <p className="text-fg-primary truncate font-semibold">{m.name}</p>
                   <p className="text-label text-fg-muted truncate">
-                    {m.email} · joined {m.joinedAt}
+                    {m.email} · {t("users.memberList.joined", { date: m.joinedAt })}
                   </p>
                 </div>
-                {m.isAgencyAdmin ? <Badge variant="primary">Admin</Badge> : null}
+                {m.isAgencyAdmin ? (
+                  <Badge variant="primary">{t("users.memberList.admin")}</Badge>
+                ) : null}
                 <Badge variant={active ? "success" : "default"}>
-                  {active ? "Active" : "Deactivated"}
+                  {active ? t("users.memberList.active") : t("users.memberList.deactivated")}
                 </Badge>
                 <Button
                   size="sm"
                   variant="ghost"
                   disabled={pending || !canEdit}
                   onClick={() => setEditing(m)}
-                  aria-label={`Edit ${m.name}`}
+                  aria-label={t("users.memberList.editAria", { name: m.name })}
                   data-testid={`users-member-edit-${m.id}`}
                 >
                   <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                  Edit
+                  {t("users.memberList.edit")}
                 </Button>
                 <Button
                   size="sm"
@@ -124,17 +128,21 @@ export function MemberList({
                       if ("error" in result && result.error) setError(result.error);
                     });
                   }}
-                  aria-label={active ? `Deactivate ${m.name}` : `Reactivate ${m.name}`}
+                  aria-label={
+                    active
+                      ? t("users.memberList.deactivateAria", { name: m.name })
+                      : t("users.memberList.reactivateAria", { name: m.name })
+                  }
                 >
                   {active ? (
                     <>
                       <UserX className="h-3.5 w-3.5" aria-hidden="true" />
-                      Deactivate
+                      {t("users.memberList.deactivate")}
                     </>
                   ) : (
                     <>
                       <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                      Reactivate
+                      {t("users.memberList.reactivate")}
                     </>
                   )}
                 </Button>

@@ -21,7 +21,13 @@ const initialState: InviteActionState = {};
  * `<WorkspaceRoleMatrix>` (under `_components/`) so the "Add directly"
  * tab can reuse the exact same UI without duplication.
  */
-export function SendInviteForm({ workspaces }: { workspaces: { id: string; name: string }[] }) {
+export function SendInviteForm({
+  workspaces,
+  t,
+}: {
+  workspaces: { id: string; name: string }[];
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
   const [state, formAction] = useActionState(sendInviteAction, initialState);
   // Derive the form's `key` from the invitation id. Each successful
   // submit changes the invitation id, so the form remounts and all
@@ -42,7 +48,7 @@ export function SendInviteForm({ workspaces }: { workspaces: { id: string; name:
         >
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <div className="flex flex-col gap-1">
-            <span className="text-label font-semibold">We couldn&apos;t send that invitation</span>
+            <span className="text-label font-semibold">{t("users.sendInviteError")}</span>
             <span className="text-body">{errorMessage}</span>
           </div>
         </div>
@@ -55,8 +61,8 @@ export function SendInviteForm({ workspaces }: { workspaces: { id: string; name:
         >
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="text-body">
-            Invitation emailed. Expires in 7 days.
-            {state.expiresAt ? ` (on ${state.expiresAt})` : null}
+            {t("users.sendInviteSuccess")}
+            {state.expiresAt ? ` (${state.expiresAt})` : null}
           </span>
         </div>
       ) : null}
@@ -66,9 +72,9 @@ export function SendInviteForm({ workspaces }: { workspaces: { id: string; name:
           role="status"
           className="border-primary/20 bg-primary-subtle text-primary flex flex-col gap-1 rounded-[var(--radius-control)] border p-3"
         >
-          <span className="text-label font-semibold">Invitation sent.</span>
+          <span className="text-label font-semibold">{t("users.sendInvite.success")}</span>
           <span className="text-body break-all">
-            Dev link:{" "}
+            {t("users.devLink")}{" "}
             <a href={state.devLink} className="underline">
               {state.devLink}
             </a>
@@ -80,7 +86,7 @@ export function SendInviteForm({ workspaces }: { workspaces: { id: string; name:
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <FormField
             id="email"
-            label="Email"
+            label={t("users.sendInvite.emailLabel")}
             required
             {...(fieldErrors.email?.[0] ? { error: fieldErrors.email[0] } : {})}
           >
@@ -89,19 +95,19 @@ export function SendInviteForm({ workspaces }: { workspaces: { id: string; name:
               name="email"
               required
               autoComplete="email"
-              placeholder="alice@example.com"
+              placeholder={t("users.sendInvite.emailPlaceholder")}
               {...(fieldErrors.email ? { "aria-invalid": true } : {})}
             />
           </FormField>
           <FormField
             id="inviteeName"
-            label="Name (optional)"
+            label={t("users.sendInviteNameOptional")}
             {...(fieldErrors.inviteeName?.[0] ? { error: fieldErrors.inviteeName[0] } : {})}
           >
             <Input
               type="text"
               name="inviteeName"
-              placeholder="Alice Doe"
+              placeholder={t("users.sendInviteNamePlaceholder")}
               {...(fieldErrors.inviteeName ? { "aria-invalid": true } : {})}
             />
           </FormField>
@@ -117,21 +123,20 @@ export function SendInviteForm({ workspaces }: { workspaces: { id: string; name:
               name="grantsAgencyAdmin"
               data-testid="send-invite-grants-admin"
             />
-            Grant agency admin
+            {t("users.sendInvite.agencyAdminLabel")}
           </label>
           <p id="send-invite-grants-admin-help" className="text-fg-muted text-label ps-6">
-            Agency admins can manage members, workspaces, and all agency settings. Only grant to
-            people you trust with full access.
+            {t("users.sendInvite.agencyAdminHint")}
           </p>
         </div>
 
         {workspaces.length > 0 ? (
           <fieldset className="space-y-2">
-            <legend className="text-body text-fg-primary font-semibold">Workspace roles</legend>
+            <legend className="text-body text-fg-primary font-semibold">
+              {t("users.sendInvite.workspacesLabel")}
+            </legend>
             <p id="send-invite-workspace-roles-help" className="text-fg-muted text-label">
-              Pick at least one role in at least one workspace. Leaving everything blank adds the
-              person to the agency but gives them no workspace access — they can sign in but cannot
-              open any workspace.
+              {t("users.sendInvite.workspacesHint")}
             </p>
             {fieldErrors.workspaceRoles ? (
               <p role="alert" className="text-label text-danger font-semibold">
@@ -142,7 +147,10 @@ export function SendInviteForm({ workspaces }: { workspaces: { id: string; name:
           </fieldset>
         ) : null}
 
-        <FormSubmitButton label="Send invitation" pendingLabel="Sending…" />
+        <FormSubmitButton
+          label={t("users.sendInvite.send")}
+          pendingLabel={t("users.sendInvite.sending")}
+        />
       </form>
     </div>
   );

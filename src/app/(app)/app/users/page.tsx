@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { workspaceMembershipRoles, workspaceMemberships, workspaces } from "@/lib/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { listAgencyMembers, listInvitationGrants, listInvitations } from "@/lib/auth/invitations";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { SendInviteForm } from "./send-invite-form";
 import { AddDirectlyForm } from "./add-directly-form";
 import { InvitationList } from "./invitation-list";
@@ -42,15 +43,16 @@ export default async function UsersPage() {
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) redirect("/setup");
+  const { t } = await tForActive();
   if (!(await isAgencyAdmin(actor, agencyId))) {
     return (
       <div className="space-y-4">
-        <PageHeader title="Forbidden" description="Only agency admins can manage users." />
+        <PageHeader title={t("users.forbiddenTitle")} description={t("users.forbiddenBody")} />
         <Link
           href="/app"
           className="text-primary focus-visible:ring-focus-ring inline-block rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
         >
-          ← Back to My Work
+          {t("users.backToMyWork")}
         </Link>
       </div>
     );
@@ -114,27 +116,24 @@ export default async function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="User Management"
-        description="Invite team members, pre-create accounts, assign workspace roles, deactivate departures."
-      />
+      <PageHeader title={t("users.title")} description={t("users.description")} />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="users-kpi-row">
         <KpiTile
           icon={<UserCheck className="h-4 w-4" aria-hidden="true" />}
-          label="Active users"
+          label={t("users.kpiActive")}
           value={activeCount}
           tone="success"
         />
         <KpiTile
           icon={<Mail className="h-4 w-4" aria-hidden="true" />}
-          label="Pending invitations"
+          label={t("users.kpiPending")}
           value={pending.length}
           tone="warning"
         />
         <KpiTile
           icon={<UserX className="h-4 w-4" aria-hidden="true" />}
-          label="Deactivated"
+          label={t("users.kpiDeactivated")}
           value={deactivatedCount}
         />
       </div>
@@ -143,36 +142,37 @@ export default async function UsersPage() {
         <CardHeader>
           <CardTitle className="inline-flex items-center gap-2">
             <UserPlus className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-            Add a user
+            {t("users.addUserTitle")}
           </CardTitle>
-          <Badge variant="outline">Agency admin only</Badge>
+          <Badge variant="outline">{t("users.adminOnly")}</Badge>
         </CardHeader>
         <Tabs defaultValue="invite">
-          <TabsList aria-label="Add a user: send an invitation or pre-create an account">
+          <TabsList aria-label={t("users.addAria")}>
             <TabsTrigger value="invite" data-testid="users-tab-invite">
               <Mail className="me-1 h-4 w-4" aria-hidden="true" />
-              Send invitation
+              {t("users.tabInvite")}
             </TabsTrigger>
             <TabsTrigger value="add" data-testid="users-tab-add">
               <UserPlus className="me-1 h-4 w-4" aria-hidden="true" />
-              Add directly
+              {t("users.tabAdd")}
             </TabsTrigger>
           </TabsList>
           <TabsContent value="invite">
-            <SendInviteForm workspaces={workspaceList} />
+            <SendInviteForm workspaces={workspaceList} t={t} />
           </TabsContent>
           <TabsContent value="add">
-            <AddDirectlyForm workspaces={workspaceList} />
+            <AddDirectlyForm workspaces={workspaceList} t={t} />
           </TabsContent>
         </Tabs>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Pending invitations</CardTitle>
+          <CardTitle>{t("users.pendingTitle")}</CardTitle>
           <Badge variant="info">{pending.length}</Badge>
         </CardHeader>
         <InvitationList
+          t={t}
           invitations={pending.map((i) => ({
             id: i.id,
             email: i.email,
@@ -187,11 +187,12 @@ export default async function UsersPage() {
         <CardHeader>
           <CardTitle className="inline-flex items-center gap-2">
             <Building2 className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-            Members
+            {t("users.membersTitle")}
           </CardTitle>
           <Badge variant="info">{members.length}</Badge>
         </CardHeader>
         <MemberList
+          t={t}
           actorId={session.user.id}
           workspaces={workspaceList}
           rolesByUser={rolesByUser}

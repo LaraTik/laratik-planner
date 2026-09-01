@@ -41,7 +41,13 @@ const initialState: AddDirectlyActionState = {};
  *    the user switches tabs and returns, the strip is gone (the
  *    action's success state is per-form-remount).
  */
-export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name: string }[] }) {
+export function AddDirectlyForm({
+  workspaces,
+  t,
+}: {
+  workspaces: { id: string; name: string }[];
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
   const [state, formAction] = useActionState(createUserDirectlyAction, initialState);
   const formKey = state?.success && state.userId ? state.userId : "initial";
   const fieldErrors = state?.fieldErrors ?? {};
@@ -64,7 +70,7 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
         >
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <div className="flex flex-col gap-1">
-            <span className="text-label font-semibold">We couldn&apos;t add that user</span>
+            <span className="text-label font-semibold">{t("users.addDirectlyError")}</span>
             <span className="text-body">{errorMessage}</span>
           </div>
         </div>
@@ -78,16 +84,17 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
         >
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span className="text-label font-semibold">Account created for {state.email}</span>
+            <span className="text-label font-semibold">
+              {t("users.addDirectlyAccountCreated", { email: state.email })}
+            </span>
           </div>
-          <p className="text-body">
-            Share these credentials securely — they won&apos;t be shown again.
-          </p>
-          <RevealPassword password={state.tempPassword} />
+          <p className="text-body">{t("users.addDirectlyShareCreds")}</p>
+          <RevealPassword password={state.tempPassword} t={t} />
           {state.acceptedWorkspaceIds && state.acceptedWorkspaceIds.length > 0 ? (
             <p className="text-body">
-              Assigned to {state.acceptedWorkspaceIds.length} workspace
-              {state.acceptedWorkspaceIds.length === 1 ? "" : "s"}.
+              {t("users.addDirectlyAssigned", {
+                count: state.acceptedWorkspaceIds.length,
+              })}
             </p>
           ) : null}
         </div>
@@ -97,7 +104,7 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <FormField
             id="add-email"
-            label="Email"
+            label={t("users.addDirectly.emailLabel")}
             required
             {...(fieldErrors.email?.[0] ? { error: fieldErrors.email[0] } : {})}
           >
@@ -106,19 +113,19 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
               name="email"
               required
               autoComplete="off"
-              placeholder="alice@example.com"
+              placeholder={t("users.sendInvite.emailPlaceholder")}
               {...(fieldErrors.email ? { "aria-invalid": true } : {})}
             />
           </FormField>
           <FormField
             id="add-name"
-            label="Name (optional)"
+            label={t("users.sendInvite.nameOptionalLabel")}
             {...(fieldErrors.name?.[0] ? { error: fieldErrors.name[0] } : {})}
           >
             <Input
               type="text"
               name="name"
-              placeholder="Alice Doe"
+              placeholder={t("users.sendInvite.namePlaceholder")}
               autoComplete="off"
               {...(fieldErrors.name ? { "aria-invalid": true } : {})}
             />
@@ -127,9 +134,9 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
 
         <FormField
           id="add-password"
-          label="Temporary password"
+          label={t("users.addDirectlyPasswordLabel")}
           required
-          hint="At least 8 characters, with a letter and a digit. Share this with the new user out-of-band — it won't be shown again after the form is reset."
+          hint={t("users.addDirectlyPasswordHint")}
           {...(fieldErrors.password?.[0] ? { error: fieldErrors.password[0] } : {})}
         >
           <div className="flex flex-col gap-2">
@@ -171,11 +178,11 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
                   // to the new user via the success strip anyway).
                   setShowPassword(true);
                 }}
-                aria-label="Generate a strong temporary password"
+                aria-label={t("users.addDirectlyGenerateAria")}
                 data-testid="add-directly-generate"
               >
                 <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                <span className="ms-1">Generate</span>
+                <span className="ms-1">{t("users.addDirectlyGenerate")}</span>
               </Button>
             </div>
             <PasswordStrengthMeter
@@ -199,11 +206,10 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
               aria-describedby="add-must-change-help"
               data-testid="add-directly-must-change"
             />
-            Force password change on first login
+            {t("users.addDirectlyForceChange")}
           </label>
           <p id="add-must-change-help" className="text-fg-muted text-label ps-6">
-            The user will be sent to a set-password screen the first time they sign in. Recommended
-            — keeps admin-supplied passwords from being a permanent backdoor.
+            {t("users.addDirectlyForceChangeHint")}
           </p>
         </div>
 
@@ -217,18 +223,17 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
               name="grantsAgencyAdmin"
               data-testid="add-directly-grants-admin"
             />
-            Grant agency admin
+            {t("users.addDirectly.agencyAdminLabel")}
           </label>
           <p id="add-grants-admin-help" className="text-fg-muted text-label ps-6">
-            Agency admins can manage members, workspaces, and all agency settings. Only grant to
-            people you trust with full access.
+            {t("users.sendInvite.agencyAdminHint")}
           </p>
         </div>
 
         {workspaces.length > 0 ? (
           <fieldset className="space-y-2">
             <legend className="text-body text-fg-primary font-semibold">
-              Workspace roles (optional)
+              {t("users.addDirectly.workspacesLabel")}
             </legend>
             {fieldErrors.workspaceRoles ? (
               <p role="alert" className="text-label text-danger font-semibold">
@@ -239,7 +244,10 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
           </fieldset>
         ) : null}
 
-        <FormSubmitButton label="Create user" pendingLabel="Creating…" />
+        <FormSubmitButton
+          label={t("users.addDirectly.add")}
+          pendingLabel={t("users.addDirectly.adding")}
+        />
       </form>
     </div>
   );
@@ -253,7 +261,7 @@ export function AddDirectlyForm({ workspaces }: { workspaces: { id: string; name
  * (because the user submits again or switches tabs), the strip is
  * gone and the password is unrecoverable from the UI.
  */
-function RevealPassword({ password }: { password: string }) {
+function RevealPassword({ password, t }: { password: string; t: (key: string) => string }) {
   const [copied, setCopied] = React.useState(false);
   const onCopy = async () => {
     try {
@@ -281,11 +289,13 @@ function RevealPassword({ password }: { password: string }) {
         type="button"
         variant="outline"
         onClick={onCopy}
-        aria-label="Copy temporary password to clipboard"
+        aria-label={t("users.addDirectlyCopyAria")}
         data-testid="add-directly-copy"
       >
         <Copy className="h-4 w-4" aria-hidden="true" />
-        <span className="ms-1">{copied ? "Copied" : "Copy"}</span>
+        <span className="ms-1">
+          {copied ? t("users.addDirectlyCopied") : t("users.addDirectlyCopy")}
+        </span>
       </Button>
     </div>
   );
