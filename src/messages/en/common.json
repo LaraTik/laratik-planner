@@ -272,7 +272,8 @@
     "frozenStatusDescription": "It is currently in {status} — once an idea moves past draft / changes requested, its title, format, schedule and channels are frozen so reviewers can rely on them.",
     "editIdeaTitle": "Edit idea",
     "editIdeaDescription": "Make changes to a draft or changes-requested idea.",
-    "comingSoon": "Coming soon"
+    "comingSoon": "Coming soon",
+    "loadingListAria": "Loading planning list"
   },
   "board": {
     "title": "Workflow board",

@@ -14,13 +14,21 @@ export interface PlanningListSkeletonProps {
   rows?: number;
   density?: "comfortable" | "compact";
   className?: string;
+  /**
+   * Optional translator. When provided, the loading-state
+   * aria-label renders from `planning.loadingListAria`; when
+   * omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export function PlanningListSkeleton({
   rows = 5,
   density = "comfortable",
   className,
+  t,
 }: PlanningListSkeletonProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const padding = density === "compact" ? "py-2" : "py-3";
   return (
     <ul
@@ -30,7 +38,7 @@ export function PlanningListSkeleton({
       )}
       data-testid="planning-list-skeleton"
       aria-busy="true"
-      aria-label="Loading planning list"
+      aria-label={tr("planning.loadingListAria", "Loading planning list")}
     >
       {Array.from({ length: rows }).map((_, i) => (
         <li key={i} className={cn("flex flex-col gap-2 px-4", padding)}>
