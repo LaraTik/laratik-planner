@@ -1123,5 +1123,35 @@
     "errorExists": "توجد مساحة عمل بهذا المعرّف بالفعل.",
     "errorNameRequired": "اسم مساحة العمل مطلوب.",
     "errorSlugInvalid": "يجب أن يحتوي المعرّف على حروف لاتينية صغيرة وأرقام وشرطات فقط."
+  },
+  "team": {
+    "title": "الفريق والصلاحيات",
+    "description": "الأشخاص الذين لديهم صلاحية الوصول إلى مساحة عمل هذه العلامة وأدوارهم الدقيقة.",
+    "invitePeople": "دعوة أشخاص",
+    "pendingTitle": "الدعوات المعلّقة",
+    "pendingAwaiting": "{count} بانتظار القبول",
+    "expiresOn": "تنتهي في {date}",
+    "agencyAdmin": "مسؤول الوكالة",
+    "colMember": "العضو",
+    "colRoles": "الأدوار",
+    "colLastActive": "آخر نشاط",
+    "colStatus": "الحالة",
+    "activeNow": "نشِط الآن",
+    "statusActive": "نشِط",
+    "statusInactive": "غير نشِط",
+    "actionsAria": "إجراءات",
+    "showing": "عرض {count} من {count} أعضاء",
+    "emptyTitle": "لا يوجد أعضاء بعد",
+    "adminEmpty": "ادعُ زملاء في الوكالة لمنحهم صلاحية الوصول إلى مساحة العمل هذه.",
+    "memberEmpty": "عندما يدعو مدير مساحة العمل زملاء في الوكالة، سيظهرون في هذه القائمة.",
+    "role": {
+      "workspaceManager": "مدير مساحة العمل",
+      "contentPlanner": "مخطط المحتوى",
+      "designer": "المصمم",
+      "internalReviewer": "المراجع الداخلي",
+      "clientReviewer": "مراجع العميل",
+      "publisher": "الناشر",
+      "viewer": "المشاهد"
+    }
   }
 }

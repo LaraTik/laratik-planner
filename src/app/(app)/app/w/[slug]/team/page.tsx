@@ -22,6 +22,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { IconTile } from "@/components/workspace/icon-button";
 import { PageHeader } from "@/components/workspace/page-header";
 import { isAgencyAdmin } from "@/lib/auth/policy";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { MemberEditTrigger } from "./member-edit-trigger";
 
 type MemberRow = {
@@ -38,11 +39,12 @@ function teamColumns(args: {
   actorIsAgencyAdmin: boolean;
   memberRolesByWorkspace: Record<string, Record<string, string[]>>;
   allWorkspaces: { id: string; name: string }[];
+  t: (key: string) => string;
 }): DataTableColumnDef<MemberRow>[] {
   return [
     {
       key: "member",
-      header: "Member",
+      header: args.t("team.colMember"),
       cell: (member) => (
         <div className="flex items-center gap-3">
           <IconTile size="md" tone="primary" aria-hidden="true">
@@ -57,44 +59,50 @@ function teamColumns(args: {
     },
     {
       key: "roles",
-      header: "Roles",
+      header: args.t("team.colRoles"),
       cell: (member) => (
         <div className="flex flex-wrap gap-1">
-          {member.isAgencyAdmin ? <Badge variant="info">Agency admin</Badge> : null}
+          {member.isAgencyAdmin ? <Badge variant="info">{args.t("team.agencyAdmin")}</Badge> : null}
           {member.roles.length === 0 ? (
             <span className="text-fg-muted">&mdash;</span>
           ) : (
-            member.roles.map((role) => <Badge key={role}>{ROLE_LABEL[role] ?? role}</Badge>)
+            member.roles.map((role) => (
+              <Badge key={role}>{args.t(ROLE_LABEL_KEY[role] ?? role)}</Badge>
+            ))
           )}
         </div>
       ),
     },
     {
       key: "last-active",
-      header: "Last active",
+      header: args.t("team.colLastActive"),
       hideOn: "md",
       cell: (member) =>
-        member.status === "active" ? "Active now" : <span className="text-fg-muted">—</span>,
+        member.status === "active" ? (
+          args.t("team.activeNow")
+        ) : (
+          <span className="text-fg-muted">—</span>
+        ),
     },
     {
       key: "status",
-      header: "Status",
+      header: args.t("team.colStatus"),
       cell: (member) =>
         member.status === "active" ? (
           <Badge variant="success">
             <span className="bg-success h-1.5 w-1.5 rounded-full" aria-hidden="true" />
-            Active
+            {args.t("team.statusActive")}
           </Badge>
         ) : (
           <Badge variant="danger">
             <span className="bg-danger h-1.5 w-1.5 rounded-full" aria-hidden="true" />
-            Inactive
+            {args.t("team.statusInactive")}
           </Badge>
         ),
     },
     {
       key: "actions",
-      header: <span className="sr-only">Actions</span>,
+      header: <span className="sr-only">{args.t("team.actionsAria")}</span>,
       cell: (member) => (
         <MemberEditTrigger
           member={{
@@ -116,14 +124,14 @@ function teamColumns(args: {
   ];
 }
 
-const ROLE_LABEL: Record<string, string> = {
-  workspace_manager: "Workspace Manager",
-  content_planner: "Content Planner",
-  designer: "Designer",
-  internal_reviewer: "Internal Reviewer",
-  client_reviewer: "Client Reviewer",
-  publisher: "Publisher",
-  viewer: "Viewer",
+const ROLE_LABEL_KEY: Record<string, string> = {
+  workspace_manager: "team.role.workspaceManager",
+  content_planner: "team.role.contentPlanner",
+  designer: "team.role.designer",
+  internal_reviewer: "team.role.internalReviewer",
+  client_reviewer: "team.role.clientReviewer",
+  publisher: "team.role.publisher",
+  viewer: "team.role.viewer",
 };
 
 /**
@@ -144,6 +152,7 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
+  const { t } = await tForActive();
   const canInvite = await isAgencyAdmin({ id: session.user.id }, workspace.agencyId);
 
   // Active members (join users + roles)
@@ -248,10 +257,10 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
     <div className="space-y-6" data-testid="workspace-team">
       <PageHeader
         eyebrow={workspace.name}
-        title="Team and access"
+        title={t("team.title")}
         description={
           <>
-            People with access to this brand workspace and their exact roles.
+            {t("team.description")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
@@ -263,7 +272,7 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
             <Button asChild>
               <Link href="/app/users" data-testid="team-invite-cta">
                 <UserPlus className="h-4 w-4" aria-hidden="true" />
-                Invite people
+                {t("team.invitePeople")}
               </Link>
             </Button>
           ) : null
@@ -273,9 +282,11 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
       {pendingInvitations.length ? (
         <Card padding="none" className="overflow-hidden" data-testid="team-pending-card">
           <div className="border-border border-b px-4 py-3">
-            <h2 className="text-title-card text-fg-primary font-semibold">Pending invitations</h2>
+            <h2 className="text-title-card text-fg-primary font-semibold">
+              {t("team.pendingTitle")}
+            </h2>
             <p className="text-label text-fg-muted mt-0.5">
-              {pendingInvitations.length} awaiting acceptance
+              {t("team.pendingAwaiting", { count: pendingInvitations.length })}
             </p>
           </div>
           <ul className="divide-border divide-y">
@@ -291,10 +302,10 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
                 <div className="min-w-0 flex-1">
                   <p className="text-body text-fg-primary font-semibold">{inv.email}</p>
                   <p className="text-label text-fg-muted">
-                    Expires {new Date(inv.expiresAt).toLocaleDateString()}
+                    {t("team.expiresOn", { date: new Date(inv.expiresAt).toLocaleDateString() })}
                   </p>
                 </div>
-                <Badge variant="info">{ROLE_LABEL[inv.role] ?? inv.role}</Badge>
+                <Badge variant="info">{t(ROLE_LABEL_KEY[inv.role] ?? inv.role)}</Badge>
               </li>
             ))}
           </ul>
@@ -306,12 +317,8 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
           <div className="p-6" data-testid="team-empty-state">
             <EmptyState
               icon={<Users className="h-8 w-8" />}
-              title="No members yet"
-              description={
-                canInvite
-                  ? "Invite agency teammates to give them access to this workspace."
-                  : "Once a workspace manager invites agency teammates, they will appear in this list."
-              }
+              title={t("team.emptyTitle")}
+              description={canInvite ? t("team.adminEmpty") : t("team.memberEmpty")}
             />
           </div>
         ) : (
@@ -327,13 +334,12 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
                   actorIsAgencyAdmin: canInvite,
                   memberRolesByWorkspace,
                   allWorkspaces,
+                  t,
                 })}
               />
             </div>
             <div className="border-border text-label text-fg-secondary flex items-center justify-between border-t px-4 py-3">
-              <span data-testid="team-count">
-                Showing {members.size} of {members.size} members
-              </span>
+              <span data-testid="team-count">{t("team.showing", { count: members.size })}</span>
             </div>
           </>
         )}
