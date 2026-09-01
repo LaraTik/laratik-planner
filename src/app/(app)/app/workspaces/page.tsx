@@ -31,7 +31,10 @@ import { formatRelativeDate } from "@/lib/utils/format-relative-date";
  * Rows are clickable; secondary actions (open, settings, team,
  * channels) live in a kebab menu so the row stays scannable.
  */
-export const metadata = { title: "Workspaces" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("workspaces.title") };
+}
 
 export default async function WorkspacesPage() {
   const session = await auth();

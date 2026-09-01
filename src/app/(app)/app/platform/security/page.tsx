@@ -33,7 +33,10 @@ import { PermissionNotice } from "@/components/platform/permission-notice";
  *      recent. The link routes to the agency detail page
  *      where the agency admin decides.
  */
-export const metadata = { title: "Platform · Security" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("platform.securityTitle") };
+}
 export const dynamic = "force-dynamic";
 
 type GrantRow = {

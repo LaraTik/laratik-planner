@@ -27,7 +27,10 @@ import { deriveAgencyDetailCapabilities } from "@/lib/auth/platform-agency-capab
  * The page combines the M1 overview with M2 plan, usage, AI, and
  * lifecycle controls. All mutations remain platform-admin gated.
  */
-export const metadata = { title: "Platform · Agency" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("platform.agencyTitle") };
+}
 
 // See /app/platform/overview for the rationale.
 export const dynamic = "force-dynamic";

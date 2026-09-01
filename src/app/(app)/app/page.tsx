@@ -43,7 +43,10 @@ import { tForActive } from "@/lib/i18n/t-for-active";
  * string uses `Intl.DateTimeFormat` so the locale-aware weekday /
  * month names also follow the active locale.
  */
-export const metadata = { title: "My Work" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("myWork.title") };
+}
 
 export default async function MyWorkPage() {
   const { t, dir } = await tForActive();

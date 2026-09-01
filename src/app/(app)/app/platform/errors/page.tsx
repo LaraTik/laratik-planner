@@ -38,7 +38,10 @@ import { cn } from "@/lib/utils";
  * Retention is intentionally not implemented yet — a 30-day prune is
  * a follow-up after we collect usage data.
  */
-export const metadata = { title: "Platform · App errors" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("platform.appErrorsTitle") };
+}
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;

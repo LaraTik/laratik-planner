@@ -33,7 +33,10 @@ import { ChangePlatformRoleDialog } from "./change-role-dialog";
 import { GrantPlatformAccessForm } from "./grant-form";
 import { RevokePlatformAccessDialog } from "./revoke-dialog";
 
-export const metadata = { title: "Platform · Access" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("platform.accessTitle") };
+}
 export const dynamic = "force-dynamic";
 
 const ROLE_BADGE_VARIANT: Record<PlatformRole, BadgeProps["variant"]> = {

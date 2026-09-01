@@ -1467,6 +1467,7 @@
     "sourceServerAction": "Server action",
     "sourceClientUnhandled": "Client (unhandled)",
     "agenciesTitle": "Agencies",
+    "agencyTitle": "Agency",
     "agenciesDescription": "Every agency on the platform. Use search to narrow by name or slug.",
     "signInRequiredAgenciesBody": "Sign in to view agencies.",
     "agenciesUnavailable": "Agency access unavailable",

@@ -37,7 +37,10 @@ import { PermissionNotice } from "@/components/platform/permission-notice";
  *
  * M2 adds the transactional four-step agency provisioning drawer.
  */
-export const metadata = { title: "Platform · Agencies" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("platform.agenciesTitle") };
+}
 
 // See /app/platform/overview for the rationale. The page is gated
 // by the platform layout's console-entry permission and this page's exact

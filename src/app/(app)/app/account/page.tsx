@@ -28,7 +28,10 @@ import { getNotificationPreferencesForUser } from "@/lib/notifications/service";
  *  4. Application information (read-only) — build SHA + environment.
  *  5. Sign out (destructive) — one-click sign out via shared action.
  */
-export const metadata = { title: "Account" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("account.title") };
+}
 export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {

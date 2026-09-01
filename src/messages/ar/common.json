@@ -1467,6 +1467,7 @@
     "sourceServerAction": "إجراء الخادم",
     "sourceClientUnhandled": "العميل (غير مُعالَج)",
     "agenciesTitle": "الوكالات",
+    "agencyTitle": "وكالة",
     "agenciesDescription": "كل وكالة على المنصة. استخدم البحث للتضييق حسب الاسم أو المعرّف.",
     "signInRequiredAgenciesBody": "سجّل الدخول لعرض الوكالات.",
     "agenciesUnavailable": "الوصول إلى الوكالات غير متاح",

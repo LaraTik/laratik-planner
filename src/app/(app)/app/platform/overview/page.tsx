@@ -32,7 +32,10 @@ import { PermissionNotice } from "@/components/platform/permission-notice";
  * enforces console entry; this page re-checks exact agency-read authority
  * before loading data.
  */
-export const metadata = { title: "Platform overview" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("platform.overviewTitle") };
+}
 
 // The page is gated by the platform layout's console-entry check and then by
 // its own exact `platform.agency.read` check. Both are

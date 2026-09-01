@@ -29,7 +29,10 @@ import { tForActive } from "@/lib/i18n/t-for-active";
  * Server action: validates the input, creates the workspace, adds the
  * current user as workspace_manager, and redirects to the new workspace.
  */
-export const metadata = { title: "New workspace" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("workspaceNew.title") };
+}
 
 const FormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),

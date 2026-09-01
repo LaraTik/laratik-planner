@@ -33,7 +33,10 @@ import { Building2, Mail, UserCheck, UserPlus, UserX } from "lucide-react";
  * original card. The KPI tiles + Pending + Members sections are
  * unchanged from the prior release.
  */
-export const metadata = { title: "User Management" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("users.title") };
+}
 
 export default async function UsersPage() {
   const session = await auth();

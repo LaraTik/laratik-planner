@@ -63,7 +63,10 @@ import { cn } from "@/lib/utils";
  * the card updates on the same response cycle.
  */
 
-export const metadata = { title: "Platform · Cron health" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("platform.cronTitle") };
+}
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE_LOG_TAIL = 30;
