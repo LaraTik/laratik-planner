@@ -191,11 +191,12 @@ evidence; `Verified` requires independent reviewer sign-off.
 Status: **Implemented and the focused i18n suite Tested; independent
 verification is not claimed.**
 
-This is the foundation commit of the
-`docs/ui-ux-pro-max-2026-09-01.md` master plan. The product as
-a whole does **not** claim Arabic support on production
-surfaces yet — the per-page audit and message catalog
-expansion land in subsequent phases. What ships today:
+This is the localization foundation tracked by
+`docs/i18n/CONTRACT.md` and the page-by-page audit. The product
+as a whole does **not** claim Arabic support on production
+surfaces yet. Independent review found open P0/P1 work recorded
+in `docs/implementation/ui-ux-arabic-critical-todo.md`.
+The foundation includes:
 
 - `laratik_locale` HttpOnly / SameSite=Lax / Secure-in-prod
   cookie (365-day lifetime), mutated only by server actions.
@@ -212,12 +213,13 @@ expansion land in subsequent phases. What ships today:
   face automatically when `<html dir="rtl">`.
 - Profile form (`/app/account`) locale `<select>` widened
   from `["en"]` to the central `SUPPORTED_LOCALES` set;
-  saving the profile writes both `users.locale` and the
-  cookie in one transaction.
-- A compact `<PublicLocaleSwitcher>` mounted at the root
-  layout, with a server action that validates the locale
-  and a same-origin relative return path before writing
-  the cookie.
+  the intended save sequence is database write first, then
+  cookie synchronization, revalidation, and client refresh.
+- A compact `<PublicLocaleSwitcher>` for signed-out public and
+  authentication surfaces, with a server action that validates
+  the locale and a same-origin relative return path before
+  writing the cookie. Its current root-layout mounting is an
+  open P1 and must not be copied.
 - `src/messages/{en,ar}/common.json` — `Common` +
   `Navigation` + `languageSwitcher` namespace pair.
   Missing-key parity is locked by `tests/unit/i18n/catalogs.test.ts`.
@@ -232,6 +234,7 @@ expansion land in subsequent phases. What ships today:
 Evidence: `pnpm typecheck` clean; `pnpm lint` clean;
 `pnpm format:check` clean; `pnpm test:unit` 2950/2950 pass
 (53 new i18n tests, 2897 pre-existing — zero regressions).
-Independent review handoff is the Phase 10 work, not this
-commit. Pre-merge browser matrix and the full pre-merge
-visual sweep are also Phase 10 work.
+This historical unit/build evidence is not a release verdict.
+Migration, authenticated browser, accessibility, and visual
+evidence remain required at the exact clean release-candidate
+HEAD; follow the critical TODO before requesting verification.

@@ -66,10 +66,13 @@ direction follows the active locale.
 ```
 
 The profile value, when set, always overrides a conflicting
-public cookie. Saving the profile **writes both**
-`users.locale` and the cookie in a single transaction; the
-cookie is set only after the DB write returns ok. The
-cookie is mutated by a server action — never from client JS.
+public cookie. Saving the profile writes `users.locale` in the
+database first. Only after that write succeeds does the server
+action set the cookie, revalidate the affected layouts, and let
+the client refresh. A database write and an HTTP cookie mutation
+cannot share one transaction; the database remains authoritative
+if the later cookie write fails. The cookie is mutated by a server
+action — never from client JS.
 
 The `agencies.locale` column is **not** part of the
 interface-language chain. It controls **content / brand
@@ -169,10 +172,15 @@ cookie; the (app) layouts use the user-or-cookie precedence.
   `Auth`, `Profile`, `Planning`, `Content`, `Workflow`,
   `Reviews`, `Publishing`, `Workspace`, `Agency`, `Platform`,
   `Notifications`, `Validation`, `Legal`, `Operational`.
-- Type augmentation is configured so missing / misspelled
-  keys fail `tsc`. Catalog tests assert identical key
-  structure across `en` and `ar`, ICU variable parity,
-  plural parameter parity, and rich-text placeholder parity.
+- `next-intl` is the locked target runtime. The Phase 1
+  hand-written loader is transitional and must not be treated as
+  completion evidence or expanded indefinitely. Until the target
+  runtime and generated key types land, arbitrary string keys do
+  not fail `tsc`; catalog tests remain the minimum parity gate.
+- The completed runtime must type message keys so missing /
+  misspelled keys fail `tsc`. Catalog tests assert identical key
+  structure across `en` and `ar`, ICU variable parity, plural
+  parameter parity, and rich-text placeholder parity.
 - **Server Components** resolve messages through the
   shared per-request config; **Client Components** receive
   either scoped providers or already-translated props
@@ -220,8 +228,9 @@ path:
 
 ### Public language switching
 
-A compact `<PublicLocaleSwitcher>` lives on the landing and
-authentication surfaces. It calls a server action
+A compact `<PublicLocaleSwitcher>` lives only on the signed-out
+landing and authentication surfaces; it must not be mounted by the
+root layout across authenticated routes. It calls a server action
 `setPublicLocaleAction` that:
 
 1. Validates the requested locale against

@@ -164,6 +164,9 @@ laratik-planner/
 - ❌ Never expose `MINIMAX_API_KEY`, `AUTH_SECRET`, `SMTP_PASSWORD`, or `SENTRY_AUTH_TOKEN` in client code (the split env schema enforces this structurally)
 - ✅ Always backup before upgrading — `./scripts/project.sh backup` (or `scripts/vps/backup.sh` on VPS)
 - ✅ Always run `pnpm verify` before pushing
+- ✅ `pnpm verify` is the baseline, not complete release evidence. Database changes also require `pnpm migration-drill`; user-facing UI or localization changes also require the relevant bilingual E2E, accessibility, and visual checks from `docs/testing/strategy.md`.
+- ✅ Every migration must be registered in `src/lib/db/migrations/meta/_journal.json`, target the exact table names in the Drizzle schema, and include forward, compatibility, backup, rollback, from-zero, and upgrade evidence. A successful build does not prove that a migration runs.
+- ✅ Record verification against the exact clean commit SHA. If the branch advances or becomes dirty after verification, rerun the affected gates before calling the work complete.
 - ✅ Pre-commit hook catches lint/format/typecheck/unit-test issues early — keep it fast by keeping its scope tight (lint-staged on staged files, `vitest related` on staged sources, sentinel-driven `tsc --noEmit`). Skip with `git commit --no-verify` or `SKIP_TYPECHECK=1` for WIP / hotfixes.
 - ✅ Pre-push hook runs the full unit suite and the critical E2E subset (`pnpm test:e2e:critical` = chromium + visual-chromium). Skip with `git push --no-verify`, `SKIP_PREPUSH=1`, or `SKIP_E2E=1` for trivial pushes.
 - ✅ Always merge finished work to `main` — review, commit, push as soon as `pnpm verify` is green and the local pre-merge E2E checklist (full 5-browser matrix + visual) is complete on the release-candidate branch. No half-finished work sitting in the local working tree or on a stale local branch. The deploy workflow fires on `workflow_run: CI success`, so the change is live on production the moment the deploy job finishes.
@@ -275,36 +278,22 @@ the per-format Zod schema; a row that exceeds a per-format
 limit rolls back the whole batch. v1 paste rows (4 fields)
 still parse.
 
-## Bilingual content (EN/AR) + RTL
+## Interface localization and bilingual content (EN/AR + RTL)
 
-The layout is bilingual from v1. The agency's `locale`
-(`agencies.locale`) drives the document `lang` / `dir`
-attributes on the root `<html>` (`src/app/layout.tsx`).
-v1 supports `en` and `ar`; adding a locale is a one-line
-change in `src/lib/i18n/locales.ts` (`SUPPORTED_LOCALES`).
-`resolveLocale()` is total — unknown codes fall back to
-`en` so a stale `agencies.locale` row from a legacy agency
-can't crash the layout.
+The canonical implementation and verification contract is
+`docs/i18n/CONTRACT.md`; ADR 0009 records the architectural
+decision. The durable rules are:
 
-- Per-field direction is _content_-driven, not
-  locale-driven. `DirAwareTextarea` / `DirAwareInput`
-  (`src/components/forms/dir-aware-textarea.tsx`) detect
-  the first non-whitespace char: Arabic Unicode blocks
-  → `rtl`, otherwise `ltr`. A user typing an English
-  hashtag inside an Arabic form gets LTR alignment
-  inside the field; the page chrome is whatever the
-  agency locale says.
-- All text uses Tailwind 4 logical properties
-  (`text-start` / `text-end`, `ps-*` / `pe-*`,
-  `ms-*` / `me-*`) so layouts mirror correctly when
-  the document `dir` flips. **Never** hard-code
-  `text-left` / `text-right` in a component that's
-  used in a workspace — use the logical property.
-- Translations live inside `formatPayload.translations[locale]`
-  (see the `formatPayload` rule below). The editor's
-  per-field sidecar (`TranslationPanel`) is the UI;
-  the mapper (`lib/format-payload/mapper.ts`) is the
-  read side that feeds the publish form.
+- **Interface locale and content locale are different concepts.** The interface precedence is validated `users.locale` → validated HttpOnly `laratik_locale` cookie → `en`. `agencies.locale` is only the agency's content / brand default and must never drive application chrome.
+- The root `<html lang dir>` and Arabic font come from the resolved interface locale. Public language controls belong only on signed-out public/authentication surfaces. Authenticated users switch language through `/app/account`, which persists `users.locale` and synchronizes the public cookie after the database write succeeds.
+- **Never pass a translator function or other function-valued prop from a Server Component to a Client Component.** Pass serializable translated strings or install a scoped client provider. Do not serialize the full catalog into every page.
+- The locale cookie is HttpOnly by design. Client code and error boundaries must not read `document.cookie` to resolve locale; bootstrap locale through server-rendered serializable state or a provider. Do not weaken the cookie to fix a client translation problem.
+- Server actions and domain services return stable codes / structured data. Page, action, email, notification, and error boundaries translate those codes. Logs and audit records remain technical. User-generated content is never machine-translated implicitly.
+- Per-field direction is content-driven. Use `DirAwareTextarea` / `DirAwareInput`, `<bdi>`, `dir="auto"`, or reviewed `dir="ltr"` for mixed-direction values such as URLs, handles, emails, IDs, hashtags, and filenames.
+- Use logical CSS (`text-start` / `text-end`, `ps-*` / `pe-*`, `ms-*` / `me-*`, logical inset utilities). Physical left/right utilities require a documented intrinsic-direction exception.
+- Arabic numbers, percentages, dates, and times use Western `0–9` digits and the workspace timezone. Arabic product copy requires native editorial review against the glossary in `docs/i18n/CONTRACT.md`; direction switching alone is not Arabic support.
+- A touched route is not complete until English and Arabic, LTR and RTL, 375/768/1024/1280/1440+ layouts, keyboard access, axe, loading/empty/error states, and locale persistence are evidenced at the exact clean HEAD.
+- Format-specific content translations continue to live in `formatPayload.translations[locale]`; the `TranslationPanel` is the write UI and `lib/format-payload/mapper.ts` is the read path.
 
 ## AI integration
 
@@ -588,6 +577,8 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 - `PORT_NOTES.md` — every Supabase / Vercel / Resend / pgTAP reference mapped to the VPS-native equivalent
 - `docs/architecture/overview.md` — system map (replaces the master prompt's diagram)
 - `docs/operations/runbook.md` — deploy, backup, recovery, rotation
+- `docs/i18n/CONTRACT.md` — interface/content locale ownership, RSC boundary, RTL, copy, notification/email, and bilingual evidence rules
+- `docs/decisions/0009-user-interface-locale.md` — accepted EN/AR locale architecture and rollback contract
 - `docs/operations/environment.md` — every env var, what it does, where it lives
 - `docs/testing/strategy.md` — test layers, fixtures, coverage targets
 - `docs/implementation/progress.md` — live task list (per master prompt §0)

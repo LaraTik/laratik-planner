@@ -1,7 +1,8 @@
 # UI/UX Refinement and Arabic Localization — page-by-page audit
 
 - **Date:** 2026-09-01
-- **Plan:** `docs/ui-ux-pro-max-2026-09-01.md` (the `/ui-ux-pro-max` master prompt for the **final** pass).
+- **Localization contract:** [`docs/i18n/CONTRACT.md`](../i18n/CONTRACT.md)
+- **Independent-review TODO:** [`docs/implementation/ui-ux-arabic-critical-todo.md`](../implementation/ui-ux-arabic-critical-todo.md)
 - **Branch:** `feat/ui-ux-arabic-2026-09-01`
 - **Companion ADR:** [`docs/decisions/0009-user-interface-locale.md`](../decisions/0009-user-interface-locale.md)
 - **Previous passes:**
@@ -11,7 +12,7 @@
 
 ## Scope
 
-- 65 page routes, 6 layout files, 8 loading files, 6 error files, 1 not-found.
+- 65 page routes, 6 layout files, 8 loading files, 6 error files, 2 not-found boundaries.
 - All authentication / invitation / setup / recovery surfaces.
 - Public surfaces (landing, privacy, terms, data-deletion).
 - Agency-admin, workspace-manager, client-reviewer, and platform-admin consoles.
@@ -27,6 +28,16 @@
 | `Implemented`  | The proposed change has landed in code on the `feat/ui-ux-arabic-2026-09-01` branch.              |
 | `Tested`       | The change passes the focused unit + bilingual E2E + axe + visual subset.                         |
 | `Verified`     | Independent review has accepted the change. Only the independent reviewer can move to `Verified`. |
+
+## Independent-review status — blockers open
+
+The phase table below is an implementation history, not a release
+verdict. Independent browser and migration review found open P0/P1
+failures after the recorded baseline verification. The authoritative
+handoff and acceptance criteria are in
+`docs/implementation/ui-ux-arabic-critical-todo.md`. No phase may be
+promoted to `Tested` or `Verified` until that TODO is closed and the
+required evidence is rerun against the exact clean HEAD.
 
 Severity definitions from the master prompt:
 
@@ -189,7 +200,7 @@ and verified against the route-boundary files:
 | `layout.tsx`    |     6 | `src/app/layout.tsx`, `src/app/(app)/layout.tsx`, `src/app/(app)/app/layout.tsx`, `src/app/(app)/app/w/[slug]/layout.tsx`, `src/app/signin/layout.tsx`, `src/app/setup/layout.tsx` |
 | `loading.tsx`   |     8 | enumerated below                                                                                                                                                                   |
 | `error.tsx`     |     6 | enumerated below                                                                                                                                                                   |
-| `not-found.tsx` |     1 | `src/app/not-found.tsx`                                                                                                                                                            |
+| `not-found.tsx` |     2 | `src/app/not-found.tsx`, `src/app/(app)/not-found.tsx`                                                                                                                             |
 
 > Each route-boundary file is treated as a single audit row; the
 > matrix above is regenerated alongside the per-page rows in
@@ -207,10 +218,10 @@ production surfaces — the per-page audit is the next phase.
   helpers (`getPublicLocale`, `setPublicLocale`,
   `clearPublicLocale`). HttpOnly, SameSite=Lax, Secure-in-prod,
   365-day lifetime, validated against `SUPPORTED_LOCALES`.
-- `src/lib/i18n/resolve-active-locale.ts` — server-side resolver
-  with the locked precedence: user profile → public cookie →
-  active agency → English fallback. Memoized per request.
-- `src/lib/i18n/format-arabic.ts` — Arabic number / percentage /
+- `src/lib/i18n/resolve-active-locale.ts` — server-side interface
+  resolver with the locked precedence: user profile → public cookie →
+  English fallback. Agency locale is resolved separately for content.
+- `src/lib/i18n/format-locale.ts` — Arabic number / percentage /
   date / time formatters built on `Intl` with
   `numberingSystem: "latn"`. Pure, no DOM.
 - `src/app/layout.tsx` — `<html lang dir>` now reads from
@@ -238,7 +249,8 @@ production surfaces — the per-page audit is the next phase.
   `src/app/(landing)/public-locale-actions.ts`.
 - `src/messages/{en,ar}/common.json` — `Common` and
   `Navigation` namespace seed. Both files share the same key
-  set; missing-key tests fail `tsc` and the test suite.
+  set; catalog tests catch parity problems. The transitional loader
+  accepts string keys, so missing keys do not yet fail `tsc`.
 - `tests/unit/i18n/cookie.test.ts` — cookie attribute + invalid
   value + delete behavior.
 - `tests/unit/i18n/resolve-active-locale.test.ts` — full
@@ -246,7 +258,7 @@ production surfaces — the per-page audit is the next phase.
   value fallbacks, and English-when-everything-is-bad.
 - `tests/unit/i18n/catalogs.test.ts` — en vs ar identical key
   structure, ICU variable parity, plural parameter parity.
-- `tests/unit/i18n/format-arabic.test.ts` — Western-digit Arabic
+- `tests/unit/i18n/format-locale.test.ts` — Western-digit Arabic
   formatting, timezone respected, mixed string does not throw.
 
 ### What this commit does **not** do
@@ -271,7 +283,7 @@ production surfaces — the per-page audit is the next phase.
   server with a fresh DB and switching the profile to `ar`
   flips the root `lang`/`dir`/font on the next navigation.
 
-## Final verification (ca65eea → bd252e8)
+## Baseline verification (ca65eea → bd252e8; superseded)
 
 Full `pnpm verify` pass on the branch tip:
 
@@ -281,5 +293,10 @@ Full `pnpm verify` pass on the branch tip:
 - `pnpm test:unit` — 2962/2962 passing (4 todo)
 - `pnpm build` — clean (every route in the inventory compiles)
 
-All five gates green. Independent review (master prompt §22
-`Verified` status) is the documented next gate.
+These five baseline gates were green for the recorded range, but they
+did not run migration, authenticated browser, accessibility, or visual
+proof. Independent review subsequently reproduced a broken migration,
+an account-page RSC crash, inconsistent authenticated locale switching,
+English-only client error recovery, and unreachable localized-email
+logic. Follow `docs/implementation/ui-ux-arabic-critical-todo.md`; rerun
+all required gates at the final clean HEAD before requesting `Verified`.

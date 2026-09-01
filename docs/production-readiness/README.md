@@ -10,6 +10,9 @@ This directory contains evidence, not optimistic progress notes. The authoritati
 4. A screenshot proves presentation only; pair it with behavioral and authorization tests.
 5. A build proves compilation only; pair it with domain, database and browser tests.
 6. External checks that cannot be automated must name the operator and date.
+7. Evidence belongs to one exact clean commit SHA. If that SHA changes or the worktree becomes dirty, rerun every affected gate before reusing the result.
+8. Database changes require registered migration metadata plus successful from-zero and supported-upgrade drills; `pnpm verify` is not migration evidence.
+9. A localized UI route reaches `Tested` only with English/LTR and Arabic/RTL browser, accessibility, and responsive/visual evidence. Catalog parity or `<html dir>` alone is insufficient.
 
 Documents:
 
