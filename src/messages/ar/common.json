@@ -74,6 +74,18 @@
     "englishLabel": "English",
     "arabicLabel": "العربية"
   },
+  "reviews": {
+    "title": "الموافقات",
+    "pending": "قيد الانتظار",
+    "overdue": "متأخر",
+    "onTime": "في الوقت",
+    "decisionWaitingOne": "{count} قرار بانتظارك.",
+    "decisionWaitingMany": "{count} قرارات بانتظارك.",
+    "emptyAllCaughtUpTitle": "أنت على اطلاع بكل شيء",
+    "emptyAllCaughtUpDescription": "ستظهر طلبات مراجعة المحتوى والإبداع الجديدة هنا.",
+    "emptyFilterTitle": "لا توجد عناصر تطابق هذا التصفية",
+    "emptyFilterDescription": "حاول مسح التصفية لرؤية جميع المراجعات التي بانتظارك."
+  },
   "sidebar": {
     "createContent": "إنشاء محتوى",
     "sidebarAriaLabel": "الرئيسية",

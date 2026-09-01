@@ -74,6 +74,18 @@
     "englishLabel": "English",
     "arabicLabel": "العربية"
   },
+  "reviews": {
+    "title": "Approvals",
+    "pending": "Pending",
+    "overdue": "Overdue",
+    "onTime": "On time",
+    "decisionWaitingOne": "{count} decision waiting for you.",
+    "decisionWaitingMany": "{count} decisions waiting for you.",
+    "emptyAllCaughtUpTitle": "You're all caught up",
+    "emptyAllCaughtUpDescription": "New content and creative review requests will appear here.",
+    "emptyFilterTitle": "No items match this filter",
+    "emptyFilterDescription": "Try clearing the filter to see all reviews waiting for you."
+  },
   "sidebar": {
     "createContent": "Create content",
     "sidebarAriaLabel": "Primary",

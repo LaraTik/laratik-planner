@@ -6,6 +6,7 @@ import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import { approvalRequests, contentItems } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Card } from "@/components/ui/card";
 import { KpiTile } from "@/components/workspace/kpi-tile";
@@ -23,6 +24,7 @@ export default async function ReviewsQueuePage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ gate?: string; sort?: string }>;
 }) {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -79,10 +81,12 @@ export default async function ReviewsQueuePage({
     <div className="space-y-6" data-testid="reviews-kpi-row">
       <PageHeader
         eyebrow={workspace.name}
-        title="Approvals"
+        title={t("reviews.title")}
         description={
           <>
-            {sortedRows.length} decision{sortedRows.length === 1 ? "" : "s"} waiting for you.
+            {sortedRows.length === 1
+              ? t("reviews.decisionWaitingOne", { count: sortedRows.length })
+              : t("reviews.decisionWaitingMany", { count: sortedRows.length })}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
@@ -94,18 +98,18 @@ export default async function ReviewsQueuePage({
       <section aria-label="Reviews KPIs" className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <KpiTile
           icon={<Inbox className="h-3.5 w-3.5" aria-hidden="true" />}
-          label="Pending"
+          label={t("reviews.pending")}
           value={sortedRows.length}
         />
         <KpiTile
           icon={<Calendar className="h-3.5 w-3.5" aria-hidden="true" />}
-          label="Overdue"
+          label={t("reviews.overdue")}
           value={overdueCount}
           tone={overdueCount > 0 ? "danger" : "default"}
         />
         <KpiTile
           icon={<Clock className="h-3.5 w-3.5" aria-hidden="true" />}
-          label="On time"
+          label={t("reviews.onTime")}
           value={sortedRows.length - overdueCount}
         />
       </section>
@@ -145,11 +149,11 @@ export default async function ReviewsQueuePage({
         <Card variant="dashed" padding="lg">
           <EmptyState
             icon={<Inbox className="h-8 w-8" />}
-            title={activeGate ? "No items match this filter" : "You're all caught up"}
+            title={activeGate ? t("reviews.emptyFilterTitle") : t("reviews.emptyAllCaughtUpTitle")}
             description={
               activeGate
-                ? "Try clearing the filter to see all reviews waiting for you."
-                : "New content and creative review requests will appear here."
+                ? t("reviews.emptyFilterDescription")
+                : t("reviews.emptyAllCaughtUpDescription")
             }
           />
         </Card>
