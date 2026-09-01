@@ -7,8 +7,22 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { MonthNav } from "@/components/workspace/month-nav";
 import { CalendarEventCard } from "@/components/workspace/calendar-event-card";
 import { cn } from "@/lib/utils";
+import { tForActive } from "@/lib/i18n/t-for-active";
+import type { LocaleCode } from "@/lib/i18n/locales";
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+/**
+ * Build the locale-aware weekday headers for the calendar
+ * grid. `Intl.DateTimeFormat` with `weekday: "short"` returns
+ * the abbreviated day name in the active locale. We anchor
+ * the array to Sunday so the grid layout (Sun → Sat) is
+ * stable across locales; the *labels* are the ones that
+ * change between English and Arabic.
+ */
+function buildWeekdays(code: LocaleCode): readonly string[] {
+  const fmt = new Intl.DateTimeFormat(code, { weekday: "short" });
+  // Index 0 = Sunday through index 6 = Saturday.
+  return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2024, 0, 7 + i)));
+}
 
 export default async function EditorialCalendarPage({
   params,
@@ -17,6 +31,8 @@ export default async function EditorialCalendarPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ month?: string }>;
 }) {
+  const { t, code, dir } = await tForActive();
+  const weekdays = buildWeekdays(code as LocaleCode);
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -46,15 +62,31 @@ export default async function EditorialCalendarPage({
     a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate();
+  // Locale-aware date / weekday formatters. The mobile
+  // agenda uses the abbreviated day + month form; the
+  // grid's "Today" badge uses the long weekday + month
+  // + day form. Both follow the active `dir` so Arabic
+  // dates render Arabic script + Western `0–9` digits.
+  const bcp47 = dir === "rtl" ? "ar" : "en";
+  const agendaDateFmt = new Intl.DateTimeFormat(bcp47, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const todayLongFmt = new Intl.DateTimeFormat(bcp47, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 
   return (
     <div className="space-y-6" data-testid="workspace-calendar">
       <PageHeader
         eyebrow={workspace.name}
-        title="Editorial calendar"
+        title={t("calendar.title")}
         description={
           <>
-            Planned publish dates in the workspace timezone.
+            {t("calendar.description")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
@@ -66,10 +98,10 @@ export default async function EditorialCalendarPage({
         }
       />
 
-      <section className="space-y-2 md:hidden" aria-label="Calendar agenda">
+      <section className="space-y-2 md:hidden" aria-label={t("calendar.agendaAriaLabel")}>
         {items.length === 0 ? (
           <div className="border-border bg-surface text-body text-fg-secondary rounded-[var(--radius-card)] border p-4">
-            Nothing is scheduled for this month.
+            {t("calendar.emptyMonth")}
           </div>
         ) : (
           items.map((item) => {
@@ -84,11 +116,7 @@ export default async function EditorialCalendarPage({
                   {...(isTodayItem ? { "aria-current": "date" as const } : {})}
                   className="text-label text-fg-secondary font-semibold"
                 >
-                  {item.plannedPublishAt.toLocaleDateString("en-US", {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                  })}
+                  {agendaDateFmt.format(item.plannedPublishAt)}
                 </time>
                 <CalendarEventCard
                   id={item.id}
@@ -105,7 +133,7 @@ export default async function EditorialCalendarPage({
 
       <div className="border-border bg-surface hidden overflow-x-auto rounded-[var(--radius-card)] border md:block">
         <div className="grid min-w-[760px] grid-cols-7">
-          {WEEKDAYS.map((day) => (
+          {weekdays.map((day) => (
             <div
               key={day}
               className="border-border text-label text-fg-muted border-b p-3 font-semibold"
@@ -150,10 +178,12 @@ export default async function EditorialCalendarPage({
                     // indigo `bg-primary` (#4f46e5) only reaches 2.58:1
                     // — fails WCAG AA. White-on-indigo is 5.85:1.
                     <span
-                      aria-label={`Today, ${cellDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}`}
+                      aria-label={t("calendar.todayAriaLabel", {
+                        date: todayLongFmt.format(cellDate),
+                      })}
                       className="text-label bg-primary rounded-full px-1.5 font-semibold text-white"
                     >
-                      Today
+                      {t("calendar.today")}
                     </span>
                   ) : null}
                 </div>

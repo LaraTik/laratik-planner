@@ -202,6 +202,14 @@
     "columnReady": "Ready",
     "columnPublished": "Published"
   },
+  "calendar": {
+    "title": "Editorial calendar",
+    "description": "Planned publish dates in the workspace timezone.",
+    "agendaAriaLabel": "Calendar agenda",
+    "emptyMonth": "Nothing is scheduled for this month.",
+    "today": "Today",
+    "todayAriaLabel": "Today, {date}"
+  },
   "auth": {
     "appName": "laratik-planner",
     "productName": "StudioFlow",

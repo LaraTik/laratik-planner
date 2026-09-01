@@ -202,6 +202,14 @@
     "columnReady": "جاهز",
     "columnPublished": "منشور"
   },
+  "calendar": {
+    "title": "التقويم التحريري",
+    "description": "تواريخ النشر المُخطّطة في المنطقة الزمنية لمساحة العمل.",
+    "agendaAriaLabel": "أجندة التقويم",
+    "emptyMonth": "لا يوجد شيء مُجدول لهذا الشهر.",
+    "today": "اليوم",
+    "todayAriaLabel": "اليوم، {date}"
+  },
   "auth": {
     "appName": "laratik-planner",
     "productName": "StudioFlow",
