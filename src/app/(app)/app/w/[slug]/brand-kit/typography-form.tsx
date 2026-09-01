@@ -40,16 +40,39 @@ import {
  */
 
 type FontRole = "headline" | "body" | "accent" | "mono";
-const ROLES: { value: FontRole; label: string }[] = [
-  { value: "headline", label: "Headline" },
-  { value: "body", label: "Body" },
-  { value: "accent", label: "Accent" },
-  { value: "mono", label: "Mono" },
-];
+const ROLE_KEY: Record<FontRole, string> = {
+  headline: "users.typographyForm.roleHeadline",
+  body: "users.typographyForm.roleBody",
+  accent: "users.typographyForm.roleAccent",
+  mono: "users.typographyForm.roleMono",
+};
+const ROLE_FALLBACK: Record<FontRole, string> = {
+  headline: "Headline",
+  body: "Body",
+  accent: "Accent",
+  mono: "Mono",
+};
 
 const SAMPLE_TEXT = "The quick brown fox jumps over the lazy dog";
 
-export function TypographyForm({ slug }: { slug: string }) {
+export function TypographyForm({
+  slug,
+  t,
+}: {
+  slug: string;
+  /**
+   * Optional translator. When provided, every user-visible string
+   * (4 form field labels, the family hint, the 4 role options, the
+   * 2 placeholders, the family aria-label, the live preview
+   * aria-label + 'Preview — {family} {weight} ({role})' label,
+   * the submit button + pending label) renders from
+   * `users.typographyForm.*`; when omitted, the stored English
+   * copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   const [state, action] = useActionState(
     createFontAssetAction.bind(null, slug),
     {} as { error?: string; success?: boolean },
@@ -68,32 +91,45 @@ export function TypographyForm({ slug }: { slug: string }) {
   return (
     <Card padding="md" className="mb-3">
       <form ref={formRef} action={action} className="grid gap-3">
-        <FormField id="typography-name" label="Name" required>
+        <FormField
+          id="typography-name"
+          label={tr("users.typographyForm.nameLabel", "Name")}
+          required
+        >
           <CharacterCountInput
             id="typography-name"
             className="mt-0"
             name="name"
             maxLength={80}
-            placeholder="Heading, Body, Mono caption…"
+            placeholder={tr("users.typographyForm.namePlaceholder", "Heading, Body, Mono caption…")}
           />
         </FormField>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <FormField id="typography-family" label="Family" required hint="Catalog + free-text">
+          <FormField
+            id="typography-family"
+            label={tr("users.typographyForm.familyLabel", "Family")}
+            required
+            hint={tr("users.typographyForm.familyHint", "Catalog + free-text")}
+          >
             <Combobox
               value={family}
               onChange={setFamily}
               name="family"
               options={TYPOGRAPHY_OPTIONS}
-              placeholder="Pick a family…"
-              ariaLabel="Typography family"
+              placeholder={tr("users.typographyForm.familyPlaceholder", "Pick a family…")}
+              ariaLabel={tr("users.typographyForm.familyAria", "Typography family")}
               triggerTestId="typography-family-input"
               inputTestId="typography-family-search"
               allowCustom
             />
           </FormField>
 
-          <FormField id="typography-weight" label="Weight" required>
+          <FormField
+            id="typography-weight"
+            label={tr("users.typographyForm.weightLabel", "Weight")}
+            required
+          >
             <input
               id="typography-weight"
               type="number"
@@ -109,7 +145,11 @@ export function TypographyForm({ slug }: { slug: string }) {
             />
           </FormField>
 
-          <FormField id="typography-role" label="Role" required>
+          <FormField
+            id="typography-role"
+            label={tr("users.typographyForm.roleLabel", "Role")}
+            required
+          >
             <select
               id="typography-role"
               name="role"
@@ -119,9 +159,9 @@ export function TypographyForm({ slug }: { slug: string }) {
               data-testid="typography-role-input"
               className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-10 w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
             >
-              {ROLES.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
+              {(Object.keys(ROLE_KEY) as FontRole[]).map((value) => (
+                <option key={value} value={value}>
+                  {tr(ROLE_KEY[value], ROLE_FALLBACK[value])}
                 </option>
               ))}
             </select>
@@ -130,12 +170,16 @@ export function TypographyForm({ slug }: { slug: string }) {
 
         <div
           className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
-          aria-label="Live preview"
+          aria-label={tr("users.typographyForm.previewAria", "Live preview")}
           data-testid="typography-preview"
         >
           <p className="text-label text-fg-muted mb-1 inline-flex items-center gap-1 font-semibold">
             <TypeIcon className="h-3 w-3" aria-hidden="true" />
-            Preview — {family} {weight} ({role})
+            {tr("users.typographyForm.previewLabel", `Preview — ${family} ${weight} (${role})`, {
+              family,
+              weight,
+              role: tr(ROLE_KEY[role], ROLE_FALLBACK[role]),
+            })}
           </p>
           <p
             className={fontClass ?? undefined}
@@ -151,7 +195,7 @@ export function TypographyForm({ slug }: { slug: string }) {
         </div>
 
         <div className="flex items-center justify-end">
-          <SubmitButton />
+          <SubmitButton {...(t ? { t } : {})} />
         </div>
         {state?.error ? (
           <p role="alert" className="text-label text-danger font-semibold">
@@ -163,8 +207,13 @@ export function TypographyForm({ slug }: { slug: string }) {
   );
 }
 
-function SubmitButton() {
+function SubmitButton({
+  t,
+}: {
+  t?: (key: string, params?: Record<string, string | number>) => string;
+}) {
   const { pending } = useFormStatus();
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   return (
     <Button
       type="submit"
@@ -174,7 +223,9 @@ function SubmitButton() {
       aria-busy={pending || undefined}
       data-testid="typography-submit"
     >
-      {pending ? "Adding…" : "Add font"}
+      {pending
+        ? tr("users.typographyForm.adding", "Adding…")
+        : tr("users.typographyForm.addFont", "Add font")}
     </Button>
   );
 }

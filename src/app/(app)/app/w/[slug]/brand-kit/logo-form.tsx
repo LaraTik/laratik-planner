@@ -84,7 +84,25 @@ async function uploadFile(args: {
   return (await putRes.json()) as { storagePath: string; fileId: string; size: number };
 }
 
-export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: string }) {
+export function LogoForm({
+  slug,
+  workspaceId,
+  t,
+}: {
+  slug: string;
+  workspaceId: string;
+  /**
+   * Optional translator. When provided, every user-visible string
+   * (fieldset aria-label, the two mode buttons, the file/url
+   * labels + hints + placeholders, the upload status, the logo
+   * name label + placeholder, the submit button + pending label)
+   * renders from `users.logoForm.*`; when omitted, the stored
+   * English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   const [state, action] = useActionState(
     createLogoAssetAction.bind(null, slug),
     {} as { error?: string; success?: boolean },
@@ -142,21 +160,24 @@ export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: str
   return (
     <Card padding="md" className="mb-3">
       <form ref={formRef} action={action} className="grid gap-3">
-        <fieldset className="flex flex-wrap items-center gap-2" aria-label="Logo source">
-          <legend className="sr-only">Logo source</legend>
+        <fieldset
+          className="flex flex-wrap items-center gap-2"
+          aria-label={tr("users.logoForm.sourceAria", "Logo source")}
+        >
+          <legend className="sr-only">{tr("users.logoForm.sourceLegend", "Logo source")}</legend>
           <ModeButton
             current={mode}
             value="upload"
             onClick={() => onModeChange("upload")}
             icon={<Upload className="h-4 w-4" aria-hidden="true" />}
-            label="Upload"
+            label={tr("users.logoForm.uploadMode", "Upload")}
           />
           <ModeButton
             current={mode}
             value="url"
             onClick={() => onModeChange("url")}
             icon={<LinkIcon className="h-4 w-4" aria-hidden="true" />}
-            label="External URL"
+            label={tr("users.logoForm.urlMode", "External URL")}
           />
         </fieldset>
 
@@ -164,8 +185,8 @@ export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: str
           <div className="grid gap-2">
             <FormField
               id="logo-file"
-              label="Logo file"
-              hint="PNG, JPG, SVG, WebP, or GIF up to 10 MB."
+              label={tr("users.logoForm.fileLabel", "Logo file")}
+              hint={tr("users.logoForm.fileHint", "PNG, JPG, SVG, WebP, or GIF up to 10 MB.")}
               required
               className="border-border bg-surface-subtle rounded-[var(--radius-control)] border-2 border-dashed p-3"
             >
@@ -183,13 +204,18 @@ export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: str
             </FormField>
             <div id="logo-file-status" className="text-label text-fg-muted" aria-live="polite">
               {uploading ? (
-                <span>Uploading…</span>
+                <span>{tr("users.logoForm.uploading", "Uploading…")}</span>
               ) : file ? (
                 <span>
-                  {file.name} ({formatBytes(file.size)})
+                  {tr("users.logoForm.fileSize", `${file.name} (${formatBytes(file.size)})`, {
+                    name: file.name,
+                    size: formatBytes(file.size),
+                  })}
                 </span>
               ) : (
-                <span>PNG, JPG, SVG, WebP, or GIF up to 10 MB.</span>
+                <span>
+                  {tr("users.logoForm.fileHint", "PNG, JPG, SVG, WebP, or GIF up to 10 MB.")}
+                </span>
               )}
             </div>
             {previewUrl ? (
@@ -217,7 +243,11 @@ export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: str
             />
           </div>
         ) : (
-          <FormField id="logo-external-url" label="HTTPS URL" required>
+          <FormField
+            id="logo-external-url"
+            label={tr("users.logoForm.urlLabel", "HTTPS URL")}
+            required
+          >
             <Input
               id="logo-external-url"
               className="mt-0"
@@ -225,7 +255,7 @@ export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: str
               name="externalUrl"
               value={urlValue}
               onChange={(e) => setUrlValue(e.target.value)}
-              placeholder="https://cdn.example.com/logo.svg"
+              placeholder={tr("users.logoForm.urlPlaceholder", "https://cdn.example.com/logo.svg")}
               // Tighter pattern (Round 5): the old https://.* matched
               // 'https:// ' (whitespace) and 'https://-invalid'. The
               // new pattern enforces https:// + a domain-like host.
@@ -238,18 +268,23 @@ export function LogoForm({ slug, workspaceId }: { slug: string; workspaceId: str
           </FormField>
         )}
 
-        <FormField id="logo-name" label="Logo name" required>
+        <FormField id="logo-name" label={tr("users.logoForm.nameLabel", "Logo name")} required>
           <CharacterCountInput
             id="logo-name"
             className="mt-0"
             name="name"
             maxLength={120}
-            placeholder="Wordmark, Icon, Dark variant…"
+            placeholder={tr("users.logoForm.namePlaceholder", "Wordmark, Icon, Dark variant…")}
           />
         </FormField>
 
         <div className="flex items-center justify-end">
-          <SubmitButton mode={mode} uploaded={!!uploadedPath} uploading={uploading} />
+          <SubmitButton
+            mode={mode}
+            uploaded={!!uploadedPath}
+            uploading={uploading}
+            {...(t ? { t } : {})}
+          />
         </div>
         {state?.error ? (
           <p role="alert" className="text-label text-danger font-semibold">
@@ -301,12 +336,15 @@ function SubmitButton({
   mode,
   uploaded,
   uploading,
+  t,
 }: {
   mode: Mode;
   uploaded: boolean;
   uploading: boolean;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const { pending } = useFormStatus();
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const uploadIncomplete = mode === "upload" && (!uploaded || uploading);
   const disabled = pending || uploadIncomplete;
   return (
@@ -318,7 +356,7 @@ function SubmitButton({
       aria-busy={pending || undefined}
       data-testid="logo-submit"
     >
-      {pending ? "Adding…" : "Add logo"}
+      {pending ? tr("users.logoForm.adding", "Adding…") : tr("users.logoForm.addLogo", "Add logo")}
     </Button>
   );
 }

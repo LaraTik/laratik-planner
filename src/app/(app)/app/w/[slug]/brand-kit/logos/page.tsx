@@ -70,7 +70,7 @@ export default async function BrandKitLogosPage({ params }: { params: Promise<{ 
         aria-label={t("brandKit.logosAria")}
         data-testid="brand-kit-section-logos"
       >
-        {canManage ? <LogoForm slug={slug} workspaceId={workspace.id} /> : null}
+        {canManage ? <LogoForm slug={slug} workspaceId={workspace.id} t={t} /> : null}
         <LogoGrid slug={slug} canManage={canManage} assets={logos} t={t} />
       </SectionCard>
     </div>

@@ -90,7 +90,7 @@ export default async function BrandKitTypographyPage({
         aria-label={t("brandKit.typographyAria")}
         data-testid="brand-kit-section-typography"
       >
-        {canManage ? <TypographyForm slug={slug} /> : null}
+        {canManage ? <TypographyForm slug={slug} t={t} /> : null}
         <TypographyCards slug={slug} canManage={canManage} assets={fonts} t={t} />
       </SectionCard>
     </div>

@@ -33,20 +33,30 @@ import { CharacterCountInput } from "@/components/workspace/character-count-inpu
  */
 type ColorRole = "primary" | "secondary" | "accent" | "neutral";
 
-const COLOR_ROLES: { value: ColorRole; label: string; description: string }[] = [
-  {
-    value: "primary",
-    label: "Primary",
-    description: "The dominant brand colour (CTAs, headlines)",
-  },
-  {
-    value: "secondary",
-    label: "Secondary",
-    description: "A supporting brand colour (sub-heads, badges)",
-  },
-  { value: "accent", label: "Accent", description: "A highlight colour (links, call-outs)" },
-  { value: "neutral", label: "Neutral", description: "Background, surface, and text gray" },
-];
+const ROLE_LABEL_KEY: Record<ColorRole, string> = {
+  primary: "users.colorForm.rolePrimary",
+  secondary: "users.colorForm.roleSecondary",
+  accent: "users.colorForm.roleAccent",
+  neutral: "users.colorForm.roleNeutral",
+};
+const ROLE_LABEL_FALLBACK: Record<ColorRole, string> = {
+  primary: "Primary",
+  secondary: "Secondary",
+  accent: "Accent",
+  neutral: "Neutral",
+};
+const ROLE_DESC_KEY: Record<ColorRole, string> = {
+  primary: "users.colorForm.roleDescPrimary",
+  secondary: "users.colorForm.roleDescSecondary",
+  accent: "users.colorForm.roleDescAccent",
+  neutral: "users.colorForm.roleDescNeutral",
+};
+const ROLE_DESC_FALLBACK: Record<ColorRole, string> = {
+  primary: "The dominant brand colour (CTAs, headlines)",
+  secondary: "A supporting brand colour (sub-heads, badges)",
+  accent: "A highlight colour (links, call-outs)",
+  neutral: "Background, surface, and text gray",
+};
 
 const SHORT_HEX = /^#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])$/;
 const LONG_HEX = /^#[0-9a-fA-F]{6}$/;
@@ -62,7 +72,21 @@ function expandHex(raw: string): string {
   return trimmed.toUpperCase();
 }
 
-export function ColorForm({ slug }: { slug: string }) {
+export function ColorForm({
+  slug,
+  t,
+}: {
+  slug: string;
+  /**
+   * Optional translator. When provided, every user-visible string
+   * (4 form field labels, 4 role labels, 4 role descriptions, the
+   * 2 placeholders, the picker aria-label, the submit button +
+   * pending label) renders from `users.colorForm.*`; when omitted,
+   * the stored English copy is used.
+   */
+  t?: (key: string) => string;
+}) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const [state, action] = useActionState(
     createColorAssetAction.bind(null, slug),
     {} as { error?: string; success?: boolean },
@@ -81,16 +105,16 @@ export function ColorForm({ slug }: { slug: string }) {
   return (
     <Card padding="md" className="mb-3">
       <form ref={formRef} action={action} className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]">
-        <FormField id="color-name" label="Color name" required>
+        <FormField id="color-name" label={tr("users.colorForm.nameLabel", "Color name")} required>
           <CharacterCountInput
             id="color-name"
             name="name"
             maxLength={80}
-            placeholder="Brand blue"
+            placeholder={tr("users.colorForm.namePlaceholder", "Brand blue")}
             className="mt-0"
           />
         </FormField>
-        <FormField id="color-hex" label="Hex" required>
+        <FormField id="color-hex" label={tr("users.colorForm.hexLabel", "Hex")} required>
           <Input
             id="color-hex"
             className="mt-0 font-mono"
@@ -103,21 +127,21 @@ export function ColorForm({ slug }: { slug: string }) {
             value={hex}
             onChange={(e) => setHex(e.target.value)}
             onBlur={onHexBlur}
-            placeholder="#3B82F6"
+            placeholder={tr("users.colorForm.hexPlaceholder", "#3B82F6")}
             maxLength={7}
           />
         </FormField>
-        <FormField id="color-pick" label="Pick">
+        <FormField id="color-pick" label={tr("users.colorForm.pickLabel", "Pick")}>
           <input
             id="color-pick"
             type="color"
             value={hex}
             onChange={(e) => setHex(e.target.value.toUpperCase())}
             className="border-border bg-surface h-10 w-16 cursor-pointer rounded-[var(--radius-control)] border p-1"
-            aria-label="Pick a color"
+            aria-label={tr("users.colorForm.pickAria", "Pick a color")}
           />
         </FormField>
-        <FormField id="color-role" label="Role">
+        <FormField id="color-role" label={tr("users.colorForm.roleLabel", "Role")}>
           <select
             id="color-role"
             name="colorRole"
@@ -127,9 +151,9 @@ export function ColorForm({ slug }: { slug: string }) {
             className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-10 w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
             aria-describedby="color-role-description"
           >
-            {COLOR_ROLES.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
+            {(Object.keys(ROLE_LABEL_KEY) as ColorRole[]).map((value) => (
+              <option key={value} value={value}>
+                {tr(ROLE_LABEL_KEY[value], ROLE_LABEL_FALLBACK[value])}
               </option>
             ))}
           </select>
@@ -139,10 +163,13 @@ export function ColorForm({ slug }: { slug: string }) {
           className="text-label text-fg-muted sm:col-span-4"
           aria-live="polite"
         >
-          {COLOR_ROLES.find((r) => r.value === role)?.description}
+          {tr(ROLE_DESC_KEY[role], ROLE_DESC_FALLBACK[role])}
         </p>
         <div className="flex items-end sm:col-span-4 sm:justify-end">
-          <FormSubmitButton label="Add color" pendingLabel="Adding…" />
+          <FormSubmitButton
+            label={tr("users.colorForm.addColor", "Add color")}
+            pendingLabel={tr("users.colorForm.adding", "Adding…")}
+          />
         </div>
         {state?.error ? (
           <p role="alert" className="text-label text-danger sm:col-span-4">
