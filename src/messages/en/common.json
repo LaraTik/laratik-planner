@@ -411,6 +411,15 @@
         "unknownError": "Unknown error",
         "requestFailed": "Request failed ({status})"
       },
+      "translations": {
+        "label": "Translations",
+        "buttonAria": "{field} translations ({count} added)",
+        "popoverHeader": "Translations · {field}",
+        "emptyState": "No translations yet. Add one when this post will publish in a second language.",
+        "addLanguage": "Add language",
+        "addLanguageAria": "Add another language",
+        "removeAria": "Remove {language} translation"
+      },
       "readOnly": "Read-only — this item is past the editable window.",
       "readOnlyCreative": "Read-only — this item is past changes_requested.",
       "creativeBriefTitle": "{format} content",

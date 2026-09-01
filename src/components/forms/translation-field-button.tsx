@@ -143,13 +143,16 @@ export function TranslationFieldButton({
           type="button"
           size="sm"
           variant="ghost"
-          aria-label={`${fieldKey} translations (${count} added)`}
+          aria-label={t("formatEditor.editor.translations.buttonAria", {
+            field: fieldKey,
+            count,
+          })}
           data-testid={`translation-button-${fieldKey}`}
           data-count={count}
           className="text-label text-fg-secondary"
         >
           <Languages className="h-3.5 w-3.5" aria-hidden="true" />
-          Translations
+          {t("formatEditor.editor.translations.label")}
           {count > 0 ? (
             <Badge variant="info" className="ms-1">
               {count}
@@ -166,16 +169,16 @@ export function TranslationFieldButton({
         <div className="flex items-center justify-between gap-2">
           <p className="text-label text-fg-secondary inline-flex items-center gap-1.5 font-semibold">
             <Languages className="h-3.5 w-3.5" aria-hidden="true" />
-            Translations · {fieldKey}
+            {t("formatEditor.editor.translations.popoverHeader", { field: fieldKey })}
           </p>
           {addableLocales.length > 0 ? (
-            <PopoverAddLocale addable={addableLocales} onAdd={addLocale} />
+            <PopoverAddLocale addable={addableLocales} onAdd={addLocale} t={t} />
           ) : null}
         </div>
 
         {activeLocales.length === 0 ? (
           <p className="text-label text-fg-muted">
-            No translations yet. Add one when this post will publish in a second language.
+            {t("formatEditor.editor.translations.emptyState")}
           </p>
         ) : null}
 
@@ -206,9 +209,11 @@ export function TranslationFieldButton({
 function PopoverAddLocale({
   addable,
   onAdd,
+  t,
 }: {
   addable: ReadonlyArray<LocaleDescriptor>;
   onAdd: (code: LocaleCode) => void;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   // The popover header is too narrow to show every available
   // locale as a button. We collapse them into a single
@@ -223,12 +228,12 @@ function PopoverAddLocale({
           type="button"
           size="sm"
           variant="ghost"
-          aria-label="Add another language"
+          aria-label={t("formatEditor.editor.translations.addLanguageAria")}
           data-testid="translation-add-language"
           className="text-label"
         >
           <Plus className="h-3 w-3" aria-hidden="true" />
-          Add language
+          {t("formatEditor.editor.translations.addLanguage")}
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -300,7 +305,7 @@ function TranslationFieldRow({
           size="sm"
           variant="ghost"
           onClick={onRemove}
-          aria-label={`Remove ${desc.label} translation`}
+          aria-label={t("formatEditor.editor.translations.removeAria", { language: desc.label })}
           className="text-fg-muted hover:text-danger"
         >
           <X className="h-3 w-3" aria-hidden="true" />
