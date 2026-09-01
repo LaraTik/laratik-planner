@@ -2226,7 +2226,8 @@
       "emptyDescription": "Once someone in this workspace creates a draft, it'll show up here.",
       "newContent": "New content",
       "viewAll": "View all →",
-      "lastUpdated": "Last updated {time}"
+      "lastUpdated": "Last updated {time}",
+      "ariaList": "Recently updated content"
     },
     "needsAttention": {
       "title": "Needs attention",
@@ -2240,7 +2241,8 @@
       "deadlineToday": "Due today · {date}",
       "deadlineTomorrow": "Due tomorrow · {date}",
       "deadlineInDays": "Due in {days} days · {date}",
-      "deadlineAbsolute": "Due {date}"
+      "deadlineAbsolute": "Due {date}",
+      "ariaList": "Attention items"
     },
     "deliveryHealth": {
       "title": "Delivery health",

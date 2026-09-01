@@ -2226,7 +2226,8 @@
       "emptyDescription": "بمجرد أن ينشئ أحد في هذه المساحة مسودة، ستظهر هنا.",
       "newContent": "محتوى جديد",
       "viewAll": "عرض الكل ←",
-      "lastUpdated": "آخر تحديث {time}"
+      "lastUpdated": "آخر تحديث {time}",
+      "ariaList": "المحتوى المحدّث مؤخرًا"
     },
     "needsAttention": {
       "title": "يحتاج إلى انتباه",
@@ -2240,7 +2241,8 @@
       "deadlineToday": "مستحق اليوم · {date}",
       "deadlineTomorrow": "مستحق غدًا · {date}",
       "deadlineInDays": "مستحق خلال {days} يوم · {date}",
-      "deadlineAbsolute": "مستحق {date}"
+      "deadlineAbsolute": "مستحق {date}",
+      "ariaList": "العناصر التي تحتاج إلى انتباه"
     },
     "deliveryHealth": {
       "title": "صحة التسليم",

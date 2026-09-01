@@ -155,7 +155,10 @@ export function NeedsAttentionList({
           </div>
         </div>
       ) : (
-        <ul className="divide-border divide-y" aria-label="Attention items">
+        <ul
+          className="divide-border divide-y"
+          aria-label={tr("workspaceOverviewDashboard.needsAttention.ariaList", "Attention items")}
+        >
           {items.map((it) => {
             const date =
               it.plannedPublishAt instanceof Date

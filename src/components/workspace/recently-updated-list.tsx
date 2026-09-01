@@ -99,7 +99,13 @@ export function RecentlyUpdatedList({
           }
         />
       ) : (
-        <ul className="divide-border divide-y" aria-label="Recently updated content">
+        <ul
+          className="divide-border divide-y"
+          aria-label={tr(
+            "workspaceOverviewDashboard.recentlyUpdated.ariaList",
+            "Recently updated content",
+          )}
+        >
           {items.map((it) => {
             // The row's primary date signal is the relative
             // "last touched" stamp ("12m ago", "2h ago", "3d
