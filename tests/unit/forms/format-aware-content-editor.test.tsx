@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { FormatAwareContentEditor } from "@/components/forms/format-aware-content-editor";
+import { tFor } from "@/messages";
 
 vi.mock("@/components/forms/per-field-ai-suggest", () => ({
   PerFieldAiSuggest: () => null,
@@ -16,6 +17,13 @@ vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
  * Strategy / Copy / Creative groups. Each format gets
  * its own section composition; the data model is unchanged.
  *
+ * Phase 5b (2026-09-01): the editor now resolves its
+ * section title / description / field label through the
+ * active message catalog. The tests bind `tFor("en")` so the
+ * assertions lock the English values that the catalog ships
+ * with — a future catalog refactor that drops a key trips
+ * these tests.
+ *
  * These tests pin the structural contract — they don't
  * exercise the per-field renderers (those are covered
  * by `format-payload-editor.test.tsx`).
@@ -30,7 +38,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const t = tFor("en");
 const baseProps = {
+  t,
   workspaceSlug: "acme",
   contentItemId: "ci-1",
   initial: { schemaVersion: 1 as const },

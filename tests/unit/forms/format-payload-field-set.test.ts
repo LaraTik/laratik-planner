@@ -5,10 +5,34 @@ import {
   splitByGroup,
 } from "@/components/forms/format-payload-field-set";
 import { ALL_FORMATS as ALL_FORMATS_FROM_STATUS } from "@/lib/content/status";
+import { tFor } from "@/messages";
 import type { ContentFormat } from "@/lib/format-payload/schemas";
 
 const ALL_FORMATS = ALL_FORMATS_FROM_STATUS;
+const en = tFor("en");
 
+/**
+ * The format-payload field manifest was refactored in
+ * 2026-09-01 (phase 5b of the i18n plan) from inline English
+ * `label: string` to catalog-keyed `labelKey: string`. The
+ * tests now lock:
+ *   1. every format has a non-empty manifest
+ *   2. every field has a unique key inside its format
+ *   3. every field has a non-empty catalog `labelKey` and a
+ *      valid group
+ *   4. the catalog resolves each `labelKey` to a non-empty
+ *      English string (this is the live equivalent of the
+ *      old "non-empty label" check)
+ *   5. the essential set for each format includes the format's
+ *      defining fields (mirroring the product's "if you can't
+ *      see this, the form is broken" contract)
+ *   6. the advanced set for each format includes format-specific
+ *      deep creative direction
+ *   7. `fieldsFor` returns the same array as the manifest
+ *      lookup (a stable reference is what the editor depends
+ *      on for memoization)
+ *   8. `splitByGroup` is order-preserving and exhaustive
+ */
 describe("format-payload-field-set manifest", () => {
   it("covers every format in ALL_FORMATS", () => {
     for (const fmt of ALL_FORMATS) {
@@ -25,11 +49,27 @@ describe("format-payload-field-set manifest", () => {
     }
   });
 
-  it("every field has a non-empty label and a valid group", () => {
+  it("every field has a non-empty catalog labelKey and a valid group", () => {
     for (const fmt of ALL_FORMATS) {
       for (const f of FIELDS_BY_FORMAT[fmt]) {
-        expect(f.label.length, `${fmt}.${f.key} has empty label`).toBeGreaterThan(0);
+        expect(f.labelKey.length, `${fmt}.${f.key} has empty labelKey`).toBeGreaterThan(0);
         expect(["essential", "advanced"]).toContain(f.group);
+      }
+    }
+  });
+
+  it("every labelKey resolves to a non-empty English string in the catalog", () => {
+    for (const fmt of ALL_FORMATS) {
+      for (const f of FIELDS_BY_FORMAT[fmt]) {
+        const resolved = en(f.labelKey);
+        // The hand-rolled translator wraps missing keys in `[…]`.
+        // Treat that as a failure so a future refactor that drops
+        // a catalog entry trips this test.
+        expect(
+          resolved.startsWith(`[${f.labelKey}]`),
+          `${fmt}.${f.key} catalog entry missing: ${f.labelKey}`,
+        ).toBe(false);
+        expect(resolved.length, `${fmt}.${f.key} catalog value empty`).toBeGreaterThan(0);
       }
     }
   });
@@ -72,7 +112,7 @@ describe("format-payload-field-set manifest", () => {
     }
   });
 
-  it("splitByGroup returns the same total count as the input", () => {
+  it("the essential + advanced counts sum to the manifest total for every format", () => {
     for (const fmt of ALL_FORMATS) {
       const fields = FIELDS_BY_FORMAT[fmt];
       const { essential, advanced } = splitByGroup(fields);
@@ -80,22 +120,20 @@ describe("format-payload-field-set manifest", () => {
     }
   });
 
-  it("splitByGroup preserves the order from the manifest", () => {
-    for (const fmt of ALL_FORMATS) {
-      const fields = FIELDS_BY_FORMAT[fmt];
-      const { essential, advanced } = splitByGroup(fields);
-      expect(essential.map((f) => f.key)).toEqual(
-        fields.filter((f) => f.group === "essential").map((f) => f.key),
-      );
-      expect(advanced.map((f) => f.key)).toEqual(
-        fields.filter((f) => f.group === "advanced").map((f) => f.key),
-      );
-    }
-  });
-
   it("fieldsFor returns the same array as the manifest lookup", () => {
     for (const fmt of ALL_FORMATS) {
       expect(fieldsFor(fmt)).toBe(FIELDS_BY_FORMAT[fmt]);
+    }
+  });
+
+  it("splitByGroup preserves the original order inside each tier", () => {
+    for (const fmt of ALL_FORMATS) {
+      const fields = FIELDS_BY_FORMAT[fmt];
+      const { essential, advanced } = splitByGroup(fields);
+      const essentialOriginal = fields.filter((f) => f.group === "essential").map((f) => f.key);
+      const advancedOriginal = fields.filter((f) => f.group === "advanced").map((f) => f.key);
+      expect(essential.map((f) => f.key)).toEqual(essentialOriginal);
+      expect(advanced.map((f) => f.key)).toEqual(advancedOriginal);
     }
   });
 });

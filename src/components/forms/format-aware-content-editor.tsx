@@ -47,6 +47,15 @@ import { humanFormat } from "@/lib/content/status";
  * the full `formatPayload` via the existing server action;
  * the sectioning is purely presentational.
  *
+ * Localization (Phase 5b, 2026-09-01): section titles,
+ * section descriptions, and field labels are resolved
+ * through the active message catalog at render time. The
+ * parent passes a bound translator via the `t` prop. Per-
+ * format description overrides (carousel slide manager,
+ * reel scene manager) live in `descriptionFallback` so the
+ * editor can keep the per-format copy without bloating the
+ * catalog with format-specific keys in v1.
+ *
  * Backwards compatibility: `FormatPayloadEditor` is still
  * exported and the planning detail page's "Creative brief"
  * section continues to work. The new `FormatAwareContentEditor`
@@ -57,6 +66,10 @@ import { humanFormat } from "@/lib/content/status";
 const initial: { error?: string } = {};
 
 export interface FormatAwareContentEditorProps {
+  /** Bound translator from `tForActive()`. Resolves the field's
+   *  `labelKey` and the section's `titleKey` / `descriptionKey`
+   *  through the active message catalog. */
+  t: (key: string, params?: Record<string, string | number>) => string;
   workspaceSlug: string;
   contentItemId: string;
   format: ContentFormat;
@@ -74,8 +87,14 @@ export interface FormatAwareContentEditorProps {
  */
 interface SectionDef {
   id: "strategy" | "copy" | "creative";
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
+  /** Optional per-format description override; falls back to
+   *  the descriptionKey when omitted. The carousel "Slides"
+   *  section uses this for the per-format "Add, reorder…" copy
+   *  that lives outside the catalog for now (a future
+   *  per-format catalog key can promote it). */
+  descriptionFallback?: string;
   icon: React.ComponentType<{ className?: string }>;
   keys: ReadonlyArray<string>;
 }
@@ -84,22 +103,22 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
   static_post: [
     {
       id: "strategy",
-      title: "Strategy",
-      description: "Why are we publishing this post?",
+      titleKey: "formatEditor.sections.strategy.title",
+      descriptionKey: "formatEditor.sections.strategy.description",
       icon: Compass,
       keys: ["objective", "audience", "hook", "mainMessage", "callToAction"],
     },
     {
       id: "copy",
-      title: "Copy",
-      description: "Caption, hashtags, first comment.",
+      titleKey: "formatEditor.sections.copy.title",
+      descriptionKey: "formatEditor.sections.copy.description",
       icon: MessageSquareText,
       keys: ["caption", "hashtags", "firstComment"],
     },
     {
       id: "creative",
-      title: "Creative",
-      description: "Visual direction, references, design notes.",
+      titleKey: "formatEditor.sections.creative.title",
+      descriptionKey: "formatEditor.sections.creative.description",
       icon: Palette,
       keys: ["visualDirection", "visualSlides", "references", "location", "additionalNotes"],
     },
@@ -107,22 +126,23 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
   carousel: [
     {
       id: "strategy",
-      title: "Strategy",
-      description: "Why are we publishing this carousel?",
+      titleKey: "formatEditor.sections.strategy.title",
+      descriptionKey: "formatEditor.sections.strategy.description",
       icon: Compass,
       keys: ["objective", "audience", "hook", "mainMessage", "callToAction"],
     },
     {
       id: "copy",
-      title: "Copy",
-      description: "Post-level caption, hashtags, first comment.",
+      titleKey: "formatEditor.sections.copy.title",
+      descriptionKey: "formatEditor.sections.copy.description",
       icon: MessageSquareText,
       keys: ["caption", "hashtags", "firstComment"],
     },
     {
       id: "creative",
-      title: "Slides",
-      description:
+      titleKey: "formatEditor.sections.creative.title",
+      descriptionKey: "formatEditor.sections.creative.description",
+      descriptionFallback:
         "Add, reorder, and edit each slide. Drag chips or use Alt + ↑ / ↓ to reorder; ⌘D to duplicate.",
       icon: Palette,
       // The slide outline gets first-class treatment; we
@@ -135,22 +155,23 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
   short_form_video: [
     {
       id: "strategy",
-      title: "Strategy",
-      description: "Why are we publishing this Reel?",
+      titleKey: "formatEditor.sections.strategy.title",
+      descriptionKey: "formatEditor.sections.strategy.description",
       icon: Compass,
       keys: ["objective", "audience", "hook", "mainMessage", "callToAction"],
     },
     {
       id: "copy",
-      title: "Copy",
-      description: "Caption, hashtags, first comment.",
+      titleKey: "formatEditor.sections.copy.title",
+      descriptionKey: "formatEditor.sections.copy.description",
       icon: MessageSquareText,
       keys: ["caption", "hashtags", "firstComment"],
     },
     {
       id: "creative",
-      title: "Creative direction",
-      description:
+      titleKey: "formatEditor.sections.creativeDirection.title",
+      descriptionKey: "formatEditor.sections.creativeDirection.description",
+      descriptionFallback:
         "Scenes, cover, on-screen text, voice-over and audio reference. Use Alt + ↑ / ↓ to reorder scenes.",
       icon: Palette,
       keys: [
@@ -174,22 +195,22 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
   story: [
     {
       id: "strategy",
-      title: "Strategy",
-      description: "Why are we publishing this story?",
+      titleKey: "formatEditor.sections.strategy.title",
+      descriptionKey: "formatEditor.sections.strategy.description",
       icon: Compass,
       keys: ["objective", "audience", "hook", "callToAction"],
     },
     {
       id: "copy",
-      title: "Copy",
-      description: "Caption and hashtags.",
+      titleKey: "formatEditor.sections.copy.title",
+      descriptionKey: "formatEditor.sections.copy.description",
       icon: MessageSquareText,
       keys: ["caption", "hashtags"],
     },
     {
       id: "creative",
-      title: "Creative",
-      description: "Visual direction and design notes.",
+      titleKey: "formatEditor.sections.creative.title",
+      descriptionKey: "formatEditor.sections.creative.description",
       icon: Palette,
       keys: ["frameCount", "visualDirection", "additionalNotes"],
     },
@@ -197,22 +218,22 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
   long_form_video: [
     {
       id: "strategy",
-      title: "Strategy",
-      description: "Why are we publishing this long-form video?",
+      titleKey: "formatEditor.sections.strategy.title",
+      descriptionKey: "formatEditor.sections.strategy.description",
       icon: Compass,
       keys: ["objective", "audience", "hook", "mainMessage", "callToAction"],
     },
     {
       id: "copy",
-      title: "Copy",
-      description: "Caption, hashtags, first comment.",
+      titleKey: "formatEditor.sections.copy.title",
+      descriptionKey: "formatEditor.sections.copy.description",
       icon: MessageSquareText,
       keys: ["caption", "hashtags", "firstComment"],
     },
     {
       id: "creative",
-      title: "Creative",
-      description: "Script outline, visual direction, references.",
+      titleKey: "formatEditor.sections.creative.title",
+      descriptionKey: "formatEditor.sections.creative.description",
       icon: Palette,
       keys: [
         "ratio",
@@ -228,22 +249,22 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
   article: [
     {
       id: "strategy",
-      title: "Strategy",
-      description: "Why are we publishing this article?",
+      titleKey: "formatEditor.sections.strategy.title",
+      descriptionKey: "formatEditor.sections.strategy.description",
       icon: Compass,
       keys: ["objective", "audience", "mainMessage", "callToAction"],
     },
     {
       id: "copy",
-      title: "Copy",
-      description: "Title, summary, body.",
+      titleKey: "formatEditor.sections.copy.title",
+      descriptionKey: "formatEditor.sections.copy.description",
       icon: MessageSquareText,
       keys: ["headline", "summary", "body", "hashtags"],
     },
     {
       id: "creative",
-      title: "Creative",
-      description: "Outline, references, design notes.",
+      titleKey: "formatEditor.sections.creative.title",
+      descriptionKey: "formatEditor.sections.creative.description",
       icon: Palette,
       keys: ["outline", "references", "additionalNotes"],
     },
@@ -251,22 +272,22 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
   live_content: [
     {
       id: "strategy",
-      title: "Strategy",
-      description: "Why are we going live?",
+      titleKey: "formatEditor.sections.strategy.title",
+      descriptionKey: "formatEditor.sections.strategy.description",
       icon: Compass,
       keys: ["objective", "audience", "hook", "mainMessage"],
     },
     {
       id: "copy",
-      title: "Copy",
-      description: "Pre / post captions and hashtags.",
+      titleKey: "formatEditor.sections.copy.title",
+      descriptionKey: "formatEditor.sections.copy.description",
       icon: MessageSquareText,
       keys: ["preShowCaption", "postShowCaption", "hashtags"],
     },
     {
       id: "creative",
-      title: "Creative",
-      description: "Run-of-show, guests, references.",
+      titleKey: "formatEditor.sections.creative.title",
+      descriptionKey: "formatEditor.sections.creative.description",
       icon: Palette,
       keys: ["runOfShow", "guests", "expectedDurationSeconds", "references", "additionalNotes"],
     },
@@ -274,22 +295,22 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
   other: [
     {
       id: "strategy",
-      title: "Strategy",
-      description: "Why are we publishing this?",
+      titleKey: "formatEditor.sections.strategy.title",
+      descriptionKey: "formatEditor.sections.strategy.description",
       icon: Compass,
       keys: ["objective", "audience", "mainMessage"],
     },
     {
       id: "copy",
-      title: "Copy",
-      description: "Caption, hashtags.",
+      titleKey: "formatEditor.sections.copy.title",
+      descriptionKey: "formatEditor.sections.copy.description",
       icon: MessageSquareText,
       keys: ["caption", "hashtags"],
     },
     {
       id: "creative",
-      title: "Creative",
-      description: "Visual direction and notes.",
+      titleKey: "formatEditor.sections.creative.title",
+      descriptionKey: "formatEditor.sections.creative.description",
       icon: Palette,
       keys: ["visualDirection", "references", "additionalNotes"],
     },
@@ -297,6 +318,7 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
 };
 
 export function FormatAwareContentEditor({
+  t,
   workspaceSlug,
   contentItemId,
   format,
@@ -340,12 +362,25 @@ export function FormatAwareContentEditor({
   const translations =
     (payload.translations as Record<string, Record<string, unknown>> | undefined) ?? {};
 
+  // Resolve a section description: prefer the per-format
+  // `descriptionFallback` when present, otherwise the
+  // catalog's `descriptionKey`. The fallback is English-only
+  // in v1 (noted limitation; future pass moves per-format
+  // copy to the catalog).
+  function resolveDescription(section: SectionDef): string {
+    if (section.descriptionFallback) return section.descriptionFallback;
+    return t(section.descriptionKey);
+  }
+
   // Render a single field via the existing renderer registry.
   const renderField = (field: FieldDef) => {
     const renderer = rendererFor(field.key);
     return renderer({
       fieldKey: field.key,
-      label: field.label,
+      // Resolve the field's catalog key to a localized label at
+      // the call site. The renderer only sees the resolved string,
+      // so it doesn't need to know about the catalog.
+      label: t(field.labelKey),
       payload,
       translations,
       locale,
@@ -375,7 +410,7 @@ export function FormatAwareContentEditor({
         key={fieldKey}
         fieldKey={fieldKey}
         label={label}
-        hint="Drag chips to reorder, or focus and press Alt + ↑ / ↓. ⌘D duplicates, Delete removes."
+        hint={t("formatEditor.editor.structuredArrayHint")}
         rows={arr}
         columns={columns}
         locale={locale}
@@ -391,10 +426,10 @@ export function FormatAwareContentEditor({
     <Card data-testid="format-aware-content-editor" data-format={format}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <CardTitle>{humanFormat(format)} content</CardTitle>
-          <CardDescription>
-            Strategy, copy, and creative sections. Fields persist via the Save button below.
-          </CardDescription>
+          <CardTitle>
+            {t("formatEditor.editor.creativeBriefTitle", { format: humanFormat(format) })}
+          </CardTitle>
+          <CardDescription>{t("formatEditor.editor.creativeBriefDescription")}</CardDescription>
         </div>
         <span
           className="text-label text-fg-secondary border-border bg-surface-subtle inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-semibold"
@@ -427,9 +462,9 @@ export function FormatAwareContentEditor({
             >
               <header className="mb-3 flex items-baseline gap-2">
                 <Icon className="text-fg-muted h-4 w-4" aria-hidden="true" />
-                <h3 className="text-body text-fg-primary font-semibold">{section.title}</h3>
+                <h3 className="text-body text-fg-primary font-semibold">{t(section.titleKey)}</h3>
               </header>
-              <p className="text-label text-fg-muted mb-3">{section.description}</p>
+              <p className="text-label text-fg-muted mb-3">{resolveDescription(section)}</p>
               <div className="space-y-4">
                 {/* The objective+audience pair is rendered as one
                     composite block via its dedicated renderer. */}
@@ -439,7 +474,7 @@ export function FormatAwareContentEditor({
                       const renderer = rendererFor("objective");
                       return renderer({
                         fieldKey: "objective",
-                        label: "Goal & audience",
+                        label: t("formatEditor.editor.goalAudience"),
                         payload,
                         translations,
                         locale,
@@ -457,11 +492,30 @@ export function FormatAwareContentEditor({
                   if (format === "carousel" && f.key === "slideOutline") {
                     return (
                       <div key={f.key} data-testid={`format-section-${section.id}-${f.key}`}>
-                        {renderStructuredArray("creative", "slideOutline", "Slides", "Slide", [
-                          { key: "position", label: "#", kind: "number" },
-                          { key: "summary", label: "Summary", kind: "text" },
-                          { key: "visual", label: "Visual", kind: "text", optional: true },
-                        ])}
+                        {renderStructuredArray(
+                          "creative",
+                          "slideOutline",
+                          t("formatEditor.editor.structuredArraySlideOutline"),
+                          t("formatEditor.editor.structuredArraySlideEntity"),
+                          [
+                            {
+                              key: "position",
+                              label: t("formatEditor.fields.positionTag"),
+                              kind: "number",
+                            },
+                            {
+                              key: "summary",
+                              label: t("formatEditor.fields.summary"),
+                              kind: "text",
+                            },
+                            {
+                              key: "visual",
+                              label: t("formatEditor.fields.visual"),
+                              kind: "text",
+                              optional: true,
+                            },
+                          ],
+                        )}
                       </div>
                     );
                   }
@@ -469,11 +523,30 @@ export function FormatAwareContentEditor({
                   if (format === "short_form_video" && f.key === "scenes") {
                     return (
                       <div key={f.key} data-testid={`format-section-${section.id}-${f.key}`}>
-                        {renderStructuredArray("creative", "scenes", "Scenes", "Scene", [
-                          { key: "position", label: "#", kind: "number" },
-                          { key: "summary", label: "Summary", kind: "text" },
-                          { key: "durationSeconds", label: "Sec", kind: "number", optional: true },
-                        ])}
+                        {renderStructuredArray(
+                          "creative",
+                          "scenes",
+                          t("formatEditor.editor.structuredArrayScenes"),
+                          t("formatEditor.editor.structuredArraySceneEntity"),
+                          [
+                            {
+                              key: "position",
+                              label: t("formatEditor.fields.scenePosition"),
+                              kind: "number",
+                            },
+                            {
+                              key: "summary",
+                              label: t("formatEditor.fields.summary"),
+                              kind: "text",
+                            },
+                            {
+                              key: "durationSeconds",
+                              label: t("formatEditor.fields.durationSeconds"),
+                              kind: "number",
+                              optional: true,
+                            },
+                          ],
+                        )}
                       </div>
                     );
                   }
@@ -488,7 +561,7 @@ export function FormatAwareContentEditor({
                     className="text-label text-fg-muted"
                     data-testid={`format-section-${section.id}-empty`}
                   >
-                    No fields in this section for {humanFormat(format)}.
+                    {t("formatEditor.editor.emptySection", { format: humanFormat(format) })}
                   </p>
                 ) : null}
               </div>
@@ -507,7 +580,7 @@ export function FormatAwareContentEditor({
             ) : (
               <Save className="h-3.5 w-3.5" aria-hidden="true" />
             )}
-            {pending ? "Saving…" : "Save content details"}
+            {pending ? t("formatEditor.editor.savePending") : t("formatEditor.editor.save")}
           </Button>
           {state?.error ? (
             <p role="alert" className="text-label text-danger">
@@ -518,7 +591,7 @@ export function FormatAwareContentEditor({
       ) : (
         <p className="text-label text-fg-muted mt-3 inline-flex items-center gap-1.5">
           <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-          Read-only — this item is past the editable window.
+          {t("formatEditor.editor.readOnly")}
         </p>
       )}
     </Card>

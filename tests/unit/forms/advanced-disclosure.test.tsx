@@ -3,11 +3,24 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AdvancedDisclosure } from "@/components/forms/advanced-disclosure";
 import { type FieldDef } from "@/components/forms/format-payload-field-set";
+import { tFor } from "@/messages";
+
+/**
+ * The `FieldDef` shape was refactored in 2026-09-01
+ * (phase 5b of the i18n plan) from inline English
+ * `label: string` to catalog-keyed `labelKey: string`. The
+ * tests below bind a `t` translator to resolve each
+ * field's catalog key into the English label so the
+ * assertions still lock the displayed strings without
+ * depending on a hard-coded inline label.
+ */
+const en = tFor("en");
+const resolveLabel = (f: FieldDef) => en(f.labelKey);
 
 const FIELDS: FieldDef[] = [
-  { key: "voiceOverNotes", label: "Voiceover notes", group: "advanced" },
-  { key: "audioReference", label: "Audio reference", group: "advanced" },
-  { key: "coverDirection", label: "Cover direction", group: "advanced" },
+  { key: "voiceOverNotes", labelKey: "formatEditor.fields.voiceOverNotes", group: "advanced" },
+  { key: "audioReference", labelKey: "formatEditor.fields.audioReference", group: "advanced" },
+  { key: "coverDirection", labelKey: "formatEditor.fields.coverDirection", group: "advanced" },
 ];
 
 describe("AdvancedDisclosure", () => {
@@ -26,7 +39,7 @@ describe("AdvancedDisclosure", () => {
         fields={FIELDS}
         format="short_form_video"
         payload={{}}
-        renderField={(f) => <div data-testid={`field-${f.key}`}>{f.label}</div>}
+        renderField={(f) => <div data-testid={`field-${f.key}`}>{resolveLabel(f)}</div>}
       />,
     );
     const disclosure = screen.getByTestId("advanced-disclosure");
@@ -42,7 +55,7 @@ describe("AdvancedDisclosure", () => {
         fields={FIELDS}
         format="short_form_video"
         payload={{}}
-        renderField={(f) => <div data-testid={`field-${f.key}`}>{f.label}</div>}
+        renderField={(f) => <div data-testid={`field-${f.key}`}>{resolveLabel(f)}</div>}
       />,
     );
     expect(screen.queryByTestId("field-voiceOverNotes")).toBeNull();
@@ -55,7 +68,7 @@ describe("AdvancedDisclosure", () => {
         fields={FIELDS}
         format="short_form_video"
         payload={{ voiceOverNotes: "Soft whisper, second beat" }}
-        renderField={(f) => <div data-testid={`field-${f.key}`}>{f.label}</div>}
+        renderField={(f) => <div data-testid={`field-${f.key}`}>{resolveLabel(f)}</div>}
       />,
     );
     // The disclosure is still collapsed, but the populated
@@ -63,7 +76,9 @@ describe("AdvancedDisclosure", () => {
     // existing work.
     expect(screen.getByTestId("advanced-disclosure")).toHaveAttribute("data-open", "false");
     expect(screen.getByTestId("field-voiceOverNotes")).toBeInTheDocument();
-    expect(screen.getByTestId("field-voiceOverNotes")).toHaveTextContent("Voiceover notes");
+    expect(screen.getByTestId("field-voiceOverNotes")).toHaveTextContent(
+      en("formatEditor.fields.voiceOverNotes"),
+    );
     // Empty fields stay hidden.
     expect(screen.queryByTestId("field-audioReference")).toBeNull();
   });
@@ -74,7 +89,7 @@ describe("AdvancedDisclosure", () => {
         fields={FIELDS}
         format="short_form_video"
         payload={{}}
-        renderField={(f) => <div data-testid={`field-${f.key}`}>{f.label}</div>}
+        renderField={(f) => <div data-testid={`field-${f.key}`}>{resolveLabel(f)}</div>}
       />,
     );
     await userEvent.click(screen.getByTestId("advanced-disclosure-show"));
@@ -98,7 +113,7 @@ describe("AdvancedDisclosure", () => {
         fields={FIELDS}
         format="short_form_video"
         payload={{}}
-        renderField={(f) => <div data-testid={`field-${f.key}`}>{f.label}</div>}
+        renderField={(f) => <div data-testid={`field-${f.key}`}>{resolveLabel(f)}</div>}
       />,
     );
     // The disclosure opens automatically when the preference
@@ -113,7 +128,7 @@ describe("AdvancedDisclosure", () => {
         fields={[]}
         format="static_post"
         payload={{}}
-        renderField={(f) => <div>{f.label}</div>}
+        renderField={(f) => <div>{resolveLabel(f)}</div>}
       />,
     );
     expect(container.firstChild).toBeNull();
@@ -129,7 +144,7 @@ describe("AdvancedDisclosure", () => {
           audioReference: [],
           coverDirection: {},
         }}
-        renderField={(f) => <div data-testid={`field-${f.key}`}>{f.label}</div>}
+        renderField={(f) => <div data-testid={`field-${f.key}`}>{resolveLabel(f)}</div>}
       />,
     );
     expect(screen.queryByTestId("field-voiceOverNotes")).toBeNull();

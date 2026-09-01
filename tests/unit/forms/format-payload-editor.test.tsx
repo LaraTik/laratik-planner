@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormatPayloadEditor } from "@/components/forms/format-payload-editor";
+import { tFor } from "@/messages";
 
 vi.mock("@/components/forms/per-field-ai-suggest", () => ({
   PerFieldAiSuggest: () => null,
@@ -10,6 +11,15 @@ vi.mock("@/components/forms/per-field-ai-suggest", () => ({
 vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
   updateFormatPayloadAction: vi.fn(),
 }));
+
+/**
+ * Phase 5b (2026-09-01): the editor now receives a bound
+ * translator via the `t` prop. The tests bind `tFor("en")`
+ * so the assertions lock the English values the catalog
+ * ships with — a future catalog refactor that drops a key
+ * trips these tests.
+ */
+const t = tFor("en");
 
 const STATIC_POST_PAYLOAD = {
   schemaVersion: 1,
@@ -21,6 +31,7 @@ describe("FormatPayloadEditor", () => {
   it("renders the body hidden by default with the right completion count", () => {
     render(
       <FormatPayloadEditor
+        t={t}
         workspaceSlug="acme"
         contentItemId="ci-1"
         format="static_post"
@@ -45,6 +56,7 @@ describe("FormatPayloadEditor", () => {
     const user = userEvent.setup();
     render(
       <FormatPayloadEditor
+        t={t}
         workspaceSlug="acme"
         contentItemId="ci-1"
         format="static_post"
@@ -67,6 +79,7 @@ describe("FormatPayloadEditor", () => {
   it("renders the advanced disclosure with the right count", async () => {
     render(
       <FormatPayloadEditor
+        t={t}
         workspaceSlug="acme"
         contentItemId="ci-1"
         format="static_post"
@@ -91,6 +104,7 @@ describe("FormatPayloadEditor", () => {
   it("renders format-specific essential fields for short_form_video", async () => {
     render(
       <FormatPayloadEditor
+        t={t}
         workspaceSlug="acme"
         contentItemId="ci-1"
         format="short_form_video"
@@ -114,6 +128,7 @@ describe("FormatPayloadEditor", () => {
   it("renders carousel-specific essentials including the slide outline", async () => {
     render(
       <FormatPayloadEditor
+        t={t}
         workspaceSlug="acme"
         contentItemId="ci-1"
         format="carousel"
@@ -132,6 +147,7 @@ describe("FormatPayloadEditor", () => {
   it("does not render a save button when read-only", async () => {
     render(
       <FormatPayloadEditor
+        t={t}
         workspaceSlug="acme"
         contentItemId="ci-1"
         format="static_post"
@@ -149,6 +165,7 @@ describe("FormatPayloadEditor", () => {
   it("shows a read-only notice when read-only", async () => {
     render(
       <FormatPayloadEditor
+        t={t}
         workspaceSlug="acme"
         contentItemId="ci-1"
         format="static_post"

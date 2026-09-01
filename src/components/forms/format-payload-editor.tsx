@@ -43,12 +43,23 @@ import { AdvancedDisclosure } from "./advanced-disclosure";
  *    to the existing "X filled" badge so the planner knows
  *    when they're done with the essentials vs the full set.
  *
+ * Localization (Phase 5b, 2026-09-01): the parent passes a
+ * bound translator via the `t` prop. Field labels resolve
+ * through `field.labelKey`; the editor chrome (title, badge
+ * suffixes, Show / Hide, Save, read-only notice) resolves
+ * through the `formatEditor.editor.*` keys. `splitByGroup`
+ * is the same helper `format-payload-field-set.test.ts` locks.
+ *
  * Save semantics: the editor holds the full `formatPayload`
  * in React state; on save it serialises to JSON, posts via
  * the `updateFormatPayloadAction` server action, and either
  * re-renders on success or surfaces the server error inline.
  */
 export interface FormatPayloadEditorProps {
+  /** Bound translator from `tForActive()`. Resolves the field's
+   *  `labelKey` and the editor's chrome strings through the
+   *  active message catalog. */
+  t: (key: string, params?: Record<string, string | number>) => string;
   workspaceSlug: string;
   contentItemId: string;
   format: ContentFormat;
@@ -61,6 +72,7 @@ export interface FormatPayloadEditorProps {
 const initial: { error?: string } = {};
 
 export function FormatPayloadEditor({
+  t,
   workspaceSlug,
   contentItemId,
   format,
@@ -146,12 +158,14 @@ export function FormatPayloadEditor({
 
   // Render a single field via the registry. The renderer
   // signature is `FieldRendererProps`, defined in
-  // `format-payload-field-renderers.tsx`.
+  // `format-payload-field-renderers.tsx`. The label is
+  // resolved at the call site so the renderer stays
+  // catalog-agnostic.
   const renderField = (field: FieldDef) => {
     const renderer = rendererFor(field.key);
     return renderer({
       fieldKey: field.key,
-      label: field.label,
+      label: t(field.labelKey),
       payload,
       translations,
       locale,
@@ -172,7 +186,7 @@ export function FormatPayloadEditor({
     const renderer = rendererFor("objective");
     return renderer({
       fieldKey: "objective",
-      label: "Objective",
+      label: t("formatEditor.editor.goalAudience"),
       payload,
       translations,
       locale,
@@ -196,28 +210,31 @@ export function FormatPayloadEditor({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <CardTitle>More details</CardTitle>
+            <CardTitle>{t("formatEditor.editor.moreDetails")}</CardTitle>
             <span
               className="text-label text-fg-secondary border-border bg-surface-subtle inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-semibold"
               data-testid="format-payload-completion-total"
-              aria-label={`${totalFilled} of ${fields.length} fields filled`}
+              aria-label={t("formatEditor.editor.totalFilledAria", {
+                filled: totalFilled,
+                total: fields.length,
+              })}
             >
-              {totalFilled} / {fields.length} total filled
+              {totalFilled} / {fields.length} {t("formatEditor.editor.totalFilledSuffix")}
             </span>
             {essential.length > 0 ? (
               <span
                 className="text-label text-fg-secondary border-primary/30 bg-primary-subtle inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-semibold"
                 data-testid="format-payload-completion-essential"
-                aria-label={`${essentialFilled} of ${essential.length} essential fields filled`}
+                aria-label={t("formatEditor.editor.essentialAria", {
+                  filled: essentialFilled,
+                  total: essential.length,
+                })}
               >
-                {essentialFilled} / {essential.length} essential
+                {essentialFilled} / {essential.length} {t("formatEditor.editor.essentialSuffix")}
               </span>
             ) : null}
           </div>
-          <CardDescription>
-            Per-format creative contract — caption, hashtags, scenes, visual direction,
-            translations. Everything is optional.
-          </CardDescription>
+          <CardDescription>{t("formatEditor.editor.moreDetailsSubtitle")}</CardDescription>
         </div>
         <Button
           type="button"
@@ -232,7 +249,7 @@ export function FormatPayloadEditor({
             className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
             aria-hidden="true"
           />
-          {open ? "Hide" : "Show"}
+          {open ? t("formatEditor.editor.hide") : t("formatEditor.editor.show")}
         </Button>
       </div>
 
@@ -245,7 +262,7 @@ export function FormatPayloadEditor({
           {!editable ? (
             <p className="text-label text-fg-muted inline-flex items-center gap-1.5">
               <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
-              Read-only — this item is past <em>changes_requested</em>.
+              {t("formatEditor.editor.readOnlyCreative")}
             </p>
           ) : null}
 
@@ -288,7 +305,9 @@ export function FormatPayloadEditor({
                 ) : (
                   <Save className="h-3.5 w-3.5" aria-hidden="true" />
                 )}
-                {pending ? "Saving…" : "Save creative details"}
+                {pending
+                  ? t("formatEditor.editor.savePending")
+                  : t("formatEditor.editor.saveCreative")}
               </Button>
               {state?.error ? (
                 <p role="alert" className="text-label text-danger">

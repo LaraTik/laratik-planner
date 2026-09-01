@@ -686,6 +686,7 @@ export default async function ContentDetailPage({
                   >
                     <div className="space-y-3">
                       <FormatAwareContentEditor
+                        t={t}
                         workspaceSlug={slug}
                         contentItemId={item.id}
                         format={item.format}
@@ -736,6 +737,7 @@ export default async function ContentDetailPage({
                     description="The per-format fields (caption, hook, scenes, …). AI suggestions are inline per field."
                   >
                     <FormatAwareContentEditor
+                      t={t}
                       workspaceSlug={slug}
                       contentItemId={item.id}
                       format={item.format}
