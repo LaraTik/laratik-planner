@@ -23,7 +23,9 @@
     "arabic": "Arabic",
     "moveUpShortcut": "Move up (Alt+ArrowUp)",
     "moveDownShortcut": "Move down (Alt+ArrowDown)",
-    "duplicateShortcut": "Duplicate (Ctrl/Cmd+D)"
+    "duplicateShortcut": "Duplicate (Ctrl/Cmd+D)",
+    "previousNavAria": "Previous",
+    "nextNavAria": "Next"
   },
   "navigation": {
     "myWork": "My Work",

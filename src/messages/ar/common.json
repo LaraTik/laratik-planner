@@ -23,7 +23,9 @@
     "arabic": "العربية",
     "moveUpShortcut": "نقل للأعلى (Alt+سهم لأعلى)",
     "moveDownShortcut": "نقل للأسفل (Alt+سهم لأسفل)",
-    "duplicateShortcut": "تكرار (Ctrl/Cmd+D)"
+    "duplicateShortcut": "تكرار (Ctrl/Cmd+D)",
+    "previousNavAria": "السابق",
+    "nextNavAria": "التالي"
   },
   "navigation": {
     "myWork": "عملي",

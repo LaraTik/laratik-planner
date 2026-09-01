@@ -416,7 +416,7 @@ export function NavigableArrayField({
                   variant="ghost"
                   onClick={() => setActiveIndex(Math.max(0, activeIndex - 1))}
                   disabled={activeIndex === 0}
-                  aria-label="Previous"
+                  aria-label={tr("common.previousNavAria", "Previous")}
                 >
                   <DirAwareChevronLeft className="h-4 w-4" aria-hidden="true" />
                 </Button>
@@ -426,7 +426,7 @@ export function NavigableArrayField({
                   variant="ghost"
                   onClick={() => setActiveIndex(Math.min(rows.length - 1, activeIndex + 1))}
                   disabled={activeIndex >= rows.length - 1}
-                  aria-label="Next"
+                  aria-label={tr("common.nextNavAria", "Next")}
                 >
                   <DirAwareChevronRight className="h-4 w-4" aria-hidden="true" />
                 </Button>
