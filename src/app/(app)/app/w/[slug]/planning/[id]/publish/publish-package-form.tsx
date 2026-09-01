@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Checkbox as UiCheckbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { ReasonDialog } from "@/components/forms/reason-dialog";
 import {
@@ -778,13 +779,7 @@ function Checkbox({
       className="text-body text-fg-primary flex min-h-11 cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-1"
       data-testid={testId}
     >
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="border-border h-5 w-5 rounded"
-      />
+      <UiCheckbox id={id} checked={checked} onCheckedChange={(next) => onChange(next === true)} />
       <span>{label}</span>
     </label>
   );

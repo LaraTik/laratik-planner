@@ -7,6 +7,7 @@ import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type SignInMethod = "password" | "magic";
 type FormAction = (formData: FormData) => void | Promise<void>;
@@ -118,19 +119,12 @@ export function SignInOptions({
             </div>
           </div>
 
-          <label
-            htmlFor="signin-remember"
-            className="text-label text-fg-secondary flex min-h-11 cursor-pointer items-center gap-2.5"
-          >
-            <input
-              id="signin-remember"
-              name="remember"
-              type="checkbox"
-              value="on"
-              className="border-border text-primary focus-visible:ring-focus-ring bg-surface h-4 w-4 cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-            />
-            {copy.rememberMe}
-          </label>
+          <div className="text-label text-fg-secondary flex min-h-11 items-center gap-2.5">
+            <Checkbox id="signin-remember" name="remember" value="on" className="cursor-pointer" />
+            <label htmlFor="signin-remember" className="cursor-pointer">
+              {copy.rememberMe}
+            </label>
+          </div>
 
           <FormSubmitButton
             label={copy.submit}

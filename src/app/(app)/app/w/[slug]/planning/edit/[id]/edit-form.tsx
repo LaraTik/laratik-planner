@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { updateContentItemAction } from "../../actions";
 
 const initial: { error?: string } = {};
@@ -106,16 +107,17 @@ export function EditIdeaForm({
           <legend className="text-body text-fg-primary font-semibold">Channels</legend>
           <div className="border-border bg-surface grid grid-cols-1 gap-2 rounded-[var(--radius-control)] border p-3 md:grid-cols-2">
             {channels.map((c) => (
-              <label key={c.id} className="text-body text-fg-primary flex items-center gap-2">
-                <input
-                  type="checkbox"
+              <div key={c.id} className="text-body text-fg-primary flex items-center gap-2">
+                <Checkbox
+                  id={`edit-channel-${c.id}`}
                   name="channelIds"
                   value={c.id}
                   defaultChecked={initialValues.channelIds.includes(c.id)}
-                  className="h-4 w-4"
                 />
-                {c.platform} · {c.accountName}
-              </label>
+                <label htmlFor={`edit-channel-${c.id}`} className="cursor-pointer">
+                  {c.platform} · {c.accountName}
+                </label>
+              </div>
             ))}
           </div>
         </fieldset>

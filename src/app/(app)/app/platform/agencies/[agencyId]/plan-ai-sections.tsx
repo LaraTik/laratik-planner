@@ -2,6 +2,7 @@ import { and, eq, gte, isNull, sql } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { db } from "@/lib/db";
 import {
   agencies,
@@ -254,12 +255,12 @@ export async function PlanAiSections({
                   {tr("platform.planAiCeilingLegend")}
                 </legend>
                 {ALL_AI_CAPABILITIES.map((capability) => (
-                  <label
+                  <div
                     key={capability}
                     className="text-label text-fg-secondary inline-flex items-center gap-2"
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
+                      id={`override-capability-${capability}`}
                       name="override_enabled_capabilities"
                       value={capability}
                       defaultChecked={
@@ -267,8 +268,10 @@ export async function PlanAiSections({
                         effective.enabledAiCapabilities.has(capability)
                       }
                     />
-                    {capabilityLabel(capability, tr)}
-                  </label>
+                    <label htmlFor={`override-capability-${capability}`} className="cursor-pointer">
+                      {capabilityLabel(capability, tr)}
+                    </label>
+                  </div>
                 ))}
               </fieldset>
             </details>

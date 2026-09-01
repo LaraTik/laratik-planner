@@ -5,6 +5,7 @@ import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   createSupportAccessRequestFormAction,
   type SupportAccessRequestActionState,
@@ -98,24 +99,34 @@ export function SupportAccessRequestForm({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="border-border text-body text-fg-secondary flex min-h-11 items-start gap-3 rounded-[var(--radius-control)] border p-3">
-          <input type="checkbox" name="scopeMetadataOnly" className="mt-1" />
-          <span>
+        <div className="border-border text-body text-fg-secondary flex min-h-11 items-start gap-3 rounded-[var(--radius-control)] border p-3">
+          <Checkbox
+            id="support-metadata-only"
+            name="scopeMetadataOnly"
+            value="on"
+            className="mt-1"
+          />
+          <label htmlFor="support-metadata-only" className="cursor-pointer">
             <span className="text-fg-primary block font-semibold">
               {tr("platform.supportMetadataTitle")}
             </span>
             {tr("platform.supportMetadataBody")}
-          </span>
-        </label>
-        <label className="border-border text-body text-fg-secondary flex min-h-11 items-start gap-3 rounded-[var(--radius-control)] border p-3">
-          <input type="checkbox" name="downloadsRequested" className="mt-1" />
-          <span>
+          </label>
+        </div>
+        <div className="border-border text-body text-fg-secondary flex min-h-11 items-start gap-3 rounded-[var(--radius-control)] border p-3">
+          <Checkbox
+            id="support-downloads-requested"
+            name="downloadsRequested"
+            value="on"
+            className="mt-1"
+          />
+          <label htmlFor="support-downloads-requested" className="cursor-pointer">
             <span className="text-fg-primary block font-semibold">
               {tr("platform.supportDownloadsTitle")}
             </span>
             {tr("platform.supportDownloadsBody")}
-          </span>
-        </label>
+          </label>
+        </div>
       </div>
 
       <div className="space-y-1.5">

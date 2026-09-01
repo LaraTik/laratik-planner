@@ -6,6 +6,7 @@ import { AlertOctagon, Check, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -174,12 +175,11 @@ export function BulkResetConfirmDialog({
 
           <div className="space-y-1.5">
             <div className="flex items-start gap-3">
-              <input
+              <Checkbox
                 id="bulk-reset-include-published"
-                type="checkbox"
                 checked={includePublished}
-                onChange={(event) => setIncludePublished(event.target.checked)}
-                className="border-border text-danger focus-visible:ring-focus-ring mt-0.5 h-4 w-4 rounded"
+                onCheckedChange={(checked) => setIncludePublished(checked === true)}
+                className="data-[state=checked]:border-danger data-[state=checked]:bg-danger mt-0.5"
                 data-testid="bulk-reset-include-published"
               />
               <div className="space-y-1">

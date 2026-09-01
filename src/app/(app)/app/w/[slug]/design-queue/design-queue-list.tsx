@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckSquare, FileText, Paintbrush, Square, User } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { StatusBadge } from "@/components/content/status-badge";
 import { humanFormat } from "@/lib/content/status";
@@ -117,13 +118,13 @@ export function DesignQueueList({
               data-selected={isSelected ? "true" : "false"}
             >
               {canBulkArchive ? (
-                <input
-                  type="checkbox"
-                  className="absolute start-3 top-3 h-4 w-4 cursor-pointer accent-[var(--color-primary,#4f46e5)]"
+                <Checkbox
+                  id={`design-queue-row-${item.id}`}
+                  className="absolute start-3 top-3 cursor-pointer"
                   aria-label={t("sidebar.designQueuePage.selectItem", { title: item.title })}
                   data-testid="design-queue-row-checkbox"
                   checked={isSelected}
-                  onChange={() => toggleOne(item.id)}
+                  onCheckedChange={() => toggleOne(item.id)}
                 />
               ) : null}
               <div className={canBulkArchive ? "ps-7" : ""}>

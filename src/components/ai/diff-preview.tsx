@@ -23,6 +23,7 @@
 import * as React from "react";
 import { FileText, Sparkles } from "lucide-react";
 import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function DiffPreview({
   before,
@@ -86,26 +87,27 @@ export function DiffPreview({
           ? "No size change."
           : `${lineDelta > 0 ? "+" : ""}${lineDelta} line${Math.abs(lineDelta) === 1 ? "" : "s"}, ${charDelta > 0 ? "+" : ""}${charDelta} character${Math.abs(charDelta) === 1 ? "" : "s"}.`}
       </p>
-      <label
+      <div
         className="border-border bg-warning-soft text-body text-fg-primary flex items-start gap-2 rounded-[var(--radius-control)] border p-3"
         data-testid={`${testIdPrefix}-confirm-row`}
       >
-        <input
+        <Checkbox
           id={id}
-          type="checkbox"
           checked={confirmed}
-          onChange={(e) => onConfirmedChange(e.target.checked)}
-          className="mt-0.5 h-4 w-4 shrink-0"
+          onCheckedChange={(checked) => onConfirmedChange(checked === true)}
+          className="mt-0.5"
           data-testid={`${testIdPrefix}-confirm`}
         />
-        <span className="min-w-0 flex-1">
-          <span className="font-semibold">I understand this will replace the current brief.</span>
+        <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer">
+          <span className="block font-semibold">
+            I understand this will replace the current brief.
+          </span>
           <span className="text-fg-secondary block">
             The previous text is shown above; the new text below. Once you confirm, the new text
             becomes the live brief.
           </span>
-        </span>
-      </label>
+        </label>
+      </div>
     </div>
   );
 }

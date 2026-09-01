@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
 import {
@@ -272,23 +273,26 @@ export function ChannelEditDrawer({
               />
             </div>
 
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id={`edit-active-${channel.id}`}
                 name="isActive"
+                value="on"
                 defaultChecked={channel.isActive}
-                className="border-border text-primary focus-visible:ring-focus-ring h-4 w-4 rounded-[var(--radius-control)] border focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
               />
-              <span className="text-body text-fg-primary font-semibold">
+              <label
+                htmlFor={`edit-active-${channel.id}`}
+                className="text-body text-fg-primary cursor-pointer font-semibold"
+              >
                 {tr("users.channelsEdit.activeLabel", "Active")}
-              </span>
+              </label>
               <span className="text-label text-fg-muted">
                 {tr(
                   "users.channelsEdit.activeHint",
                   "Inactive channels are hidden from new idea targeting.",
                 )}
               </span>
-            </label>
+            </div>
 
             {state?.error ? (
               <p role="alert" className="text-label text-danger font-semibold">

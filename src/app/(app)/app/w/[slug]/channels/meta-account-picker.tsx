@@ -5,6 +5,7 @@ import { Check, ListChecks, X } from "lucide-react";
 import { DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
 import { finalizeMetaSelectionAction, type FinalizeSelectionInput } from "./actions";
 
@@ -160,17 +161,11 @@ export function MetaAccountPicker({
                   className="border-border bg-surface hover:bg-surface-subtle focus-within:ring-primary flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition focus-within:ring-2 focus-within:ring-offset-2"
                   data-testid={`picker-row-${p.providerAccountId}`}
                 >
-                  <input
-                    type="checkbox"
+                  <Checkbox
+                    id={`picker-${p.providerAccountId}`}
                     checked={isSelected}
-                    onChange={() => toggle(p.providerAccountId)}
-                    onKeyDown={(e) => {
-                      if (e.key === " " || e.key === "Enter") {
-                        e.preventDefault();
-                        toggle(p.providerAccountId);
-                      }
-                    }}
-                    className="mt-1 h-4 w-4 cursor-pointer"
+                    onCheckedChange={() => toggle(p.providerAccountId)}
+                    className="mt-1 cursor-pointer"
                     aria-label={`Select ${p.accountName}`}
                   />
                   <div className="min-w-0 flex-1 space-y-1">

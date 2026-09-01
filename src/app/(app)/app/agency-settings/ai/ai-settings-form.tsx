@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   saveAiSettingsAction,
   testAiConnectionAction,
@@ -128,19 +129,22 @@ export function AiSettingsForm({
                   managed secret).
                 </p>
               </div>
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="checkbox"
+              <div className="inline-flex items-center gap-2">
+                <Checkbox
+                  id="ai-enabled-toggle"
                   name="enabled"
+                  value="on"
                   defaultChecked={initialEnabled && featureIsEnabled}
                   disabled={!featureIsEnabled}
-                  className="h-4 w-4"
                   data-testid="ai-enabled-toggle"
                 />
-                <span className="text-label text-fg-primary font-semibold">
+                <label
+                  htmlFor="ai-enabled-toggle"
+                  className="text-label text-fg-primary cursor-pointer font-semibold"
+                >
                   {initialEnabled && featureIsEnabled ? "On" : "Off"}
-                </span>
-              </label>
+                </label>
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -185,16 +189,18 @@ export function AiSettingsForm({
                       </p>
                       <p className="text-label text-fg-muted mt-0.5">{cap.description}</p>
                     </div>
-                    <label className="text-label text-fg-primary inline-flex items-center gap-2 font-semibold">
-                      <input
-                        type="checkbox"
+                    <div className="text-label text-fg-primary inline-flex items-center gap-2 font-semibold">
+                      <Checkbox
+                        id={`ai-capability-${cap.id}`}
                         name={`cap_${cap.id}`}
+                        value="on"
                         defaultChecked={initialCapabilities.includes(cap.id)}
-                        className="h-4 w-4"
                         data-testid={`ai-capability-checkbox-${cap.id}`}
                       />
-                      {initialCapabilities.includes(cap.id) ? "On" : "Off"}
-                    </label>
+                      <label htmlFor={`ai-capability-${cap.id}`} className="cursor-pointer">
+                        {initialCapabilities.includes(cap.id) ? "On" : "Off"}
+                      </label>
+                    </div>
                   </li>
                 ))}
               </ul>

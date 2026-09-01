@@ -4,6 +4,7 @@ import * as React from "react";
 import { useActionState } from "react";
 import { AlertCircle, CheckCircle2, Bell } from "lucide-react";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   setNotificationPreferencesAction,
   type NotificationPreferencesActionState,
@@ -81,41 +82,51 @@ export function NotificationPreferencesForm({
         className="space-y-3"
         data-testid="notification-preferences-form"
       >
-        <label className={toggleClass} data-testid="notification-preferences-email-row">
-          <input
-            type="checkbox"
+        <div className={toggleClass} data-testid="notification-preferences-email-row">
+          <Checkbox
+            id="notification-preferences-email"
             name="emailOnMention"
+            value="on"
             defaultChecked={initialEmailOnMention}
-            className="border-border text-primary focus-visible:ring-focus-ring mt-1 h-4 w-4 rounded border focus-visible:ring-2 focus-visible:ring-offset-1"
+            aria-describedby="notification-preferences-email-hint"
             data-testid="notification-preferences-email-input"
           />
-          <span className="space-y-0.5">
-            <span className="text-body text-fg-primary flex items-center gap-2 font-semibold">
+          <div className="space-y-0.5">
+            <label
+              htmlFor="notification-preferences-email"
+              className="text-body text-fg-primary flex cursor-pointer items-center gap-2 font-semibold"
+            >
               <Bell className="h-3.5 w-3.5" aria-hidden="true" />
               {t("account.emailOnMentionLabel")}
-            </span>
-            <span className="text-label text-fg-muted block">
+            </label>
+            <p id="notification-preferences-email-hint" className="text-label text-fg-muted">
               {t("account.emailOnMentionHint")}
-            </span>
-          </span>
-        </label>
+            </p>
+          </div>
+        </div>
 
-        <label className={toggleClass} data-testid="notification-preferences-digest-row">
-          <input
-            type="checkbox"
+        <div className={toggleClass} data-testid="notification-preferences-digest-row">
+          <Checkbox
+            id="notification-preferences-digest"
             name="dailyDigest"
+            value="on"
             defaultChecked={initialDailyDigest}
-            className="border-border text-primary focus-visible:ring-focus-ring mt-1 h-4 w-4 rounded border focus-visible:ring-2 focus-visible:ring-offset-1"
+            aria-describedby="notification-preferences-digest-hint"
             data-testid="notification-preferences-digest-input"
           />
-          <span className="space-y-0.5">
-            <span className="text-body text-fg-primary flex items-center gap-2 font-semibold">
+          <div className="space-y-0.5">
+            <label
+              htmlFor="notification-preferences-digest"
+              className="text-body text-fg-primary flex cursor-pointer items-center gap-2 font-semibold"
+            >
               <Bell className="h-3.5 w-3.5" aria-hidden="true" />
               {t("account.dailyDigestLabel")}
-            </span>
-            <span className="text-label text-fg-muted block">{t("account.dailyDigestHint")}</span>
-          </span>
-        </label>
+            </label>
+            <p id="notification-preferences-digest-hint" className="text-label text-fg-muted">
+              {t("account.dailyDigestHint")}
+            </p>
+          </div>
+        </div>
 
         <FormSubmitButton
           label={t("account.savePreferences")}

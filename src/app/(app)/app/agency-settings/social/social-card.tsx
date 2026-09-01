@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -580,13 +581,12 @@ function RecoveryKeyModal({
           )}
         </p>
         <div className="flex items-start gap-2">
-          <input
+          <Checkbox
             id="agency-social-recovery-key-confirm"
-            type="checkbox"
             checked={confirmed}
-            onChange={(e) => setConfirmed(e.target.checked)}
+            onCheckedChange={(checked) => setConfirmed(checked === true)}
             data-testid="agency-social-recovery-key-confirm"
-            className="border-border text-primary mt-1 h-4 w-4 rounded-[var(--radius-control)] border focus:ring-2 focus:ring-offset-1 focus:outline-none"
+            className="mt-1"
           />
           <Label htmlFor="agency-social-recovery-key-confirm" className="text-body">
             {tr(

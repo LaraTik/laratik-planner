@@ -5,6 +5,7 @@ import { Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/forms/form-field";
 import { submitDeliveryAction } from "../actions";
@@ -198,9 +199,12 @@ export function DeliverySection({
                         placeholder="https://…"
                       />
                     </div>
-                    <label className="text-label text-fg-primary col-span-12 flex min-h-11 items-center gap-2 sm:col-span-1 sm:mt-5">
-                      <input type="checkbox" name="linkPreview" className="h-4 w-4" /> Preview
-                    </label>
+                    <div className="text-label text-fg-primary col-span-12 flex min-h-11 items-center gap-2 sm:col-span-1 sm:mt-5">
+                      <Checkbox id={`link-preview-${i}`} name="linkPreview" value="on" />
+                      <label htmlFor={`link-preview-${i}`} className="cursor-pointer">
+                        Preview
+                      </label>
+                    </div>
                   </div>
                 ))}
               </fieldset>

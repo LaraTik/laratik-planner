@@ -427,6 +427,18 @@ keeps the hook friendly to dev machines that haven't been
 provisioned yet. `SKIP_INTEGRATION=1` is the explicit escape
 hatch when you have a reason to skip.
 
+#### Checkbox controls and mobile touch targets
+
+Use the shared Radix checkbox (`src/components/ui/checkbox.tsx`) for
+every checkbox. The global mobile accessibility rule gives buttons and
+`role="button"` elements a 44px minimum height; the checkbox primitive
+sets `min-h-0` so its 16px visual control is not stretched into a tall
+rectangle. Wrap it in a labeled row/card (with `htmlFor`) to provide the
+full touch target and keep the helper text linked with
+`aria-describedby`. When reviewing a mobile screenshot, a checkbox
+should remain square while its surrounding row remains comfortably
+touchable.
+
 ### Dev-only API helpers
 
 `/api/dev/seed`, `/api/dev/sign-in`, and `/api/dev/sign-out` exist to make E2E tests skip the Google OAuth and Mailcow SMTP flows. They are guarded by `NODE_ENV !== "production"` in two places (the route handler + the proxy allowlist) so production builds return 404.

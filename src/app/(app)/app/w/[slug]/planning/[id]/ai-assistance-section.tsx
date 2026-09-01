@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { applyAiDraftAction } from "../actions";
 import {
   AI_CAPABILITY_METADATA,
@@ -383,14 +384,13 @@ export function AiAssistanceSection({
               key={toggle.key}
               className="border-border bg-surface flex items-start gap-2 rounded-[var(--radius-control)] border p-2"
             >
-              <input
+              <Checkbox
                 id={`ai-context-${toggle.key}`}
-                type="checkbox"
                 checked={Boolean(contextSelection[toggle.key])}
-                onChange={(e) =>
-                  setContextSelection((s) => ({ ...s, [toggle.key]: e.target.checked }))
+                onCheckedChange={(checked) =>
+                  setContextSelection((s) => ({ ...s, [toggle.key]: checked === true }))
                 }
-                className="mt-0.5 h-4 w-4 shrink-0"
+                className="mt-0.5 shrink-0"
                 data-testid={`ai-context-toggle-${toggle.key}`}
               />
               <label

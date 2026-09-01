@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import {
   setProviderConfigAction,
@@ -413,17 +414,21 @@ export function ProviderConfigCard({
             autoComplete="off"
           />
         </div>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id={`${provider}-enabled`}
             checked={enabled}
-            onChange={(e) => setEnabled(e.target.checked)}
-            className="border-border text-primary focus-visible:ring-focus-ring h-4 w-4 rounded-[var(--radius-control)] border focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+            onCheckedChange={(checked) => setEnabled(checked === true)}
             data-testid={`provider-config-enabled-${provider}`}
           />
-          <span className="text-body text-fg-primary">{tr("agencyProviders.enabledLabel")}</span>
+          <label
+            htmlFor={`${provider}-enabled`}
+            className="text-body text-fg-primary cursor-pointer"
+          >
+            {tr("agencyProviders.enabledLabel")}
+          </label>
           <span className="text-label text-fg-muted">{tr("agencyProviders.enabledHelp")}</span>
-        </label>
+        </div>
 
         {state.error ? (
           <p

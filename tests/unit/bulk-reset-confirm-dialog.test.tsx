@@ -74,8 +74,8 @@ describe("BulkResetConfirmDialog", () => {
 
   it("starts with includePublished toggled OFF", () => {
     renderDialog();
-    const toggle = screen.getByTestId("bulk-reset-include-published") as HTMLInputElement;
-    expect(toggle.checked).toBe(false);
+    const toggle = screen.getByTestId("bulk-reset-include-published");
+    expect(toggle).toHaveAttribute("aria-checked", "false");
     // The live warning must NOT be visible until the operator opts in.
     expect(screen.queryByTestId("bulk-reset-live-warning")).not.toBeInTheDocument();
   });
@@ -85,7 +85,7 @@ describe("BulkResetConfirmDialog", () => {
     renderDialog();
     const toggle = screen.getByTestId("bulk-reset-include-published");
     await user.click(toggle);
-    expect(toggle).toBeChecked();
+    expect(toggle).toHaveAttribute("aria-checked", "true");
     const warning = await screen.findByTestId("bulk-reset-live-warning");
     expect(warning.textContent).toMatch(/5 live ideas?/);
   });

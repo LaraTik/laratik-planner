@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Archive, CheckSquare, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { bulkArchiveDesignQueueAction } from "./actions";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
@@ -67,25 +68,23 @@ export function DesignQueueBulkToolbar({
       className="border-border bg-surface flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] border p-3"
       data-testid="design-queue-bulk-toolbar"
     >
-      <label className="text-label text-fg-secondary inline-flex cursor-pointer items-center gap-2 font-semibold">
-        <input
-          type="checkbox"
-          className="h-4 w-4 cursor-pointer accent-[var(--color-primary,#4f46e5)]"
+      <div className="text-label text-fg-secondary inline-flex items-center gap-2 font-semibold">
+        <Checkbox
+          id="design-queue-select-all"
           aria-label={t("sidebar.designQueuePage.selectAll")}
           data-testid="design-queue-select-all"
-          checked={allChecked}
-          ref={(el) => {
-            if (el) el.indeterminate = someChecked;
-          }}
-          onChange={toggleAll}
+          checked={allChecked ? true : someChecked ? "indeterminate" : false}
+          onCheckedChange={toggleAll}
         />
         {allChecked || someChecked ? (
           <CheckSquare className="h-4 w-4" aria-hidden="true" />
         ) : (
           <Square className="h-4 w-4" aria-hidden="true" />
         )}
-        {t("sidebar.designQueuePage.selectedCount", { count: selected.size })}
-      </label>
+        <label htmlFor="design-queue-select-all" className="cursor-pointer">
+          {t("sidebar.designQueuePage.selectedCount", { count: selected.size })}
+        </label>
+      </div>
       <Button
         type="button"
         variant="outline"

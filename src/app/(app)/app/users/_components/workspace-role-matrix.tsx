@@ -4,6 +4,7 @@ import * as React from "react";
 import { X } from "lucide-react";
 import { workspaceRoleSchema, type WorkspaceRole } from "@/lib/auth/invitation-command";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 /**
  * Shared per-workspace role multi-selector used by the "Send invitation",
@@ -129,24 +130,26 @@ export function WorkspaceRoleMatrix({
                 {workspaceRoleSchema.options.map((role) => {
                   const isOn = selected.includes(role);
                   return (
-                    <label
+                    <div
                       key={role}
-                      className={`text-label inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 font-semibold transition-colors ${
+                      className={`text-label inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-semibold transition-colors ${
                         isOn
                           ? "border-primary bg-primary-subtle text-primary"
                           : "border-border bg-surface text-fg-secondary hover:border-fg-secondary"
                       }`}
                       data-testid={testId ? `${testId}-chip-${w.id}-${role}` : undefined}
                     >
-                      <input
-                        type="checkbox"
+                      <Checkbox
+                        id={`workspace-role-${w.id}-${role}`}
                         className="sr-only"
                         checked={isOn}
-                        onChange={() => toggleRole(w.id, role)}
+                        onCheckedChange={() => toggleRole(w.id, role)}
                         aria-label={`${roleLabel(role)} for ${w.name}`}
                       />
-                      <span>{roleLabel(role)}</span>
-                    </label>
+                      <label htmlFor={`workspace-role-${w.id}-${role}`} className="cursor-pointer">
+                        {roleLabel(role)}
+                      </label>
+                    </div>
                   );
                 })}
               </div>
