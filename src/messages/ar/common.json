@@ -136,6 +136,21 @@
     "expandGroup": "توسيع {label}",
     "unreadBadgeSummary": "{count} غير مقروءة"
   },
+  "myWork": {
+    "title": "عملي",
+    "kpiAssigned": "مسندة إليّ",
+    "kpiAwaitingReview": "بانتظار مراجعتي",
+    "kpiAtRisk": "في خطر",
+    "kpiReadyToPublish": "جاهز للنشر",
+    "newWorkspace": "مساحة عمل جديدة",
+    "emptyTitle": "لا يوجد شيء مسند إليك بعد",
+    "emptyDescription": "عندما ينشئ المخطّط محتوى ويسنده إليك، سيظهر هنا. يمكنك أيضًا البدء بإنشاء مساحة عمل.",
+    "emptyAction": "إنشاء مساحة عمل",
+    "needsAttention": "تحتاج إلى متابعتك",
+    "needsAttentionEmpty": "لا يوجد شيء متأخر. أنت مُطمئن.",
+    "upcoming": "القادم هذا الأسبوع",
+    "upcomingEmpty": "لا توجد عناصر مُخطّطة خلال الأيام السبعة القادمة."
+  },
   "auth": {
     "appName": "laratik-planner",
     "productName": "StudioFlow",

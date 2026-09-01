@@ -22,6 +22,7 @@ import { ListCard, ListItem } from "@/components/workspace/list-item";
 import { PageHeader } from "@/components/workspace/page-header";
 import { StatusBadge } from "@/components/content/status-badge";
 import { KpiContentStatus, calculateOverviewMetrics } from "@/lib/dashboard/kpis";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 /**
  * My Work — Stitch-aligned personal dashboard.
@@ -36,10 +37,16 @@ import { KpiContentStatus, calculateOverviewMetrics } from "@/lib/dashboard/kpis
  * the "Needs attention" list, and an "Upcoming this week" panel. v0
  * kept a single list; the rewrite makes the KPI tiles actionable
  * (each links to a filtered view) and surfaces overdue items first.
+ *
+ * All user-visible copy is sourced from the message catalog. The
+ * page renders in English or Arabic from the same JSX; the date
+ * string uses `Intl.DateTimeFormat` so the locale-aware weekday /
+ * month names also follow the active locale.
  */
 export const metadata = { title: "My Work" };
 
 export default async function MyWorkPage() {
+  const { t, dir } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) return null;
   const userId = session.user.id;
@@ -152,21 +159,34 @@ export default async function MyWorkPage() {
     .sort((a, b) => a.plannedPublishAt.getTime() - b.plannedPublishAt.getTime())
     .slice(0, 6);
 
+  // Locale-aware date formatting. The My Work header reads "today"
+  // as a long-form weekday + date string; the list items use a
+  // short date. Both follow the active `dir` so an Arabic date
+  // is rendered in Arabic script with Western digits (the format
+  // helper from `src/lib/i18n/format-locale.ts` enforces the
+  // latn numbering contract).
+  const headerDate = new Intl.DateTimeFormat(dir === "rtl" ? "ar" : "en", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(now);
+  const itemDateFmt = new Intl.DateTimeFormat(dir === "rtl" ? "ar" : "en", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="My Work"
-        description={now.toLocaleDateString(undefined, {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })}
+        title={t("myWork.title")}
+        description={headerDate}
         action={
           <Button asChild variant="secondary" size="sm">
             <Link href="/app/workspaces/new">
               <Plus className="h-4 w-4" aria-hidden="true" />
-              New workspace
+              {t("myWork.newWorkspace")}
             </Link>
           </Button>
         }
@@ -181,23 +201,23 @@ export default async function MyWorkPage() {
          * workspace's own Overview provide the actionable deep links.
          */}
         <KpiCard
-          label="Assigned to me"
+          label={t("myWork.kpiAssigned")}
           value={assignedToMe}
           icon={<FileText className="h-4 w-4" aria-hidden="true" />}
         />
         <KpiCard
-          label="Awaiting my review"
+          label={t("myWork.kpiAwaitingReview")}
           value={awaitingMyReview}
           icon={<Eye className="h-4 w-4" aria-hidden="true" />}
         />
         <KpiCard
-          label="At risk"
+          label={t("myWork.kpiAtRisk")}
           value={atRisk}
           icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
           danger
         />
         <KpiCard
-          label="Ready to publish"
+          label={t("myWork.kpiReadyToPublish")}
           value={readyToPublish}
           icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
         />
@@ -207,13 +227,13 @@ export default async function MyWorkPage() {
         <Card variant="dashed" padding="lg">
           <EmptyState
             icon={<Sparkles className="h-8 w-8" aria-hidden="true" />}
-            title="Nothing assigned yet"
-            description="Once a planner creates content and assigns it to you, it'll show up here. You can also start by creating a workspace."
+            title={t("myWork.emptyTitle")}
+            description={t("myWork.emptyDescription")}
             action={
               <Button asChild>
                 <Link href="/app/workspaces/new">
                   <Plus className="h-4 w-4" aria-hidden="true" />
-                  Create a workspace
+                  {t("myWork.emptyAction")}
                 </Link>
               </Button>
             }
@@ -224,13 +244,11 @@ export default async function MyWorkPage() {
           <div className="space-y-3 lg:col-span-8">
             <h2 className="text-title-section text-fg-primary inline-flex items-center gap-2 font-semibold">
               <AlertTriangle className="text-warning h-5 w-5" aria-hidden="true" />
-              Needs your attention
+              {t("myWork.needsAttention")}
             </h2>
             {needsAttention.length === 0 ? (
               <Card variant="dashed" padding="md">
-                <p className="text-body text-fg-muted">
-                  Nothing overdue. You&rsquo;re on top of it.
-                </p>
+                <p className="text-body text-fg-muted">{t("myWork.needsAttentionEmpty")}</p>
               </Card>
             ) : (
               <ListCard data-testid="my-work-needs-attention">
@@ -246,7 +264,7 @@ export default async function MyWorkPage() {
                         <span aria-hidden="true"> · </span>
                         <span className="inline-flex shrink-0 items-center gap-1 align-middle">
                           <Clock className="h-3 w-3" aria-hidden="true" />
-                          {item.plannedPublishAt.toLocaleDateString()}
+                          {itemDateFmt.format(item.plannedPublishAt)}
                         </span>
                       </>
                     }
@@ -260,11 +278,11 @@ export default async function MyWorkPage() {
           <div className="space-y-3 lg:col-span-4">
             <h2 className="text-title-section text-fg-primary inline-flex items-center gap-2 font-semibold">
               <Calendar className="text-fg-secondary h-5 w-5" aria-hidden="true" />
-              Upcoming this week
+              {t("myWork.upcoming")}
             </h2>
             {upcoming.length === 0 ? (
               <Card variant="dashed" padding="md">
-                <p className="text-body text-fg-muted">No items planned in the next 7 days.</p>
+                <p className="text-body text-fg-muted">{t("myWork.upcomingEmpty")}</p>
               </Card>
             ) : (
               <ListCard>
@@ -278,7 +296,7 @@ export default async function MyWorkPage() {
                       <>
                         <span className="truncate">{item.workspaceName}</span>
                         <span aria-hidden="true"> · </span>
-                        <span>{item.plannedPublishAt.toLocaleDateString()}</span>
+                        <span>{itemDateFmt.format(item.plannedPublishAt)}</span>
                       </>
                     }
                     trailing={<StatusBadge status={item.status} />}
