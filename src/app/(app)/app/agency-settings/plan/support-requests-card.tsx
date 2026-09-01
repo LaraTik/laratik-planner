@@ -5,6 +5,7 @@ import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { listRequestsForAgency, type SupportAccessRequestRow } from "@/lib/support";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 /**
  * M3.4 — Agency admin's view of pending support access
@@ -22,15 +23,20 @@ import { listRequestsForAgency, type SupportAccessRequestRow } from "@/lib/suppo
  * dedicated decision page where the approve / reject UI lives.
  */
 export async function SupportAccessRequestsCard({ agencyId }: { agencyId: string }) {
+  const { t } = await tForActive();
   const requests = await listRequestsForAgency(agencyId, { limit: 25 });
   const pending = requests.filter((r) => r.status === "pending");
   const recent = requests.filter((r) => r.status !== "pending").slice(0, 5);
 
   const columns: DataTableColumnDef<SupportAccessRequestRow>[] = [
-    { key: "ticketReference", header: "Ticket", cell: (row) => row.ticketReference },
+    {
+      key: "ticketReference",
+      header: t("agencyPlan.supportColTicket"),
+      cell: (row) => row.ticketReference,
+    },
     {
       key: "status",
-      header: "Status",
+      header: t("agencyPlan.supportColStatus"),
       cell: (row) => (
         <Badge
           variant={
@@ -43,33 +49,38 @@ export async function SupportAccessRequestsCard({ agencyId }: { agencyId: string
                   : "default"
           }
         >
-          {row.status}
+          {t(`agencyPlan.supportStatus.${row.status}`, { defaultValue: row.status })}
         </Badge>
       ),
     },
-    { key: "duration", header: "Hours", cell: (row) => `${row.requestedDurationHours}h` },
+    {
+      key: "duration",
+      header: t("agencyPlan.supportColHours"),
+      cell: (row) => `${row.requestedDurationHours}h`,
+    },
     {
       key: "scope",
-      header: "Scope",
+      header: t("agencyPlan.supportColScope"),
       cell: (row) =>
         row.scopeMetadataOnly
-          ? "Metadata only"
+          ? t("agencyPlan.supportScopeMetadata")
           : row.scopeWorkspaceId
-            ? `Workspace ${row.scopeWorkspaceId.slice(0, 8)}…`
-            : "Agency-wide",
+            ? t("agencyPlan.supportScopeWorkspace", { prefix: row.scopeWorkspaceId.slice(0, 8) })
+            : t("agencyPlan.supportScopeAgency"),
     },
-    { key: "createdAt", header: "When", cell: (row) => formatRelativeDate(row.createdAt) },
+    {
+      key: "createdAt",
+      header: t("agencyPlan.supportColWhen"),
+      cell: (row) => formatRelativeDate(row.createdAt),
+    },
   ];
 
   return (
     <Card padding="lg" className="space-y-4" data-testid="agency-plan-support-requests">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <CardTitle>Support access requests</CardTitle>
-          <CardDescription>
-            Ticketed asks from a platform administrator to view your agency&apos;s content.
-            Approving creates a time-limited grant; rejecting closes the request without a grant.
-          </CardDescription>
+          <CardTitle>{t("agencyPlan.supportRequestsTitle")}</CardTitle>
+          <CardDescription>{t("agencyPlan.supportRequestsBody")}</CardDescription>
         </div>
         <Link
           href="/app/agency-settings/plan/support"
@@ -77,17 +88,15 @@ export async function SupportAccessRequestsCard({ agencyId }: { agencyId: string
           data-testid="agency-plan-support-requests-link"
         >
           {pending.length > 0
-            ? `Review ${pending.length} pending`
-            : pending.length === 0 && requests.length === 0
-              ? "View history"
-              : "View history"}
+            ? t("agencyPlan.supportReviewPending", { count: pending.length })
+            : t("agencyPlan.supportViewHistory")}
         </Link>
       </div>
 
       {pending.length === 0 && recent.length === 0 ? (
         <EmptyState
-          title="No support access requests"
-          description="No platform administrator has filed a support access request for your agency."
+          title={t("agencyPlan.supportEmptyTitle")}
+          description={t("agencyPlan.supportEmptyBody")}
           data-testid="agency-plan-support-empty"
         />
       ) : (
@@ -103,7 +112,7 @@ export async function SupportAccessRequestsCard({ agencyId }: { agencyId: string
           {recent.length > 0 ? (
             <div data-testid="agency-plan-support-recent">
               <h4 className="text-title-card text-fg-primary mb-2 font-semibold">
-                Recent decisions
+                {t("agencyPlan.supportRecentHeading")}
               </h4>
               <DataTable getRowKey={(row) => row.id} rows={recent} columns={columns} />
             </div>

@@ -1807,7 +1807,27 @@
     "howLimitsWorkBody": "Workspaces cover active brand workspaces. Users include active members and pending administrator invitations. Social profiles have both an agency-wide total and an individual cap for each network. AI requests and tokens reset monthly; storage is cumulative.",
     "requestLimitChange": "Request limit change",
     "requestSubject": "Planner limit change request",
-    "requestBody": "Hello,\n\nI'd like to request a limit change for my agency.\n\nAgency name:\nWorkspace: /app/agency-settings/plan\n\nCurrent limits / usage: see /app/agency-settings/plan\n\nReason:\n"
+    "requestBody": "Hello,\n\nI'd like to request a limit change for my agency.\n\nAgency name:\nWorkspace: /app/agency-settings/plan\n\nCurrent limits / usage: see /app/agency-settings/plan\n\nReason:\n",
+    "supportColTicket": "Ticket",
+    "supportColStatus": "Status",
+    "supportColHours": "Hours",
+    "supportColScope": "Scope",
+    "supportColWhen": "When",
+    "supportStatus": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "supportScopeMetadata": "Metadata only",
+    "supportScopeWorkspace": "Workspace {prefix}…",
+    "supportScopeAgency": "Agency-wide",
+    "supportRequestsTitle": "Support access requests",
+    "supportRequestsBody": "Ticketed asks from a platform administrator to view your agency's content. Approving creates a time-limited grant; rejecting closes the request without a grant.",
+    "supportReviewPending": "Review {count} pending",
+    "supportViewHistory": "View history",
+    "supportEmptyTitle": "No support access requests",
+    "supportEmptyBody": "No platform administrator has filed a support access request for your agency.",
+    "supportRecentHeading": "Recent decisions"
   },
   "agencyAi": {
     "title": "AI configuration",
