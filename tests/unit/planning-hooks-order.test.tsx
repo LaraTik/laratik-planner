@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
+import { tFor } from "@/messages";
+
+const t = tFor("en");
 
 // All four components import server actions; mock them so the test
 // stays pure structural (no Next.js server runtime needed).
@@ -226,6 +229,7 @@ describe("planning detail components — hooks order guard", () => {
           contentItemId="ci-1"
           canPostClientVisible={false}
           canPostInternal={false}
+          t={t}
         />,
       );
       // State B: full posting rights. Same instance.
@@ -236,6 +240,7 @@ describe("planning detail components — hooks order guard", () => {
             contentItemId="ci-1"
             canPostClientVisible
             canPostInternal
+            t={t}
           />,
         ),
       );

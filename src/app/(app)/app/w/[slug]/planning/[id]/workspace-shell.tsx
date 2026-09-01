@@ -68,6 +68,16 @@ export interface WorkspaceShellProps {
   /** Total open / mentioning comment counts (for the trigger). */
   openCommentCount: number;
   mentionCount: number;
+  /**
+   * Bound translator from the parent planning detail page.
+   * Threaded to the embedded `<DiscussionDrawer>` so the
+   * discussion surface (drawer chrome + comment items +
+   * composer + mention picker) renders in the active locale.
+   * (The shell's own chrome — tab labels, the discussion
+   * trigger, the overflow menu — stays English for now;
+   * that work belongs to a dedicated shell/tabs commit.)
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export function WorkspaceShell({
@@ -85,6 +95,7 @@ export function WorkspaceShell({
   resetCounts,
   openCommentCount,
   mentionCount,
+  t,
 }: WorkspaceShellProps) {
   const [activeId, setActiveId] = React.useState<WorkspaceTabId>(() =>
     initialActiveTabFromHash(tabs),
@@ -156,6 +167,7 @@ export function WorkspaceShell({
         canPostClientVisible={canPostClientVisible}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
+        t={t}
       />
 
       {canResetIdea ? (

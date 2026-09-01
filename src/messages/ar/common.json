@@ -222,6 +222,54 @@
     "description": "الصق حتى 50 فكرة. تُطبَّق جميع القنوات النشطة وإعدادات مساحة العمل تلقائيًا. الدفعة ذرّية."
   },
   "contentDetail": {
+    "comments": {
+      "drawer": {
+        "backdropAria": "إغلاق المناقشة",
+        "title": "المناقشة",
+        "openCount": "({count} مفتوحة)",
+        "closeAria": "إغلاق",
+        "mentionForYouOne": "إشارة واحدة لك",
+        "mentionForYouMany": "{count} إشارات لك",
+        "empty": "لا توجد تعليقات بعد. ابدأ المحادثة.",
+        "addButton": "إضافة تعليق",
+        "noPermission": "ليس لديك إذن بالتعليق."
+      },
+      "item": {
+        "visibilityInternal": "داخلي",
+        "visibilityClient": "للعميل",
+        "resolved": "تم الحل",
+        "reply": "رد",
+        "resolve": "حل",
+        "unresolve": "إلغاء الحل",
+        "mentionOne": "إشارة واحدة",
+        "mentionMany": "{count} إشارات"
+      },
+      "composer": {
+        "placeholderNew": "أضف تعليقًا. استخدم @ للإشارة إلى زميل.",
+        "placeholderReply": "اكتب ردًا. استخدم @ للإشارة إلى زميل.",
+        "visibilityGroupAria": "الظهور",
+        "clientVisible": "مرئي للعميل",
+        "internalOnly": "داخلي فقط",
+        "labelAria": "تصنيف التعليق",
+        "labelGeneral": "عام",
+        "labelQuestion": "سؤال",
+        "labelFeedback": "ملاحظة",
+        "labelDecision": "قرار",
+        "cancel": "إلغاء",
+        "submit": "تعليق",
+        "reply": "رد",
+        "posting": "جارٍ النشر…"
+      },
+      "mentionPicker": {
+        "listboxAria": "اقتراحات الإشارة",
+        "headerMatching": "أشر إلى شخص يطابق \"{query}\"",
+        "headerInitial": "أشر إلى زميل",
+        "searching": "جارٍ البحث…",
+        "emptyMatching": "لا يوجد زملاء يطابقون \"{query}\".",
+        "emptyInitial": "اكتب اسمًا للبحث عن زميل للإشارة إليه.",
+        "agencyAdmin": "مسؤول الوكالة"
+      }
+    },
     "activity": {
       "title": "النشاط",
       "emptyState": "لا يوجد نشاط بعد.",

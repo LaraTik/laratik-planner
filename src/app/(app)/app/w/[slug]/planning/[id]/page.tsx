@@ -1043,6 +1043,7 @@ export default async function ContentDetailPage({
           activityCount: activityEvents.length,
           openCommentCount: openCommentsCount,
           mentionCount,
+          t,
         }}
         footer={
           <p className="text-label text-fg-muted text-center">

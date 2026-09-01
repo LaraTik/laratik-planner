@@ -62,6 +62,15 @@ export interface CommentComposerProps {
   autoFocus?: boolean;
   /** Placeholder for the textarea. */
   placeholder?: string;
+  /**
+   * Bound translator from the parent. Resolves the textarea
+   * placeholder, the visibility group aria-label, the
+   * Client/Internal chip labels, the label select aria-label
+   * + four options, the Cancel / Comment / Reply submit
+   * buttons, the Posting… pending state, and threads `t` to
+   * the embedded `<MentionPicker>`.
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 interface PendingMention {
@@ -73,12 +82,20 @@ interface PendingMention {
   end: number;
 }
 
-const LABEL_OPTIONS: { value: CommentLabel; label: string }[] = [
-  { value: "general", label: "General" },
-  { value: "question", label: "Question" },
-  { value: "feedback", label: "Feedback" },
-  { value: "decision", label: "Decision" },
-];
+const LABEL_VALUES: ReadonlyArray<CommentLabel> = ["general", "question", "feedback", "decision"];
+
+function labelKey(value: CommentLabel): string {
+  switch (value) {
+    case "general":
+      return "contentDetail.comments.composer.labelGeneral";
+    case "question":
+      return "contentDetail.comments.composer.labelQuestion";
+    case "feedback":
+      return "contentDetail.comments.composer.labelFeedback";
+    case "decision":
+      return "contentDetail.comments.composer.labelDecision";
+  }
+}
 
 export function CommentComposer({
   workspaceSlug,
@@ -91,6 +108,7 @@ export function CommentComposer({
   onPosted,
   autoFocus,
   placeholder,
+  t,
 }: CommentComposerProps) {
   const boundAction = createCommentAction.bind(null, workspaceSlug);
   const [state, formAction] = useActionState<
@@ -404,9 +422,11 @@ export function CommentComposer({
           onKeyDown={handleKeyDown}
           placeholder={
             placeholder ??
-            (parentCommentId
-              ? "Write a reply. Use @ to mention a teammate."
-              : "Add a comment. Use @ to mention a teammate.")
+            t(
+              parentCommentId
+                ? "contentDetail.comments.composer.placeholderReply"
+                : "contentDetail.comments.composer.placeholderNew",
+            )
           }
           className="border-border bg-surface text-fg-primary text-body placeholder:text-fg-muted focus-visible:ring-focus-ring w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none disabled:opacity-60"
           data-testid="comment-composer-textarea"
@@ -435,6 +455,7 @@ export function CommentComposer({
         onHighlight={setPickerIndex}
         anchorRect={pickerAnchor}
         open={pickerOpen}
+        t={t}
       />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -444,7 +465,11 @@ export function CommentComposer({
             comment much less likely. The chips carry the
             `name="visibility"` + `value="…"` so the form
             serialises whichever chip is currently pressed. */}
-        <div className="flex items-center gap-1.5" role="group" aria-label="Visibility">
+        <div
+          className="flex items-center gap-1.5"
+          role="group"
+          aria-label={t("contentDetail.comments.composer.visibilityGroupAria")}
+        >
           {canPostClientVisible ? (
             <button
               type="button"
@@ -462,7 +487,7 @@ export function CommentComposer({
               ].join(" ")}
             >
               <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-              Client visible
+              {t("contentDetail.comments.composer.clientVisible")}
             </button>
           ) : null}
           {canPostInternal ? (
@@ -482,7 +507,7 @@ export function CommentComposer({
               ].join(" ")}
             >
               <Lock className="h-3.5 w-3.5" aria-hidden="true" />
-              Internal only
+              {t("contentDetail.comments.composer.internalOnly")}
             </button>
           ) : null}
         </div>
@@ -491,13 +516,13 @@ export function CommentComposer({
           value={label}
           onChange={(e) => setLabel(e.target.value as CommentLabel)}
           disabled={pending}
-          aria-label="Comment label"
+          aria-label={t("contentDetail.comments.composer.labelAria")}
           className="border-border bg-surface text-fg-primary text-label h-9 rounded-[var(--radius-control)] border px-2.5 py-1 disabled:opacity-60"
           data-testid="comment-composer-label"
         >
-          {LABEL_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
+          {LABEL_VALUES.map((value) => (
+            <option key={value} value={value}>
+              {t(labelKey(value))}
             </option>
           ))}
         </select>
@@ -505,13 +530,17 @@ export function CommentComposer({
           {onCancel ? (
             <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={pending}>
               <X className="h-3.5 w-3.5" aria-hidden="true" />
-              Cancel
+              {t("contentDetail.comments.composer.cancel")}
             </Button>
           ) : null}
           <FormSubmitButton
             size="sm"
-            label={parentCommentId ? "Reply" : "Comment"}
-            pendingLabel="Posting…"
+            label={t(
+              parentCommentId
+                ? "contentDetail.comments.composer.reply"
+                : "contentDetail.comments.composer.submit",
+            )}
+            pendingLabel={t("contentDetail.comments.composer.posting")}
             data-testid="comment-composer-submit"
           />
         </div>

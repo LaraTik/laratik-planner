@@ -42,6 +42,16 @@ export interface DiscussionDrawerProps {
   /** Controlled open state — the parent decides when to open. */
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Bound translator from the parent (planning detail page).
+   * Resolves the drawer's title, close aria-labels, the
+   * "(N open)" suffix, the "N mention for you" banner, the
+   * empty state, the "Add comment" CTA, the no-permission
+   * state, and threads `t` to the embedded `<CommentItem>`
+   * and `<CommentForm>` so the entire discussion surface
+   * renders in the active locale.
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export function DiscussionDrawer({
@@ -54,6 +64,7 @@ export function DiscussionDrawer({
   canPostClientVisible,
   open,
   onOpenChange,
+  t,
 }: DiscussionDrawerProps) {
   const [replyingTo, setReplyingTo] = React.useState<string | null>(null);
   const [showForm, setShowForm] = React.useState(false);
@@ -95,7 +106,7 @@ export function DiscussionDrawer({
       {/* Backdrop — clicking it closes the drawer */}
       <button
         type="button"
-        aria-label="Close discussion"
+        aria-label={t("contentDetail.comments.drawer.backdropAria")}
         className="absolute inset-0 bg-black/30"
         onClick={() => onOpenChange(false)}
         data-testid="discussion-drawer-backdrop"
@@ -113,16 +124,18 @@ export function DiscussionDrawer({
             className="text-title-card text-fg-primary flex items-center gap-2 font-semibold"
           >
             <MessageCircle className="h-5 w-5" aria-hidden="true" />
-            Discussion
+            {t("contentDetail.comments.drawer.title")}
             {openCount > 0 ? (
-              <span className="text-label text-fg-muted">({openCount} open)</span>
+              <span className="text-label text-fg-muted">
+                {t("contentDetail.comments.drawer.openCount", { count: openCount })}
+              </span>
             ) : null}
           </h2>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onOpenChange(false)}
-            aria-label="Close"
+            aria-label={t("contentDetail.comments.drawer.closeAria")}
             data-testid="discussion-drawer-close"
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -130,12 +143,14 @@ export function DiscussionDrawer({
         </header>
         {mentionCount > 0 ? (
           <p className="border-border bg-primary-subtle text-label text-primary border-b px-4 py-2 font-semibold">
-            {mentionCount} mention{mentionCount === 1 ? "" : "s"} for you
+            {mentionCount === 1
+              ? t("contentDetail.comments.drawer.mentionForYouOne")
+              : t("contentDetail.comments.drawer.mentionForYouMany", { count: mentionCount })}
           </p>
         ) : null}
         <div className="flex-1 overflow-y-auto p-4">
           {comments.length === 0 ? (
-            <p className="text-body text-fg-muted">No comments yet. Start the conversation.</p>
+            <p className="text-body text-fg-muted">{t("contentDetail.comments.drawer.empty")}</p>
           ) : (
             <div className="space-y-2">
               {topLevel.map((c) => (
@@ -147,6 +162,7 @@ export function DiscussionDrawer({
                     roles={roles}
                     onReply={() => setReplyingTo(replyingTo === c.id ? null : c.id)}
                     isReply={false}
+                    t={t}
                   />
                   {repliesByParent.get(c.id)?.map((reply) => (
                     <CommentItem
@@ -157,6 +173,7 @@ export function DiscussionDrawer({
                       roles={roles}
                       onReply={() => setReplyingTo(replyingTo === reply.id ? null : reply.id)}
                       isReply
+                      t={t}
                     />
                   ))}
                   {replyingTo === c.id ? (
@@ -168,6 +185,7 @@ export function DiscussionDrawer({
                         canPostClientVisible={canPostClientVisible}
                         canPostInternal={canPostInternal}
                         onCancel={() => setReplyingTo(null)}
+                        t={t}
                       />
                     </div>
                   ) : null}
@@ -185,14 +203,17 @@ export function DiscussionDrawer({
               canPostInternal={canPostInternal}
               onCancel={() => setShowForm(false)}
               onPosted={() => setShowForm(false)}
+              t={t}
             />
           ) : canPostInternal || canPostClientVisible ? (
             <Button variant="secondary" size="sm" onClick={() => setShowForm(true)}>
               <MessageCircle className="h-4 w-4" aria-hidden="true" />
-              Add comment
+              {t("contentDetail.comments.drawer.addButton")}
             </Button>
           ) : (
-            <p className="text-label text-fg-muted">You don&apos;t have permission to comment.</p>
+            <p className="text-label text-fg-muted">
+              {t("contentDetail.comments.drawer.noPermission")}
+            </p>
           )}
         </footer>
       </aside>

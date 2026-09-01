@@ -19,6 +19,14 @@ export interface CommentFormProps {
   defaultVisibility?: CommentVisibility;
   onCancel?: () => void;
   onPosted?: () => void;
+  /**
+   * Bound translator from the parent. Threaded through to
+   * `<CommentComposer>` (and onward to `<MentionPicker>`) so
+   * the composer's placeholder, visibility chips, label
+   * options, submit/cancel buttons, and the mention picker's
+   * headers all render in the active locale.
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export function CommentForm({
@@ -30,6 +38,7 @@ export function CommentForm({
   defaultVisibility,
   onCancel,
   onPosted,
+  t,
 }: CommentFormProps) {
   return (
     <CommentComposer
@@ -41,6 +50,7 @@ export function CommentForm({
       {...(defaultVisibility ? { defaultVisibility } : {})}
       {...(onCancel ? { onCancel } : {})}
       {...(onPosted ? { onPosted } : {})}
+      t={t}
     />
   );
 }

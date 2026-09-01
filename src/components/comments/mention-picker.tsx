@@ -53,6 +53,13 @@ export interface MentionPickerProps {
   /** When true, the picker is mounted (e.g. the user has typed
    *  `@something` and the composer hasn't dismissed it). */
   open: boolean;
+  /**
+   * Bound translator from the parent composer. Resolves
+   * the listbox aria-label, the matching/initial headers,
+   * the loading + empty states, and the "Agency admin"
+   * badge through the active message catalog.
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export function MentionPicker({
@@ -64,12 +71,13 @@ export function MentionPicker({
   onHighlight,
   anchorRect,
   open,
+  t,
 }: MentionPickerProps) {
   if (!open) return null;
   return (
     <div
       role="listbox"
-      aria-label="Mention suggestions"
+      aria-label={t("contentDetail.comments.mentionPicker.listboxAria")}
       data-testid="mention-picker"
       className="bg-surface border-border fixed z-50 max-h-72 w-72 overflow-y-auto rounded-[var(--radius-control)] border shadow-lg"
       style={{
@@ -80,21 +88,21 @@ export function MentionPicker({
       <div className="text-label text-fg-muted border-border flex items-center gap-1.5 border-b px-3 py-2 font-semibold">
         <AtSign className="h-3.5 w-3.5" aria-hidden="true" />
         {query ? (
-          <>
-            Mention someone matching <span className="text-fg-primary">&quot;{query}&quot;</span>
-          </>
+          <>{t("contentDetail.comments.mentionPicker.headerMatching", { query })}</>
         ) : (
-          <>Mention a teammate</>
+          <>{t("contentDetail.comments.mentionPicker.headerInitial")}</>
         )}
       </div>
       {loading ? (
         <div className="text-label text-fg-muted flex items-center gap-2 px-3 py-3">
           <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-          Searching…
+          {t("contentDetail.comments.mentionPicker.searching")}
         </div>
       ) : users.length === 0 ? (
         <p className="text-label text-fg-muted px-3 py-3">
-          {query ? `No teammates match “${query}”.` : "Type a name to find a teammate to mention."}
+          {query
+            ? t("contentDetail.comments.mentionPicker.emptyMatching", { query })
+            : t("contentDetail.comments.mentionPicker.emptyInitial")}
         </p>
       ) : (
         <ul role="presentation">
@@ -136,7 +144,7 @@ export function MentionPicker({
                     </span>
                   ) : u.isAgencyAdmin ? (
                     <span className="text-label text-fg-muted shrink-0 rounded-full border px-2 py-0.5 font-semibold">
-                      Agency admin
+                      {t("contentDetail.comments.mentionPicker.agencyAdmin")}
                     </span>
                   ) : null}
                 </button>

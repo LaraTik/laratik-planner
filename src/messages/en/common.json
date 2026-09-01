@@ -222,6 +222,54 @@
     "description": "Paste up to 50 ideas. All active channels and workspace defaults are applied automatically. The batch is atomic."
   },
   "contentDetail": {
+    "comments": {
+      "drawer": {
+        "backdropAria": "Close discussion",
+        "title": "Discussion",
+        "openCount": "({count} open)",
+        "closeAria": "Close",
+        "mentionForYouOne": "1 mention for you",
+        "mentionForYouMany": "{count} mentions for you",
+        "empty": "No comments yet. Start the conversation.",
+        "addButton": "Add comment",
+        "noPermission": "You don't have permission to comment."
+      },
+      "item": {
+        "visibilityInternal": "Internal",
+        "visibilityClient": "Client",
+        "resolved": "resolved",
+        "reply": "Reply",
+        "resolve": "Resolve",
+        "unresolve": "Unresolve",
+        "mentionOne": "1 mention",
+        "mentionMany": "{count} mentions"
+      },
+      "composer": {
+        "placeholderNew": "Add a comment. Use @ to mention a teammate.",
+        "placeholderReply": "Write a reply. Use @ to mention a teammate.",
+        "visibilityGroupAria": "Visibility",
+        "clientVisible": "Client visible",
+        "internalOnly": "Internal only",
+        "labelAria": "Comment label",
+        "labelGeneral": "General",
+        "labelQuestion": "Question",
+        "labelFeedback": "Feedback",
+        "labelDecision": "Decision",
+        "cancel": "Cancel",
+        "submit": "Comment",
+        "reply": "Reply",
+        "posting": "Posting…"
+      },
+      "mentionPicker": {
+        "listboxAria": "Mention suggestions",
+        "headerMatching": "Mention someone matching \"{query}\"",
+        "headerInitial": "Mention a teammate",
+        "searching": "Searching…",
+        "emptyMatching": "No teammates match \"{query}\".",
+        "emptyInitial": "Type a name to find a teammate to mention.",
+        "agencyAdmin": "Agency admin"
+      }
+    },
     "activity": {
       "title": "Activity",
       "emptyState": "No activity yet.",

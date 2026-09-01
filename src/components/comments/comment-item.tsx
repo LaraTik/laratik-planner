@@ -46,6 +46,13 @@ export interface CommentItemProps {
   onReply: () => void;
   /** When true, the item is rendered as a reply (smaller indent). */
   isReply?: boolean;
+  /**
+   * Bound translator from the parent (discussion drawer).
+   * Resolves the visibility badge (Internal / Client), the
+   * resolved status badge, the Reply / Resolve / Unresolve
+   * buttons, and the mention count.
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 /**
@@ -64,6 +71,7 @@ export function CommentItem({
   roles,
   onReply,
   isReply = false,
+  t,
 }: CommentItemProps) {
   const isAuthor = c.authorId === currentUserId;
   const canResolve = isAuthor || roles.isManager || roles.isPlanner;
@@ -94,7 +102,9 @@ export function CommentItem({
                   : "bg-info-subtle text-info",
               ].join(" ")}
             >
-              {c.visibility === "internal" ? "Internal" : "Client"}
+              {c.visibility === "internal"
+                ? t("contentDetail.comments.item.visibilityInternal")
+                : t("contentDetail.comments.item.visibilityClient")}
             </span>
             {c.label !== "general" ? (
               <span className="text-label text-fg-muted rounded-full border px-2 py-0.5">
@@ -103,7 +113,8 @@ export function CommentItem({
             ) : null}
             {c.resolvedAt ? (
               <span className="text-label text-success flex items-center gap-1">
-                <CheckCircle className="h-3 w-3" aria-hidden="true" /> resolved
+                <CheckCircle className="h-3 w-3" aria-hidden="true" />{" "}
+                {t("contentDetail.comments.item.resolved")}
               </span>
             ) : null}
           </div>
@@ -114,7 +125,8 @@ export function CommentItem({
               onClick={onReply}
               className="text-label text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-1.5 py-0.5 hover:underline focus:outline-none focus-visible:ring-2"
             >
-              <Reply className="me-1 inline h-3 w-3" aria-hidden="true" /> Reply
+              <Reply className="me-1 inline h-3 w-3" aria-hidden="true" />{" "}
+              {t("contentDetail.comments.item.reply")}
             </button>
             {canResolve ? (
               <form
@@ -128,13 +140,19 @@ export function CommentItem({
                   type="submit"
                   className="text-label text-fg-secondary hover:text-fg-primary focus-visible:text-fg-primary focus:outline-none"
                 >
-                  {c.resolvedAt ? "Unresolve" : "Resolve"}
+                  {c.resolvedAt
+                    ? t("contentDetail.comments.item.unresolve")
+                    : t("contentDetail.comments.item.resolve")}
                 </button>
               </form>
             ) : null}
             {c.mentionedUserIds.length > 0 ? (
               <span className="text-label text-fg-muted">
-                {c.mentionedUserIds.length} mention{c.mentionedUserIds.length === 1 ? "" : "s"}
+                {c.mentionedUserIds.length === 1
+                  ? t("contentDetail.comments.item.mentionOne")
+                  : t("contentDetail.comments.item.mentionMany", {
+                      count: c.mentionedUserIds.length,
+                    })}
               </span>
             ) : null}
           </div>

@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CommentForm } from "@/components/comments/comment-form";
+import { tFor } from "@/messages";
+
+const t = tFor("en");
 
 // `useFormStatus` is a React 19 server-action hook that only works
 // inside a <form action>. Mock it so we can drive `pending` from the
@@ -38,6 +41,7 @@ function renderForm(
       canPostInternal
       onCancel={onCancel}
       onPosted={onPosted}
+      t={t}
       {...overrides}
     />,
   );
@@ -167,6 +171,7 @@ describe("CommentForm", () => {
         contentItemId="ci-1"
         canPostClientVisible
         canPostInternal
+        t={t}
       />,
     );
     expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull();

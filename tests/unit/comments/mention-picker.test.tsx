@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MentionPicker, type MentionableUser } from "@/components/comments/mention-picker";
+import { tFor } from "@/messages";
+
+const t = tFor("en");
 
 const SAMPLE: MentionableUser[] = [
   {
@@ -42,6 +45,7 @@ describe("MentionPicker", () => {
         onHighlight={vi.fn()}
         anchorRect={null}
         open={false}
+        t={t}
       />,
     );
     expect(container.firstChild).toBeNull();
@@ -58,6 +62,7 @@ describe("MentionPicker", () => {
         onHighlight={vi.fn()}
         anchorRect={{ left: 0, top: 0, width: 300 }}
         open
+        t={t}
       />,
     );
     expect(screen.getByTestId("mention-option-u-1")).toBeInTheDocument();
@@ -76,6 +81,7 @@ describe("MentionPicker", () => {
         onHighlight={vi.fn()}
         anchorRect={{ left: 0, top: 0, width: 300 }}
         open
+        t={t}
       />,
     );
     expect(screen.getByTestId("mention-option-u-1")).toHaveAttribute("aria-selected", "false");
@@ -93,6 +99,7 @@ describe("MentionPicker", () => {
         onHighlight={vi.fn()}
         anchorRect={{ left: 0, top: 0, width: 300 }}
         open
+        t={t}
       />,
     );
     expect(screen.getByText("Workspace Manager")).toBeInTheDocument();
@@ -111,6 +118,7 @@ describe("MentionPicker", () => {
         onHighlight={vi.fn()}
         anchorRect={{ left: 0, top: 0, width: 300 }}
         open
+        t={t}
       />,
     );
     expect(screen.getByText(/Searching/i)).toBeInTheDocument();
@@ -127,6 +135,7 @@ describe("MentionPicker", () => {
         onHighlight={vi.fn()}
         anchorRect={{ left: 0, top: 0, width: 300 }}
         open
+        t={t}
       />,
     );
     expect(screen.getByText(/No teammates match/i)).toBeInTheDocument();
@@ -144,6 +153,7 @@ describe("MentionPicker", () => {
         onHighlight={vi.fn()}
         anchorRect={{ left: 0, top: 0, width: 300 }}
         open
+        t={t}
       />,
     );
     await userEvent.click(screen.getByTestId("mention-option-u-2"));
@@ -162,6 +172,7 @@ describe("MentionPicker", () => {
         onHighlight={onHighlight}
         anchorRect={{ left: 0, top: 0, width: 300 }}
         open
+        t={t}
       />,
     );
     await userEvent.hover(screen.getByTestId("mention-option-u-2"));

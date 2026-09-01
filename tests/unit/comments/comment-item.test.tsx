@@ -10,6 +10,9 @@ vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
 }));
 
 import { CommentItem, type CommentRecord } from "@/components/comments/comment-item";
+import { tFor } from "@/messages";
+
+const t = tFor("en");
 
 const baseComment: CommentRecord = {
   id: "c-1",
@@ -46,6 +49,7 @@ function renderItem(overrides: Partial<CommentRecord> = {}, onReply = vi.fn()) {
       currentUserId="u-2"
       roles={baseRoles}
       onReply={onReply}
+      t={t}
     />,
   );
 }
@@ -127,6 +131,7 @@ describe("CommentItem", () => {
         currentUserId="u-1"
         roles={baseRoles}
         onReply={vi.fn()}
+        t={t}
       />,
     );
     expect(screen.getAllByRole("button", { name: /resolve/i }).length).toBeGreaterThan(0);
@@ -140,6 +145,7 @@ describe("CommentItem", () => {
         currentUserId="u-2"
         roles={{ ...baseRoles, isManager: true }}
         onReply={vi.fn()}
+        t={t}
       />,
     );
     expect(screen.getByRole("button", { name: /resolve/i })).toBeInTheDocument();
@@ -153,6 +159,7 @@ describe("CommentItem", () => {
         currentUserId="u-1"
         roles={baseRoles}
         onReply={vi.fn()}
+        t={t}
       />,
     );
     expect(screen.getByRole("button", { name: /unresolve/i })).toBeInTheDocument();
@@ -166,6 +173,7 @@ describe("CommentItem", () => {
         currentUserId="u-2"
         roles={{ ...baseRoles, isManager: false, isPlanner: false }}
         onReply={vi.fn()}
+        t={t}
       />,
     );
     expect(screen.queryByRole("button", { name: /resolve/i })).toBeNull();
@@ -211,6 +219,7 @@ describe("CommentItem", () => {
         roles={baseRoles}
         onReply={vi.fn()}
         isReply
+        t={t}
       />,
     );
     expect((c2.firstChild as HTMLElement).className).toContain("sm:ms-6");
