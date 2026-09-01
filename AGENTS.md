@@ -295,6 +295,25 @@ decision. The durable rules are:
 - A touched route is not complete until English and Arabic, LTR and RTL, 375/768/1024/1280/1440+ layouts, keyboard access, axe, loading/empty/error states, and locale persistence are evidenced at the exact clean HEAD.
 - Format-specific content translations continue to live in `formatPayload.translations[locale]`; the `TranslationPanel` is the write UI and `lib/format-payload/mapper.ts` is the read path.
 
+### Bilingual implementation contract (master-prompt §22 / UI_UX_REFINEMENT_2026-09-01)
+
+The durable bilingual implementation rules — not optional, not review-dependent — are:
+
+- **Every new screen ships in English/LTR and Arabic/RTL.** A feature is not complete until both locales render at the same code path. Direction switching alone (`<html dir="rtl">`) is not Arabic support.
+- **Central message catalogs only.** No hard-coded user-facing copy in components. The catalog module is `src/messages/{en,ar}/common.json`; the loader is `src/messages/index.ts` (pure, vitest-importable); the server resolver is `src/lib/i18n/t-for-active.ts`; the client-side optional-`t` + English-fallback pattern is documented in the "Client components" rule below. Catalog parity (en ↔ ar identical key shape) is a `tests/unit/i18n/catalogs.test.ts` gate.
+- **Interface / content locale split.** `users.locale` controls the application interface. `agencies.locale` is content-only (brand default). The two never drive each other.
+- **Server-side `tForActive()` for every Server Component that renders user-visible copy.** It returns `{ t, code, dir, source }`; the page threads the `t` function (or pre-resolved strings) to client children via serializable props.
+- **Client children: optional `t` + English-fallback pattern.** Every client sub-component that renders user-visible text accepts an optional `t?: (key, params?) => string` prop. When provided, the component reads from the catalog via `tr(key, fallback, params?)`. When omitted, the component falls back to the stored English copy with `{name}` placeholders interpolated manually (no `sprintf` dependency). The result: the test surface (which doesn't mock the translator) still renders real, human-readable strings.
+- **The exactOptionalPropertyTypes contract.** TypeScript's `exactOptionalPropertyTypes: true` is on, so `t?` props cannot be passed as `t={undefined}` to a child. Either pass `t={t}` directly (when the parent always has `t` in scope, e.g. immediately after `await tForActive()`), or use the conditional-spread pattern `{...(t ? { t } : {})}` when the parent itself has optional `t?`. The "always true" error TS2774 is a hint that the parent can pass directly.
+- **Plural pair pattern.** The hand-rolled `t(key, params?)` does not support ICU `plural`. Use adjacent `{One,Many}` keys (e.g. `workspaceOverview.attention.atRiskOne` / `atRiskMany`); the caller picks the right key by count. The translated path interpolates `{count}`; the fallback path uses the English singular/plural. This keeps the catalog parity test green.
+- **No function-valued prop crosses the Server → Client Component boundary.** Pre-resolve translated strings in the Server Component and pass them as serializable props, OR install a scoped client provider with a small, named catalog slice. Do not serialize the full catalog into every page.
+- **Mixed-direction isolation.** Use `DirAwareTextarea` / `DirAwareInput`, `<bdi>`, `dir="auto"`, or reviewed `dir="ltr"` for mixed-direction values (URLs, handles, emails, IDs, hashtags, filenames). E-mail addresses, URLs, handles, hashtags, filenames, IDs, and channel identifiers stay direction-isolated.
+- **`generateMetadata` for every page with a meaningful title.** The browser tab / SEO title follows the active locale. The body title is in `PageHeader`. Hard-coded English `export const metadata = { title: "..." }` is forbidden on production routes.
+- **A touched route is bilingual-gate-complete only when** English and Arabic, LTR and RTL, 375/768/1024/1280/1440+ layouts, keyboard access, axe, loading/empty/error states, locale persistence, and the role-by-role and authentication-state review (`auth/anon`, `auth/client_reviewer`, `auth/workspace_manager`, `auth/agency_admin`, `auth/platform_owner`, suspended/archived workspaces) are all evidenced at the exact clean HEAD.
+- **Direction switching is not Arabic support.** `<html dir="rtl">` plus `font-family` swap is necessary but not sufficient. Arabic product copy requires native editorial review against the glossary; UI strings require the catalog round-trip; date/number/percent/time formatting requires `Intl.*` with `numberingSystem: "latn"` and the workspace timezone; mixed-direction values require the explicit per-field isolation.
+
+These rules apply to every new feature, every refactor of a touched surface, and every UI/UX polish pass. The audit doc `docs/design/UI_UX_REFINEMENT_2026-09-01.md` records the evidence trail.
+
 ## AI integration
 
 Per StudioFlow §15:
