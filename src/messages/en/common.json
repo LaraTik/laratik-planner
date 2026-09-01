@@ -221,6 +221,47 @@
     "title": "Batch add",
     "description": "Paste up to 50 ideas. All active channels and workspace defaults are applied automatically. The batch is atomic."
   },
+  "contentDetail": {
+    "readiness": {
+      "rowContent": "Content",
+      "rowContentReady": "Brief and format fields are filled in",
+      "rowContentEmpty": "Brief is empty",
+      "rowAssets": "Assets & versions",
+      "rowAssetsReady": "An approved version is on file",
+      "rowAssetsEmpty": "No design versions yet",
+      "rowAssetsUnapprovedOne": "{count} version, none approved",
+      "rowAssetsUnapprovedMany": "{count} versions, none approved",
+      "rowPublishing": "Publishing",
+      "rowPublishingReady": "Channels configured",
+      "rowPublishingNoChannels": "No channels",
+      "rowPublishingBlockerOne": "{count} blocker",
+      "rowPublishingBlockerMany": "{count} blockers",
+      "rowPublishingNeedSetupOne": "{count} channel needs setup",
+      "rowPublishingNeedSetupMany": "{count} channels need setup",
+      "rowSchedule": "Schedule",
+      "rowScheduleShipped": "Shipped",
+      "rowScheduleCancelled": "Cancelled",
+      "rowScheduleOverdue": "Planned date is in the past",
+      "rowScheduleOnTime": "On schedule"
+    },
+    "sectionCreativeTitle": "Creative brief",
+    "sectionCreativeDescription": "The per-format fields (caption, hook, scenes, …). AI suggestions are inline per field.",
+    "sectionAssetsTitle": "Assets & versions",
+    "sectionAssetsDescription": "Design versions uploaded by the designer, plus the final-copy approval.",
+    "previewShortcut": "Previewing on {platform} · {account}",
+    "previewShortcutNoAccount": "no channel",
+    "openPreview": "Open preview",
+    "nextAction": {
+      "draftEditable": "Edit content",
+      "draftReadOnly": "View content",
+      "contentReview": "Open content review",
+      "changesRequested": "Review changes",
+      "creative": "Open Creative",
+      "publishing": "Open Publishing",
+      "blocked": "Open workflow",
+      "published": "View Publishing"
+    }
+  },
   "auth": {
     "appName": "laratik-planner",
     "productName": "StudioFlow",

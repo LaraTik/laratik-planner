@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Clock, Eye, Sparkles } from "lucide-react";
 import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 /**
  * Localised platform name. We render the raw platform key in
@@ -77,27 +78,29 @@ export async function generateMetadata({
  * server already determined a different primary action) is the
  * `primaryActionLabel` prop in `OverviewCommandCenter`.
  */
-function nextActionLabel(status: string, canEdit: boolean): string {
+function nextActionLabel(status: string, canEdit: boolean, t: (key: string) => string): string {
   switch (status) {
     case "draft":
-      return canEdit ? "Edit content" : "View content";
+      return canEdit
+        ? t("contentDetail.nextAction.draftEditable")
+        : t("contentDetail.nextAction.draftReadOnly");
     case "content_review":
-      return "Open content review";
+      return t("contentDetail.nextAction.contentReview");
     case "changes_requested":
-      return "Review changes";
+      return t("contentDetail.nextAction.changesRequested");
     case "approved_for_design":
     case "in_design":
     case "creative_review":
-      return "Open Creative";
+      return t("contentDetail.nextAction.creative");
     case "ready_to_publish":
     case "partially_published":
-      return "Open Publishing";
+      return t("contentDetail.nextAction.publishing");
     case "blocked":
-      return "Open workflow";
+      return t("contentDetail.nextAction.blocked");
     case "published":
-      return "View Publishing";
+      return t("contentDetail.nextAction.published");
     default:
-      return "View content";
+      return t("contentDetail.nextAction.draftReadOnly");
   }
 }
 
@@ -106,6 +109,7 @@ export default async function ContentDetailPage({
 }: {
   params: Promise<{ slug: string; id: string }>;
 }) {
+  const { t } = await tForActive();
   const { slug, id } = await params;
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
@@ -363,24 +367,26 @@ export default async function ContentDetailPage({
   const overviewReadinessLines = [
     {
       id: "content",
-      label: "Content",
+      label: t("contentDetail.readiness.rowContent"),
       status: contentReadinessStatus,
       detail:
         contentReadinessStatus === "ready"
-          ? "Brief and format fields are filled in"
-          : (contentReadinessIssue?.message ?? "Brief is empty"),
+          ? t("contentDetail.readiness.rowContentReady")
+          : (contentReadinessIssue?.message ?? t("contentDetail.readiness.rowContentEmpty")),
       href: "#content",
     },
     {
       id: "assets-versions",
-      label: "Assets & versions",
+      label: t("contentDetail.readiness.rowAssets"),
       status: creativeReadinessStatus,
       detail:
         creativeReadinessStatus === "ready"
-          ? "An approved version is on file"
+          ? t("contentDetail.readiness.rowAssetsReady")
           : deliveryCount === 0
-            ? "No design versions yet"
-            : `${deliveryCount} version${deliveryCount === 1 ? "" : "s"}, none approved`,
+            ? t("contentDetail.readiness.rowAssetsEmpty")
+            : deliveryCount === 1
+              ? t("contentDetail.readiness.rowAssetsUnapprovedOne", { count: deliveryCount })
+              : t("contentDetail.readiness.rowAssetsUnapprovedMany", { count: deliveryCount }),
       // Phase 3 of the planning-detail refactor (2026-08-30):
       // the "Creative" section merged into the Content tab as
       // "Assets & versions". The row now points at the new
@@ -389,29 +395,37 @@ export default async function ContentDetailPage({
     },
     {
       id: "publishing",
-      label: "Publishing",
+      label: t("contentDetail.readiness.rowPublishing"),
       status: publishingReadinessStatus,
       detail:
         publishingReadinessStatus === "ready"
           ? item.channels.length === 0
-            ? "No channels"
-            : "Channels configured"
+            ? t("contentDetail.readiness.rowPublishingNoChannels")
+            : t("contentDetail.readiness.rowPublishingReady")
           : publishingReadinessStatus === "danger"
-            ? `${publishingBlockers} blocker${publishingBlockers === 1 ? "" : "s"}`
-            : `${channelsNotConfigured} channel${channelsNotConfigured === 1 ? "" : "s"} need setup`,
+            ? publishingBlockers === 1
+              ? t("contentDetail.readiness.rowPublishingBlockerOne", { count: publishingBlockers })
+              : t("contentDetail.readiness.rowPublishingBlockerMany", { count: publishingBlockers })
+            : channelsNotConfigured === 1
+              ? t("contentDetail.readiness.rowPublishingNeedSetupOne", {
+                  count: channelsNotConfigured,
+                })
+              : t("contentDetail.readiness.rowPublishingNeedSetupMany", {
+                  count: channelsNotConfigured,
+                }),
       href: "#publishing",
     },
     {
       id: "schedule",
-      label: "Schedule",
+      label: t("contentDetail.readiness.rowSchedule"),
       status: scheduleReadinessStatus,
       detail: shipped
         ? item.status === "cancelled"
-          ? "Cancelled"
-          : "Shipped"
+          ? t("contentDetail.readiness.rowScheduleCancelled")
+          : t("contentDetail.readiness.rowScheduleShipped")
         : plannedMs < nowMs
-          ? "Planned date is in the past"
-          : "On schedule",
+          ? t("contentDetail.readiness.rowScheduleOverdue")
+          : t("contentDetail.readiness.rowScheduleOnTime"),
       href: "#publishing",
     },
   ];
@@ -422,7 +436,7 @@ export default async function ContentDetailPage({
   // glance, regardless of category.
   const recentActivity = activityEvents.slice(0, 5);
 
-  const primaryActionLabel = nextActionLabel(item.status, canEdit);
+  const primaryActionLabel = nextActionLabel(item.status, canEdit, t);
   // Phase 3 of the planning-detail refactor (2026-08-30): the
   // "Creative" section merged into the Content tab as "Assets
   // & versions". The Next-Action CTA on Overview now scrolls
@@ -667,8 +681,8 @@ export default async function ContentDetailPage({
                 {item.channels.length > 0 ? (
                   <PlanningSection
                     id="creative"
-                    title="Creative brief"
-                    description="The per-format fields (caption, hook, scenes, …). AI suggestions are inline per field."
+                    title={t("contentDetail.sectionCreativeTitle")}
+                    description={t("contentDetail.sectionCreativeDescription")}
                   >
                     <div className="space-y-3">
                       <FormatAwareContentEditor
@@ -694,8 +708,12 @@ export default async function ContentDetailPage({
                         data-testid="content-preview-shortcut"
                       >
                         <span className="font-medium">
-                          Previewing on {humanPlatform(item.channels[0]?.platform)} ·{" "}
-                          {item.channels[0]?.accountName ?? "no channel"}
+                          {t("contentDetail.previewShortcut", {
+                            platform: humanPlatform(item.channels[0]?.platform),
+                            account:
+                              item.channels[0]?.accountName ??
+                              t("contentDetail.previewShortcutNoAccount"),
+                          })}
                         </span>
                         <Button
                           variant="outline"
@@ -705,7 +723,7 @@ export default async function ContentDetailPage({
                         >
                           <Link href="#preview">
                             <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-                            Open preview
+                            {t("contentDetail.openPreview")}
                           </Link>
                         </Button>
                       </div>
@@ -788,8 +806,8 @@ export default async function ContentDetailPage({
                 >
                   <PlanningSection
                     id="delivery"
-                    title="Assets & versions"
-                    description="Design versions uploaded by the designer, plus the final-copy approval."
+                    title={t("contentDetail.sectionAssetsTitle")}
+                    description={t("contentDetail.sectionAssetsDescription")}
                   >
                     <DeliverySection
                       workspaceSlug={slug}

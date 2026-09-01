@@ -221,6 +221,47 @@
     "title": "إضافة دفعة",
     "description": "الصق حتى 50 فكرة. تُطبَّق جميع القنوات النشطة وإعدادات مساحة العمل تلقائيًا. الدفعة ذرّية."
   },
+  "contentDetail": {
+    "readiness": {
+      "rowContent": "المحتوى",
+      "rowContentReady": "تم ملء حقول الموجز وحقول التنسيق",
+      "rowContentEmpty": "الموجز فارغ",
+      "rowAssets": "الأصول والإصدارات",
+      "rowAssetsReady": "توجد نسخة معتمدة في الملف",
+      "rowAssetsEmpty": "لا توجد إصدارات تصميم بعد",
+      "rowAssetsUnapprovedOne": "إصدار واحد، لم يُعتمد أي منها",
+      "rowAssetsUnapprovedMany": "{count} إصدارات، لم يُعتمد أي منها",
+      "rowPublishing": "النشر",
+      "rowPublishingReady": "تم إعداد القنوات",
+      "rowPublishingNoChannels": "لا توجد قنوات",
+      "rowPublishingBlockerOne": "مانع واحد",
+      "rowPublishingBlockerMany": "{count} موانع",
+      "rowPublishingNeedSetupOne": "قناة واحدة تحتاج إعدادًا",
+      "rowPublishingNeedSetupMany": "{count} قنوات تحتاج إعدادًا",
+      "rowSchedule": "الجدول",
+      "rowScheduleShipped": "تم النشر",
+      "rowScheduleCancelled": "تم الإلغاء",
+      "rowScheduleOverdue": "تاريخ النشر المُخطّط في الماضي",
+      "rowScheduleOnTime": "في الموعد"
+    },
+    "sectionCreativeTitle": "الموجز الإبداعي",
+    "sectionCreativeDescription": "حقول لكل تنسيق (التعليق، الخطاف، المشاهد، ...). اقتراحات الذكاء الاصطناعي مدمجة داخل كل حقل.",
+    "sectionAssetsTitle": "الأصول والإصدارات",
+    "sectionAssetsDescription": "إصدارات التصميم التي رفعها المصمم، بالإضافة إلى الموافقة على النسخة النهائية.",
+    "previewShortcut": "معاينة على {platform} · {account}",
+    "previewShortcutNoAccount": "لا توجد قناة",
+    "openPreview": "فتح المعاينة",
+    "nextAction": {
+      "draftEditable": "تعديل المحتوى",
+      "draftReadOnly": "عرض المحتوى",
+      "contentReview": "فتح مراجعة المحتوى",
+      "changesRequested": "مراجعة التعديلات",
+      "creative": "فتح الإبداعي",
+      "publishing": "فتح النشر",
+      "blocked": "فتح سير العمل",
+      "published": "عرض النشر"
+    }
+  },
   "auth": {
     "appName": "laratik-planner",
     "productName": "StudioFlow",
