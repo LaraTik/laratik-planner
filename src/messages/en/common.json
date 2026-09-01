@@ -1369,6 +1369,24 @@
     "copy": "Copy",
     "copied": "Copied"
   },
+  "platform": {
+    "eyebrow": "Platform",
+    "overviewTitle": "Overview",
+    "overviewDescription": "Aggregate health of every agency on the platform. Drill into a specific agency from the Agencies tab.",
+    "viewAgencies": "View agencies",
+    "kpiTotalAgencies": "Total agencies",
+    "kpiActiveUsers": "Active users",
+    "kpiTotalWorkspaces": "Total workspaces",
+    "kpiAiUsage": "AI usage (calls)",
+    "recentTitle": "Recent agencies",
+    "recentDescription": "The five most recently created agencies on the platform. Click an agency to drill into its overview tab.",
+    "seeAll": "See all",
+    "recentEmpty": "No agencies yet. The platform bootstrap creates the singleton agency on first run.",
+    "signInRequired": "Sign in required",
+    "signInRequiredBody": "Sign in to view platform health.",
+    "overviewUnavailable": "Platform overview unavailable",
+    "overviewUnavailableBody": "Your platform role does not include agency oversight."
+  },
   "agencyProviders": {
     "title": "Social provider config",
     "description": "Per-agency credentials for the social analytics pipeline. Each agency brings its own Meta and TikTok app — your tokens never leave your tenant. The app secret is sealed with the same key we use for OAuth tokens, then re-fetched only when the cron or a Re-test needs it.",

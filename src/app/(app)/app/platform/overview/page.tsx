@@ -3,6 +3,7 @@ import { count, desc, eq, isNull, sql } from "drizzle-orm";
 import { Building, Building2, Sparkles, Users2, Workflow } from "lucide-react";
 import { db } from "@/lib/db";
 import { agencyMemberships, agencies, aiUsageEvents, workspaces } from "@/lib/db/schema";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { KpiTile } from "@/components/workspace/kpi-tile";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
@@ -88,9 +89,13 @@ async function loadRecentAgencies(limit = 5) {
 
 export default async function PlatformOverviewPage() {
   const actor = await currentActor();
+  const { t } = await tForActive();
   if (!actor) {
     return (
-      <PermissionNotice title="Sign in required" description="Sign in to view platform health." />
+      <PermissionNotice
+        title={t("platform.signInRequired")}
+        description={t("platform.signInRequiredBody")}
+      />
     );
   }
   try {
@@ -98,8 +103,8 @@ export default async function PlatformOverviewPage() {
   } catch {
     return (
       <PermissionNotice
-        title="Platform overview unavailable"
-        description="Your platform role does not include agency oversight."
+        title={t("platform.overviewUnavailable")}
+        description={t("platform.overviewUnavailableBody")}
       />
     );
   }
@@ -108,9 +113,9 @@ export default async function PlatformOverviewPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Platform"
-        title="Overview"
-        description="Aggregate health of every agency on the platform. Drill into a specific agency from the Agencies tab."
+        eyebrow={t("platform.eyebrow")}
+        title={t("platform.overviewTitle")}
+        description={t("platform.overviewDescription")}
         action={
           <Link
             href="/app/platform/agencies"
@@ -118,7 +123,7 @@ export default async function PlatformOverviewPage() {
             data-testid="platform-overview-view-agencies"
           >
             <Building2 className="h-4 w-4" aria-hidden="true" />
-            View agencies
+            {t("platform.viewAgencies")}
           </Link>
         }
       />
@@ -129,25 +134,25 @@ export default async function PlatformOverviewPage() {
       >
         <KpiTile
           icon={<Building2 className="h-4 w-4" aria-hidden="true" />}
-          label="Total agencies"
+          label={t("platform.kpiTotalAgencies")}
           value={kpis.totalAgencies}
           data-testid="platform-overview-kpi-agencies"
         />
         <KpiTile
           icon={<Users2 className="h-4 w-4" aria-hidden="true" />}
-          label="Active users"
+          label={t("platform.kpiActiveUsers")}
           value={kpis.totalActiveUsers}
           data-testid="platform-overview-kpi-users"
         />
         <KpiTile
           icon={<Workflow className="h-4 w-4" aria-hidden="true" />}
-          label="Total workspaces"
+          label={t("platform.kpiTotalWorkspaces")}
           value={kpis.totalWorkspaces}
           data-testid="platform-overview-kpi-workspaces"
         />
         <KpiTile
           icon={<Sparkles className="h-4 w-4" aria-hidden="true" />}
-          label="AI usage (calls)"
+          label={t("platform.kpiAiUsage")}
           value={kpis.totalAiCalls}
           tone="success"
           data-testid="platform-overview-kpi-ai"
@@ -157,22 +162,19 @@ export default async function PlatformOverviewPage() {
       <Card padding="lg" className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <CardTitle>Recent agencies</CardTitle>
-            <CardDescription>
-              The five most recently created agencies on the platform. Click an agency to drill into
-              its overview tab.
-            </CardDescription>
+            <CardTitle>{t("platform.recentTitle")}</CardTitle>
+            <CardDescription>{t("platform.recentDescription")}</CardDescription>
           </div>
           <Link
             href="/app/platform/agencies"
             className="text-primary focus-visible:ring-focus-ring text-body rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
           >
-            See all
+            {t("platform.seeAll")}
           </Link>
         </div>
         {recent.length === 0 ? (
           <p className="text-body text-fg-muted" data-testid="platform-overview-recent-empty">
-            No agencies yet. The platform bootstrap creates the singleton agency on first run.
+            {t("platform.recentEmpty")}
           </p>
         ) : (
           <ul
