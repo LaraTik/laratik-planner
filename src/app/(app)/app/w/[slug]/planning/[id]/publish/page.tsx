@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 /**
  * Phase 7 of the planning-detail refactor (2026-08-30):
@@ -26,6 +27,7 @@ export default async function PublishPackageRedirectPage({
 }: {
   params: Promise<{ slug: string; id: string }>;
 }) {
+  const { t } = await tForActive();
   const { slug, id } = await params;
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
@@ -39,14 +41,13 @@ export default async function PublishPackageRedirectPage({
     return (
       <div className="space-y-4">
         <p className="text-body text-fg-muted">
-          The publishing setup is now part of the planning detail page. This workspace can&apos;t be
-          resolved; ask your manager for a fresh link.
+          {t("contentDetail.publish.redirectFallbackMessage")}
         </p>
         <Link
           href={`/app/w/${slug}/planning/${id}`}
           className="text-primary underline-offset-4 hover:underline"
         >
-          Back to content
+          {t("contentDetail.publish.redirectFallbackBack")}
         </Link>
       </div>
     );

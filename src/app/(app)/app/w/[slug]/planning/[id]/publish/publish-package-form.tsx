@@ -190,6 +190,7 @@ export function PublishPackageForm({
   canEdit,
   canApproveFinalCopy,
   canConfirmReadiness,
+  t,
 }: {
   workspaceId: string;
   workspaceSlug: string;
@@ -211,6 +212,17 @@ export function PublishPackageForm({
   canEdit: boolean;
   canApproveFinalCopy: boolean;
   canConfirmReadiness: boolean;
+  /**
+   * Bound translator from the parent. Phase 6e (2026-09-01)
+   * migrates the top-level chrome (empty state, status
+   * messages, save / ready buttons, last-saved label) through
+   * `contentDetail.publish.*`. The per-field labels inside
+   * the Destination & caption / Media & disclosures /
+   * Preview & approval sections (Phase {hashtag} /
+   * First comment / etc.) are still English and belong to a
+   * follow-up commit.
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const [activeChannel, setActiveChannel] = useState<string>(channels[0]?.id ?? "");
   const [drafts, setDrafts] = useState<Record<string, PlatformPayload>>(() => {
@@ -256,10 +268,8 @@ export function PublishPackageForm({
   if (channels.length === 0) {
     return (
       <Card padding="lg" data-testid="publish-no-channels">
-        <CardTitle>No channels selected</CardTitle>
-        <CardDescription>
-          Add a destination profile from the content detail page to configure the publish package.
-        </CardDescription>
+        <CardTitle>{t("contentDetail.publish.noChannelsTitle")}</CardTitle>
+        <CardDescription>{t("contentDetail.publish.noChannelsDescription")}</CardDescription>
       </Card>
     );
   }
@@ -307,7 +317,7 @@ export function PublishPackageForm({
       }
       setDrafts((previous) => ({ ...previous, [channelId]: result.payload }));
       setSavedAt((prev) => ({ ...prev, [channelId]: Date.now() }));
-      setStatusMessage("Draft saved. Material approvals were reset for this revision.");
+      setStatusMessage(t("contentDetail.publish.statusDraftSaved"));
     });
   }
 
@@ -319,7 +329,7 @@ export function PublishPackageForm({
       summary,
     });
     if (!result.ok) throw new Error(result.error);
-    setStatusMessage("Internal note added without resetting approvals.");
+    setStatusMessage(t("contentDetail.publish.statusInternalNoteAdded"));
   }
 
   function handleFinalCopyApproval(approved: boolean) {
@@ -338,7 +348,11 @@ export function PublishPackageForm({
         return;
       }
       setDrafts((previous) => ({ ...previous, [current.id]: result.payload }));
-      setStatusMessage(approved ? "Final copy approved." : "Final-copy approval revoked.");
+      setStatusMessage(
+        approved
+          ? t("contentDetail.publish.statusFinalCopyApproved")
+          : t("contentDetail.publish.statusFinalCopyRevoked"),
+      );
     });
   }
 
@@ -351,7 +365,11 @@ export function PublishPackageForm({
         setError(result.error);
         return;
       }
-      setStatusMessage(`Publish package confirmed ready at revision ${result.report.revision}.`);
+      setStatusMessage(
+        t("contentDetail.publish.statusConfirmedReadyOne", {
+          revision: result.report.revision,
+        }),
+      );
     });
   }
 
@@ -670,7 +688,9 @@ export function PublishPackageForm({
           />
           {Object.keys(savedAt).length > 0 ? (
             <span className="text-label text-fg-muted" data-testid="publish-last-saved">
-              Last saved {new Date(Math.max(...Object.values(savedAt))).toLocaleTimeString()}
+              {t("contentDetail.publish.lastSaved", {
+                time: new Date(Math.max(...Object.values(savedAt))).toLocaleTimeString(),
+              })}
             </span>
           ) : null}
         </div>
@@ -684,7 +704,7 @@ export function PublishPackageForm({
             data-testid="publish-save-draft"
           >
             <Save className="me-1 h-4 w-4" aria-hidden="true" />
-            Save draft
+            {t("contentDetail.publish.saveDraft")}
           </Button>
           <Button
             type="button"
@@ -694,7 +714,7 @@ export function PublishPackageForm({
             data-testid="publish-ready"
           >
             <Send className="me-1 h-4 w-4" aria-hidden="true" />
-            Ready for publishing
+            {t("contentDetail.publish.readyForPublishing")}
           </Button>
         </div>
       </div>

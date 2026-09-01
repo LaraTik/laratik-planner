@@ -293,6 +293,20 @@
     "description": "الصق حتى 50 فكرة. تُطبَّق جميع القنوات النشطة وإعدادات مساحة العمل تلقائيًا. الدفعة ذرّية."
   },
   "contentDetail": {
+    "publish": {
+      "redirectFallbackMessage": "إعداد النشر أصبح الآن جزءًا من صفحة تفاصيل التخطيط. لا يمكن العثور على مساحة العمل هذه؛ اطلب رابطًا جديدًا من مديرك.",
+      "redirectFallbackBack": "العودة إلى المحتوى",
+      "noChannelsTitle": "لم يتم اختيار قنوات",
+      "noChannelsDescription": "أضف ملف وجهة من صفحة تفاصيل المحتوى لتكوين حزمة النشر.",
+      "statusDraftSaved": "تم حفظ المسودة. تم إعادة تعيين الموافقات المادية لهذه المراجعة.",
+      "statusInternalNoteAdded": "تمت إضافة ملاحظة داخلية دون إعادة تعيين الموافقات.",
+      "statusFinalCopyApproved": "تمت الموافقة على النسخة النهائية.",
+      "statusFinalCopyRevoked": "تم سحب الموافقة على النسخة النهائية.",
+      "statusConfirmedReadyOne": "تم تأكيد جاهزية حزمة النشر عند المراجعة {revision}.",
+      "lastSaved": "آخر حفظ {time}",
+      "saveDraft": "حفظ المسودة",
+      "readyForPublishing": "جاهز للنشر"
+    },
     "comments": {
       "drawer": {
         "backdropAria": "إغلاق المناقشة",

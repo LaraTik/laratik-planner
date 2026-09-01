@@ -293,6 +293,20 @@
     "description": "Paste up to 50 ideas. All active channels and workspace defaults are applied automatically. The batch is atomic."
   },
   "contentDetail": {
+    "publish": {
+      "redirectFallbackMessage": "The publishing setup is now part of the planning detail page. This workspace can't be resolved; ask your manager for a fresh link.",
+      "redirectFallbackBack": "Back to content",
+      "noChannelsTitle": "No channels selected",
+      "noChannelsDescription": "Add a destination profile from the content detail page to configure the publish package.",
+      "statusDraftSaved": "Draft saved. Material approvals were reset for this revision.",
+      "statusInternalNoteAdded": "Internal note added without resetting approvals.",
+      "statusFinalCopyApproved": "Final copy approved.",
+      "statusFinalCopyRevoked": "Final-copy approval revoked.",
+      "statusConfirmedReadyOne": "Publish package confirmed ready at revision {revision}.",
+      "lastSaved": "Last saved {time}",
+      "saveDraft": "Save draft",
+      "readyForPublishing": "Ready for publishing"
+    },
     "comments": {
       "drawer": {
         "backdropAria": "Close discussion",

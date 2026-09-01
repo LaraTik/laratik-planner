@@ -1000,6 +1000,7 @@ export default async function ContentDetailPage({
                       canEdit={canEdit}
                       canApproveFinalCopy={canApproveFinalCopy}
                       canConfirmReadiness={canConfirmReadiness}
+                      t={t}
                     />
                   </div>
                 ) : null}
