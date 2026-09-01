@@ -1353,6 +1353,11 @@
     "signOut": "Sign out",
     "signOutBlurb": "End this session on this device. You can sign back in at any time."
   },
+  "errors": {
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "The page you tried to reach doesn't exist, or you don't have access to it.",
+    "backToMyWork": "Back to My Work"
+  },
   "agencySettings": {
     "title": "Agency Settings",
     "description": "Agency identity, access footprint, and environment-managed services.",
