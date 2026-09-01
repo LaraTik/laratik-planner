@@ -75,9 +75,7 @@ function clientBoundaryOffenders(): string[] {
               attribute.name.text === "t" &&
               !!attribute.initializer &&
               ts.isJsxExpression(attribute.initializer) &&
-              /^(?:t|(?:[A-Za-z_$][\w$]*\.)+t)$/.test(
-                attribute.initializer.expression?.getText(syntax) ?? "",
-              ),
+              !!attribute.initializer.expression,
           );
           if (hasTranslatorProp) {
             offenders.push(

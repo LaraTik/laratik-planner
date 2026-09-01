@@ -102,7 +102,6 @@ export async function SupportAccessSection({
             agencyId={agencyId}
             agencyName={agencyName}
             workspaces={workspaces}
-            t={tr}
           />
         </Card>
       ) : null}

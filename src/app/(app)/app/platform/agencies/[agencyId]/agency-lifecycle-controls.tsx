@@ -4,6 +4,7 @@ import { Archive, ArchiveRestore, CirclePause, RotateCcw } from "lucide-react";
 import { ReasonDialog } from "@/components/forms/reason-dialog";
 import { PermissionNotice } from "@/components/platform/permission-notice";
 import { Button } from "@/components/ui/button";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 import { changeLifecycleAction } from "../actions";
 
 type AgencyLifecycle = "active" | "suspended" | "archived";
@@ -53,16 +54,14 @@ export function AgencyLifecycleControls({
   lifecycle,
   canManageLifecycle,
   canArchive,
-  t,
 }: {
   agencyId: string;
   agencyName: string;
   lifecycle: AgencyLifecycle;
   canManageLifecycle: boolean;
   canArchive: boolean;
-  t?: Translator;
 }) {
-  const tr: Translator = t ?? EN_FALLBACK;
+  const tr: Translator = useLocaleT() ?? EN_FALLBACK;
   async function submit(action: LifecycleAction, reason: string) {
     const formData = new FormData();
     formData.set("agencyId", agencyId);

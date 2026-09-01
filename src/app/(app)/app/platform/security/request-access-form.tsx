@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 import {
   createSupportAccessRequestFormAction,
   type SupportAccessRequestActionState,
@@ -42,14 +43,12 @@ export function SupportAccessRequestForm({
   agencyId,
   agencyName,
   workspaces,
-  t,
 }: {
   agencyId: string;
   agencyName: string;
   workspaces: ReadonlyArray<{ id: string; name: string }>;
-  t?: Translator;
 }) {
-  const tr: Translator = t ?? EN_FALLBACK;
+  const tr: Translator = useLocaleT() ?? EN_FALLBACK;
   const [state, action] = useActionState(createSupportAccessRequestFormAction, initial);
   return (
     <form action={action} className="space-y-4" data-testid="platform-support-request-form">

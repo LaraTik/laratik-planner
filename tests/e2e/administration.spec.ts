@@ -31,7 +31,7 @@ test.describe("Brand Kit administration journey", () => {
   test("workspace manager configures Brand Kit rules and resources", async ({ page }) => {
     await bootstrapRoleSession(page, "workspace_manager", "brand-admin");
 
-    await page.goto("/app/w/brand-admin/brand-kit");
+    await page.goto("/app/w/brand-admin/brand-kit/publishing");
 
     // Wait for the publishing-rule form to be visible (server-rendered).
     await expect(page.getByTestId("publishing-rule-form")).toBeVisible();
@@ -55,6 +55,7 @@ test.describe("Brand Kit administration journey", () => {
     ).toBeVisible();
 
     // ── Linked resource ────────────────────────────────────────────────
+    await page.goto("/app/w/brand-admin/brand-kit/linked");
     const resourceName = `Master design library ${Date.now()}`;
     const linkedResourceForm = page.getByTestId("linked-resource-form");
     await linkedResourceForm.getByLabel("Provider").selectOption("figma");
@@ -69,7 +70,7 @@ test.describe("Brand Kit administration journey", () => {
   test("content planner can create and archive Brand Kit records", async ({ page }) => {
     await bootstrapRoleSession(page, "content_planner", "brand-admin");
 
-    await page.goto("/app/w/brand-admin/brand-kit");
+    await page.goto("/app/w/brand-admin/brand-kit/publishing");
     await expect(page.getByTestId("publishing-rule-form")).toBeVisible();
 
     // content_planner is in BRAND_MANAGER_ROLES so they see the form.
@@ -104,7 +105,7 @@ test.describe("Brand Kit administration journey", () => {
   test("viewer can see approved Brand Kit content but no mutation controls", async ({ page }) => {
     // First seed a rule as a manager so the viewer has something to see.
     await bootstrapRoleSession(page, "workspace_manager", "brand-admin");
-    await page.goto("/app/w/brand-admin/brand-kit");
+    await page.goto("/app/w/brand-admin/brand-kit/publishing");
     const publicTitle = `Public guidance ${Date.now()}`;
     await page.getByLabel("Rule type").selectOption("general");
     await page.getByLabel("Title").fill(publicTitle);
@@ -121,7 +122,7 @@ test.describe("Brand Kit administration journey", () => {
     // Now switch to the viewer and confirm they see the rule but not
     // the create / archive controls.
     await bootstrapRoleSession(page, "viewer", "brand-admin");
-    await page.goto("/app/w/brand-admin/brand-kit");
+    await page.goto("/app/w/brand-admin/brand-kit/publishing");
 
     // The page renders (viewer is in INTERNAL_WORKSPACE_ROLES) and the
     // rule text is visible.
@@ -141,11 +142,10 @@ test.describe("Brand Kit administration journey", () => {
   test("client reviewer cannot open internal Brand Kit", async ({ page }) => {
     await bootstrapRoleSession(page, "client_reviewer", "brand-admin");
 
-    // The brand-kit page calls getAccessibleWorkspace which uses
-    // canAccessInternalWorkspace. client_reviewer is not in
-    // INTERNAL_WORKSPACE_ROLES, so the page returns 404.
-    await page.goto("/app/w/brand-admin/brand-kit");
-    await expect(page.getByRole("heading", { name: /Page not found/i })).toBeVisible();
+    // Client reviewers are redirected to the neutral workspace-unavailable
+    // surface before any internal Brand Kit data or controls are rendered.
+    await page.goto("/app/w/brand-admin/brand-kit/publishing");
+    await expect(page.getByRole("heading", { name: /Workspace unavailable/i })).toBeVisible();
 
     // No internal Brand Kit markers should be present.
     await expect(page.getByTestId("brand-kit-bento")).toHaveCount(0);
@@ -155,7 +155,7 @@ test.describe("Brand Kit administration journey", () => {
 
   test("archived records disappear after reload", async ({ page }) => {
     await bootstrapRoleSession(page, "workspace_manager", "brand-admin");
-    await page.goto("/app/w/brand-admin/brand-kit");
+    await page.goto("/app/w/brand-admin/brand-kit/publishing");
     await expect(page.getByTestId("publishing-rule-form")).toBeVisible();
 
     const ephemeralTitle = `Ephemeral rule ${Date.now()}`;
@@ -192,7 +192,7 @@ test.describe("Brand Kit administration journey", () => {
     // ── Set up workspace A: create a rule as workspace_manager ────────
     const seedA: SeedResult = await bootstrapRoleSession(page, "workspace_manager", "brand-admin");
     expect(seedA.workspaceSlug).toBe("brand-admin");
-    await page.goto("/app/w/brand-admin/brand-kit");
+    await page.goto("/app/w/brand-admin/brand-kit/publishing");
     await expect(page.getByTestId("publishing-rule-form")).toBeVisible();
 
     const crossTitle = `Cross-workspace rule ${Date.now()}`;
@@ -226,7 +226,7 @@ test.describe("Brand Kit administration journey", () => {
       await bootstrapRoleSession(workspaceBPage, "workspace_manager", "brand-admin-b");
 
       // Sanity-check: workspace B has its own empty brand kit.
-      await workspaceBPage.goto("/app/w/brand-admin-b/brand-kit");
+      await workspaceBPage.goto("/app/w/brand-admin-b/brand-kit/publishing");
       await expect(workspaceBPage.getByText(crossTitle)).toHaveCount(0);
 
       // Try to archive the rule from workspace A using workspace B's
@@ -263,7 +263,7 @@ test.describe("Brand Kit administration journey", () => {
 
     // ── Re-fetch workspace A's brand kit and confirm the rule is still
     // present (the cross-workspace archive was a no-op, not a delete).
-    await page.goto("/app/w/brand-admin/brand-kit");
+    await page.goto("/app/w/brand-admin/brand-kit/publishing");
     // The original test id still resolves to the same row.
     await expect(page.getByTestId(`brand-publishing-rule-${ruleId}`)).toBeVisible();
 

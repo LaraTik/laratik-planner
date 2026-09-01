@@ -288,7 +288,6 @@ export async function PlanAiSections({
           lifecycle={agency.archivedAt ? "archived" : agency.suspendedAt ? "suspended" : "active"}
           canManageLifecycle={canManageLifecycle}
           canArchive={canArchive}
-          t={tr}
         />
       </Card>
 
