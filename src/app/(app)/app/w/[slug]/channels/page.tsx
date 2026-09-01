@@ -143,6 +143,7 @@ function channelsColumns(props: {
                     "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected") ??
                   "manual",
               }}
+              t={props.t}
             />
           );
         }
@@ -161,6 +162,7 @@ function channelsColumns(props: {
                 "connected",
             }}
             affectedChannels={affected}
+            t={props.t}
           />
         );
       },
@@ -374,7 +376,7 @@ export default async function ChannelsPage({
         )
       ) : null}
 
-      {canManage ? <ChannelForm slug={slug} /> : null}
+      {canManage ? <ChannelForm slug={slug} t={t} /> : null}
 
       {rows.length ? (
         <Card padding="none" className="overflow-hidden">

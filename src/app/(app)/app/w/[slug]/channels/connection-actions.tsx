@@ -65,15 +65,29 @@ type AffectedChannel = Pick<ChannelRow, "id" | "accountName" | "platform">;
 
 type TestFlash = { kind: "success"; lastSyncedAt: Date } | { kind: "error"; message: string };
 
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
 export function ConnectionActions({
   slug,
   channel,
   affectedChannels = [],
+  t,
 }: {
   slug: string;
   channel: ChannelRow;
   affectedChannels?: AffectedChannel[];
+  /**
+   * Optional translator. When provided, every user-visible string
+   * (Re-test / Sync now button labels + pending labels,
+   * Disconnect / Revoke buttons, the Validated {when} chip, the
+   * Revoke-confirm dialog + the affected channels list label) renders
+   * from `users.channelsConnectionActions.*`; when omitted, the
+   * stored English copy is used.
+   */
+  t?: Translator;
 }) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   const [pending, startTransition] = useTransition();
   const [flash, setFlash] = useState<TestFlash | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -128,14 +142,15 @@ export function ConnectionActions({
   // degraded state (delayed sync / needs_reauth) — the user is
   // trying to recover, not just check. "Re-test" is the right label
   // for a healthy connection — the user is verifying, not kicking.
-  const testLabel =
-    channel.connectionStatus === "connected" || channel.connectionStatus === "manual"
-      ? pending
-        ? "Validating…"
-        : "Re-test"
-      : pending
-        ? "Retrying…"
-        : "Sync now";
+  const isHealthy =
+    channel.connectionStatus === "connected" || channel.connectionStatus === "manual";
+  const testLabel = isHealthy
+    ? pending
+      ? tr("users.channelsConnectionActions.retestValidating", "Validating…")
+      : tr("users.channelsConnectionActions.retestLabel", "Re-test")
+    : pending
+      ? tr("users.channelsConnectionActions.retrying", "Retrying…")
+      : tr("users.channelsConnectionActions.syncNow", "Sync now");
 
   return (
     <div className="flex flex-col items-end gap-1" data-testid="connection-actions">
@@ -163,7 +178,7 @@ export function ConnectionActions({
               data-testid="disconnect-button"
             >
               <PlugZap className="h-3 w-3" aria-hidden={true} />
-              Disconnect
+              {tr("users.channelsConnectionActions.disconnect", "Disconnect")}
             </Button>
             {isShared ? (
               <Button
@@ -175,7 +190,7 @@ export function ConnectionActions({
                 data-testid="revoke-button"
               >
                 <AlertTriangle className="h-3 w-3" aria-hidden={true} />
-                Revoke
+                {tr("users.channelsConnectionActions.revoke", "Revoke")}
               </Button>
             ) : null}
           </>
@@ -188,7 +203,11 @@ export function ConnectionActions({
           data-testid="retest-success"
         >
           <Check className="text-success h-3 w-3" aria-hidden={true} />
-          Validated {formatRelativeDate(flash.lastSyncedAt)}
+          {tr(
+            "users.channelsConnectionActions.validatedAt",
+            `Validated ${formatRelativeDate(flash.lastSyncedAt)}`,
+            { when: formatRelativeDate(flash.lastSyncedAt) },
+          )}
         </span>
       ) : null}
       {flash?.kind === "error" ? (
@@ -210,14 +229,24 @@ export function ConnectionActions({
       <Dialog open={showRevoke} onOpenChange={setShowRevoke}>
         <DialogContent data-testid="revoke-dialog">
           <DialogHeader>
-            <DialogTitle>Revoke this Meta grant?</DialogTitle>
+            <DialogTitle>
+              {tr("users.channelsConnectionActions.revokeDialogTitle", "Revoke this Meta grant?")}
+            </DialogTitle>
             <DialogDescription>
-              This will revoke the shared Meta grant and disconnect every account attached to it.
-              Historical metrics are preserved.
+              {tr(
+                "users.channelsConnectionActions.revokeDialogBody",
+                "This will revoke the shared Meta grant and disconnect every account attached to it. Historical metrics are preserved.",
+              )}
             </DialogDescription>
           </DialogHeader>
           <div>
-            <p className="text-label text-fg-muted">Affected channels ({otherChannels.length}):</p>
+            <p className="text-label text-fg-muted">
+              {tr(
+                "users.channelsConnectionActions.revokeAffectedLabel",
+                `Affected channels (${otherChannels.length}):`,
+                { count: otherChannels.length },
+              )}
+            </p>
             <ul
               className="border-border bg-surface-subtle mt-2 max-h-40 space-y-1 overflow-y-auto rounded border p-3"
               data-testid="revoke-affected-list"
@@ -238,7 +267,7 @@ export function ConnectionActions({
               disabled={pending}
               data-testid="revoke-cancel"
             >
-              Cancel
+              {tr("common.cancel", "Cancel")}
             </Button>
             <Button
               type="button"
@@ -248,7 +277,9 @@ export function ConnectionActions({
               aria-busy={pending}
               data-testid="revoke-confirm"
             >
-              {pending ? "Revoking…" : "Yes, revoke access"}
+              {pending
+                ? tr("users.channelsConnectionActions.revokePending", "Revoking…")
+                : tr("users.channelsConnectionActions.revokeConfirm", "Yes, revoke access")}
             </Button>
           </DialogFooter>
         </DialogContent>

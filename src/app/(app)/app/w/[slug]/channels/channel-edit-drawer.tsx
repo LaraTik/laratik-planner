@@ -67,6 +67,8 @@ const PLATFORM_OPTIONS = [
 
 type ActionState = { error?: string; success?: boolean };
 
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
 /**
  * Right-side drawer for editing a single social channel. The drawer
  * reuses the project's `Dialog` primitive with a custom `className` to
@@ -84,12 +86,25 @@ export function ChannelEditDrawer({
   channel,
   open,
   onOpenChange,
+  t,
 }: {
   slug: string;
   channel: Channel;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Optional translator. When provided, every user-visible string
+   * (drawer title + description, field labels, placeholders, hints,
+   * the inner ConnectionHealthSection, the action buttons, the
+   * archive-confirm dialog + toast) renders from
+   * `users.channelsEdit.*` + `users.channelsHealth.*` +
+   * `users.channelsErrors.*`; when omitted, the stored English
+   * copy is used.
+   */
+  t?: Translator;
 }) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   const boundAction = React.useMemo(
     () => updateChannelAction.bind(null, slug, channel.id),
     [slug, channel.id],
@@ -142,11 +157,13 @@ export function ChannelEditDrawer({
         <form action={formAction} className="flex h-full flex-col">
           <DialogHeader className="border-border shrink-0 border-b px-6 py-4 pe-14">
             <DialogTitle className="text-title-section text-fg-primary font-semibold">
-              Edit social channel
+              {tr("users.channelsEdit.title", "Edit social channel")}
             </DialogTitle>
             <DialogDescription className="text-body text-fg-secondary mt-1">
-              Update how this account appears across the planner. Changes apply to new ideas
-              immediately.
+              {tr(
+                "users.channelsEdit.description",
+                "Update how this account appears across the planner. Changes apply to new ideas immediately.",
+              )}
             </DialogDescription>
           </DialogHeader>
 
@@ -154,13 +171,17 @@ export function ChannelEditDrawer({
             <div className="bg-surface-subtle border-border flex items-center gap-3 rounded-[var(--radius-control)] border p-3">
               <PlatformIcon platform={channel.platform} className="h-5 w-5 shrink-0" />
               <p className="text-body text-fg-secondary">
-                Editing <span className="font-semibold">{platformLabel(channel.platform)}</span>
-                {channel.handle ? (
-                  <>
-                    {" — "}
-                    <span className="text-fg-muted">@{channel.handle}</span>
-                  </>
-                ) : null}
+                {channel.handle
+                  ? tr(
+                      "users.channelsEdit.editingLabel",
+                      `Editing ${platformLabel(channel.platform)}@${channel.handle}`,
+                      { platform: platformLabel(channel.platform), handle: channel.handle },
+                    )
+                  : tr(
+                      "users.channelsEdit.editingNoHandle",
+                      `Editing ${platformLabel(channel.platform)}`,
+                      { platform: platformLabel(channel.platform) },
+                    )}
               </p>
             </div>
 
@@ -174,11 +195,14 @@ export function ChannelEditDrawer({
                 onReTest={reTest}
                 reTestPending={reTestPending}
                 reTestResult={reTestResult}
+                {...(t !== undefined ? { t } : {})}
               />
             ) : null}
 
             <div className="space-y-2">
-              <Label htmlFor={`edit-platform-${channel.id}`}>Platform</Label>
+              <Label htmlFor={`edit-platform-${channel.id}`}>
+                {tr("users.channelsEdit.platformLabel", "Platform")}
+              </Label>
               <select
                 id={`edit-platform-${channel.id}`}
                 name="platform"
@@ -195,7 +219,7 @@ export function ChannelEditDrawer({
 
             <div className="space-y-2">
               <Label htmlFor={`edit-accountName-${channel.id}`}>
-                Account name
+                {tr("users.channelsEdit.accountNameLabel", "Account name")}
                 <span aria-hidden="true" className="text-danger ms-0.5">
                   *
                 </span>
@@ -205,38 +229,44 @@ export function ChannelEditDrawer({
                 name="accountName"
                 required
                 defaultValue={channel.accountName}
-                placeholder="Brand Instagram"
+                placeholder={tr("users.channelsEdit.accountNamePlaceholder", "Brand Instagram")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`edit-handle-${channel.id}`}>Handle</Label>
+              <Label htmlFor={`edit-handle-${channel.id}`}>
+                {tr("users.channelsEdit.handleLabel", "Handle")}
+              </Label>
               <Input
                 id={`edit-handle-${channel.id}`}
                 name="handle"
                 defaultValue={channel.handle ?? ""}
-                placeholder="@brand"
+                placeholder={tr("users.channelsEdit.handlePlaceholder", "@brand")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`edit-url-${channel.id}`}>Account link</Label>
+              <Label htmlFor={`edit-url-${channel.id}`}>
+                {tr("users.channelsEdit.urlLabel", "Account link")}
+              </Label>
               <Input
                 id={`edit-url-${channel.id}`}
                 name="url"
                 type="url"
                 defaultValue={channel.url ?? ""}
-                placeholder="https://…"
+                placeholder={tr("users.channelsEdit.urlPlaceholder", "https://…")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`edit-accountType-${channel.id}`}>Owner / contact</Label>
+              <Label htmlFor={`edit-accountType-${channel.id}`}>
+                {tr("users.channelsEdit.ownerLabel", "Owner / contact")}
+              </Label>
               <Input
                 id={`edit-accountType-${channel.id}`}
                 name="accountType"
                 defaultValue={channel.accountType ?? ""}
-                placeholder="Marketing team"
+                placeholder={tr("users.channelsEdit.ownerPlaceholder", "Marketing team")}
               />
             </div>
 
@@ -247,9 +277,14 @@ export function ChannelEditDrawer({
                 defaultChecked={channel.isActive}
                 className="border-border text-primary focus-visible:ring-focus-ring h-4 w-4 rounded-[var(--radius-control)] border focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
               />
-              <span className="text-body text-fg-primary font-semibold">Active</span>
+              <span className="text-body text-fg-primary font-semibold">
+                {tr("users.channelsEdit.activeLabel", "Active")}
+              </span>
               <span className="text-label text-fg-muted">
-                Inactive channels are hidden from new idea targeting.
+                {tr(
+                  "users.channelsEdit.activeHint",
+                  "Inactive channels are hidden from new idea targeting.",
+                )}
               </span>
             </label>
 
@@ -262,9 +297,12 @@ export function ChannelEditDrawer({
 
           <DialogFooter className="border-border shrink-0 border-t px-6 py-4 sm:justify-end">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {tr("common.cancel", "Cancel")}
             </Button>
-            <FormSubmitButton label="Save changes" pendingLabel="Saving…" />
+            <FormSubmitButton
+              label={tr("users.channelsEdit.saveChanges", "Save changes")}
+              pendingLabel={tr("users.channelsEdit.saving", "Saving…")}
+            />
           </DialogFooter>
         </form>
       </DialogContent>
@@ -290,7 +328,23 @@ export function ChannelEditDrawer({
  * a single client component to own all three pieces of state
  * (dropdown open, drawer open, confirm open).
  */
-export function ChannelRowActions({ slug, channel }: { slug: string; channel: Channel }) {
+export function ChannelRowActions({
+  slug,
+  channel,
+  t,
+}: {
+  slug: string;
+  channel: Channel;
+  /**
+   * Optional translator. When provided, every user-visible string
+   * (kebab aria-label, dropdown labels, archive-confirm dialog
+   * + toast) renders from `users.channelsEdit.*`; when omitted,
+   * the stored English copy is used.
+   */
+  t?: Translator;
+}) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isArchiving, startArchiveTransition] = useTransition();
@@ -304,7 +358,9 @@ export function ChannelRowActions({ slug, channel }: { slug: string; channel: Ch
         // confirm dialog closed silently and the user had no idea
         // why. Now the action returns `{ error?: string }` and we
         // surface it in a destructive toast.
-        toast.error("Could not archive channel", { description: result.error });
+        toast.error(tr("users.channelsEdit.archiveToastErrorTitle", "Could not archive channel"), {
+          description: result.error,
+        });
         return;
       }
       setConfirmOpen(false);
@@ -320,7 +376,11 @@ export function ChannelRowActions({ slug, channel }: { slug: string; channel: Ch
           <Button
             size="icon"
             variant="ghost"
-            aria-label={`Open actions for ${channel.accountName}`}
+            aria-label={tr(
+              "users.channelsEdit.rowActionsAria",
+              `Open actions for ${channel.accountName}`,
+              { name: channel.accountName },
+            )}
             data-testid={`channel-row-actions-${channel.id}`}
           >
             <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
@@ -333,7 +393,7 @@ export function ChannelRowActions({ slug, channel }: { slug: string; channel: Ch
               setDrawerOpen(true);
             }}
           >
-            Edit
+            {tr("users.channelsEdit.rowActionEdit", "Edit")}
           </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
@@ -342,7 +402,7 @@ export function ChannelRowActions({ slug, channel }: { slug: string; channel: Ch
               setConfirmOpen(true);
             }}
           >
-            Archive
+            {tr("users.channelsEdit.rowActionArchive", "Archive")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -352,17 +412,22 @@ export function ChannelRowActions({ slug, channel }: { slug: string; channel: Ch
         channel={channel}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
+        {...(t !== undefined ? { t } : {})}
       />
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="max-w-md" data-testid={`channel-archive-confirm-${channel.id}`}>
           <DialogHeader>
             <DialogTitle className="text-title-card text-fg-primary font-semibold">
-              Archive {handleText}?
+              {tr("users.channelsEdit.archiveConfirmTitle", `Archive ${handleText}?`, {
+                handle: handleText,
+              })}
             </DialogTitle>
             <DialogDescription className="text-body text-fg-secondary">
-              This hides the channel from new ideas but preserves its audit history. You can
-              re-activate it from the database if needed.
+              {tr(
+                "users.channelsEdit.archiveConfirmBody",
+                "This hides the channel from new ideas but preserves its audit history. You can re-activate it from the database if needed.",
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:justify-end">
@@ -372,7 +437,7 @@ export function ChannelRowActions({ slug, channel }: { slug: string; channel: Ch
               onClick={() => setConfirmOpen(false)}
               disabled={isArchiving}
             >
-              Cancel
+              {tr("common.cancel", "Cancel")}
             </Button>
             <Button
               type="button"
@@ -381,7 +446,9 @@ export function ChannelRowActions({ slug, channel }: { slug: string; channel: Ch
               disabled={isArchiving}
               aria-busy={isArchiving || undefined}
             >
-              {isArchiving ? "Archiving…" : "Archive"}
+              {isArchiving
+                ? tr("users.channelsEdit.archiveConfirmPending", "Archiving…")
+                : tr("users.channelsEdit.archiveConfirmLabel", "Archive")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -417,6 +484,7 @@ function ConnectionHealthSection({
   onReTest,
   reTestPending,
   reTestResult,
+  t,
 }: {
   channelId: string;
   lastSyncedAt: Date | null;
@@ -427,7 +495,10 @@ function ConnectionHealthSection({
   reTestPending: boolean;
   reTestResult:
     { kind: "success"; lastSyncedAt: string } | { kind: "error"; message: string } | null;
+  t?: Translator;
 }) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   // Prefer the in-flight Re-test result (fresher than the row
   // prop) when present. On success, surface the result timestamp;
   // on failure, show the inline error and ignore the stale row
@@ -437,34 +508,40 @@ function ConnectionHealthSection({
     reTestResult?.kind === "error"
       ? reTestResult.message
       : connectionStatus !== "connected" && lastSyncErrorCode
-        ? `${humanizeErrorCode(lastSyncErrorCode)}${lastSyncErrorAt ? ` (${formatRelativeDate(lastSyncErrorAt)})` : ""}`
+        ? `${humanizeErrorCode(lastSyncErrorCode, tr)}${
+            lastSyncErrorAt ? ` (${formatRelativeDate(lastSyncErrorAt)})` : ""
+          }`
         : null;
   const showSuccess = reTestResult?.kind === "success";
   return (
     <section
       className="border-border bg-surface-subtle space-y-3 rounded-[var(--radius-control)] border p-4"
       data-testid={`channel-health-${channelId}`}
-      aria-label="Connection health"
+      aria-label={tr("users.channelsHealth.sectionAria", "Connection health")}
     >
       <header className="flex items-center justify-between gap-2">
-        <h3 className="text-body text-fg-primary font-semibold">Connection health</h3>
+        <h3 className="text-body text-fg-primary font-semibold">
+          {tr("users.channelsHealth.title", "Connection health")}
+        </h3>
         <span className="text-label text-fg-muted" aria-live="polite" data-testid="health-status">
           {connectionStatus === "connected"
-            ? "Connected"
+            ? tr("users.channelsHealth.statusConnected", "Connected")
             : connectionStatus === "needs_reauth"
-              ? "Needs reconnect"
+              ? tr("users.channelsHealth.statusNeedsReconnect", "Needs reconnect")
               : connectionStatus === "sync_error"
-                ? "Sync delayed"
+                ? tr("users.channelsHealth.statusSyncDelayed", "Sync delayed")
                 : connectionStatus === "disconnected"
-                  ? "Disconnected"
-                  : "Manual"}
+                  ? tr("users.channelsHealth.statusDisconnected", "Disconnected")
+                  : tr("users.channelsHealth.statusManual", "Manual")}
         </span>
       </header>
       <dl className="text-label grid gap-1">
         <div className="flex items-baseline justify-between gap-2">
-          <dt className="text-fg-muted">Last sync</dt>
+          <dt className="text-fg-muted">{tr("users.channelsHealth.lastSyncLabel", "Last sync")}</dt>
           <dd className="text-fg-primary font-medium">
-            {lastSyncedAt ? formatRelativeDate(lastSyncedAt) : "Never"}
+            {lastSyncedAt
+              ? formatRelativeDate(lastSyncedAt)
+              : tr("users.channelsHealth.lastSyncNever", "Never")}
           </dd>
         </div>
       </dl>
@@ -484,7 +561,11 @@ function ConnectionHealthSection({
           data-testid="health-success"
         >
           <Check className="text-success h-3 w-3" aria-hidden={true} />
-          Validated {formatRelativeDate(new Date(reTestResult.lastSyncedAt))}
+          {tr(
+            "users.channelsHealth.validatedAt",
+            `Validated ${formatRelativeDate(new Date(reTestResult.lastSyncedAt))}`,
+            { when: formatRelativeDate(new Date(reTestResult.lastSyncedAt)) },
+          )}
         </p>
       ) : null}
       <Button
@@ -497,7 +578,9 @@ function ConnectionHealthSection({
         data-testid="health-retest-button"
       >
         <RefreshCw className="h-3 w-3" aria-hidden={true} />
-        {reTestPending ? "Validating…" : "Re-test connection"}
+        {reTestPending
+          ? tr("users.channelsHealth.validating", "Validating…")
+          : tr("users.channelsHealth.retestLabel", "Re-test connection")}
       </Button>
     </section>
   );
@@ -512,18 +595,18 @@ function ConnectionHealthSection({
  * those are operator-only and would never appear in a user-visible
  * "last error" chip.
  */
-function humanizeErrorCode(code: string): string {
+function humanizeErrorCode(code: string, tr: (key: string, fallback: string) => string): string {
   switch (code) {
     case "auth_expired":
-      return "Meta access expired";
+      return tr("users.channelsErrors.authExpired", "Meta access expired");
     case "permission_denied":
-      return "Missing analytics permission";
+      return tr("users.channelsErrors.permissionDenied", "Missing analytics permission");
     case "rate_limited":
-      return "Meta rate-limited this account";
+      return tr("users.channelsErrors.rateLimited", "Meta rate-limited this account");
     case "provider_unavailable":
-      return "Meta was temporarily unavailable";
+      return tr("users.channelsErrors.providerUnavailable", "Meta was temporarily unavailable");
     case "not_found":
-      return "Connected account not found";
+      return tr("users.channelsErrors.notFound", "Connected account not found");
     default:
       return code;
   }
