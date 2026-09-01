@@ -1903,7 +1903,19 @@
       "publishing": "Publishing",
       "linked": "Linked accounts",
       "activity": "Activity"
-    }
+    },
+    "voiceEyebrow": "Voice",
+    "voiceTitle": "Voice & tone",
+    "voiceDescription": "The tone, do's, and don'ts every planner and reviewer should follow. The rules surface in the editor's draft-time hints.",
+    "colorsEyebrow": "Identity",
+    "colorsTitle": "Colors",
+    "colorsDescription": "Primary, secondary, accent, and neutral hexes. Designers and copywriters grab the hex with one click.",
+    "publishingEyebrow": "Voice",
+    "publishingTitle": "Publishing rules",
+    "publishingDescription": "Editorial guardrails — alt text conventions, hashtag norms, compliance reminders, per-channel guidance.",
+    "logosEyebrow": "Identity",
+    "logosTitle": "Logos",
+    "logosDescription": "The primary mark, secondary marks, and reference logos that every designer, planner, and reviewer should ship in."
   },
   "notifications": {
     "kind": {

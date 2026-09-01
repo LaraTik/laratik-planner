@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { brandAssets } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { BrandKitHealth } from "../_components/brand-kit-health";
@@ -25,6 +26,7 @@ import { LogoGrid } from "../logo-grid";
  * `LogoGrid`.
  */
 export default async function BrandKitLogosPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -49,9 +51,9 @@ export default async function BrandKitLogosPage({ params }: { params: Promise<{ 
     <div className="space-y-6">
       <BrandKitBackLink slug={slug} />
       <PageHeader
-        eyebrow="Identity"
-        title="Logos"
-        description="The primary mark, secondary marks, and reference logos that every designer, planner, and reviewer should ship in."
+        eyebrow={t("brandKit.logosEyebrow")}
+        title={t("brandKit.logosTitle")}
+        description={t("brandKit.logosDescription")}
       />
       <BrandKitHealth section="logos" slug={slug} count={logos.length} />
 

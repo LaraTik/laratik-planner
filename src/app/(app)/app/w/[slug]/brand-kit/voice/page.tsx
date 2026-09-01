@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { brandVoiceRules } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { BrandKitHealth } from "../_components/brand-kit-health";
@@ -22,6 +23,7 @@ import { VoiceRuleList } from "../voice-rule-list";
  * the AI has access to.
  */
 export default async function BrandKitVoicePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -51,9 +53,9 @@ export default async function BrandKitVoicePage({ params }: { params: Promise<{ 
     <div className="space-y-6">
       <BrandKitBackLink slug={slug} />
       <PageHeader
-        eyebrow="Voice"
-        title="Voice & tone"
-        description="The tone, do's, and don'ts every planner and reviewer should follow. The rules surface in the editor's draft-time hints."
+        eyebrow={t("brandKit.voiceEyebrow")}
+        title={t("brandKit.voiceTitle")}
+        description={t("brandKit.voiceDescription")}
       />
       <BrandKitHealth section="voice" slug={slug} count={rules.length} breakdown={breakdown} />
 

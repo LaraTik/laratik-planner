@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { brandAssets } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { BrandKitHealth } from "../_components/brand-kit-health";
@@ -40,6 +41,7 @@ export default async function BrandKitColorsPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -76,9 +78,9 @@ export default async function BrandKitColorsPage({
     <div className="space-y-6">
       <BrandKitBackLink slug={slug} />
       <PageHeader
-        eyebrow="Identity"
-        title="Colors"
-        description="Primary, secondary, accent, and neutral hexes. Designers and copywriters grab the hex with one click."
+        eyebrow={t("brandKit.colorsEyebrow")}
+        title={t("brandKit.colorsTitle")}
+        description={t("brandKit.colorsDescription")}
       />
       <BrandKitHealth section="colors" slug={slug} count={colors.length} breakdown={breakdown} />
 

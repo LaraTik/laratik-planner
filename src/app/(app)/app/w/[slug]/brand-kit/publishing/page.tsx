@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { listBrandPublishingRules } from "@/lib/brand/service";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { BrandKitHealth } from "../_components/brand-kit-health";
@@ -25,6 +26,7 @@ export default async function BrandKitPublishingPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -41,9 +43,9 @@ export default async function BrandKitPublishingPage({
     <div className="space-y-6">
       <BrandKitBackLink slug={slug} />
       <PageHeader
-        eyebrow="Voice"
-        title="Publishing rules"
-        description="Editorial guardrails — alt text conventions, hashtag norms, compliance reminders, per-channel guidance."
+        eyebrow={t("brandKit.publishingEyebrow")}
+        title={t("brandKit.publishingTitle")}
+        description={t("brandKit.publishingDescription")}
       />
       <BrandKitHealth section="publishing" slug={slug} count={rules.length} />
 
