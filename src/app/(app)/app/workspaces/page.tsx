@@ -7,6 +7,7 @@ import { contentItems, socialChannels, workspaces, workspaceMemberships } from "
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
@@ -41,6 +42,7 @@ export default async function WorkspacesPage() {
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) return null;
   const isAdmin = await isAgencyAdmin(actor, agencyId);
+  const { t } = await tForActive();
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const nowMs = now.getTime();
@@ -145,18 +147,14 @@ export default async function WorkspacesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Workspaces"
-        description={
-          isAdmin
-            ? "One workspace per brand keeps channels, team access, and planning separate. Create a new one to onboard a client brand."
-            : "Workspaces you're a member of. Each one is a separate brand environment."
-        }
+        title={t("workspaces.title")}
+        description={isAdmin ? t("workspaces.adminDescription") : t("workspaces.memberDescription")}
         action={
           isAdmin ? (
             <Button asChild>
               <Link href="/app/workspaces/new">
                 <Plus className="h-4 w-4" aria-hidden="true" />
-                New workspace
+                {t("workspaces.newWorkspace")}
               </Link>
             </Button>
           ) : null
@@ -166,23 +164,23 @@ export default async function WorkspacesPage() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4" data-testid="workspaces-kpi-row">
         <KpiTile
           icon={<Building className="h-4 w-4" aria-hidden="true" />}
-          label="Active brands"
+          label={t("workspaces.kpiActiveBrands")}
           value={rows.length}
         />
         <KpiTile
           icon={<Lightbulb className="h-4 w-4" aria-hidden="true" />}
-          label="Total ideas"
+          label={t("workspaces.kpiTotalIdeas")}
           value={totalIdeas}
         />
         <KpiTile
           icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
-          label="Need review"
+          label={t("workspaces.kpiNeedReview")}
           value={needsReview}
           tone="warning"
         />
         <KpiTile
           icon={<Send className="h-4 w-4" aria-hidden="true" />}
-          label="Ready to publish"
+          label={t("workspaces.kpiReadyToPublish")}
           value={readyToPublish}
           tone="success"
         />
@@ -192,18 +190,14 @@ export default async function WorkspacesPage() {
         <Card variant="dashed" padding="lg">
           <EmptyState
             icon={<Folder className="h-8 w-8" aria-hidden="true" />}
-            title="No workspaces yet"
-            description={
-              isAdmin
-                ? "Create the first workspace to start planning content for a client brand."
-                : "Ask an admin to add you to a workspace."
-            }
+            title={t("workspaces.emptyTitle")}
+            description={isAdmin ? t("workspaces.adminEmpty") : t("workspaces.memberEmpty")}
             action={
               isAdmin ? (
                 <Button asChild>
                   <Link href="/app/workspaces/new">
                     <Plus className="h-4 w-4" aria-hidden="true" />
-                    New workspace
+                    {t("workspaces.newWorkspace")}
                   </Link>
                 </Button>
               ) : null
@@ -225,6 +219,7 @@ export default async function WorkspacesPage() {
                 memberCounts,
                 canArchive: isAdmin,
                 canEditSettings: isAdmin,
+                t,
               })}
             />
           </div>
@@ -251,11 +246,12 @@ function workspacesColumns(props: {
   memberCounts: MemberCountMap;
   canArchive: boolean;
   canEditSettings: boolean;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }): DataTableColumnDef<WorkspaceRow>[] {
   return [
     {
       key: "brand",
-      header: "Brand",
+      header: props.t("workspaces.colBrand"),
       headerClassName: "w-1/3",
       cell: (ws) => (
         <div className="flex items-center gap-3">
@@ -276,12 +272,12 @@ function workspacesColumns(props: {
     },
     {
       key: "channels",
-      header: "Channels",
+      header: props.t("workspaces.colChannels"),
       cell: (ws) => {
         const channelCount = props.channelCounts.get(ws.id) ?? 0;
         const samples = props.sampleChannels.get(ws.id) ?? [];
         if (channelCount === 0) {
-          return <span className="text-fg-muted">No channels</span>;
+          return <span className="text-fg-muted">{props.t("workspaces.noChannels")}</span>;
         }
         return (
           <div className="flex items-center gap-2">
@@ -297,7 +293,7 @@ function workspacesColumns(props: {
               ))}
             </div>
             <span className="text-label text-fg-secondary">
-              {channelCount} channel{channelCount === 1 ? "" : "s"}
+              {props.t("workspaces.channelCount", { count: channelCount })}
             </span>
           </div>
         );
@@ -305,19 +301,19 @@ function workspacesColumns(props: {
     },
     {
       key: "members",
-      header: "Members",
+      header: props.t("workspaces.colMembers"),
       cell: (ws) => {
         const memberCount = props.memberCounts.get(ws.id) ?? 0;
         return (
           <span className="text-body text-fg-primary font-medium">
-            {memberCount} member{memberCount === 1 ? "" : "s"}
+            {props.t("workspaces.memberCount", { count: memberCount })}
           </span>
         );
       },
     },
     {
       key: "last-activity",
-      header: "Last activity",
+      header: props.t("workspaces.colLastActivity"),
       cell: (ws) => formatRelativeDate(ws.updatedAt),
     },
     {

@@ -1086,5 +1086,46 @@
       "creativeApproval": "Creative approval",
       "readyToPublish": "Ready to publish"
     }
+  },
+  "workspaces": {
+    "title": "Workspaces",
+    "adminDescription": "One workspace per brand keeps channels, team access, and planning separate. Create a new one to onboard a client brand.",
+    "memberDescription": "Workspaces you're a member of. Each one is a separate brand environment.",
+    "newWorkspace": "New workspace",
+    "kpiActiveBrands": "Active brands",
+    "kpiTotalIdeas": "Total ideas",
+    "kpiNeedReview": "Need review",
+    "kpiReadyToPublish": "Ready to publish",
+    "emptyTitle": "No workspaces yet",
+    "adminEmpty": "Create the first workspace to start planning content for a client brand.",
+    "memberEmpty": "Ask an admin to add you to a workspace.",
+    "colBrand": "Brand",
+    "colChannels": "Channels",
+    "colMembers": "Members",
+    "colLastActivity": "Last activity",
+    "noChannels": "No channels",
+    "channelCount": "{count} channel",
+    "channelCountMany": "{count} channels",
+    "memberCount": "{count} member",
+    "memberCountMany": "{count} members"
+  },
+  "workspaceNew": {
+    "title": "New workspace",
+    "eyebrow": "Workspaces",
+    "description": "Set up a separate brand environment. Each workspace owns its own channels, team access, settings, and planning surface.",
+    "adminOnly": "Only agency admins can create workspaces. Ask your admin to create one and add you to it.",
+    "backLink": "← Back to Workspaces",
+    "nameLabel": "Workspace name",
+    "nameHint": "The brand name your team and clients will see.",
+    "namePlaceholder": "Acme Studio",
+    "slugLabel": "Workspace slug",
+    "slugHint": "Lowercase letters, digits, and hyphens. Used in URLs.",
+    "timezonesLabel": "Workspace timezone",
+    "timezonesHint": "Used for the calendar, lead-time math, and any 'X days from now' view.",
+    "create": "Create workspace",
+    "cancel": "Cancel",
+    "errorExists": "A workspace with that slug already exists.",
+    "errorNameRequired": "Workspace name is required.",
+    "errorSlugInvalid": "Slug must be lowercase letters, digits, and hyphens."
   }
 }

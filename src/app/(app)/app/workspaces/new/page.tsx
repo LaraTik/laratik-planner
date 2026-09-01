@@ -21,6 +21,7 @@ import { FormField } from "@/components/forms/form-field";
 import { PageHeader } from "@/components/workspace/page-header";
 import { revalidatePath } from "next/cache";
 import { reserveCapacity } from "@/lib/entitlements";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 /**
  * Create a new workspace.
@@ -117,6 +118,7 @@ export default async function NewWorkspacePage() {
   if (!session?.user?.id) return null;
   const actor = await currentActor();
   if (!actor) return null;
+  const { t } = await tForActive();
   const ctx = actor ? await resolveActiveAgencyContext({ actor }) : null;
   const agencyId = ctx?.agencyId ?? null;
   const isAdmin = agencyId ? await isAgencyAdmin(actor, agencyId) : false;
@@ -124,15 +126,12 @@ export default async function NewWorkspacePage() {
   if (!isAdmin) {
     return (
       <div className="space-y-6">
-        <PageHeader
-          title="New workspace"
-          description="Only agency admins can create workspaces. Ask your admin to create one and add you to it."
-        />
+        <PageHeader title={t("workspaceNew.title")} description={t("workspaceNew.adminOnly")} />
         <Link
           href="/app/workspaces"
           className="text-primary focus-visible:ring-focus-ring inline-block rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
         >
-          ← Back to Workspaces
+          {t("workspaceNew.backLink")}
         </Link>
       </div>
     );
@@ -140,27 +139,29 @@ export default async function NewWorkspacePage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-6" data-testid="workspaces-new-form">
-      <PageHeader
-        title="New workspace"
-        description="A workspace is one client brand. Each has its own planning, content, and team."
-      />
+      <PageHeader title={t("workspaceNew.title")} description={t("workspaceNew.description")} />
 
       <Card>
         <form action={createWorkspaceAction} className="space-y-4">
-          <FormField id="name" label="Workspace name" hint="e.g. Acme Coffee" required>
+          <FormField
+            id="name"
+            label={t("workspaceNew.nameLabel")}
+            hint={t("workspaceNew.nameHint")}
+            required
+          >
             <Input
               type="text"
               name="name"
               required
               minLength={2}
               maxLength={100}
-              placeholder="Acme Coffee"
+              placeholder={t("workspaceNew.namePlaceholder")}
             />
           </FormField>
           <FormField
             id="slug"
-            label="URL slug"
-            hint="Lowercase letters, digits, and hyphens. Used in URLs."
+            label={t("workspaceNew.slugLabel")}
+            hint={t("workspaceNew.slugHint")}
             required
           >
             <Input
@@ -173,18 +174,22 @@ export default async function NewWorkspacePage() {
               placeholder="acme-coffee"
             />
           </FormField>
-          <FormField id="timezone" label="Timezone" hint="Used to display dates. UTC by default.">
+          <FormField
+            id="timezone"
+            label={t("workspaceNew.timezonesLabel")}
+            hint={t("workspaceNew.timezonesHint")}
+          >
             <Input type="text" name="timezone" defaultValue="UTC" placeholder="UTC" />
           </FormField>
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <Button type="submit" size="lg">
-              Create workspace
+              {t("workspaceNew.create")}
             </Button>
             <Link
               href="/app/workspaces"
               className="text-body text-fg-secondary hover:text-fg-primary"
             >
-              Cancel
+              {t("workspaceNew.cancel")}
             </Link>
           </div>
         </form>
