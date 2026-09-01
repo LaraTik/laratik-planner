@@ -179,6 +179,28 @@
     "appErrors": "App errors",
     "platformGroup": "Platform",
     "clientReview": "Client review",
+    "clientReviewPage": {
+      "title": "Client review",
+      "subtitle": "Creative deliveries waiting for your decision.",
+      "viewCalendar": "View calendar",
+      "creativeDeliveryFallback": "Creative delivery",
+      "empty": "No client reviews are waiting.",
+      "badge": "Review",
+      "versionPublishes": "Version {version} · publishes {date}",
+      "noVersion": "—",
+      "deliveryFilesAria": "Delivery files",
+      "noDeliveryFile": "No delivery file is attached.",
+      "feedbackLabel": "Feedback (required when requesting changes)",
+      "saving": "Saving…",
+      "approveDelivery": "Approve delivery",
+      "requestChanges": "Request changes",
+      "feedbackRequiredError": "Tell the team what should change before sending the request.",
+      "saveFailedError": "The decision could not be saved. Refresh and try again."
+    },
+    "clientCalendarPage": {
+      "title": "Client calendar",
+      "subtitle": "Read-only approved and review-stage content for this month."
+    },
     "clientCalendar": "Calendar",
     "pendingBadge": "{label}: {count} pending",
     "collapseGroup": "Collapse {label}",

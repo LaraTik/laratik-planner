@@ -17,6 +17,15 @@ type ClientReviewCardProps = {
   plannedPublishAt: string;
   overdue: boolean;
   links: { id: string; label: string; url: string }[];
+  /**
+   * Bound translator from the parent. Resolves the Review
+   * badge, the "Version N · publishes {date}" meta line, the
+   * "Delivery files" listbox aria-label, the "No delivery
+   * file is attached." warning, the feedback label + the
+   * inline validation + catch errors, the Saving… pending
+   * state, and the Approve / Request changes button labels.
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 };
 
 export function ClientReviewCard(props: ClientReviewCardProps) {
@@ -28,7 +37,7 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
   const decide = (decision: "approved" | "changes_requested") => {
     setError(null);
     if (decision === "changes_requested" && !feedback.trim()) {
-      setError("Tell the team what should change before sending the request.");
+      setError(props.t("sidebar.clientReviewPage.feedbackRequiredError"));
       return;
     }
     startTransition(async () => {
@@ -45,7 +54,7 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
         }
         router.refresh();
       } catch {
-        setError("The decision could not be saved. Refresh and try again.");
+        setError(props.t("sidebar.clientReviewPage.saveFailedError"));
       }
     });
   };
@@ -54,16 +63,23 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
     <Card>
       <div className="flex items-start justify-between gap-3">
         <CardTitle>{props.title}</CardTitle>
-        <Badge variant={props.overdue ? "danger" : "info"}>Review</Badge>
+        <Badge variant={props.overdue ? "danger" : "info"}>
+          {props.t("sidebar.clientReviewPage.badge")}
+        </Badge>
       </div>
       <p className="text-body text-fg-secondary mt-2">{props.deliveryDescription}</p>
       <p className="text-label text-fg-muted mt-3">
-        Version {props.deliveryVersion ?? "—"} · publishes{" "}
-        {new Date(props.plannedPublishAt).toLocaleDateString()}
+        {props.t("sidebar.clientReviewPage.versionPublishes", {
+          version: props.deliveryVersion ?? props.t("sidebar.clientReviewPage.noVersion"),
+          date: new Date(props.plannedPublishAt).toLocaleDateString(),
+        })}
       </p>
 
       {props.links.length ? (
-        <ul className="mt-4 space-y-2" aria-label="Delivery files">
+        <ul
+          className="mt-4 space-y-2"
+          aria-label={props.t("sidebar.clientReviewPage.deliveryFilesAria")}
+        >
           {props.links.map((link) => (
             <li key={link.id}>
               <a
@@ -79,14 +95,16 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
           ))}
         </ul>
       ) : (
-        <p className="text-label text-warning mt-4">No delivery file is attached.</p>
+        <p className="text-label text-warning mt-4">
+          {props.t("sidebar.clientReviewPage.noDeliveryFile")}
+        </p>
       )}
 
       <label
         className="text-label text-fg-primary mt-5 block font-semibold"
         htmlFor={`feedback-${props.requestId}`}
       >
-        Feedback (required when requesting changes)
+        {props.t("sidebar.clientReviewPage.feedbackLabel")}
       </label>
       <textarea
         id={`feedback-${props.requestId}`}
@@ -107,7 +125,9 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
           onClick={() => decide("approved")}
           disabled={pending || !props.links.length}
         >
-          {pending ? "Saving…" : "Approve delivery"}
+          {pending
+            ? props.t("sidebar.clientReviewPage.saving")
+            : props.t("sidebar.clientReviewPage.approveDelivery")}
         </Button>
         <Button
           type="button"
@@ -115,7 +135,7 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
           onClick={() => decide("changes_requested")}
           disabled={pending}
         >
-          Request changes
+          {props.t("sidebar.clientReviewPage.requestChanges")}
         </Button>
       </div>
     </Card>

@@ -179,6 +179,28 @@
     "appErrors": "أخطاء التطبيق",
     "platformGroup": "المنصة",
     "clientReview": "مراجعة العميل",
+    "clientReviewPage": {
+      "title": "مراجعة العميل",
+      "subtitle": "عمليات التسليم الإبداعية بانتظار قرارك.",
+      "viewCalendar": "عرض التقويم",
+      "creativeDeliveryFallback": "تسليم إبداعي",
+      "empty": "لا توجد مراجعات عميل قيد الانتظار.",
+      "badge": "مراجعة",
+      "versionPublishes": "الإصدار {version} · يُنشر في {date}",
+      "noVersion": "—",
+      "deliveryFilesAria": "ملفات التسليم",
+      "noDeliveryFile": "لا توجد ملفات تسليم مرفقة.",
+      "feedbackLabel": "ملاحظات (مطلوبة عند طلب تعديلات)",
+      "saving": "جارٍ الحفظ…",
+      "approveDelivery": "الموافقة على التسليم",
+      "requestChanges": "طلب تعديلات",
+      "feedbackRequiredError": "أخبر الفريق بما يجب تغييره قبل إرسال الطلب.",
+      "saveFailedError": "تعذر حفظ القرار. حدّث الصفحة وأعد المحاولة."
+    },
+    "clientCalendarPage": {
+      "title": "تقويم العميل",
+      "subtitle": "المحتوى المعتمد وقيد المراجعة لهذا الشهر (للقراءة فقط)."
+    },
     "clientCalendar": "التقويم",
     "pendingBadge": "{label}: {count} معلّقة",
     "collapseGroup": "طي {label}",

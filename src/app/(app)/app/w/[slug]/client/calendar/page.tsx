@@ -6,6 +6,7 @@ import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import { contentItems } from "@/lib/db/schema";
 import { getClientWorkspace } from "@/lib/workspaces/context";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { StatusBadge } from "@/components/content/status-badge";
@@ -16,6 +17,7 @@ export default async function ClientCalendarPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -54,10 +56,10 @@ export default async function ClientCalendarPage({
     <div className="space-y-6" data-testid="workspace-client-calendar">
       <PageHeader
         eyebrow={workspace.name}
-        title="Client calendar"
+        title={t("sidebar.clientCalendarPage.title")}
         description={
           <>
-            Read-only approved and review-stage content for this month.
+            {t("sidebar.clientCalendarPage.subtitle")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}

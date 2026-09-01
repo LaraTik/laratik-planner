@@ -7,6 +7,7 @@ import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import { approvalRequests, contentItems, deliveryLinks, deliveryVersions } from "@/lib/db/schema";
 import { getClientWorkspace } from "@/lib/workspaces/context";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { ClientReviewCard } from "./client-review-card";
@@ -16,6 +17,7 @@ export default async function ClientReviewPortalPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -66,10 +68,10 @@ export default async function ClientReviewPortalPage({
     <div className="space-y-6" data-testid="workspace-client-review">
       <PageHeader
         eyebrow={workspace.name}
-        title="Client review"
+        title={t("sidebar.clientReviewPage.title")}
         description={
           <>
-            Creative deliveries waiting for your decision.
+            {t("sidebar.clientReviewPage.subtitle")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
@@ -82,7 +84,7 @@ export default async function ClientReviewPortalPage({
             className="border-border bg-surface text-body hover:bg-surface-subtle inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] border px-3 py-2 font-semibold transition-colors"
           >
             <Calendar className="h-4 w-4" aria-hidden="true" />
-            View calendar
+            {t("sidebar.clientReviewPage.viewCalendar")}
           </Link>
         }
       />
@@ -93,17 +95,20 @@ export default async function ClientReviewPortalPage({
             workspaceSlug={slug}
             requestId={row.requestId}
             title={row.title}
-            deliveryDescription={row.deliveryDescription || "Creative delivery"}
+            deliveryDescription={
+              row.deliveryDescription || t("sidebar.clientReviewPage.creativeDeliveryFallback")
+            }
             deliveryVersion={row.deliveryVersion}
             plannedPublishAt={row.plannedPublishAt.toISOString()}
             overdue={Boolean(row.dueAt && row.dueAt < new Date())}
             links={links.filter((link) => link.deliveryVersionId === row.deliveryVersionId)}
+            t={t}
           />
         ))}
       </div>
       {rows.length === 0 ? (
         <Card padding="lg" className="text-body text-fg-secondary text-center">
-          No client reviews are waiting.
+          {t("sidebar.clientReviewPage.empty")}
         </Card>
       ) : null}
     </div>
