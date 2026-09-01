@@ -4,14 +4,24 @@
 > checks. The destructive downgrade/rollback drill remains intentionally
 > separate because the project uses forward-only corrective migrations.
 >
-> Latest capture: 2026-08-26 on local Postgres 16
+> Latest capture: 2026-09-01 on local Postgres 16
 > (`127.0.0.1:5432`, database `planner_test`).
-> Result: **4/5 PASS** — drill 2 (skipped-migration repair) is blocked
-> on a `scripts/migration-drill.ts` historical-rewind allowlist that has
-> not been updated for migrations `0019_agency_social_provider_config`
-> and `0020_app_error_event`. The schema and Drizzle ledger are healthy
-> (drills 1, 3, 4, 5 all PASS at 21/21 ledger rows); the allowlist fix
-> is a one-line edit to the script and is tracked separately.
+> Result: **5/5 PASS** — the historical-rewind allowlist and migration
+> registration are current through migration 0025. The disposable database
+> was provisioned inside the Docker Postgres container; see
+> `docs/operations/runbook.md` for the idempotent setup command.
+
+```text
+1. from-zero                PASS  59 public tables; Drizzle ledger 26/26
+2. skipped migration repair PASS  message columns restored; 0025 ledger rows=1
+3. in-place upgrade         PASS  marker add/drop cycle
+4. backup + restore         PASS  ledger 26 before / 26 after; restore verified
+5. failed-migration abort   PASS  60 tables before / after; missing=0; added=0
+total: 4.6s
+```
+
+The 2026-08-26 4/5 capture below is retained as historical evidence; it is no
+longer the current status.
 
 ## 2026-08-26 re-run result
 

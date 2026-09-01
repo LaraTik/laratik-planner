@@ -3,6 +3,18 @@
 > **Release verdict: `READY FOR INDEPENDENT REVIEW`** (2026-08-24 — shared across this file and `docs/production-readiness/UAT_RELEASE.md`).
 >
 > This is the authoritative implementation and verification tracker. `STUDIOFLOW_MASTER_PROMPT.md` remains the product source of truth. MiniMax may move an item through `Tested`; only an independent reviewer may set `Verified` and flip the shared verdict to `READY`.
+
+> **2026-09-01 local release-gate setup** — The Docker Postgres container
+> `laratik-planner-pg-dev` is healthy and now has the disposable
+> `planner_test` database. `NODE_ENV=test TEST_DATABASE_URL=… pnpm
+migration-drill` passes 5/5; `TEST_DATABASE_URL=… pnpm test:integration`
+> passes 22 files / 187 tests; the authenticated Chromium accessibility sweep
+> passes 24/24 routes. The isolated E2E and visual commands now share
+> `scripts/run-e2e-tests.ts`, which applies migrations, injects deterministic
+> test-only Auth.js settings, and refuses non-test URLs. The visual suite reaches
+> screenshot assertions; committed baseline differences remain, so the release
+> verdict stays `READY FOR INDEPENDENT REVIEW` until visual review, the full
+> browser matrix, manual accessibility/UAT, and independent sign-off are complete.
 >
 > **2026-08-26 update — landing entry and sign-in refinement** — Commit `caa349f` redirects authenticated `/` visits directly to `/app`, exposes one contextual public CTA, and redesigns `/signin` around one active method at a time. Password remains the default for returning users, Google is secondary, magic link is progressively disclosed, and first-time setup offers only identity-verifying providers. Evidence: clean-snapshot `pnpm verify` passes with 2,110 runnable unit tests and the Next.js production build; Chromium entry checks pass 4/4, public accessibility checks pass 4/4, and the `/signin` Stitch/responsive visual set passes 4/4. Full pre-merge browser gates were attempted against disposable Postgres but remain non-green on unrelated social-analytics/agency-switcher cases and a parallel authenticated visual-seed race; no unrelated test or production code was changed. The verdict remains `READY FOR INDEPENDENT REVIEW`.
 >
