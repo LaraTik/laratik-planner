@@ -19,6 +19,7 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { currentActor } from "@/lib/auth/current-actor";
 import { requirePlatformPermission } from "@/lib/auth/platform-access";
 import { PLATFORM_ROLE_DETAILS, type PlatformRole } from "@/lib/auth/platform-access-types";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import {
   getPlatformSupportAccessSummary,
   listPlatformAccess,
@@ -42,17 +43,35 @@ const ROLE_BADGE_VARIANT: Record<PlatformRole, BadgeProps["variant"]> = {
   support_operator: "warning",
 };
 
-const AUDIT_ACTION_LABELS: Record<string, string> = {
-  "platform_access.grant": "Access granted",
-  "platform_access.role_change": "Role changed",
-  "platform_access.revoke": "Access revoked",
-};
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+function roleLabel(role: PlatformRole, t: Translator): string {
+  return t(`platform.roleLabels.${role}.label`) || PLATFORM_ROLE_DETAILS[role].label;
+}
+
+function roleDescription(role: PlatformRole, t: Translator): string {
+  return t(`platform.roleLabels.${role}.description`) || PLATFORM_ROLE_DETAILS[role].description;
+}
+
+function auditActionLabel(action: string, t: Translator): string {
+  const key = `platform.auditAction${action
+    .split(".")
+    .pop()!
+    .replace(/^./, (c) => c.toUpperCase())}`;
+  const value = t(key);
+  // If t returns a key-wrapper (missing key), fall back to raw action.
+  return value.startsWith("[") ? action : value;
+}
 
 export default async function PlatformAccessPage() {
   const actor = await currentActor();
+  const { t } = await tForActive();
   if (!actor) {
     return (
-      <PermissionNotice title="Sign in required" description="Sign in to view platform access." />
+      <PermissionNotice
+        title={t("platform.signInRequired")}
+        description={t("platform.signInRequiredAccessBody")}
+      />
     );
   }
 
@@ -62,8 +81,8 @@ export default async function PlatformAccessPage() {
   } catch {
     return (
       <PermissionNotice
-        title="Platform access unavailable"
-        description="Your platform role does not include access oversight."
+        title={t("platform.accessUnavailable")}
+        description={t("platform.accessUnavailableBody")}
       />
     );
   }
@@ -83,7 +102,7 @@ export default async function PlatformAccessPage() {
   const assignmentColumns: DataTableColumnDef<PlatformAccessRow>[] = [
     {
       key: "person",
-      header: "Person",
+      header: t("platform.colPerson"),
       cell: (row) => (
         <div className="min-w-0">
           <p className="text-body text-fg-primary font-semibold">{row.displayName || row.email}</p>
@@ -93,32 +112,34 @@ export default async function PlatformAccessPage() {
     },
     {
       key: "role",
-      header: "Role",
+      header: t("platform.colRole"),
       cell: (row) => (
         <Badge variant={ROLE_BADGE_VARIANT[row.role]}>
           <ShieldCheck className="h-3 w-3" aria-hidden="true" />
-          {PLATFORM_ROLE_DETAILS[row.role].label}
+          {roleLabel(row.role, t)}
         </Badge>
       ),
     },
     {
       key: "scope",
-      header: "Access boundary",
+      header: t("platform.colAccessBoundary"),
       hideOn: "lg",
       cell: (row) => (
-        <span className="text-body text-fg-secondary">
-          {PLATFORM_ROLE_DETAILS[row.role].description}
-        </span>
+        <span className="text-body text-fg-secondary">{roleDescription(row.role, t)}</span>
       ),
     },
     {
       key: "changed",
-      header: "Last changed",
+      header: t("platform.colLastChanged"),
       hideOn: "md",
       cell: (row) => (
         <div className="text-body text-fg-secondary">
           <p>{formatRelativeDate(row.updatedAt)}</p>
-          <p className="text-label text-fg-muted">by {row.grantedByEmail ?? "bootstrap"}</p>
+          <p className="text-label text-fg-muted">
+            {row.grantedByEmail
+              ? t("platform.colChangedByPrefix", { name: row.grantedByEmail })
+              : t("platform.colChangedByBootstrap")}
+          </p>
         </div>
       ),
     },
@@ -127,13 +148,18 @@ export default async function PlatformAccessPage() {
   if (canManage) {
     assignmentColumns.push({
       key: "actions",
-      header: <span className="sr-only">Actions</span>,
+      header: <span className="sr-only">{t("platform.colActions")}</span>,
       headerClassName: "w-24",
       cellClassName: "text-end",
       cell: (row) => (
         <div className="flex justify-end gap-1">
-          <ChangePlatformRoleDialog userId={row.userId} email={row.email} currentRole={row.role} />
-          <RevokePlatformAccessDialog userId={row.userId} email={row.email} role={row.role} />
+          <ChangePlatformRoleDialog
+            userId={row.userId}
+            email={row.email}
+            currentRole={row.role}
+            t={t}
+          />
+          <RevokePlatformAccessDialog userId={row.userId} email={row.email} role={row.role} t={t} />
         </div>
       ),
     });
@@ -142,25 +168,25 @@ export default async function PlatformAccessPage() {
   const auditColumns: DataTableColumnDef<PlatformAccessAuditRow>[] = [
     {
       key: "action",
-      header: "Action",
+      header: t("platform.colAction"),
       cell: (row) => (
         <span className="text-body text-fg-primary font-medium">
-          {AUDIT_ACTION_LABELS[row.action] ?? row.action}
+          {auditActionLabel(row.action, t)}
         </span>
       ),
     },
     {
       key: "target",
-      header: "Person",
+      header: t("platform.colTarget"),
       cell: (row) => (
         <span className="text-body text-fg-secondary">
-          {row.targetId ? (targetLabels.get(row.targetId) ?? "Former platform member") : "—"}
+          {row.targetId ? (targetLabels.get(row.targetId) ?? t("platform.colFormerMember")) : "—"}
         </span>
       ),
     },
     {
       key: "outcome",
-      header: "Outcome",
+      header: t("platform.colOutcome"),
       hideOn: "sm",
       cell: (row) => (
         <Badge variant={row.outcome === "success" ? "success" : "warning"}>{row.outcome}</Badge>
@@ -168,7 +194,7 @@ export default async function PlatformAccessPage() {
     },
     {
       key: "when",
-      header: "When",
+      header: t("platform.colWhen"),
       hideOn: "md",
       cell: (row) => (
         <span className="text-body text-fg-secondary">{formatRelativeDate(row.createdAt)}</span>
@@ -179,9 +205,9 @@ export default async function PlatformAccessPage() {
   return (
     <div className="space-y-6" data-testid="platform-access-root">
       <PageHeader
-        eyebrow="Platform"
-        title="Platform access"
-        description="Assign operational responsibilities without granting tenant content. Support access remains ticketed, approved, time-limited, and separately audited."
+        eyebrow={t("platform.accessEyebrow")}
+        title={t("platform.accessTitle")}
+        description={t("platform.accessDescription")}
         action={
           canManage ? (
             <Link
@@ -189,7 +215,7 @@ export default async function PlatformAccessPage() {
               className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}
             >
               <UserPlus className="h-4 w-4" aria-hidden="true" />
-              Add platform member
+              {t("platform.accessAddMember")}
             </Link>
           ) : undefined
         }
@@ -197,28 +223,28 @@ export default async function PlatformAccessPage() {
 
       {!canManage ? (
         <PermissionNotice
-          title="Read-only access oversight"
-          description="You can review assignments and audit history. Only a Platform Owner can change access."
+          title={t("platform.readOnlyAccessOversight")}
+          description={t("platform.readOnlyAccessOversightBody")}
         />
       ) : null}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiTile
           icon={<Users className="h-4 w-4" aria-hidden="true" />}
-          label="Active members"
+          label={t("platform.kpiActiveMembers")}
           value={assignments.length}
           data-testid="platform-access-kpi-members"
         />
         <KpiTile
           icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
-          label="Platform Owners"
+          label={t("platform.kpiPlatformOwners")}
           value={ownerCount}
           tone={ownerCount <= 1 ? "warning" : "default"}
           data-testid="platform-access-kpi-owners"
         />
         <KpiTile
           icon={<UserCog className="h-4 w-4" aria-hidden="true" />}
-          label="Operators"
+          label={t("platform.kpiOperators")}
           value={operatorCount}
           data-testid="platform-access-kpi-operators"
         />
@@ -226,8 +252,8 @@ export default async function PlatformAccessPage() {
           icon={<Headphones className="h-4 w-4" aria-hidden="true" />}
           label={
             supportSummary.expiring > 0
-              ? `Support grants · ${supportSummary.expiring} expiring soon`
-              : "Active support grants"
+              ? t("platform.kpiSupportExpiring", { count: supportSummary.expiring })
+              : t("platform.kpiSupportActive")
           }
           value={supportSummary.active}
           tone={supportSummary.expiring > 0 ? "warning" : "default"}
@@ -242,10 +268,7 @@ export default async function PlatformAccessPage() {
           data-testid="platform-access-owner-warning"
         >
           <AlertTriangle className="text-warning mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-          <p>
-            There is only one active Platform Owner. Add a second owner before changing or revoking
-            this assignment. The server prevents removal of the final owner.
-          </p>
+          <p>{t("platform.ownerWarning")}</p>
         </div>
       ) : null}
 
@@ -253,30 +276,24 @@ export default async function PlatformAccessPage() {
         <Card id="add-platform-member" padding="lg" className="scroll-mt-6 space-y-4">
           <div className="flex items-center gap-2">
             <UserPlus className="text-primary h-5 w-5" aria-hidden="true" />
-            <CardTitle>Add platform member</CardTitle>
+            <CardTitle>{t("platform.accessAddMember")}</CardTitle>
           </div>
-          <CardDescription>
-            The person must have signed in once. Choose the narrowest role that matches their
-            responsibility; every change requires a reason and is audited.
-          </CardDescription>
-          <GrantPlatformAccessForm />
+          <CardDescription>{t("platform.addMemberDescription")}</CardDescription>
+          <GrantPlatformAccessForm t={t} />
         </Card>
       ) : null}
 
       <Card padding="lg" className="space-y-4">
         <div className="flex items-center gap-2">
           <ShieldCheck className="text-primary h-5 w-5" aria-hidden="true" />
-          <CardTitle>Current assignments</CardTitle>
+          <CardTitle>{t("platform.currentAssignmentsTitle")}</CardTitle>
         </div>
-        <CardDescription>
-          Platform roles control the global console only. They do not make someone an agency or
-          workspace member.
-        </CardDescription>
+        <CardDescription>{t("platform.currentAssignmentsDescription")}</CardDescription>
         {assignments.length === 0 ? (
           <EmptyState
             icon={<Users className="h-8 w-8" aria-hidden="true" />}
-            title="No active platform assignments"
-            description="Recover access with the documented production bootstrap procedure."
+            title={t("platform.emptyAssignments")}
+            description={t("platform.emptyAssignmentsBody")}
             data-testid="platform-access-empty"
           />
         ) : (
@@ -296,15 +313,15 @@ export default async function PlatformAccessPage() {
                       <p className="text-label text-fg-muted truncate">{row.email}</p>
                     </div>
                     <Badge variant={ROLE_BADGE_VARIANT[row.role]} className="shrink-0">
-                      {PLATFORM_ROLE_DETAILS[row.role].label}
+                      {roleLabel(row.role, t)}
                     </Badge>
                   </div>
                   <p className="text-label text-fg-secondary mt-3">
-                    {PLATFORM_ROLE_DETAILS[row.role].description}
+                    {roleDescription(row.role, t)}
                   </p>
                   <div className="mt-3 flex min-h-11 items-center justify-between gap-3">
                     <span className="text-label text-fg-muted">
-                      Changed {formatRelativeDate(row.updatedAt)}
+                      {t("platform.colMobileChanged", { date: formatRelativeDate(row.updatedAt) })}
                     </span>
                     {canManage ? (
                       <div className="flex shrink-0 gap-1">
@@ -312,11 +329,13 @@ export default async function PlatformAccessPage() {
                           userId={row.userId}
                           email={row.email}
                           currentRole={row.role}
+                          t={t}
                         />
                         <RevokePlatformAccessDialog
                           userId={row.userId}
                           email={row.email}
                           role={row.role}
+                          t={t}
                         />
                       </div>
                     ) : null}
@@ -340,17 +359,14 @@ export default async function PlatformAccessPage() {
       <Card padding="lg" className="space-y-4">
         <div className="flex items-center gap-2">
           <ClipboardCheck className="text-fg-secondary h-5 w-5" aria-hidden="true" />
-          <CardTitle>Recent access changes</CardTitle>
+          <CardTitle>{t("platform.auditTitle")}</CardTitle>
         </div>
-        <CardDescription>
-          The latest grants, role changes, and revocations. Audit records remain after access is
-          revoked.
-        </CardDescription>
+        <CardDescription>{t("platform.auditDescription")}</CardDescription>
         {audit.length === 0 ? (
           <EmptyState
             icon={<ClipboardCheck className="h-8 w-8" aria-hidden="true" />}
-            title="No access changes yet"
-            description="Future platform role changes will appear here."
+            title={t("platform.auditEmpty")}
+            description={t("platform.auditEmptyBody")}
             data-testid="platform-access-audit-empty"
           />
         ) : (

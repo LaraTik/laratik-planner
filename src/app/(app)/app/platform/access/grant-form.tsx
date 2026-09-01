@@ -9,24 +9,34 @@ import { grantPlatformAccessAction, type PlatformAccessActionState } from "./act
 
 const initial: PlatformAccessActionState = {};
 
-export function GrantPlatformAccessForm() {
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+function roleLabel(role: (typeof PLATFORM_ROLE_VALUES)[number], t: Translator): string {
+  return t(`platform.roleLabels.${role}.label`) || PLATFORM_ROLE_DETAILS[role].label;
+}
+
+function roleDescription(role: (typeof PLATFORM_ROLE_VALUES)[number], t: Translator): string {
+  return t(`platform.roleLabels.${role}.description`) || PLATFORM_ROLE_DETAILS[role].description;
+}
+
+export function GrantPlatformAccessForm({ t }: { t: Translator }) {
   const [state, action] = useActionState(grantPlatformAccessAction, initial);
   return (
     <form action={action} className="grid gap-4" data-testid="platform-access-grant-form">
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-1.5">
-          <Label htmlFor="platform-access-email">Email</Label>
+          <Label htmlFor="platform-access-email">{t("platform.grantEmailLabel")}</Label>
           <Input
             id="platform-access-email"
             name="email"
             type="email"
             required
             autoComplete="off"
-            placeholder="person@company.com"
+            placeholder={t("platform.grantEmailPlaceholder")}
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="platform-access-role">Platform role</Label>
+          <Label htmlFor="platform-access-role">{t("platform.grantRoleLabel")}</Label>
           <select
             id="platform-access-role"
             name="role"
@@ -36,30 +46,28 @@ export function GrantPlatformAccessForm() {
           >
             {PLATFORM_ROLE_VALUES.map((role) => (
               <option key={role} value={role}>
-                {PLATFORM_ROLE_DETAILS[role].label}
+                {roleLabel(role, t)}
               </option>
             ))}
           </select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="platform-access-reason">Reason</Label>
+          <Label htmlFor="platform-access-reason">{t("platform.grantReasonLabel")}</Label>
           <Input
             id="platform-access-reason"
             name="reason"
             required
             minLength={3}
             maxLength={500}
-            placeholder="On-call rotation or responsibility"
+            placeholder={t("platform.grantReasonPlaceholder")}
           />
         </div>
       </div>
       <ul className="text-label text-fg-muted grid gap-1 sm:grid-cols-2">
         {PLATFORM_ROLE_VALUES.map((role) => (
           <li key={role}>
-            <span className="text-fg-secondary font-semibold">
-              {PLATFORM_ROLE_DETAILS[role].label}:
-            </span>{" "}
-            {PLATFORM_ROLE_DETAILS[role].description}
+            <span className="text-fg-secondary font-semibold">{roleLabel(role, t)}:</span>{" "}
+            {roleDescription(role, t)}
           </li>
         ))}
       </ul>
@@ -70,11 +78,14 @@ export function GrantPlatformAccessForm() {
       ) : null}
       {state.ok ? (
         <p role="status" className="text-body text-success">
-          {state.unchanged ? "That assignment was already active." : "Platform access added."}
+          {state.unchanged ? t("platform.grantUnchanged") : t("platform.grantSuccess")}
         </p>
       ) : null}
       <div className="flex justify-end">
-        <FormSubmitButton label="Add platform member" pendingLabel="Adding…" />
+        <FormSubmitButton
+          label={t("platform.accessAddMember")}
+          pendingLabel={t("platform.grantSubmitPending")}
+        />
       </div>
     </form>
   );

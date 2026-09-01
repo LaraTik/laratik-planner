@@ -20,14 +20,22 @@ import { revokePlatformAccessAction, type PlatformAccessActionState } from "./ac
 
 const initial: PlatformAccessActionState = {};
 
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+function roleLabel(role: PlatformRole, t: Translator): string {
+  return t(`platform.roleLabels.${role}.label`) || PLATFORM_ROLE_DETAILS[role].label;
+}
+
 export function RevokePlatformAccessDialog({
   userId,
   email,
   role,
+  t,
 }: {
   userId: string;
   email: string;
   role: PlatformRole;
+  t: Translator;
 }) {
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(revokePlatformAccessAction, initial);
@@ -39,31 +47,32 @@ export function RevokePlatformAccessDialog({
           variant="ghost"
           size="sm"
           className="text-danger min-h-11 min-w-11 px-0"
-          aria-label={`Revoke access for ${email}`}
-          title={`Revoke access for ${email}`}
+          aria-label={t("platform.revokeAria", { email })}
+          title={t("platform.revokeTitle", { email })}
         >
           <Trash2 className="h-4 w-4" aria-hidden="true" />
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Revoke platform access</DialogTitle>
+          <DialogTitle>{t("platform.revokeHeading")}</DialogTitle>
           <DialogDescription>
-            Revoke {PLATFORM_ROLE_DETAILS[role].label} access for <strong>{email}</strong>. The
-            assignment remains in the audit history.
+            {t("platform.revokeDescription", { email, role: roleLabel(role, t) })}
           </DialogDescription>
         </DialogHeader>
         <form action={action} className="space-y-4">
           <input type="hidden" name="userId" value={userId} />
           <div className="space-y-1.5">
-            <Label htmlFor={`platform-revoke-reason-${userId}`}>Reason</Label>
+            <Label htmlFor={`platform-revoke-reason-${userId}`}>
+              {t("platform.revokeReasonLabel")}
+            </Label>
             <Input
               id={`platform-revoke-reason-${userId}`}
               name="reason"
               required
               minLength={3}
               maxLength={500}
-              placeholder="Offboarding or rotation ended"
+              placeholder={t("platform.revokeReasonPlaceholder")}
             />
           </div>
           {state.error ? (
@@ -73,17 +82,17 @@ export function RevokePlatformAccessDialog({
           ) : null}
           {state.ok ? (
             <p role="status" className="text-body text-success">
-              Access revoked.
+              {t("platform.revokeSuccess")}
             </p>
           ) : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              {state.ok ? "Close" : "Cancel"}
+              {state.ok ? t("platform.commonClose") : t("platform.commonCancel")}
             </Button>
             {!state.ok ? (
               <FormSubmitButton
-                label="Revoke access"
-                pendingLabel="Revoking…"
+                label={t("platform.revokeSubmit")}
+                pendingLabel={t("platform.revokeSubmitPending")}
                 variant="destructive"
               />
             ) : null}

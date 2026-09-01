@@ -24,14 +24,22 @@ import { changePlatformRoleAction, type PlatformAccessActionState } from "./acti
 
 const initial: PlatformAccessActionState = {};
 
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+function roleLabel(role: (typeof PLATFORM_ROLE_VALUES)[number], t: Translator): string {
+  return t(`platform.roleLabels.${role}.label`) || PLATFORM_ROLE_DETAILS[role].label;
+}
+
 export function ChangePlatformRoleDialog({
   userId,
   email,
   currentRole,
+  t,
 }: {
   userId: string;
   email: string;
   currentRole: PlatformRole;
+  t: Translator;
 }) {
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(changePlatformRoleAction, initial);
@@ -43,24 +51,23 @@ export function ChangePlatformRoleDialog({
           variant="ghost"
           size="sm"
           className="min-h-11 min-w-11 px-0"
-          aria-label={`Change role for ${email}`}
-          title={`Change role for ${email}`}
+          aria-label={t("platform.changeRoleAria", { email })}
+          title={t("platform.changeRoleTitle", { email })}
         >
           <Pencil className="h-4 w-4" aria-hidden="true" />
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Change platform role</DialogTitle>
-          <DialogDescription>
-            Change access for <strong>{email}</strong>. Downgrading the final Platform Owner is
-            blocked by the server.
-          </DialogDescription>
+          <DialogTitle>{t("platform.changeRoleHeading")}</DialogTitle>
+          <DialogDescription>{t("platform.changeRoleDescription", { email })}</DialogDescription>
         </DialogHeader>
         <form action={action} className="space-y-4">
           <input type="hidden" name="userId" value={userId} />
           <div className="space-y-1.5">
-            <Label htmlFor={`platform-role-${userId}`}>New role</Label>
+            <Label htmlFor={`platform-role-${userId}`}>
+              {t("platform.changeRoleNewRoleLabel")}
+            </Label>
             <select
               id={`platform-role-${userId}`}
               name="role"
@@ -70,20 +77,22 @@ export function ChangePlatformRoleDialog({
             >
               {PLATFORM_ROLE_VALUES.map((role) => (
                 <option key={role} value={role}>
-                  {PLATFORM_ROLE_DETAILS[role].label}
+                  {roleLabel(role, t)}
                 </option>
               ))}
             </select>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor={`platform-role-reason-${userId}`}>Reason</Label>
+            <Label htmlFor={`platform-role-reason-${userId}`}>
+              {t("platform.changeRoleReasonLabel")}
+            </Label>
             <Input
               id={`platform-role-reason-${userId}`}
               name="reason"
               required
               minLength={3}
               maxLength={500}
-              placeholder="Responsibility changed"
+              placeholder={t("platform.changeRoleReasonPlaceholder")}
             />
           </div>
           {state.error ? (
@@ -93,14 +102,19 @@ export function ChangePlatformRoleDialog({
           ) : null}
           {state.ok ? (
             <p role="status" className="text-body text-success">
-              Role updated.
+              {t("platform.changeRoleSuccess")}
             </p>
           ) : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              {state.ok ? "Close" : "Cancel"}
+              {state.ok ? t("platform.commonClose") : t("platform.commonCancel")}
             </Button>
-            {!state.ok ? <FormSubmitButton label="Change role" pendingLabel="Changing…" /> : null}
+            {!state.ok ? (
+              <FormSubmitButton
+                label={t("platform.changeRoleSubmit")}
+                pendingLabel={t("platform.changeRoleSubmitPending")}
+              />
+            ) : null}
           </DialogFooter>
         </form>
       </DialogContent>
