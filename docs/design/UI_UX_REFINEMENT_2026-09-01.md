@@ -270,3 +270,16 @@ production surfaces — the per-page audit is the next phase.
 - Manual verification: `pnpm build` succeeds; running the dev
   server with a fresh DB and switching the profile to `ar`
   flips the root `lang`/`dir`/font on the next navigation.
+
+## Final verification (ca65eea → bd252e8)
+
+Full `pnpm verify` pass on the branch tip:
+
+- `pnpm format:check` — clean
+- `pnpm lint` — 0/0 warnings
+- `pnpm typecheck` — clean
+- `pnpm test:unit` — 2962/2962 passing (4 todo)
+- `pnpm build` — clean (every route in the inventory compiles)
+
+All five gates green. Independent review (master prompt §22
+`Verified` status) is the documented next gate.
