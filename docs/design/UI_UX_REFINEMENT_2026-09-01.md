@@ -293,13 +293,13 @@ Full `pnpm verify` pass on the branch tip:
 - `pnpm test:unit` — 2962/2962 passing (4 todo)
 - `pnpm build` — clean (every route in the inventory compiles)
 
-## Follow-up verification (1c87544 → 375774a; 11 atomic commits)
+## Follow-up verification (1c87544 → 9413938; 15 atomic commits)
 
 After the recorded baseline, the deferred sub-component hard-coded
 `title="..."` strings (≈ 42 occurrences across 32 files) plus a
-wave of `aria-label` / `placeholder` / button-text gaps were
-bilingualised in 11 atomic commits on top of the `1a27467` docs
-consolidation commit:
+wave of `aria-label` / `placeholder` / button-text / dialog-close
+gaps were bilingualised in 15 atomic commits on top of the
+`1a27467` docs consolidation commit:
 
 | #   | SHA       | Scope                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | --- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
