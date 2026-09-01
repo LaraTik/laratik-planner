@@ -25,7 +25,15 @@
     "moveDownShortcut": "Move down (Alt+ArrowDown)",
     "duplicateShortcut": "Duplicate (Ctrl/Cmd+D)",
     "previousNavAria": "Previous",
-    "nextNavAria": "Next"
+    "nextNavAria": "Next",
+    "paginationAria": "Pagination",
+    "firstPageAria": "First page",
+    "previousPageAria": "Previous page",
+    "previousPageText": "Previous",
+    "pageX": "Page {p}",
+    "nextPageAria": "Next page",
+    "nextPageText": "Next",
+    "lastPageAria": "Last page"
   },
   "navigation": {
     "myWork": "My Work",

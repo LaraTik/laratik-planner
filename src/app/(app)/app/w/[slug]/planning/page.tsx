@@ -467,6 +467,7 @@ export default async function PlanningPage({
             buildHref={buildPageHref}
             totalCount={totalCount}
             pageSize={pageSize}
+            t={t}
           />
         </>
       )}

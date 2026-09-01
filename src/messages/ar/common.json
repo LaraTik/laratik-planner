@@ -25,7 +25,15 @@
     "moveDownShortcut": "نقل للأسفل (Alt+سهم لأسفل)",
     "duplicateShortcut": "تكرار (Ctrl/Cmd+D)",
     "previousNavAria": "السابق",
-    "nextNavAria": "التالي"
+    "nextNavAria": "التالي",
+    "paginationAria": "ترقيم الصفحات",
+    "firstPageAria": "الصفحة الأولى",
+    "previousPageAria": "الصفحة السابقة",
+    "previousPageText": "السابق",
+    "pageX": "صفحة {p}",
+    "nextPageAria": "الصفحة التالية",
+    "nextPageText": "التالي",
+    "lastPageAria": "الصفحة الأخيرة"
   },
   "navigation": {
     "myWork": "عملي",

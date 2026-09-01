@@ -25,6 +25,13 @@ export interface PaginationProps {
   /** Total number of pages (>= 1). */
   totalPages: number;
   /**
+   * Optional translator. When provided, the nav + page-link
+   * aria-labels + the prev/next text labels render from
+   * `common.{paginationAria,firstPage,previousPage,pageX,nextPage,lastPage}`;
+   * when omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
+  /**
    * Href builder. Called with a 1-indexed page number; the parent
    * is responsible for preserving filter / sort / search state in
    * the returned URL.
@@ -74,7 +81,16 @@ export function Pagination({
   totalCount,
   pageSize,
   className,
+  t,
 }: PaginationProps) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
+    const value = t ? t(key, params) : fallback;
+    if (!params) return value;
+    return Object.entries(params).reduce(
+      (acc, [k, v]) => acc.replaceAll(`{${k}}`, String(v)),
+      value,
+    );
+  };
   if (totalPages <= 1 && totalCount === undefined) return null;
   const safePage = Math.min(Math.max(currentPage, 1), Math.max(totalPages, 1));
   const pages = pageHrefs(safePage, totalPages);
@@ -91,7 +107,7 @@ export function Pagination({
       : null;
   return (
     <nav
-      aria-label="Pagination"
+      aria-label={tr("common.paginationAria", "Pagination")}
       className={cn(
         "border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-card)] border p-3 sm:flex-row sm:items-center sm:justify-between",
         className,
@@ -110,21 +126,25 @@ export function Pagination({
           <PageLink
             {...(hasPrev ? { href: buildHref(1) } : {})}
             disabled={!hasPrev}
-            label="First page"
+            label={tr("common.firstPageAria", "First page")}
           >
             <ChevronFirst className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="sr-only">First page</span>
+            <span className="sr-only">{tr("common.firstPageAria", "First page")}</span>
           </PageLink>
         </li>
         <li>
           <PageLink
             {...(hasPrev ? { href: buildHref(safePage - 1) } : {})}
             disabled={!hasPrev}
-            label="Previous page"
+            label={tr("common.previousPageAria", "Previous page")}
           >
             <DirAwareChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="sr-only sm:hidden">Previous page</span>
-            <span className="text-label hidden sm:inline">Previous</span>
+            <span className="sr-only sm:hidden">
+              {tr("common.previousPageAria", "Previous page")}
+            </span>
+            <span className="text-label hidden sm:inline">
+              {tr("common.previousPageText", "Previous")}
+            </span>
           </PageLink>
         </li>
         {pages.map((p, i) =>
@@ -137,7 +157,7 @@ export function Pagination({
               <PageLink
                 href={buildHref(p)}
                 active={p === safePage}
-                label={`Page ${p}`}
+                label={tr("common.pageX", "Page {p}", { p })}
                 {...(p === safePage ? { ariaCurrent: "page" as const } : {})}
               >
                 {p}
@@ -149,10 +169,10 @@ export function Pagination({
           <PageLink
             {...(hasNext ? { href: buildHref(safePage + 1) } : {})}
             disabled={!hasNext}
-            label="Next page"
+            label={tr("common.nextPageAria", "Next page")}
           >
-            <span className="text-label hidden sm:inline">Next</span>
-            <span className="sr-only sm:hidden">Next page</span>
+            <span className="text-label hidden sm:inline">{tr("common.nextPageText", "Next")}</span>
+            <span className="sr-only sm:hidden">{tr("common.nextPageAria", "Next page")}</span>
             <DirAwareChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
           </PageLink>
         </li>
@@ -160,9 +180,9 @@ export function Pagination({
           <PageLink
             {...(hasNext ? { href: buildHref(totalPages) } : {})}
             disabled={!hasNext}
-            label="Last page"
+            label={tr("common.lastPageAria", "Last page")}
           >
-            <span className="sr-only">Last page</span>
+            <span className="sr-only">{tr("common.lastPageAria", "Last page")}</span>
             <ChevronLast className="h-3.5 w-3.5" aria-hidden="true" />
           </PageLink>
         </li>
