@@ -10,6 +10,8 @@ import {
 } from "@/lib/auth/profile";
 import { setNotificationPreferencesForUser } from "@/lib/notifications/service";
 import { setUser } from "@/lib/observability/sentry";
+import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
+import { setPublicLocale } from "@/lib/i18n/cookie";
 
 /**
  * Own-profile server actions. All three:
@@ -25,9 +27,13 @@ import { setUser } from "@/lib/observability/sentry";
  * framework turns into a 307 to /signin. We keep the wrapper as a
  * server action so both the Account page and the User menu can call
  * the same code path.
+ *
+ * After a successful profile save the action also writes the
+ * public-locale cookie so the next request — including the
+ * one the client triggers through `router.refresh()` — paints
+ * the root `<html lang dir>` from the profile's choice rather
+ * than from a stale public preference.
  */
-
-const SUPPORTED_LOCALES: ReadonlyArray<Locale> = ["en"];
 
 export type ProfileActionState =
   { saved: true } | { error: string; field?: string } | Record<string, never>;
@@ -51,7 +57,7 @@ export async function updateProfileAction(
   if (!session?.user?.id) return { error: "Sign in again to save your profile." };
 
   const rawLocale = String(formData.get("locale") ?? "en");
-  const locale = SUPPORTED_LOCALES.find((l) => l === rawLocale);
+  const locale: Locale | undefined = SUPPORTED_LOCALES.find((l) => l.code === rawLocale)?.code;
   if (!locale) return { error: "That locale isn't supported yet.", field: "locale" };
 
   const result = await updateOwnProfile(session.user.id, {
@@ -66,8 +72,18 @@ export async function updateProfileAction(
     }
     return { error: result.message };
   }
+  // The DB row is the source of truth for authenticated
+  // requests. The cookie is the source of truth for the
+  // *next* public render (sign-out, deep link from email,
+  // etc.) and is also what the very next authenticated
+  // request reads if the JWT has not yet re-decoded the
+  // updated `users.locale` — Next.js caches the JWT
+  // payload for the request, so without the cookie the
+  // first paint after a language switch would still show
+  // the old language until the next navigation.
+  await setPublicLocale(locale);
   revalidatePath("/app/account");
-  revalidatePath("/app");
+  revalidatePath("/app", "layout");
   return { saved: true };
 }
 

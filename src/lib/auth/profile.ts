@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { isPasswordStrong, setPassword, verifyPassword } from "@/lib/auth/password";
+import { SUPPORTED_LOCALES, type LocaleCode } from "@/lib/i18n/locales";
 
 /**
  * Own-profile helpers — used by the /app/account server actions.
@@ -32,8 +33,19 @@ import { isPasswordStrong, setPassword, verifyPassword } from "@/lib/auth/passwo
 
 // ─── Profile update ────────────────────────────────────────────────────────
 
-const LOCALE_VALUES = ["en"] as const;
-export type Locale = (typeof LOCALE_VALUES)[number];
+/**
+ * The closed set of profile-locale values. Mirrored from
+ * `src/lib/i18n/locales.ts` `SUPPORTED_LOCALES` so the Zod
+ * schema, the form, the action, and the resolver all read
+ * from a single source of truth. Adding a third locale is
+ * a one-line change to `SUPPORTED_LOCALES`; the schema and
+ * every consumer pick it up automatically.
+ */
+const LOCALE_VALUES = SUPPORTED_LOCALES.map((l) => l.code) as unknown as readonly [
+  LocaleCode,
+  ...LocaleCode[],
+];
+export type Locale = LocaleCode;
 
 const profileSchema = z.object({
   displayName: z

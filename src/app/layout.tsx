@@ -1,19 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Noto_Sans_Arabic } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/lib/auth/config";
-import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
-import { currentActor } from "@/lib/auth/current-actor";
-import { db } from "@/lib/db";
-import { agencies } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { resolveLocale } from "@/lib/i18n/locales";
+import { resolveActiveLocale } from "@/lib/i18n/resolve-active-locale";
+import { PublicLocaleSwitcher } from "@/app/(landing)/public-locale-switcher";
 import "./globals.css";
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
+});
+
+// Noto Sans Arabic — the canonical Arabic face for the
+// product. Loaded with weights 400/500/600/700 to cover the
+// StudioFlow type scale. `display: "swap"` so the Latin face
+// stays painted during the font fetch (no FOIT for the
+// landing page). The body element switches to this face
+// when the document is `dir="rtl"` (see `globals.css`).
+const notoArabic = Noto_Sans_Arabic({
+  variable: "--font-noto-arabic",
+  subsets: ["arabic"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -43,27 +52,34 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // and Next.js would surface a generic "Something went wrong"
   // page from the global-error boundary.
   const session = await auth();
-  // Resolve the active agency locale once per request so the
+  // Resolve the active interface locale once per request so the
   // document `lang` / `dir` attributes reflect the user's
-  // working locale. Unknown / missing agency falls back to
-  // English / LTR — never throws. The (app) workspace
-  // layouts may also set per-page locale; the root value
-  // is the safe default for the marketing / signin pages
-  // that sit above the workspace context.
-  const actor = session?.user?.id ? await currentActor() : null;
-  const agencyId = actor ? ((await resolveActiveAgencyContext({ actor }))?.agencyId ?? null) : null;
-  const [agencyRow] = agencyId
-    ? await db
-        .select({ locale: agencies.locale })
-        .from(agencies)
-        .where(eq(agencies.id, agencyId))
-        .limit(1)
-    : [];
-  const activeLocale = resolveLocale(agencyRow?.locale);
+  // working locale. Precedence is locked in ADR 0009:
+  // user profile → public cookie → English fallback. The
+  // agency locale is intentionally NOT in this chain — it is
+  // the *content* default, resolved by `resolveContentLocale`.
+  // Unknown / missing values fall back to English / LTR — never
+  // throws.
+  const activeLocale = await resolveActiveLocale();
   return (
-    <html lang={activeLocale.code} dir={activeLocale.dir} className={`${inter.variable} h-full`}>
+    <html
+      lang={activeLocale.code}
+      dir={activeLocale.dir}
+      className={`${inter.variable} ${notoArabic.variable} h-full`}
+    >
       <body className="bg-canvas text-fg-primary min-h-full">
         <SessionProvider session={session}>{children}</SessionProvider>
+        {/*
+          The public locale switcher is mounted at the root so
+          it is reachable from any page that has not yet
+          committed to a header / sidebar (the landing, the
+          sign-in surfaces, the legal pages). Once a workspace
+          chrome is in place the switcher moves into the
+          account/profile surface and the root instance is
+          suppressed (it is a no-op when the user is signed in
+          and the workspace chrome renders).
+        */}
+        <PublicLocaleSwitcher />
         {/*
           Sonner toaster. Mounted once at the root so any client
           component (forms, archive buttons) can call `toast(...)`

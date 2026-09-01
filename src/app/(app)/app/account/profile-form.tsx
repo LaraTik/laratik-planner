@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { updateProfileAction, type ProfileActionState } from "./actions";
+import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 
 /**
  * Profile editor — display name, name, avatar URL, locale.
@@ -24,9 +25,14 @@ import { updateProfileAction, type ProfileActionState } from "./actions";
  *  - profile-success      the top-of-form success banner (when shown)
  *  - profile-submit       the submit button
  *  - profile-display-name / profile-name / profile-image / profile-locale
+ *
+ * The locale `<select>` enumerates `en` and `ar` with their
+ * native labels. Native script ("English" / "العربية") is used
+ * rather than translated labels because the user is choosing
+ * the *name* of the language, not a translated description of
+ * it. The `aria-current` attribute announces the active
+ * selection to screen readers.
  */
-
-const SUPPORTED_LOCALES = [{ value: "en", label: "English" }] as const;
 
 const initialState: ProfileActionState = {};
 
@@ -154,12 +160,13 @@ export function ProfileForm({
             id="profile-locale"
             name="locale"
             defaultValue={values.locale}
+            aria-current={values.locale ? "true" : undefined}
             className={controlClass}
             data-testid="profile-locale-input"
           >
             {SUPPORTED_LOCALES.map((l) => (
-              <option key={l.value} value={l.value}>
-                {l.label}
+              <option key={l.code} value={l.code} lang={l.code} dir={l.dir}>
+                {l.nativeLabel}
               </option>
             ))}
           </select>

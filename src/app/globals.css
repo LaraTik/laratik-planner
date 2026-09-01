@@ -137,6 +137,25 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* When the document is in RTL the body switches to Noto Sans
+ * Arabic, loaded by `next/font/google` in `src/app/layout.tsx`
+ * and exposed as `--font-noto-arabic`. The fallback chain keeps
+ * Inter for any Latin-only segment (mentions, hashtags, IDs).
+ * The `:where(html[dir="rtl"]) body` selector is preferred over
+ * a generic `[dir="rtl"] body` so per-element `dir` overrides
+ * on inputs (DirAwareInput / DirAwareTextarea) do not pull the
+ * Arabic font in. */
+html[dir="rtl"] body {
+  font-family:
+    var(--font-noto-arabic, "Noto Sans Arabic"),
+    var(--font-inter),
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+
 /* Focus ring — always visible for keyboard users (§18) */
 *:focus-visible {
   outline: 2px solid var(--focus-ring);

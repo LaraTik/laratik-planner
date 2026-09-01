@@ -185,3 +185,53 @@ Definitions (used consistently across every doc above):
 
 `Implemented` means code exists; `Tested` requires committed automated/manual
 evidence; `Verified` requires independent reviewer sign-off.
+
+## 2026-09-01 — Localization foundation + Arabic UI preparation (Phase 1)
+
+Status: **Implemented and the focused i18n suite Tested; independent
+verification is not claimed.**
+
+This is the foundation commit of the
+`docs/ui-ux-pro-max-2026-09-01.md` master plan. The product as
+a whole does **not** claim Arabic support on production
+surfaces yet — the per-page audit and message catalog
+expansion land in subsequent phases. What ships today:
+
+- `laratik_locale` HttpOnly / SameSite=Lax / Secure-in-prod
+  cookie (365-day lifetime), mutated only by server actions.
+- `resolveActiveLocale()` server resolver with the locked
+  precedence from ADR 0009: authenticated `users.locale` →
+  public `laratik_locale` cookie → English fallback. The
+  agency locale is **not** in the interface chain; it is the
+  _content_ default, exposed through the separate
+  `resolveContentLocale()` helper so an Arabic agency
+  writing Arabic content can serve a planner whose UI is
+  English.
+- Noto Sans Arabic loaded via `next/font/google` weights
+  400 / 500 / 600 / 700; the body element switches to the
+  face automatically when `<html dir="rtl">`.
+- Profile form (`/app/account`) locale `<select>` widened
+  from `["en"]` to the central `SUPPORTED_LOCALES` set;
+  saving the profile writes both `users.locale` and the
+  cookie in one transaction.
+- A compact `<PublicLocaleSwitcher>` mounted at the root
+  layout, with a server action that validates the locale
+  and a same-origin relative return path before writing
+  the cookie.
+- `src/messages/{en,ar}/common.json` — `Common` +
+  `Navigation` + `languageSwitcher` namespace pair.
+  Missing-key parity is locked by `tests/unit/i18n/catalogs.test.ts`.
+- `src/lib/i18n/format-locale.ts` — locale-aware number,
+  percent, currency, date, time, relative-time, and list
+  formatters, all with `numberingSystem: "latn"` so Arabic
+  renders Western `0–9` digits per the locked decision.
+- ADR-0009 (locale policy) and the page-by-page audit
+  matrix (`docs/design/UI_UX_REFINEMENT_2026-09-01.md`)
+  scaffolded for the remaining 64 surfaces.
+
+Evidence: `pnpm typecheck` clean; `pnpm lint` clean;
+`pnpm format:check` clean; `pnpm test:unit` 2950/2950 pass
+(53 new i18n tests, 2897 pre-existing — zero regressions).
+Independent review handoff is the Phase 10 work, not this
+commit. Pre-merge browser matrix and the full pre-merge
+visual sweep are also Phase 10 work.
