@@ -715,6 +715,8 @@ export async function confirmPublishReadiness(
       contentItemId: parsed.contentItemId,
       title: `Ready to publish: "${item.title}"`,
       body: "A publisher has confirmed the package is ready. The publish window is open.",
+      messageKey: "notifications.events.ready_to_publish",
+      messageParams: { title: item.title },
     });
   }
 

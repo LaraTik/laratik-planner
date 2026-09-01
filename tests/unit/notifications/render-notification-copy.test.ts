@@ -84,4 +84,31 @@ describe("renderNotificationCopy", () => {
     // parity test.
     expect(out).toEqual({ title: "Stored English title", body: "Stored English body" });
   });
+
+  it("interpolates per-event params (review_request with {title})", () => {
+    const out = renderNotificationCopy(
+      {
+        title: `Review requested: "My Item"`,
+        body: "A planner submitted this item for content review.",
+        messageKey: "notifications.events.review_request",
+        messageParams: { title: "My Item" },
+      },
+      "ar",
+    );
+    expect(out.title).toBe("طلب مراجعة: «My Item»");
+    expect(out.body).toBe("قدّم المخطط هذا العنصر لمراجعة المحتوى.");
+  });
+
+  it("interpolates per-event params (changes_requested_with_reason)", () => {
+    const out = renderNotificationCopy(
+      {
+        title: `Changes requested: "My Item"`,
+        body: "Reviewer feedback: please shorten the caption",
+        messageKey: "notifications.events.changes_requested_with_reason",
+        messageParams: { title: "My Item", reason: "please shorten the caption" },
+      },
+      "ar",
+    );
+    expect(out.body).toBe("ملاحظات المراجع: please shorten the caption");
+  });
 });

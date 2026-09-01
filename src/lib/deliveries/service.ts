@@ -192,6 +192,8 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
             contentItemId: input.contentItemId,
             title: `Delivery submitted: "${itemMeta.title}"`,
             body: `Delivery V${nextVersion} is waiting on creative review.`,
+            messageKey: "notifications.events.delivery_submitted",
+            messageParams: { title: itemMeta.title, version: nextVersion },
           },
           tx,
         );
@@ -369,6 +371,8 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
             contentItemId: lockedRequest.contentItemId,
             title: `Creative approved: "${itemMeta.title}"`,
             body: `The ${lockedRequest.gate} reviewer approved this delivery.`,
+            messageKey: "notifications.events.delivery_approved",
+            messageParams: { title: itemMeta.title },
           },
           tx,
         );
@@ -385,6 +389,8 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
               contentItemId: lockedRequest.contentItemId,
               title: `Ready to publish: "${itemMeta.title}"`,
               body: "All approvals are in. The item is ready to publish.",
+              messageKey: "notifications.events.ready_to_publish",
+              messageParams: { title: itemMeta.title },
             },
             tx,
           );
@@ -395,15 +401,20 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
         skipSelf(itemMeta.designerId),
         skipSelf(itemMeta.contentOwnerId),
       ].filter((u): u is string => Boolean(u))) {
+        const reason = input.feedback?.slice(0, 240);
         await enqueueDeliveryNotification(
           {
             userId: recipient,
             workspaceId: item.workspaceId,
             contentItemId: lockedRequest.contentItemId,
             title: `Changes requested: "${itemMeta.title}"`,
-            body: input.feedback
-              ? `Reviewer feedback: ${input.feedback.slice(0, 240)}`
+            body: reason
+              ? `Reviewer feedback: ${reason}`
               : "The reviewer requested changes on the latest delivery.",
+            messageKey: reason
+              ? "notifications.events.changes_requested_with_reason"
+              : "notifications.events.delivery_changes_requested",
+            messageParams: reason ? { title: itemMeta.title, reason } : { title: itemMeta.title },
           },
           tx,
         );

@@ -1020,6 +1020,8 @@ export async function transitionContent(
             contentItemId: item.id,
             title: `Review requested: "${title}"`,
             body: "A planner submitted this item for content review.",
+            messageKey: "notifications.events.review_request",
+            messageParams: { title },
           },
           tx,
         );
@@ -1035,6 +1037,8 @@ export async function transitionContent(
             contentItemId: item.id,
             title: `Content approved: "${title}"`,
             body: "The brief was approved. The item is ready for the next step.",
+            messageKey: "notifications.events.approval",
+            messageParams: { title },
           },
           tx,
         );
@@ -1042,15 +1046,20 @@ export async function transitionContent(
     } else if (input.action === "request_content_changes") {
       const recipient = skipSelf(ownerId);
       if (recipient) {
+        const reason = input.reason?.slice(0, 240);
         await enqueueChangesRequestedNotification(
           {
             userId: recipient,
             workspaceId: item.workspaceId,
             contentItemId: item.id,
             title: `Changes requested: "${title}"`,
-            body: input.reason
-              ? `Reviewer feedback: ${input.reason.slice(0, 240)}`
+            body: reason
+              ? `Reviewer feedback: ${reason}`
               : "Open the item to see the reviewer's notes.",
+            messageKey: reason
+              ? "notifications.events.changes_requested_with_reason"
+              : "notifications.events.changes_requested",
+            messageParams: reason ? { title, reason } : { title },
           },
           tx,
         );
@@ -1066,6 +1075,8 @@ export async function transitionContent(
             contentItemId: item.id,
             title: `Ready to publish: "${title}"`,
             body: "All approvals are in. The item is ready to publish.",
+            messageKey: "notifications.events.ready_to_publish",
+            messageParams: { title },
           },
           tx,
         );
@@ -1127,6 +1138,8 @@ export async function claimAsDesigner(actor: Actor, contentItemId: string) {
           contentItemId,
           title: `Designer claimed "${item.title}"`,
           body: "The design task is now in progress. You'll be notified when a delivery is submitted.",
+          messageKey: "notifications.events.designer_claimed",
+          messageParams: { title: item.title },
         },
         tx,
       );
@@ -1204,6 +1217,8 @@ export async function assignDesigner(actor: Actor, input: AssignDesignerInput) {
         contentItemId: parsed.data.contentItemId,
         title: `You were assigned "${item.title}"`,
         body: "A planner assigned this design task to you. Open the item to start.",
+        messageKey: "notifications.events.assignment",
+        messageParams: { title: item.title },
       },
       tx,
     );
@@ -1215,6 +1230,8 @@ export async function assignDesigner(actor: Actor, input: AssignDesignerInput) {
           contentItemId: parsed.data.contentItemId,
           title: `Design task reassigned: "${item.title}"`,
           body: "This design task was reassigned to another designer.",
+          messageKey: "notifications.events.designer_reassigned",
+          messageParams: { title: item.title },
         },
         tx,
       );
@@ -1299,6 +1316,8 @@ export async function releaseDesignTask(actor: Actor, input: ReleaseDesignTaskIn
           contentItemId: parsed.data.contentItemId,
           title: `Design task released: "${item.title}"`,
           body: "A planner released your hold on this design task. The item is back in the unassigned queue.",
+          messageKey: "notifications.events.designer_released",
+          messageParams: { title: item.title },
         },
         tx,
       );
@@ -1485,6 +1504,8 @@ export async function dispatchDeadlineReminders(
         contentItemId: item.id,
         title: `Deadline approaching: "${item.title}"`,
         body: `The planned publish date is approaching. Confirm the package is on track.`,
+        messageKey: "notifications.events.deadline_warning",
+        messageParams: { title: item.title },
       });
       enqueued += 1;
     }

@@ -234,6 +234,8 @@ export async function recordMaterialityEvent(
         kind: "system",
         title: `Material edit on content item`,
         body: `Resource '${input.resource}' changed. Approvals were reset; please re-review (revision ${newRevision}).`,
+        messageKey: "notifications.events.material_edit",
+        messageParams: { resource: input.resource, revision: newRevision },
         actionUrl: `/app/w/${item.workspaceId}/planning/${input.contentItemId}/publish`,
       });
       notified += 1;

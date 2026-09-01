@@ -1942,6 +1942,64 @@
       }
     },
     "commentMentionTitle": "You were mentioned in a comment",
-    "commentMentionBody": "Someone @mentioned you in a comment on a content item."
+    "commentMentionBody": "Someone @mentioned you in a comment on a content item.",
+    "events": {
+      "review_request": {
+        "title": "Review requested: \"{title}\"",
+        "body": "A planner submitted this item for content review."
+      },
+      "approval": {
+        "title": "Content approved: \"{title}\"",
+        "body": "The brief was approved. The item is ready for the next step."
+      },
+      "changes_requested": {
+        "title": "Changes requested: \"{title}\"",
+        "body": "Open the item to see the reviewer's notes."
+      },
+      "changes_requested_with_reason": {
+        "title": "Changes requested: \"{title}\"",
+        "body": "Reviewer feedback: {reason}"
+      },
+      "ready_to_publish": {
+        "title": "Ready to publish: \"{title}\"",
+        "body": "All approvals are in. The item is ready to publish."
+      },
+      "designer_claimed": {
+        "title": "Designer claimed \"{title}\"",
+        "body": "A designer picked up the work for this item."
+      },
+      "assignment": {
+        "title": "You were assigned \"{title}\"",
+        "body": "Open the item to start work."
+      },
+      "designer_reassigned": {
+        "title": "Design task reassigned: \"{title}\"",
+        "body": "A new designer was assigned to this item."
+      },
+      "designer_released": {
+        "title": "Design task released: \"{title}\"",
+        "body": "The designer released this item back to the queue."
+      },
+      "deadline_warning": {
+        "title": "Deadline approaching: \"{title}\"",
+        "body": "The planned publish date is approaching. Confirm the package is on track."
+      },
+      "material_edit": {
+        "title": "Material edit on content item",
+        "body": "Resource '{resource}' changed. Approvals were reset; please re-review (revision {revision})."
+      },
+      "delivery_submitted": {
+        "title": "Delivery submitted: \"{title}\"",
+        "body": "Delivery V{version} is waiting on creative review."
+      },
+      "delivery_approved": {
+        "title": "Creative approved: \"{title}\"",
+        "body": "The delivery is approved. The item is ready to publish."
+      },
+      "delivery_changes_requested": {
+        "title": "Changes requested on delivery: \"{title}\"",
+        "body": "The reviewer requested changes on the delivery. Open the item to see the notes."
+      }
+    }
   }
 }
