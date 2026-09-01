@@ -293,6 +293,38 @@ Full `pnpm verify` pass on the branch tip:
 - `pnpm test:unit` — 2962/2962 passing (4 todo)
 - `pnpm build` — clean (every route in the inventory compiles)
 
+## Follow-up verification (1c87544 → 142b24e; 5 atomic commits)
+
+After the recorded baseline, the deferred sub-component hard-coded
+`title="..."` strings (≈ 42 occurrences across 32 files) were
+bilingualised in five atomic commits on top of the `1a27467` docs
+consolidation commit:
+
+| #   | SHA       | Scope                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| --- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `1c87544` | 6 server pages — added `tForActive()` where missing (ai-settings, brand-kit index, analytics/social, planning/edit) and swapped the title/description/empty-state to `t(...)` keys under `aiSettings`, `analytics`, `planning.{editAccess*,frozenStatus*,editIdea*}`, `brandKit.*`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2   | `7c31395` | 5 error boundaries — `app/error.tsx` (top-level), `app/(app)/error.tsx`, plus 4 per-route boundaries under `app/w/[slug]/{channels,planning,planning/[id],brand-kit}/error.tsx`; all now resolve the public `laratik_locale` cookie via `getClientT()` and render the matching `errors.*` keys.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 3   | `5a44893` | 6 workspace overview dashboard panels — added optional `t` prop + `tr(key, fallback)` helper to `workflow-pipeline`, `plan-coverage-card`, `delivery-health-card`, `needs-attention-list`, `recently-updated-list`, `approval-timeline`; threaded from the server page. 28 new keys under `workspaceOverviewDashboard.*`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 4   | `2492001` | 8 brand-kit client subcomponents — same optional-`t` pattern applied to `logo-grid`, `color-swatch-grid`, `typography-cards`, `voice-rule-list`, `pillar-list`, `publishing-rule-list`, `linked-resource-list`, `recent-updates-table`; threaded from each per-section page. 18 new keys under `brandKit.empty.*`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 5   | `142b24e` | 5 misc client components — `social-card` (2 destructive-modal titles), `workspace-shell` ("Coming soon" tooltips on disabled overflow-menu items, threaded through the inner `OverflowMenu` function), `workflow-rail` (3 `ReasonDialog` titles for request-changes / cancel / block, threaded from the server page through `PlanningDetailShell` into both `WorkflowRail` + `WorkflowSheet`, and from `WorkflowRailBody` into the inner `ActionButtons`), `publish-package-form` (1 "Add internal note" dialog, t was already accepted as a prop from a prior phase), `navigable-array-field` (3 keyboard-shortcut tooltips, threaded from `format-payload-field-renderers` into all 4 array-field call sites). 16 new keys under `contentDetail.{workflow,internalNote}`, `planning.comingSoon`, `agencySocial.{disable,recovery}`, `common.{moveUpShortcut,moveDownShortcut,duplicateShortcut}`. |
+
+Across these five commits: 42 source files, +865/-180. Branch
+`feat/ui-ux-arabic-2026-09-01` now at `142b24e` (88 atomic commits
+since `b1d08ce`).
+
+Full `pnpm verify` re-run on `142b24e`:
+
+- `pnpm format:check` — clean
+- `pnpm lint` — 0/0 warnings
+- `pnpm typecheck` — clean
+- `pnpm test:unit` — 2962/2962 passing (4 todo)
+- `pnpm build` — clean (every route in the inventory compiles)
+- `tests/unit/i18n/catalogs.test.ts` — 7/7 passing (en + ar key parity)
+
+The optional-`t` + English-fallback pattern means every subcomponent
+rendered from a non-bilingual parent (or from a unit test that does
+not mock the translator) still shows correct hard-coded English.
+
 These five baseline gates were green for the recorded range, but they
 did not run migration, authenticated browser, accessibility, or visual
 proof. Independent review subsequently reproduced a broken migration,
