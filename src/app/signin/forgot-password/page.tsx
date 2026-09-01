@@ -12,6 +12,10 @@ import { clientEnv, serverEnv } from "@/lib/validation/env";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { headers } from "next/headers";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { tFor } from "@/messages";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 /**
  * Zod schema for the forgot-password email input. Rejecting obvious
@@ -75,18 +79,24 @@ async function requestResetAction(formData: FormData) {
   const issued = await issuePasswordResetToken(email);
   if (issued) {
     const resetUrl = `${serverEnv.AUTH_URL || clientEnv.NEXT_PUBLIC_APP_URL}/signin/set-password?token=${issued.raw}`;
-    // Best-effort send (drop if SMTP not configured in dev).
-    // The email subject and body are technical / English-locked
-    // by plan §"Stored system copy" — the recipient locale is
-    // applied at the email layer (FEAT-08) in a follow-up.
+    // STUDIOFLOW_MASTER_PROMPT.md §1 — stored system copy.
+    // Password reset emails render in the recipient's profile
+    // locale at send time. The public-cookie locale is the
+    // fallback for the rare case the user has never signed in
+    // (e.g. an admin triggers a reset for a freshly invited
+    // account that hasn't completed its first sign-in).
+    const [recipient] = await db
+      .select({ locale: users.locale })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+    const recipientLocale = (recipient?.locale as Parameters<typeof tFor>[0] | undefined) ?? "en";
+    const t = tFor(recipientLocale);
+    const expiresAt = new Date(issued.expiresAt).toISOString().slice(0, 10);
     await sendEmail({
       to: email,
-      subject: "Reset your laratik-planner password",
-      text: `Someone (hopefully you) requested a password reset on laratik-planner.
-
-Reset your password: ${resetUrl}
-
-This link expires in 1 hour. If you didn't request this, you can ignore the email — your password will not change.`,
+      subject: t("emails.passwordReset.subject"),
+      text: t("emails.passwordReset.body", { resetUrl, expiresAt }),
     });
   }
   redirect("/signin/forgot-password?sent=1");

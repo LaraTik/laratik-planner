@@ -3,6 +3,7 @@ import { randomBytes, createHash } from "node:crypto";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
+  agencies,
   agencyMemberships,
   invitationWorkspaceRoles,
   invitations,
@@ -20,6 +21,7 @@ import type { InvitationCommand } from "@/lib/auth/invitation-command";
 import { flattenWorkspaceRoleGrants, workspaceRoleSchema } from "@/lib/auth/invitation-command";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { releaseCapacity, reserveCapacity } from "@/lib/entitlements";
+import { tFor } from "@/messages";
 
 /**
  * Invitation service — per master prompt §13:
@@ -152,15 +154,29 @@ export async function createInvitation(
 
   const acceptUrl = `${APP_URL}/accept-invitation?token=${raw}`;
 
+  // STUDIOFLOW_MASTER_PROMPT.md §1 — system-generated email
+  // copy. New-recipient invitations use the agency locale,
+  // then English fallback when the agency locale isn't
+  // translated (the agency locale is content-default, so
+  // we treat it as a candidate, but the catalog is the
+  // source of truth for what the user sees).
+  const [agencyRow] = await db
+    .select({ locale: agencies.locale })
+    .from(agencies)
+    .where(eq(agencies.id, input.agencyId))
+    .limit(1);
+  const inviteLocale = (agencyRow?.locale as Parameters<typeof tFor>[0] | undefined) ?? "en";
+  const t = tFor(inviteLocale);
+  const inviteParams = {
+    acceptUrl,
+    expiresAt: expiresAt.toISOString().slice(0, 10),
+  };
+
   // Best-effort email send (drop if SMTP not configured in dev)
   const sent = await sendEmail({
     to: normalizedEmail,
-    subject: `You're invited to laratik-planner`,
-    text: `You've been invited to join the agency on laratik-planner.
-
-Accept the invitation: ${acceptUrl}
-
-This link expires on ${expiresAt.toISOString().slice(0, 10)}.`,
+    subject: t("emails.invitation.subject"),
+    text: t("emails.invitation.body", inviteParams),
   });
 
   if (sent) {
@@ -416,14 +432,24 @@ export async function resendInvitation(input: {
     .where(and(eq(invitations.id, inv.id), eq(invitations.agencyId, input.agencyId)));
 
   const acceptUrl = `${APP_URL}/accept-invitation?token=${raw}`;
+  // Same locale + i18n policy as the initial invitation: the
+  // agency locale, with English fallback. (Re-read on every
+  // resend so an admin changing the agency locale mid-flow
+  // picks up the new locale on the next reminder.)
+  const [agencyRow2] = await db
+    .select({ locale: agencies.locale })
+    .from(agencies)
+    .where(eq(agencies.id, inv.agencyId))
+    .limit(1);
+  const reminderLocale = (agencyRow2?.locale as Parameters<typeof tFor>[0] | undefined) ?? "en";
+  const tReminder = tFor(reminderLocale);
   await sendEmail({
     to: inv.email,
-    subject: `Reminder: you're invited to laratik-planner`,
-    text: `Reminder: you've been invited to join the agency on laratik-planner.
-
-Accept the invitation: ${acceptUrl}
-
-This link expires on ${expiresAt.toISOString().slice(0, 10)}.`,
+    subject: tReminder("emails.invitationReminder.subject"),
+    text: tReminder("emails.invitationReminder.body", {
+      acceptUrl,
+      expiresAt: expiresAt.toISOString().slice(0, 10),
+    }),
   });
   void input.invitedBy;
   return acceptUrl;

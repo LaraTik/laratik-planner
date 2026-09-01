@@ -19,6 +19,7 @@ import { requirePlatformPermission } from "@/lib/auth/platform-access";
 import type { Actor } from "@/lib/auth/policy";
 import { clientEnv, serverEnv } from "@/lib/validation/env";
 import { captureError } from "@/lib/observability/sentry";
+import { tFor } from "@/messages";
 
 export const CreateAgencySchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -134,13 +135,30 @@ export async function createAgency(actor: Actor, raw: CreateAgencyInput) {
   const acceptUrl = `${appUrl}/accept-invitation?token=${rawToken}`;
   let emailSent = true;
   try {
-    await sendEmail({
-      to: input.adminEmail,
-      subject: `You're invited to manage ${input.name}`,
-      text: result.invitationId
-        ? `You are the first administrator for ${input.name}. Accept the invitation: ${acceptUrl}`
-        : `You are now an administrator for ${input.name}. Sign in at ${appUrl}/signin`,
-    });
+    // STUDIOFLOW_MASTER_PROMPT.md §1 — system-generated email
+    // copy. Platform operator onboarding emails render in the
+    // recipient's profile locale (looked up by email) at send
+    // time. Falls back to English for the fresh-invite case
+    // where the user row doesn't exist yet.
+    const [recipient] = await db
+      .select({ locale: users.locale })
+      .from(users)
+      .where(eq(users.email, input.adminEmail))
+      .limit(1);
+    const t = tFor((recipient?.locale as Parameters<typeof tFor>[0] | undefined) ?? "en");
+    const subject = result.invitationId
+      ? t("emails.platformFirstAdminInvite.subject", { agencyName: input.name })
+      : t("emails.platformExistingAdminNotify.subject", { agencyName: input.name });
+    const text = result.invitationId
+      ? t("emails.platformFirstAdminInvite.body", {
+          agencyName: input.name,
+          acceptUrl,
+        })
+      : t("emails.platformExistingAdminNotify.body", {
+          agencyName: input.name,
+          signInUrl: `${appUrl}/signin`,
+        });
+    await sendEmail({ to: input.adminEmail, subject, text });
   } catch (cause) {
     emailSent = false;
     captureError("platform.agency_admin_email_failed", cause, {
