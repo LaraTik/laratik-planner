@@ -734,8 +734,8 @@ export default async function ContentDetailPage({
                 ) : (
                   <PlanningSection
                     id="creative"
-                    title="Creative brief"
-                    description="The per-format fields (caption, hook, scenes, …). AI suggestions are inline per field."
+                    title={t("contentDetail.sectionCreativeTitle")}
+                    description={t("contentDetail.sectionCreativeDescription")}
                   >
                     <FormatAwareContentEditor
                       t={t}

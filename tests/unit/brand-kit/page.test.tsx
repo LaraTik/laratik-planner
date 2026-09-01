@@ -48,6 +48,55 @@ const storageMock = vi.hoisted(() => ({
   getSignedDownloadUrl: vi.fn(),
 }));
 
+// Phase-7 follow-up (bilingual): the page now calls `tForActive()`
+// to render its header. Tests assert on data-testid + text content
+// (e.g. KPI label text), so we resolve the few keys the page reads
+// to their English catalog values. The production catalog is the
+// real source of truth; this shim just keeps the test cheap.
+const tForActiveMock = vi.hoisted(() =>
+  vi.fn(async () => ({
+    t: (key: string, params?: Record<string, string | number>) => {
+      const map: Record<string, string> = {
+        "brandKit.title": "Brand Kit",
+        "brandKit.description":
+          "The shared source for visual assets and writing guidance. Every planner, designer, and reviewer ships in one voice.",
+        "brandKit.eyebrow": "Brand Kit",
+        "brandKit.activityTitle": "Activity",
+        "brandKit.activityDescription": "Recent changes to the brand kit.",
+        "brandKit.logosTitle": "Logos",
+        "brandKit.logosDescription": "Marks, wordmarks, and approved uses.",
+        "brandKit.colorsTitle": "Colors",
+        "brandKit.colorsDescription": "Primary, secondary, and accent tokens.",
+        "brandKit.typographyTitle": "Typography",
+        "brandKit.typographyDescription": "Headline, body, and accent faces.",
+        "brandKit.voiceTitle": "Voice & tone",
+        "brandKit.voiceDescription": "Do/don't rules and editorial guardrails.",
+        "brandKit.pillarsTitle": "Pillars",
+        "brandKit.pillarsDescription": "Recurring topics for plans and posts.",
+        "brandKit.publishingTitle": "Publishing rules",
+        "brandKit.publishingDescription": "Editorial guardrails for the team.",
+        "brandKit.linkedTitle": "Linked resources",
+        "brandKit.linkedDescription": "External libraries the team can pull from.",
+        "brandKit.downloadZip": "Download ZIP",
+        "brandKit.addAsset": "Add asset",
+        "brandKit.recentUpdates": "Recent updates",
+        "brandKit.viewAllActivity": "View all activity",
+        "brandKit.downloadDisabledHint":
+          "Add at least one logo, color, or font before downloading.",
+      };
+      const value = map[key] ?? key;
+      if (!params) return value;
+      return Object.entries(params).reduce(
+        (acc, [k, v]) => acc.replaceAll(`{${k}}`, String(v)),
+        value,
+      );
+    },
+    code: "en",
+    dir: "ltr" as const,
+    source: "fallback" as const,
+  })),
+);
+
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 vi.mock("@/lib/auth/config", () => ({ auth: authMock.auth }));
 vi.mock("@/lib/workspaces/context", () => workspaceMock);
@@ -59,6 +108,7 @@ vi.mock("@/lib/brand/service", () => ({
   listBrandLinkedResources: serviceMock.listBrandLinkedResources,
 }));
 vi.mock("@/lib/storage", () => ({ getSignedDownloadUrl: storageMock.getSignedDownloadUrl }));
+vi.mock("@/lib/i18n/t-for-active", () => ({ tForActive: tForActiveMock }));
 
 vi.mock("next/navigation", () => ({
   redirect: vi.fn(),
@@ -91,6 +141,7 @@ beforeEach(() => {
   serviceMock.listBrandPublishingRules.mockResolvedValue([]);
   serviceMock.listBrandLinkedResources.mockResolvedValue([]);
   storageMock.getSignedDownloadUrl.mockReset();
+  tForActiveMock.mockClear();
 });
 
 async function renderOverview(): Promise<ReturnType<typeof render>> {

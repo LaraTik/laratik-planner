@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { AI_PROVIDER, PLANNER_FACING_CAPABILITIES } from "@/lib/ai/capabilities";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 export const metadata = { title: "AI settings" };
 
@@ -67,15 +68,16 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
   const effectiveEnabled = hasAnyKey && (feature?.enabled ?? true);
   const enabledCapabilities = new Set(feature?.enabledCapabilities ?? []);
   const requestCount = usage?.value ?? 0;
+  const { t } = await tForActive();
 
   return (
     <div className="space-y-6" data-testid="workspace-ai-settings">
       <PageHeader
         eyebrow={workspace.name}
-        title="AI assistance"
+        title={t("aiSettings.title")}
         description={
           <>
-            Environment-managed assistance with human-controlled insert and replace.
+            {t("aiSettings.description")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}

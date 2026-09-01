@@ -52,10 +52,10 @@ export default async function BrandKitPillarsPage({
 
       <SectionCard
         id="pillars"
-        title="Pillars"
+        title={t("brandKit.pillarsTitle")}
         count={pillars.length}
         fullWidth
-        aria-label="Content pillars"
+        aria-label={t("brandKit.pillarsTitle")}
         data-testid="brand-kit-section-pillars"
       >
         {canEdit ? <PillarForm slug={slug} /> : null}

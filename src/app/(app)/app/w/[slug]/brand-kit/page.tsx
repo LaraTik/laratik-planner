@@ -27,6 +27,7 @@ import { getSignedDownloadUrl } from "@/lib/storage";
 import { safeHref } from "@/lib/utils/safe-href";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/workspace/page-header";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { BrandIdentityHero } from "./brand-identity-hero";
 import { RecentUpdatesTable } from "./recent-updates-table";
 
@@ -53,6 +54,7 @@ import { RecentUpdatesTable } from "./recent-updates-table";
  * (the full feed, ready for Phase 7 per-actor / type filters).
  */
 export default async function BrandKitPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -113,8 +115,8 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
     <div className="space-y-6" data-testid="brand-kit-overview">
       <PageHeader
         eyebrow={workspace.name}
-        title="Brand Kit"
-        description="The shared source for visual assets and writing guidance. Every planner, designer, and reviewer ships in one voice."
+        title={t("brandKit.title")}
+        description={t("brandKit.description")}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Button

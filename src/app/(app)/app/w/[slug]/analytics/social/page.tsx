@@ -27,6 +27,7 @@ import { SocialSyncDiagnostics } from "./social-sync-diagnostics";
 import { SocialAggregateStrip, type AggregateChannel } from "./social-aggregate-strip";
 import { SocialSparkline, socialSparklineTestId } from "./social-sparkline";
 import { SocialEngagementRateCard } from "./social-engagement-rate";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 /**
  * M4 — social analytics dashboard.
@@ -58,6 +59,7 @@ export default async function SocialAnalyticsPage({
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
+  const { t } = await tForActive();
   const { slug } = await params;
   const sp = await searchParams;
   const rawWindow = Array.isArray(sp.window) ? sp.window[0] : sp.window;
@@ -133,11 +135,10 @@ export default async function SocialAnalyticsPage({
     <div className="space-y-6" data-testid="social-analytics-page">
       <PageHeader
         eyebrow={workspace.name}
-        title="Analytics"
+        title={t("analytics.title")}
         description={
           <>
-            Daily follower totals, growth windows, and connection health for the channels in this
-            workspace.
+            {t("analytics.description")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               {workspace.timezone}
             </span>
@@ -260,8 +261,8 @@ export default async function SocialAnalyticsPage({
         <Card variant="dashed" padding="lg" data-testid="social-analytics-empty">
           <EmptyState
             icon={<BarChart3 className="h-8 w-8" aria-hidden={true} />}
-            title="No connected channels yet"
-            description="Connect a Meta account on the Social Channels page to start collecting daily metrics."
+            title={t("analytics.emptyNoChannelsTitle")}
+            description={t("analytics.emptyNoChannelsDescription")}
             action={
               <a
                 href={`/app/w/${slug}/channels`}

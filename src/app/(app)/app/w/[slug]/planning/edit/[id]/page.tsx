@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/workspace/page-header";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { humanStatus } from "@/lib/content/status";
+import { tForActive } from "@/lib/i18n/t-for-active";
 import { EditIdeaForm } from "./edit-form";
 
 export async function generateMetadata({
@@ -33,6 +34,7 @@ export default async function EditIdeaPage({
   params: Promise<{ slug: string; id: string }>;
 }) {
   const { slug, id } = await params;
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
 
@@ -51,8 +53,8 @@ export default async function EditIdeaPage({
     return (
       <div className="space-y-4">
         <PageHeader
-          title="Edit access required"
-          description="Only workspace managers and content planners can edit ideas."
+          title={t("planning.editAccessDeniedTitle")}
+          description={t("planning.editAccessDeniedDescription")}
         />
         <Button asChild variant="ghost">
           <Link href={`/app/w/${slug}/planning/${id}`}>← Back to idea</Link>
@@ -65,8 +67,10 @@ export default async function EditIdeaPage({
     return (
       <div className="space-y-4">
         <PageHeader
-          title="This idea can no longer be edited"
-          description={`It is currently in ${humanStatus(item.status)} — once an idea moves past draft / changes requested, its title, format, schedule and channels are frozen so reviewers can rely on them.`}
+          title={t("planning.frozenStatusTitle")}
+          description={t("planning.frozenStatusDescription", {
+            status: humanStatus(item.status),
+          })}
         />
         <Button asChild variant="secondary">
           <Link href={`/app/w/${slug}/planning/${id}`}>← Back to idea</Link>
@@ -124,10 +128,10 @@ export default async function EditIdeaPage({
     <div className="mx-auto max-w-2xl space-y-6" data-testid="workspace-planning-edit">
       <PageHeader
         eyebrow={ws.name}
-        title="Edit idea"
+        title={t("planning.editIdeaTitle")}
         description={
           <>
-            Make changes to a draft or changes-requested idea.
+            {t("planning.editIdeaDescription")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {ws.timezone}

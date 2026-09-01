@@ -251,7 +251,13 @@
     "outOfRangeDescriptionMany": "The current filters match {count} items across {pages} pages. Jump back to the first page to keep browsing.",
     "goToPageOne": "Go to page 1",
     "noAtRiskTitle": "No at-risk items on this page",
-    "noAtRiskDescription": "The at-risk filter only shows items that are overdue and still in flight. Try the next page, or clear the filter to see everything."
+    "noAtRiskDescription": "The at-risk filter only shows items that are overdue and still in flight. Try the next page, or clear the filter to see everything.",
+    "editAccessDeniedTitle": "Edit access required",
+    "editAccessDeniedDescription": "Only workspace managers and content planners can edit ideas.",
+    "frozenStatusTitle": "This idea can no longer be edited",
+    "frozenStatusDescription": "It is currently in {status} — once an idea moves past draft / changes requested, its title, format, schedule and channels are frozen so reviewers can rely on them.",
+    "editIdeaTitle": "Edit idea",
+    "editIdeaDescription": "Make changes to a draft or changes-requested idea."
   },
   "board": {
     "title": "Workflow board",
@@ -2090,5 +2096,19 @@
       "htmlButton": "Sign in",
       "htmlFooter": "If you did not request this email you can safely ignore it."
     }
+  },
+  "aiSettings": {
+    "title": "AI assistance",
+    "description": "Environment-managed assistance with human-controlled insert and replace.",
+    "emptyNoKeyTitle": "AI not configured",
+    "emptyNoKeyDescription": "Connect a key in agency settings, or ask an agency admin to enable AI assistance for this workspace."
+  },
+  "analytics": {
+    "title": "Analytics",
+    "description": "Daily follower totals, growth windows, and connection health for the channels in this workspace.",
+    "emptyNoChannelsTitle": "No connected channels yet",
+    "emptyNoChannelsDescription": "Connect a Meta account on the Social Channels page to start collecting daily metrics.",
+    "emptyNoKeyTitle": "No data in this window",
+    "emptyNoKeyDescription": "Daily metrics accumulate from the day a channel is connected. Pick a wider window, or wait for new data to roll in."
   }
 }
