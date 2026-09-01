@@ -101,11 +101,15 @@ release checklist.
 
 The visual runner is now configuration-safe: `test:e2e:critical` and
 `test:visual` provision migrations and deterministic test-only Auth.js settings
-through `scripts/run-e2e-tests.ts`. A focused sign-in visual run confirmed the
-database/auth setup, but its four sign-in screenshots differ from committed
-baselines. The full 112-test visual run also reached real screenshot assertions
-and exposed additional route baseline differences before it was stopped; these
-are visual review work, not missing database/auth configuration.
+through `scripts/run-e2e-tests.ts`. On 2026-09-01 the complete visual matrix
+passed **112/112** against refreshed candidate baselines. Four stale error-page
+captures (channels, batch planning, new planning, and planning detail) were
+replaced after a dev-manifest/JSON race; the focused rerun and the full suite
+both pass. The account-menu capture now scans the underlying page before the
+Radix focus trap opens, avoiding a false `aria-hidden-focus` axe result while
+still preserving the open-menu visual state. Human Stitch comparison and
+independent reviewer approval remain required; these are review obligations,
+not missing database/auth configuration.
 
 ## P1 — I18N-003: profile language switching is blocked and profile copy is English
 

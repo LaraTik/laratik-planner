@@ -12,9 +12,11 @@ migration-drill` passes 5/5; `TEST_DATABASE_URL=… pnpm test:integration`
 > passes 24/24 routes. The isolated E2E and visual commands now share
 > `scripts/run-e2e-tests.ts`, which applies migrations, injects deterministic
 > test-only Auth.js settings, and refuses non-test URLs. The visual suite reaches
-> screenshot assertions; committed baseline differences remain, so the release
-> verdict stays `READY FOR INDEPENDENT REVIEW` until visual review, the full
-> browser matrix, manual accessibility/UAT, and independent sign-off are complete.
+> screenshot assertions. The complete visual suite now passes 112/112 on
+> Chromium after four stale development-error baselines were recaptured;
+> candidate PNGs are present for human Stitch comparison. The release verdict
+> stays `READY FOR INDEPENDENT REVIEW` until visual review, the full browser
+> matrix, manual accessibility/UAT, and independent sign-off are complete.
 >
 > **2026-08-26 update — landing entry and sign-in refinement** — Commit `caa349f` redirects authenticated `/` visits directly to `/app`, exposes one contextual public CTA, and redesigns `/signin` around one active method at a time. Password remains the default for returning users, Google is secondary, magic link is progressively disclosed, and first-time setup offers only identity-verifying providers. Evidence: clean-snapshot `pnpm verify` passes with 2,110 runnable unit tests and the Next.js production build; Chromium entry checks pass 4/4, public accessibility checks pass 4/4, and the `/signin` Stitch/responsive visual set passes 4/4. Full pre-merge browser gates were attempted against disposable Postgres but remain non-green on unrelated social-analytics/agency-switcher cases and a parallel authenticated visual-seed race; no unrelated test or production code was changed. The verdict remains `READY FOR INDEPENDENT REVIEW`.
 >

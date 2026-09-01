@@ -13,6 +13,21 @@ making the product match obsolete work.
 
 ## Process
 
+### Automated capture evidence (2026-09-01)
+
+The isolated runner created `planner_test`, applied migrations, and supplied
+deterministic test-only Auth.js settings before starting Playwright. The full
+visual suite completed **112/112** in assert mode on Chromium (`pnpm
+test:visual`). Four stale runtime-error baselines caused by a development
+manifest/JSON race were recaptured individually and then verified again in the
+full run. The account-menu state is intentionally scanned before its Radix
+focus trap opens because axe otherwise reports the expected `aria-hidden`
+background as focusable; the open menu is still included in the screenshot.
+
+This proves the automated gate and candidate-file portability. It does not
+replace the reviewer comparison against the Stitch PNG/HTML or the manual
+keyboard/screen-reader sign-off below.
+
 For every active `STITCH_CASES` entry:
 
 1. Compare the live candidate against the PNG and HTML under
