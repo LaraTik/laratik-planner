@@ -1561,6 +1561,77 @@
       "namePlaceholder": "علامة مكتوبة، أيقونة، نسخة داكنة…",
       "addLogo": "إضافة شعار",
       "adding": "جارٍ الإضافة…"
+    },
+    "pillarForm": {
+      "nameLabel": "اسم المحور",
+      "namePlaceholder": "تعليم، منتج، خلف الكواليس…",
+      "colorLabel": "اللون",
+      "colorPlaceholder": "#6366F1",
+      "colorAria": "اختر لونًا للمحور",
+      "descriptionLabel": "الوصف",
+      "descriptionPlaceholder": "جملة أو جملتان يستخدمهما الذكاء الاصطناعي للحفاظ على توافق المسودات مع الموضوع.",
+      "addPillar": "إضافة محور",
+      "adding": "جارٍ الإضافة…"
+    },
+    "publishingRuleForm": {
+      "typeLabel": "نوع القاعدة",
+      "typeAltText": "نص بديل",
+      "typeHashtag": "هاشتاغات",
+      "typeCompliance": "الامتثال",
+      "typeChannel": "خاصة بالقناة",
+      "typeGeneral": "عامة",
+      "titleLabel": "العنوان",
+      "titlePlaceholder": "مثال: معيار النص البديل",
+      "contentLabel": "القاعدة",
+      "contentPlaceholder": "صف القاعدة بلغة واضحة.",
+      "createRule": "إنشاء قاعدة",
+      "creating": "جارٍ الإنشاء…"
+    },
+    "voiceForm": {
+      "fieldTone": "النبرة",
+      "fieldDo": "افعلي",
+      "fieldDont": "لا تفعلي",
+      "placeholderTone": "دافئة، مباشرة، دون استعلاء.",
+      "placeholderDo": "ابدئي بنتيجة العميل.",
+      "placeholderDont": "تجنبي المصطلحات المؤسسية مثل 'التآزر'.",
+      "addTone": "إضافة نبرة",
+      "addDo": "إضافة 'افعلي'",
+      "addDont": "إضافة 'لا تفعلي'",
+      "adding": "جارٍ الإضافة…"
+    },
+    "voiceSuggestions": {
+      "suggestTone": "اقتراح نبرة",
+      "suggestDo": "اقتراح قواعد 'افعلي'",
+      "suggestDont": "اقتراح 'لا تفعلي'",
+      "pickHint": "اختر اقتراحًا لتعبئة النموذج، ثم عدّل.",
+      "empty": "لم يُعد النموذج أي اقتراحات. حاول مجددًا أو اكتب واحدة بنفسك.",
+      "errorFallback": "فشل اقتراح الذكاء الاصطناعي."
+    },
+    "addAssetMenu": {
+      "triggerAria": "إضافة إلى مجموعة الهوية",
+      "triggerLabel": "إضافة إلى مجموعة الهوية",
+      "menuLabel": "إضافة إلى مجموعة الهوية",
+      "itemLogoLabel": "شعار",
+      "itemLogoDesc": "ارفع ملفًا أو ألصق عنوان URL خارجيًا",
+      "itemColorLabel": "لون",
+      "itemColorDesc": "أضف رمز hex إلى اللوحة",
+      "itemGuidelinesLabel": "خطوط",
+      "itemGuidelinesDesc": "فهرس خط بدور ووزن",
+      "itemVoiceLabel": "قاعدة صوتية",
+      "itemVoiceDesc": "وثّق النبرة، الافعلي، ولا تفعلي",
+      "itemPublishingLabel": "قاعدة نشر",
+      "itemPublishingDesc": "ضابط تحريري للفريق",
+      "itemLinkedLabel": "مورد مرتبط",
+      "itemLinkedDesc": "رابط Figma أو Drive أو Canva أو Dropbox"
+    },
+    "linkedResource": {
+      "providerGoogleDrive": "Google Drive",
+      "providerFigma": "Figma",
+      "providerCanva": "Canva",
+      "providerDropbox": "Dropbox",
+      "providerOther": "أخرى",
+      "openAria": "فتح {name} على {provider} في تبويب جديد",
+      "archiveLabel": "مورد مرتبط"
     }
   },
   "account": {

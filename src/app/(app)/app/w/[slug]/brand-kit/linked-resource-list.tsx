@@ -32,7 +32,14 @@ export interface LinkedResourceListProps {
   t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
-const PROVIDER_LABEL: Record<string, string> = {
+const PROVIDER_LABEL_KEY: Record<string, string> = {
+  google_drive: "users.linkedResource.providerGoogleDrive",
+  figma: "users.linkedResource.providerFigma",
+  canva: "users.linkedResource.providerCanva",
+  dropbox: "users.linkedResource.providerDropbox",
+  other: "users.linkedResource.providerOther",
+};
+const PROVIDER_LABEL_FALLBACK: Record<string, string> = {
   google_drive: "Google Drive",
   figma: "Figma",
   canva: "Canva",
@@ -41,7 +48,8 @@ const PROVIDER_LABEL: Record<string, string> = {
 };
 
 export function LinkedResourceList({ slug, canManage, resources, t }: LinkedResourceListProps) {
-  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   if (resources.length === 0) {
     return (
       <SectionEmptyState
@@ -58,7 +66,10 @@ export function LinkedResourceList({ slug, canManage, resources, t }: LinkedReso
   return (
     <ul className="space-y-2" data-testid="brand-kit-linked-resources">
       {resources.map((resource) => {
-        const provider = PROVIDER_LABEL[resource.provider] ?? "Other";
+        const providerKey = PROVIDER_LABEL_KEY[resource.provider] ?? PROVIDER_LABEL_KEY.other!;
+        const providerFallback =
+          PROVIDER_LABEL_FALLBACK[resource.provider] ?? PROVIDER_LABEL_FALLBACK.other!;
+        const provider = tr(providerKey, providerFallback);
         const safe = safeHref(resource.url);
         return (
           <li
@@ -75,7 +86,11 @@ export function LinkedResourceList({ slug, canManage, resources, t }: LinkedReso
                   href={safe.href}
                   target={safe.href.startsWith("http") ? "_blank" : undefined}
                   rel="noreferrer"
-                  aria-label={`Open ${resource.name} on ${provider} in a new tab`}
+                  aria-label={tr(
+                    "users.linkedResource.openAria",
+                    `Open ${resource.name} on ${provider} in a new tab`,
+                    { name: resource.name, provider },
+                  )}
                   data-testid={`brand-linked-resource-link-${resource.id}`}
                   data-warning={safe.warning || undefined}
                   className="text-body text-primary inline-flex items-center gap-1 font-semibold break-all hover:underline"
@@ -88,7 +103,7 @@ export function LinkedResourceList({ slug, canManage, resources, t }: LinkedReso
                 <ArchiveWithUndo
                   slug={slug}
                   id={resource.id}
-                  label="linked resource"
+                  label={tr("users.linkedResource.archiveLabel", "linked resource")}
                   name={resource.name}
                   archiveAction={archiveLinkedResourceAction}
                   restoreAction={restoreLinkedResourceAction}

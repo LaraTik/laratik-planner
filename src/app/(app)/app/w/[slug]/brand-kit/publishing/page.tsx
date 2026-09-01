@@ -62,7 +62,7 @@ export default async function BrandKitPublishingPage({
         aria-label={t("brandKit.publishingAria")}
         data-testid="brand-kit-section-publishing"
       >
-        {canEditBrand ? <PublishingRuleForm slug={slug} /> : null}
+        {canEditBrand ? <PublishingRuleForm slug={slug} t={t} /> : null}
         <PublishingRuleList slug={slug} canManage={canEditBrand} rules={rules} t={t} />
       </SectionCard>
     </div>

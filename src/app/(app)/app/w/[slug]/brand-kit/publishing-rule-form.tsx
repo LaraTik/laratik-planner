@@ -42,7 +42,37 @@ const controlClass =
 
 type FormState = { error?: string; success?: boolean };
 
-export function PublishingRuleForm({ slug }: { slug: string }) {
+const TYPE_KEY: Record<"alt_text" | "hashtag" | "compliance" | "channel" | "general", string> = {
+  alt_text: "users.publishingRuleForm.typeAltText",
+  hashtag: "users.publishingRuleForm.typeHashtag",
+  compliance: "users.publishingRuleForm.typeCompliance",
+  channel: "users.publishingRuleForm.typeChannel",
+  general: "users.publishingRuleForm.typeGeneral",
+};
+const TYPE_FALLBACK: Record<"alt_text" | "hashtag" | "compliance" | "channel" | "general", string> =
+  {
+    alt_text: "Alt text",
+    hashtag: "Hashtags",
+    compliance: "Compliance",
+    channel: "Channel-specific",
+    general: "General",
+  };
+
+export function PublishingRuleForm({
+  slug,
+  t,
+}: {
+  slug: string;
+  /**
+   * Optional translator. When provided, every user-visible string
+   * (3 field labels, 2 placeholders, 5 rule-type options, the
+   * submit button + pending label) renders from
+   * `users.publishingRuleForm.*`; when omitted, the stored
+   * English copy is used.
+   */
+  t?: (key: string) => string;
+}) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const [state, action] = useActionState(
     createPublishingRuleAction.bind(null, slug),
     {} as FormState,
@@ -55,7 +85,11 @@ export function PublishingRuleForm({ slug }: { slug: string }) {
 
   return (
     <form ref={formRef} action={action} className="space-y-3" data-testid="publishing-rule-form">
-      <FormField id="publishing-rule-type" label="Rule type" required>
+      <FormField
+        id="publishing-rule-type"
+        label={tr("users.publishingRuleForm.typeLabel", "Rule type")}
+        required
+      >
         <select
           id="publishing-rule-type"
           name="ruleType"
@@ -63,25 +97,33 @@ export function PublishingRuleForm({ slug }: { slug: string }) {
           defaultValue="general"
           className={controlClass}
         >
-          <option value="alt_text">Alt text</option>
-          <option value="hashtag">Hashtags</option>
-          <option value="compliance">Compliance</option>
-          <option value="channel">Channel-specific</option>
-          <option value="general">General</option>
+          {(Object.keys(TYPE_KEY) as Array<keyof typeof TYPE_KEY>).map((value) => (
+            <option key={value} value={value}>
+              {tr(TYPE_KEY[value], TYPE_FALLBACK[value])}
+            </option>
+          ))}
         </select>
       </FormField>
 
-      <FormField id="publishing-rule-title" label="Title" required>
+      <FormField
+        id="publishing-rule-title"
+        label={tr("users.publishingRuleForm.titleLabel", "Title")}
+        required
+      >
         <CharacterCountInput
           id="publishing-rule-title"
           name="title"
           required
           maxLength={80}
-          placeholder="e.g. Alt text standard"
+          placeholder={tr("users.publishingRuleForm.titlePlaceholder", "e.g. Alt text standard")}
         />
       </FormField>
 
-      <FormField id="publishing-rule-content" label="Rule" required>
+      <FormField
+        id="publishing-rule-content"
+        label={tr("users.publishingRuleForm.contentLabel", "Rule")}
+        required
+      >
         <CharacterCountInput
           id="publishing-rule-content"
           as="textarea"
@@ -89,7 +131,10 @@ export function PublishingRuleForm({ slug }: { slug: string }) {
           required
           maxLength={1000}
           rows={4}
-          placeholder="Describe the rule in plain language."
+          placeholder={tr(
+            "users.publishingRuleForm.contentPlaceholder",
+            "Describe the rule in plain language.",
+          )}
         />
       </FormField>
 
@@ -100,7 +145,11 @@ export function PublishingRuleForm({ slug }: { slug: string }) {
       ) : null}
 
       <div className="flex items-center justify-end">
-        <FormSubmitButton label="Create rule" pendingLabel="Creating…" className="min-h-[44px]" />
+        <FormSubmitButton
+          label={tr("users.publishingRuleForm.createRule", "Create rule")}
+          pendingLabel={tr("users.publishingRuleForm.creating", "Creating…")}
+          className="min-h-[44px]"
+        />
       </div>
     </form>
   );

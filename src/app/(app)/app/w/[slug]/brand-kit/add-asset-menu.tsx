@@ -44,44 +44,58 @@ type SectionId = "logo" | "color" | "guidelines" | "voice" | "publishing" | "lin
 
 const ITEMS: {
   id: SectionId;
-  label: string;
-  description: string;
+  labelKey: string;
+  labelFallback: string;
+  descriptionKey: string;
+  descriptionFallback: string;
   icon: LucideIcon;
 }[] = [
   {
     id: "logo",
-    label: "Logo",
-    description: "Upload a file or paste an external URL",
+    labelKey: "users.addAssetMenu.itemLogoLabel",
+    labelFallback: "Logo",
+    descriptionKey: "users.addAssetMenu.itemLogoDesc",
+    descriptionFallback: "Upload a file or paste an external URL",
     icon: Plus,
   },
   {
     id: "color",
-    label: "Color",
-    description: "Add a hex token to the palette",
+    labelKey: "users.addAssetMenu.itemColorLabel",
+    labelFallback: "Color",
+    descriptionKey: "users.addAssetMenu.itemColorDesc",
+    descriptionFallback: "Add a hex token to the palette",
     icon: Palette,
   },
   {
     id: "guidelines",
-    label: "Typography",
-    description: "Catalogue a font with role + weight",
+    labelKey: "users.addAssetMenu.itemGuidelinesLabel",
+    labelFallback: "Typography",
+    descriptionKey: "users.addAssetMenu.itemGuidelinesDesc",
+    descriptionFallback: "Catalogue a font with role + weight",
     icon: Type,
   },
   {
     id: "voice",
-    label: "Voice rule",
-    description: "Document tone, do's, or don'ts",
+    labelKey: "users.addAssetMenu.itemVoiceLabel",
+    labelFallback: "Voice rule",
+    descriptionKey: "users.addAssetMenu.itemVoiceDesc",
+    descriptionFallback: "Document tone, do's, or don'ts",
     icon: Sparkles,
   },
   {
     id: "publishing",
-    label: "Publishing rule",
-    description: "Editorial guardrail for the team",
+    labelKey: "users.addAssetMenu.itemPublishingLabel",
+    labelFallback: "Publishing rule",
+    descriptionKey: "users.addAssetMenu.itemPublishingDesc",
+    descriptionFallback: "Editorial guardrail for the team",
     icon: Sparkles,
   },
   {
     id: "linked",
-    label: "Linked resource",
-    description: "Figma, Drive, Canva, or Dropbox link",
+    labelKey: "users.addAssetMenu.itemLinkedLabel",
+    labelFallback: "Linked resource",
+    descriptionKey: "users.addAssetMenu.itemLinkedDesc",
+    descriptionFallback: "Figma, Drive, Canva, or Dropbox link",
     icon: LinkIcon,
   },
 ];
@@ -105,7 +119,8 @@ function jumpToSection(id: SectionId) {
   }, 120);
 }
 
-export function AddAssetMenu() {
+export function AddAssetMenu({ t }: { t?: (key: string) => string }) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -114,15 +129,17 @@ export function AddAssetMenu() {
           variant="default"
           size="default"
           data-testid="brand-kit-add-asset"
-          aria-label="Add to the brand kit"
+          aria-label={tr("users.addAssetMenu.triggerAria", "Add to the brand kit")}
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
-          Add to brand kit
+          {tr("users.addAssetMenu.triggerLabel", "Add to brand kit")}
           <ChevronDown className="h-4 w-4" aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel>Add to brand kit</DropdownMenuLabel>
+        <DropdownMenuLabel>
+          {tr("users.addAssetMenu.menuLabel", "Add to brand kit")}
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {ITEMS.map((item) => {
           const Icon = item.icon;
@@ -134,8 +151,12 @@ export function AddAssetMenu() {
             >
               <Icon className="h-4 w-4" aria-hidden="true" />
               <div className="flex flex-col">
-                <span className="text-body text-fg-primary font-semibold">{item.label}</span>
-                <span className="text-label text-fg-muted">{item.description}</span>
+                <span className="text-body text-fg-primary font-semibold">
+                  {tr(item.labelKey, item.labelFallback)}
+                </span>
+                <span className="text-label text-fg-muted">
+                  {tr(item.descriptionKey, item.descriptionFallback)}
+                </span>
               </div>
             </DropdownMenuItem>
           );

@@ -72,7 +72,7 @@ export default async function BrandKitVoicePage({ params }: { params: Promise<{ 
         aria-label={t("brandKit.voiceAria")}
         data-testid="brand-kit-section-voice"
       >
-        {canManage ? <VoiceForm slug={slug} /> : null}
+        {canManage ? <VoiceForm slug={slug} t={t} /> : null}
         <VoiceRuleList slug={slug} canManage={canManage} rules={rules} t={t} />
       </SectionCard>
     </div>

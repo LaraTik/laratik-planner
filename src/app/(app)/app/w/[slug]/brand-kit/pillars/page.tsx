@@ -58,7 +58,7 @@ export default async function BrandKitPillarsPage({
         aria-label={t("brandKit.pillarsTitle")}
         data-testid="brand-kit-section-pillars"
       >
-        {canEdit ? <PillarForm slug={slug} /> : null}
+        {canEdit ? <PillarForm slug={slug} t={t} /> : null}
         <PillarList slug={slug} canManage={canEdit} pillars={pillars} />
       </SectionCard>
     </div>

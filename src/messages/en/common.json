@@ -1561,6 +1561,77 @@
       "namePlaceholder": "Wordmark, Icon, Dark variant…",
       "addLogo": "Add logo",
       "adding": "Adding…"
+    },
+    "pillarForm": {
+      "nameLabel": "Pillar name",
+      "namePlaceholder": "Education, Product, Behind the scenes…",
+      "colorLabel": "Color",
+      "colorPlaceholder": "#6366F1",
+      "colorAria": "Pick a pillar color",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "One or two sentences the AI uses to keep caption drafts on-topic.",
+      "addPillar": "Add pillar",
+      "adding": "Adding…"
+    },
+    "publishingRuleForm": {
+      "typeLabel": "Rule type",
+      "typeAltText": "Alt text",
+      "typeHashtag": "Hashtags",
+      "typeCompliance": "Compliance",
+      "typeChannel": "Channel-specific",
+      "typeGeneral": "General",
+      "titleLabel": "Title",
+      "titlePlaceholder": "e.g. Alt text standard",
+      "contentLabel": "Rule",
+      "contentPlaceholder": "Describe the rule in plain language.",
+      "createRule": "Create rule",
+      "creating": "Creating…"
+    },
+    "voiceForm": {
+      "fieldTone": "Tone",
+      "fieldDo": "Do",
+      "fieldDont": "Don't",
+      "placeholderTone": "Warm, direct, never patronising.",
+      "placeholderDo": "Lead with the customer's outcome.",
+      "placeholderDont": "Avoid corporate jargon like 'synergy'.",
+      "addTone": "Add tone",
+      "addDo": "Add do",
+      "addDont": "Add don't",
+      "adding": "Adding…"
+    },
+    "voiceSuggestions": {
+      "suggestTone": "Suggest tone",
+      "suggestDo": "Suggest do rules",
+      "suggestDont": "Suggest don'ts",
+      "pickHint": "Pick a suggestion to fill the form, then edit.",
+      "empty": "The model did not return any suggestions. Try again or write one yourself.",
+      "errorFallback": "AI suggestion failed."
+    },
+    "addAssetMenu": {
+      "triggerAria": "Add to the brand kit",
+      "triggerLabel": "Add to brand kit",
+      "menuLabel": "Add to brand kit",
+      "itemLogoLabel": "Logo",
+      "itemLogoDesc": "Upload a file or paste an external URL",
+      "itemColorLabel": "Color",
+      "itemColorDesc": "Add a hex token to the palette",
+      "itemGuidelinesLabel": "Typography",
+      "itemGuidelinesDesc": "Catalogue a font with role + weight",
+      "itemVoiceLabel": "Voice rule",
+      "itemVoiceDesc": "Document tone, do's, or don'ts",
+      "itemPublishingLabel": "Publishing rule",
+      "itemPublishingDesc": "Editorial guardrail for the team",
+      "itemLinkedLabel": "Linked resource",
+      "itemLinkedDesc": "Figma, Drive, Canva, or Dropbox link"
+    },
+    "linkedResource": {
+      "providerGoogleDrive": "Google Drive",
+      "providerFigma": "Figma",
+      "providerCanva": "Canva",
+      "providerDropbox": "Dropbox",
+      "providerOther": "Other",
+      "openAria": "Open {name} on {provider} in a new tab",
+      "archiveLabel": "linked resource"
     }
   },
   "account": {

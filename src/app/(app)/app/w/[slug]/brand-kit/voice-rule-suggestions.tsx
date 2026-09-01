@@ -23,17 +23,31 @@ export interface VoiceRuleSuggestionsProps {
   ruleType: "tone" | "do" | "dont";
   /** Called with the chosen suggestion so the parent can fill the form. */
   onPick: (value: string) => void;
+  /**
+   * Optional translator. When provided, the suggest button label,
+   * the "Pick a suggestion to fill the form" hint, the empty-state
+   * line, and the error fallback all render from
+   * `users.voiceSuggestions.*`; when omitted, the stored English
+   * copy is used.
+   */
+  t?: (key: string) => string;
 }
 
 type Status = "idle" | "loading" | "ready" | "error";
 
-const LABEL: Record<"tone" | "do" | "dont", string> = {
+const SUGGEST_KEY: Record<"tone" | "do" | "dont", string> = {
+  tone: "users.voiceSuggestions.suggestTone",
+  do: "users.voiceSuggestions.suggestDo",
+  dont: "users.voiceSuggestions.suggestDont",
+};
+const SUGGEST_FALLBACK: Record<"tone" | "do" | "dont", string> = {
   tone: "Suggest tone",
   do: "Suggest do rules",
   dont: "Suggest don'ts",
 };
 
-export function VoiceRuleSuggestions({ slug, ruleType, onPick }: VoiceRuleSuggestionsProps) {
+export function VoiceRuleSuggestions({ slug, ruleType, onPick, t }: VoiceRuleSuggestionsProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const [status, setStatus] = React.useState<Status>("idle");
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
   const [error, setError] = React.useState<string | null>(null);
@@ -44,7 +58,7 @@ export function VoiceRuleSuggestions({ slug, ruleType, onPick }: VoiceRuleSugges
     const res = await suggestVoiceRulesAction(slug, ruleType);
     if (!res.ok) {
       setStatus("error");
-      setError(res.error ?? "AI suggestion failed.");
+      setError(res.error ?? tr("users.voiceSuggestions.errorFallback", "AI suggestion failed."));
       return;
     }
     setSuggestions(res.suggestions ?? []);
@@ -66,11 +80,14 @@ export function VoiceRuleSuggestions({ slug, ruleType, onPick }: VoiceRuleSugges
           ) : (
             <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
           )}
-          {LABEL[ruleType]}
+          {tr(SUGGEST_KEY[ruleType], SUGGEST_FALLBACK[ruleType])}
         </button>
         {status === "ready" && suggestions.length > 0 ? (
           <span className="text-label text-fg-muted">
-            Pick a suggestion to fill the form, then edit.
+            {tr(
+              "users.voiceSuggestions.pickHint",
+              "Pick a suggestion to fill the form, then edit.",
+            )}
           </span>
         ) : null}
       </div>
@@ -81,7 +98,10 @@ export function VoiceRuleSuggestions({ slug, ruleType, onPick }: VoiceRuleSugges
       ) : null}
       {status === "ready" && suggestions.length === 0 ? (
         <p className="text-label text-fg-muted">
-          The model did not return any suggestions. Try again or write one yourself.
+          {tr(
+            "users.voiceSuggestions.empty",
+            "The model did not return any suggestions. Try again or write one yourself.",
+          )}
         </p>
       ) : null}
       {status === "ready" && suggestions.length > 0 ? (

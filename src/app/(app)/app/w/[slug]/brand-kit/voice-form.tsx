@@ -31,22 +31,35 @@ const MAX_LENGTH: Record<RuleType, number> = {
   dont: 280,
 };
 
-const PLACEHOLDER: Record<RuleType, string> = {
+const FIELD_LABEL_KEY: Record<RuleType, string> = {
+  tone: "users.voiceForm.fieldTone",
+  do: "users.voiceForm.fieldDo",
+  dont: "users.voiceForm.fieldDont",
+};
+const FIELD_LABEL_FALLBACK: Record<RuleType, string> = {
+  tone: "Tone",
+  do: "Do",
+  dont: "Don't",
+};
+const PLACEHOLDER_KEY: Record<RuleType, string> = {
+  tone: "users.voiceForm.placeholderTone",
+  do: "users.voiceForm.placeholderDo",
+  dont: "users.voiceForm.placeholderDont",
+};
+const PLACEHOLDER_FALLBACK: Record<RuleType, string> = {
   tone: "Warm, direct, never patronising.",
   do: "Lead with the customer's outcome.",
   dont: "Avoid corporate jargon like 'synergy'.",
 };
-
-const LABEL: Record<RuleType, string> = {
+const SUBMIT_KEY: Record<RuleType, string> = {
+  tone: "users.voiceForm.addTone",
+  do: "users.voiceForm.addDo",
+  dont: "users.voiceForm.addDont",
+};
+const SUBMIT_FALLBACK: Record<RuleType, string> = {
   tone: "Add tone",
   do: "Add do",
   dont: "Add don't",
-};
-
-const FIELD_LABEL: Record<RuleType, string> = {
-  tone: "Tone",
-  do: "Do",
-  dont: "Don't",
 };
 
 function RuleSubForm({
@@ -54,12 +67,21 @@ function RuleSubForm({
   ruleType,
   value,
   onValueChange,
+  t,
 }: {
   slug: string;
   ruleType: RuleType;
   value: string;
   onValueChange: (next: string) => void;
+  /**
+   * Optional translator. When provided, the field label +
+   * placeholder + submit button render from
+   * `users.voiceForm.*`; when omitted, the stored English copy
+   * is used.
+   */
+  t?: (key: string) => string;
 }) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const [state, action] = useActionState(
     createVoiceRuleAction.bind(null, slug),
     {} as { error?: string; success?: boolean },
@@ -73,7 +95,11 @@ function RuleSubForm({
   return (
     <form ref={formRef} action={action} className="grid gap-3">
       <input type="hidden" name="ruleType" value={ruleType} />
-      <FormField id={`voice-rule-${ruleType}-content`} label={FIELD_LABEL[ruleType]} required>
+      <FormField
+        id={`voice-rule-${ruleType}-content`}
+        label={tr(FIELD_LABEL_KEY[ruleType], FIELD_LABEL_FALLBACK[ruleType])}
+        required
+      >
         {useTextarea ? (
           <CharacterCountInput
             as="textarea"
@@ -82,7 +108,7 @@ function RuleSubForm({
             required
             maxLength={max}
             rows={2}
-            placeholder={PLACEHOLDER[ruleType]}
+            placeholder={tr(PLACEHOLDER_KEY[ruleType], PLACEHOLDER_FALLBACK[ruleType])}
             value={value}
             onChange={(e) => onValueChange(e.target.value)}
           />
@@ -92,14 +118,18 @@ function RuleSubForm({
             name="content"
             required
             maxLength={max}
-            placeholder={PLACEHOLDER[ruleType]}
+            placeholder={tr(PLACEHOLDER_KEY[ruleType], PLACEHOLDER_FALLBACK[ruleType])}
             value={value}
             onChange={(e) => onValueChange(e.target.value)}
           />
         )}
       </FormField>
       <div className="flex items-center justify-end">
-        <FormSubmitButton size="sm" label={LABEL[ruleType]} pendingLabel="Adding…" />
+        <FormSubmitButton
+          size="sm"
+          label={tr(SUBMIT_KEY[ruleType], SUBMIT_FALLBACK[ruleType])}
+          pendingLabel={tr("users.voiceForm.adding", "Adding…")}
+        />
       </div>
       {state?.error ? (
         <p role="alert" className="text-label text-danger">
@@ -110,7 +140,20 @@ function RuleSubForm({
   );
 }
 
-export function VoiceForm({ slug }: { slug: string }) {
+export function VoiceForm({
+  slug,
+  t,
+}: {
+  slug: string;
+  /**
+   * Optional translator. When provided, threads t through to the
+   * 3 RuleSubForm and 3 VoiceRuleSuggestions instances so the
+   * field labels, placeholders, submit buttons, and AI suggestion
+   * button labels render from the active locale; when omitted, the
+   * stored English copy is used.
+   */
+  t?: (key: string) => string;
+}) {
   const [tone, setTone] = React.useState("");
   const [doRule, setDoRule] = React.useState("");
   const [dontRule, setDontRule] = React.useState("");
@@ -119,20 +162,53 @@ export function VoiceForm({ slug }: { slug: string }) {
     <div className="mb-3 grid gap-3 sm:grid-cols-3">
       <Card padding="md">
         <div className="space-y-3">
-          <RuleSubForm slug={slug} ruleType="tone" value={tone} onValueChange={setTone} />
-          <VoiceRuleSuggestions slug={slug} ruleType="tone" onPick={setTone} />
+          <RuleSubForm
+            slug={slug}
+            ruleType="tone"
+            value={tone}
+            onValueChange={setTone}
+            {...(t ? { t } : {})}
+          />
+          <VoiceRuleSuggestions
+            slug={slug}
+            ruleType="tone"
+            onPick={setTone}
+            {...(t ? { t } : {})}
+          />
         </div>
       </Card>
       <Card padding="md">
         <div className="space-y-3">
-          <RuleSubForm slug={slug} ruleType="do" value={doRule} onValueChange={setDoRule} />
-          <VoiceRuleSuggestions slug={slug} ruleType="do" onPick={setDoRule} />
+          <RuleSubForm
+            slug={slug}
+            ruleType="do"
+            value={doRule}
+            onValueChange={setDoRule}
+            {...(t ? { t } : {})}
+          />
+          <VoiceRuleSuggestions
+            slug={slug}
+            ruleType="do"
+            onPick={setDoRule}
+            {...(t ? { t } : {})}
+          />
         </div>
       </Card>
       <Card padding="md">
         <div className="space-y-3">
-          <RuleSubForm slug={slug} ruleType="dont" value={dontRule} onValueChange={setDontRule} />
-          <VoiceRuleSuggestions slug={slug} ruleType="dont" onPick={setDontRule} />
+          <RuleSubForm
+            slug={slug}
+            ruleType="dont"
+            value={dontRule}
+            onValueChange={setDontRule}
+            {...(t ? { t } : {})}
+          />
+          <VoiceRuleSuggestions
+            slug={slug}
+            ruleType="dont"
+            onPick={setDontRule}
+            {...(t ? { t } : {})}
+          />
         </div>
       </Card>
     </div>
