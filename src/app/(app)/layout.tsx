@@ -8,7 +8,11 @@ import {
 import { listActorAgencies, resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { AppShell } from "@/components/app-shell/app-shell";
-import { countUnreadNotifications, listNotificationsForUser } from "@/lib/notifications/service";
+import {
+  countUnreadNotifications,
+  listNotificationsForUser,
+  renderNotificationCopy,
+} from "@/lib/notifications/service";
 import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
 import { getPlatformPrincipal } from "@/lib/auth/platform-access";
 import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
@@ -42,7 +46,7 @@ import type { AppShellChrome } from "@/components/app-shell/app-shell";
  * `usePathname()` and render the workspace-scoped nav.
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { t } = await tForActive();
+  const { t, code: activeLocale } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/signin");
@@ -312,15 +316,24 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       workspaceCanCreateContent={workspaceCanCreateContent}
       agencySwitcher={{ active: activeAgency, options: agencyOptions }}
       canCreateWorkspace={switcher.isAdmin}
-      notifications={notifications.map((n) => ({
-        id: n.id,
-        kind: n.kind,
-        title: n.title,
-        body: n.body,
-        actionUrl: n.actionUrl,
-        readAt: n.readAt ? n.readAt.toISOString() : null,
-        createdAt: n.createdAt.toISOString(),
-      }))}
+      notifications={notifications.map((n) => {
+        // STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy.
+        // Resolve the row's title/body in the recipient's profile
+        // locale when `messageKey` is set; otherwise the stored
+        // English fallback is rendered. The bell stays a client
+        // component; the server resolves the strings once per
+        // request so the client never reaches for the catalog.
+        const copy = renderNotificationCopy(n, activeLocale);
+        return {
+          id: n.id,
+          kind: n.kind,
+          title: copy.title,
+          body: copy.body,
+          actionUrl: n.actionUrl,
+          readAt: n.readAt ? n.readAt.toISOString() : null,
+          createdAt: n.createdAt.toISOString(),
+        };
+      })}
       unreadCount={unreadCount}
       platformAccess={platformAccess}
       supportGrants={supportGrants}

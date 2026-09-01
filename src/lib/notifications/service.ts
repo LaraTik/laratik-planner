@@ -10,6 +10,7 @@ import {
 } from "@/lib/db/schema";
 import { type Actor } from "@/lib/auth/policy";
 import { sendEmail } from "@/lib/email";
+import { tFor } from "@/messages";
 import { z } from "zod";
 
 /**
@@ -86,6 +87,12 @@ export async function createInAppNotification(input: {
   kind: NotificationKind;
   title: string;
   body: string;
+  // STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy. When set,
+  // the bell + email dispatcher render the i18n at view / send
+  // time using the recipient's profile locale. The stored `title`
+  // + `body` remain the fallback for old rows + untranslated kinds.
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
   actionUrl?: string;
   // Optional transaction — used by the outbox dispatcher so the
   // notification fan-out and the outbox row update commit together.
@@ -101,6 +108,8 @@ export async function createInAppNotification(input: {
       kind: input.kind,
       title: input.title,
       body: input.body,
+      ...(input.messageKey ? { messageKey: input.messageKey } : {}),
+      ...(input.messageParams ? { messageParams: input.messageParams } : {}),
       ...(input.actionUrl ? { actionUrl: input.actionUrl } : {}),
     })
     .returning({ id: notifications.id });
@@ -306,8 +315,28 @@ export async function dispatchEmailOnce(
     }
     const title = (payload["title"] as string | undefined) ?? defaultTitleFor(kind);
     const body = (payload["body"] as string | undefined) ?? defaultBodyFor(kind);
+    // STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy. When
+    // the outbox event carries a `messageKey` + `messageParams`,
+    // render the email in the recipient's profile locale at
+    // send time. Per master prompt §8 invitations + security
+    // events bypass user preferences, but they still flow
+    // through the i18n rendering so the email body is
+    // locale-correct.
+    const messageKey = payload["messageKey"] as string | undefined;
+    const messageParams =
+      (payload["messageParams"] as Record<string, string | number> | undefined) ?? undefined;
+    const recipientLocale =
+      (await db
+        .select({ locale: users.locale })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1)
+        .then((rows) => rows[0]?.locale)) ?? "en";
+    const t = tFor(recipientLocale as Parameters<typeof tFor>[0]);
+    const subject = messageKey && !title ? t(`${messageKey}.title`, messageParams) : title;
+    const emailBody = messageKey && !body ? t(`${messageKey}.body`, messageParams) : body;
     try {
-      await sendEmail({ to: user.email, subject: title, text: body });
+      await sendEmail({ to: user.email, subject, text: emailBody });
       await db
         .update(outboxEvents)
         .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
@@ -389,6 +418,7 @@ async function fanOutCommentCreated(
         kind: "mention",
         title: "You were mentioned in a comment",
         body: "Someone @mentioned you in a comment on a content item.",
+        messageKey: "notifications.kind.mention",
       },
       tx,
       {
@@ -437,6 +467,13 @@ async function fanOutSingleRecipient(
   const contentItemId = payload["contentItemId"] as string | undefined;
   const title = (payload["title"] as string | undefined) ?? defaultTitleFor(kind);
   const body = (payload["body"] as string | undefined) ?? defaultBodyFor(kind);
+  // STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy. Read
+  // the structured key + params from the outbox payload (writers
+  // attach both alongside the fallback title/body). The bell
+  // resolves the i18n at view time using these columns; the
+  // email dispatcher uses them at send time.
+  const messageKey = payload["messageKey"] as string | undefined;
+  const messageParams = payload["messageParams"] as Record<string, string | number> | undefined;
   const workspaceId = payload["workspaceId"] as string | undefined;
   const actionUrl = payload["actionUrl"] as string | undefined;
   if (contentItemId) {
@@ -447,6 +484,8 @@ async function fanOutSingleRecipient(
         kind,
         title,
         body,
+        ...(messageKey ? { messageKey } : {}),
+        ...(messageParams ? { messageParams } : {}),
         ...(actionUrl ? { actionUrl } : {}),
       },
       tx,
@@ -471,6 +510,8 @@ async function fanOutSingleRecipient(
       kind,
       title,
       body,
+      ...(messageKey ? { messageKey } : {}),
+      ...(messageParams ? { messageParams } : {}),
       ...(actionUrl ? { actionUrl } : {}),
       tx,
     });
@@ -502,11 +543,20 @@ async function fanOutPublicationRecorded(
     .limit(1);
   if (!item) return;
   const ownerId = (payload["actorId"] as string | undefined) ?? null;
+  const failureReason = (payload["failureReason"] as string | undefined) ?? null;
   const title = channelStatus === "failed" ? "Publish failure" : "Item published";
   const body =
     channelStatus === "failed"
-      ? `A channel failed to publish: ${(payload["failureReason"] as string | undefined) ?? "no reason given"}.`
+      ? `A channel failed to publish: ${failureReason ?? "no reason given"}.`
       : "A channel went live. Open the planning item to see the live URL.";
+  const messageKey =
+    channelStatus === "failed"
+      ? failureReason
+        ? "notifications.publication.failed"
+        : "notifications.publication.failedNoReason"
+      : "notifications.publication.published";
+  const messageParams =
+    channelStatus === "failed" && failureReason ? { reason: failureReason } : undefined;
 
   // Fan out to owner (the actor who recorded the outcome).
   if (ownerId) {
@@ -516,6 +566,8 @@ async function fanOutPublicationRecorded(
         contentItemId,
         title,
         body,
+        ...(messageKey ? { messageKey } : {}),
+        ...(messageParams ? { messageParams } : {}),
         actionUrl: `/app/w/${item.workspaceId}/planning/${contentItemId}#publishing`,
         workspaceId: item.workspaceId,
       },
@@ -586,6 +638,12 @@ async function maybeNotify(
     kind: NotificationKind;
     title: string;
     body: string;
+    // STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy.
+    // Threaded through to the in-app row so the bell renders the
+    // i18n at view time. Callers that don't yet know the key
+    // simply omit it; the fallback copy is the stored title/body.
+    messageKey?: string;
+    messageParams?: Record<string, string | number>;
   },
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   opts: { workspaceId?: string; actionUrl?: string } = {},
@@ -620,6 +678,8 @@ async function maybeNotify(
     kind: input.kind,
     title: input.title,
     body: input.body,
+    ...(input.messageKey ? { messageKey: input.messageKey } : {}),
+    ...(input.messageParams ? { messageParams: input.messageParams } : {}),
     actionUrl: opts.actionUrl ?? `/app/planning/${input.contentItemId}`,
     tx,
   });
@@ -778,6 +838,12 @@ export type EnqueueNotificationInput = {
   aggregateId?: string;
   title?: string;
   body?: string;
+  // STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy. When
+  // set, the dispatched in-app + email notifications render the
+  // i18n at view / send time using the recipient's profile
+  // locale; otherwise the stored `title` / `body` is the fallback.
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
   actionUrl?: string;
 };
 
@@ -801,6 +867,8 @@ async function enqueueOutboxEvent(
         ...(input.contentItemId ? { contentItemId: input.contentItemId } : {}),
         ...(input.title ? { title: input.title } : {}),
         ...(input.body ? { body: input.body } : {}),
+        ...(input.messageKey ? { messageKey: input.messageKey } : {}),
+        ...(input.messageParams ? { messageParams: input.messageParams } : {}),
         ...(input.actionUrl ? { actionUrl: input.actionUrl } : {}),
         eventType,
       },
@@ -894,6 +962,11 @@ export type NotificationRow = {
   kind: NotificationKind;
   title: string;
   body: string;
+  // STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy. The
+  // bell + email dispatcher render the i18n at view / send time
+  // when set; otherwise the stored `title` / `body` is the fallback.
+  messageKey: string | null;
+  messageParams: Record<string, string | number> | null;
   actionUrl: string | null;
   readAt: Date | null;
   createdAt: Date;
@@ -916,6 +989,31 @@ export async function listNotificationsForUser(
     .orderBy(desc(notifications.createdAt))
     .limit(limit);
   return rows as NotificationRow[];
+}
+
+/**
+ * STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy. Render the
+ * persisted `title` + `body` for the given locale using the
+ * `messageKey` + `messageParams` columns when present. Falls back
+ * to the stored English copy when `messageKey` is null (the
+ * additive migration keeps every pre-existing row with no
+ * `messageKey`, so the fallback is the common case until every
+ * writer is updated).
+ */
+export function renderNotificationCopy(
+  row: Pick<NotificationRow, "title" | "body" | "messageKey" | "messageParams">,
+  locale: string,
+): { title: string; body: string } {
+  if (!row.messageKey) return { title: row.title, body: row.body };
+  const t = tFor(locale as Parameters<typeof tFor>[0]);
+  const title = t(row.messageKey + ".title", row.messageParams ?? undefined);
+  const body = t(row.messageKey + ".body", row.messageParams ?? undefined);
+  // Loud-key wrapper on missing translations — surface the gap
+  // to tests rather than silently falling back to English.
+  if (title.startsWith("[") || body.startsWith("[")) {
+    return { title: row.title, body: row.body };
+  }
+  return { title, body };
 }
 
 export async function countUnreadNotifications(actor: Actor): Promise<number> {

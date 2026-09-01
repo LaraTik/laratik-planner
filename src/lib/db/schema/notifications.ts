@@ -45,6 +45,12 @@ export const notifications = pgTable(
     kind: notificationKindEnum("kind").notNull(),
     title: text("title").notNull(),
     body: text("body").notNull(),
+    // STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy. Nullable
+    // so existing rows survive the additive migration. When set,
+    // the bell + email dispatcher render the i18n at view / send
+    // time; otherwise the stored `title` / `body` is the fallback.
+    messageKey: text("message_key"),
+    messageParams: jsonb("message_params"),
     actionUrl: text("action_url"),
     readAt: timestamp("read_at", { withTimezone: true, mode: "date" }),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
@@ -116,6 +122,13 @@ export const activityEvents = pgTable(
     beforeData: jsonb("before_data"),
     afterData: jsonb("after_data"),
     metadata: jsonb("metadata"),
+    // STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy. Same
+    // nullable-shape contract as `notifications.message_key`. The
+    // activity timeline is currently rendered from `kind` + metadata
+    // via `humanizeKind`, so this column is future-proofing only; a
+    // later commit may route specific kinds through this catalog.
+    messageKey: text("message_key"),
+    messageParams: jsonb("message_params"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .notNull()
       .default(sql`now()`),

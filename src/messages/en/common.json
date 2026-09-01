@@ -478,7 +478,6 @@
       "keyTakeaways": "Key takeaways",
       "talkingPoints": "Talking points",
       "qaPrompts": "Q&A prompts",
-      "references": "References",
       "keyTakeawaysMeta": {
         "hint": "One per line",
         "placeholder": "3-5 takeaways"
@@ -546,11 +545,8 @@
       "thumbnailDirection": "Thumbnail direction",
       "scheduledStart": "Scheduled start",
       "expectedDuration": "Expected duration",
-      "talkingPoints": "Talking points",
       "segments": "Segments",
-      "qaPrompts": "Q&A prompts",
-      "outline": "Outline",
-      "keyTakeaways": "Key takeaways"
+      "outline": "Outline"
     },
     "editor": {
       "save": "Save content details",
@@ -1158,36 +1154,6 @@
       "viewer": "Viewer"
     }
   },
-  "team": {
-    "title": "Team and access",
-    "description": "People with access to this brand workspace and their exact roles.",
-    "invitePeople": "Invite people",
-    "pendingTitle": "Pending invitations",
-    "pendingAwaiting": "{count} awaiting acceptance",
-    "expiresOn": "Expires {date}",
-    "agencyAdmin": "Agency admin",
-    "colMember": "Member",
-    "colRoles": "Roles",
-    "colLastActive": "Last active",
-    "colStatus": "Status",
-    "activeNow": "Active now",
-    "statusActive": "Active",
-    "statusInactive": "Inactive",
-    "actionsAria": "Actions",
-    "showing": "Showing {count} of {count} members",
-    "emptyTitle": "No members yet",
-    "adminEmpty": "Invite agency teammates to give them access to this workspace.",
-    "memberEmpty": "Once a workspace manager invites agency teammates, they will appear in this list.",
-    "role": {
-      "workspaceManager": "Workspace Manager",
-      "contentPlanner": "Content Planner",
-      "designer": "Designer",
-      "internalReviewer": "Internal Reviewer",
-      "clientReviewer": "Client Reviewer",
-      "publisher": "Publisher",
-      "viewer": "Viewer"
-    }
-  },
   "users": {
     "title": "User Management",
     "description": "Invite team members, pre-create accounts, assign workspace roles, deactivate departures.",
@@ -1491,7 +1457,6 @@
     "colAction": "Action",
     "colTarget": "Person",
     "colOutcome": "Outcome",
-    "colWhen": "When",
     "colFormerMember": "Former platform member",
     "colMobileChanged": "Changed {date}",
     "auditActionGrant": "Access granted",
@@ -1914,5 +1879,69 @@
       "linked": "Linked accounts",
       "activity": "Activity"
     }
+  },
+  "notifications": {
+    "kind": {
+      "assignment": {
+        "title": "You were assigned a task",
+        "body": "You were assigned a content item. Open it to start work."
+      },
+      "review_request": {
+        "title": "Your review is requested",
+        "body": "An approval request is waiting on you."
+      },
+      "approval": {
+        "title": "Content approved",
+        "body": "An approval was recorded on a content item you follow."
+      },
+      "changes_requested": {
+        "title": "Changes requested",
+        "body": "Reviewer requested changes. Open the item to see the notes."
+      },
+      "reply": {
+        "title": "New reply on a comment",
+        "body": "Someone replied to a comment you're part of."
+      },
+      "unresolved_question": {
+        "title": "Unresolved question needs attention",
+        "body": "A comment is still marked as an unresolved question."
+      },
+      "deadline": {
+        "title": "A deadline is approaching",
+        "body": "A planned publish date is approaching. Confirm the package is on track."
+      },
+      "delivery": {
+        "title": "A delivery was submitted",
+        "body": "A new delivery version was submitted for review."
+      },
+      "ready_to_publish": {
+        "title": "A piece is ready to publish",
+        "body": "A content item moved into the ready-to-publish lane."
+      },
+      "mention": {
+        "title": "You were mentioned in a comment",
+        "body": "Someone @mentioned you in a comment on a content item."
+      },
+      "system": {
+        "title": "System update",
+        "body": "The workspace has a new system update."
+      }
+    },
+    "publication": {
+      "published": {
+        "title": "Item published",
+        "body": "A channel went live. Open the planning item to see the live URL."
+      },
+      "failed": {
+        "title": "Publish failure",
+        "body": "A channel failed to publish: {reason}."
+      },
+      "failedNoReason": {
+        "title": "Publish failure",
+        "body": "A channel failed to publish: no reason given."
+      }
+    },
+    "commentMentionTitle": "You were mentioned in a comment",
+    "commentMentionBody": "Someone @mentioned you in a comment on a content item."
   }
 }
