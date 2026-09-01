@@ -47,6 +47,12 @@ export interface RecentlyUpdatedListProps {
   workspaceSlug: string;
   viewAllHref: string;
   createHref?: string;
+  /**
+   * Optional translator. When provided, the panel renders
+   * `workspaceOverviewDashboard.recentlyUpdated.*`; when omitted,
+   * the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export function RecentlyUpdatedList({
@@ -54,26 +60,32 @@ export function RecentlyUpdatedList({
   workspaceSlug,
   viewAllHref,
   createHref,
+  t,
 }: RecentlyUpdatedListProps) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   return (
     <DashboardPanel
-      title="Recently updated"
-      eyebrow="Latest activity"
+      title={tr("workspaceOverviewDashboard.recentlyUpdated.title", "Recently updated")}
+      eyebrow={tr("workspaceOverviewDashboard.recentlyUpdated.eyebrow", "Latest activity")}
       data-testid="recently-updated"
       footer={
         <Link
           href={viewAllHref}
           className="text-label text-primary inline-flex items-center gap-1 rounded-[var(--radius-control)] px-1 py-0.5 font-semibold underline-offset-4 hover:underline"
         >
-          View all →
+          {tr("workspaceOverviewDashboard.recentlyUpdated.viewAll", "View all →")}
         </Link>
       }
     >
       {items.length === 0 ? (
         <EmptyState
           icon={<FileText className="h-8 w-8" />}
-          title="No content yet"
-          description="Once someone in this workspace creates a draft, it'll show up here."
+          title={tr("workspaceOverviewDashboard.recentlyUpdated.emptyTitle", "No content yet")}
+          description={tr(
+            "workspaceOverviewDashboard.recentlyUpdated.emptyDescription",
+            "Once someone in this workspace creates a draft, it'll show up here.",
+          )}
           action={
             createHref ? (
               <Link
@@ -81,7 +93,7 @@ export function RecentlyUpdatedList({
                 className="bg-primary text-button inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold text-white"
               >
                 <CalendarPlus className="h-4 w-4" aria-hidden="true" />
-                New content
+                {tr("workspaceOverviewDashboard.recentlyUpdated.newContent", "New content")}
               </Link>
             ) : undefined
           }
@@ -115,7 +127,11 @@ export function RecentlyUpdatedList({
                   <span
                     className="text-label text-fg-muted shrink-0 tabular-nums"
                     data-testid="recently-updated-relative"
-                    title={`Last updated ${exactTimestamp}`}
+                    title={tr(
+                      "workspaceOverviewDashboard.recentlyUpdated.lastUpdated",
+                      `Last updated ${exactTimestamp}`,
+                      { time: exactTimestamp },
+                    )}
                   >
                     {formatRelativeDate(updatedAt)}
                   </span>

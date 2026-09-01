@@ -2128,5 +2128,74 @@
     "emptyNoChannelsDescription": "وصّل حساب ميتا في صفحة القنوات الاجتماعية لبدء جمع المقاييس اليومية.",
     "emptyNoKeyTitle": "لا توجد بيانات في هذه النافذة",
     "emptyNoKeyDescription": "تتراكم المقاييس اليومية من يوم ربط القناة. اختر نافذة أعرض، أو انتظر تراكم بيانات جديدة."
+  },
+  "workspaceOverviewDashboard": {
+    "workflow": {
+      "title": "سير العمل",
+      "eyebrow": "أين تتركز الأعمال",
+      "description": "انقر على أي مرحلة لمعرفة العناصر الموجودة فيها.",
+      "viewAll": "عرض الكل",
+      "requestChanges": "طلب تعديلات",
+      "requestChangesDescription": "اشرح ما يحتاج إلى تغيير ليتصرف المسؤول دون تخمين.",
+      "feedbackLabel": "ملاحظات",
+      "sendRequest": "إرسال الطلب",
+      "approvalRequests": "طلبات الموافقة"
+    },
+    "recentlyUpdated": {
+      "title": "المحدّث مؤخرًا",
+      "eyebrow": "أحدث النشاطات",
+      "emptyTitle": "لا يوجد محتوى بعد",
+      "emptyDescription": "بمجرد أن ينشئ أحد في هذه المساحة مسودة، ستظهر هنا.",
+      "newContent": "محتوى جديد",
+      "viewAll": "عرض الكل ←",
+      "lastUpdated": "آخر تحديث {time}"
+    },
+    "needsAttention": {
+      "title": "يحتاج إلى انتباه",
+      "eyebrow": "الأولوية القصوى",
+      "viewAll": "عرض كل العناصر التي تحتاج انتباهًا ←",
+      "everythingOnTrack": "كل شيء على المسار الصحيح.",
+      "nothingOverdue": "لا توجد عناصر متأخرة أو محظورة هذا الشهر.",
+      "unassigned": "· غير مسند",
+      "open": "فتح ←",
+      "deadlineOverdue": "متأخر {days} يوم · {date}",
+      "deadlineToday": "مستحق اليوم · {date}",
+      "deadlineTomorrow": "مستحق غدًا · {date}",
+      "deadlineInDays": "مستحق خلال {days} يوم · {date}",
+      "deadlineAbsolute": "مستحق {date}"
+    },
+    "deliveryHealth": {
+      "title": "صحة التسليم",
+      "eyebrow": "هل العناصر في طريقها للإطلاق",
+      "onTrackThisMonth": "في المسار الصحيح هذا الشهر",
+      "onTrackBucket": "في المسار",
+      "atRiskBucket": "في خطر",
+      "blockedBucket": "محظور",
+      "whyAtRisk": "لماذا في خطر",
+      "allAtRiskPastDue": "جميع العناصر في خطر تجاوزت موعدها.",
+      "viewAllAtRisk": "عرض كل العناصر في خطر ←",
+      "percentAria": "{percent} بالمئة في المسار",
+      "percentOnTrackAria": "في المسار {onTrack} من {total}، في خطر {atRisk}، محظور {blocked}",
+      "bucketAria": "{label}: {count} عنصر، انقر للعرض",
+      "bucketOnTrackAria": "في المسار: {count}",
+      "bucketAtRiskAria": "في خطر: {count}",
+      "bucketBlockedAria": "محظور: {count}"
+    },
+    "planCoverage": {
+      "title": "تغطية الخطة",
+      "eyebrow": "كم خططنا",
+      "editTarget": "تعديل الهدف",
+      "setTarget": "تعيين هدف",
+      "editTargetAria": "تعديل الهدف الشهري",
+      "setTargetAria": "تعيين هدف شهري",
+      "formatMix": "مزيج التنسيقات",
+      "plannedThisMonth": "مخطط له هذا الشهر",
+      "plannedProgress": "/ {target} مخطط",
+      "targetMet": "تم بلوغ الهدف ({percent}%)",
+      "coverageRemaining": "{percent}٪ تغطية · متبقي {remaining} عنصر",
+      "noMonthlyTarget": "لا يوجد هدف شهري",
+      "setTargetHint": "لا يوجد هدف شهري — عيّن هدفًا لرؤية تقدم التغطية.",
+      "coverageAria": "{percent} بالمئة من الهدف الشهري"
+    }
   }
 }

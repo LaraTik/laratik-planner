@@ -370,6 +370,7 @@ export default async function WorkspaceOverviewPage({
             formatBreakdown={dashboard.formatBreakdown}
             buildFormatHref={formatHref}
             settingsHref={`/app/w/${slug}/settings`}
+            t={t}
           />
         </div>
         <div className="lg:col-span-5">
@@ -386,6 +387,7 @@ export default async function WorkspaceOverviewPage({
             onTrackHref={buildPlanningHref({ status: null, risk: null })}
             blockedHref={buildPlanningHref({ status: "blocked" })}
             viewAllHref={buildPlanningHref({ risk: "at_risk" })}
+            t={t}
           />
         </div>
       </div>
@@ -398,6 +400,7 @@ export default async function WorkspaceOverviewPage({
           count: s.count,
         }))}
         buildHref={stageHref}
+        t={t}
       />
 
       {/* Needs attention + Recently updated (master prompt §14-16) */}
@@ -408,6 +411,7 @@ export default async function WorkspaceOverviewPage({
             workspaceSlug={slug}
             now={now}
             viewAllHref={buildPlanningHref({ risk: "at_risk" })}
+            t={t}
           />
         </div>
         <div className="lg:col-span-4">
@@ -416,6 +420,7 @@ export default async function WorkspaceOverviewPage({
             workspaceSlug={slug}
             viewAllHref={buildPlanningHref({ status: null, risk: null })}
             createHref={`/app/w/${slug}/planning/new`}
+            t={t}
           />
         </div>
       </div>

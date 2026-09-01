@@ -30,6 +30,14 @@ export interface WorkflowPipelineProps {
   buildHref: (stage: WorkflowStage) => string;
   /** Optional className override. */
   className?: string;
+  /**
+   * Optional translator. When provided, the panel renders
+   * `workspaceOverviewDashboard.workflow.{title,eyebrow,description}`;
+   * when omitted, the hard-coded English copy is used (this is the
+   * pre-bilingual default; tests + non-bilingual surfaces still
+   * work without threading `t` through the parent).
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const STAGE_ICON: Record<WorkflowStage, React.ComponentType<{ className?: string }>> = {
@@ -46,15 +54,19 @@ const STAGE_TONE: Record<WorkflowStage, string> = {
   publish: "text-success",
 };
 
-export function WorkflowPipeline({ stages, buildHref, className }: WorkflowPipelineProps) {
+export function WorkflowPipeline({ stages, buildHref, className, t }: WorkflowPipelineProps) {
   const total = stages.reduce((s, x) => s + x.count, 0);
   const maxCount = Math.max(...stages.map((s) => s.count), 1);
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
 
   return (
     <DashboardPanel
-      title="Workflow"
-      eyebrow="Where work is concentrated"
-      description="Click any stage to see the items sitting in it."
+      title={tr("workspaceOverviewDashboard.workflow.title", "Workflow")}
+      eyebrow={tr("workspaceOverviewDashboard.workflow.eyebrow", "Where work is concentrated")}
+      description={tr(
+        "workspaceOverviewDashboard.workflow.description",
+        "Click any stage to see the items sitting in it.",
+      )}
       data-testid="workflow-pipeline"
       className={className}
     >

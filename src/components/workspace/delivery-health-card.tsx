@@ -41,6 +41,12 @@ export interface DeliveryHealthCardProps {
   blockedHref: string;
   /** Optional URL for "View all" in the footer. */
   viewAllHref: string;
+  /**
+   * Optional translator. When provided, the panel renders
+   * `workspaceOverviewDashboard.deliveryHealth.*`; when omitted,
+   * the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export function DeliveryHealthCard({
@@ -56,16 +62,22 @@ export function DeliveryHealthCard({
   onTrackHref,
   blockedHref,
   viewAllHref,
+  t,
 }: DeliveryHealthCardProps) {
   // The stacked-bar segments sum to 100 (or 0 when the workspace
   // has no items). We render the bar with three flex children; the
   // flex-basis is the segment's percent.
   const hasAny = total > 0;
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
 
   return (
     <DashboardPanel
-      title="Delivery health"
-      eyebrow="Are items on track to ship"
+      title={tr("workspaceOverviewDashboard.deliveryHealth.title", "Delivery health")}
+      eyebrow={tr(
+        "workspaceOverviewDashboard.deliveryHealth.eyebrow",
+        "Are items on track to ship",
+      )}
       data-testid="delivery-health"
     >
       <div className="space-y-5">
@@ -81,18 +93,31 @@ export function DeliveryHealthCard({
               atRiskPercent > 50 && "text-warning",
               blockedPercent > 0 && atRiskPercent <= 50 && "text-danger",
             )}
-            aria-label={`${onTrackPercent} percent on track`}
+            aria-label={tr(
+              "workspaceOverviewDashboard.deliveryHealth.percentAria",
+              `${onTrackPercent} percent on track`,
+              { percent: onTrackPercent },
+            )}
           >
             {onTrackPercent}%
           </span>
-          <span className="text-body text-fg-secondary font-medium">on track this month</span>
+          <span className="text-body text-fg-secondary font-medium">
+            {tr(
+              "workspaceOverviewDashboard.deliveryHealth.onTrackThisMonth",
+              "on track this month",
+            )}
+          </span>
         </div>
 
         {/* Stacked health bar */}
         <div
           className="bg-surface-container-low flex h-3 w-full overflow-hidden rounded-full"
           role="img"
-          aria-label={`On track ${onTrackCount} of ${total}, at risk ${atRiskCount}, blocked ${blockedCount}`}
+          aria-label={tr(
+            "workspaceOverviewDashboard.deliveryHealth.percentOnTrackAria",
+            `On track ${onTrackCount} of ${total}, at risk ${atRiskCount}, blocked ${blockedCount}`,
+            { onTrack: onTrackCount, total, atRisk: atRiskCount, blocked: blockedCount },
+          )}
         >
           {!hasAny ? (
             <div className="bg-surface-variant h-full w-full" aria-hidden="true" />
@@ -102,21 +127,33 @@ export function DeliveryHealthCard({
                 <div
                   className="bg-success h-full"
                   style={{ width: `${onTrackPercent}%` }}
-                  aria-label={`On track: ${onTrackCount}`}
+                  aria-label={tr(
+                    "workspaceOverviewDashboard.deliveryHealth.bucketOnTrackAria",
+                    `On track: ${onTrackCount}`,
+                    { count: onTrackCount },
+                  )}
                 />
               ) : null}
               {atRiskPercent > 0 ? (
                 <div
                   className="bg-warning h-full"
                   style={{ width: `${atRiskPercent}%` }}
-                  aria-label={`At risk: ${atRiskCount}`}
+                  aria-label={tr(
+                    "workspaceOverviewDashboard.deliveryHealth.bucketAtRiskAria",
+                    `At risk: ${atRiskCount}`,
+                    { count: atRiskCount },
+                  )}
                 />
               ) : null}
               {blockedPercent > 0 ? (
                 <div
                   className="bg-danger h-full"
                   style={{ width: `${blockedPercent}%` }}
-                  aria-label={`Blocked: ${blockedCount}`}
+                  aria-label={tr(
+                    "workspaceOverviewDashboard.deliveryHealth.bucketBlockedAria",
+                    `Blocked: ${blockedCount}`,
+                    { count: blockedCount },
+                  )}
                 />
               ) : null}
             </>
@@ -128,23 +165,26 @@ export function DeliveryHealthCard({
           <HealthBucket
             tone="success"
             icon={CheckCircle2}
-            label="On track"
+            label={tr("workspaceOverviewDashboard.deliveryHealth.onTrackBucket", "On track")}
             count={onTrackCount}
             href={onTrackHref}
+            {...(t ? { t } : {})}
           />
           <HealthBucket
             tone="warning"
             icon={ShieldAlert}
-            label="At risk"
+            label={tr("workspaceOverviewDashboard.deliveryHealth.atRiskBucket", "At risk")}
             count={atRiskCount}
             href={atRiskHref}
+            {...(t ? { t } : {})}
           />
           <HealthBucket
             tone="danger"
             icon={CircleSlash}
-            label="Blocked"
+            label={tr("workspaceOverviewDashboard.deliveryHealth.blockedBucket", "Blocked")}
             count={blockedCount}
             href={blockedHref}
+            {...(t ? { t } : {})}
           />
         </ul>
 
@@ -152,11 +192,16 @@ export function DeliveryHealthCard({
         {atRiskCount > 0 ? (
           <div>
             <p className="text-label text-fg-muted mb-2 font-semibold tracking-wide uppercase">
-              Why at risk
+              {tr("workspaceOverviewDashboard.deliveryHealth.whyAtRisk", "Why at risk")}
             </p>
             <ul className="space-y-1.5">
               {riskReasons.length === 0 ? (
-                <li className="text-body text-fg-secondary">All at-risk items are past due.</li>
+                <li className="text-body text-fg-secondary">
+                  {tr(
+                    "workspaceOverviewDashboard.deliveryHealth.allAtRiskPastDue",
+                    "All at-risk items are past due.",
+                  )}
+                </li>
               ) : (
                 riskReasons.map((r) => (
                   <li key={r.label} className="flex items-center justify-between gap-3">
@@ -175,7 +220,10 @@ export function DeliveryHealthCard({
               href={viewAllHref}
               className="text-label text-primary mt-3 inline-flex items-center gap-1 rounded-[var(--radius-control)] px-1 py-0.5 font-semibold underline-offset-4 hover:underline"
             >
-              View all at-risk items →
+              {tr(
+                "workspaceOverviewDashboard.deliveryHealth.viewAllAtRisk",
+                "View all at-risk items →",
+              )}
             </Link>
           </div>
         ) : null}
@@ -190,13 +238,17 @@ function HealthBucket({
   label,
   count,
   href,
+  t,
 }: {
   tone: "success" | "warning" | "danger";
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   count: number;
   href: string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   const toneClass = {
     success: "border-success/30 bg-success-subtle text-success",
     warning: "border-warning/30 bg-warning-subtle text-warning",
@@ -210,7 +262,11 @@ function HealthBucket({
           "focus-visible:ring-focus-ring flex flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] border p-3 text-center transition-colors hover:opacity-90 focus:outline-none focus-visible:ring-2",
           toneClass,
         )}
-        aria-label={`${label}: ${count} items, click to view`}
+        aria-label={tr(
+          "workspaceOverviewDashboard.deliveryHealth.bucketAria",
+          `${label}: ${count} items, click to view`,
+          { label, count },
+        )}
       >
         <Icon className="h-4 w-4" aria-hidden="true" />
         <span className="text-title-card text-2xl leading-none font-bold tabular-nums">

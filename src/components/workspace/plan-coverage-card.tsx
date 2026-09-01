@@ -32,6 +32,12 @@ export interface PlanCoverageCardProps {
   buildFormatHref: (format: KpiContentFormat) => string;
   /** Where "Set target" / "Edit target" points. */
   settingsHref: string;
+  /**
+   * Optional translator. When provided, the panel renders
+   * `workspaceOverviewDashboard.planCoverage.*`; when omitted, the
+   * hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export function PlanCoverageCard({
@@ -41,23 +47,32 @@ export function PlanCoverageCard({
   formatBreakdown,
   buildFormatHref,
   settingsHref,
+  t,
 }: PlanCoverageCardProps) {
   const hasTarget = monthlyTarget !== null && monthlyTarget > 0;
   const remaining = hasTarget ? Math.max(0, monthlyTarget - total) : null;
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
 
   return (
     <DashboardPanel
-      title="Plan coverage"
-      eyebrow="How much have we planned"
+      title={tr("workspaceOverviewDashboard.planCoverage.title", "Plan coverage")}
+      eyebrow={tr("workspaceOverviewDashboard.planCoverage.eyebrow", "How much have we planned")}
       data-testid="plan-coverage"
       headerAction={
         <Link
           href={settingsHref}
           className="text-label text-primary inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline"
-          aria-label={hasTarget ? "Edit monthly target" : "Set a monthly target"}
+          aria-label={
+            hasTarget
+              ? tr("workspaceOverviewDashboard.planCoverage.editTargetAria", "Edit monthly target")
+              : tr("workspaceOverviewDashboard.planCoverage.setTargetAria", "Set a monthly target")
+          }
         >
           <Target className="h-3.5 w-3.5" aria-hidden="true" />
-          {hasTarget ? "Edit target" : "Set target"}
+          {hasTarget
+            ? tr("workspaceOverviewDashboard.planCoverage.editTarget", "Edit target")
+            : tr("workspaceOverviewDashboard.planCoverage.setTarget", "Set target")}
         </Link>
       }
     >
@@ -69,13 +84,14 @@ export function PlanCoverageCard({
               {total}
             </span>
             <span className="text-body text-fg-secondary font-medium">
-              {hasTarget ? (
-                <>
-                  / <span className="tabular-nums">{monthlyTarget}</span> planned
-                </>
-              ) : (
-                <>planned this month</>
-              )}
+              {hasTarget
+                ? tr("workspaceOverviewDashboard.planCoverage.plannedProgress", `planned`, {
+                    target: monthlyTarget,
+                  })
+                : tr(
+                    "workspaceOverviewDashboard.planCoverage.plannedThisMonth",
+                    "planned this month",
+                  )}
             </span>
           </div>
           {hasTarget ? (
@@ -83,16 +99,17 @@ export function PlanCoverageCard({
               coveragePercent={coveragePercent ?? 0}
               remaining={remaining ?? 0}
               met={total >= (monthlyTarget ?? 0)}
+              {...(t ? { t } : {})}
             />
           ) : (
-            <NoTargetCallout settingsHref={settingsHref} />
+            <NoTargetCallout settingsHref={settingsHref} {...(t ? { t } : {})} />
           )}
         </div>
 
         {/* Format mix */}
         <div>
           <p className="text-label text-fg-muted mb-2 font-semibold tracking-wide uppercase">
-            Format mix
+            {tr("workspaceOverviewDashboard.planCoverage.formatMix", "Format mix")}
           </p>
           <FormatDistributionBars bars={formatBreakdown} buildHref={buildFormatHref} />
         </div>
@@ -105,11 +122,15 @@ function CoverageBar({
   coveragePercent,
   remaining,
   met,
+  t,
 }: {
   coveragePercent: number;
   remaining: number;
   met: boolean;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   return (
     <div className="mt-3 space-y-1.5">
       <div
@@ -118,7 +139,10 @@ function CoverageBar({
         aria-valuenow={coveragePercent}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={`${coveragePercent} percent of monthly target`}
+        aria-label={tr(
+          "workspaceOverviewDashboard.planCoverage.coverageAria",
+          `${coveragePercent} percent of monthly target`,
+        )}
       >
         <div
           className={cn(
@@ -130,21 +154,42 @@ function CoverageBar({
       </div>
       <p className={cn("text-label font-semibold", met ? "text-success" : "text-fg-secondary")}>
         {met
-          ? `Target met (${coveragePercent}%)`
-          : `${coveragePercent}% coverage · ${remaining} item${remaining === 1 ? "" : "s"} to go`}
+          ? tr(
+              "workspaceOverviewDashboard.planCoverage.targetMet",
+              `Target met (${coveragePercent}%)`,
+              { percent: coveragePercent },
+            )
+          : tr(
+              "workspaceOverviewDashboard.planCoverage.coverageRemaining",
+              `${coveragePercent}% coverage · ${remaining} item${remaining === 1 ? "" : "s"} to go`,
+              { percent: coveragePercent, remaining, plural: remaining === 1 ? "" : "s" },
+            )}
       </p>
     </div>
   );
 }
 
-function NoTargetCallout({ settingsHref }: { settingsHref: string }) {
+function NoTargetCallout({
+  settingsHref,
+  t,
+}: {
+  settingsHref: string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   return (
     <div className="border-border bg-surface-subtle mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border border-dashed px-3 py-2">
       <div className="flex items-center gap-2">
         <Target className="text-fg-muted h-4 w-4" aria-hidden="true" />
         <p className="text-body text-fg-secondary">
-          <span className="font-semibold">No monthly target</span> — set one to see coverage
-          progress.
+          <span className="font-semibold">
+            {tr("workspaceOverviewDashboard.planCoverage.noMonthlyTarget", "No monthly target")}
+          </span>{" "}
+          —{" "}
+          {tr(
+            "workspaceOverviewDashboard.planCoverage.setTargetHint",
+            "set one to see coverage progress.",
+          )}
         </p>
       </div>
       <Link
@@ -152,7 +197,7 @@ function NoTargetCallout({ settingsHref }: { settingsHref: string }) {
         className="bg-primary text-label text-button inline-flex min-h-9 items-center gap-1 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold text-white"
       >
         <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-        Set target
+        {tr("workspaceOverviewDashboard.planCoverage.setTarget", "Set target")}
       </Link>
     </div>
   );

@@ -41,6 +41,12 @@ export interface NeedsAttentionListProps {
   workspaceSlug: string;
   now: Date;
   viewAllHref: string;
+  /**
+   * Optional translator. When provided, the panel renders
+   * `workspaceOverviewDashboard.needsAttention.*`; when omitted,
+   * the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 function severityTone(input: {
@@ -67,17 +73,45 @@ const SEVERITY_CLASS: Record<"critical" | "warning" | "info", string> = {
   info: "text-info bg-info-subtle border-info/30",
 };
 
-function formatDeadline(input: { plannedPublishAt: Date; now: Date; daysOverdue: number }): string {
-  const { plannedPublishAt, now, daysOverdue } = input;
+function formatDeadline(input: {
+  plannedPublishAt: Date;
+  now: Date;
+  daysOverdue: number;
+  t?: (key: string, params?: Record<string, string | number>) => string;
+}): string {
+  const { plannedPublishAt, now, daysOverdue, t } = input;
   const absolute = format(plannedPublishAt, "MMM d");
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   if (daysOverdue > 0) {
-    return `${daysOverdue} day${daysOverdue === 1 ? "" : "s"} overdue · ${absolute}`;
+    return tr(
+      "workspaceOverviewDashboard.needsAttention.deadlineOverdue",
+      `${daysOverdue} day${daysOverdue === 1 ? "" : "s"} overdue · ${absolute}`,
+      { days: daysOverdue, plural: daysOverdue === 1 ? "" : "s", date: absolute },
+    );
   }
   const daysUntil = -differenceInDays(plannedPublishAt, now);
-  if (daysUntil === 0) return `Due today · ${absolute}`;
-  if (daysUntil === 1) return `Due tomorrow · ${absolute}`;
-  if (daysUntil <= 7) return `Due in ${daysUntil} days · ${absolute}`;
-  return `Due ${absolute}`;
+  if (daysUntil === 0)
+    return tr(
+      "workspaceOverviewDashboard.needsAttention.deadlineToday",
+      `Due today · ${absolute}`,
+      { date: absolute },
+    );
+  if (daysUntil === 1)
+    return tr(
+      "workspaceOverviewDashboard.needsAttention.deadlineTomorrow",
+      `Due tomorrow · ${absolute}`,
+      { date: absolute },
+    );
+  if (daysUntil <= 7)
+    return tr(
+      "workspaceOverviewDashboard.needsAttention.deadlineInDays",
+      `Due in ${daysUntil} days · ${absolute}`,
+      { days: daysUntil, date: absolute },
+    );
+  return tr("workspaceOverviewDashboard.needsAttention.deadlineAbsolute", `Due ${absolute}`, {
+    date: absolute,
+  });
 }
 
 export function NeedsAttentionList({
@@ -85,18 +119,20 @@ export function NeedsAttentionList({
   workspaceSlug,
   now,
   viewAllHref,
+  t,
 }: NeedsAttentionListProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   return (
     <DashboardPanel
-      title="Needs attention"
-      eyebrow="Top priority items"
+      title={tr("workspaceOverviewDashboard.needsAttention.title", "Needs attention")}
+      eyebrow={tr("workspaceOverviewDashboard.needsAttention.eyebrow", "Top priority items")}
       data-testid="needs-attention"
       footer={
         <Link
           href={viewAllHref}
           className="text-label text-primary inline-flex items-center gap-1 rounded-[var(--radius-control)] px-1 py-0.5 font-semibold underline-offset-4 hover:underline"
         >
-          View all attention items →
+          {tr("workspaceOverviewDashboard.needsAttention.viewAll", "View all attention items →")}
         </Link>
       }
     >
@@ -104,8 +140,18 @@ export function NeedsAttentionList({
         <div className="border-success/30 bg-success-subtle flex items-start gap-3 rounded-[var(--radius-control)] border p-3">
           <ShieldAlert className="text-success mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
           <div>
-            <p className="text-body text-fg-primary font-semibold">Everything is on track.</p>
-            <p className="text-label text-fg-secondary">No overdue or blocked items this month.</p>
+            <p className="text-body text-fg-primary font-semibold">
+              {tr(
+                "workspaceOverviewDashboard.needsAttention.everythingOnTrack",
+                "Everything is on track.",
+              )}
+            </p>
+            <p className="text-label text-fg-secondary">
+              {tr(
+                "workspaceOverviewDashboard.needsAttention.nothingOverdue",
+                "No overdue or blocked items this month.",
+              )}
+            </p>
           </div>
         </div>
       ) : (
@@ -121,6 +167,7 @@ export function NeedsAttentionList({
               plannedPublishAt: date,
               now,
               daysOverdue: it.daysOverdue,
+              ...(t ? { t } : {}),
             });
             return (
               <li key={it.id} className="py-3 first:pt-0 last:pb-0">
@@ -167,7 +214,12 @@ export function NeedsAttentionList({
                           {it.ownerName}
                         </span>
                       ) : (
-                        <span className="text-label text-fg-muted">· Unassigned</span>
+                        <span className="text-label text-fg-muted">
+                          {tr(
+                            "workspaceOverviewDashboard.needsAttention.unassigned",
+                            "· Unassigned",
+                          )}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -176,7 +228,7 @@ export function NeedsAttentionList({
                     className="text-label text-primary inline-flex items-center gap-1 self-center rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline"
                     aria-label={`Open ${it.title}`}
                   >
-                    Open →
+                    {tr("workspaceOverviewDashboard.needsAttention.open", "Open →")}
                   </Link>
                 </div>
               </li>

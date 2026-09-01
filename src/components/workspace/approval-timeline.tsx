@@ -48,6 +48,13 @@ export interface ApprovalTimelineProps {
    * appear so the user understands the action exists.
    */
   disabled?: boolean;
+  /**
+   * Optional translator. When provided, the section title +
+   * "Request changes" dialog copy resolves to
+   * `workspaceOverviewDashboard.workflow.{requestChanges,...}`; when
+   * omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 function canActorDecide(request: ApprovalRequest, roles: ApprovalTimelineRoles): boolean {
@@ -69,11 +76,15 @@ export function ApprovalTimeline({
   onApprove,
   onRequestChanges,
   disabled = false,
+  t,
 }: ApprovalTimelineProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   if (approvals.length === 0) return null;
   return (
     <div className="mt-4 space-y-1.5">
-      <h3 className="text-label text-fg-muted tracking-wide uppercase">Approval requests</h3>
+      <h3 className="text-label text-fg-muted tracking-wide uppercase">
+        {tr("workspaceOverviewDashboard.workflow.approvalRequests", "Approval requests")}
+      </h3>
       {approvals.map((a) => {
         const canAct = a.status === "pending" && canActorDecide(a, roles);
         return (
@@ -100,13 +111,22 @@ export function ApprovalTimeline({
                 <ReasonDialog
                   trigger={
                     <Button size="sm" variant="secondary" disabled={disabled}>
-                      Request changes
+                      {tr("workspaceOverviewDashboard.workflow.requestChanges", "Request changes")}
                     </Button>
                   }
-                  title="Request changes"
-                  description="Explain what needs to change so the assignee can act without guesswork."
-                  label="Feedback"
-                  confirmLabel="Send request"
+                  title={tr(
+                    "workspaceOverviewDashboard.workflow.requestChanges",
+                    "Request changes",
+                  )}
+                  description={tr(
+                    "workspaceOverviewDashboard.workflow.requestChangesDescription",
+                    "Explain what needs to change so the assignee can act without guesswork.",
+                  )}
+                  label={tr("workspaceOverviewDashboard.workflow.feedbackLabel", "Feedback")}
+                  confirmLabel={tr(
+                    "workspaceOverviewDashboard.workflow.sendRequest",
+                    "Send request",
+                  )}
                   disabled={disabled}
                   onConfirm={(feedback) => onRequestChanges(a.id, feedback)}
                 />
