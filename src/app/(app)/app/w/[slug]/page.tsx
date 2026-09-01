@@ -291,6 +291,7 @@ export default async function WorkspaceOverviewPage({
         approvalsCount={approvalRows.length}
         reviewHref={buildPlanningHref({ risk: "at_risk" })}
         approvalsHref={`/app/w/${slug}/reviews`}
+        t={t}
       />
       <PageHeader
         eyebrow={ws.name}

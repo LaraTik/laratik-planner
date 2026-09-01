@@ -244,6 +244,23 @@
     "selectedMonth": "Selected month",
     "today": "Today",
     "batchAdd": "Batch add ideas",
+    "attention": {
+      "criticalTitle": "Critical attention",
+      "warningTitle": "Needs attention",
+      "infoTitle": "Heads up",
+      "criticalBody": "Blocked items are stuck on someone. Open the list to resolve them.",
+      "warningBody": "These are slipping past their planned publish date.",
+      "infoBody": "Upcoming deadlines within the next 7 days.",
+      "reviewCta": "Review attention items",
+      "approvalsCta": "Approvals",
+      "blocked": "{count} blocked",
+      "atRiskOne": "{count} item at risk",
+      "atRiskMany": "{count} items at risk",
+      "approachingOne": "{count} approaching deadline",
+      "approachingMany": "{count} approaching deadlines",
+      "approvalsWaitingOne": "{count} approval waiting for you",
+      "approvalsWaitingMany": "{count} approvals waiting for you"
+    },
     "createContent": "Create content"
   },
   "planning": {

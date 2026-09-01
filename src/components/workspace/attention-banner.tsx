@@ -24,6 +24,11 @@ import { cn } from "@/lib/utils";
  *   - Provides a single primary action ("Review attention items")
  *     and a contextual secondary action ("Open approvals") only
  *     when approvals are pending.
+ *
+ * Translation: the banner accepts an optional `t` prop (the active
+ * locale's translator). When provided, severity titles, body copy,
+ * and CTA labels render from the workspaceOverview.attention.*
+ * catalog. When omitted, the stored English copy is used.
  */
 export type AttentionSeverity = "critical" | "warning" | "info";
 
@@ -36,6 +41,12 @@ export interface AttentionBannerProps {
   reviewHref: string;
   /** Secondary CTA — open approvals. Required only when approvalsCount > 0. */
   approvalsHref?: string;
+  /**
+   * Optional translator. When provided, all user-visible strings
+   * render from the workspaceOverview.attention.* catalog; when
+   * omitted, the stored English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const SEVERITY_ICON: Record<AttentionSeverity, React.ComponentType<{ className?: string }>> = {
@@ -56,10 +67,26 @@ const SEVERITY_ICON_CLASS: Record<AttentionSeverity, string> = {
   info: "bg-info/10 text-info",
 };
 
-const SEVERITY_LABEL: Record<AttentionSeverity, string> = {
+const SEVERITY_TITLE_KEY: Record<AttentionSeverity, string> = {
+  critical: "workspaceOverview.attention.criticalTitle",
+  warning: "workspaceOverview.attention.warningTitle",
+  info: "workspaceOverview.attention.infoTitle",
+};
+const SEVERITY_TITLE_FALLBACK: Record<AttentionSeverity, string> = {
   critical: "Critical attention",
   warning: "Needs attention",
   info: "Heads up",
+};
+
+const SEVERITY_BODY_KEY: Record<AttentionSeverity, string> = {
+  critical: "workspaceOverview.attention.criticalBody",
+  warning: "workspaceOverview.attention.warningBody",
+  info: "workspaceOverview.attention.infoBody",
+};
+const SEVERITY_BODY_FALLBACK: Record<AttentionSeverity, string> = {
+  critical: "Blocked items are stuck on someone. Open the list to resolve them.",
+  warning: "These are slipping past their planned publish date.",
+  info: "Upcoming deadlines within the next 7 days.",
 };
 
 export function AttentionBanner({
@@ -69,7 +96,10 @@ export function AttentionBanner({
   approvalsCount = 0,
   reviewHref,
   approvalsHref,
+  t,
 }: AttentionBannerProps) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   const total = atRiskCount + blockedCount + approachingCount + approvalsCount;
   if (total === 0) return null;
 
@@ -79,12 +109,40 @@ export function AttentionBanner({
   const Icon = SEVERITY_ICON[severity];
 
   const parts: string[] = [];
-  if (blockedCount > 0) parts.push(`${blockedCount} blocked`);
-  if (atRiskCount > 0) parts.push(`${atRiskCount} item${atRiskCount === 1 ? "" : "s"} at risk`);
+  if (blockedCount > 0)
+    parts.push(
+      tr("workspaceOverview.attention.blocked", `${blockedCount} blocked`, { count: blockedCount }),
+    );
+  if (atRiskCount > 0)
+    parts.push(
+      tr(
+        atRiskCount === 1
+          ? "workspaceOverview.attention.atRiskOne"
+          : "workspaceOverview.attention.atRiskMany",
+        `${atRiskCount} item${atRiskCount === 1 ? "" : "s"} at risk`,
+        { count: atRiskCount },
+      ),
+    );
   if (approachingCount > 0)
-    parts.push(`${approachingCount} approaching deadline${approachingCount === 1 ? "" : "s"}`);
+    parts.push(
+      tr(
+        approachingCount === 1
+          ? "workspaceOverview.attention.approachingOne"
+          : "workspaceOverview.attention.approachingMany",
+        `${approachingCount} approaching deadline${approachingCount === 1 ? "" : "s"}`,
+        { count: approachingCount },
+      ),
+    );
   if (approvalsCount > 0)
-    parts.push(`${approvalsCount} approval${approvalsCount === 1 ? "" : "s"} waiting for you`);
+    parts.push(
+      tr(
+        approvalsCount === 1
+          ? "workspaceOverview.attention.approvalsWaitingOne"
+          : "workspaceOverview.attention.approvalsWaitingMany",
+        `${approvalsCount} approval${approvalsCount === 1 ? "" : "s"} waiting for you`,
+        { count: approvalsCount },
+      ),
+    );
 
   return (
     <div
@@ -108,14 +166,11 @@ export function AttentionBanner({
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-body font-semibold">
-          {SEVERITY_LABEL[severity]} — {parts.join(" · ")}
+          {tr(SEVERITY_TITLE_KEY[severity], SEVERITY_TITLE_FALLBACK[severity])} —{" "}
+          {parts.join(" · ")}
         </p>
         <p className="text-label text-fg-muted">
-          {severity === "critical"
-            ? "Blocked items are stuck on someone. Open the list to resolve them."
-            : severity === "warning"
-              ? "These are slipping past their planned publish date."
-              : "Upcoming deadlines within the next 7 days."}
+          {tr(SEVERITY_BODY_KEY[severity], SEVERITY_BODY_FALLBACK[severity])}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -131,7 +186,7 @@ export function AttentionBanner({
           )}
         >
           <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
-          Review attention items
+          {tr("workspaceOverview.attention.reviewCta", "Review attention items")}
           <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
         {approvalsCount > 0 && approvalsHref ? (
@@ -146,7 +201,7 @@ export function AttentionBanner({
                   : "border-info/40 text-info hover:bg-info/10",
             )}
           >
-            Approvals
+            {tr("workspaceOverview.attention.approvalsCta", "Approvals")}
             <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         ) : null}
