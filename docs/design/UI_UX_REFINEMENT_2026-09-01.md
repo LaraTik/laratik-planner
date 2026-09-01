@@ -79,16 +79,16 @@ and verified against the route-boundary files:
 
 ### Public surfaces (8)
 
-| #   | Route                        | Surface                       | EN/LTR               | AR/RTL         | A11y                 | Responsive           | Findings | Status         |
-| --- | ---------------------------- | ----------------------------- | -------------------- | -------------- | -------------------- | -------------------- | -------- | -------------- |
-| 1   | `/`                          | Landing                       | `Reviewed` (Phase 2) | `Not Reviewed` | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | —        | `Not Reviewed` |
-| 2   | `/signin`                    | Sign-in (password-first)      | `Reviewed` (Phase 2) | `Not Reviewed` | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | —        | `Not Reviewed` |
-| 3   | `/signin/verify`             | Magic-link verification state | `Not Reviewed`       | `Not Reviewed` | `Not Reviewed`       | `Not Reviewed`       | —        | `Not Reviewed` |
-| 4   | `/signin/forgot-password`    | Forgot password               | `Not Reviewed`       | `Not Reviewed` | `Not Reviewed`       | `Not Reviewed`       | —        | `Not Reviewed` |
-| 5   | `/signin/set-password`       | Forced first-password change  | `Not Reviewed`       | `Not Reviewed` | `Not Reviewed`       | `Not Reviewed`       | —        | `Not Reviewed` |
-| 6   | `/setup`                     | First administrator setup     | `Not Reviewed`       | `Not Reviewed` | `Not Reviewed`       | `Not Reviewed`       | —        | `Not Reviewed` |
-| 7   | `/accept-invitation/[token]` | Invitation acceptance         | `Not Reviewed`       | `Not Reviewed` | `Not Reviewed`       | `Not Reviewed`       | —        | `Not Reviewed` |
-| 8   | `/set-password`              | OAuth first-password set      | `Not Reviewed`       | `Not Reviewed` | `Not Reviewed`       | `Not Reviewed`       | —        | `Not Reviewed` |
+| #   | Route                        | Surface                       | EN/LTR               | AR/RTL               | A11y                 | Responsive           | Findings | Status        |
+| --- | ---------------------------- | ----------------------------- | -------------------- | -------------------- | -------------------- | -------------------- | -------- | ------------- |
+| 1   | `/`                          | Landing                       | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | —        | `Implemented` |
+| 2   | `/signin`                    | Sign-in (password-first)      | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | —        | `Implemented` |
+| 3   | `/signin/verify`             | Magic-link verification state | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | —        | `Implemented` |
+| 4   | `/signin/forgot-password`    | Forgot password               | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | —        | `Implemented` |
+| 5   | `/signin/set-password`       | Forced first-password change  | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | —        | `Implemented` |
+| 6   | `/setup`                     | First administrator setup     | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | —        | `Implemented` |
+| 7   | `/accept-invitation/[token]` | Invitation acceptance         | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | —        | `Implemented` |
+| 8   | `/set-password`              | OAuth first-password set      | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | `Reviewed` (Phase 2) | —        | `Implemented` |
 
 ### Legal / operational (3)
 
