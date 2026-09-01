@@ -46,8 +46,8 @@ Required fix:
 Implemented in `ad26213`: the migration targets the singular tables, is registered
 in the Drizzle journal, and the migration drill now replays the latest additive
 migration without stale 0012/0018 timestamp assumptions. The disposable
-`planner_test` database was unavailable in this worktree, so runtime drill proof
-is still pending.
+`planner_test` database drill passed all 5 scenarios on 2026-09-01; production
+backup/rollback evidence and owner sign-off remain required.
 
 Acceptance criteria:
 
@@ -60,7 +60,8 @@ Acceptance criteria:
 
 ## P1 — I18N-002: translator functions cross Server/Client boundaries
 
-Status: Implemented in code — authenticated route evidence remains pending
+Status: Implemented in code — authenticated route sweep is green for the
+remaining direct boundaries; keep the static guard mandatory
 
 Evidence:
 
@@ -75,7 +76,7 @@ Required fix:
 - Do not serialize the entire catalog per page and do not silence the React error.
 - Add a regression guard that fails when a Server Component passes a function-valued translator prop into a Client Component.
 
-Implemented in `ad26213` and follow-up boundary pass: account forms, channels,
+Implemented in `ad26213`, `69aebbe`, `add83ad`, and follow-up boundary passes: account forms, channels,
 agency/platform administration, users, brand kit, design queue, planning
 detail, and workspace settings no longer receive translator functions from
 Server Components. Client forms resolve the active translator from the root
@@ -89,6 +90,12 @@ Acceptance criteria:
 - [x] No Server → Client `t={t}` boundary remains (static regression guard passes).
 - [ ] English and Arabic interactive states still translate after client updates.
 - [ ] Focused unit tests and authenticated E2E cover at least account, users, planning detail, and settings.
+
+Authenticated accessibility sweep (2026-09-01) also found seven serious
+violations that remain release blockers: invalid `aria-label` usage on
+non-semantic progress/status wrappers, invalid `<dl>` child structure on Team,
+and a workflow-stepper text contrast/semantics issue. Track fixes with the
+route-level axe suite before release.
 
 ## P1 — I18N-003: profile language switching is blocked and profile copy is English
 
