@@ -367,7 +367,7 @@ pnpm test:e2e:critical
 pnpm test:e2e:isolated
 
 # Pre-merge: full visual matrix (assert mode against committed
-# baselines). ~10 min. The command uses the same isolated runner and
+# baselines). ~15 min locally (longer on cold dev servers). The command uses the same isolated runner and
 # therefore needs TEST_DATABASE_URL. Use `pnpm test:visual:update` to refresh
 # baselines after a deliberate UI change.
 pnpm test:visual

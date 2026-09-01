@@ -100,6 +100,16 @@ M3b (PR #1) closed the Goal 3–10 product gaps and shipped all 27 canonical rou
 
 The `Missing` and `Partial` statuses from the prior revision were pre-M3b and are no longer accurate. The prior file is kept in git history (`docs/production-readiness/SCREEN_PARITY.md` before this commit).
 
+## Automated evidence update — 2026-09-01
+
+The candidate baseline set is now present in the worktree and the full
+`visual-chromium` suite passes 112/112 in assert mode against the disposable
+Postgres/Auth.js setup. Four development-error captures were recaptured after a
+manifest/JSON race. This changes the automated status from “no baselines” to
+“candidate baselines ready for review”; the matrix below intentionally remains
+pending until a human reviewer compares each PNG/HTML pair and records the
+result.
+
 ## Matrix
 
 > **Screen ID format**: the table below uses the 8-character capture prefix that matches the on-disk filename in `designs/stitch/`. The full 32-character Stitch ID is recorded in the Google Stitch project and can be regenerated from `docs/visual-parity/MCP.md`; only the 8-character prefix is portable in the repo.

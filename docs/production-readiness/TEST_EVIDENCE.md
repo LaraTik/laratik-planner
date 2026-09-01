@@ -52,6 +52,17 @@ The per-glob **regression floor** in `vitest.config.ts` is set at the current pe
 
 ## Browser evidence
 
+### Local rebaseline — 2026-09-01
+
+The Docker Postgres service `laratik-planner-pg-dev` was healthy with the
+disposable `planner_test` database. The isolated runner applied migrations and
+injected deterministic test-only Auth.js settings. Migration drill passed 5/5,
+integration passed 22 files / 187 tests, the authenticated Chromium axe sweep
+passed 24/24 routes, and the complete visual suite passed **112/112** after
+refreshing the candidate PNGs. This supersedes the historical pending-baseline
+note below; human Stitch comparison and the five-browser functional matrix are
+still independent release gates.
+
 | Suite                                        | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Source                                                                                      |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | Playwright `chromium`                        | 144 pass, 10 skip                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `pnpm test:e2e:run` (split into `e2e.yml` so the slow suite does not gate deploy)           |

@@ -1,6 +1,6 @@
 # UI/UX + Arabic critical findings — implementation TODO
 
-> Handoff for a fixing agent. Review snapshot: `df10abf` on `feat/ui-ux-arabic-2026-09-01`, 2026-09-01. The branch is active; re-confirm each path against the current HEAD before editing.
+> Handoff for a fixing agent. Review snapshot: `fd2616a` on `feat/ui-ux-arabic-2026-09-01`, 2026-09-01. The branch is active; re-confirm each path against the current HEAD before editing.
 
 ## Objective
 
