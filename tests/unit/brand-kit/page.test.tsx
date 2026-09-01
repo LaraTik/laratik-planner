@@ -83,6 +83,17 @@ const tForActiveMock = vi.hoisted(() =>
         "brandKit.viewAllActivity": "View all activity",
         "brandKit.downloadDisabledHint":
           "Add at least one logo, color, or font before downloading.",
+        "brandKit.section.logos": "Logos",
+        "brandKit.section.colors": "Colors",
+        "brandKit.section.typography": "Typography",
+        "brandKit.section.pillars": "Pillars",
+        "brandKit.section.activity": "Activity",
+        "brandKit.overview.downloadZip": "Download ZIP",
+        "brandKit.overview.downloadZipEmpty":
+          "Add at least one logo, color, or font before downloading.",
+        "brandKit.overview.browseTemplates": "Browse templates",
+        "brandKit.overview.recentUpdates": "Recent updates",
+        "brandKit.overview.seeAllActivity": "See all activity →",
       };
       const value = map[key] ?? key;
       if (!params) return value;

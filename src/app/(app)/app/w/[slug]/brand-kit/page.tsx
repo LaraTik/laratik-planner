@@ -53,6 +53,11 @@ import { RecentUpdatesTable } from "./recent-updates-table";
  * this page (last 5–10 rows) and the dedicated `/activity` route
  * (the full feed, ready for Phase 7 per-actor / type filters).
  */
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("brandKit.title") };
+}
+
 export default async function BrandKitPage({ params }: { params: Promise<{ slug: string }> }) {
   const { t } = await tForActive();
   const session = await auth();
@@ -123,22 +128,18 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
               variant="outline"
               asChild={totalAssetCount > 0}
               disabled={totalAssetCount === 0}
-              title={
-                totalAssetCount === 0
-                  ? "Add at least one logo, color, or font before downloading."
-                  : undefined
-              }
+              title={totalAssetCount === 0 ? t("brandKit.overview.downloadZipEmpty") : undefined}
               data-testid="brand-kit-export-zip"
             >
               {totalAssetCount > 0 ? (
                 <a href={`/api/export/brand-assets-zip?slug=${encodeURIComponent(slug)}`} download>
                   <Download className="h-4 w-4" aria-hidden="true" />
-                  Download ZIP
+                  {t("brandKit.overview.downloadZip")}
                 </a>
               ) : (
                 <span aria-disabled="true">
                   <Download className="h-4 w-4" aria-hidden="true" />
-                  Download ZIP
+                  {t("brandKit.overview.downloadZip")}
                 </span>
               )}
             </Button>
@@ -148,7 +149,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
                 data-testid="brand-kit-browse-templates"
               >
                 <Sparkles className="h-4 w-4" aria-hidden="true" />
-                Browse templates
+                {t("brandKit.overview.browseTemplates")}
               </a>
             </Button>
           </div>
@@ -171,56 +172,56 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
         <KpiCard
           href={`${wsBase}/logos`}
           icon={ImageIcon}
-          label="Logos"
+          label={t("brandKit.section.logos")}
           count={assetsByKind.logo.length}
           testId="brand-kit-kpi-logos"
         />
         <KpiCard
           href={`${wsBase}/colors`}
           icon={Palette}
-          label="Colors"
+          label={t("brandKit.section.colors")}
           count={assetsByKind.color.length}
           testId="brand-kit-kpi-colors"
         />
         <KpiCard
           href={`${wsBase}/typography`}
           icon={Type}
-          label="Typography"
+          label={t("brandKit.section.typography")}
           count={assetsByKind.font.length}
           testId="brand-kit-kpi-typography"
         />
         <KpiCard
           href={`${wsBase}/voice`}
           icon={MessageCircle}
-          label="Voice & tone"
+          label={t("brandKit.voiceTitle")}
           count={rules.length}
           testId="brand-kit-kpi-voice"
         />
         <KpiCard
           href={`${wsBase}/pillars`}
           icon={Tag}
-          label="Pillars"
+          label={t("brandKit.section.pillars")}
           count={pillars.length}
           testId="brand-kit-kpi-pillars"
         />
         <KpiCard
           href={`${wsBase}/publishing`}
           icon={BookOpen}
-          label="Publishing rules"
+          label={t("brandKit.publishingTitle")}
           count={publishingRules.length}
           testId="brand-kit-kpi-publishing"
         />
         <KpiCard
           href={`${wsBase}/linked`}
           icon={Link2}
-          label="Linked resources"
+          label={t("brandKit.linkedTitle")}
           count={linkedResources.length}
           testId="brand-kit-kpi-linked"
         />
         <KpiCard
           href={`${wsBase}/activity`}
           icon={History}
-          label="Activity"
+          label={t("brandKit.section.activity")}
           count={recent.length}
           testId="brand-kit-kpi-activity"
         />
@@ -232,13 +233,15 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
         data-testid="brand-kit-recent-section"
       >
         <header className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-section-title text-fg-primary font-semibold">Recent updates</h2>
+          <h2 className="text-section-title text-fg-primary font-semibold">
+            {t("brandKit.overview.recentUpdates")}
+          </h2>
           <a
             href={`${wsBase}/activity`}
             className="text-label text-primary font-semibold hover:underline"
             data-testid="brand-kit-recent-section-link"
           >
-            See all activity →
+            {t("brandKit.overview.seeAllActivity")}
           </a>
         </header>
         <RecentUpdatesTable rows={recent.slice(0, 5)} t={t} />

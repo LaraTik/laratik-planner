@@ -2068,6 +2068,13 @@
       "recentTitle": "No recent updates yet",
       "recentDescription": "As the team adds logos, colors, fonts, voice rules, and publishing guidelines, the latest changes will appear here."
     },
+    "overview": {
+      "downloadZip": "Download ZIP",
+      "downloadZipEmpty": "Add at least one logo, color, or font before downloading.",
+      "browseTemplates": "Browse templates",
+      "recentUpdates": "Recent updates",
+      "seeAllActivity": "See all activity →"
+    },
     "logosAria": "Logo assets",
     "colorsAria": "Color palette",
     "typographyAria": "Typography",

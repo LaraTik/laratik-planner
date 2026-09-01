@@ -2068,6 +2068,13 @@
       "recentTitle": "لا توجد تحديثات حديثة بعد",
       "recentDescription": "مع إضافة الفريق للشعارات والألوان والخطوط وقواعد الصوت وإرشادات النشر، ستظهر آخر التغييرات هنا."
     },
+    "overview": {
+      "downloadZip": "تنزيل ZIP",
+      "downloadZipEmpty": "أضف شعارًا أو لونًا أو خطًا واحدًا على الأقل قبل التنزيل.",
+      "browseTemplates": "استعراض القوالب",
+      "recentUpdates": "آخر التحديثات",
+      "seeAllActivity": "← عرض كل النشاط"
+    },
     "logosAria": "أصول الشعار",
     "colorsAria": "لوحة الألوان",
     "typographyAria": "الخطوط",

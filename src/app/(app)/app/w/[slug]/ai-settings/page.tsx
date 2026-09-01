@@ -15,7 +15,10 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { AI_PROVIDER, PLANNER_FACING_CAPABILITIES } from "@/lib/ai/capabilities";
 import { tForActive } from "@/lib/i18n/t-for-active";
 
-export const metadata = { title: "AI settings" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("aiSettings.title") };
+}
 
 /**
  * Workspace AI settings — READ-ONLY status card.
