@@ -9,6 +9,7 @@ import { securityAuditEvents, users } from "@/lib/db/schema";
 import { hashPassword, isPasswordStrong } from "@/lib/auth/password";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { captureError } from "@/lib/observability/sentry";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 /**
  * Server action for /set-password — the first-login redirect target
@@ -26,6 +27,12 @@ import { captureError } from "@/lib/observability/sentry";
  * `mustChangePassword` flag in the same transaction, and writes a
  * `password_change` audit event.
  *
+ * All user-visible error strings are resolved against the active
+ * locale through `tForActive()` and returned to the client form
+ * in the user's language. The catalog key namespace is
+ * `auth.firstLoginSetPassword.*` so the strings move with the
+ * rest of the auth surface's translation work.
+ *
  * The JWT is NOT automatically refreshed by this action. The client
  * form calls `useSession().update({ mustChangePassword: false })` on
  * success, which re-invokes the `jwt` callback with
@@ -38,7 +45,7 @@ const setPasswordSchema = z
     confirmPassword: z.string(),
   })
   .refine((d) => d.newPassword === d.confirmPassword, {
-    message: "The two passwords don't match.",
+    message: "auth.firstLoginSetPassword.mismatch",
     path: ["confirmPassword"],
   });
 
@@ -52,15 +59,16 @@ export async function setOwnPasswordAction(
   _prev: SetPasswordState | undefined,
   formData: FormData,
 ): Promise<SetPasswordState> {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) {
-    return { error: "Not signed in. Please sign in again." };
+    return { error: t("auth.firstLoginSetPassword.notSignedIn") };
   }
   if (!session.user.mustChangePassword) {
     // Defensive: the middleware should have routed this user away
     // from /set-password. If they got here anyway, don't let them
     // re-run the flow.
-    return { error: "You don't need to change your password." };
+    return { error: t("auth.firstLoginSetPassword.notRequired") };
   }
 
   const parsed = setPasswordSchema.safeParse({
@@ -72,15 +80,18 @@ export async function setOwnPasswordAction(
     for (const issue of parsed.error.issues) {
       const key = issue.path.length > 0 ? issue.path.join(".") : "_root";
       if (!fieldErrors[key]) fieldErrors[key] = [];
-      fieldErrors[key].push(issue.message);
+      // The Zod error message is a catalog key. Resolve it
+      // through the same translator so the field error and the
+      // top-level error share a single source of copy.
+      fieldErrors[key].push(t(issue.message));
     }
-    const firstMessage = parsed.error.issues[0]?.message ?? "Check the form values and try again.";
-    return { error: firstMessage, fieldErrors };
+    const firstKey = parsed.error.issues[0]?.message ?? "auth.firstLoginSetPassword.weak";
+    return { error: t(firstKey), fieldErrors };
   }
   if (!isPasswordStrong(parsed.data.newPassword)) {
     return {
-      error: "Password must be at least 8 characters and contain a letter and a digit.",
-      fieldErrors: { newPassword: ["Too weak."] },
+      error: t("auth.firstLoginSetPassword.weak"),
+      fieldErrors: { newPassword: [t("auth.firstLoginSetPassword.weak")] },
     };
   }
 
@@ -91,7 +102,7 @@ export async function setOwnPasswordAction(
   });
   if (!rateLimit.allowed) {
     return {
-      error: "Too many password changes. Try again in a few minutes.",
+      error: t("auth.firstLoginSetPassword.weak"),
     };
   }
 
@@ -114,7 +125,7 @@ export async function setOwnPasswordAction(
   } catch (err) {
     captureError("setPassword.firstLogin", err);
     return {
-      error: "We couldn't update your password. The error has been logged. Please try again.",
+      error: t("auth.firstLoginSetPassword.weak"),
     };
   }
 

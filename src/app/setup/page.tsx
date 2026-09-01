@@ -5,6 +5,7 @@ import { firstAgencyForBootstrap } from "@/lib/auth/policy";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 /**
  * First-time agency administrator setup.
@@ -12,10 +13,16 @@ import { FormField } from "@/components/forms/form-field";
  * Per master prompt §13: "One-time first-agency-administrator setup when
  * no administrator exists." After this flow completes, the user is the
  * admin and the bootstrap token becomes operationally irrelevant.
+ *
+ * The form posts to `/api/bootstrap/admin` (a server endpoint, not a
+ * server action) so the bootstrap is enforced in exactly one place
+ * and the audit log is consistent. All copy is read from the message
+ * catalog at the top of the request.
  */
 export const metadata = { title: "Bootstrap the agency" };
 
 export default async function SetupPage() {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user) {
     redirect("/signin?callbackUrl=/setup");
@@ -35,22 +42,19 @@ export default async function SetupPage() {
     >
       <header className="flex flex-col items-center gap-2 text-center">
         <p className="border-border bg-surface text-label text-fg-muted rounded-full border px-3 py-1">
-          First-time setup
+          {t("auth.setup.eyebrow")}
         </p>
         <h1 className="text-title-page text-fg-primary font-semibold tracking-tight">
-          Bootstrap the agency
+          {t("auth.setup.title")}
         </h1>
-        <p className="text-body text-fg-secondary max-w-sm">
-          You&apos;re the first user of this deployment. Create the agency and become its
-          administrator. This action is one-time.
-        </p>
+        <p className="text-body text-fg-secondary max-w-sm">{t("auth.setup.body")}</p>
       </header>
 
       <form action="/api/bootstrap/admin" method="POST" className="w-full space-y-4">
         <FormField
           id="agencyName"
-          label="Agency name"
-          hint="The name your clients and team will see."
+          label={t("auth.setup.agencyNameLabel")}
+          hint={t("auth.setup.agencyNameHint")}
           required
         >
           <Input
@@ -64,8 +68,8 @@ export default async function SetupPage() {
         </FormField>
         <FormField
           id="agencySlug"
-          label="Agency slug"
-          hint="Lowercase letters, digits, and hyphens. Used in URLs."
+          label={t("auth.setup.agencySlugLabel")}
+          hint={t("auth.setup.agencySlugHint")}
           required
         >
           <Input
@@ -80,19 +84,19 @@ export default async function SetupPage() {
         </FormField>
         <FormField
           id="token"
-          label="Bootstrap token"
-          hint="From the BOOTSTRAP_SETUP_TOKEN env var on the server."
+          label={t("auth.setup.tokenLabel")}
+          hint={t("auth.setup.tokenHint")}
           required
         >
           <Input type="password" name="token" required minLength={1} autoComplete="off" />
         </FormField>
         <Button type="submit" className="w-full" size="lg">
-          Create the agency
+          {t("auth.setup.submit")}
         </Button>
       </form>
 
       <p className="text-label text-fg-muted text-center">
-        Signed in as{" "}
+        {t("auth.setup.signedInAs")}{" "}
         <span className="text-fg-primary font-semibold" data-testid="setup-signed-in-email">
           {session.user.email}
         </span>
@@ -101,7 +105,7 @@ export default async function SetupPage() {
           href="/api/auth/signout"
           className="text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
         >
-          Sign out
+          {t("auth.setup.signOut")}
         </Link>
       </p>
     </main>

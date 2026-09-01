@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
-import { SetPasswordForm } from "./set-password-form";
+import { SetPasswordForm, type FirstLoginSetPasswordCopy } from "./set-password-form";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 /**
  * First-login password reset page.
@@ -19,10 +20,16 @@ import { SetPasswordForm } from "./set-password-form";
  * (e.g. a hijacked cookie on a borrowed device), the user can sign
  * out without setting a new password. Without this escape, the only
  * way out is `delete authjs.session-token` from devtools.
+ *
+ * All user-visible copy is sourced from the message catalog and
+ * handed to the client form as a typed `copy` prop. The action
+ * returns locale-resolved error strings; the client never reads
+ * the catalog itself.
  */
 export const metadata = { title: "Set your password" };
 
 export default async function SetPasswordPage() {
+  const { t } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/signin");
@@ -30,24 +37,33 @@ export default async function SetPasswordPage() {
   if (!session.user.mustChangePassword) {
     redirect("/app");
   }
+
+  const copy: FirstLoginSetPasswordCopy = {
+    errorTitle: t("auth.firstLoginSetPassword.errorTitle"),
+    successTitle: t("auth.firstLoginSetPassword.successTitle"),
+    successBody: t("auth.firstLoginSetPassword.successBody"),
+    newPasswordLabel: t("auth.firstLoginSetPassword.newPasswordLabel"),
+    newPasswordHint: t("auth.firstLoginSetPassword.newPasswordHint"),
+    confirmLabel: t("auth.firstLoginSetPassword.confirmLabel"),
+    submit: t("auth.firstLoginSetPassword.submit"),
+    submitPending: t("auth.firstLoginSetPassword.submitPending"),
+  };
+
   return (
     <main className="bg-surface flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-md space-y-6" data-testid="set-password-page">
         <div className="space-y-1 text-center">
-          <h1 className="text-heading text-fg-primary">Set your password</h1>
-          <p className="text-body text-fg-secondary">
-            Your account was created by an administrator. Choose a new password to continue — you
-            won&apos;t need the temporary one again.
-          </p>
+          <h1 className="text-heading text-fg-primary">{t("auth.firstLoginSetPassword.title")}</h1>
+          <p className="text-body text-fg-secondary">{t("auth.firstLoginSetPassword.body")}</p>
         </div>
-        <SetPasswordForm />
+        <SetPasswordForm copy={copy} />
         <div className="text-center">
           <Link
             href="/signout"
             className="text-fg-muted text-label hover:text-fg-secondary focus-visible:ring-focus-ring inline-block rounded-sm focus:outline-none focus-visible:ring-2"
             data-testid="set-password-signout-link"
           >
-            Not you? Sign out instead
+            {t("auth.firstLoginSetPassword.signOut")}
           </Link>
         </div>
       </div>

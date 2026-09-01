@@ -16,6 +16,24 @@ import { setOwnPasswordAction, type SetPasswordState } from "./actions";
 const initialState: SetPasswordState = {};
 
 /**
+ * Localized copy bundle for the first-login set-password form.
+ * The Server Component parent (`/app/set-password/page.tsx`)
+ * resolves every string through the message catalog and hands
+ * the bundle to the client. The client never reaches for the
+ * catalog itself.
+ */
+export type FirstLoginSetPasswordCopy = {
+  errorTitle: string;
+  successTitle: string;
+  successBody: string;
+  newPasswordLabel: string;
+  newPasswordHint: string;
+  confirmLabel: string;
+  submit: string;
+  submitPending: string;
+};
+
+/**
  * /set-password form.
  *
  * Used as the first-login destination for users created via the
@@ -28,11 +46,15 @@ const initialState: SetPasswordState = {};
  *    so the first-login redirect middleware stops intercepting,
  *    then `router.push("/app")` to the home.
  *
+ * The action resolves all error strings against the active locale
+ * before returning, so the form displays them in the user's
+ * language without needing to know about the catalog.
+ *
  * After `state.saved` flips true, the form is hidden and only the
  * success strip renders. This prevents a stale-form re-submit
  * during the brief window between "saved" and the redirect.
  */
-export function SetPasswordForm() {
+export function SetPasswordForm({ copy }: { copy: FirstLoginSetPasswordCopy }) {
   const [state, formAction] = useActionState(setOwnPasswordAction, initialState);
   const router = useRouter();
   const { update: updateSession } = useSession();
@@ -80,7 +102,7 @@ export function SetPasswordForm() {
         >
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <div className="flex flex-col gap-1">
-            <span className="text-label font-semibold">We couldn&apos;t update your password</span>
+            <span className="text-label font-semibold">{copy.errorTitle}</span>
             <span className="text-body">{errorMessage}</span>
           </div>
         </div>
@@ -94,17 +116,17 @@ export function SetPasswordForm() {
         >
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <div className="flex flex-col gap-1">
-            <span className="text-label font-semibold">Password updated.</span>
-            <span className="text-body">Redirecting you to the app…</span>
+            <span className="text-label font-semibold">{copy.successTitle}</span>
+            <span className="text-body">{copy.successBody}</span>
           </div>
         </div>
       ) : (
         <form action={formAction} className="space-y-4" data-testid="set-password-form">
           <FormField
             id="newPassword"
-            label="New password"
+            label={copy.newPasswordLabel}
             required
-            hint="At least 8 characters, with a letter and a digit."
+            hint={copy.newPasswordHint}
             {...(fieldErrors.newPassword?.[0] ? { error: fieldErrors.newPassword[0] } : {})}
           >
             <div className="space-y-2">
@@ -135,7 +157,7 @@ export function SetPasswordForm() {
 
           <FormField
             id="confirmPassword"
-            label="Confirm new password"
+            label={copy.confirmLabel}
             required
             {...(fieldErrors.confirmPassword?.[0] ? { error: fieldErrors.confirmPassword[0] } : {})}
           >
@@ -148,7 +170,7 @@ export function SetPasswordForm() {
             />
           </FormField>
 
-          <FormSubmitButton label="Set password and continue" pendingLabel="Saving…" />
+          <FormSubmitButton label={copy.submit} pendingLabel={copy.submitPending} />
         </form>
       )}
     </div>
