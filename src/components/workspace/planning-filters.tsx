@@ -42,6 +42,12 @@ export interface PlanningFiltersProps {
   selectedOwnerId?: string | undefined;
   /** Current search term, or undefined for "no search". */
   searchValue?: string | undefined;
+  /**
+   * Optional translator. When provided, the 4 filter aria-labels +
+   * the search placeholder render from `planningFilters.*`; when
+   * omitted, the hard-coded English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
   /** Currently active list density. Required when `showDensity` is true. */
   density?: "comfortable" | "compact";
   /** Whether to render the density selector. List view: true. Board view: false. */
@@ -77,7 +83,9 @@ export function PlanningFilters({
   hasFilter,
   members,
   testIdPrefix = "planning",
+  t,
 }: PlanningFiltersProps) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   // The form's `action` is the same path it lives on — both the
   // list and the board pages render this form on themselves. The
   // form has no `action` attribute, which makes the browser fall
@@ -102,9 +110,9 @@ export function PlanningFilters({
         <input
           type="search"
           name="search"
-          aria-label="Search by title or brief"
+          aria-label={tr("planningFilters.searchAria", "Search by title or brief")}
           defaultValue={searchValue ?? ""}
-          placeholder="Search title or brief"
+          placeholder={tr("planningFilters.searchPlaceholder", "Search title or brief")}
           maxLength={80}
           className={`${controlClass} w-44 ps-7`}
           data-testid={`${testIdPrefix}-search-input`}
@@ -112,7 +120,7 @@ export function PlanningFilters({
       </div>
       <select
         name="status"
-        aria-label="Filter by status"
+        aria-label={tr("planningFilters.statusAria", "Filter by status")}
         defaultValue={selectedStatus ?? ""}
         className={controlClass}
         data-testid={`${testIdPrefix}-status-filter`}
@@ -126,7 +134,7 @@ export function PlanningFilters({
       </select>
       <select
         name="format"
-        aria-label="Filter by format"
+        aria-label={tr("planningFilters.formatAria", "Filter by format")}
         defaultValue={selectedFormat ?? ""}
         className={controlClass}
         data-testid={`${testIdPrefix}-format-filter`}
@@ -140,7 +148,7 @@ export function PlanningFilters({
       </select>
       <select
         name="owner"
-        aria-label="Filter by owner"
+        aria-label={tr("planningFilters.ownerAria", "Filter by owner")}
         defaultValue={selectedOwnerId ?? ""}
         className={controlClass}
         data-testid={`${testIdPrefix}-owner-filter`}
@@ -155,7 +163,7 @@ export function PlanningFilters({
       {showDensity && density ? (
         <select
           name="density"
-          aria-label="List density"
+          aria-label={tr("planningFilters.densityAria", "List density")}
           defaultValue={density}
           className={controlClass}
           data-testid={`${testIdPrefix}-density-filter`}

@@ -185,6 +185,7 @@ export default async function WorkflowBoardPage({
             label: m.displayName ?? m.name ?? m.id.slice(0, 8),
           }))}
           testIdPrefix="board"
+          t={t}
         />
       </div>
 
