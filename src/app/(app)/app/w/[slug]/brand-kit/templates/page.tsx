@@ -54,8 +54,8 @@ export default async function BrandKitTemplatesPage({
 
       <TemplateSection
         icon={MessageCircle}
-        title="Voice"
-        blurb="Tone, do, and don't rule seeds. The AI uses the voice rules you keep as the strongest signal in caption drafts."
+        title={t("brandKit.templatesSectionVoice")}
+        blurb={t("brandKit.templatesSectionVoiceBlurb")}
         testId="template-section-voice"
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -79,8 +79,8 @@ export default async function BrandKitTemplatesPage({
 
       <TemplateSection
         icon={Tag}
-        title="Pillars"
-        blurb="Content pillar seeds to bootstrap the taxonomy. Each pillar carries a one-sentence description the AI uses to keep caption drafts on-topic."
+        title={t("brandKit.templatesSectionPillars")}
+        blurb={t("brandKit.templatesSectionPillarsBlurb")}
         testId="template-section-pillars"
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -108,8 +108,8 @@ export default async function BrandKitTemplatesPage({
 
       <TemplateSection
         icon={Palette}
-        title="Color palettes"
-        blurb="Five-color starter palettes with role assignments. Each click adds every swatch that isn't already in your palette."
+        title={t("brandKit.templatesSectionPalettes")}
+        blurb={t("brandKit.templatesSectionPalettesBlurb")}
         testId="template-section-colors"
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -142,8 +142,8 @@ export default async function BrandKitTemplatesPage({
 
       <TemplateSection
         icon={Type}
-        title="Typography pairs"
-        blurb="Headline + body face pairings. Each click adds every face in the pair that isn't already catalogued."
+        title={t("brandKit.templatesSectionTypography")}
+        blurb={t("brandKit.templatesSectionTypographyBlurb")}
         testId="template-section-typography"
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -178,8 +178,8 @@ export default async function BrandKitTemplatesPage({
 
       <TemplateSection
         icon={BookOpen}
-        title="Publishing rules"
-        blurb="Editorial guardrails for the team. Each click adds the rule to your publishing rules list."
+        title={t("brandKit.templatesSectionPublishing")}
+        blurb={t("brandKit.templatesSectionPublishingBlurb")}
         testId="template-section-publishing"
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -1928,7 +1928,17 @@
     "typographyTitle": "Typography",
     "typographyDescription": "The headline, body, accent, and mono faces that every asset should ship in. Each entry renders a live sample.",
     "templatesTitle": "Brand kit templates",
-    "templatesDescription": "Curated seeds for every section of your brand kit. Pick what fits and one-click add — your brand kit grows without you having to write every rule from scratch."
+    "templatesDescription": "Curated seeds for every section of your brand kit. Pick what fits and one-click add — your brand kit grows without you having to write every rule from scratch.",
+    "templatesSectionVoice": "Voice",
+    "templatesSectionVoiceBlurb": "Tone, do, and don't rule seeds. The AI uses the voice rules you keep as the strongest signal in caption drafts.",
+    "templatesSectionPillars": "Pillars",
+    "templatesSectionPillarsBlurb": "Content pillar seeds to bootstrap the taxonomy. Each pillar carries a one-sentence description the AI uses to keep caption drafts on-topic.",
+    "templatesSectionPalettes": "Color palettes",
+    "templatesSectionPalettesBlurb": "Five-color starter palettes with role assignments. Each click adds every swatch that isn't already in your palette.",
+    "templatesSectionTypography": "Typography pairs",
+    "templatesSectionTypographyBlurb": "Headline + body face pairings. Each click adds every face in the pair that isn't already catalogued.",
+    "templatesSectionPublishing": "Publishing rules",
+    "templatesSectionPublishingBlurb": "Editorial guardrails for the team. Each click adds the rule to your publishing rules list."
   },
   "notifications": {
     "kind": {
