@@ -1,6 +1,6 @@
 # UI/UX + Arabic critical findings — implementation TODO
 
-> Handoff for a fixing agent. Review snapshot: `cd99538` on `feat/ui-ux-arabic-2026-09-01`, 2026-09-01. The branch is active; re-confirm each path against the current HEAD before editing.
+> Handoff for a fixing agent. Review snapshot: `df10abf` on `feat/ui-ux-arabic-2026-09-01`, 2026-09-01. The branch is active; re-confirm each path against the current HEAD before editing.
 
 ## Objective
 
@@ -93,9 +93,11 @@ Acceptance criteria:
 
 The seven serious violations found by the initial authenticated accessibility
 sweep were fixed in `cd99538` (decorative progress labels, status semantics,
-workflow markers, and nested navigation list structure). The focused route-level
-axe sweep now passes 7/7 routes on Chromium (2026-09-01). Keep the static RSC
-boundary guard and the route-level axe suite in the release checklist.
+workflow markers, and nested navigation list structure). The complete
+route-level axe sweep now passes 24/24 routes on Chromium (2026-09-01). The
+hash-linked Publishing deep link also no longer emits a hydration mismatch after
+`df10abf`; keep the static RSC boundary guard and route-level axe suite in the
+release checklist.
 
 The visual runner is now configuration-safe: `test:e2e:critical` and
 `test:visual` provision migrations and deterministic test-only Auth.js settings
