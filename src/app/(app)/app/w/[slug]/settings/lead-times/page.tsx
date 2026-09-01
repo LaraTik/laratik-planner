@@ -74,21 +74,21 @@ export default async function SettingsLeadTimesPage({
       />
       <SectionCard
         id="lead-times-context"
-        title="What this drives"
+        title={t("settings.leadTimes.contextTitle")}
         fullWidth
-        aria-label="What the lead times drive"
+        aria-label={t("settings.leadTimes.contextAria")}
         data-testid="settings-section-lead-times-context"
       >
         <p className="text-body text-fg-secondary mb-3 max-w-3xl">
-          With the current buffers, a post started today lands on the publish-ready stage on:
+          {t("settings.leadTimes.contextBody")}
         </p>
         <LeadTimeDeadline totalDays={total} today={new Date()} timezone={workspace.timezone} />
       </SectionCard>
       <SectionCard
         id="lead-times"
-        title="Lead time buffers"
+        title={t("settings.leadTimes.buffersTitle")}
         fullWidth
-        aria-label="Lead time buffers"
+        aria-label={t("settings.leadTimes.buffersAria")}
         data-testid="settings-section-lead-times"
       >
         {canManage ? (

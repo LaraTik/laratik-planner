@@ -919,7 +919,12 @@
       "total": "Total: {count} business days end-to-end.",
       "days": "days",
       "submit": "Save lead times",
-      "saved": "Lead times saved."
+      "saved": "Lead times saved.",
+      "contextTitle": "What this drives",
+      "contextAria": "What the lead times drive",
+      "contextBody": "With the current buffers, a post started today lands on the publish-ready stage on:",
+      "buffersTitle": "Lead time buffers",
+      "buffersAria": "Lead time buffers"
     },
     "defaults": {
       "title": "Assignment defaults",
