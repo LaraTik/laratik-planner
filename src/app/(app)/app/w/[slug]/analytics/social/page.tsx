@@ -247,7 +247,7 @@ export default async function SocialAnalyticsPage({
             key={w}
             href={`/app/w/${slug}/analytics/social?window=${w}`}
             className={`border-border text-body rounded-md border px-3 py-1 ${
-              w === window ? "bg-primary text-primary-fg" : "bg-surface text-fg-secondary"
+              w === window ? "bg-primary text-primary-foreground" : "bg-surface text-fg-secondary"
             }`}
             aria-current={w === window ? "page" : undefined}
             data-testid={`window-${w}`}

@@ -16,6 +16,7 @@ import {
 } from "./actions";
 import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
 import type { MappedPlatformFields } from "@/lib/format-payload/mapper";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * M4 — Publish package form (client component).
@@ -190,7 +191,7 @@ export function PublishPackageForm({
   canEdit,
   canApproveFinalCopy,
   canConfirmReadiness,
-  t,
+  t: tProp,
 }: {
   workspaceId: string;
   workspaceSlug: string;
@@ -222,8 +223,10 @@ export function PublishPackageForm({
    * First comment / etc.) are still English and belong to a
    * follow-up commit.
    */
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const [activeChannel, setActiveChannel] = useState<string>(channels[0]?.id ?? "");
   const [drafts, setDrafts] = useState<Record<string, PlatformPayload>>(() => {
     const initial: Record<string, PlatformPayload> = {};

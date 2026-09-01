@@ -39,9 +39,9 @@ const Checkbox = React.forwardRef<
     className={cn(
       // Visual: 16x16, primary-fg bg, primary border on hover, danger on
       // invalid. Rounded-[2px] matches the project's other controls.
-      "border-border bg-surface text-primary-fg focus-visible:ring-focus-ring peer h-4 w-4 shrink-0 rounded-[2px] border focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-      "data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:text-primary-fg",
-      "data-[state=indeterminate]:bg-primary data-[state=indeterminate]:border-primary data-[state=indeterminate]:text-primary-fg",
+      "border-border bg-surface text-primary-foreground focus-visible:ring-focus-ring peer h-4 w-4 shrink-0 rounded-[2px] border focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+      "data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:text-primary-foreground",
+      "data-[state=indeterminate]:bg-primary data-[state=indeterminate]:border-primary data-[state=indeterminate]:text-primary-foreground",
       "hover:border-fg-secondary",
       "disabled:cursor-not-allowed disabled:opacity-50",
       "aria-[invalid=true]:border-danger",

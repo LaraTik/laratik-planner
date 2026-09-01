@@ -194,6 +194,15 @@ test.describe("Agency switcher — atomic navigation (P0.2)", () => {
       workspaceName: "Atomic Workspace B1",
       workspaceSlug: "atomic-workspace-b1",
     });
+    // Seed A last so the fixture's active-agency cookie starts in A;
+    // the test then exercises the actual A → B switch.
+    await devSeed(page.request, {
+      email,
+      agencyName: "Atomic Agency A",
+      agencySlug: "atomic-agency-a",
+      workspaceName: "Atomic Workspace A1",
+      workspaceSlug: "atomic-workspace-a1",
+    });
     await devSignIn(page.request, { email });
 
     // Start in agency A on a workspace-scoped URL.
@@ -240,6 +249,14 @@ test.describe("Agency switcher — atomic navigation (P0.2)", () => {
       agencySlug: "fromapp-agency-b",
       workspaceName: "FromApp Workspace B1",
       workspaceSlug: "fromapp-workspace-b1",
+    });
+    // Leave the active context in A before switching to B.
+    await devSeed(page.request, {
+      email,
+      agencyName: "FromApp Agency A",
+      agencySlug: "fromapp-agency-a",
+      workspaceName: "FromApp Workspace A1",
+      workspaceSlug: "fromapp-workspace-a1",
     });
     await devSignIn(page.request, { email });
 

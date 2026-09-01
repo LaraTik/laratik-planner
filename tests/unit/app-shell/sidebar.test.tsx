@@ -348,9 +348,9 @@ describe("Sidebar (agency switcher wiring — M1.5)", () => {
     expect(trigger).toBeDisabled();
   });
 
-  it("does not spend footer space on an agency switcher when only one agency is available", () => {
+  it("keeps the active agency context visible even when only one agency is available", () => {
     render(<Sidebar {...baseProps} />);
-    expect(screen.queryByTestId("sidebar-agency-switcher-trigger")).toBeNull();
+    expect(screen.getByTestId("sidebar-agency-switcher-trigger")).toBeInTheDocument();
     expect(screen.getByTestId("sidebar-workspace-switcher-trigger")).toBeInTheDocument();
   });
 

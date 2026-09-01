@@ -7,6 +7,7 @@ import { Search, X, Filter as FilterIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ALL_FORMATS, ALL_STATUSES, humanFormat, humanStatus } from "@/lib/content/status";
 import { ATTENTION_HEALTHS, type HealthSnapshot } from "@/lib/dashboard/health";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * PlanningFiltersBar — instant-update filter bar for the planning
@@ -69,9 +70,14 @@ export function PlanningFiltersBar({
   monthParam,
   members,
   channels = [],
-  t,
+  t: tProp,
 }: PlanningFiltersBarProps) {
-  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
+  const tr = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

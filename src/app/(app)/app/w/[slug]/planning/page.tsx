@@ -352,7 +352,6 @@ export default async function PlanningPage({
             label: m.displayName ?? m.name ?? m.id.slice(0, 8),
           }))}
           channels={[]}
-          t={t}
         />
       </div>
 

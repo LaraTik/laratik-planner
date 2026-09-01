@@ -99,7 +99,7 @@ describe("Sidebar under agency switch (React #441 regression)", () => {
     // switchActiveAgency + router.refresh().
     expect(() => rerender(<Sidebar {...makeProps("agency-b", "Agency B")} />)).not.toThrow();
 
-    expect(screen.getByTestId("app-sidebar")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Primary" })).toBeInTheDocument();
   });
 
   it("survives the active agency becoming null (e.g. cookie cleared mid-flow)", () => {

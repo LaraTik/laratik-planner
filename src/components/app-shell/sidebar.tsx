@@ -144,11 +144,7 @@ export function Sidebar({
   const createContentHref = workspaceNav?.createContentHref ?? null;
 
   return (
-    <nav
-      className="flex h-full flex-col"
-      aria-label={labelFor("sidebarAriaLabel", "Primary")}
-      data-testid="app-sidebar"
-    >
+    <nav className="flex h-full flex-col" aria-label={labelFor("sidebarAriaLabel", "Primary")}>
       {/* Brand + workspace switcher (top) */}
       <SidebarHeader
         collapsed={collapsed}
@@ -334,7 +330,7 @@ function SidebarFooter({
           cross-tenant invalid. The workspace switcher stays in the
           footer only on global routes; on workspace routes the
           header is the primary surface. */}
-      {agencySwitcher.options.length > 1 || platformAccess.canEnter ? (
+      {agencySwitcher.options.length > 0 || platformAccess.canEnter ? (
         <div className="pt-1">
           <AgencySwitcher
             active={agencySwitcher.active}

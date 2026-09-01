@@ -102,7 +102,6 @@ export default async function ClientReviewPortalPage({
             plannedPublishAt={row.plannedPublishAt.toISOString()}
             overdue={Boolean(row.dueAt && row.dueAt < new Date())}
             links={links.filter((link) => link.deliveryVersionId === row.deliveryVersionId)}
-            t={t}
           />
         ))}
       </div>

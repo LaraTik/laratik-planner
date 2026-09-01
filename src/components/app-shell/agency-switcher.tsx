@@ -109,6 +109,9 @@ export function AgencySwitcher({
       const nextHref = result.firstWorkspaceSlug ? `/app/w/${result.firstWorkspaceSlug}` : "/app";
       router.push(nextHref);
       router.refresh();
+    } catch (error) {
+      console.error("agency switch failed", error);
+      toast.error("Couldn't switch agencies. Please try again.");
     } finally {
       setPending(false);
     }

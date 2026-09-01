@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { OverviewCommandCenter, type OverviewCommandCenterProps } from "./overview-command-center";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * OverviewNavigator — thin client wrapper that supplies
@@ -34,6 +35,7 @@ import { OverviewCommandCenter, type OverviewCommandCenterProps } from "./overvi
 export type OverviewNavigatorProps = OverviewCommandCenterProps;
 
 export function OverviewNavigator(props: OverviewNavigatorProps) {
+  const localeT = useLocaleT();
   const handleNavigate = React.useCallback((href: string) => {
     if (typeof window === "undefined") return;
     const anchor = href.startsWith("#") ? href : `#${href}`;
@@ -74,5 +76,7 @@ export function OverviewNavigator(props: OverviewNavigatorProps) {
     };
     window.requestAnimationFrame(() => window.setTimeout(tryFocus, 50));
   }, []);
-  return <OverviewCommandCenter {...props} onReadinessNavigate={handleNavigate} />;
+  return (
+    <OverviewCommandCenter {...props} t={props.t ?? localeT} onReadinessNavigate={handleNavigate} />
+  );
 }

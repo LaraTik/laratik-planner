@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 const SRC_ROOT = path.resolve(process.cwd(), "src");
@@ -37,30 +38,55 @@ function clientBoundaryOffenders(): string[] {
   for (const file of sourceFiles(SRC_ROOT)) {
     const source = fs.readFileSync(file, "utf8");
     if (/^\s*["']use client["']/.test(source) || !source.includes("t={t}")) continue;
-
-    const imports = [
-      ...source.matchAll(/import\s+(?:\{([^}]+)\}|([\w]+))\s+from\s+["']([^"']+)["']/g),
-    ];
-    for (const match of imports) {
-      const names = match[1]
-        ? match[1].split(",").map(
-            (name) =>
-              name
-                .trim()
-                .split(/\s+as\s+/)
-                .pop() ?? "",
-          )
-        : [match[2] ?? ""];
-      const target = resolveImport(file, match[3] ?? "");
-      if (!target) continue;
-      const targetSource = fs.readFileSync(target, "utf8");
-      if (!/^\s*["']use client["']/.test(targetSource)) continue;
-      if (names.some((name) => new RegExp(`<${name}\\b[^>]*\\bt=\\{t\\}`).test(source))) {
-        offenders.push(
-          `${path.relative(process.cwd(), file)} -> ${path.relative(process.cwd(), target)}`,
-        );
+    const syntax = ts.createSourceFile(
+      file,
+      source,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX,
+    );
+    const clientImports = new Map<string, string>();
+    for (const statement of syntax.statements) {
+      if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) {
+        continue;
+      }
+      const target = resolveImport(file, statement.moduleSpecifier.text);
+      const clause = statement.importClause;
+      if (!target || !clause || !/^\s*["']use client["']/.test(fs.readFileSync(target, "utf8"))) {
+        continue;
+      }
+      if (clause.name) clientImports.set(clause.name.text, target);
+      if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+        for (const element of clause.namedBindings.elements) {
+          clientImports.set(element.name.text, target);
+        }
       }
     }
+
+    function visit(node: ts.Node): void {
+      if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
+        const opening = ts.isJsxElement(node) ? node.openingElement : node;
+        const tag = opening.tagName;
+        if (ts.isIdentifier(tag) && clientImports.has(tag.text)) {
+          const hasTranslatorProp = opening.attributes.properties.some(
+            (attribute) =>
+              ts.isJsxAttribute(attribute) &&
+              ts.isIdentifier(attribute.name) &&
+              attribute.name.text === "t" &&
+              !!attribute.initializer &&
+              ts.isJsxExpression(attribute.initializer) &&
+              attribute.initializer.expression?.getText(syntax) === "t",
+          );
+          if (hasTranslatorProp) {
+            offenders.push(
+              `${path.relative(process.cwd(), file)} -> ${path.relative(process.cwd(), clientImports.get(tag.text)!)}`,
+            );
+          }
+        }
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(syntax);
   }
   return offenders;
 }

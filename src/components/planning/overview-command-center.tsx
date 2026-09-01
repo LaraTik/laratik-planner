@@ -8,6 +8,7 @@ import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { humanFormat, humanStatus } from "@/lib/content/status";
 import { explainStatus } from "@/lib/content/workflow-explanations";
 import { ActivityTimeline, type ActivityEventView } from "./activity-timeline";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * OverviewCommandCenter — the at-a-glance summary that lives
@@ -68,7 +69,7 @@ export interface OverviewCommandCenterProps {
    * status pills, etc. — stays English for now; that work
    * belongs to a dedicated overview-tab commit.)
    */
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
   /** Name of the content owner, when present. */
   ownerName?: string | null;
   /** Total blockers from the readiness service. */
@@ -129,8 +130,10 @@ export function OverviewCommandCenter({
   onReadinessNavigate,
   primaryActionLabel,
   reviewChangesHref,
-  t,
+  t: tProp,
 }: OverviewCommandCenterProps) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   return (
     <div className="space-y-6" data-testid="overview-command-center">
       <NextActionCard

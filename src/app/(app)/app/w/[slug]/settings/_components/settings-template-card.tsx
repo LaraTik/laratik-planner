@@ -9,6 +9,7 @@ import {
   applyLeadTimeTemplateAction,
   applyMonthlyTargetTemplateAction,
 } from "../templates-actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * SettingsTemplateCard — one-click "Apply preset" affordance
@@ -33,7 +34,7 @@ export interface SettingsTemplateCardProps {
   /** Optional "current vs preset" delta badge (Phase D). */
   delta?: React.ReactNode;
   testId?: string;
-  t: (key: string) => string;
+  t?: (key: string) => string;
 }
 
 type Status = "idle" | "loading" | "added" | "error";
@@ -49,8 +50,10 @@ export function SettingsTemplateCard({
   hint,
   delta,
   testId,
-  t,
+  t: tProp,
 }: SettingsTemplateCardProps) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const [status, setStatus] = React.useState<Status>("idle");
   const [error, setError] = React.useState<string | null>(null);
 

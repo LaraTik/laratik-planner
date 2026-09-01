@@ -262,12 +262,9 @@ function workspacesColumns(props: {
             {ws.name.charAt(0).toUpperCase()}
           </IconTile>
           <div className="min-w-0">
-            <Link
-              href={`/app/w/${ws.slug}`}
-              className="text-body text-fg-primary hover:text-primary block truncate font-semibold"
-            >
+            <span className="text-body text-fg-primary block truncate font-semibold">
               {ws.name}
-            </Link>
+            </span>
             <p className="text-label text-fg-muted truncate">{ws.slug}.planner.laratik.com</p>
           </div>
         </div>

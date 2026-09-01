@@ -657,7 +657,6 @@ export default async function ContentDetailPage({
                   editHref={editHref}
                   primaryActionLabel={primaryActionLabel}
                   reviewChangesHref={reviewChangesHref}
-                  t={t}
                 />
               </section>
             ),
@@ -1000,7 +999,6 @@ export default async function ContentDetailPage({
                       canEdit={canEdit}
                       canApproveFinalCopy={canApproveFinalCopy}
                       canConfirmReadiness={canConfirmReadiness}
-                      t={t}
                     />
                   </div>
                 ) : null}

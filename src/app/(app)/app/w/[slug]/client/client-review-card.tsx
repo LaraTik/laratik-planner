@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
 import { decideApprovalAction } from "../planning/actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 type ClientReviewCardProps = {
   workspaceSlug: string;
@@ -25,10 +26,12 @@ type ClientReviewCardProps = {
    * inline validation + catch errors, the Saving… pending
    * state, and the Approve / Request changes button labels.
    */
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 };
 
 export function ClientReviewCard(props: ClientReviewCardProps) {
+  const localeT = useLocaleT();
+  const t = props.t ?? localeT;
   const router = useRouter();
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +40,7 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
   const decide = (decision: "approved" | "changes_requested") => {
     setError(null);
     if (decision === "changes_requested" && !feedback.trim()) {
-      setError(props.t("sidebar.clientReviewPage.feedbackRequiredError"));
+      setError(t("sidebar.clientReviewPage.feedbackRequiredError"));
       return;
     }
     startTransition(async () => {
@@ -54,7 +57,7 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
         }
         router.refresh();
       } catch {
-        setError(props.t("sidebar.clientReviewPage.saveFailedError"));
+        setError(t("sidebar.clientReviewPage.saveFailedError"));
       }
     });
   };
@@ -64,22 +67,19 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
       <div className="flex items-start justify-between gap-3">
         <CardTitle>{props.title}</CardTitle>
         <Badge variant={props.overdue ? "danger" : "info"}>
-          {props.t("sidebar.clientReviewPage.badge")}
+          {t("sidebar.clientReviewPage.badge")}
         </Badge>
       </div>
       <p className="text-body text-fg-secondary mt-2">{props.deliveryDescription}</p>
       <p className="text-label text-fg-muted mt-3">
-        {props.t("sidebar.clientReviewPage.versionPublishes", {
-          version: props.deliveryVersion ?? props.t("sidebar.clientReviewPage.noVersion"),
+        {t("sidebar.clientReviewPage.versionPublishes", {
+          version: props.deliveryVersion ?? t("sidebar.clientReviewPage.noVersion"),
           date: new Date(props.plannedPublishAt).toLocaleDateString(),
         })}
       </p>
 
       {props.links.length ? (
-        <ul
-          className="mt-4 space-y-2"
-          aria-label={props.t("sidebar.clientReviewPage.deliveryFilesAria")}
-        >
+        <ul className="mt-4 space-y-2" aria-label={t("sidebar.clientReviewPage.deliveryFilesAria")}>
           {props.links.map((link) => (
             <li key={link.id}>
               <a
@@ -96,7 +96,7 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
         </ul>
       ) : (
         <p className="text-label text-warning mt-4">
-          {props.t("sidebar.clientReviewPage.noDeliveryFile")}
+          {t("sidebar.clientReviewPage.noDeliveryFile")}
         </p>
       )}
 
@@ -104,7 +104,7 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
         className="text-label text-fg-primary mt-5 block font-semibold"
         htmlFor={`feedback-${props.requestId}`}
       >
-        {props.t("sidebar.clientReviewPage.feedbackLabel")}
+        {t("sidebar.clientReviewPage.feedbackLabel")}
       </label>
       <textarea
         id={`feedback-${props.requestId}`}
@@ -126,8 +126,8 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
           disabled={pending || !props.links.length}
         >
           {pending
-            ? props.t("sidebar.clientReviewPage.saving")
-            : props.t("sidebar.clientReviewPage.approveDelivery")}
+            ? t("sidebar.clientReviewPage.saving")
+            : t("sidebar.clientReviewPage.approveDelivery")}
         </Button>
         <Button
           type="button"
@@ -135,7 +135,7 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
           onClick={() => decide("changes_requested")}
           disabled={pending}
         >
-          {props.t("sidebar.clientReviewPage.requestChanges")}
+          {t("sidebar.clientReviewPage.requestChanges")}
         </Button>
       </div>
     </Card>

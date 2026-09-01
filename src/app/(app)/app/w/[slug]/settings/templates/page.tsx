@@ -111,7 +111,6 @@ export default async function SettingsTemplatesPage({
                   {...(tpl.forClientApproval
                     ? { hint: t("settings.templates.leadClientHint") }
                     : {})}
-                  t={t}
                 />
               </li>
             );
@@ -145,7 +144,6 @@ export default async function SettingsTemplatesPage({
                     kind="badge"
                   />
                 }
-                t={t}
               />
             </li>
           ))}
@@ -204,7 +202,6 @@ export default async function SettingsTemplatesPage({
                       />
                     )
                   }
-                  t={t}
                 />
               </li>
             );
