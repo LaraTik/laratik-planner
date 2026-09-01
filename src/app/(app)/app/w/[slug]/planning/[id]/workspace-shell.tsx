@@ -14,6 +14,7 @@ import {
 } from "@/components/planning/workspace-tabs";
 import type { CommentRecord, CommentRoleFlags } from "@/components/comments/comment-item";
 import type { ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * WorkspaceShell — the client-side shell that:
@@ -77,7 +78,6 @@ export interface WorkspaceShellProps {
    * trigger, the overflow menu — stays English for now;
    * that work belongs to a dedicated shell/tabs commit.)
    */
-  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export function WorkspaceShell({
@@ -95,8 +95,8 @@ export function WorkspaceShell({
   resetCounts,
   openCommentCount,
   mentionCount,
-  t,
 }: WorkspaceShellProps) {
+  const t = useLocaleT();
   const [activeId, setActiveId] = React.useState<WorkspaceTabId>(() =>
     initialActiveTabFromHash(tabs),
   );
@@ -167,7 +167,6 @@ export function WorkspaceShell({
         canPostClientVisible={canPostClientVisible}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        t={t}
       />
 
       {canResetIdea ? (

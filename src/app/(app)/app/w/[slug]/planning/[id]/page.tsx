@@ -563,7 +563,6 @@ export default async function ContentDetailPage({
                   deliveryVersionId: a.deliveryVersionId,
                 }))}
                 designers={designers}
-                t={t}
               />
             </div>
             {/* Compact header — answers the four questions at a
@@ -605,7 +604,6 @@ export default async function ContentDetailPage({
             deliveryVersionId: a.deliveryVersionId,
           })),
           designers,
-          t,
         }}
         workspace={{
           workspaceSlug: slug,
@@ -691,7 +689,6 @@ export default async function ContentDetailPage({
                   >
                     <div className="space-y-3">
                       <FormatAwareContentEditor
-                        t={t}
                         workspaceSlug={slug}
                         contentItemId={item.id}
                         format={item.format}
@@ -742,7 +739,6 @@ export default async function ContentDetailPage({
                     description={t("contentDetail.sectionCreativeDescription")}
                   >
                     <FormatAwareContentEditor
-                      t={t}
                       workspaceSlug={slug}
                       contentItemId={item.id}
                       format={item.format}
@@ -1023,7 +1019,7 @@ export default async function ContentDetailPage({
                   useful content area rather than stretching to
                   fill the entire viewport. */}
                 {activityEvents.length > 0 ? (
-                  <ActivityWithFilters events={activityEvents} t={t} />
+                  <ActivityWithFilters events={activityEvents} />
                 ) : (
                   <div
                     className="border-border bg-surface-subtle mx-auto flex max-w-md flex-col items-center gap-3 rounded-[var(--radius-card)] border border-dashed px-6 py-10 text-center"
@@ -1047,7 +1043,6 @@ export default async function ContentDetailPage({
           activityCount: activityEvents.length,
           openCommentCount: openCommentsCount,
           mentionCount,
-          t,
         }}
         footer={
           <p className="text-label text-fg-muted text-center">

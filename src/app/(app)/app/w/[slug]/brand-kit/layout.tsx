@@ -2,7 +2,6 @@ import * as React from "react";
 import { redirect, notFound } from "next/navigation";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
-import { tForActive } from "@/lib/i18n/t-for-active";
 import { BrandKitBreadcrumb } from "./_components/brand-kit-breadcrumb";
 
 /**
@@ -32,11 +31,9 @@ export default async function BrandKitLayout({
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
-  const { t } = await tForActive();
-
   return (
     <div className="space-y-4" data-testid="brand-kit-layout">
-      <BrandKitBreadcrumb workspaceName={workspace.name} t={t} />
+      <BrandKitBreadcrumb workspaceName={workspace.name} />
       {children}
     </div>
   );

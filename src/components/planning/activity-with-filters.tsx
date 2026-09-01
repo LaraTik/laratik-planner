@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ActivityTimeline, type ActivityEventView } from "./activity-timeline";
 import { cn } from "@/lib/utils";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * ActivityWithFilters — the Activity tab body, with the
@@ -84,14 +85,16 @@ export interface ActivityWithFiltersProps {
    * `<ActivityTimeline>` so its kind-based humanised
    * phrases render in the active locale.
    */
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export function ActivityWithFilters({
   events,
   defaultFilter = "all",
-  t,
+  t: tProp,
 }: ActivityWithFiltersProps) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const [filter, setFilter] = React.useState<ActivityFilterId>(defaultFilter);
 
   const counts = React.useMemo(() => {

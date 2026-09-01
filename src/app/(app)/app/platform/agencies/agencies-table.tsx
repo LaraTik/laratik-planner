@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Building2 } from "lucide-react";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Row shape for the platform-agencies table. Owned by the server
@@ -36,12 +37,11 @@ export type PlatformAgencyRow = {
 export function AgenciesTable({
   rows,
   relativeNow,
-  t,
 }: {
   rows: readonly PlatformAgencyRow[];
   relativeNow: string;
-  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const t = useLocaleT();
   const [query, setQuery] = React.useState("");
   const columns = React.useMemo(() => createColumns(new Date(relativeNow), t), [relativeNow, t]);
 

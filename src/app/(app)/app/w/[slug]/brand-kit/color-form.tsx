@@ -8,6 +8,7 @@ import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * ColorForm — inline create form for the brand-kit color palette.
@@ -74,7 +75,7 @@ function expandHex(raw: string): string {
 
 export function ColorForm({
   slug,
-  t,
+  t: tProp,
 }: {
   slug: string;
   /**
@@ -86,7 +87,12 @@ export function ColorForm({
    */
   t?: (key: string) => string;
 }) {
-  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
+  const tr = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
   const [state, action] = useActionState(
     createColorAssetAction.bind(null, slug),
     {} as { error?: string; success?: boolean },

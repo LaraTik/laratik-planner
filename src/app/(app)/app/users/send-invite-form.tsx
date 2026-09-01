@@ -9,6 +9,7 @@ import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { sendInviteAction, type InviteActionState } from "./actions";
 import { WorkspaceRoleMatrix } from "./_components/workspace-role-matrix";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 const initialState: InviteActionState = {};
 
@@ -23,11 +24,13 @@ const initialState: InviteActionState = {};
  */
 export function SendInviteForm({
   workspaces,
-  t,
+  t: tProp,
 }: {
   workspaces: { id: string; name: string }[];
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const [state, formAction] = useActionState(sendInviteAction, initialState);
   // Derive the form's `key` from the invitation id. Each successful
   // submit changes the invitation id, so the form remounts and all

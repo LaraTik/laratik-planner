@@ -97,7 +97,7 @@ export default async function BrandKitColorsPage({
         aria-label={t("brandKit.colorsAria")}
         data-testid="brand-kit-section-colors"
       >
-        {canManage ? <ColorForm slug={slug} t={t} /> : null}
+        {canManage ? <ColorForm slug={slug} /> : null}
         <ColorSwatchGrid slug={slug} canManage={canManage} assets={colors} t={t} />
       </SectionCard>
     </div>

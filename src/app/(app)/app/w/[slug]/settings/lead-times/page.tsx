@@ -97,7 +97,6 @@ export default async function SettingsLeadTimesPage({
             values={values}
             approvalMode={approvalMode}
             timezone={workspace.timezone}
-            t={t}
           />
         ) : (
           <p className="text-label text-fg-muted">{t("settings.leadTimes.readOnly")}</p>

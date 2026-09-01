@@ -13,6 +13,7 @@ import { PasswordStrengthMeter } from "@/components/forms/password-strength-mete
 import { WorkspaceRoleMatrix } from "./_components/workspace-role-matrix";
 import { passwordStrength, type PasswordStrength } from "@/lib/auth/user-create-command";
 import { createUserDirectlyAction, type AddDirectlyActionState } from "./actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 const initialState: AddDirectlyActionState = {};
 
@@ -43,11 +44,13 @@ const initialState: AddDirectlyActionState = {};
  */
 export function AddDirectlyForm({
   workspaces,
-  t,
+  t: tProp,
 }: {
   workspaces: { id: string; name: string }[];
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const [state, formAction] = useActionState(createUserDirectlyAction, initialState);
   const formKey = state?.success && state.userId ? state.userId : "initial";
   const fieldErrors = state?.fieldErrors ?? {};

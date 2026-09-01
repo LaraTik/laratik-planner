@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Pencil, UserCheck, UserX } from "lucide-react";
 import { toggleDeactivationAction } from "./actions";
 import { MemberEditDrawer, type MemberEditWorkspace } from "./member-edit-drawer";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 type MemberRow = {
   id: string;
@@ -22,7 +23,7 @@ export function MemberList({
   workspaces,
   rolesByUser,
   members,
-  t,
+  t: tProp,
 }: {
   actorId: string;
   workspaces: { id: string; name: string }[];
@@ -33,8 +34,10 @@ export function MemberList({
    */
   rolesByUser: Record<string, Record<string, string[]>>;
   members: MemberRow[];
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<MemberRow | null>(null);

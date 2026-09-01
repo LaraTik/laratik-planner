@@ -229,12 +229,7 @@ export default async function WorkspaceSettingsPage({
       </ul>
 
       {canBulkReset ? (
-        <BulkResetSection
-          workspaceSlug={slug}
-          workspaceName={workspace.name}
-          counts={bulkCounts}
-          t={t}
-        />
+        <BulkResetSection workspaceSlug={slug} workspaceName={workspace.name} counts={bulkCounts} />
       ) : null}
     </div>
   );

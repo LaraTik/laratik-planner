@@ -75,12 +75,7 @@ export default async function SettingsLifecyclePage({
         data-testid="settings-section-lifecycle"
       >
         {canManage ? (
-          <LifecycleForm
-            slug={slug}
-            timezone={workspace.timezone}
-            monthlyTarget={monthlyTarget}
-            t={t}
-          />
+          <LifecycleForm slug={slug} timezone={workspace.timezone} monthlyTarget={monthlyTarget} />
         ) : (
           <p className="text-label text-fg-muted">{t("settings.lifecycle.readOnly")}</p>
         )}

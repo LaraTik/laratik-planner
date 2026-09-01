@@ -156,13 +156,8 @@ export default async function PlatformAccessPage() {
       cellClassName: "text-end",
       cell: (row) => (
         <div className="flex justify-end gap-1">
-          <ChangePlatformRoleDialog
-            userId={row.userId}
-            email={row.email}
-            currentRole={row.role}
-            t={t}
-          />
-          <RevokePlatformAccessDialog userId={row.userId} email={row.email} role={row.role} t={t} />
+          <ChangePlatformRoleDialog userId={row.userId} email={row.email} currentRole={row.role} />
+          <RevokePlatformAccessDialog userId={row.userId} email={row.email} role={row.role} />
         </div>
       ),
     });
@@ -282,7 +277,7 @@ export default async function PlatformAccessPage() {
             <CardTitle>{t("platform.accessAddMember")}</CardTitle>
           </div>
           <CardDescription>{t("platform.addMemberDescription")}</CardDescription>
-          <GrantPlatformAccessForm t={t} />
+          <GrantPlatformAccessForm />
         </Card>
       ) : null}
 
@@ -332,13 +327,11 @@ export default async function PlatformAccessPage() {
                           userId={row.userId}
                           email={row.email}
                           currentRole={row.role}
-                          t={t}
                         />
                         <RevokePlatformAccessDialog
                           userId={row.userId}
                           email={row.email}
                           role={row.role}
-                          t={t}
                         />
                       </div>
                     ) : null}

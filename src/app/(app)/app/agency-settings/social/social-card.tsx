@@ -22,6 +22,7 @@ import {
   rotateSocialDekAction,
   type SocialActionState,
 } from "./actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * M4.5 — social analytics card on the agency settings page.
@@ -78,7 +79,6 @@ function interpolate(template: string, params: Record<string, string | number>):
 export function SocialCard({
   agencyId,
   initialStatus,
-  t,
 }: {
   agencyId: string;
   initialStatus: SocialStatus;
@@ -87,8 +87,8 @@ export function SocialCard({
    * bodies render from `agencySocial.{disableTitle,disableBody,recoveryTitle,recoveryBody}`;
    * when omitted, the hard-coded English copy is used.
    */
-  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const t = useLocaleT();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t ? t(key, params) : params ? interpolate(fallback, params) : fallback;
   const [status, setStatus] = React.useState<SocialStatus>(initialStatus);

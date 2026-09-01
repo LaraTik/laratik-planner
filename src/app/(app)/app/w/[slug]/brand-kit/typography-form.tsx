@@ -15,6 +15,7 @@ import {
   fontClassFor,
   KNOWN_FAMILY_NAMES,
 } from "@/lib/brand/typography-families";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * TypographyForm — create form for the brand-kit Typography section.
@@ -57,7 +58,7 @@ const SAMPLE_TEXT = "The quick brown fox jumps over the lazy dog";
 
 export function TypographyForm({
   slug,
-  t,
+  t: tProp,
 }: {
   slug: string;
   /**
@@ -71,8 +72,12 @@ export function TypographyForm({
    */
   t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
-  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
-    t ? t(key, params) : fallback;
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
+    const value = t(key, params);
+    return value === key ? fallback : value;
+  };
   const [state, action] = useActionState(
     createFontAssetAction.bind(null, slug),
     {} as { error?: string; success?: boolean },
@@ -195,7 +200,7 @@ export function TypographyForm({
         </div>
 
         <div className="flex items-center justify-end">
-          <SubmitButton {...(t ? { t } : {})} />
+          <SubmitButton t={t} />
         </div>
         {state?.error ? (
           <p role="alert" className="text-label text-danger font-semibold">

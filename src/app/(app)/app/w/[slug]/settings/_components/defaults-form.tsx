@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { updateDefaultsSettingsAction, type SettingsActionState } from "../actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 type PersonOption = { id: string; label: string };
 
@@ -30,7 +31,7 @@ export function DefaultsForm({
   internalCreativeReviewers,
   clientReviewers,
   values,
-  t,
+  t: tProp,
 }: {
   slug: string;
   designers: PersonOption[];
@@ -43,8 +44,10 @@ export function DefaultsForm({
     defaultInternalCreativeReviewerId: string | null;
     defaultClientReviewerId: string | null;
   };
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const action = updateDefaultsSettingsAction.bind(null, slug);
   const [state, formAction] = useActionState<SettingsActionState, FormData>(action, {});
 

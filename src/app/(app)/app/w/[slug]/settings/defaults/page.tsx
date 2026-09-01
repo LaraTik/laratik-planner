@@ -119,7 +119,6 @@ export default async function SettingsDefaultsPage({
                 settings?.defaultInternalCreativeReviewerId ?? null,
               defaultClientReviewerId: settings?.defaultClientReviewerId ?? null,
             }}
-            t={t}
           />
         ) : (
           <p className="text-label text-fg-muted">{t("settings.defaults.readOnly")}</p>

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { CommentRecord, CommentRoleFlags } from "@/components/comments/comment-item";
 import { CommentItem } from "@/components/comments/comment-item";
 import { CommentForm } from "@/components/comments/comment-form";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Discussion drawer — right-side collaboration panel.
@@ -51,7 +52,6 @@ export interface DiscussionDrawerProps {
    * and `<CommentForm>` so the entire discussion surface
    * renders in the active locale.
    */
-  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export function DiscussionDrawer({
@@ -64,8 +64,8 @@ export function DiscussionDrawer({
   canPostClientVisible,
   open,
   onOpenChange,
-  t,
 }: DiscussionDrawerProps) {
+  const t = useLocaleT();
   const [replyingTo, setReplyingTo] = React.useState<string | null>(null);
   const [showForm, setShowForm] = React.useState(false);
 

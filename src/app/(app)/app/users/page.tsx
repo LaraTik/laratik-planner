@@ -161,10 +161,10 @@ export default async function UsersPage() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="invite">
-            <SendInviteForm workspaces={workspaceList} t={t} />
+            <SendInviteForm workspaces={workspaceList} />
           </TabsContent>
           <TabsContent value="add">
-            <AddDirectlyForm workspaces={workspaceList} t={t} />
+            <AddDirectlyForm workspaces={workspaceList} />
           </TabsContent>
         </Tabs>
       </Card>
@@ -175,7 +175,6 @@ export default async function UsersPage() {
           <Badge variant="info">{pending.length}</Badge>
         </CardHeader>
         <InvitationList
-          t={t}
           invitations={pending.map((i) => ({
             id: i.id,
             email: i.email,
@@ -195,7 +194,6 @@ export default async function UsersPage() {
           <Badge variant="info">{members.length}</Badge>
         </CardHeader>
         <MemberList
-          t={t}
           actorId={session.user.id}
           workspaces={workspaceList}
           rolesByUser={rolesByUser}

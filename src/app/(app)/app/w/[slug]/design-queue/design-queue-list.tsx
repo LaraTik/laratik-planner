@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/content/status-badge";
 import { humanFormat } from "@/lib/content/status";
 import { DesignQueueBulkToolbar } from "./bulk-toolbar";
 import { cn } from "@/lib/utils";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Client-side design-queue list (FEAT-14, GAP-FULL-REVIEW-2026-08-25).
@@ -52,13 +53,15 @@ export function DesignQueueList({
   workspaceId,
   items,
   canBulkArchive,
-  t,
+  t: tProp,
 }: {
   workspaceId: string;
   items: DesignQueueListItem[];
   canBulkArchive: boolean;
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const router = useRouter();
 

@@ -10,6 +10,7 @@ import { FormField } from "@/components/forms/form-field";
 import { Input } from "@/components/ui/input";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
 import { Button } from "@/components/ui/button";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * LogoForm — two-mode create form for the brand-kit Logo section.
@@ -87,7 +88,7 @@ async function uploadFile(args: {
 export function LogoForm({
   slug,
   workspaceId,
-  t,
+  t: tProp,
 }: {
   slug: string;
   workspaceId: string;
@@ -101,6 +102,8 @@ export function LogoForm({
    */
   t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t ? t(key, params) : fallback;
   const [state, action] = useActionState(
@@ -279,12 +282,7 @@ export function LogoForm({
         </FormField>
 
         <div className="flex items-center justify-end">
-          <SubmitButton
-            mode={mode}
-            uploaded={!!uploadedPath}
-            uploading={uploading}
-            {...(t ? { t } : {})}
-          />
+          <SubmitButton mode={mode} uploaded={!!uploadedPath} uploading={uploading} t={t} />
         </div>
         {state?.error ? (
           <p role="alert" className="text-label text-danger font-semibold">

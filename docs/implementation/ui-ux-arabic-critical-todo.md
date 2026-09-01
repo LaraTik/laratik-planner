@@ -60,7 +60,7 @@ Acceptance criteria:
 
 ## P1 — I18N-002: translator functions cross Server/Client boundaries
 
-Status: In progress — account boundary fixed; remaining route inventory is still open
+Status: Implemented in code — authenticated route evidence remains pending
 
 Evidence:
 
@@ -75,15 +75,18 @@ Required fix:
 - Do not serialize the entire catalog per page and do not silence the React error.
 - Add a regression guard that fails when a Server Component passes a function-valued translator prop into a Client Component.
 
-Implemented in `ad26213`: account forms and the channels create form no longer
-receive server translator functions; the root `LocaleProvider` creates the
-translator in the client tree. The full repository still contains legacy
-`t={t}` call sites in other routes, which remain a follow-up blocker.
+Implemented in `ad26213` and follow-up boundary pass: account forms, channels,
+agency/platform administration, users, brand kit, design queue, planning
+detail, and workspace settings no longer receive translator functions from
+Server Components. Client forms resolve the active translator from the root
+`LocaleProvider` while retaining an optional test-only override. The new
+`tests/unit/i18n/rsc-translator-boundary.test.ts` regression guard scans all
+source imports and fails on a client boundary that reintroduces `t={t}`.
 
 Acceptance criteria:
 
-- [ ] `/app/account` and every inventoried route render without RSC serialization errors.
-- [ ] No Server → Client `t={t}` boundary remains.
+- [ ] `/app/account` and every inventoried route render without RSC serialization errors (requires authenticated E2E).
+- [x] No Server → Client `t={t}` boundary remains (static regression guard passes).
 - [ ] English and Arabic interactive states still translate after client updates.
 - [ ] Focused unit tests and authenticated E2E cover at least account, users, planning detail, and settings.
 

@@ -9,6 +9,7 @@ import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * PillarForm — inline create form for the brand-kit Pillars
@@ -41,7 +42,7 @@ function expandHex(raw: string): string {
 
 export function PillarForm({
   slug,
-  t,
+  t: tProp,
 }: {
   slug: string;
   /**
@@ -53,7 +54,12 @@ export function PillarForm({
    */
   t?: (key: string) => string;
 }) {
-  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
+  const tr = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
   const [state, action] = useActionState(createPillarAction.bind(null, slug), {} as FormState);
   const [color, setColor] = React.useState("#6366F1");
   const [name, setName] = React.useState("");

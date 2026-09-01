@@ -11,6 +11,7 @@ import {
   editAgencyAction,
   type EditAgencyActionState,
 } from "@/app/(app)/app/agency-settings/actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 const initial: EditAgencyActionState = {};
 
@@ -93,7 +94,6 @@ export function EditAgencyForm({
   formAction,
   actionState,
   hiddenFields = {},
-  t,
 }: {
   initialName: string;
   initialSlug: string;
@@ -103,9 +103,8 @@ export function EditAgencyForm({
   formAction?: (formData: FormData) => void | Promise<void>;
   actionState?: EditAgencyActionState;
   hiddenFields?: Record<string, string>;
-  t?: Translator;
 }) {
-  const tr: Translator = t ?? EN_FALLBACK;
+  const tr: Translator = useLocaleT() ?? EN_FALLBACK;
   const [localState, defaultAction, pending] = useActionState(editAgencyAction, initial);
   const state = actionState ?? localState;
   void pending; // pending is read by FormSubmitButton via useFormStatus

@@ -5,6 +5,7 @@ import { AlertOctagon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BulkResetConfirmDialog } from "@/components/forms/bulk-reset-confirm-dialog";
 import type { ResetAllIdeasCounts } from "@/lib/content/reset-all-ideas";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Bulk "Reset all ideas" Danger zone section.
@@ -21,13 +22,12 @@ export function BulkResetSection({
   workspaceSlug,
   workspaceName,
   counts,
-  t,
 }: {
   workspaceSlug: string;
   workspaceName: string;
   counts: ResetAllIdeasCounts;
-  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const t = useLocaleT();
   const [open, setOpen] = React.useState(false);
   return (
     <section
@@ -64,7 +64,6 @@ export function BulkResetSection({
         workspaceSlug={workspaceSlug}
         workspaceName={workspaceName}
         counts={counts}
-        t={t}
       />
     </section>
   );

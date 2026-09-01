@@ -15,6 +15,7 @@ import {
 } from "./actions";
 import type { MonthlyUsage } from "@/lib/ai/feature-settings";
 import { ADMIN_FACING_CAPABILITIES, AI_PROVIDER } from "@/lib/ai/capabilities";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 const initial: AiSettingsActionState = {};
 
@@ -42,7 +43,6 @@ export function AiSettingsForm({
   lastTestAt,
   lastTestOk,
   usage,
-  t,
 }: {
   initialEnabled: boolean;
   initialModel: string;
@@ -57,9 +57,9 @@ export function AiSettingsForm({
   lastTestAt: string | null;
   lastTestOk: boolean | null;
   usage: MonthlyUsage;
-  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
-  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
+  const t = useLocaleT();
+  const tr = (key: string, fallback: string) => t(key) || fallback;
   const [state, formAction] = useActionState(saveAiSettingsAction, initial);
   const [testState, setTestState] = React.useState<AiSettingsActionState>({});
   const [testing, setTesting] = React.useState(false);

@@ -10,6 +10,7 @@ import { updateLeadTimesSettingsAction, type SettingsActionState } from "../acti
 import { suggestLeadTimesAction } from "../ai-suggestions";
 import { LeadTimeTimeline } from "./lead-time-timeline";
 import { LeadTimeDeadline } from "./lead-time-deadline";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * LeadTimesForm — per-section form for the Settings → Lead
@@ -46,14 +47,16 @@ export function LeadTimesForm({
   values,
   approvalMode,
   timezone,
-  t,
+  t: tProp,
 }: {
   slug: string;
   values: LeadTimeValues;
   approvalMode: "simple" | "internal_then_client";
   timezone: string;
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   // `today` is captured once at component mount so the AI
   // preview's deadline-impact line is stable while the user
   // is interacting (and matches the page-level "What this

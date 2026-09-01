@@ -9,6 +9,7 @@ import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { cn } from "@/lib/utils";
 import { updateApprovalsSettingsAction, type SettingsActionState } from "../actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * ApprovalsForm — per-section form for the Settings → Approval
@@ -35,11 +36,13 @@ type ApprovalsFormProps = {
     creativeApprovalLeadDays: number;
     readyToPublishLeadDays: number;
   };
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 };
 
 export function ApprovalsForm(props: ApprovalsFormProps) {
-  const { slug, currentMode, leadTimes, t } = props;
+  const { slug, currentMode, leadTimes, t: tProp } = props;
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const MODES: {
     value: ApprovalMode;
     label: string;

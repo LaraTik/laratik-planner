@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Home } from "lucide-react";
 import { DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 import { isActivePath } from "@/lib/utils";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * BrandKitBreadcrumb — a compact breadcrumb that sits above every
@@ -32,11 +33,13 @@ const BRAND_KIT_SECTION_KEYS: Record<string, string> = {
 
 export function BrandKitBreadcrumb({
   workspaceName,
-  t,
+  t: tProp,
 }: {
   workspaceName: string;
-  t: (key: string) => string;
+  t?: (key: string) => string;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const pathname = usePathname();
   // The current section is the segment after `/brand-kit/`. Empty
   // string means we're on the overview (`/brand-kit` itself).

@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { PLATFORM_ROLE_DETAILS, type PlatformRole } from "@/lib/auth/platform-access-types";
 import { revokePlatformAccessAction, type PlatformAccessActionState } from "./actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 const initial: PlatformAccessActionState = {};
 
@@ -30,13 +31,15 @@ export function RevokePlatformAccessDialog({
   userId,
   email,
   role,
-  t,
+  t: tProp,
 }: {
   userId: string;
   email: string;
   role: PlatformRole;
-  t: Translator;
+  t?: Translator;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(revokePlatformAccessAction, initial);
   return (

@@ -8,6 +8,7 @@ import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
 import { VoiceRuleSuggestions } from "./voice-rule-suggestions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * VoiceForm — three inline sub-forms (Tone / Do / Don't) that all
@@ -142,7 +143,7 @@ function RuleSubForm({
 
 export function VoiceForm({
   slug,
-  t,
+  t: tProp,
 }: {
   slug: string;
   /**
@@ -154,6 +155,8 @@ export function VoiceForm({
    */
   t?: (key: string) => string;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const [tone, setTone] = React.useState("");
   const [doRule, setDoRule] = React.useState("");
   const [dontRule, setDontRule] = React.useState("");
@@ -162,36 +165,14 @@ export function VoiceForm({
     <div className="mb-3 grid gap-3 sm:grid-cols-3">
       <Card padding="md">
         <div className="space-y-3">
-          <RuleSubForm
-            slug={slug}
-            ruleType="tone"
-            value={tone}
-            onValueChange={setTone}
-            {...(t ? { t } : {})}
-          />
-          <VoiceRuleSuggestions
-            slug={slug}
-            ruleType="tone"
-            onPick={setTone}
-            {...(t ? { t } : {})}
-          />
+          <RuleSubForm slug={slug} ruleType="tone" value={tone} onValueChange={setTone} t={t} />
+          <VoiceRuleSuggestions slug={slug} ruleType="tone" onPick={setTone} t={t} />
         </div>
       </Card>
       <Card padding="md">
         <div className="space-y-3">
-          <RuleSubForm
-            slug={slug}
-            ruleType="do"
-            value={doRule}
-            onValueChange={setDoRule}
-            {...(t ? { t } : {})}
-          />
-          <VoiceRuleSuggestions
-            slug={slug}
-            ruleType="do"
-            onPick={setDoRule}
-            {...(t ? { t } : {})}
-          />
+          <RuleSubForm slug={slug} ruleType="do" value={doRule} onValueChange={setDoRule} t={t} />
+          <VoiceRuleSuggestions slug={slug} ruleType="do" onPick={setDoRule} t={t} />
         </div>
       </Card>
       <Card padding="md">
@@ -201,14 +182,9 @@ export function VoiceForm({
             ruleType="dont"
             value={dontRule}
             onValueChange={setDontRule}
-            {...(t ? { t } : {})}
+            t={t}
           />
-          <VoiceRuleSuggestions
-            slug={slug}
-            ruleType="dont"
-            onPick={setDontRule}
-            {...(t ? { t } : {})}
-          />
+          <VoiceRuleSuggestions slug={slug} ruleType="dont" onPick={setDontRule} t={t} />
         </div>
       </Card>
     </div>

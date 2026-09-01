@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { ContentStatus } from "@/lib/content/status";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * PlanningListActions — three-dot quick actions menu for a
@@ -60,10 +61,10 @@ export function PlanningListActions({
   canSubmit,
   canArchive,
   className,
-  t,
 }: PlanningListActionsProps) {
+  const t = useLocaleT();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
-    t ? t(key, params) : fallback;
+    t(key, params) === key ? fallback : t(key, params);
   const detailHref = `/app/w/${workspaceSlug}/planning/${itemId}`;
   const isDraft = status === "draft";
   const isChangesRequested = status === "changes_requested";

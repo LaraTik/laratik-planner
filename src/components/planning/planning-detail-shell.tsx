@@ -33,14 +33,6 @@ export interface PlanningDetailShellWorkspaceProps {
   activityCount: number;
   openCommentCount: number;
   mentionCount: number;
-  /**
-   * Bound translator from the parent planning detail page.
-   * Threaded to `<WorkspaceShell>` (and onward to the
-   * discussion drawer + comments + composer + mention
-   * picker) so the discussion surface renders in the
-   * active locale.
-   */
-  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 /**

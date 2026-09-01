@@ -4,6 +4,7 @@ import * as React from "react";
 import { Archive, CheckSquare, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { bulkArchiveDesignQueueAction } from "./actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Bulk-action toolbar for the design queue (FEAT-14,
@@ -19,15 +20,17 @@ export function DesignQueueBulkToolbar({
   selected,
   onChange,
   onArchived,
-  t,
+  t: tProp,
 }: {
   workspaceId: string;
   itemIds: string[];
   selected: Set<string>;
   onChange: (next: Set<string>) => void;
   onArchived: () => void;
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 

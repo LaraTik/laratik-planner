@@ -96,12 +96,7 @@ export default async function DesignQueuePage({ params }: { params: Promise<{ sl
           </>
         }
       />
-      <DesignQueueList
-        workspaceId={workspace.id}
-        items={items}
-        canBulkArchive={canBulkArchive}
-        t={t}
-      />
+      <DesignQueueList workspaceId={workspace.id} items={items} canBulkArchive={canBulkArchive} />
     </div>
   );
 }

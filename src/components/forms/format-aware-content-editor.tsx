@@ -15,6 +15,7 @@ import {
 } from "./format-payload-field-renderers";
 import type { ContentFormat } from "@/lib/format-payload/schemas";
 import { humanFormat } from "@/lib/content/status";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * FormatAwareContentEditor — sectioned, format-aware
@@ -69,7 +70,7 @@ export interface FormatAwareContentEditorProps {
   /** Bound translator from `tForActive()`. Resolves the field's
    *  `labelKey` and the section's `titleKey` / `descriptionKey`
    *  through the active message catalog. */
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
   workspaceSlug: string;
   contentItemId: string;
   format: ContentFormat;
@@ -318,7 +319,7 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
 };
 
 export function FormatAwareContentEditor({
-  t,
+  t: tProp,
   workspaceSlug,
   contentItemId,
   format,
@@ -327,6 +328,8 @@ export function FormatAwareContentEditor({
   locale,
   aiEnabled,
 }: FormatAwareContentEditorProps) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const [payload, setPayload] = React.useState<Record<string, unknown>>(initialPayload);
   const initialJson = React.useMemo(() => JSON.stringify(initialPayload), [initialPayload]);
   // Reset the payload only when the initial changes (e.g.

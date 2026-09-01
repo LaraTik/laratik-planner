@@ -21,6 +21,7 @@ import {
   type PlatformRole,
 } from "@/lib/auth/platform-access-types";
 import { changePlatformRoleAction, type PlatformAccessActionState } from "./actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 const initial: PlatformAccessActionState = {};
 
@@ -34,13 +35,15 @@ export function ChangePlatformRoleDialog({
   userId,
   email,
   currentRole,
-  t,
+  t: tProp,
 }: {
   userId: string;
   email: string;
   currentRole: PlatformRole;
-  t: Translator;
+  t?: Translator;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(changePlatformRoleAction, initial);
   return (

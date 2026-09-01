@@ -66,7 +66,7 @@ export default async function SettingsApprovalsPage({
         data-testid="settings-section-approvals"
       >
         {canManage ? (
-          <ApprovalsForm slug={slug} currentMode={currentMode} leadTimes={leadTimes} t={t} />
+          <ApprovalsForm slug={slug} currentMode={currentMode} leadTimes={leadTimes} />
         ) : (
           <p className="text-label text-fg-muted">{t("settings.approvals.readOnly")}</p>
         )}

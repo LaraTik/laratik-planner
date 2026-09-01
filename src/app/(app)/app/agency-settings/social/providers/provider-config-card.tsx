@@ -13,6 +13,7 @@ import {
   testProviderConfigAction,
   type ProviderConfigFormState,
 } from "./actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 // Hydration-aware `window.location.origin` reader. Mirrors the
 // pattern in `edit-agency-form.tsx` (browser-only value, server
@@ -127,16 +128,14 @@ export function ProviderConfigCard({
   agencySlug,
   actorId,
   existing,
-  t,
 }: {
   provider: "meta" | "tiktok";
   agencyId: string;
   agencySlug: string;
   actorId: string;
   existing: ExistingSummary | null;
-  t?: Translator;
 }) {
-  const tr: Translator = t ?? EN_FALLBACK;
+  const tr: Translator = useLocaleT() ?? EN_FALLBACK;
   const meta = PROVIDER_META[provider];
   const [appId, setAppId] = useState(existing?.appId ?? "");
   const [appSecret, setAppSecret] = useState("");

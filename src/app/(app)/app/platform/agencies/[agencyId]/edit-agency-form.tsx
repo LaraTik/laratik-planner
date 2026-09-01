@@ -6,8 +6,6 @@ import { platformEditAgencyAction, type PlatformEditAgencyActionState } from "./
 
 const initial: PlatformEditAgencyActionState = {};
 
-type Translator = (key: string, params?: Record<string, string | number>) => string;
-
 /**
  * Platform-scoped wrapper around the shared EditAgencyForm
  * (M3.4 — agency CRUD). The wrapper:
@@ -28,14 +26,12 @@ export function PlatformEditAgencyForm({
   initialSlug,
   initialLocale,
   initialTimezone,
-  t,
 }: {
   agencyId: string;
   initialName: string;
   initialSlug: string;
   initialLocale: string;
   initialTimezone: string;
-  t?: Translator;
 }) {
   // useActionState returns a (prev, formData) => Promise<state>
   // action. EditAgencyForm expects a (formData) => Promise<void>
@@ -55,7 +51,6 @@ export function PlatformEditAgencyForm({
       formAction={formAction}
       actionState={state}
       hiddenFields={{ agencyId }}
-      {...(t ? { t } : {})}
     />
   );
 }

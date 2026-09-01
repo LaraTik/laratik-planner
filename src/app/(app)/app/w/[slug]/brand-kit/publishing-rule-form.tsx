@@ -6,6 +6,7 @@ import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * PublishingRuleForm — inline create form for the brand-kit
@@ -60,7 +61,7 @@ const TYPE_FALLBACK: Record<"alt_text" | "hashtag" | "compliance" | "channel" | 
 
 export function PublishingRuleForm({
   slug,
-  t,
+  t: tProp,
 }: {
   slug: string;
   /**
@@ -72,7 +73,12 @@ export function PublishingRuleForm({
    */
   t?: (key: string) => string;
 }) {
-  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
+  const tr = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
   const [state, action] = useActionState(
     createPublishingRuleAction.bind(null, slug),
     {} as FormState,

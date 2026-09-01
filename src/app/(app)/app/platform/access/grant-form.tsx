@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PLATFORM_ROLE_DETAILS, PLATFORM_ROLE_VALUES } from "@/lib/auth/platform-access-types";
 import { grantPlatformAccessAction, type PlatformAccessActionState } from "./actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 const initial: PlatformAccessActionState = {};
 
@@ -19,7 +20,9 @@ function roleDescription(role: (typeof PLATFORM_ROLE_VALUES)[number], t: Transla
   return t(`platform.roleLabels.${role}.description`) || PLATFORM_ROLE_DETAILS[role].description;
 }
 
-export function GrantPlatformAccessForm({ t }: { t: Translator }) {
+export function GrantPlatformAccessForm({ t: tProp }: { t?: Translator } = {}) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const [state, action] = useActionState(grantPlatformAccessAction, initial);
   return (
     <form action={action} className="grid gap-4" data-testid="platform-access-grant-form">

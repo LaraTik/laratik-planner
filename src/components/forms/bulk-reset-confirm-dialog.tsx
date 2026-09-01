@@ -24,6 +24,7 @@ import {
   CONTENT_STATUS_LABELS,
   type ResetAllIdeasCounts,
 } from "@/lib/content/reset-all-ideas-shared";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Bulk destructive "Reset all ideas" confirm dialog.
@@ -48,15 +49,17 @@ export function BulkResetConfirmDialog({
   workspaceSlug,
   workspaceName,
   counts,
-  t,
+  t: tProp,
 }: {
   open: boolean;
   onOpenChange: (next: boolean) => void;
   workspaceSlug: string;
   workspaceName: string;
   counts: ResetAllIdeasCounts;
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const action = resetAllIdeasAction.bind(null, workspaceSlug);
   const [state, formAction, pending] = useActionState<ResetAllIdeasActionState, FormData>(action, {
     ok: false,

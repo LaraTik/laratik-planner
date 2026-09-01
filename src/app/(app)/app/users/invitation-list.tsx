@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Building2, CheckCircle2, Mail, RotateCcw, X } from "lucide-react";
 import { resendInviteAction, revokeInviteAction } from "./actions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 type InvitationRow = {
   id: string;
@@ -40,11 +41,13 @@ const ROLE_LABEL_KEY: Record<string, string> = {
  */
 export function InvitationList({
   invitations,
-  t,
+  t: tProp,
 }: {
   invitations: InvitationRow[];
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const [pending, start] = useTransition();
   const [rowMessages, setRowMessages] = useState<
     Record<string, { kind: "error" | "success"; text: string }>

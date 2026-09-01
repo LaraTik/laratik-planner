@@ -250,7 +250,6 @@ export default async function PlatformAgencyDetailPage({
             initialSlug={detail.slug}
             initialLocale={detail.locale}
             initialTimezone={detail.timezone}
-            t={t}
           />
         ) : (
           <PermissionNotice

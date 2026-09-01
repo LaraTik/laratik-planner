@@ -150,7 +150,6 @@ export default async function AgencyAiSettingsPage() {
       />
 
       <AiSettingsForm
-        t={t}
         initialEnabled={feature?.enabled ?? true}
         initialModel={feature?.model ?? envModel}
         initialCapabilities={[...(feature?.enabledCapabilities ?? [])]}

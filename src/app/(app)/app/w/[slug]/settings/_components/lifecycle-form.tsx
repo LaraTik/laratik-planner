@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { updateLifecycleSettingsAction, type SettingsActionState } from "../actions";
 import { suggestMonthlyTargetAction } from "../ai-suggestions";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * LifecycleForm — per-section form for the Settings → Lifecycle
@@ -21,13 +22,15 @@ export function LifecycleForm({
   slug,
   timezone,
   monthlyTarget,
-  t,
+  t: tProp,
 }: {
   slug: string;
   timezone: string;
   monthlyTarget: number | null;
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   const action = updateLifecycleSettingsAction.bind(null, slug);
   const [state, formAction] = useActionState<SettingsActionState, FormData>(action, {});
   const [tz, setTz] = React.useState(timezone);

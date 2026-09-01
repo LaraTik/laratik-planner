@@ -32,6 +32,7 @@ import { ReasonDialog } from "@/components/forms/reason-dialog";
 import { STEP_EXPLANATIONS, explainStatus } from "@/lib/content/workflow-explanations";
 import { type WorkflowStage, stageForStatus } from "./workflow-stepper";
 import { cn } from "@/lib/utils";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 type Role =
   | "isManager"
@@ -211,7 +212,11 @@ export function railStageForStatus(status: string): {
  *     opens a slide-up sheet that mounts `WorkflowRailBody`.
  */
 export function WorkflowRail(props: WorkflowRailBodyProps) {
-  const tr = (key: string, fallback: string) => (props.t ? props.t(key) : fallback);
+  const t = useLocaleT();
+  const tr = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const [hydrated, setHydrated] = useState<boolean>(false);
 
@@ -286,7 +291,7 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
                 data-active={state.kind === "current" || undefined}
                 title={STAGE_LABEL[stage]}
               >
-                <StageIcon kind={state.kind} compact {...(props.t ? { t: props.t } : {})} />
+                <StageIcon kind={state.kind} compact t={t} />
               </li>
             );
           })}
@@ -345,7 +350,6 @@ export interface WorkflowRailBodyProps {
    * + descriptions render from `contentDetail.workflow.*`; when
    * omitted, the hard-coded English copy is used.
    */
-  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 function WorkflowRailBody({
@@ -357,7 +361,6 @@ function WorkflowRailBody({
   roles,
   approvals,
   designers,
-  t,
 }: {
   workspaceSlug: string;
   contentItemId: string;
@@ -373,9 +376,12 @@ function WorkflowRailBody({
     deliveryVersionId: string | null;
   }[];
   designers: { id: string; label: string }[];
-  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
-  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
+  const t = useLocaleT();
+  const tr = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
   const [pending, start] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -494,7 +500,7 @@ function WorkflowRailBody({
               data-stage-id={stage}
               data-active={expanded || undefined}
             >
-              <RailStageRow stage={stage} label={label} status={status} {...(t ? { t } : {})} />
+              <RailStageRow stage={stage} label={label} status={status} t={t} />
               {expanded ? (
                 <div
                   className="border-border bg-surface-subtle ms-7 mt-1 space-y-2 rounded-[var(--radius-control)] border p-2"
@@ -571,7 +577,7 @@ function WorkflowRailBody({
                           });
                           if (result?.error) setActionError(result.error);
                         }}
-                        {...(t ? { t } : {})}
+                        t={t}
                       />
 
                       {!hasAnyButton && currentEligibleRoles.length > 0 ? (
