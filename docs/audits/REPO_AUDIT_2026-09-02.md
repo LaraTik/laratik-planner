@@ -1,7 +1,9 @@
 # LaraTik Planner — Repository Audit
 
 Date: 2026-09-02  
-Baseline: `09354a5` (`main`, clean working tree)
+Audit-fix baseline: `a41582f` (`main`, clean at commit time; the current
+checkout also contains separate uncommitted designer-assignment work owned by
+the user)
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
 responsive, performance, typography, motion, and data-display guidance.
@@ -20,15 +22,18 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 
 ## Baseline evidence
 
-| Gate                   | Result                         | Evidence                                                 |
-| ---------------------- | ------------------------------ | -------------------------------------------------------- |
-| Prettier               | Pass                           | `pnpm format:check`                                      |
-| ESLint                 | Pass                           | `pnpm lint`                                              |
-| TypeScript             | Pass                           | `pnpm exec tsc --noEmit --incremental false`             |
-| Unit tests             | Pass                           | 301 files; 3,034 passed; 4 todo                          |
-| Production build       | Pass                           | `pnpm build`                                             |
-| Working tree           | Clean                          | `git status -sb`                                         |
-| Integration/E2E/visual | Not evidenced in this baseline | Must run against disposable test DB and exact clean HEAD |
+| Gate              | Result    | Evidence                                                |
+| ----------------- | --------- | ------------------------------------------------------- |
+| Prettier          | Pass      | `pnpm format:check`                                     |
+| ESLint            | Pass      | `pnpm lint`                                             |
+| TypeScript        | Pass      | `pnpm exec tsc --noEmit --incremental false`            |
+| Unit tests        | Pass      | 302 files; 3,039 passed; 4 todo                         |
+| Production build  | Pass      | `pnpm build`                                            |
+| Migration drill   | Pass      | 5/5 drills on disposable `planner_test`                 |
+| Integration tests | Pass      | 22 files; 187 tests on disposable `planner_test`        |
+| Focused E2E/a11y  | Pass      | Publishing + Settings axe; 6 Brand Kit admin journeys   |
+| Full E2E/visual   | Pending   | Must run on exact clean release-candidate HEAD          |
+| Working tree      | Not clean | Separate user-owned designer-assignment changes present |
 
 ## Repository inventory
 
@@ -72,6 +77,11 @@ handled before unrelated cleanup.
    typecheck, unit, migration, integration, coverage, build, and operational
    checks are server-side gates; critical E2E and visual review remain documented
    release-candidate checks with exact-HEAD evidence requirements.
+6. **Isolated browser hydration now has a test-runtime CSP exception.** The
+   Playwright runner uses Next's Webpack development server with `NODE_ENV=test`;
+   its non-production CSP now permits the same `unsafe-eval` required by that
+   client runtime, while production continues to prohibit it. The focused
+   Publishing deep-link and Brand Kit mutation journeys now pass.
 
 ### P2 — maintainability and quality
 
@@ -88,6 +98,8 @@ handled before unrelated cleanup.
 6. Replace the four pending TODO tests with explicit tracked coverage or an
    approved reason for keeping them pending.
 7. Add repeatable LCP, INP, CLS, bundle, image, font, and slow-query evidence.
+8. Ensure isolated E2E server processes are reliably cleaned up before a build;
+   this audit observed an orphan Next dev server competing with `next build`.
 
 ### P3 — polish
 
@@ -191,7 +203,9 @@ as the sole release protection; browser and visual evidence remain in Step 6.
 
 Run the disposable database migration drill, integration suite, critical E2E,
 full browser matrix, visual snapshots, axe checks, manual accessibility review,
-and performance measurements at the exact clean commit.
+and performance measurements at the exact clean commit. The migration drill,
+integration suite, focused axe checks, and Brand Kit E2E journeys are evidenced;
+the full browser/visual matrix remains open.
 
 ### Step 7 — Reconcile operations and documentation
 
