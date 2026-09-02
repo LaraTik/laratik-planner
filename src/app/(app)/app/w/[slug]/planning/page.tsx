@@ -27,6 +27,7 @@ import { aggregateHealth } from "@/lib/dashboard/health";
 import { db } from "@/lib/db";
 import { users, workspaceMemberships } from "@/lib/db/schema";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import type { LocaleCode } from "@/lib/i18n/locales";
 
 /**
  * Planning list (Goal 6 master prompt §3 Monthly Planning List).
@@ -344,7 +345,7 @@ export default async function PlanningPage({
 
       <div className="border-border bg-surface rounded-[var(--radius-card)] border p-3">
         <div className="border-border flex items-center justify-between gap-3 border-b pb-3">
-          <MonthNav month={now} buildHref={buildMonthHref} />
+          <MonthNav month={now} buildHref={buildMonthHref} locale={code as LocaleCode} t={t} />
         </div>
         <div className="pt-3">
           <PlanningFiltersBar

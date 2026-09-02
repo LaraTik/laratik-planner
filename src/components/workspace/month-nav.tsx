@@ -2,6 +2,8 @@ import * as React from "react";
 import Link from "next/link";
 
 import { DirAwareChevronLeft, DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
+import { formatDate } from "@/lib/i18n/format-locale";
+import type { LocaleCode } from "@/lib/i18n/locales";
 import { cn } from "@/lib/utils";
 
 /**
@@ -17,23 +19,29 @@ export interface MonthNavProps {
   month: Date;
   /** Returns the search-param value for a relative month offset (-1 / +1). */
   buildHref: (offset: number) => string;
+  /** Active interface locale for the month label and accessible names. */
+  locale: LocaleCode;
+  /** Translates the previous/next month accessible names. */
+  t: (key: string, params?: Record<string, string | number>) => string;
   className?: string;
 }
 
-export function MonthNav({ month, buildHref, className }: MonthNavProps) {
-  const label = month.toLocaleString("default", { month: "long", year: "numeric" });
+export function MonthNav({ month, buildHref, locale, t, className }: MonthNavProps) {
+  const formatMonth = (value: Date) =>
+    formatDate(value, locale, { month: "long", year: "numeric" });
+  const label = formatMonth(month);
   const previousLabel = (() => {
     const d = new Date(month.getFullYear(), month.getMonth() - 1, 1);
-    return d.toLocaleString("default", { month: "long", year: "numeric" });
+    return formatMonth(d);
   })();
   const nextLabel = (() => {
     const d = new Date(month.getFullYear(), month.getMonth() + 1, 1);
-    return d.toLocaleString("default", { month: "long", year: "numeric" });
+    return formatMonth(d);
   })();
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <Link
-        aria-label={`Previous month, ${previousLabel}`}
+        aria-label={t("workspaceOverview.previousMonth", { month: previousLabel })}
         href={buildHref(-1)}
         className="border-border bg-surface focus-visible:ring-focus-ring rounded-[var(--radius-control)] border p-2 transition-colors focus:outline-none focus-visible:ring-2"
       >
@@ -41,7 +49,7 @@ export function MonthNav({ month, buildHref, className }: MonthNavProps) {
       </Link>
       <span className="text-body min-w-32 text-center font-semibold sm:min-w-36">{label}</span>
       <Link
-        aria-label={`Next month, ${nextLabel}`}
+        aria-label={t("workspaceOverview.nextMonth", { month: nextLabel })}
         href={buildHref(1)}
         className="border-border bg-surface focus-visible:ring-focus-ring rounded-[var(--radius-control)] border p-2 transition-colors focus:outline-none focus-visible:ring-2"
       >

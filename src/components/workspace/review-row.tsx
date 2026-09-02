@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { humanFormat } from "@/lib/content/status";
+import { formatDate, DateFormat } from "@/lib/i18n/format-locale";
+import type { LocaleCode } from "@/lib/i18n/locales";
 
 /**
  * Minimal shape the review queue row needs. The page supplies the DB
@@ -27,6 +29,8 @@ export interface ReviewRowProps {
   nowMs: number;
   /** Optional override for the "overdue" badge variant. */
   overdueVariant?: "danger" | "warning";
+  /** Active interface locale for requested and due dates. */
+  locale: LocaleCode;
   /**
    * Bound translator from the parent. Resolves the "Requested
    * {date}" and "due {date}" string templates and the gate
@@ -50,6 +54,7 @@ export function ReviewRow({
   workspaceSlug,
   nowMs,
   overdueVariant = "danger",
+  locale,
   t,
 }: ReviewRowProps) {
   const dueMs = item.dueAt
@@ -72,8 +77,10 @@ export function ReviewRow({
           <p className="text-body text-fg-primary truncate font-semibold">{item.title}</p>
           <p className="text-label text-fg-muted mt-1">
             {humanFormat(item.format)} ·{" "}
-            {t("reviews.rowRequested", { date: requested.toLocaleDateString() })}
-            {due ? ` · ${t("reviews.rowDue", { date: due.toLocaleDateString() })}` : ""}
+            {t("reviews.rowRequested", { date: formatDate(requested, locale, DateFormat.short) })}
+            {due
+              ? ` · ${t("reviews.rowDue", { date: formatDate(due, locale, DateFormat.short) })}`
+              : ""}
           </p>
         </div>
         <Badge variant={isOverdue ? overdueVariant : "info"}>{t(gateKey(item.gate))}</Badge>

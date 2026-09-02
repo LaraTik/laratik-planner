@@ -30,7 +30,7 @@ export default async function ReviewsQueuePage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ gate?: string; sort?: string }>;
 }) {
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -148,6 +148,7 @@ export default async function ReviewsQueuePage({
                 }
                 workspaceSlug={slug}
                 nowMs={nowMs}
+                locale={code}
                 t={t}
               />
             ))}

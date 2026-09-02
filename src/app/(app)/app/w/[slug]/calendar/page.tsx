@@ -100,7 +100,12 @@ export default async function EditorialCalendarPage({
           </>
         }
         action={
-          <MonthNav month={reference} buildHref={(offset) => `?month=${monthParam(offset)}`} />
+          <MonthNav
+            month={reference}
+            buildHref={(offset) => `?month=${monthParam(offset)}`}
+            locale={code as LocaleCode}
+            t={t}
+          />
         }
       />
 

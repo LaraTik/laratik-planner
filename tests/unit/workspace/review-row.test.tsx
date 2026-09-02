@@ -21,7 +21,13 @@ function renderRow(
 ) {
   return render(
     <ul>
-      <ReviewRow item={{ ...baseItem, ...overrides }} workspaceSlug="acme" nowMs={nowMs} t={t} />
+      <ReviewRow
+        item={{ ...baseItem, ...overrides }}
+        workspaceSlug="acme"
+        nowMs={nowMs}
+        locale="en"
+        t={t}
+      />
     </ul>,
   );
 }
@@ -114,6 +120,7 @@ describe("ReviewRow", () => {
           workspaceSlug="acme"
           nowMs={nowMs}
           overdueVariant="warning"
+          locale="en"
           t={t}
         />
       </ul>,

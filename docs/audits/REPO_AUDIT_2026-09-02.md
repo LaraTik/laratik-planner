@@ -1,7 +1,7 @@
 # LaraTik Planner — Repository Audit
 
 Date: 2026-09-02  
-Baseline: `2b3d257` (`main`, clean working tree)  
+Baseline: `09354a5` (`main`, clean working tree)
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
 responsive, performance, typography, motion, and data-display guidance.
@@ -9,7 +9,7 @@ responsive, performance, typography, motion, and data-display guidance.
 ## Executive verdict
 
 The repository has a strong production foundation and a broad quality harness.
-The clean baseline currently passes formatting, ESLint, strict TypeScript, the
+The current clean baseline passes formatting, ESLint, strict TypeScript, the
 full unit suite, and the production build. It is not yet final-production-ready
 because independent visual/accessibility review, exact-HEAD evidence, several
 localization/metadata checks, and architecture decisions remain open.
@@ -25,7 +25,7 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | Prettier               | Pass                           | `pnpm format:check`                                      |
 | ESLint                 | Pass                           | `pnpm lint`                                              |
 | TypeScript             | Pass                           | `pnpm exec tsc --noEmit --incremental false`             |
-| Unit tests             | Pass                           | 300 files; 3,032 passed; 4 todo                          |
+| Unit tests             | Pass                           | 301 files; 3,034 passed; 4 todo                          |
 | Production build       | Pass                           | `pnpm build`                                             |
 | Working tree           | Clean                          | `git status -sb`                                         |
 | Integration/E2E/visual | Not evidenced in this baseline | Must run against disposable test DB and exact clean HEAD |
@@ -58,7 +58,7 @@ handled before unrelated cleanup.
    row. The former section paths remain compatibility redirects, and navigation,
    action revalidation, tests, and the RTL contract now target the anchors.
 2. **Route metadata coverage is now explicit for meaningful pages.** 60 of 65
-   page files expose localized `generateMetadata`. The five deliberate
+   page files expose metadata, and a regression test keeps the five deliberate
    exceptions are compatibility/fallback routes: four legacy settings redirects
    and the absorbed publish redirect.
 3. **User-facing copy is not fully catalog-backed.** Known hotspots include
@@ -68,9 +68,10 @@ handled before unrelated cleanup.
 4. **Exact-HEAD visual and accessibility evidence is incomplete.** Existing
    candidate snapshots do not replace final human comparison, keyboard,
    screen-reader, zoom, and reduced-motion sign-off.
-5. **Release-gate ownership is split between local hooks and CI.** Formatting,
-   lint, typecheck, unit, critical E2E, and visual policy must be made explicit
-   and non-bypassable for the protected release path.
+5. **Release-gate ownership is now explicit in CI.** Formatting, lint,
+   typecheck, unit, migration, integration, coverage, build, and operational
+   checks are server-side gates; critical E2E and visual review remain documented
+   release-candidate checks with exact-HEAD evidence requirements.
 
 ### P2 — maintainability and quality
 
@@ -180,9 +181,10 @@ testability improves.
 
 ### Step 5 — Make quality gates deterministic
 
-Run format, lint, typecheck, unit, integration, migration, build, audit, Docker,
-workflow, and shell checks in CI. Keep local hooks fast but never treat them as
-the sole release protection.
+Resolved for the static/unit/migration path in commit `09354a5`: CI now runs
+format, lint, typecheck, unit, migration, integration, coverage, build, audit,
+Docker, workflow, and shell checks. Keep local hooks fast but never treat them
+as the sole release protection; browser and visual evidence remain in Step 6.
 
 ### Step 6 — Complete test and performance evidence
 
