@@ -7,6 +7,9 @@ import {
 } from "@/app/(app)/app/w/[slug]/analytics/social/social-aggregate-strip";
 import { SocialSparkline } from "@/app/(app)/app/w/[slug]/analytics/social/social-sparkline";
 import { SocialEngagementRateCard } from "@/app/(app)/app/w/[slug]/analytics/social/social-engagement-rate";
+import { SegmentedControl } from "@/app/(app)/app/w/[slug]/analytics/social/social-segmented-control";
+import { SocialHealthyStatus } from "@/app/(app)/app/w/[slug]/analytics/social/social-healthy-status";
+import { SocialGrowthChart } from "@/app/(app)/app/w/[slug]/analytics/social/social-growth-chart";
 import type { MetricSeriesPoint } from "@/lib/social/analytics";
 
 /**
@@ -149,6 +152,7 @@ describe("SocialAggregateStrip", () => {
     name: string,
     values: Array<number | null>,
     growth7Absolute: number | null,
+    growth7Percent: number | null = null,
   ): AggregateChannel {
     return {
       id,
@@ -156,6 +160,7 @@ describe("SocialAggregateStrip", () => {
       platform: "instagram",
       fullSeries: makeSeries(values),
       growth7Absolute,
+      growth7Percent,
     };
   }
 
@@ -255,5 +260,184 @@ describe("SocialEngagementRateCard", () => {
     expect(
       within(card as HTMLElement).getByTestId("social-engagement-rate-c1"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("SegmentedControl", () => {
+  it("renders every option as an anchor and marks the current with aria-current=page", () => {
+    const options = [
+      { value: 7, label: "7 days", href: "?window=7", testId: "window-7" },
+      { value: 30, label: "30 days", href: "?window=30", testId: "window-30" },
+      { value: 90, label: "90 days", href: "?window=90", testId: "window-90" },
+    ];
+    render(<SegmentedControl<number> label="Window" options={options} current={30} />);
+    const nav = screen.getByLabelText("Window");
+    expect(nav.tagName.toLowerCase()).toBe("nav");
+    const active = within(nav).getByTestId("window-30");
+    expect(active.getAttribute("aria-current")).toBe("page");
+    expect(active.textContent).toBe("30 days");
+    // The non-active options should NOT have aria-current
+    expect(within(nav).getByTestId("window-7").getAttribute("aria-current")).toBeNull();
+    expect(within(nav).getByTestId("window-90").getAttribute("aria-current")).toBeNull();
+    // Every option is rendered as a link
+    expect(within(nav).getByTestId("window-7").tagName.toLowerCase()).toBe("a");
+    expect(within(nav).getByTestId("window-30").getAttribute("href")).toBe("?window=30");
+  });
+
+  it("supports string-typed values (the metric selector use case)", () => {
+    const options = [
+      { value: "reach", label: "Reach", href: "?metric=reach", testId: "metric-reach" },
+      { value: "views", label: "Views", href: "?metric=views", testId: "metric-views" },
+    ];
+    render(<SegmentedControl<string> label="Metric" options={options} current="views" />);
+    expect(screen.getByTestId("metric-views").getAttribute("aria-current")).toBe("page");
+    expect(screen.getByTestId("metric-reach").getAttribute("aria-current")).toBeNull();
+  });
+});
+
+describe("SocialAggregateStrip (M5 percent sub-line)", () => {
+  function channel(
+    id: string,
+    name: string,
+    values: Array<number | null>,
+    growth7Absolute: number | null,
+    growth7Percent: number | null = null,
+  ): AggregateChannel {
+    return {
+      id,
+      accountName: name,
+      platform: "instagram",
+      fullSeries: makeSeries(values),
+      growth7Absolute,
+      growth7Percent,
+    };
+  }
+
+  it("surfaces the 7d percent alongside the absolute winner", () => {
+    const channels: AggregateChannel[] = [channel("a", "Big", [2000, 2050, 2100], 50, 2.4)];
+    render(<SocialAggregateStrip channels={channels} windowDays={7} />);
+    const cell = screen.getByTestId("social-aggregate-strip-best-growth");
+    expect(cell.textContent).toContain("+50");
+    expect(cell.textContent).toContain("+2.4%");
+  });
+
+  it("omits the percent sub-line when the percent is null (e.g. zero baseline)", () => {
+    const channels: AggregateChannel[] = [channel("a", "ZeroBaseline", [0, 0, 5], 5, null)];
+    render(<SocialAggregateStrip channels={channels} windowDays={7} />);
+    const cell = screen.getByTestId("social-aggregate-strip-best-growth");
+    expect(cell.textContent).toContain("+5");
+    expect(screen.queryByTestId("social-aggregate-strip-best-growth-percent")).toBeNull();
+  });
+
+  it("renders a negative percent with a leading minus sign", () => {
+    const channels: AggregateChannel[] = [channel("a", "Shrinking", [200, 195, 190], -10, -5.0)];
+    render(<SocialAggregateStrip channels={channels} windowDays={7} />);
+    const cell = screen.getByTestId("social-aggregate-strip-best-growth");
+    expect(cell.textContent).toContain("-5.0%");
+  });
+});
+
+describe("SocialHealthyStatus", () => {
+  it("renders the channel count and a last-sync relative timestamp", () => {
+    const now = new Date("2026-08-28T12:00:00Z");
+    // 12:00 - 09:00 = 3h exactly (no rounding needed)
+    render(
+      <SocialHealthyStatus channelCount={3} asOf={new Date("2026-08-28T09:00:00Z")} now={now} />,
+    );
+    const status = screen.getByTestId("social-healthy-status");
+    expect(status.textContent).toContain("All 3 channels healthy");
+    expect(status.textContent).toContain("last sync 3h ago");
+  });
+
+  it("uses singular 'channel' when count is 1", () => {
+    render(
+      <SocialHealthyStatus
+        channelCount={1}
+        asOf={new Date("2026-08-28T12:00:00Z")}
+        now={new Date("2026-08-28T12:00:00Z")}
+      />,
+    );
+    expect(screen.getByTestId("social-healthy-status").textContent).toContain(
+      "All 1 channel healthy",
+    );
+  });
+
+  it("omits the sync line when asOf is null", () => {
+    render(<SocialHealthyStatus channelCount={2} asOf={null} now={new Date()} />);
+    const status = screen.getByTestId("social-healthy-status");
+    expect(status.textContent).toContain("All 2 channels healthy");
+    expect(status.textContent).not.toContain("last sync");
+  });
+});
+
+describe("SocialGrowthChart (M5)", () => {
+  function makePoints(): Array<{ date: string; value: number | null }> {
+    return [
+      { date: "2026-08-22", value: 240 },
+      { date: "2026-08-23", value: 245 },
+      { date: "2026-08-24", value: 248 },
+    ];
+  }
+
+  it("uses growthPercent for the trend badge when provided", () => {
+    render(
+      <SocialGrowthChart
+        title="Reach · 7 days"
+        platform="Instagram"
+        profileName="Food Game"
+        metricLabel="Reach"
+        points={makePoints()}
+        tableId="t1"
+        growthPercent={3.4}
+      />,
+    );
+    const badge = screen.getByText("+3.4%");
+    expect(badge).toBeInTheDocument();
+    expect(screen.queryByText("Growing")).toBeNull();
+  });
+
+  it("shows 'Declining' badge text when growthPercent is negative (no plus sign)", () => {
+    render(
+      <SocialGrowthChart
+        title="Reach · 7 days"
+        platform="Instagram"
+        profileName="Food Game"
+        metricLabel="Reach"
+        points={makePoints()}
+        tableId="t1"
+        growthPercent={-2.1}
+      />,
+    );
+    expect(screen.getByText("-2.1%")).toBeInTheDocument();
+  });
+
+  it("falls back to endpoint-delta badge text when growthPercent is null (M4 legacy)", () => {
+    render(
+      <SocialGrowthChart
+        title="Reach · 7 days"
+        platform="Instagram"
+        profileName="Food Game"
+        metricLabel="Reach"
+        points={makePoints()}
+        tableId="t1"
+      />,
+    );
+    // 240 → 248 is positive → "Growing"
+    expect(screen.getByText("Growing")).toBeInTheDocument();
+  });
+
+  it("includes the metric label in the chart's accessible description", () => {
+    render(
+      <SocialGrowthChart
+        title="Views · 7 days"
+        platform="Instagram"
+        profileName="Food Game"
+        metricLabel="Views"
+        points={makePoints()}
+        tableId="t1"
+      />,
+    );
+    const svg = screen.getByRole("img");
+    expect(svg.getAttribute("aria-label")).toContain("Views");
   });
 });

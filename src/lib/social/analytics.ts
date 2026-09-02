@@ -47,6 +47,62 @@ export function parseSocialWindow(value: string | number | null | undefined): So
   return isSocialWindow(n) ? n : 7;
 }
 
+/**
+ * M5 — social analytics "feel v2".
+ *
+ * The chart is no longer pinned to `followerCount`. The page accepts a
+ * `?metric=` URL parameter and the chart plots whichever of the five
+ * supported daily metrics the user picked. The window selector and
+ * the metric selector compose: `?window=30&metric=reach` plots the
+ * last 30 days of reach for every connected channel.
+ *
+ * The set of metrics is closed. Adding a new metric here requires:
+ *
+ *   1. extending `SOCIAL_METRICS` and the parse/label helpers
+ *   2. making sure `MetricSeriesPoint` already carries the field
+ *   3. the page's data model must already populate the field
+ *
+ * We intentionally do NOT derive the metric list from the
+ * `MetricSeriesPoint` type — that would let a typo or a forgotten
+ * field slip into the UI. Closed set, parsed at the boundary.
+ */
+export const SOCIAL_METRICS = [
+  "followerCount",
+  "reach",
+  "views",
+  "engagedAccounts",
+  "interactions",
+] as const;
+export type SocialMetric = (typeof SOCIAL_METRICS)[number];
+
+function isSocialMetric(s: string): s is SocialMetric {
+  return (SOCIAL_METRICS as readonly string[]).includes(s);
+}
+
+export function parseSocialMetric(value: string | null | undefined): SocialMetric {
+  return isSocialMetric(String(value ?? "")) ? (value as SocialMetric) : "followerCount";
+}
+
+/**
+ * Human-readable label for the metric, used as the chart title
+ * suffix, the metric selector, and the CSV column header. Keep these
+ * short — they're competing for space on the chart card.
+ */
+export function metricLabel(metric: SocialMetric): string {
+  switch (metric) {
+    case "followerCount":
+      return "Followers";
+    case "reach":
+      return "Reach";
+    case "views":
+      return "Views";
+    case "engagedAccounts":
+      return "Engaged accounts";
+    case "interactions":
+      return "Interactions";
+  }
+}
+
 export function calculateGrowth(
   series: MetricSeriesPoint[],
   field: keyof MetricSeriesPoint = "followerCount",
@@ -112,6 +168,30 @@ export function seriesInWindow(
   if (series.length === 0) return [];
   if (windowDays <= 0) return series;
   return series.slice(-windowDays);
+}
+
+/**
+ * The "prior N days" series — the N days that immediately preceded
+ * the current window. Used to compute the `vs previous period`
+ * comparison tile and to surface acceleration / deceleration
+ * trends that the absolute growth number hides.
+ *
+ * For a 90-day series with `windowDays = 7`, the prior window is
+ * the 7 days BEFORE the last 7 days (i.e. days 76..82 from the end
+ * of the series). If the series is shorter than 2*windowDays, we
+ * return whatever fits — the caller is expected to render an
+ * em-dash for the prior side when it has fewer than 2 observed
+ * values.
+ */
+export function priorSeriesInWindow(
+  series: MetricSeriesPoint[],
+  windowDays: number,
+): MetricSeriesPoint[] {
+  if (series.length === 0 || windowDays <= 0) return [];
+  const end = series.length - windowDays;
+  if (end <= 0) return [];
+  const start = Math.max(0, end - windowDays);
+  return series.slice(start, end);
 }
 
 export function chartSeries(

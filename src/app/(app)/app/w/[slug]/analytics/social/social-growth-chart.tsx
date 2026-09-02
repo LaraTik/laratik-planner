@@ -6,11 +6,12 @@ import { Badge } from "@/components/ui/badge";
 
 /**
  * M4 — accessible SVG growth chart.
+ * M5 — multi-metric support.
  *
  * The chart is a hand-rolled dependency-free SVG so the milestone
  * ships without adding a chart library. The visual contract is
  *
- *   - one series at a time
+ *   - one series at a time (any of the 5 supported metrics)
  *   - responsive viewBox
  *   - visible focusable data points
  *   - platform / name text labels in the legend
@@ -21,6 +22,16 @@ import { Badge } from "@/components/ui/badge";
  * data points render as gaps. The chart is intentionally
  * minimal — the visible value table below it is the source of
  * truth.
+ *
+ * Trend badge:
+ *   The chart's endpoint-delta ("latest vs earliest in the visible
+ *   window") is a bad signal for the operator — a channel that
+ *   dipped 20% then recovered 20% reads "Flat" even though the
+ *   underlying 7d growth is 0%. M5 takes the growth percent from
+ *   the page (which is computed from the SAME first/last pair, but
+ *   also surfaces the `partial` flag) and uses it to drive the
+ *   badge. The chart endpoint is still used as a fallback when no
+ *   growth percent is provided (e.g. legacy callers).
  */
 
 export type GrowthPoint = {
@@ -32,14 +43,25 @@ export function SocialGrowthChart({
   title,
   platform,
   profileName,
+  metricLabel,
   points,
   tableId,
+  growthPercent,
 }: {
   title: string;
   platform: string;
   profileName: string;
+  /** Human-readable label for the plotted metric (e.g. "Followers"). */
+  metricLabel: string;
   points: GrowthPoint[];
   tableId: string;
+  /**
+   * Optional growth percent for the same window (e.g. summary
+   * tile's `growth.percent`). When provided, the trend badge
+   * uses this instead of the chart's endpoint delta. `null`
+   * falls back to endpoint delta (the M4 behavior).
+   */
+  growthPercent?: number | null;
 }) {
   const reactId = useId();
   const chartId = `${reactId}-chart`;
@@ -49,16 +71,24 @@ export function SocialGrowthChart({
     () => points.filter((p) => p.value !== null) as Array<{ date: string; value: number }>,
     [points],
   );
-  const latest = numericPoints[numericPoints.length - 1]?.value ?? null;
-  const earliest = numericPoints[0]?.value ?? null;
+
+  // Trend source: prefer the page-computed growth percent (M5),
+  // fall back to chart endpoint delta (M4 legacy).
   const trend =
-    latest === null || earliest === null
-      ? "flat"
-      : latest > earliest
+    typeof growthPercent === "number"
+      ? growthPercent > 0
         ? "up"
-        : latest < earliest
+        : growthPercent < 0
           ? "down"
-          : "flat";
+          : "flat"
+      : (() => {
+          const latest = numericPoints[numericPoints.length - 1]?.value ?? null;
+          const earliest = numericPoints[0]?.value ?? null;
+          if (latest === null || earliest === null) return "flat" as const;
+          if (latest > earliest) return "up" as const;
+          if (latest < earliest) return "down" as const;
+          return "flat" as const;
+        })();
 
   return (
     <figure
@@ -70,7 +100,7 @@ export function SocialGrowthChart({
         <div>
           <h3 className="text-body text-fg-primary font-semibold">{title}</h3>
           <p className="text-label text-fg-muted">
-            {platform} · {profileName}
+            {platform} · {profileName} · {metricLabel}
           </p>
         </div>
         <Badge variant={trend === "up" ? "success" : trend === "down" ? "danger" : "outline"}>
@@ -81,7 +111,13 @@ export function SocialGrowthChart({
           ) : (
             <Minus className="h-3 w-3" aria-hidden={true} />
           )}
-          {trend === "up" ? "Growing" : trend === "down" ? "Declining" : "Flat"}
+          {typeof growthPercent === "number"
+            ? `${growthPercent > 0 ? "+" : ""}${growthPercent.toFixed(1)}%`
+            : trend === "up"
+              ? "Growing"
+              : trend === "down"
+                ? "Declining"
+                : "Flat"}
         </Badge>
       </figcaption>
 
@@ -90,13 +126,13 @@ export function SocialGrowthChart({
         viewBox="0 0 600 220"
         className="mt-4 w-full"
         role="img"
-        aria-label={`${title} for ${profileName}. Numeric values are in the table below.`}
+        aria-label={`${title} for ${profileName}, plotting ${metricLabel}. Numeric values are in the table below.`}
         preserveAspectRatio="none"
         style={{ transition: "none" }}
       >
         <title>{title}</title>
         <desc id={descId}>
-          A line chart showing follower count over {points.length} day
+          A line chart showing {metricLabel.toLowerCase()} over {points.length} day
           {points.length === 1 ? "" : "s"} for {profileName}. Numeric values are in the adjacent
           table.
         </desc>
@@ -152,7 +188,7 @@ export function SocialGrowthChart({
                       onBlur={() => setHover(null)}
                       tabIndex={0}
                       role="button"
-                      aria-label={`${p.date}: ${p.value.toLocaleString()} followers`}
+                      aria-label={`${p.date}: ${p.value.toLocaleString()} ${metricLabel.toLowerCase()}`}
                     />
                   );
                 })}
@@ -163,20 +199,28 @@ export function SocialGrowthChart({
                       const idx = points.findIndex((q) => q.date === p.date);
                       const x = 40 + idx * stepX;
                       const y = yOf(p.value);
+                      // Flip the tooltip to the LEFT of the point when
+                      // we're close to the right edge, so the box
+                      // never spills off the chart. M4 had a one-sided
+                      // clamp that let the box overflow.
+                      const TIP_WIDTH = 120;
+                      const flipLeft = x + 8 + TIP_WIDTH > 580;
+                      const tipX = flipLeft ? x - 8 - TIP_WIDTH : Math.min(560, x + 8);
+                      const tipY = Math.max(20, Math.min(180, y - 28));
                       return (
                         <g>
                           <rect
-                            x={Math.min(560, x + 8)}
-                            y={Math.max(20, y - 28)}
-                            width={120}
+                            x={tipX}
+                            y={tipY}
+                            width={TIP_WIDTH}
                             height={20}
                             className="fill-surface-subtle stroke-border"
                             strokeWidth={1}
                             rx={4}
                           />
                           <text
-                            x={Math.min(560, x + 8) + 60}
-                            y={Math.max(20, y - 28) + 14}
+                            x={tipX + TIP_WIDTH / 2}
+                            y={tipY + 14}
                             textAnchor="middle"
                             className="fill-fg-primary"
                             fontSize={11}
