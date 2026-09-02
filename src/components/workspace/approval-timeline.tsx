@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { humanize } from "@/lib/content/status";
 import { ReasonDialog } from "@/components/forms/reason-dialog";
-import { useLocaleCode } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 
 /**
@@ -81,7 +81,14 @@ export function ApprovalTimeline({
   t,
 }: ApprovalTimelineProps) {
   const locale = useLocaleCode();
-  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
+  const localeT = useLocaleT();
+  const tr = (key: string, fallback: string) => {
+    const value = t ? t(key) : localeT(key);
+    return value.startsWith(`[${key}]`) ? fallback : value;
+  };
+  const translateKnown = (key: string, fallback: string) => {
+    return tr(key, fallback);
+  };
   if (approvals.length === 0) return null;
   return (
     <div className="mt-4 space-y-1.5">
@@ -95,8 +102,15 @@ export function ApprovalTimeline({
             key={a.id}
             className="border-border bg-surface-subtle text-body flex flex-wrap items-center gap-3 rounded-[var(--radius-control)] border p-2"
           >
-            <span className="font-semibold">{humanize(a.gate)}</span>
-            <Badge variant={statusVariant(a.status)}>{a.status}</Badge>
+            <span className="font-semibold">
+              {translateKnown(`contentDetail.workflow.approvalGates.${a.gate}`, humanize(a.gate))}
+            </span>
+            <Badge variant={statusVariant(a.status)}>
+              {translateKnown(
+                `contentDetail.workflow.approvalStatuses.${a.status}`,
+                humanize(a.status),
+              )}
+            </Badge>
             <span className="text-label text-fg-muted">
               {formatDate(a.requestedAt, locale, DateFormat.dateTime)}
             </span>
@@ -109,7 +123,7 @@ export function ApprovalTimeline({
                     void onApprove(a.id);
                   }}
                 >
-                  Approve
+                  {tr("contentDetail.workflow.approve", "Approve")}
                 </Button>
                 <ReasonDialog
                   trigger={

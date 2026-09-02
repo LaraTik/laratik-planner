@@ -250,6 +250,18 @@
     "stageAriaLabel": "{stage} — {state}",
     "stageBlocked": "محظور",
     "stageUpcoming": "قادم",
+    "approve": "موافقة",
+    "approvalGates": {
+      "content": "المحتوى",
+      "creative_internal": "الإبداعي الداخلي",
+      "creative_client": "الإبداعي للعميل"
+    },
+    "approvalStatuses": {
+      "pending": "قيد الانتظار",
+      "approved": "تمت الموافقة",
+      "changes_requested": "التعديلات المطلوبة",
+      "cancelled": "ملغى"
+    },
     "label": "سير العمل",
     "canAct": "يمكنك التنفيذ",
     "awaiting": "بانتظار التنفيذ",

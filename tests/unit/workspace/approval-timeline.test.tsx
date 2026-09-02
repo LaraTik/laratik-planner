@@ -65,7 +65,7 @@ describe("ApprovalTimeline", () => {
       approvals: [{ ...baseRequest, status: "approved" }],
       roles: { isManager: true, isInternalReviewer: true, isClientReviewer: true },
     });
-    expect(screen.getByText("approved")).toBeInTheDocument();
+    expect(screen.getByText("Approved")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^approve$/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /request changes/i })).toBeNull();
   });
@@ -75,7 +75,7 @@ describe("ApprovalTimeline", () => {
       approvals: [{ ...baseRequest, status: "changes_requested" }],
       roles: { isManager: true, isInternalReviewer: true, isClientReviewer: true },
     });
-    expect(screen.getByText("changes_requested")).toBeInTheDocument();
+    expect(screen.getByText("Changes requested")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^approve$/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /request changes/i })).toBeNull();
   });
@@ -91,7 +91,7 @@ describe("ApprovalTimeline", () => {
       onRequestChanges,
     });
     // pending should be visible
-    expect(screen.getByText("pending")).toBeInTheDocument();
+    expect(screen.getByText("Pending")).toBeInTheDocument();
     const approve = screen.getByRole("button", { name: /^approve$/i });
     const request = screen.getByRole("button", { name: /request changes/i });
     expect(approve).toBeEnabled();
@@ -105,7 +105,7 @@ describe("ApprovalTimeline", () => {
       approvals: [{ ...baseRequest, gate: "creative_client", status: "pending" }],
       roles: { isManager: false, isInternalReviewer: false, isClientReviewer: true },
     });
-    expect(screen.getByText("pending")).toBeInTheDocument();
+    expect(screen.getByText("Pending")).toBeInTheDocument();
     const approve = screen.getByRole("button", { name: /^approve$/i });
     const request = screen.getByRole("button", { name: /request changes/i });
     expect(approve).toBeEnabled();
@@ -120,7 +120,7 @@ describe("ApprovalTimeline", () => {
       approvals: [{ ...baseRequest, gate: "creative_client", status: "pending" }],
       roles: { isManager: false, isInternalReviewer: true, isClientReviewer: false },
     });
-    expect(screen.getByText("pending")).toBeInTheDocument();
+    expect(screen.getByText("Pending")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^approve$/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /request changes/i })).toBeNull();
   });
@@ -130,7 +130,7 @@ describe("ApprovalTimeline", () => {
       approvals: [{ ...baseRequest, status: "pending" }],
       roles: { isManager: false, isInternalReviewer: false, isClientReviewer: false },
     });
-    expect(screen.getByText("pending")).toBeInTheDocument();
+    expect(screen.getByText("Pending")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^approve$/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /request changes/i })).toBeNull();
   });
@@ -163,8 +163,8 @@ describe("ApprovalTimeline", () => {
     renderTimeline({
       approvals: [{ ...baseRequest, gate: "creative_client", status: "approved" }],
     });
-    // humanize("creative_client") → "Creative Client"
-    expect(screen.getByText(/creative client/i)).toBeInTheDocument();
+    // The displayed label is catalog-backed rather than the raw gate id.
+    expect(screen.getByText(/client creative/i)).toBeInTheDocument();
   });
 
   it("renders the requested-at timestamp", () => {
@@ -173,7 +173,7 @@ describe("ApprovalTimeline", () => {
     });
     // toLocaleString() is locale-dependent; we just assert the
     // timestamp container is in the row and is non-empty.
-    const card = screen.getByText("approved").closest('[class*="bg-surface-subtle"]');
+    const card = screen.getByText("Approved").closest('[class*="bg-surface-subtle"]');
     expect(card).not.toBeNull();
     const text = (card as HTMLElement).textContent ?? "";
     expect(text.length).toBeGreaterThan(0);
@@ -244,7 +244,7 @@ describe("ApprovalTimeline", () => {
     const { container } = renderTimeline({
       approvals: [{ ...baseRequest, status: "approved" }],
     });
-    const card = within(container).getByText("approved").closest("div");
+    const card = within(container).getByText("Approved").closest("div");
     // Sanity: the row container is a div and has at least one text node.
     expect(card).not.toBeNull();
   });

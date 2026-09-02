@@ -250,6 +250,18 @@
     "stageAriaLabel": "{stage} — {state}",
     "stageBlocked": "Blocked",
     "stageUpcoming": "Upcoming",
+    "approve": "Approve",
+    "approvalGates": {
+      "content": "Content",
+      "creative_internal": "Internal creative",
+      "creative_client": "Client creative"
+    },
+    "approvalStatuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "changes_requested": "Changes requested",
+      "cancelled": "Cancelled"
+    },
     "label": "Workflow",
     "canAct": "You can act",
     "awaiting": "Awaiting",
