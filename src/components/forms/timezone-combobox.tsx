@@ -54,6 +54,7 @@ const ALL_ZONES: TimezoneOption[] = (() => {
   const zones = ["UTC", ...Intl.supportedValuesOf("timeZone").filter((zone) => zone !== "UTC")];
   const sample = new Date();
   return zones.map((zone) => {
+    if (zone === "UTC") return { value: zone, offset: "UTC" };
     let offset = "UTC";
     try {
       const parts = new Intl.DateTimeFormat("en", {
