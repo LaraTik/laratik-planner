@@ -151,13 +151,13 @@ export function AttentionBanner({
       data-testid="workspace-overview-attention"
       data-severity={severity}
       className={cn(
-        "flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] border px-4 py-3",
+        "grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-[var(--radius-card)] border px-4 py-3 sm:flex sm:flex-wrap sm:items-center",
         SEVERITY_CLASS[severity],
       )}
     >
       <span
         className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)]",
+          "row-span-2 flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)]",
           SEVERITY_ICON_CLASS[severity],
         )}
         aria-hidden="true"
@@ -173,11 +173,11 @@ export function AttentionBanner({
           {tr(SEVERITY_BODY_KEY[severity], SEVERITY_BODY_FALLBACK[severity])}
         </p>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="col-start-2 flex flex-wrap items-center gap-2 sm:col-auto sm:ms-auto">
         <Link
           href={reviewHref}
           className={cn(
-            "text-label inline-flex min-h-9 items-center gap-1 rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold",
+            "text-label inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold",
             severity === "critical"
               ? "border-danger/40 text-danger hover:bg-danger/10"
               : severity === "warning"
@@ -193,7 +193,7 @@ export function AttentionBanner({
           <Link
             href={approvalsHref}
             className={cn(
-              "text-label inline-flex min-h-9 items-center gap-1 rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold",
+              "text-label inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold",
               severity === "critical"
                 ? "border-danger/40 text-danger hover:bg-danger/10"
                 : severity === "warning"

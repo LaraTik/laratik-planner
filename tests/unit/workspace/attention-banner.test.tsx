@@ -64,6 +64,17 @@ describe("AttentionBanner", () => {
     expect(screen.getByText(/Heads up/)).toBeInTheDocument();
   });
 
+  it("uses a narrow-screen layout that keeps the message readable and actions touchable", () => {
+    render(<AttentionBanner {...baseProps} atRiskCount={0} />);
+
+    const banner = screen.getByTestId("workspace-overview-attention");
+    const reviewLink = screen.getByRole("link", { name: /Review attention items/i });
+
+    expect(banner.className).toContain("grid-cols-[auto_minmax(0,1fr)]");
+    expect(banner.className).toContain("sm:flex");
+    expect(reviewLink.className).toContain("min-h-11");
+  });
+
   it("shows the Approvals CTA only when approvalsCount > 0", () => {
     const { rerender } = render(<AttentionBanner {...baseProps} />);
     expect(screen.queryByRole("link", { name: /^Approvals/i })).toBeNull();
