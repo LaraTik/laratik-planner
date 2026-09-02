@@ -89,9 +89,14 @@ handled before unrelated cleanup.
    accessible translated SVG copy, and Latin-digit number formatting in
    `a1d7963` and `443092c`. The AI diagnostic panel is now catalog-backed and
    receives the server-resolved translator, with Arabic coverage in `b6efac8`.
-   Remaining hotspots include publish forms. The static scan must be repeated
-   after each localization batch because dynamic catalog keys are not fully
-   discoverable.
+   The publish action bar and bilingual free-text controls were also corrected,
+   with an Arabic render regression in `b22eb21`. Publish server actions now
+   return stable error codes instead of raw domain messages, and the client
+   translates them through `contentDetail.publishErrors` in `9dc243a`; mapping
+   and render tests pass. Remaining localization work is a lower-priority
+   static scan for copy outside these audited surfaces. The scan must be
+   repeated after each localization batch because dynamic catalog keys are not
+   fully discoverable.
 4. **Exact-HEAD visual review is incomplete.** Exact-HEAD axe and RTL checks
    pass, but the visual suite still has reference deltas and the required
    keyboard, screen-reader, zoom, and reduced-motion review is not independently
