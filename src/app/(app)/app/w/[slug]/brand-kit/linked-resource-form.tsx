@@ -7,6 +7,7 @@ import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * LinkedResourceForm — inline create form for the brand-kit Linked
@@ -42,6 +43,11 @@ const controlClass =
 type FormState = { error?: string; success?: boolean };
 
 export function LinkedResourceForm({ slug }: { slug: string }) {
+  const t = useLocaleT();
+  const tr = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
   const [state, action] = useActionState(
     createLinkedResourceAction.bind(null, slug),
     {} as FormState,
@@ -54,7 +60,11 @@ export function LinkedResourceForm({ slug }: { slug: string }) {
 
   return (
     <form ref={formRef} action={action} className="space-y-3" data-testid="linked-resource-form">
-      <FormField id="linked-resource-provider" label="Provider" required>
+      <FormField
+        id="linked-resource-provider"
+        label={tr("users.linkedResource.providerLabel", "Provider")}
+        required
+      >
         <select
           id="linked-resource-provider"
           name="provider"
@@ -62,25 +72,36 @@ export function LinkedResourceForm({ slug }: { slug: string }) {
           defaultValue="figma"
           className={controlClass}
         >
-          <option value="google_drive">Google Drive</option>
-          <option value="figma">Figma</option>
-          <option value="canva">Canva</option>
-          <option value="dropbox">Dropbox</option>
-          <option value="other">Other</option>
+          <option value="google_drive">
+            {tr("users.linkedResource.providerGoogleDrive", "Google Drive")}
+          </option>
+          <option value="figma">{tr("users.linkedResource.providerFigma", "Figma")}</option>
+          <option value="canva">{tr("users.linkedResource.providerCanva", "Canva")}</option>
+          <option value="dropbox">{tr("users.linkedResource.providerDropbox", "Dropbox")}</option>
+          <option value="other">{tr("users.linkedResource.providerOther", "Other")}</option>
         </select>
       </FormField>
 
-      <FormField id="linked-resource-name" label="Name" required>
+      <FormField
+        id="linked-resource-name"
+        label={tr("users.linkedResource.nameLabel", "Name")}
+        required
+      >
         <CharacterCountInput
           id="linked-resource-name"
           name="name"
           required
           maxLength={120}
-          placeholder="e.g. Brand library"
+          placeholder={tr("users.linkedResource.namePlaceholder", "e.g. Brand library")}
         />
       </FormField>
 
-      <FormField id="linked-resource-url" label="URL" required hint="HTTPS only">
+      <FormField
+        id="linked-resource-url"
+        label={tr("users.linkedResource.urlLabel", "URL")}
+        required
+        hint={tr("users.linkedResource.urlHint", "HTTPS only")}
+      >
         <Input
           id="linked-resource-url"
           name="url"
@@ -92,19 +113,25 @@ export function LinkedResourceForm({ slug }: { slug: string }) {
           // The server-side Zod schema (.url().refine(...)) is
           // the real source of truth; the pattern is a UX hint.
           pattern="https://[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}.*"
-          placeholder="https://figma.com/file/…"
+          placeholder={tr("users.linkedResource.urlPlaceholder", "https://figma.com/file/…")}
           className="min-h-[44px]"
         />
       </FormField>
 
-      <FormField id="linked-resource-description" label="Description">
+      <FormField
+        id="linked-resource-description"
+        label={tr("users.linkedResource.descriptionLabel", "Description")}
+      >
         <CharacterCountInput
           id="linked-resource-description"
           as="textarea"
           name="description"
           maxLength={280}
           rows={3}
-          placeholder="Optional. What's in this library?"
+          placeholder={tr(
+            "users.linkedResource.descriptionPlaceholder",
+            "Optional. What's in this library?",
+          )}
         />
       </FormField>
 
@@ -115,7 +142,11 @@ export function LinkedResourceForm({ slug }: { slug: string }) {
       ) : null}
 
       <div className="flex items-center justify-end">
-        <FormSubmitButton label="Link resource" pendingLabel="Adding…" className="min-h-[44px]" />
+        <FormSubmitButton
+          label={tr("users.linkedResource.link", "Link resource")}
+          pendingLabel={tr("users.linkedResource.adding", "Adding…")}
+          className="min-h-[44px]"
+        />
       </div>
     </form>
   );

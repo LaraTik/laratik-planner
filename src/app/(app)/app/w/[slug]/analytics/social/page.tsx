@@ -15,7 +15,6 @@ import {
   calculateEngagementRate,
   calculateGrowth,
   chartSeries,
-  metricLabel,
   parseSocialMetric,
   parseSocialWindow,
   priorSeriesInWindow,
@@ -68,6 +67,13 @@ import { SocialCsvExport, type CsvRow } from "./social-csv-export";
 const MAX_LOOKBACK_DAYS = 90;
 const CRON_HOUR_LOCAL = 3; // 03:15 workspace-tz (sync.ts convention)
 const CRON_MINUTE_LOCAL = 15;
+const METRIC_LABEL_KEYS: Record<SocialMetric, string> = {
+  followerCount: "analytics.metricFollowers",
+  reach: "analytics.metricReach",
+  views: "analytics.metricViews",
+  engagedAccounts: "analytics.metricEngagedAccounts",
+  interactions: "analytics.metricInteractions",
+};
 
 export default async function SocialAnalyticsPage({
   params,
@@ -170,6 +176,7 @@ export default async function SocialAnalyticsPage({
   // that the next tick is meaningful. Operators trust the cron
   // to fire; the ETA is a convenience, not a contract.
   const nextSyncEtaText = mostRecentSync ? nextSyncEta(now, workspace.timezone) : null;
+  const metricText = t(METRIC_LABEL_KEYS[metric]);
 
   return (
     <div className="space-y-6" data-testid="social-analytics-page">
@@ -213,6 +220,7 @@ export default async function SocialAnalyticsPage({
           };
         })}
         slug={slug}
+        t={t}
       />
       {/* M5 — page-level freshness line. Sits below the page
           description so it doesn't fight the title. Sits above
@@ -223,10 +231,12 @@ export default async function SocialAnalyticsPage({
         <p
           className="text-label text-fg-muted -mt-3"
           data-testid="social-analytics-as-of"
-          aria-label={`Analytics data as of ${formatRelativeDate(mostRecentSync, now)}`}
+          aria-label={t("analytics.asOf", {
+            date: formatRelativeDate(mostRecentSync, now, code),
+          })}
         >
-          Analytics data as of {formatRelativeDate(mostRecentSync, now)}
-          {nextSyncEtaText ? <> · next refresh in {nextSyncEtaText}</> : null}
+          {t("analytics.asOf", { date: formatRelativeDate(mostRecentSync, now, code) })}
+          {nextSyncEtaText ? <> · {t("analytics.nextRefresh", { eta: nextSyncEtaText })}</> : null}
         </p>
       ) : null}
 
@@ -263,34 +273,36 @@ export default async function SocialAnalyticsPage({
         <SocialHealthyStatus channelCount={channels.length} asOf={mostRecentSync} now={now} />
       ) : null}
 
-      <SocialAggregateStrip
-        channels={channels.map<AggregateChannel>((c) => {
-          const fullSeries: MetricSeriesPoint[] = (byChannel.get(c.id) ?? []).map((m) => ({
-            metricDate: m.metricDate,
-            followerCount: m.followerCount,
-            reach: m.reach,
-            views: m.views,
-            engagedAccounts: m.engagedAccounts,
-            interactions: m.interactions,
-            partial: (m.sourceMetadata as { partial?: boolean } | null)?.partial === true,
-          }));
-          const summary = buildProfileSummary({
-            fullSeries,
-            lastSyncedAt: c.lastSyncedAt,
-            connectionStatus: c.connectionStatus as
-              "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected",
-          });
-          return {
-            id: c.id,
-            accountName: c.accountName,
-            platform: c.platform as "instagram" | "facebook" | "tiktok",
-            fullSeries,
-            growth7Absolute: summary.growth7.absolute,
-            growth7Percent: summary.growth7.percent,
-          };
-        })}
-        windowDays={window}
-      />
+      {channels.length > 0 ? (
+        <SocialAggregateStrip
+          channels={channels.map<AggregateChannel>((c) => {
+            const fullSeries: MetricSeriesPoint[] = (byChannel.get(c.id) ?? []).map((m) => ({
+              metricDate: m.metricDate,
+              followerCount: m.followerCount,
+              reach: m.reach,
+              views: m.views,
+              engagedAccounts: m.engagedAccounts,
+              interactions: m.interactions,
+              partial: (m.sourceMetadata as { partial?: boolean } | null)?.partial === true,
+            }));
+            const summary = buildProfileSummary({
+              fullSeries,
+              lastSyncedAt: c.lastSyncedAt,
+              connectionStatus: c.connectionStatus as
+                "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected",
+            });
+            return {
+              id: c.id,
+              accountName: c.accountName,
+              platform: c.platform as "instagram" | "facebook" | "tiktok",
+              fullSeries,
+              growth7Absolute: summary.growth7.absolute,
+              growth7Percent: summary.growth7.percent,
+            };
+          })}
+          windowDays={window}
+        />
+      ) : null}
 
       {/* M5 — two segmented controls side-by-side. The window
           selector is unchanged in behavior from M4. The metric
@@ -299,21 +311,21 @@ export default async function SocialAnalyticsPage({
           the other's selection when one is changed. */}
       <div className="flex flex-wrap items-center gap-3" data-testid="social-analytics-controls">
         <SegmentedControl<SocialWindow>
-          label="Window selector"
+          label={t("analytics.windowSelector")}
           current={window}
           options={([7, 30, 90] as const).map<SegmentedOption<SocialWindow>>((w) => ({
             value: w,
-            label: `${w} days`,
+            label: t("analytics.days", { count: w }),
             href: `/app/w/${slug}/analytics/social?window=${w}&metric=${metric}`,
             testId: `window-${w}`,
           }))}
         />
         <SegmentedControl<SocialMetric>
-          label="Metric selector"
+          label={t("analytics.metricSelector")}
           current={metric}
           options={SOCIAL_METRICS.map<SegmentedOption<SocialMetric>>((m) => ({
             value: m,
-            label: metricLabel(m),
+            label: t(METRIC_LABEL_KEYS[m]),
             href: `/app/w/${slug}/analytics/social?window=${window}&metric=${m}`,
             testId: `metric-${m}`,
           }))}
@@ -331,7 +343,7 @@ export default async function SocialAnalyticsPage({
                 href={`/app/w/${slug}/channels`}
                 className="border-border bg-surface text-fg-primary text-body rounded-md border px-4 py-2"
               >
-                Go to Social Channels
+                {t("analytics.goToChannels")}
               </a>
             }
           />
@@ -391,17 +403,18 @@ export default async function SocialAnalyticsPage({
                         data-testid={socialSparklineTestId(channel.id)}
                       >
                         <Activity className="h-3 w-3" aria-hidden={true} />
-                        Last synced{" "}
-                        {channel.lastSyncedAt
-                          ? formatRelativeDate(channel.lastSyncedAt, new Date(), code)
-                          : "—"}
+                        {t("analytics.lastSynced", {
+                          date: channel.lastSyncedAt
+                            ? formatRelativeDate(channel.lastSyncedAt, new Date(), code)
+                            : "—",
+                        })}
                       </div>
                     </div>
                   </header>
 
                   <div className="grid gap-4 sm:grid-cols-3">
                     <SummaryCard
-                      label="Current followers"
+                      label={t("analytics.currentFollowers")}
                       value={
                         summary.currentFollowers === null
                           ? "—"
@@ -409,7 +422,10 @@ export default async function SocialAnalyticsPage({
                       }
                     />
                     <SummaryCard
-                      label={`${window}-day change (${metricLabel(metric).toLowerCase()})`}
+                      label={t("analytics.windowChange", {
+                        count: window,
+                        metric: metricText.toLowerCase(),
+                      })}
                       value={
                         growth.absolute === null
                           ? "—"
@@ -437,6 +453,19 @@ export default async function SocialAnalyticsPage({
                             }
                       }
                       partial={growth.partial}
+                      partialLabel={t("analytics.partial")}
+                      priorLabel={
+                        growth.absolute === null || priorGrowth.absolute === null
+                          ? null
+                          : t("analytics.vsPrior", {
+                              count: window,
+                              value: `${priorGrowth.absolute > 0 ? "+" : ""}${priorGrowth.absolute.toLocaleString()}`,
+                              percent:
+                                typeof priorGrowth.percent === "number"
+                                  ? ` (${priorGrowth.percent > 0 ? "+" : ""}${priorGrowth.percent.toFixed(1)}%)`
+                                  : "",
+                            })
+                      }
                     />
                     <SocialEngagementRateCard
                       channelId={channel.id}
@@ -446,8 +475,7 @@ export default async function SocialAnalyticsPage({
 
                   {windowed.length === 0 ? (
                     <p className="text-body text-fg-muted" data-testid="no-windowed-data">
-                      No data in the {window}-day window yet. The first snapshot lands within 24
-                      hours of connecting; check back tomorrow.
+                      {t("analytics.noWindowedData", { count: window })}
                     </p>
                   ) : (
                     <div className="space-y-2">
@@ -455,7 +483,7 @@ export default async function SocialAnalyticsPage({
                         title={`${platformLabel(channel.platform)} · last ${window} days`}
                         platform={platformLabel(channel.platform)}
                         profileName={channel.accountName}
-                        metricLabel={metricLabel(metric)}
+                        metricLabel={metricText}
                         points={chartPts}
                         tableId={tableId}
                         growthPercent={growth.percent}
@@ -464,7 +492,9 @@ export default async function SocialAnalyticsPage({
                   )}
 
                   <div className="flex items-center justify-between gap-3">
-                    <h3 className="text-title-card text-fg-primary font-semibold">Daily values</h3>
+                    <h3 className="text-title-card text-fg-primary font-semibold">
+                      {t("analytics.dailyValues")}
+                    </h3>
                     <SocialCsvExport
                       channelName={channel.accountName}
                       rows={windowed.map<CsvRow>((p) => ({
@@ -513,6 +543,8 @@ function SummaryCard({
   sub,
   priorSub,
   partial,
+  partialLabel,
+  priorLabel,
   testId,
 }: {
   label: string;
@@ -520,6 +552,8 @@ function SummaryCard({
   sub?: string | null;
   priorSub?: PriorSub | null;
   partial?: boolean;
+  partialLabel?: string;
+  priorLabel?: string | null;
   testId?: string;
 }) {
   return (
@@ -534,7 +568,7 @@ function SummaryCard({
             data-testid="summary-card-partial"
             className="border-warning/40 bg-warning/5 text-warning rounded-full border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase"
           >
-            partial
+            {partialLabel ?? "partial"}
           </span>
         ) : null}
       </div>
@@ -552,15 +586,8 @@ function SummaryCard({
           ) : (
             <Minus className="h-3 w-3" aria-hidden={true} />
           )}
-          vs prior {priorSub.window}d: {priorSub.absolute > 0 ? "+" : ""}
-          {priorSub.absolute.toLocaleString()}
-          {typeof priorSub.percent === "number" ? (
-            <>
-              {" "}
-              ({priorSub.percent > 0 ? "+" : ""}
-              {priorSub.percent.toFixed(1)}%)
-            </>
-          ) : null}
+          {priorLabel ??
+            `vs prior ${priorSub.window}d: ${priorSub.absolute > 0 ? "+" : ""}${priorSub.absolute.toLocaleString()}`}
         </p>
       ) : null}
     </div>

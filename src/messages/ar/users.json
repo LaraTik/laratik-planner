@@ -390,11 +390,21 @@
     "itemLinkedDesc": "رابط Figma أو Drive أو Canva أو Dropbox"
   },
   "linkedResource": {
+    "providerLabel": "المزوّد",
     "providerGoogleDrive": "Google Drive",
     "providerFigma": "Figma",
     "providerCanva": "Canva",
     "providerDropbox": "Dropbox",
     "providerOther": "أخرى",
+    "nameLabel": "الاسم",
+    "namePlaceholder": "مثال: مكتبة العلامة التجارية",
+    "urlLabel": "الرابط",
+    "urlHint": "HTTPS فقط",
+    "urlPlaceholder": "https://figma.com/file/…",
+    "descriptionLabel": "الوصف",
+    "descriptionPlaceholder": "اختياري. ماذا توجد في هذه المكتبة؟",
+    "link": "ربط المورد",
+    "adding": "جارٍ الإضافة…",
     "openAria": "فتح {name} على {provider} في تبويب جديد",
     "archiveLabel": "مورد مرتبط"
   }

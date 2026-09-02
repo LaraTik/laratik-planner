@@ -213,8 +213,8 @@ export function railStageForStatus(status: string): {
  */
 export function WorkflowRail(props: WorkflowRailBodyProps) {
   const t = useLocaleT();
-  const tr = (key: string, fallback: string) => {
-    const value = t(key);
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
+    const value = t(key, params);
     return value === key ? fallback : value;
   };
   const [collapsed, setCollapsed] = useState<boolean>(false);
@@ -289,7 +289,7 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
                 className="py-0.5"
                 data-stage-id={stage}
                 data-active={state.kind === "current" || undefined}
-                title={STAGE_LABEL[stage]}
+                title={tr(`contentDetail.workflow.railStageLabels.${stage}`, STAGE_LABEL[stage])}
               >
                 <StageIcon kind={state.kind} compact t={t} />
               </li>
@@ -306,7 +306,9 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
       data-testid="workflow-rail"
     >
       <header className="border-border flex items-center justify-between border-b px-3 py-2">
-        <p className="text-label text-fg-secondary font-semibold uppercase">Workflow</p>
+        <p className="text-label text-fg-secondary font-semibold uppercase">
+          {tr("contentDetail.workflow.label", "Workflow")}
+        </p>
         <button
           type="button"
           onClick={toggle}
@@ -378,8 +380,8 @@ function WorkflowRailBody({
   designers: { id: string; label: string }[];
 }) {
   const t = useLocaleT();
-  const tr = (key: string, fallback: string) => {
-    const value = t(key);
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
+    const value = t(key, params);
     return value === key ? fallback : value;
   };
   const [pending, start] = useTransition();
@@ -471,7 +473,9 @@ function WorkflowRailBody({
           variant={canActOnCurrentStep ? "primary" : "outline"}
           data-testid="workflow-rail-actor-badge"
         >
-          {canActOnCurrentStep ? "You can act" : "Awaiting"}
+          {canActOnCurrentStep
+            ? tr("contentDetail.workflow.canAct", "You can act")
+            : tr("contentDetail.workflow.awaiting", "Awaiting")}
         </Badge>
       </div>
       <ol
@@ -500,7 +504,12 @@ function WorkflowRailBody({
               data-stage-id={stage}
               data-active={expanded || undefined}
             >
-              <RailStageRow stage={stage} label={label} status={status} t={t} />
+              <RailStageRow
+                stage={stage}
+                label={tr(`contentDetail.workflow.railStageLabels.${stage}`, label)}
+                status={status}
+                t={t}
+              />
               {expanded ? (
                 <div
                   className="border-border bg-surface-subtle ms-7 mt-1 space-y-2 rounded-[var(--radius-control)] border p-2"
@@ -511,7 +520,9 @@ function WorkflowRailBody({
                       <p className="text-body text-fg-primary font-semibold">{currentStep.label}</p>
                       <p className="text-label text-fg-secondary">{currentStep.description}</p>
                       <div className="text-label text-fg-secondary flex flex-wrap items-center gap-1.5">
-                        <span className="text-fg-muted">Responsible:</span>
+                        <span className="text-fg-muted">
+                          {tr("contentDetail.workflow.responsible", "Responsible:")}
+                        </span>
                         {currentRoleLabels.length > 0 ? (
                           currentRoleLabels.map((label) => (
                             <Badge key={label} variant="info">
@@ -526,7 +537,9 @@ function WorkflowRailBody({
                         <p className="text-label text-fg-muted inline-flex items-start gap-1.5">
                           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                           <span>
-                            <span className="text-fg-secondary font-semibold">Next:</span>{" "}
+                            <span className="text-fg-secondary font-semibold">
+                              {tr("contentDetail.workflow.next", "Next:")}
+                            </span>{" "}
                             {currentStep.next}
                           </span>
                         </p>
@@ -535,13 +548,17 @@ function WorkflowRailBody({
                       {blockedReason ? (
                         <p className="text-body text-danger">
                           <Ban className="me-1 inline h-4 w-4" aria-hidden="true" />
-                          Blocked: {blockedReason}
+                          {tr("contentDetail.workflow.blockedReason", "Blocked: {reason}", {
+                            reason: blockedReason,
+                          })}
                         </p>
                       ) : null}
                       {cancellationReason ? (
                         <p className="text-body text-danger">
                           <Ban className="me-1 inline h-4 w-4" aria-hidden="true" />
-                          Cancelled: {cancellationReason}
+                          {tr("contentDetail.workflow.cancelledReason", "Cancelled: {reason}", {
+                            reason: cancellationReason,
+                          })}
                         </p>
                       ) : null}
 
@@ -597,8 +614,13 @@ function WorkflowRailBody({
                               )
                               .filter((label): label is string => Boolean(label));
                             return eligibleLabels.length > 0
-                              ? `Awaiting ${eligibleLabels.join(" or ")}.`
-                              : "Awaiting another team member.";
+                              ? tr("contentDetail.workflow.awaitingRoles", "Awaiting {roles}.", {
+                                  roles: eligibleLabels.join(" or "),
+                                })
+                              : tr(
+                                  "contentDetail.workflow.awaitingTeamMember",
+                                  "Awaiting another team member.",
+                                );
                           })()}
                         </p>
                       ) : null}
@@ -654,7 +676,9 @@ function WorkflowRailBody({
           className="text-label text-fg-secondary cursor-pointer list-none px-3 py-2 font-semibold [&::-webkit-details-marker]:hidden"
           data-testid="workflow-pipeline-toggle"
         >
-          View workflow ({STATUSES.length} steps)
+          {tr("contentDetail.workflow.viewFull", "View workflow ({count} steps)", {
+            count: STATUSES.length,
+          })}
         </summary>
         <div
           className="flex flex-wrap items-center gap-1.5 border-t border-[color:var(--border)] px-3 py-2"
@@ -673,7 +697,7 @@ function WorkflowRailBody({
                   data-testid={current ? "status-current" : undefined}
                   data-status={s}
                 >
-                  {humanize(s)}
+                  {tr(`contentDetail.workflow.statusLabels.${s}`, humanize(s))}
                 </Badge>
               );
             });
@@ -784,7 +808,8 @@ function RailStageIcon({
   kind: StageState["kind"];
   t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
-  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   if (kind === "complete") {
     return (
       <span
@@ -953,7 +978,8 @@ function ActionButtons({
           data-testid="workflow-rail-primary-action"
           className="w-full"
         >
-          <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" /> Submit for review
+          <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          {tr("contentDetail.workflow.submitForReview", "Submit for review")}
         </Button>
       ) : null}
       {status === "content_review" && can(["isInternalReviewer", "isManager"]) ? (
@@ -964,12 +990,14 @@ function ActionButtons({
             data-testid="workflow-rail-primary-action"
             className="w-full"
           >
-            <CheckCircle className="h-3.5 w-3.5" aria-hidden="true" /> Approve content
+            <CheckCircle className="h-3.5 w-3.5" aria-hidden="true" />
+            {tr("contentDetail.workflow.approveContent", "Approve content")}
           </Button>
           <ReasonDialog
             trigger={
               <Button size="default" variant="secondary" disabled={pending} className="w-full">
-                <XCircle className="h-3.5 w-3.5" aria-hidden="true" /> Request changes
+                <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                {tr("contentDetail.workflow.requestChangesConfirm", "Request changes")}
               </Button>
             }
             title={tr("contentDetail.workflow.requestChangesTitle", "Request content changes")}
@@ -991,7 +1019,8 @@ function ActionButtons({
           data-testid="workflow-rail-primary-action"
           className="w-full"
         >
-          <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" /> Resubmit for review
+          <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          {tr("contentDetail.workflow.resubmitForReview", "Resubmit for review")}
         </Button>
       ) : null}
       {status === "approved_for_design" && isDesigner ? (
@@ -1003,7 +1032,8 @@ function ActionButtons({
           data-testid="workflow-rail-primary-action"
           className="w-full"
         >
-          <Play className="h-3.5 w-3.5" aria-hidden="true" /> Claim as designer
+          <Play className="h-3.5 w-3.5" aria-hidden="true" />
+          {tr("contentDetail.workflow.claimAsDesigner", "Claim as designer")}
         </Button>
       ) : null}
       {status === "approved_for_design" && isManager ? (
@@ -1015,7 +1045,7 @@ function ActionButtons({
       ) : null}
       {status === "blocked" && isManager ? (
         <Button size="sm" onClick={() => onTransition("unblock")}>
-          Unblock
+          {tr("contentDetail.workflow.unblock", "Unblock")}
         </Button>
       ) : null}
       {[
@@ -1029,7 +1059,8 @@ function ActionButtons({
         <ReasonDialog
           trigger={
             <Button size="sm" variant="destructive" disabled={pending}>
-              <Ban className="h-3.5 w-3.5" aria-hidden="true" /> Cancel
+              <Ban className="h-3.5 w-3.5" aria-hidden="true" />
+              {tr("contentDetail.workflow.cancel", "Cancel")}
             </Button>
           }
           title={tr("contentDetail.workflow.cancelTitle", "Cancel content item")}
@@ -1055,7 +1086,7 @@ function ActionButtons({
         <ReasonDialog
           trigger={
             <Button size="sm" variant="secondary" disabled={pending}>
-              Block
+              {tr("contentDetail.workflow.block", "Block")}
             </Button>
           }
           title={tr("contentDetail.workflow.blockTitle", "Block content item")}
@@ -1115,6 +1146,11 @@ function AssignDesignerDialog({
   disabled: boolean;
   onConfirm: (designerId: string) => Promise<void> | void;
 }) {
+  const t = useLocaleT();
+  const tr = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string>(designers[0]?.id ?? "");
   const [submitting, setSubmitting] = useState(false);
@@ -1125,7 +1161,7 @@ function AssignDesignerDialog({
 
   async function submit() {
     if (!selectedId) {
-      setError("Pick a designer to assign.");
+      setError(tr("contentDetail.workflow.pickDesigner", "Pick a designer to assign."));
       return;
     }
     setSubmitting(true);
@@ -1134,7 +1170,11 @@ function AssignDesignerDialog({
       await onConfirm(selectedId);
       setOpen(false);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "The assign action failed.");
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : tr("contentDetail.workflow.assignFailed", "The assign action failed."),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -1154,15 +1194,19 @@ function AssignDesignerDialog({
           disabled={disabled || !hasDesigners}
           data-testid="assign-designer-trigger"
         >
-          Assign designer
+          {tr("contentDetail.workflow.assignDesigner", "Assign designer")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Assign a designer</DialogTitle>
+          <DialogTitle>
+            {tr("contentDetail.workflow.assignDialogTitle", "Assign a designer")}
+          </DialogTitle>
           <DialogDescription>
-            Pick the designer who will own this design task. They&apos;ll be notified and the item
-            will move into the &quot;in design&quot; state.
+            {tr(
+              "contentDetail.workflow.assignDialogDescription",
+              'Pick the designer who will own this design task. They’ll be notified and the item will move into the "in design" state.',
+            )}
           </DialogDescription>
         </DialogHeader>
         {hasDesigners ? (
@@ -1178,7 +1222,7 @@ function AssignDesignerDialog({
                 htmlFor={selectId}
                 className="text-body text-fg-primary mb-1 block font-semibold"
               >
-                Designer
+                {tr("contentDetail.workflow.designer", "Designer")}
               </label>
               <select
                 id={selectId}
@@ -1205,7 +1249,7 @@ function AssignDesignerDialog({
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="secondary" disabled={submitting}>
-                  Cancel
+                  {tr("contentDetail.workflow.cancel", "Cancel")}
                 </Button>
               </DialogClose>
               <Button
@@ -1213,14 +1257,18 @@ function AssignDesignerDialog({
                 disabled={submitting || !selectedId}
                 data-testid="assign-designer-confirm"
               >
-                {submitting ? "Assigning…" : "Assign"}
+                {submitting
+                  ? tr("contentDetail.workflow.assigning", "Assigning…")
+                  : tr("contentDetail.workflow.assignDesigner", "Assign designer")}
               </Button>
             </DialogFooter>
           </form>
         ) : (
           <p className="text-body text-fg-secondary">
-            No designers in this workspace yet. Invite one from Settings, or wait for a designer to
-            claim the item themselves.
+            {tr(
+              "contentDetail.workflow.noDesigners",
+              "No designers in this workspace yet. Invite one from Settings, or wait for a designer to claim the item themselves.",
+            )}
           </p>
         )}
       </DialogContent>
@@ -1255,6 +1303,11 @@ export type { WorkflowStage };
  *   - The sheet restores focus to the trigger on close.
  */
 export function WorkflowSheet(props: WorkflowRailBodyProps) {
+  const t = useLocaleT();
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
+    const value = t(key, params);
+    return value === key ? fallback : value;
+  };
   const [open, setOpen] = useState(false);
   const triggerRef = React.useRef<HTMLButtonElement | null>(null);
 
@@ -1313,13 +1366,19 @@ export function WorkflowSheet(props: WorkflowRailBodyProps) {
         className="border-border bg-surface text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-9 items-center gap-2 rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
         data-testid="workflow-mobile-trigger"
       >
-        <span className="text-label text-fg-muted uppercase">Workflow</span>
-        <span className="text-body text-fg-primary font-semibold">{STAGE_LABEL[currentStage]}</span>
+        <span className="text-label text-fg-muted uppercase">
+          {tr("contentDetail.workflow.label", "Workflow")}
+        </span>
+        <span className="text-body text-fg-primary font-semibold">
+          {tr(`contentDetail.workflow.stageLabels.${currentStage}`, STAGE_LABEL[currentStage])}
+        </span>
         <Badge
           variant={canAct ? "primary" : "outline"}
           data-testid="workflow-mobile-trigger-actor-badge"
         >
-          {canAct ? "You can act" : humanStatus(props.status)}
+          {canAct
+            ? tr("contentDetail.workflow.canAct", "You can act")
+            : tr(`contentDetail.workflow.statusLabels.${props.status}`, humanStatus(props.status))}
         </Badge>
         <DirAwareChevronRight className="text-fg-muted h-4 w-4" aria-hidden="true" />
       </button>
@@ -1331,11 +1390,11 @@ export function WorkflowSheet(props: WorkflowRailBodyProps) {
           id="workflow-mobile-sheet"
           role="dialog"
           aria-modal="true"
-          aria-label="Workflow"
+          aria-label={tr("contentDetail.workflow.label", "Workflow")}
         >
           <button
             type="button"
-            aria-label="Close workflow"
+            aria-label={tr("contentDetail.workflow.closeWorkflow", "Close workflow")}
             className="bg-fg-primary/40 absolute inset-0 cursor-default backdrop-blur-sm"
             onClick={() => setOpen(false)}
             data-testid="workflow-mobile-backdrop"
@@ -1345,11 +1404,13 @@ export function WorkflowSheet(props: WorkflowRailBodyProps) {
             data-testid="workflow-mobile-panel"
           >
             <header className="border-border bg-surface sticky top-0 z-10 flex items-center justify-between border-b px-3 py-2">
-              <p className="text-label text-fg-secondary font-semibold uppercase">Workflow</p>
+              <p className="text-label text-fg-secondary font-semibold uppercase">
+                {tr("contentDetail.workflow.label", "Workflow")}
+              </p>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                aria-label="Close"
+                aria-label={tr("contentDetail.workflow.close", "Close")}
                 className="text-fg-secondary hover:text-fg-primary focus-visible:ring-focus-ring inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-control)] focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                 data-testid="workflow-mobile-close"
               >

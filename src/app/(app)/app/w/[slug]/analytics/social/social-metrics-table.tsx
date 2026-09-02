@@ -1,6 +1,7 @@
 "use client";
 
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * M4 — exact-value table for the social growth chart.
@@ -25,43 +26,6 @@ function fmt(n: number | null | undefined): string {
   return n === null || n === undefined ? "—" : n.toLocaleString();
 }
 
-const columns: DataTableColumnDef<SocialMetricsRow>[] = [
-  {
-    key: "metricDate",
-    header: "Date",
-    cell: (row) => row.metricDate,
-  },
-  {
-    key: "followerCount",
-    header: "Followers",
-    cell: (row) => fmt(row.followerCount),
-  },
-  {
-    key: "reach",
-    header: "Reach",
-    hideOn: "md",
-    cell: (row) => fmt(row.reach),
-  },
-  {
-    key: "views",
-    header: "Views",
-    hideOn: "md",
-    cell: (row) => fmt(row.views),
-  },
-  {
-    key: "engagedAccounts",
-    header: "Engaged",
-    hideOn: "lg",
-    cell: (row) => fmt(row.engagedAccounts),
-  },
-  {
-    key: "interactions",
-    header: "Interactions",
-    hideOn: "lg",
-    cell: (row) => fmt(row.interactions),
-  },
-];
-
 export function SocialMetricsTable({
   rows,
   tableId,
@@ -69,11 +33,47 @@ export function SocialMetricsTable({
   rows: SocialMetricsRow[];
   tableId: string;
 }) {
+  const t = useLocaleT();
+  const columns: DataTableColumnDef<SocialMetricsRow>[] = [
+    {
+      key: "metricDate",
+      header: t("analytics.tableDate"),
+      cell: (row) => row.metricDate,
+    },
+    {
+      key: "followerCount",
+      header: t("analytics.tableFollowers"),
+      cell: (row) => fmt(row.followerCount),
+    },
+    {
+      key: "reach",
+      header: t("analytics.tableReach"),
+      hideOn: "md",
+      cell: (row) => fmt(row.reach),
+    },
+    {
+      key: "views",
+      header: t("analytics.tableViews"),
+      hideOn: "md",
+      cell: (row) => fmt(row.views),
+    },
+    {
+      key: "engagedAccounts",
+      header: t("analytics.tableEngaged"),
+      hideOn: "lg",
+      cell: (row) => fmt(row.engagedAccounts),
+    },
+    {
+      key: "interactions",
+      header: t("analytics.tableInteractions"),
+      hideOn: "lg",
+      cell: (row) => fmt(row.interactions),
+    },
+  ];
   if (rows.length === 0) {
     return (
       <p className="text-body text-fg-muted" data-testid="social-metrics-empty">
-        No daily metrics yet. The first snapshot lands within 24 hours of connecting a provider; the
-        chart and table will populate automatically.
+        {t("analytics.tableEmpty")}
       </p>
     );
   }

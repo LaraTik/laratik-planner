@@ -390,11 +390,21 @@
     "itemLinkedDesc": "Figma, Drive, Canva, or Dropbox link"
   },
   "linkedResource": {
+    "providerLabel": "Provider",
     "providerGoogleDrive": "Google Drive",
     "providerFigma": "Figma",
     "providerCanva": "Canva",
     "providerDropbox": "Dropbox",
     "providerOther": "Other",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. Brand library",
+    "urlLabel": "URL",
+    "urlHint": "HTTPS only",
+    "urlPlaceholder": "https://figma.com/file/…",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Optional. What's in this library?",
+    "link": "Link resource",
+    "adding": "Adding…",
     "openAria": "Open {name} on {provider} in a new tab",
     "archiveLabel": "linked resource"
   }

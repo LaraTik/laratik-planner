@@ -76,11 +76,15 @@ export function SocialSyncDiagnostics({
   channels,
   slug,
   now,
+  t,
 }: {
   channels: ChannelLike[];
   slug: string;
   now?: Date;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : interpolate(fallback, params);
   const at = now ?? new Date();
   const state = computeState(channels, at);
 
@@ -96,15 +100,30 @@ export function SocialSyncDiagnostics({
     <section
       data-testid="social-sync-diagnostics"
       aria-live="polite"
-      aria-label="Social sync diagnostics"
+      aria-label={tr("analytics.syncDiagnosticsAria", "Social sync diagnostics")}
       className="border-border bg-surface space-y-3 rounded-md border p-4"
     >
       <header className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Activity className="text-fg-muted h-4 w-4" aria-hidden={true} />
-          <h2 className="text-title-card text-fg-primary font-semibold">Sync diagnostics</h2>
+          <h2 className="text-title-card text-fg-primary font-semibold">
+            {tr("analytics.syncDiagnosticsTitle", "Sync diagnostics")}
+          </h2>
         </div>
-        <p className="text-label text-fg-muted">{state.summary}</p>
+        <p className="text-label text-fg-muted">
+          {channels.length === 0
+            ? tr("analytics.noConnectedChannels", "No connected channels")
+            : tr(
+                "analytics.syncSummary",
+                "{synced}/{total} healthy · {degraded} degraded · {stalled} stalled",
+                {
+                  synced: state.counts.synced,
+                  total: channels.length,
+                  degraded: state.counts.degraded,
+                  stalled: state.counts.stalled,
+                },
+              )}
+        </p>
       </header>
 
       <div
@@ -114,7 +133,7 @@ export function SocialSyncDiagnostics({
         <StateCell
           state="synced"
           count={state.counts.synced}
-          label="Synced today"
+          label={tr("analytics.syncedToday", "Synced today")}
           tone="border-success/30 bg-success/5 text-success"
           icon={<CheckCircle2 className="h-4 w-4" aria-hidden={true} />}
           testId="social-sync-diagnostics-cell-synced"
@@ -122,7 +141,7 @@ export function SocialSyncDiagnostics({
         <StateCell
           state="degraded"
           count={state.counts.degraded}
-          label="Degraded (partial data)"
+          label={tr("analytics.degradedPartial", "Degraded (partial data)")}
           tone="border-warning/30 bg-warning/5 text-warning"
           icon={<AlertTriangle className="h-4 w-4" aria-hidden={true} />}
           testId="social-sync-diagnostics-cell-degraded"
@@ -130,7 +149,7 @@ export function SocialSyncDiagnostics({
         <StateCell
           state="stalled"
           count={state.counts.stalled}
-          label="Stalled (>25h)"
+          label={tr("analytics.stalledOver25h", "Stalled (>25h)")}
           tone="border-danger/30 bg-danger/5 text-danger"
           icon={<Clock className="h-4 w-4" aria-hidden={true} />}
           testId="social-sync-diagnostics-cell-stalled"
@@ -140,15 +159,23 @@ export function SocialSyncDiagnostics({
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <InfoCell
           testId="social-sync-diagnostics-oldest"
-          label="Oldest unsynced"
+          label={tr("analytics.oldestUnsynced", "Oldest unsynced")}
           value={oldest ? `${oldest.accountName} · ${oldest.ageText}` : "—"}
-          hint={oldest?.errorCode ? `last error: ${oldest.errorCode}` : null}
+          hint={
+            oldest?.errorCode
+              ? tr("analytics.lastError", "last error: {error}", { error: oldest.errorCode })
+              : null
+          }
         />
         <InfoCell
           testId="social-sync-diagnostics-next"
-          label="Next scheduled attempt"
+          label={tr("analytics.nextScheduledAttempt", "Next scheduled attempt")}
           value={next ? next.relativeText : "—"}
-          hint={next ? `at ${next.absoluteText} UTC` : "no channel is currently scheduled"}
+          hint={
+            next
+              ? tr("analytics.scheduledAt", "at {time} UTC", { time: next.absoluteText })
+              : tr("analytics.noScheduledChannel", "no channel is currently scheduled")
+          }
         />
       </div>
 
@@ -160,11 +187,19 @@ export function SocialSyncDiagnostics({
             className="border-border bg-surface text-fg-primary hover:bg-surface-subtle inline-flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
           >
             <RefreshCw className="h-4 w-4" aria-hidden={true} />
-            Re-test on channels page
+            {tr("analytics.retestChannels", "Re-test on channels page")}
           </Link>
         </div>
       )}
     </section>
+  );
+}
+
+function interpolate(value: string, params?: Record<string, string | number>): string {
+  if (!params) return value;
+  return Object.entries(params).reduce(
+    (result, [name, replacement]) => result.replaceAll(`{${name}}`, String(replacement)),
+    value,
   );
 }
 
