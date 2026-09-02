@@ -60,7 +60,7 @@ describe("build information UI", () => {
 
     await user.click(screen.getByRole("button", { name: "Copy build information" }));
 
-    expect(toastError).toHaveBeenCalledWith("Couldn't copy build information", {
+    expect(toastError).toHaveBeenCalledWith("Could not copy build information", {
       description: "permission denied",
     });
     expect(screen.getByRole("button", { name: "Copy build information" })).toBeVisible();
