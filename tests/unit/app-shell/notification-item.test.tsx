@@ -67,20 +67,20 @@ describe("NotificationItem", () => {
     expect(li?.className).not.toContain("bg-primary-subtle/20");
   });
 
-  it("shows the 'Mark read' button when the notification is unread", () => {
+  it("shows the 'Mark as read' button when the notification is unread", () => {
     renderItem({ readAt: null });
-    expect(screen.getByRole("button", { name: "Mark read" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mark as read" })).toBeInTheDocument();
   });
 
-  it("hides the 'Mark read' button when the notification is already read", () => {
+  it("hides the 'Mark as read' button when the notification is already read", () => {
     renderItem({ readAt: "2026-08-21T11:00:00.000Z" });
-    expect(screen.queryByRole("button", { name: "Mark read" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Mark as read" })).toBeNull();
   });
 
-  it("calls onMarkRead with the item id when 'Mark read' is clicked", async () => {
+  it("calls onMarkRead with the item id when 'Mark as read' is clicked", async () => {
     const onMarkRead = vi.fn();
     renderItem({ id: "abc", readAt: null }, onMarkRead);
-    await userEvent.click(screen.getByRole("button", { name: "Mark read" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mark as read" }));
     expect(onMarkRead).toHaveBeenCalledTimes(1);
     expect(onMarkRead).toHaveBeenCalledWith("abc");
   });

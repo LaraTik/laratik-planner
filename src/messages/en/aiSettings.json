@@ -2,5 +2,53 @@
   "title": "AI assistance",
   "description": "Environment-managed assistance with human-controlled insert and replace.",
   "emptyNoKeyTitle": "AI not configured",
-  "emptyNoKeyDescription": "Connect a key in agency settings, or ask an agency admin to enable AI assistance for this workspace."
+  "emptyNoKeyDescription": "Connect a key in agency settings, or ask an agency admin to enable AI assistance for this workspace.",
+  "configureAtAgency": "Configure at agency level",
+  "provider": "Provider",
+  "enabled": "Enabled",
+  "disabled": "Disabled",
+  "agencyLevelDescription": "AI is configured at the agency level. Workspace managers cannot change provider, model, or capability toggles — only agency admins can.",
+  "notConfigured": "Not configured",
+  "apiBase": "API base",
+  "keySource": "Key source",
+  "managedSecretEndsIn": "Managed secret · ends in …{suffix}",
+  "environmentConfigured": "Configured by environment",
+  "workspaceRequests30Days": "Requests in this workspace, last 30 days",
+  "availableCapabilities": "Available capabilities",
+  "capabilitiesDescription": "Each capability surfaces a button in the planning flow. Disabled capabilities stay hidden in the UI.",
+  "on": "On",
+  "off": "Off",
+  "safetyBoundary": "Safety boundary",
+  "safety": {
+    "drafts": "AI drafts text; the human inserts or replaces — never auto-saves.",
+    "allowlistedFields": "Only allowlisted content fields are sent to the provider.",
+    "usageLogs": "Usage logs record categories and token counts, never full prompts.",
+    "rateLimits": "Rate limits protect users and provider spend; one retry on transient errors."
+  },
+  "capabilities": {
+    "campaign_ideas": {
+      "label": "Campaign ideas",
+      "description": "Generate 3-5 campaign ideas that ladder up to the active brief."
+    },
+    "brief_improvement": {
+      "label": "Improve brief",
+      "description": "Tighten a vague brief into a clear Hook → Main message → CTA structure."
+    },
+    "caption_drafts": {
+      "label": "Draft caption",
+      "description": "Draft a caption with platform-aware tone; editable before save."
+    },
+    "platform_adaptation": {
+      "label": "Adapt to platform",
+      "description": "Adapt a draft caption to a different channel (Instagram, TikTok, LinkedIn, X)."
+    },
+    "related_format_ideas": {
+      "label": "Related format ideas",
+      "description": "Suggest adjacent formats for a piece of content (carousel ↔ reel ↔ story)."
+    },
+    "completeness_check": {
+      "label": "Check completeness",
+      "description": "Score how ready a brief is for creative handoff and flag the missing pieces."
+    }
+  }
 }

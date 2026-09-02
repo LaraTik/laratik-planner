@@ -94,7 +94,7 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
               className="text-primary focus-visible:ring-focus-ring text-body inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
               data-testid="ai-open-agency-config"
             >
-              Configure at agency level
+              {t("aiSettings.configureAtAgency")}
               <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           ) : null
@@ -106,49 +106,47 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Bot className="text-primary h-5 w-5" aria-hidden="true" />
-              <CardTitle>Provider</CardTitle>
+              <CardTitle>{t("aiSettings.provider")}</CardTitle>
             </div>
             <Badge variant={effectiveEnabled ? "success" : "outline"}>
-              {effectiveEnabled ? "Enabled" : "Disabled"}
+              {effectiveEnabled ? t("aiSettings.enabled") : t("aiSettings.disabled")}
             </Badge>
           </div>
           <CardDescription className="mt-2">
-            AI is configured at the agency level. Workspace managers cannot change provider, model,
-            or capability toggles — only agency admins can.
+            {t("aiSettings.agencyLevelDescription")}
           </CardDescription>
           <dl className="mt-5 space-y-3">
             <Row
-              label="Provider"
+              label={t("aiSettings.provider")}
               value={
                 effectiveEnabled
                   ? `${AI_PROVIDER.vendor} · ${serverEnv.MINIMAX_MODEL || AI_PROVIDER.defaultModel} (${AI_PROVIDER.compat})`
-                  : "Not configured"
+                  : t("aiSettings.notConfigured")
               }
             />
             <Row
-              label="API base"
+              label={t("aiSettings.apiBase")}
               value={serverEnv.MINIMAX_BASE_URL || AI_PROVIDER.defaultBaseUrl}
             />
             <Row
-              label="Key source"
+              label={t("aiSettings.keySource")}
               value={
                 feature?.keySource === "managed_secret" && feature.maskedKeySuffix
-                  ? `Managed secret · ends in …${feature.maskedKeySuffix}`
-                  : "Configured by environment"
+                  ? t("aiSettings.managedSecretEndsIn", { suffix: feature.maskedKeySuffix })
+                  : t("aiSettings.environmentConfigured")
               }
             />
-            <Row label="Requests in this workspace, last 30 days" value={String(requestCount)} />
+            <Row label={t("aiSettings.workspaceRequests30Days")} value={String(requestCount)} />
           </dl>
         </Card>
 
         <Card data-testid="ai-capabilities-card">
           <div className="flex items-center gap-2">
             <Sparkles className="text-primary h-5 w-5" aria-hidden="true" />
-            <CardTitle>Available capabilities</CardTitle>
+            <CardTitle>{t("aiSettings.availableCapabilities")}</CardTitle>
           </div>
           <CardDescription className="mt-2">
-            Each capability surfaces a button in the planning flow. Disabled capabilities stay
-            hidden in the UI.
+            {t("aiSettings.capabilitiesDescription")}
           </CardDescription>
           <ul className="mt-4 space-y-2" data-testid="ai-capability-list">
             {PLANNER_FACING_CAPABILITIES.map((cap) => {
@@ -160,10 +158,16 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
                   data-testid={`ai-capability-${cap.id}`}
                 >
                   <div className="min-w-0">
-                    <p className="text-body text-fg-primary font-semibold">{cap.label}</p>
-                    <p className="text-label text-fg-muted mt-0.5">{cap.description}</p>
+                    <p className="text-body text-fg-primary font-semibold">
+                      {t(`aiSettings.capabilities.${cap.id}.label`)}
+                    </p>
+                    <p className="text-label text-fg-muted mt-0.5">
+                      {t(`aiSettings.capabilities.${cap.id}.description`)}
+                    </p>
                   </div>
-                  <Badge variant={isOn ? "success" : "outline"}>{isOn ? "On" : "Off"}</Badge>
+                  <Badge variant={isOn ? "success" : "outline"}>
+                    {isOn ? t("aiSettings.on") : t("aiSettings.off")}
+                  </Badge>
                 </li>
               );
             })}
@@ -174,13 +178,13 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
       <Card data-testid="ai-safety-card">
         <div className="flex items-center gap-2">
           <ShieldCheck className="text-success h-5 w-5" aria-hidden="true" />
-          <CardTitle>Safety boundary</CardTitle>
+          <CardTitle>{t("aiSettings.safetyBoundary")}</CardTitle>
         </div>
         <ul className="text-body text-fg-secondary mt-4 grid gap-2 sm:grid-cols-2">
-          <li>· AI drafts text; the human inserts or replaces — never auto-saves.</li>
-          <li>· Only allowlisted content fields are sent to the provider.</li>
-          <li>· Usage logs record categories and token counts, never full prompts.</li>
-          <li>· Rate limits protect users and provider spend; one retry on transient errors.</li>
+          <li>· {t("aiSettings.safety.drafts")}</li>
+          <li>· {t("aiSettings.safety.allowlistedFields")}</li>
+          <li>· {t("aiSettings.safety.usageLogs")}</li>
+          <li>· {t("aiSettings.safety.rateLimits")}</li>
         </ul>
       </Card>
     </div>

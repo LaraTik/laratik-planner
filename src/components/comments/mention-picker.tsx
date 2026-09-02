@@ -161,7 +161,13 @@ function Avatar({ user }: { user: MentionableUser }) {
   if (user.image) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={user.image} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
+      <img
+        src={user.image}
+        alt=""
+        className="h-7 w-7 shrink-0 rounded-full object-cover"
+        loading="lazy"
+        decoding="async"
+      />
     );
   }
   return (

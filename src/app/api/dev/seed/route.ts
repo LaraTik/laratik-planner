@@ -69,6 +69,7 @@ type SeedBody = {
   workspaceName?: string;
   workspaceSlug?: string;
   contentItemTitle?: string;
+  locale?: "en" | "ar";
   agencyAdmin?: boolean;
   workspaceRoles?: (
     | "workspace_manager"
@@ -95,6 +96,7 @@ type SeedBody = {
 };
 
 const PlatformRoleSchema = z.enum(PLATFORM_ROLE_VALUES);
+const LocaleSchema = z.enum(["en", "ar"]);
 
 const FIXTURES = {
   email: "test@laratik.local",
@@ -131,6 +133,13 @@ export async function POST(req: NextRequest) {
       { status: 400, headers: mutatingApiHeaders() },
     );
   }
+  const explicitLocale = body.locale === undefined ? null : LocaleSchema.safeParse(body.locale);
+  if (explicitLocale && !explicitLocale.success) {
+    return NextResponse.json(
+      { error: "Invalid locale" },
+      { status: 400, headers: mutatingApiHeaders() },
+    );
+  }
   const f = {
     email: (body.email ?? FIXTURES.email).trim().toLowerCase(),
     name: (body.name ?? FIXTURES.name).trim(),
@@ -139,6 +148,7 @@ export async function POST(req: NextRequest) {
     workspaceName: body.workspaceName ?? FIXTURES.workspaceName,
     workspaceSlug: body.workspaceSlug ?? FIXTURES.workspaceSlug,
     contentItemTitle: body.contentItemTitle ?? FIXTURES.contentItemTitle,
+    locale: explicitLocale?.data ?? "en",
     agencyAdmin: body.agencyAdmin ?? true,
     workspaceRoles: body.workspaceRoles ?? [],
     platformAdmin: body.platformAdmin ?? false,
@@ -165,6 +175,7 @@ async function seedInternal(f: {
   workspaceName: string;
   workspaceSlug: string;
   contentItemTitle: string;
+  locale: "en" | "ar";
   agencyAdmin: boolean;
   workspaceRoles: (
     | "workspace_manager"
@@ -189,7 +200,7 @@ async function seedInternal(f: {
     userId = existingUser[0].id;
     await db
       .update(users)
-      .set({ role: f.agencyAdmin ? "agency_admin" : "user" })
+      .set({ role: f.agencyAdmin ? "agency_admin" : "user", locale: f.locale })
       .where(eq(users.id, userId));
   } else {
     const [created] = await db
@@ -199,10 +210,22 @@ async function seedInternal(f: {
         name: f.name,
         displayName: f.name,
         role: f.agencyAdmin ? "agency_admin" : "user",
+        locale: f.locale,
         emailVerified: new Date(),
       })
+      .onConflictDoNothing()
       .returning({ id: users.id });
-    userId = created!.id;
+    if (created) {
+      userId = created.id;
+    } else {
+      const [racedUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(sql`lower(${users.email}) = ${f.email}`)
+        .limit(1);
+      if (!racedUser) throw new Error("Seed user conflict could not be resolved");
+      userId = racedUser.id;
+    }
   }
 
   // ─── Agency (idempotent by slug) ───────────────────────────────────────
@@ -226,8 +249,19 @@ async function seedInternal(f: {
         slug: f.agencySlug,
         bootstrapCompletedAt: new Date(),
       })
+      .onConflictDoNothing()
       .returning({ id: agencies.id });
-    agencyId = created!.id;
+    if (created) {
+      agencyId = created.id;
+    } else {
+      const [racedAgency] = await db
+        .select({ id: agencies.id })
+        .from(agencies)
+        .where(eq(agencies.slug, f.agencySlug))
+        .limit(1);
+      if (!racedAgency) throw new Error("Seed agency conflict could not be resolved");
+      agencyId = racedAgency.id;
+    }
   }
 
   // Production agency creation always assigns a plan. The dev fixture
@@ -314,8 +348,19 @@ async function seedInternal(f: {
         timezone: "UTC",
         createdBy: userId,
       })
+      .onConflictDoNothing()
       .returning({ id: workspaces.id });
-    workspaceId = created!.id;
+    if (created) {
+      workspaceId = created.id;
+    } else {
+      const [racedWorkspace] = await db
+        .select({ id: workspaces.id })
+        .from(workspaces)
+        .where(and(eq(workspaces.agencyId, agencyId), eq(workspaces.slug, f.workspaceSlug)))
+        .limit(1);
+      if (!racedWorkspace) throw new Error("Seed workspace conflict could not be resolved");
+      workspaceId = racedWorkspace.id;
+    }
   }
 
   // ─── Workspace membership (manager) ─────────────────────────────────────

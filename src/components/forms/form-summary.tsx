@@ -66,15 +66,10 @@ export function FormSummary({
   const tr = (key: string, fallback: string) => (t(key) === key ? fallback : t(key));
 
   // Don't render an empty card.
-  const fields = fieldErrors
-    ? Object.entries(fieldErrors).filter(([, v]) => Boolean(v))
-    : [];
+  const fields = fieldErrors ? Object.entries(fieldErrors).filter(([, v]) => Boolean(v)) : [];
   if (!error && fields.length === 0) return null;
 
-  const summaryTitle = tr(
-    "forms.errorSummary.title",
-    "Please fix the highlighted fields",
-  );
+  const summaryTitle = tr("forms.errorSummary.title", "Please fix the highlighted fields");
   const summaryDescription = tr(
     "forms.errorSummary.description",
     "We couldn't save the form because of the following issue(s):",
@@ -99,15 +94,13 @@ export function FormSummary({
           {fields.length > 0 ? (
             <ul className="text-fg-secondary list-disc space-y-0.5 ps-5">
               {fields.map(([field, message]) => {
-                const id = fieldIdPrefix
-                  ? `${fieldIdPrefix}-${field}`
-                  : field;
+                const id = fieldIdPrefix ? `${fieldIdPrefix}-${field}` : field;
                 const label = fieldLabels?.[field] ?? capitalise(field);
                 return (
                   <li key={field} data-testid={`form-summary-field-${field}`}>
                     <a
                       href={`#${id}`}
-                      className="text-danger underline underline-offset-2 hover:opacity-80 focus-visible:ring-focus-ring focus:outline-none focus-visible:ring-2"
+                      className="text-danger focus-visible:ring-focus-ring underline underline-offset-2 hover:opacity-80 focus:outline-none focus-visible:ring-2"
                       onClick={(e) => {
                         // Smooth scroll is handled by the focus helper on
                         // submit; here we just let the browser jump. We
@@ -121,9 +114,7 @@ export function FormSummary({
                     >
                       {label}
                     </a>
-                    {message ? (
-                      <span className="text-fg-muted"> — {message}</span>
-                    ) : null}
+                    {message ? <span className="text-fg-muted"> — {message}</span> : null}
                   </li>
                 );
               })}

@@ -40,7 +40,7 @@ export function focusFirstInvalid(form: HTMLFormElement | null): HTMLElement | n
   // 2. First required control with a name (covers hidden inputs
   //    that fail validation but aren't visually marked yet).
   const required = form.querySelector<HTMLElement>(
-    'input[required][name], select[required][name], textarea[required][name]',
+    "input[required][name], select[required][name], textarea[required][name]",
   );
   if (required) {
     focusAndScroll(required, reduceMotion);

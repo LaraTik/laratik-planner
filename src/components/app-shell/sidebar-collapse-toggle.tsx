@@ -79,7 +79,7 @@ export function SidebarCollapseToggle({
       title={label}
       data-testid="sidebar-collapse-toggle"
       className={cn(
-        "text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-9 min-w-9 items-center justify-center rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2",
+        "text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2",
       )}
       disabled={pending}
     >

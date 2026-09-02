@@ -150,6 +150,40 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
     expect(activeCookie?.value).not.toBe(priorValue);
     expect(activeCookie?.value.startsWith(`${first.agencyId}.`)).toBe(true);
   });
+
+  test("switching workspaces within one agency loads the selected workspace", async ({ page }) => {
+    const email = "workspace-switcher-same-agency@laratik.local";
+    await devSeed(page.request, {
+      email,
+      agencyName: "Workspace Switcher Agency",
+      agencySlug: "workspace-switcher-agency",
+      workspaceName: "Workspace One",
+      workspaceSlug: "workspace-one",
+    });
+    await devSeed(page.request, {
+      email,
+      agencyName: "Workspace Switcher Agency",
+      agencySlug: "workspace-switcher-agency",
+      workspaceName: "Workspace Two",
+      workspaceSlug: "workspace-two",
+    });
+    await devSignIn(page.request, { email });
+    await page.goto("/app/w/workspace-one");
+
+    const trigger = page.getByTestId("sidebar-workspace-switcher-trigger");
+    await expect(trigger).toHaveAttribute("aria-label", /Active workspace: Workspace One/);
+    await trigger.click();
+    await page
+      .getByRole("listbox", { name: "Workspaces" })
+      .getByRole("option", { name: "Workspace Two" })
+      .click();
+
+    await expect(page).toHaveURL(/\/app\/w\/workspace-two/);
+    await expect(page.getByTestId("sidebar-workspace-switcher-trigger")).toHaveAttribute(
+      "aria-label",
+      /Active workspace: Workspace Two/,
+    );
+  });
 });
 
 /**

@@ -55,10 +55,7 @@ export function HashtagEditor({
   const atMax = value.length >= HASHTAG_MAX;
 
   function commit(raw: string) {
-    const cleaned = raw
-      .trim()
-      .replace(/^#+/, "")
-      .slice(0, HASHTAG_TAG_MAX);
+    const cleaned = raw.trim().replace(/^#+/, "").slice(0, HASHTAG_TAG_MAX);
     if (!cleaned) return;
     if (atMax) {
       setWarning(`Up to ${HASHTAG_MAX} hashtags.`);
@@ -90,10 +87,7 @@ export function HashtagEditor({
 
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <label
-        htmlFor={id}
-        className="text-body text-fg-primary font-semibold"
-      >
+      <label htmlFor={id} className="text-body text-fg-primary font-semibold">
         {label}
       </label>
       <div
@@ -145,7 +139,9 @@ export function HashtagEditor({
           }
           aria-label={label}
           aria-invalid={error ? "true" : undefined}
-          aria-describedby={cn(error ? `${id}-error ` : "", hint ? `${id}-hint ` : "").trim() || undefined}
+          aria-describedby={
+            cn(error ? `${id}-error ` : "", hint ? `${id}-hint ` : "").trim() || undefined
+          }
           className="text-body text-fg-primary placeholder:text-fg-muted min-w-[10ch] flex-1 bg-transparent focus:outline-none"
           data-testid={`${testId}-input`}
         />
@@ -163,19 +159,12 @@ export function HashtagEditor({
             </p>
           ) : null}
           {error ? (
-            <p
-              id={`${id}-error`}
-              role="alert"
-              className="text-label text-danger font-semibold"
-            >
+            <p id={`${id}-error`} role="alert" className="text-label text-danger font-semibold">
               {error}
             </p>
           ) : null}
           {warning ? (
-            <p
-              className="text-label text-warning"
-              role="status"
-            >
+            <p className="text-label text-warning" role="status">
               {warning}
             </p>
           ) : null}

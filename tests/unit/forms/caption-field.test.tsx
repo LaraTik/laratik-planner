@@ -29,13 +29,7 @@ describe("CaptionField", () => {
 
   it("renders an 8-row textarea", () => {
     render(
-      <CaptionField
-        id="cap"
-        name="caption"
-        label="Caption"
-        value=""
-        onChange={() => undefined}
-      />,
+      <CaptionField id="cap" name="caption" label="Caption" value="" onChange={() => undefined} />,
     );
     const textarea = screen.getByRole("textbox", { name: /caption/i });
     expect(textarea.getAttribute("rows")).toBe("8");
@@ -75,15 +69,7 @@ describe("CaptionField", () => {
     const user = userEvent.setup();
     function Wrapper() {
       const [v, setV] = React.useState("");
-      return (
-        <CaptionField
-          id="cap"
-          name="caption"
-          label="Caption"
-          value={v}
-          onChange={setV}
-        />
-      );
+      return <CaptionField id="cap" name="caption" label="Caption" value={v} onChange={setV} />;
     }
     render(<Wrapper />);
     const textarea = screen.getByRole("textbox", { name: /caption/i });

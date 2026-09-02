@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import {
-  actionFailure,
-  fieldErrorsFromZod,
-} from "@/lib/validation/action-state";
+import { actionFailure, fieldErrorsFromZod } from "@/lib/validation/action-state";
 
 /**
  * Plan §4 — "fieldErrorsFromZod is the only place that knows

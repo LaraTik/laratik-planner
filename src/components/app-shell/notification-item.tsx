@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Minimal serialised shape for a single notification row. Dates are
@@ -45,6 +46,13 @@ export interface NotificationItemProps {
  */
 export function NotificationItem({ item, onMarkRead, onActionClick }: NotificationItemProps) {
   const isUnread = !item.readAt;
+  const locale = useLocaleCode();
+  const t = useLocaleT();
+  const createdAt = new Intl.DateTimeFormat(locale === "ar" ? "ar" : "en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    numberingSystem: "latn",
+  }).format(new Date(item.createdAt));
   return (
     <li
       className={[
@@ -55,9 +63,7 @@ export function NotificationItem({ item, onMarkRead, onActionClick }: Notificati
       <div className="min-w-0 flex-1">
         <p className="text-body text-fg-primary font-semibold">{item.title}</p>
         <p className="text-label text-fg-secondary">{item.body}</p>
-        <p className="text-label text-fg-muted mt-0.5">
-          {new Date(item.createdAt).toLocaleString()}
-        </p>
+        <p className="text-label text-fg-muted mt-0.5">{createdAt}</p>
         {item.actionUrl ? (
           <Link
             href={item.actionUrl}
@@ -67,14 +73,14 @@ export function NotificationItem({ item, onMarkRead, onActionClick }: Notificati
               onActionClick?.(item.id);
             }}
           >
-            Open →
+            {t("notifications.open")} →
           </Link>
         ) : null}
       </div>
       {isUnread ? (
         <button
           type="button"
-          aria-label="Mark read"
+          aria-label={t("notifications.markRead")}
           onClick={() => onMarkRead(item.id)}
           className="text-fg-muted hover:text-fg-primary"
         >

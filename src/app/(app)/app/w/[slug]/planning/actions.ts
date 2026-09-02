@@ -38,11 +38,7 @@ import {
   resolveComment,
   ResolveCommentSchema,
 } from "@/lib/discussions/service";
-import {
-  actionFailure,
-  fieldErrorsFromZod,
-  type ActionState,
-} from "@/lib/validation/action-state";
+import { actionFailure, fieldErrorsFromZod, type ActionState } from "@/lib/validation/action-state";
 
 /**
  * Per-action field maps (plan §4 — "Per-action field map").
@@ -63,11 +59,7 @@ type ApplyAiDraftFields = "draftText" | "mode";
 type SubmitDeliveryFields = "description" | "designerNote" | "linkLabel" | "linkUrl";
 type DecideApprovalFields = "decision" | "feedback";
 type RecordPublicationFields =
-  | "contentItemChannelId"
-  | "status"
-  | "publishedUrl"
-  | "note"
-  | "failureReason";
+  "contentItemChannelId" | "status" | "publishedUrl" | "note" | "failureReason";
 type CreateCommentFields = "contentItemId" | "body" | "visibility" | "label";
 type UpdateFormatPayloadFields = "contentItemId" | "format" | "formatPayload";
 type ResolveCommentFields = "commentId" | "resolved";
@@ -302,10 +294,7 @@ export async function transitionAction(input: {
     // a value keeps the message in the RSC payload. Matches the
     // pattern already used by `applyAiDraftAction`, `submitDeliveryAction`,
     // and `decideApprovalAction` in this file.
-    return actionFailure<TransitionFields>(
-      error,
-      "The workflow action failed.",
-    );
+    return actionFailure<TransitionFields>(error, "The workflow action failed.");
   }
 }
 
@@ -393,13 +382,7 @@ export async function submitDeliveryAction(
   const links = labels
     .map((label, i: number) => ({
       provider: (providers[i] ?? "other") as
-        | "google_drive"
-        | "dropbox"
-        | "onedrive"
-        | "frame_io"
-        | "figma"
-        | "canva"
-        | "other",
+        "google_drive" | "dropbox" | "onedrive" | "frame_io" | "figma" | "canva" | "other",
       label,
       url: urls[i] ?? "",
       isPreview: previews[i] === "on",

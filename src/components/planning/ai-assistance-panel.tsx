@@ -98,7 +98,7 @@ export function AiAssistancePanel({
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Close"
-              className="text-fg-muted hover:text-fg-primary focus-visible:ring-focus-ring -me-1 -mt-1 inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2"
+              className="text-fg-muted hover:text-fg-primary focus-visible:ring-focus-ring -me-1 -mt-1 inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>

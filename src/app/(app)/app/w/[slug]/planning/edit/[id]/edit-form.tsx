@@ -189,11 +189,7 @@ export function EditIdeaForm({
             ))}
           </div>
           {state?.fieldErrors?.channelIds ? (
-            <p
-              id="channelIds-error"
-              role="alert"
-              className="text-label text-danger font-semibold"
-            >
+            <p id="channelIds-error" role="alert" className="text-label text-danger font-semibold">
               {state.fieldErrors.channelIds}
             </p>
           ) : null}

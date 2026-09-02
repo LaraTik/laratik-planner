@@ -61,6 +61,8 @@
   },
   "commentMentionTitle": "You were mentioned in a comment",
   "commentMentionBody": "Someone @mentioned you in a comment on a content item.",
+  "open": "Open",
+  "markRead": "Mark as read",
   "events": {
     "review_request": {
       "title": "Review requested: \"{title}\"",

@@ -29,7 +29,7 @@
     "test:e2e:workspace": "playwright test workspace.spec.ts",
     "test:e2e:content": "playwright test content-flow.spec.ts",
     "test:e2e:smoke": "playwright test public.spec.ts auth-gate.spec.ts health.spec.ts",
-    "test:a11y": "playwright test --grep @a11y",
+    "test:a11y": "tsx scripts/run-e2e-tests.ts -- --grep @a11y",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/lib/db/migrate.ts",
     "db:reset": "drizzle-kit drop && pnpm db:migrate",

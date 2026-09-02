@@ -82,7 +82,13 @@ const dbMock = vi.hoisted(() => {
   const del = vi.fn(() => deleteChain());
 
   const transaction = vi.fn(
-    async (fn: (tx: { select: typeof select; delete: typeof del; insert: typeof insert }) => Promise<unknown>) => {
+    async (
+      fn: (tx: {
+        select: typeof select;
+        delete: typeof del;
+        insert: typeof insert;
+      }) => Promise<unknown>,
+    ) => {
       state.transactionExecutions += 1;
       const tx = { select, delete: del, insert };
       return fn(tx);

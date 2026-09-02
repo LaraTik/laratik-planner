@@ -34,13 +34,7 @@ describe("HashtagEditor", () => {
     function Wrapper() {
       const [tags, setTags] = React.useState<string[]>([]);
       return (
-        <HashtagEditor
-          id="tags"
-          name="hashtags"
-          label="Hashtags"
-          value={tags}
-          onChange={setTags}
-        />
+        <HashtagEditor id="tags" name="hashtags" label="Hashtags" value={tags} onChange={setTags} />
       );
     }
     render(<Wrapper />);
@@ -55,13 +49,7 @@ describe("HashtagEditor", () => {
     function Wrapper() {
       const [tags, setTags] = React.useState<string[]>([]);
       return (
-        <HashtagEditor
-          id="tags"
-          name="hashtags"
-          label="Hashtags"
-          value={tags}
-          onChange={setTags}
-        />
+        <HashtagEditor id="tags" name="hashtags" label="Hashtags" value={tags} onChange={setTags} />
       );
     }
     render(<Wrapper />);
@@ -76,13 +64,7 @@ describe("HashtagEditor", () => {
     function Wrapper() {
       const [tags, setTags] = React.useState<string[]>(["spring"]);
       return (
-        <HashtagEditor
-          id="tags"
-          name="hashtags"
-          label="Hashtags"
-          value={tags}
-          onChange={setTags}
-        />
+        <HashtagEditor id="tags" name="hashtags" label="Hashtags" value={tags} onChange={setTags} />
       );
     }
     render(<Wrapper />);
@@ -116,13 +98,7 @@ describe("HashtagEditor", () => {
     function Wrapper() {
       const [tags, setTags] = React.useState<string[]>(["a", "b"]);
       return (
-        <HashtagEditor
-          id="tags"
-          name="hashtags"
-          label="Hashtags"
-          value={tags}
-          onChange={setTags}
-        />
+        <HashtagEditor id="tags" name="hashtags" label="Hashtags" value={tags} onChange={setTags} />
       );
     }
     render(<Wrapper />);

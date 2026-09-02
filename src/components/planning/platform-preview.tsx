@@ -143,6 +143,8 @@ export function PlatformPreview({
           src={thumbnailUrl}
           alt={`${accountName} preview`}
           className="h-full w-full object-cover"
+          loading="lazy"
+          decoding="async"
         />
       ) : (
         <div

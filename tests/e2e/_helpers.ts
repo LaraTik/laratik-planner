@@ -143,6 +143,7 @@ export async function devSeed(
     agencySlug?: string;
     workspaceName?: string;
     workspaceSlug?: string;
+    locale?: "en" | "ar";
     agencyAdmin?: boolean;
     workspaceRoles?: Exclude<FixtureRole, "agency_admin">[];
     /**
@@ -165,6 +166,7 @@ export async function devSeed(
         ...(options.agencySlug ? { agencySlug: options.agencySlug } : {}),
         ...(options.workspaceName ? { workspaceName: options.workspaceName } : {}),
         workspaceSlug: options.workspaceSlug ?? "acme",
+        ...(options.locale ? { locale: options.locale } : {}),
         ...(options.agencyAdmin !== undefined ? { agencyAdmin: options.agencyAdmin } : {}),
         ...(options.workspaceRoles ? { workspaceRoles: options.workspaceRoles } : {}),
         ...(options.platformAdmin !== undefined ? { platformAdmin: options.platformAdmin } : {}),
@@ -196,6 +198,7 @@ export async function bootstrapTestSession(
     agencySlug?: string;
     workspaceName?: string;
     workspaceSlug?: string;
+    locale?: "en" | "ar";
   } = {},
 ): Promise<SeedResult> {
   const result = await devSeed(page.request, options);

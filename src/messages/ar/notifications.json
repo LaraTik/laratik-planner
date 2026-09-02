@@ -61,6 +61,8 @@
   },
   "commentMentionTitle": "تمت الإشارة إليك في تعليق",
   "commentMentionBody": "أشار إليك أحدهم في تعليق على عنصر محتوى.",
+  "open": "فتح",
+  "markRead": "وضع علامة كمقروء",
   "events": {
     "review_request": {
       "title": "طلب مراجعة: «{title}»",

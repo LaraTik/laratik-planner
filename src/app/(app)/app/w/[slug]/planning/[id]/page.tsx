@@ -845,50 +845,44 @@ export default async function ContentDetailPage({
                   workspaceSlug={slug}
                   contentItemId={item.id}
                   format={item.format as ContentFormat}
-                  initialCaption={
-                    ((): string => {
-                      const fp = (item as { formatPayload?: unknown }).formatPayload;
-                      if (
-                        fp &&
-                        typeof fp === "object" &&
-                        "caption" in (fp as Record<string, unknown>)
-                      ) {
-                        const c = (fp as { caption?: unknown }).caption;
-                        return typeof c === "string" ? c : "";
-                      }
-                      return "";
-                    })()
-                  }
-                  initialHashtags={
-                    ((): string[] => {
-                      const fp = (item as { formatPayload?: unknown }).formatPayload;
-                      if (
-                        fp &&
-                        typeof fp === "object" &&
-                        "hashtags" in (fp as Record<string, unknown>)
-                      ) {
-                        const h = (fp as { hashtags?: unknown }).hashtags;
-                        return Array.isArray(h)
-                          ? h.filter((t): t is string => typeof t === "string")
-                          : [];
-                      }
-                      return [];
-                    })()
-                  }
-                  initialFirstComment={
-                    ((): string => {
-                      const fp = (item as { formatPayload?: unknown }).formatPayload;
-                      if (
-                        fp &&
-                        typeof fp === "object" &&
-                        "firstComment" in (fp as Record<string, unknown>)
-                      ) {
-                        const c = (fp as { firstComment?: unknown }).firstComment;
-                        return typeof c === "string" ? c : "";
-                      }
-                      return "";
-                    })()
-                  }
+                  initialCaption={((): string => {
+                    const fp = (item as { formatPayload?: unknown }).formatPayload;
+                    if (
+                      fp &&
+                      typeof fp === "object" &&
+                      "caption" in (fp as Record<string, unknown>)
+                    ) {
+                      const c = (fp as { caption?: unknown }).caption;
+                      return typeof c === "string" ? c : "";
+                    }
+                    return "";
+                  })()}
+                  initialHashtags={((): string[] => {
+                    const fp = (item as { formatPayload?: unknown }).formatPayload;
+                    if (
+                      fp &&
+                      typeof fp === "object" &&
+                      "hashtags" in (fp as Record<string, unknown>)
+                    ) {
+                      const h = (fp as { hashtags?: unknown }).hashtags;
+                      return Array.isArray(h)
+                        ? h.filter((t): t is string => typeof t === "string")
+                        : [];
+                    }
+                    return [];
+                  })()}
+                  initialFirstComment={((): string => {
+                    const fp = (item as { formatPayload?: unknown }).formatPayload;
+                    if (
+                      fp &&
+                      typeof fp === "object" &&
+                      "firstComment" in (fp as Record<string, unknown>)
+                    ) {
+                      const c = (fp as { firstComment?: unknown }).firstComment;
+                      return typeof c === "string" ? c : "";
+                    }
+                    return "";
+                  })()}
                   channels={item.channels.map((ch) => ({
                     id: ch.id,
                     socialChannelId: ch.socialChannelId,

@@ -139,12 +139,7 @@ export function MessagesPanel({
 
   return (
     <div className="space-y-4" data-testid="messages-panel">
-      <form
-        ref={formRef}
-        action={formAction}
-        className="space-y-4"
-        data-testid="messages-form"
-      >
+      <form ref={formRef} action={formAction} className="space-y-4" data-testid="messages-form">
         <input type="hidden" name="contentItemId" value={contentItemId} />
         <input type="hidden" name="format" value={format} />
         <input type="hidden" name="formatPayload" value={payloadJson} />
@@ -184,10 +179,7 @@ export function MessagesPanel({
         />
 
         <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor={FIRST_COMMENT_ID}
-            className="text-body text-fg-primary font-semibold"
-          >
+          <label htmlFor={FIRST_COMMENT_ID} className="text-body text-fg-primary font-semibold">
             {tr("contentDetail.messages.firstCommentLabel", "First comment")}
           </label>
           <textarea
@@ -268,13 +260,11 @@ export function MessagesPanel({
                   className="border-border bg-surface-container rounded-[var(--radius-control)] border p-3"
                   data-testid={`messages-per-channel-row-${ch.socialChannelId}`}
                 >
-                  <p className="text-label text-fg-secondary font-semibold uppercase tracking-wide">
+                  <p className="text-label text-fg-secondary font-semibold tracking-wide uppercase">
                     {ch.platform} · {ch.accountName}
                   </p>
                   {caption ? (
-                    <p className="text-body text-fg-primary mt-1 whitespace-pre-wrap">
-                      {caption}
-                    </p>
+                    <p className="text-body text-fg-primary mt-1 whitespace-pre-wrap">{caption}</p>
                   ) : (
                     <p className="text-label text-fg-muted mt-1 italic">
                       {tr("contentDetail.messages.perChannelEmpty", "No caption yet.")}

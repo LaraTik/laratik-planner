@@ -86,6 +86,8 @@ const AvatarTrigger = React.forwardRef<
           alt=""
           className="h-8 w-8 rounded-full object-cover"
           referrerPolicy="no-referrer"
+          loading="lazy"
+          decoding="async"
         />
       ) : (
         <span className="bg-surface-subtle text-label flex h-8 w-8 items-center justify-center rounded-full font-semibold">

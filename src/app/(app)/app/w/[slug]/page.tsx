@@ -317,7 +317,7 @@ export default async function WorkspaceOverviewPage({
             <Link
               href={buildMonthHref(-1)}
               aria-label={t("workspaceOverview.previousMonth", { month: previousMonthLabel })}
-              className="border-border bg-surface focus-visible:ring-focus-ring hover:bg-surface-subtle inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2"
+              className="border-border bg-surface focus-visible:ring-focus-ring hover:bg-surface-subtle inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2"
             >
               <DirAwareChevronLeft className="h-4 w-4" aria-hidden="true" />
             </Link>
@@ -330,7 +330,7 @@ export default async function WorkspaceOverviewPage({
             <Link
               href={buildMonthHref(1)}
               aria-label={t("workspaceOverview.nextMonth", { month: nextMonthLabel })}
-              className="border-border bg-surface focus-visible:ring-focus-ring hover:bg-surface-subtle inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2"
+              className="border-border bg-surface focus-visible:ring-focus-ring hover:bg-surface-subtle inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2"
             >
               <DirAwareChevronRight className="h-4 w-4" aria-hidden="true" />
             </Link>

@@ -209,7 +209,7 @@ function OverflowMenu({
   return (
     <details className="relative" data-testid="workspace-overflow-menu">
       <summary
-        className="border-border bg-surface text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-[var(--radius-control)] border focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none [&::-webkit-details-marker]:hidden"
+        className="border-border bg-surface text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-[var(--radius-control)] border focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none [&::-webkit-details-marker]:hidden"
         aria-label="More actions"
         data-testid="workspace-overflow-trigger"
       >

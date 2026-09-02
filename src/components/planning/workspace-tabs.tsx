@@ -44,12 +44,7 @@ import { cn } from "@/lib/utils";
  */
 
 export type WorkspaceTabId =
-  | "overview"
-  | "content"
-  | "messages"
-  | "preview"
-  | "publishing"
-  | "activity";
+  "overview" | "content" | "messages" | "preview" | "publishing" | "activity";
 
 /**
  * Serialisable tab descriptor passed from a Server Component
