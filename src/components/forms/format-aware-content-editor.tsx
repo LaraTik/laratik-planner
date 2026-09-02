@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { updateFormatPayloadAction } from "@/app/(app)/app/w/[slug]/planning/actions";
 import { NavigableArrayField } from "@/components/forms/navigable-array-field";
+import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
+import { useNavigationDirtyGuard } from "@/lib/forms/use-navigation-dirty-guard";
 import { fieldsFor, type FieldDef } from "./format-payload-field-set";
 import {
   rendererFor,
@@ -64,7 +66,7 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  * sectioned view by default.
  */
 
-const initial: { error?: string } = {};
+const initial: { error?: string; ok?: boolean } = {};
 
 export interface FormatAwareContentEditorProps {
   /** Bound translator from `tForActive()`. Resolves the field's
@@ -342,6 +344,21 @@ export function FormatAwareContentEditor({
 
   const boundAction = updateFormatPayloadAction.bind(null, workspaceSlug);
   const [state, formAction, pending] = useActionState(boundAction, initial);
+  // Ref used by the navigation dirty guard. The Messages
+  // panel has its own form ref; the format-aware editor
+  // mirrors the same pattern so the beforeunload and
+  // in-app navigation prompts cover the Content tab too.
+  const formRef = React.useRef<HTMLFormElement | null>(null);
+  // After a successful save the form is "clean" — the
+  // dirty guards suppress their prompt until the user
+  // makes another edit.
+  const isClean = state?.ok === true;
+  useBeforeunloadDirtyGuard(formRef, isClean);
+  useNavigationDirtyGuard({
+    formRef,
+    isClean,
+    confirmMessage: t("formatEditor.editor.unsavedGuard"),
+  });
 
   const fields = React.useMemo(() => fieldsFor(format), [format]);
   const sections = SECTIONS_BY_FORMAT[format] ?? SECTIONS_BY_FORMAT.static_post!;
@@ -576,8 +593,16 @@ export function FormatAwareContentEditor({
       </div>
 
       {editable ? (
-        <form action={formAction} className="mt-5 flex flex-wrap items-center gap-2">
+        <form ref={formRef} action={formAction} className="mt-5 flex flex-wrap items-center gap-2">
           <input type="hidden" name="contentItemId" value={contentItemId} />
+          {/* The `format` hidden input is required by
+              `updateFormatPayloadFormSchema` in
+              `planning/actions.ts` — the Zod schema needs the
+              format enum to pick the right per-format parser.
+              `MessagesPanel` already includes this field; the
+              two content editors were missing it, which made
+              every save fail with a `format` field error. */}
+          <input type="hidden" name="format" value={format} />
           <input type="hidden" name="formatPayload" value={JSON.stringify(payload)} />
           <Button type="submit" size="sm" disabled={pending} data-testid="format-aware-save">
             {pending ? (
@@ -587,9 +612,32 @@ export function FormatAwareContentEditor({
             )}
             {pending ? t("formatEditor.editor.savePending") : t("formatEditor.editor.save")}
           </Button>
-          {state?.error ? (
-            <p role="alert" className="text-label text-danger">
+          {pending ? (
+            <p
+              className="text-label text-fg-muted inline-flex items-center gap-1"
+              data-testid="format-aware-saving"
+              aria-live="polite"
+            >
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              {t("formatEditor.editor.savePending")}
+            </p>
+          ) : state?.error ? (
+            <p
+              role="alert"
+              aria-live="assertive"
+              className="text-label text-danger"
+              data-testid="format-aware-save-error"
+            >
               {state.error}
+            </p>
+          ) : state?.ok ? (
+            <p
+              className="text-label text-success inline-flex items-center gap-1"
+              data-testid="format-aware-save-confirmation"
+              aria-live="polite"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("formatEditor.editor.saveSuccess")}
             </p>
           ) : null}
         </form>

@@ -101,4 +101,33 @@ describe("FormatAwareContentEditor", () => {
     // humanFormat("short_form_video") → "Short Form Video"
     expect(screen.getByText(/Short Form Video content/i)).toBeInTheDocument();
   });
+
+  it("renders the caption field with the shared CaptionField (8 rows, 2200 cap) and the format hidden input", () => {
+    // Phase 1 of the planning-detail refactor (2026-08-30)
+    // used a 220-char single-line TextFieldRenderer for
+    // `caption` and `firstComment`. The new CaptionFieldRenderer
+    // wires the shared 8-row / 2200-char CaptionField so the
+    // Content tab's editing experience matches the Messages
+    // tab and the per-platform publish form.
+    render(
+      <FormatAwareContentEditor
+        {...baseProps}
+        format="static_post"
+        initial={{ schemaVersion: 1, caption: "Hello world" }}
+      />,
+    );
+    // The shared CaptionField is mounted for the caption key.
+    // `data-testid="field-caption-caption"` is the
+    // CaptionFieldRenderer's internal testid (we append
+    // `-caption` to disambiguate from the wrapper).
+    expect(screen.getByTestId("field-caption-caption")).toBeInTheDocument();
+    // The `format` hidden input is required by the
+    // `updateFormatPayloadFormSchema` Zod schema; before the
+    // fix, every save failed with a `format` field error.
+    const saveForm = document.querySelector("form") as HTMLFormElement | null;
+    expect(saveForm).toBeInTheDocument();
+    const formatInput = saveForm?.querySelector('input[name="format"]');
+    expect(formatInput).toBeInTheDocument();
+    expect(formatInput?.getAttribute("value")).toBe("static_post");
+  });
 });

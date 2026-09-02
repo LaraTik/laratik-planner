@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { ChevronDown, Save, Loader2, ListChecks } from "lucide-react";
+import { CheckCircle2, ChevronDown, Save, Loader2, ListChecks } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
@@ -69,7 +69,7 @@ export interface FormatPayloadEditorProps {
   aiEnabled: boolean;
 }
 
-const initial: { error?: string } = {};
+const initial: { error?: string; ok?: boolean } = {};
 
 export function FormatPayloadEditor({
   t,
@@ -312,6 +312,15 @@ export function FormatPayloadEditor({
               className="flex flex-wrap items-center gap-2 pt-2"
             >
               <input type="hidden" name="contentItemId" value={contentItemId} />
+              {/* The `format` hidden input is required by
+                  `updateFormatPayloadFormSchema` in
+                  `planning/actions.ts` — the Zod schema needs
+                  the format enum to pick the right per-format
+                  parser. `MessagesPanel` already includes this
+                  field; the two content editors were missing
+                  it, which made every save fail with a
+                  `format` field error. */}
+              <input type="hidden" name="format" value={format} />
               <input type="hidden" name="formatPayload" value={JSON.stringify(payload)} />
               <Button type="submit" size="sm" disabled={pending}>
                 {pending ? (
@@ -331,6 +340,15 @@ export function FormatPayloadEditor({
                   className="text-label text-danger font-semibold"
                 >
                   {state.error}
+                </p>
+              ) : state?.ok ? (
+                <p
+                  className="text-label text-success inline-flex items-center gap-1 font-semibold"
+                  data-testid="format-payload-save-confirmation"
+                  aria-live="polite"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t("formatEditor.editor.saveSuccess")}
                 </p>
               ) : null}
             </form>
