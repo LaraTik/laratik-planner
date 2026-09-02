@@ -2,7 +2,7 @@
 
 Date: 2026-09-02  
 Broad browser/evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4`  
-Current audited code commit: `a7011a5` (`main`, clean before this audit-only update)
+Current audited HEAD: `ce9af68` (`main`, clean)
 Audit report update: committed after this evidence capture
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
@@ -26,22 +26,22 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 
 ## Baseline evidence
 
-| Gate                   | Result                | Evidence                                                                                                                        |
-| ---------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Prettier               | Pass                  | `pnpm format:check`                                                                                                             |
-| ESLint                 | Pass                  | `pnpm lint`                                                                                                                     |
-| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                                                                    |
-| Unit tests             | Pass                  | 308 files; 3,068 passed; 4 todo at current HEAD                                                                                 |
-| Production build       | Pass                  | `pnpm verify` at `a7011a5`                                                                                                      |
-| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                                                                         |
-| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                                                                |
-| Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow                                                        |
-| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe                                                  |
-| Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                                                                    |
-| Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths                                                   |
-| Visual regression      | Partial / investigate | Latest full matrix at `6bd0d98`: 73/112; 39 failed; no snapshot updates; rerun after the styling fix remains required           |
-| Performance evidence   | Partial / baseline    | Static inventory, local public-route baseline, and tiny-fixture query plans; throttled/authenticated/INP/scale evidence pending |
-| Working tree           | Clean                 | Clean after the audit-only documentation update; source evidence is `bf151a0`                                                   |
+| Gate                   | Result                | Evidence                                                                                                                                         |
+| ---------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Prettier               | Pass                  | `pnpm format:check`                                                                                                                              |
+| ESLint                 | Pass                  | `pnpm lint`                                                                                                                                      |
+| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                                                                                     |
+| Unit tests             | Pass                  | 308 files; 3,068 passed; 4 todo at current HEAD                                                                                                  |
+| Production build       | Pass                  | `pnpm verify` at `a7011a5`                                                                                                                       |
+| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                                                                                          |
+| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                                                                                 |
+| Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow                                                                         |
+| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe                                                                   |
+| Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                                                                                     |
+| Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths                                                                    |
+| Visual regression      | Partial / investigate | Full matrix at exact clean HEAD `ce9af68`: 73/112; 39 failed; no snapshot updates; route fixes and deliberate snapshot decisions remain required |
+| Performance evidence   | Partial / baseline    | Static inventory, local public-route baseline, and tiny-fixture query plans; throttled/authenticated/INP/scale evidence pending                  |
+| Working tree           | Clean                 | Clean after the audit-only documentation update; source evidence is `bf151a0`                                                                    |
 
 ## Repository inventory
 
@@ -146,19 +146,15 @@ handled before unrelated cleanup.
    changing screenshot heights. Interrupted runs can still leave a development
    server or `.next` lock behind and need a process-lifecycle fix.
 9. Reconcile the visual suite with the current canonical Stitch implementation.
-   The broad pre-reset run produced 52 passes and 60 failures. The exact current
-   full matrix at `6bd0d98` produced 73 passes and 39 failures. The source-only
-   styling correction in `bf151a0` does not change the covered error-free visual
-   states, but the matrix should be rerun at the final release candidate. The
-   former 6,305px planning height was reduced to a deterministic single-seed
-   fixture;
-   remaining differences include stale planning references containing an
-   `A11y detail <timestamp>` row, the settings redesign (3,494px actual versus
-   a 900px reference), users/workspace overview responsive deltas, and a
-   deterministic 2px `/setup` mobile height delta after the cold-compile
-   timeout was removed. These require route-by-route comparison against
-   Stitch and deliberate snapshot decisions; no snapshots were updated
-   automatically.
+   The broad pre-reset run produced 52 passes and 60 failures; the exact clean
+   matrix at `ce9af68` produces 73 passes and 39 failures. The deterministic
+   runner reset and cold-compile timeout fix are now evidenced, and no snapshots
+   were updated automatically. Remaining differences are concentrated in
+   planning/list/detail/new-content surfaces, the settings redesign (3,494px
+   actual versus a 900px reference), users/workspace/board responsive layouts,
+   and a deterministic 2px `/setup` mobile height delta. These require
+   route-by-route comparison against Stitch and deliberate implementation or
+   snapshot decisions.
 
 ### P3 — polish
 
