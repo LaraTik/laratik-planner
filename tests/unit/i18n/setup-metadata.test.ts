@@ -8,5 +8,9 @@ describe("setup route metadata", () => {
 
     expect(source).toMatch(/export async function generateMetadata/);
     expect(source).not.toMatch(/export const metadata\s*=\s*\{/);
+    expect(source).toMatch(/placeholder=\{t\("auth\.setup\.agencyNamePlaceholder"\)\}/);
+    expect(source).toMatch(/placeholder=\{t\("auth\.setup\.agencySlugPlaceholder"\)\}/);
+    expect(source).not.toContain('placeholder="Acme Social"');
+    expect(source).not.toContain('placeholder="acme"');
   });
 });

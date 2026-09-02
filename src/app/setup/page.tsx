@@ -66,7 +66,7 @@ export default async function SetupPage() {
             required
             minLength={2}
             maxLength={100}
-            placeholder="Acme Social"
+            placeholder={t("auth.setup.agencyNamePlaceholder")}
           />
         </FormField>
         <FormField
@@ -82,7 +82,7 @@ export default async function SetupPage() {
             minLength={2}
             maxLength={60}
             pattern="^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$"
-            placeholder="acme"
+            placeholder={t("auth.setup.agencySlugPlaceholder")}
           />
         </FormField>
         <FormField
