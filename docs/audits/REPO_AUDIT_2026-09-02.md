@@ -1,8 +1,8 @@
 # LaraTik Planner — Repository Audit
 
 Date: 2026-09-02  
-Implementation baseline: `044adba` (`main`, clean before audit documentation)
-Audit evidence commit: `482bdfe`
+Implementation and test-evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4` (`main`, clean)
+Audit report update: committed after this evidence capture
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
 responsive, performance, typography, motion, and data-display guidance.
@@ -11,11 +11,10 @@ responsive, performance, typography, motion, and data-display guidance.
 
 The repository has a strong production foundation and a broad quality harness.
 The current checkpoint passes formatting, ESLint, strict TypeScript, the full
-unit suite, and a clean production build. The isolated Chromium suite passes
-190/190 tests, including the complete cross-role content workflow. Targeted
-cross-engine settings hydration/a11y and content-list checks also pass.
+unit suite, a clean production build, and 192/192 isolated Chromium tests.
+Both mobile browser engines now pass the complete cross-role content workflow.
 It is not yet final-production-ready because the complete Stitch visual suite
-still has 50 baseline deltas, the mobile full-workflow path remains unstable,
+still has 50 baseline deltas, repeatable performance evidence is incomplete,
 and independent visual/accessibility review remains open.
 
 The canonical product visual source is `designs/stitch/` and the tokens in
@@ -24,21 +23,21 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 
 ## Baseline evidence
 
-| Gate                   | Result                | Evidence                                                                                 |
-| ---------------------- | --------------------- | ---------------------------------------------------------------------------------------- |
-| Prettier               | Pass                  | `pnpm format:check`                                                                      |
-| ESLint                 | Pass                  | `pnpm lint`                                                                              |
-| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                             |
-| Unit tests             | Pass                  | 303 files; 3,050 passed; 4 todo                                                          |
-| Production build       | Pass                  | `pnpm build`                                                                             |
-| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                                  |
-| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                         |
-| Focused E2E/a11y       | Pass                  | 24/24 a11y routes; 6/6 Brand Kit journeys; focused Publishing + Settings axe             |
-| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe           |
-| Full Chromium E2E      | Pass                  | 190/190 isolated Chromium tests, including full §23 workflow                             |
-| Cross-engine targeted  | Partial               | Settings 4/4; WebKit list + §23 pass; mobile Chrome list pass; mobile full path unstable |
-| Visual regression      | Partial / investigate | 62/112 pass; 50 Stitch baseline deltas; do not update snapshots blindly                  |
-| Working tree           | Clean                 | Exact audit evidence commit: `482bdfe` (implementation baseline: `044adba`)              |
+| Gate                   | Result                | Evidence                                                                        |
+| ---------------------- | --------------------- | ------------------------------------------------------------------------------- |
+| Prettier               | Pass                  | `pnpm format:check`                                                             |
+| ESLint                 | Pass                  | `pnpm lint`                                                                     |
+| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                    |
+| Unit tests             | Pass                  | 303 files; 3,051 passed; 4 todo                                                 |
+| Production build       | Pass                  | `pnpm build`                                                                    |
+| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                         |
+| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                |
+| Focused E2E/a11y       | Pass                  | 24/24 a11y routes; 6/6 Brand Kit journeys; focused Publishing + Settings axe    |
+| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe  |
+| Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                    |
+| Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths   |
+| Visual regression      | Partial / investigate | 62/112 pass; 50 Stitch baseline deltas; do not update snapshots blindly         |
+| Working tree           | Clean                 | Exact source/test evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4` |
 
 ## Repository inventory
 
@@ -93,12 +92,13 @@ handled before unrelated cleanup.
    flag; and sign-out escape controls use the existing CSRF-protected server
    action. Generated passwords now guarantee every class required by the strong
    password meter.
-8. **The mobile full cross-role content journey remains unresolved.** The
-   dedicated Chromium run is now green at 190/190, and the WebKit §23 path
-   passes. Mobile Chrome and mobile Safari still time out during the full
-   four-context journey; the test is not suppressed or weakened. The latest
-   mobile Safari retry was additionally blocked when the local Docker runtime
-   failed to start, so that environment needs a clean rerun.
+8. **Responsive workflow navigation is resolved at the browser-test level.**
+   The full four-context §23 journey now passes in mobile Chrome and mobile
+   Safari. The remediation keeps the six-tab strip in one horizontal
+   scroll row, allows its flex item to shrink at narrow widths, opens the
+   mobile WorkflowSheet explicitly, and scopes actions to the visible rail or
+   sheet when both responsive surfaces are mounted in the DOM. Root cause and
+   regression coverage are recorded in commit `2727275`.
 
 ### P2 — maintainability and quality
 
@@ -228,9 +228,9 @@ as the sole release protection; browser and visual evidence remain in Step 6.
 Run the disposable database migration drill, integration suite, critical E2E,
 full browser matrix, visual snapshots, axe checks, manual accessibility review,
 and performance measurements at the exact clean commit. The migration drill,
-integration suite, focused axe checks, full isolated Chromium flow, targeted
-cross-engine checks, and unit/build gates are evidenced. Mobile full-workflow,
-visual parity, and performance evidence remain open.
+integration suite, axe checks, full isolated Chromium flow, mobile Chrome and
+Safari §23 journeys, targeted cross-engine checks, and unit/build gates are
+evidenced. Visual parity and performance evidence remain open.
 
 ### Step 7 — Reconcile operations and documentation
 
