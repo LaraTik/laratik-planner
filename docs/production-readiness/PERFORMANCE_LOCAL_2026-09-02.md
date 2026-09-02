@@ -40,6 +40,22 @@ INP was not claimed because this capture did not exercise a representative
 interaction flow. The next run must include a user interaction on the
 authenticated planning surface and collect an actual event timing observation.
 
+## Database query observation
+
+Captured against the migrated `planner_test` database on 2026-09-02 using the
+current schema and the same query shapes used by planning and dashboard data
+loads. The fixture contained one workspace and one content item, so these
+numbers are correctness/index observations, not production-scale benchmarks.
+
+| Query shape                                         | Rows in fixture | Planning | Execution |       Buffers | Observed access                                         |
+| --------------------------------------------------- | --------------: | -------: | --------: | ------------: | ------------------------------------------------------- |
+| Workspace content ordered by planned date, limit 50 |               1 | 1.759 ms |  0.094 ms | 9 shared hits | `content_item_workspace_status_idx` plus in-memory sort |
+| Workspace content count filtered to `draft`         |               1 | 1.844 ms |  0.048 ms | 3 shared hits | `content_item_workspace_planned_idx` plus filter        |
+
+The next database evidence pass must repeat these plans, plus the dashboard,
+review-queue, and My Work shapes, with a representative seeded volume. The
+current result does not justify a bundle or slow-query threshold.
+
 ## Interpretation
 
 - The public routes have a low local baseline and no observed layout shift.

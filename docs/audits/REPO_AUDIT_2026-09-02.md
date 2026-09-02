@@ -26,22 +26,22 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 
 ## Baseline evidence
 
-| Gate                   | Result                | Evidence                                                                                                              |
-| ---------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Prettier               | Pass                  | `pnpm format:check`                                                                                                   |
-| ESLint                 | Pass                  | `pnpm lint`                                                                                                           |
-| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                                                          |
-| Unit tests             | Pass                  | 308 files; 3,068 passed; 4 todo at current HEAD                                                                       |
-| Production build       | Pass                  | `pnpm verify` at `a7011a5`                                                                                            |
-| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                                                               |
-| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                                                      |
-| Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow                                              |
-| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe                                        |
-| Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                                                          |
-| Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths                                         |
-| Visual regression      | Partial / investigate | Latest full matrix at `6bd0d98`: 73/112; 39 failed; no snapshot updates; rerun after the styling fix remains required |
-| Performance evidence   | Partial / baseline    | Static inventory plus local public-route baseline; throttled/authenticated/INP/query evidence pending                 |
-| Working tree           | Clean                 | Clean after the audit-only documentation update; source evidence is `bf151a0`                                         |
+| Gate                   | Result                | Evidence                                                                                                                        |
+| ---------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Prettier               | Pass                  | `pnpm format:check`                                                                                                             |
+| ESLint                 | Pass                  | `pnpm lint`                                                                                                                     |
+| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                                                                    |
+| Unit tests             | Pass                  | 308 files; 3,068 passed; 4 todo at current HEAD                                                                                 |
+| Production build       | Pass                  | `pnpm verify` at `a7011a5`                                                                                                      |
+| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                                                                         |
+| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                                                                |
+| Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow                                                        |
+| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe                                                  |
+| Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                                                                    |
+| Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths                                                   |
+| Visual regression      | Partial / investigate | Latest full matrix at `6bd0d98`: 73/112; 39 failed; no snapshot updates; rerun after the styling fix remains required           |
+| Performance evidence   | Partial / baseline    | Static inventory, local public-route baseline, and tiny-fixture query plans; throttled/authenticated/INP/scale evidence pending |
+| Working tree           | Clean                 | Clean after the audit-only documentation update; source evidence is `bf151a0`                                                   |
 
 ## Repository inventory
 
@@ -134,9 +134,11 @@ handled before unrelated cleanup.
    intentionally widened, rather than treating the current TODOs as missing
    production coverage.
 7. Add repeatable LCP, INP, CLS, bundle, image, font, and slow-query evidence.
-   The static build inventory and unthrottled public-route baseline are now
-   recorded in `docs/production-readiness/PERFORMANCE_LOCAL_2026-09-02.md`;
-   authenticated, throttled, interaction, and query evidence remain open.
+   The static build inventory, unthrottled public-route baseline, and minimal
+   fixture query plans are now recorded in
+   `docs/production-readiness/PERFORMANCE_LOCAL_2026-09-02.md`; authenticated,
+   throttled, interaction, representative-volume, and approved-budget evidence
+   remain open.
 8. **The isolated browser runner now resets only the disposable test database.**
    Commit `f5cb2d8` adds a URL- and environment-guarded reset that preserves the
    Drizzle migration ledger before every isolated browser run. This removes
@@ -267,8 +269,10 @@ and performance measurements at the exact clean commit. Migration, integration,
 exact-HEAD axe/RTL, full isolated Chromium, mobile Chrome/Safari §23,
 targeted cross-engine, and unit/build gates are evidenced across the recorded
 baselines. The performance protocol is now documented in
-`docs/testing/performance-report.md`; actual LCP/INP/CLS, asset-budget, and
-EXPLAIN ANALYZE measurements remain open. Visual parity also remains open.
+`docs/testing/performance-report.md`; public-route LCP/FCP/CLS and minimal-fixture
+EXPLAIN observations exist, while authenticated INP, throttled LCP/INP/CLS,
+approved asset budgets, and representative-volume plans remain open. Visual
+parity also remains open.
 
 ### Step 7 — Reconcile operations and documentation
 

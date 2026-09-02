@@ -47,9 +47,11 @@ font loading if the catalog is included in initial critical CSS.
 This inventory is supporting evidence only. It does not establish browser
 LCP/INP/CLS or prove that every emitted font is downloaded on first view.
 
-A local three-run public-route browser baseline is recorded in
-`docs/production-readiness/PERFORMANCE_LOCAL_2026-09-02.md`. It is explicitly
-unthrottled and public-route-only; it does not close the release browser gate.
+A local three-run public-route browser baseline and a minimal-fixture database
+query observation are recorded in
+`docs/production-readiness/PERFORMANCE_LOCAL_2026-09-02.md`. They are explicitly
+unthrottled and non-production-scale; they do not close the release browser or
+database gates.
 
 ### Browser experience
 
@@ -103,7 +105,8 @@ production.
 
 The repository currently has the prerequisites for this protocol—production
 build, disposable database, isolated browser runner, Stitch route manifest, the
-static-build inventory above, and a local public-route baseline—but no completed
-Lighthouse/WebPageTest report, approved route-level bundle budget, authenticated
-INP capture, or `EXPLAIN ANALYZE` evidence. These remain release-candidate tasks
-and should not be marked `Verified` from build output alone.
+static-build inventory above, a local public-route baseline, and minimal-fixture
+`EXPLAIN (ANALYZE, BUFFERS)` observations. A completed Lighthouse/WebPageTest
+report, approved route-level bundle budget, authenticated INP capture, and
+representative-volume query evidence remain release-candidate tasks and should
+not be marked `Verified` from build output or tiny-fixture timings alone.
