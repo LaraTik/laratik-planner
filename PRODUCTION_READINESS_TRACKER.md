@@ -36,6 +36,12 @@ migration-drill` passes 5/5; `TEST_DATABASE_URL=… pnpm test:integration`
 > deltas at `c0a8a9f`; no snapshots were updated. Current uncommitted
 > format-payload edits are user work and remain preserved. The verdict stays
 > `READY FOR INDEPENDENT REVIEW`.
+
+> **2026-09-03 exact-clean verification** — At clean HEAD `e8903e6`,
+> `pnpm verify` passes: Prettier, ESLint, strict TypeScript, 314 unit files
+> with 3,100 passing tests and 4 TODOs, and the production build. This updates
+> the earlier `1b15de9` verification boundary; visual, performance, manual
+> accessibility/UAT, and independent-review gates remain open.
 >
 > **2026-08-26 update — landing entry and sign-in refinement** — Commit `caa349f` redirects authenticated `/` visits directly to `/app`, exposes one contextual public CTA, and redesigns `/signin` around one active method at a time. Password remains the default for returning users, Google is secondary, magic link is progressively disclosed, and first-time setup offers only identity-verifying providers. Evidence: clean-snapshot `pnpm verify` passes with 2,110 runnable unit tests and the Next.js production build; Chromium entry checks pass 4/4, public accessibility checks pass 4/4, and the `/signin` Stitch/responsive visual set passes 4/4. Full pre-merge browser gates were attempted against disposable Postgres but remain non-green on unrelated social-analytics/agency-switcher cases and a parallel authenticated visual-seed race; no unrelated test or production code was changed. The verdict remains `READY FOR INDEPENDENT REVIEW`.
 >
