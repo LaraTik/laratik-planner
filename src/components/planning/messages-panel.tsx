@@ -84,7 +84,6 @@ export function MessagesPanel({
   const [caption, setCaption] = React.useState(initialCaption);
   const [hashtags, setHashtags] = React.useState<string[]>(initialHashtags);
   const [firstComment, setFirstComment] = React.useState(initialFirstComment);
-  const [savedAt, setSavedAt] = React.useState<number | null>(null);
 
   const boundAction = updateFormatPayloadAction.bind(null, workspaceSlug);
   const [state, formAction, pending] = useActionState(boundAction, initial);
@@ -231,7 +230,7 @@ export function MessagesPanel({
               ? tr("contentDetail.messages.saving", "Saving…")
               : tr("contentDetail.messages.save", "Save message")}
           </Button>
-          {savedAt && !pending && !state?.error && state?.ok ? (
+          {!pending && !state?.error && state?.ok ? (
             <p
               className="text-label text-success inline-flex items-center gap-1"
               data-testid="messages-save-confirmation"

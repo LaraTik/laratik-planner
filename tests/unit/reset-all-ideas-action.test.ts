@@ -290,5 +290,29 @@ describe("resetAllIdeasAction", () => {
       published: 1,
       partially_published: 1,
     });
+
+    // Plan §1: one activity_event row is written in the same
+    // transaction as the bulk delete. The kind is "bulk_delete",
+    // content_item_id is null (the row is workspace-scoped, not
+    // idea-scoped), and the metadata carries the includePublished
+    // toggle + the per-status breakdown.
+    const activityEvent = dbMock.state.insertCalls.find((c) => {
+      const v = c.values as Record<string, unknown>;
+      return v.kind === "bulk_delete";
+    });
+    expect(activityEvent).toBeDefined();
+    const aev = activityEvent!.values as Record<string, unknown>;
+    expect(aev.contentItemId).toBeNull();
+    expect(aev.summary).toBe("Deleted 4 ideas (all)");
+    const aem = aev.metadata as Record<string, unknown>;
+    expect(aem.includePublished).toBe(true);
+    expect(aem.count).toBe(4);
+    expect(aem.byStatus).toEqual({
+      draft: 1,
+      in_design: 1,
+      published: 1,
+      partially_published: 1,
+    });
+    expect(aem.contentItemIds).toEqual(["i-1", "i-2", "i-3", "i-4"]);
   });
 });

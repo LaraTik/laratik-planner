@@ -130,7 +130,7 @@ export function CommentItem({
             </button>
             {canResolve ? (
               <form
-                action={async (formData) => {
+                action={async () => {
                   const result = await resolveCommentAction({
                     workspaceSlug,
                     commentId: c.id,
