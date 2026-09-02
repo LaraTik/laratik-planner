@@ -18,6 +18,7 @@ import {
 } from "./actions";
 import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
 import type { MappedPlatformFields } from "@/lib/format-payload/mapper";
+import type { PublishActionErrorCode } from "@/lib/publishing/action-errors";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
@@ -334,7 +335,7 @@ export function PublishPackageForm({
         payload: JSON.stringify(currentDraft),
       });
       if (!result.ok) {
-        setError(result.error);
+        setError(translatePublishError(t, result, "saveFailed"));
         return;
       }
       setDrafts((previous) => ({ ...previous, [channelId]: result.payload }));
@@ -350,7 +351,7 @@ export function PublishPackageForm({
       resource: "internal_note",
       summary,
     });
-    if (!result.ok) throw new Error(result.error);
+    if (!result.ok) throw new Error(translatePublishError(t, result, "recordNoteFailed"));
     setStatusMessage(t("contentDetail.publish.statusInternalNoteAdded"));
   }
 
@@ -366,7 +367,7 @@ export function PublishPackageForm({
         approved,
       });
       if (!result.ok) {
-        setError(result.error);
+        setError(translatePublishError(t, result, "approvalFailed"));
         return;
       }
       setDrafts((previous) => ({ ...previous, [current.id]: result.payload }));
@@ -384,7 +385,7 @@ export function PublishPackageForm({
       setStatusMessage(null);
       const result = await confirmPublishReadinessAction({ workspaceSlug, contentItemId });
       if (!result.ok) {
-        setError(result.error);
+        setError(translatePublishError(t, result, "readinessFailed"));
         return;
       }
       setStatusMessage(
@@ -763,6 +764,15 @@ export function PublishPackageForm({
       </div>
     </div>
   );
+}
+
+function translatePublishError(
+  t: (key: string, params?: Record<string, string | number>) => string,
+  result: { ok: false; errorCode?: PublishActionErrorCode },
+  fallback: PublishActionErrorCode,
+): string {
+  const code = result.errorCode ?? fallback;
+  return t(`contentDetail.publishErrors.${code}`);
 }
 
 function Field({

@@ -594,6 +594,25 @@
     "addNote": "Add note",
     "noCaption": "No caption"
   },
+  "publishErrors": {
+    "authRequired": "Sign in is required.",
+    "invalidPublishRequest": "Check the publish package fields.",
+    "workspaceNotFound": "Workspace not found.",
+    "invalidPlatformPayload": "Check the platform-specific publish fields.",
+    "forbidden": "You do not have permission to change this publishing package.",
+    "publishNotFound": "The publishing package or channel was not found.",
+    "crossChannel": "That channel does not belong to this content item.",
+    "saveFailed": "Could not save the publish package.",
+    "invalidInternalNote": "Enter a valid internal note.",
+    "recordNoteFailed": "Could not record the note.",
+    "invalidApprovalRequest": "Invalid approval request.",
+    "approvalFailed": "Could not update final-copy approval.",
+    "invalidReadinessRequest": "Invalid readiness request.",
+    "readinessForbidden": "You do not have permission to confirm readiness.",
+    "readinessNotFound": "The content item was not found.",
+    "readinessInvalid": "The content item is not ready for this action.",
+    "readinessFailed": "Could not confirm publishing readiness."
+  },
   "messages": {
     "captionLabel": "Caption",
     "captionHint": "What people will see when the post lands in their feed.",

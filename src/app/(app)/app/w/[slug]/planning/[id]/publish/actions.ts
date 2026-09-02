@@ -14,15 +14,24 @@ import {
   PlatformPayloadError,
   ReadinessError,
 } from "@/lib/publishing";
+import {
+  platformPayloadErrorCode,
+  readinessErrorCode,
+  type PublishActionErrorCode,
+} from "@/lib/publishing/action-errors";
 
 /**
  * M4 — Publish page server actions.
  *
  * Thin wrappers over the publish-package service. The actions
- * layer is the only place we map `PlatformPayloadError` codes
- * to UI-friendly error strings, and the only place we call
+ * layer is the only place we map domain error codes to stable UI
+ * error codes, and the only place we call
  * `revalidatePath` for the publish page.
  */
+
+function failure(errorCode: PublishActionErrorCode) {
+  return { ok: false as const, errorCode };
+}
 
 const SavePayloadFormSchema = z.object({
   workspaceSlug: z.string().min(1).max(64),
@@ -33,19 +42,17 @@ const SavePayloadFormSchema = z.object({
 
 export async function savePublishPackageAction(input: z.input<typeof SavePayloadFormSchema>) {
   const session = await auth();
-  if (!session?.user?.id) return { ok: false as const, error: "Not signed in" };
+  if (!session?.user?.id) return failure("authRequired");
   const actor = await currentActor();
-  if (!actor) return { ok: false as const, error: "Not signed in" };
+  if (!actor) return failure("authRequired");
   const parsed = SavePayloadFormSchema.safeParse(input);
-  if (!parsed.success) return { ok: false as const, error: "Check the publish package fields." };
+  if (!parsed.success) return failure("invalidPublishRequest");
   try {
     const workspace = await getAccessibleWorkspace(actor, parsed.data.workspaceSlug);
-    if (!workspace) return { ok: false as const, error: "Workspace not found." };
+    if (!workspace) return failure("workspaceNotFound");
     const candidate: unknown = JSON.parse(parsed.data.payload);
     const payload = PlatformPayloadSchema.safeParse(candidate);
-    if (!payload.success) {
-      return { ok: false as const, error: "Check the platform-specific publish fields." };
-    }
+    if (!payload.success) return failure("invalidPlatformPayload");
     const result = await savePlatformPayload(actor, workspace.id, {
       contentItemId: parsed.data.contentItemId,
       socialChannelId: parsed.data.socialChannelId,
@@ -58,9 +65,9 @@ export async function savePublishPackageAction(input: z.input<typeof SavePayload
     return { ok: true as const, payload: result };
   } catch (e) {
     if (e instanceof PlatformPayloadError) {
-      return { ok: false as const, error: e.message, code: e.code };
+      return failure(platformPayloadErrorCode(e.code));
     }
-    return { ok: false as const, error: "Failed to save publish package" };
+    return failure("saveFailed");
   }
 }
 
@@ -79,14 +86,14 @@ const NonMaterialNoteSchema = z.object({
  */
 export async function recordInternalNoteAction(input: z.input<typeof NonMaterialNoteSchema>) {
   const session = await auth();
-  if (!session?.user?.id) return { ok: false as const, error: "Not signed in" };
+  if (!session?.user?.id) return failure("authRequired");
   const actor = await currentActor();
-  if (!actor) return { ok: false as const, error: "Not signed in" };
+  if (!actor) return failure("authRequired");
   const parsed = NonMaterialNoteSchema.safeParse(input);
-  if (!parsed.success) return { ok: false as const, error: "Enter a valid internal note." };
+  if (!parsed.success) return failure("invalidInternalNote");
   try {
     const workspace = await getAccessibleWorkspace(actor, parsed.data.workspaceSlug);
-    if (!workspace) return { ok: false as const, error: "Workspace not found." };
+    if (!workspace) return failure("workspaceNotFound");
     await recordNonMaterialityEvent({
       actor,
       contentItemId: parsed.data.contentItemId,
@@ -98,7 +105,7 @@ export async function recordInternalNoteAction(input: z.input<typeof NonMaterial
     );
     return { ok: true as const };
   } catch {
-    return { ok: false as const, error: "Failed to record note" };
+    return failure("recordNoteFailed");
   }
 }
 
@@ -111,12 +118,12 @@ const ApprovalFormSchema = z.object({
 
 export async function setFinalCopyApprovalAction(input: z.input<typeof ApprovalFormSchema>) {
   const actor = await currentActor();
-  if (!actor) return { ok: false as const, error: "Not signed in" };
+  if (!actor) return failure("authRequired");
   const parsed = ApprovalFormSchema.safeParse(input);
-  if (!parsed.success) return { ok: false as const, error: "Invalid approval request." };
+  if (!parsed.success) return failure("invalidApprovalRequest");
   try {
     const workspace = await getAccessibleWorkspace(actor, parsed.data.workspaceSlug);
-    if (!workspace) return { ok: false as const, error: "Workspace not found." };
+    if (!workspace) return failure("workspaceNotFound");
     const payload = await setFinalCopyApproval(actor, workspace.id, parsed.data);
     revalidatePath(
       `/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}/publish`,
@@ -124,9 +131,9 @@ export async function setFinalCopyApprovalAction(input: z.input<typeof ApprovalF
     return { ok: true as const, payload };
   } catch (error) {
     if (error instanceof PlatformPayloadError) {
-      return { ok: false as const, error: error.message, code: error.code };
+      return failure(platformPayloadErrorCode(error.code));
     }
-    return { ok: false as const, error: "Failed to update final-copy approval." };
+    return failure("approvalFailed");
   }
 }
 
@@ -137,12 +144,12 @@ const ReadinessFormSchema = z.object({
 
 export async function confirmPublishReadinessAction(input: z.input<typeof ReadinessFormSchema>) {
   const actor = await currentActor();
-  if (!actor) return { ok: false as const, error: "Not signed in" };
+  if (!actor) return failure("authRequired");
   const parsed = ReadinessFormSchema.safeParse(input);
-  if (!parsed.success) return { ok: false as const, error: "Invalid readiness request." };
+  if (!parsed.success) return failure("invalidReadinessRequest");
   try {
     const workspace = await getAccessibleWorkspace(actor, parsed.data.workspaceSlug);
-    if (!workspace) return { ok: false as const, error: "Workspace not found." };
+    if (!workspace) return failure("workspaceNotFound");
     const report = await confirmPublishReadiness(actor, {
       workspaceId: workspace.id,
       contentItemId: parsed.data.contentItemId,
@@ -153,8 +160,8 @@ export async function confirmPublishReadinessAction(input: z.input<typeof Readin
     return { ok: true as const, report };
   } catch (error) {
     if (error instanceof ReadinessError) {
-      return { ok: false as const, error: error.message, code: error.code };
+      return failure(readinessErrorCode(error.code));
     }
-    return { ok: false as const, error: "Failed to confirm publishing readiness." };
+    return failure("readinessFailed");
   }
 }

@@ -594,6 +594,25 @@
     "addNote": "إضافة ملاحظة",
     "noCaption": "لا يوجد كابشن"
   },
+  "publishErrors": {
+    "authRequired": "يجب تسجيل الدخول.",
+    "invalidPublishRequest": "تحقق من حقول حزمة النشر.",
+    "workspaceNotFound": "مساحة العمل غير موجودة.",
+    "invalidPlatformPayload": "تحقق من حقول النشر الخاصة بالمنصة.",
+    "forbidden": "ليست لديك صلاحية تغيير حزمة النشر هذه.",
+    "publishNotFound": "حزمة النشر أو القناة غير موجودة.",
+    "crossChannel": "هذه القناة لا تنتمي إلى عنصر المحتوى هذا.",
+    "saveFailed": "تعذر حفظ حزمة النشر.",
+    "invalidInternalNote": "أدخل ملاحظة داخلية صالحة.",
+    "recordNoteFailed": "تعذر تسجيل الملاحظة.",
+    "invalidApprovalRequest": "طلب اعتماد غير صالح.",
+    "approvalFailed": "تعذر تحديث اعتماد النسخة النهائية.",
+    "invalidReadinessRequest": "طلب جاهزية غير صالح.",
+    "readinessForbidden": "ليست لديك صلاحية تأكيد الجاهزية.",
+    "readinessNotFound": "عنصر المحتوى غير موجود.",
+    "readinessInvalid": "عنصر المحتوى غير جاهز لهذا الإجراء.",
+    "readinessFailed": "تعذر تأكيد جاهزية النشر."
+  },
   "messages": {
     "captionLabel": "الكابشن",
     "captionHint": "ما سيراه الناس عند ظهور المنشور في موجزهم.",
