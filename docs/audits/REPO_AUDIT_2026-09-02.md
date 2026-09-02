@@ -2,7 +2,7 @@
 
 Date: 2026-09-02  
 Broad browser/evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4`  
-Current audited source commit: `75081f075da9fd91d45ef5bb1667284a80b3fa50` (`main`, clean)
+Current audited commit: `0c77e50` (`main`, clean)
 Audit report update: committed after this evidence capture
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
@@ -17,8 +17,8 @@ unit suite, and a clean production build. Exact-HEAD accessibility coverage is
 contract. The earlier browser baseline also passed 192/192 isolated Chromium
 tests and the complete mobile workflow. It is not yet final-production-ready
 because the Stitch visual suite still has substantial reference deltas,
-repeatable performance evidence is incomplete, and independent visual review
-remains open.
+repeatable performance measurements are incomplete, and independent visual
+review remains open.
 
 The canonical product visual source is `designs/stitch/` and the tokens in
 `src/app/globals.css`. UI/UX Pro Max is used here as a review framework; its
@@ -26,21 +26,22 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 
 ## Baseline evidence
 
-| Gate                   | Result                | Evidence                                                                       |
-| ---------------------- | --------------------- | ------------------------------------------------------------------------------ |
-| Prettier               | Pass                  | `pnpm format:check`                                                            |
-| ESLint                 | Pass                  | `pnpm lint`                                                                    |
-| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                   |
-| Unit tests             | Pass                  | 308 files; 3,068 passed; 4 todo at current HEAD                                |
-| Production build       | Pass                  | `pnpm build` at current HEAD                                                   |
-| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                        |
-| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                               |
-| Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow       |
-| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe |
-| Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                   |
-| Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths  |
-| Visual regression      | Partial / investigate | Broad run 52/112; exact-HEAD planning slice 2/24; do not update blindly        |
-| Working tree           | Clean                 | Current audited source HEAD: `75081f075da9fd91d45ef5bb1667284a80b3fa50`        |
+| Gate                   | Result                | Evidence                                                                             |
+| ---------------------- | --------------------- | ------------------------------------------------------------------------------------ |
+| Prettier               | Pass                  | `pnpm format:check`                                                                  |
+| ESLint                 | Pass                  | `pnpm lint`                                                                          |
+| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                         |
+| Unit tests             | Pass                  | 308 files; 3,068 passed; 4 todo at current HEAD                                      |
+| Production build       | Pass                  | `pnpm verify` at current HEAD                                                        |
+| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                              |
+| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                     |
+| Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow             |
+| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe       |
+| Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                         |
+| Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths        |
+| Visual regression      | Partial / investigate | Clean-run selected planning cases 3/18; 15 failed; no snapshot updates               |
+| Performance evidence   | Protocol only         | `docs/testing/performance-report.md`; LCP/INP/CLS, asset, and query evidence pending |
+| Working tree           | Clean                 | Current audited HEAD: `0c77e50`                                                      |
 
 ## Repository inventory
 
@@ -123,18 +124,20 @@ handled before unrelated cleanup.
 6. Replace the four pending TODO tests with explicit tracked coverage or an
    approved reason for keeping them pending.
 7. Add repeatable LCP, INP, CLS, bundle, image, font, and slow-query evidence.
-8. Ensure isolated E2E server processes are reliably cleaned up before a build;
-   this audit observed an orphan Next dev server competing with `next build`.
-   The runner now cleans its disposable upload directory and restores generated
-   config files, but interrupted runs can still leave a development server or
-   `.next` lock behind and need a process-lifecycle fix.
+8. **The isolated browser runner now resets only the disposable test database.**
+   Commit `f5cb2d8` adds a URL- and environment-guarded reset that preserves the
+   Drizzle migration ledger before every isolated browser run. This removes
+   prior-suite rows from visual fixtures and prevents mutable test state from
+   changing screenshot heights. Interrupted runs can still leave a development
+   server or `.next` lock behind and need a process-lifecycle fix.
 9. Reconcile the visual suite with the current canonical Stitch implementation.
-   The broad isolated run produced 52 passes and 60 failures; the exact current
-   planning slice produced 2 passes and 22 failures. Representative failures
-   include planning at 768px measuring 6,305px versus a 1,469px reference, and
-   current planning/detail/new/batch copy-height differences. These require
-   route-by-route comparison against Stitch and deliberate snapshot decisions;
-   no snapshots were updated automatically.
+   The broad pre-reset run produced 52 passes and 60 failures. After the reset,
+   the selected planning run at the current source produced 3 passes and 15
+   failures. The former 6,305px planning height was reduced to a deterministic
+   single-seed fixture; remaining differences include stale references containing
+   an `A11y detail <timestamp>` row, plus route-level spacing/copy deltas. These
+   require route-by-route comparison against Stitch and deliberate snapshot
+   decisions; no snapshots were updated automatically.
 
 ### P3 — polish
 
@@ -244,7 +247,9 @@ full browser matrix, visual snapshots, axe checks, manual accessibility review,
 and performance measurements at the exact clean commit. Migration, integration,
 exact-HEAD axe/RTL, full isolated Chromium, mobile Chrome/Safari §23,
 targeted cross-engine, and unit/build gates are evidenced across the recorded
-baselines. Visual parity and performance evidence remain open.
+baselines. The performance protocol is now documented in
+`docs/testing/performance-report.md`; actual LCP/INP/CLS, asset-budget, and
+EXPLAIN ANALYZE measurements remain open. Visual parity also remains open.
 
 ### Step 7 — Reconcile operations and documentation
 
