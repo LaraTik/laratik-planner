@@ -24,10 +24,25 @@ import type { EngagementRate } from "@/lib/social/analytics";
 export function SocialEngagementRateCard({
   channelId,
   rate,
+  labels,
 }: {
   channelId: string;
   rate: EngagementRate;
+  labels?: {
+    title: string;
+    interactionsOverReach: string;
+    interactionsOverFollowers: string;
+    unavailable: string;
+    partial: string;
+  };
 }) {
+  const copy = labels ?? {
+    title: "Engagement rate",
+    interactionsOverReach: "interactions / reach",
+    interactionsOverFollowers: "interactions / followers",
+    unavailable: "Not enough data",
+    partial: "partial",
+  };
   const hasValue = typeof rate.percent === "number";
   return (
     <div
@@ -35,7 +50,7 @@ export function SocialEngagementRateCard({
       data-testid="social-engagement-rate"
       data-testid-id={channelId}
     >
-      <p className="text-label text-fg-muted">Engagement rate</p>
+      <p className="text-label text-fg-muted">{copy.title}</p>
       <p
         className="text-title-card text-fg-primary mt-1 font-semibold"
         data-testid={`social-engagement-rate-${channelId}`}
@@ -43,7 +58,11 @@ export function SocialEngagementRateCard({
         {hasValue ? `${rate.percent!.toFixed(1)}%` : "—"}
       </p>
       <p className="text-label text-fg-muted">
-        engaged / followers
+        {rate.denominator === "reach"
+          ? copy.interactionsOverReach
+          : rate.denominator === "followers"
+            ? copy.interactionsOverFollowers
+            : copy.unavailable}
         {rate.partial ? (
           <>
             {" · "}
@@ -51,7 +70,7 @@ export function SocialEngagementRateCard({
               data-testid="social-engagement-rate-partial"
               className="border-warning/40 bg-warning/5 text-warning rounded-full border px-1.5"
             >
-              partial
+              {copy.partial}
             </span>
           </>
         ) : null}

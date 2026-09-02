@@ -12,7 +12,9 @@ import type {
   ProfileSnapshot,
   RefreshedCredentials,
   SocialProviderAdapter,
+  SocialSourceMetadata,
 } from "../types";
+import type { MetricStatus } from "../metrics";
 import type { SocialCredentials } from "../crypto";
 import { newRequestId } from "../http";
 import { captureError } from "@/lib/observability/sentry";
@@ -248,13 +250,24 @@ export const tiktokAdapter: SocialProviderAdapter = {
     void appCredentials;
     const p = await fetchTikTokProfile(credentials.accessToken);
     const observedAt = new Date();
-    const sourceMetadata: Record<string, string | number | boolean | null> = {
+    const followerStatus: MetricStatus = {
+      status: p.followerCount === null ? "no_data" : "available",
+    };
+    const sourceMetadata: SocialSourceMetadata = {
       open_id: p.openId,
       is_verified: p.isVerified,
+      metricStatuses: {
+        followerCount: followerStatus,
+        reach: { status: "unsupported" },
+        views: { status: "unsupported" },
+        engagedAccounts: { status: "unsupported" },
+        interactions: { status: "unsupported" },
+      },
     };
     if (p.followerCount === null) {
       sourceMetadata.partial = true;
       sourceMetadata.reason = "user.info.stats denied";
+      sourceMetadata.failedMetrics = ["followerCount"];
     }
     // Compute a deterministic response hash so an operator can prove
     // the snapshot body was unchanged without retaining the body.

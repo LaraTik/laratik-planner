@@ -155,6 +155,7 @@ export async function devSeed(
     platformAdmin?: boolean;
     /** Explicit platform role. Takes precedence over the legacy platformAdmin alias. */
     platformRole?: PlatformRole;
+    socialAnalyticsFixture?: boolean;
   } = {},
 ): Promise<SeedResult> {
   return withRetry(async () => {
@@ -171,6 +172,9 @@ export async function devSeed(
         ...(options.workspaceRoles ? { workspaceRoles: options.workspaceRoles } : {}),
         ...(options.platformAdmin !== undefined ? { platformAdmin: options.platformAdmin } : {}),
         ...(options.platformRole ? { platformRole: options.platformRole } : {}),
+        ...(options.socialAnalyticsFixture
+          ? { socialAnalyticsFixture: options.socialAnalyticsFixture }
+          : {}),
       },
       // Lower the request timeout in capture mode so a hung seed
       // does not eat the entire per-test budget. The compare step
@@ -295,6 +299,7 @@ export async function bootstrapRoleSession(
   page: Page,
   role: FixtureRole,
   workspaceSlug = "acme",
+  options: { socialAnalyticsFixture?: boolean; locale?: "en" | "ar" } = {},
 ): Promise<SeedResult> {
   const email = `e2e-${role}@laratik.local`;
   const result = await devSeed(page.request, {
@@ -302,6 +307,8 @@ export async function bootstrapRoleSession(
     workspaceSlug,
     agencyAdmin: role === "agency_admin",
     workspaceRoles: role === "agency_admin" ? [] : [role],
+    ...(options.socialAnalyticsFixture ? { socialAnalyticsFixture: true } : {}),
+    ...(options.locale ? { locale: options.locale } : {}),
   });
   await devSignIn(page.request, { email, role: role === "agency_admin" ? "agency_admin" : "user" });
   return result;

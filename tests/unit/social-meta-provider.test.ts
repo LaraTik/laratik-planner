@@ -502,6 +502,13 @@ describe("fetchMetaInstagramSnapshot — IG insights response shape (cumulative 
     expect(snapshot.interactions).toBe(27);
     // partial is FALSE because every field is populated.
     expect(snapshot.sourceMetadata.partial).toBe(false);
+    expect(snapshot.sourceMetadata.metricStatuses).toMatchObject({
+      followerCount: { status: "available" },
+      reach: { status: "available" },
+      views: { status: "available" },
+      engagedAccounts: { status: "available" },
+      interactions: { status: "available" },
+    });
   });
 
   it("also parses the time-series values[] shape (the other Meta contract)", async () => {
@@ -719,6 +726,13 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     expect((snapshot.sourceMetadata as { reason?: string }).reason).toBe(
       "page_insights_unavailable",
     );
+    expect(snapshot.sourceMetadata.metricStatuses).toMatchObject({
+      followerCount: { status: "available" },
+      reach: { status: "no_data" },
+      views: { status: "no_data" },
+      interactions: { status: "no_data" },
+      engagedAccounts: { status: "unsupported" },
+    });
   });
 
   it("writes the provider error code into sourceMetadata when the insights call returns 403 (permission_denied)", async () => {
@@ -771,6 +785,12 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     expect(meta.partial).toBe(true);
     expect(meta.reason).toBe("page_insights_unavailable");
     expect(meta.providerErrorCode).toBe("permission_denied");
+    expect(snapshot.sourceMetadata.metricStatuses).toMatchObject({
+      reach: { status: "error", providerErrorCode: "permission_denied" },
+      views: { status: "error", providerErrorCode: "permission_denied" },
+      interactions: { status: "error", providerErrorCode: "permission_denied" },
+      engagedAccounts: { status: "unsupported" },
+    });
   });
 
   it("silently writes partial row when insights returns 400 'metric not available' (not_configured, the App Review / dev-mode case)", async () => {

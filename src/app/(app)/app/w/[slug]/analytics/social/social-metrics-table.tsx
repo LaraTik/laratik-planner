@@ -2,6 +2,7 @@
 
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import type { SocialPlatform } from "@/lib/social/types";
 
 /**
  * M4 — exact-value table for the social growth chart.
@@ -29,9 +30,13 @@ function fmt(n: number | null | undefined): string {
 export function SocialMetricsTable({
   rows,
   tableId,
+  platform,
+  ariaLabel,
 }: {
   rows: SocialMetricsRow[];
   tableId: string;
+  platform: SocialPlatform;
+  ariaLabel?: string;
 }) {
   const t = useLocaleT();
   const columns: DataTableColumnDef<SocialMetricsRow>[] = [
@@ -58,18 +63,20 @@ export function SocialMetricsTable({
       cell: (row) => fmt(row.views),
     },
     {
-      key: "engagedAccounts",
-      header: t("analytics.tableEngaged"),
-      hideOn: "lg",
-      cell: (row) => fmt(row.engagedAccounts),
-    },
-    {
       key: "interactions",
       header: t("analytics.tableInteractions"),
       hideOn: "lg",
       cell: (row) => fmt(row.interactions),
     },
   ];
+  if (platform === "instagram") {
+    columns.splice(4, 0, {
+      key: "engagedAccounts",
+      header: t("analytics.tableEngaged"),
+      hideOn: "lg",
+      cell: (row) => fmt(row.engagedAccounts),
+    });
+  }
   if (rows.length === 0) {
     return (
       <p className="text-body text-fg-muted" data-testid="social-metrics-empty">
@@ -83,7 +90,7 @@ export function SocialMetricsTable({
       getRowKey={(row) => row.metricDate}
       rows={rows}
       columns={columns}
-      aria-label={tableId}
+      aria-label={ariaLabel ?? tableId}
     />
   );
 }

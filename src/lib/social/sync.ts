@@ -22,7 +22,12 @@ import {
 import { isSocialProviderError, newRequestId, SocialProviderError } from "./http";
 import { metaAdapter } from "./providers/meta";
 import { tiktokAdapter } from "./providers/tiktok";
-import type { SocialProviderAdapter, ProfileSnapshot, ConnectedProfileRef } from "./types";
+import type {
+  SocialProviderAdapter,
+  ProfileSnapshot,
+  ConnectedProfileRef,
+  SocialSourceMetadata,
+} from "./types";
 import { serverEnv } from "@/lib/validation/env";
 import {
   createDekCache,
@@ -693,7 +698,7 @@ type RateLimitUsageSnapshot = {
  * from before this change).
  */
 function readUsageFromSourceMetadata(
-  sourceMetadata: Record<string, string | number | boolean | null> | null | undefined,
+  sourceMetadata: SocialSourceMetadata | null | undefined,
 ): RateLimitUsageSnapshot | null {
   if (!sourceMetadata) return null;
   const num = (k: string) =>

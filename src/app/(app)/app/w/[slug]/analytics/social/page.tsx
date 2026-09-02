@@ -35,7 +35,9 @@ import { SocialHealthyStatus } from "./social-healthy-status";
 import { SegmentedControl, type SegmentedOption } from "./social-segmented-control";
 import { SocialSparkline, socialSparklineTestId } from "./social-sparkline";
 import { SocialEngagementRateCard } from "./social-engagement-rate";
+import { SocialDataQuality } from "./social-data-quality";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import type { SocialSourceMetadata } from "@/lib/social/metrics";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -58,9 +60,9 @@ import { SocialCsvExport, type CsvRow } from "./social-csv-export";
  * table pair. Two URL parameters control the view:
  *
  *   - `?window=7|30|90` — the time window for the chart + tiles
- *   - `?metric=followerCount|reach|views|engagedAccounts|interactions`
- *                       — which of the five daily metrics the chart
- *                         plots (tiles + table always show all five)
+ *   - `?metric=followerCount|reach|views|interactions`
+ *                       — which of the four universal daily metrics
+ *                         the chart plots
  *
  * Both are Server Component props, not client state, so the URL is
  * shareable and the page is fully rendered on the server.
@@ -183,6 +185,29 @@ export default async function SocialAnalyticsPage({
   // to fire; the ETA is a convenience, not a contract.
   const nextSyncEtaText = mostRecentSync ? nextSyncEta(now, workspace.timezone) : null;
   const metricText = t(METRIC_LABEL_KEYS[metric]);
+  const qualityLabels = {
+    partial: t("analytics.partialData"),
+    metrics: t("analytics.metrics"),
+    unavailableReason: t("analytics.unavailableMetrics"),
+    statusLabels: {
+      error: t("analytics.providerError"),
+      noData: t("analytics.noData"),
+    },
+    metricLabels: {
+      followerCount: t("analytics.metricFollowers"),
+      reach: t("analytics.metricReach"),
+      views: t("analytics.metricViews"),
+      engagedAccounts: t("analytics.metricEngagedAccounts"),
+      interactions: t("analytics.metricInteractions"),
+    },
+  };
+  const engagementLabels = {
+    title: t("analytics.engagementRate"),
+    interactionsOverReach: t("analytics.interactionsOverReach"),
+    interactionsOverFollowers: t("analytics.interactionsOverFollowers"),
+    unavailable: t("analytics.engagementUnavailable"),
+    partial: t("analytics.partial"),
+  };
 
   return (
     <div className="space-y-6" data-testid="social-analytics-page">
@@ -357,7 +382,8 @@ export default async function SocialAnalyticsPage({
       ) : (
         <div className="space-y-8">
           {channels.map((channel) => {
-            const fullSeries: MetricSeriesPoint[] = (byChannel.get(channel.id) ?? []).map((m) => ({
+            const channelRows = byChannel.get(channel.id) ?? [];
+            const fullSeries: MetricSeriesPoint[] = channelRows.map((m) => ({
               metricDate: m.metricDate,
               followerCount: m.followerCount,
               reach: m.reach,
@@ -365,6 +391,11 @@ export default async function SocialAnalyticsPage({
               engagedAccounts: m.engagedAccounts,
               interactions: m.interactions,
               partial: (m.sourceMetadata as { partial?: boolean } | null)?.partial === true,
+              ...((m.sourceMetadata as SocialSourceMetadata | null)?.metricStatuses
+                ? {
+                    metricStatuses: (m.sourceMetadata as SocialSourceMetadata).metricStatuses,
+                  }
+                : {}),
             }));
             const summary = buildProfileSummary({
               fullSeries,
@@ -382,6 +413,9 @@ export default async function SocialAnalyticsPage({
             const priorGrowth = calculateGrowth(priorWindowed, metric);
             const chartPts = chartSeries(windowed, metric);
             const tableId = `social-table-${channel.id}`;
+            const latestRow = channelRows[channelRows.length - 1];
+            const latestSourceMetadata =
+              (latestRow?.sourceMetadata as SocialSourceMetadata | null) ?? null;
             return (
               <Card key={channel.id} padding="lg" data-testid={`social-card-${channel.id}`}>
                 <div className="space-y-4">
@@ -417,6 +451,13 @@ export default async function SocialAnalyticsPage({
                       </div>
                     </div>
                   </header>
+
+                  <SocialDataQuality
+                    platform={channel.platform as "instagram" | "facebook" | "tiktok"}
+                    values={latestRow ?? {}}
+                    sourceMetadata={latestSourceMetadata}
+                    labels={qualityLabels}
+                  />
 
                   <div className="grid gap-4 sm:grid-cols-3">
                     <SummaryCard
@@ -476,6 +517,7 @@ export default async function SocialAnalyticsPage({
                     <SocialEngagementRateCard
                       channelId={channel.id}
                       rate={calculateEngagementRate(fullSeries)}
+                      labels={engagementLabels}
                     />
                   </div>
 
@@ -503,6 +545,7 @@ export default async function SocialAnalyticsPage({
                     </h3>
                     <SocialCsvExport
                       channelName={channel.accountName}
+                      platform={channel.platform as "instagram" | "facebook" | "tiktok"}
                       rows={windowed.map<CsvRow>((p) => ({
                         metricDate: p.metricDate,
                         followerCount: p.followerCount,
@@ -517,6 +560,11 @@ export default async function SocialAnalyticsPage({
 
                   <SocialMetricsTable
                     tableId={tableId}
+                    platform={channel.platform as "instagram" | "facebook" | "tiktok"}
+                    ariaLabel={t("analytics.tableAria", {
+                      platform: platformLabel(channel.platform),
+                      account: channel.accountName,
+                    })}
                     rows={windowed.map((p): SocialMetricsRow => ({
                       metricDate: p.metricDate,
                       followerCount: p.followerCount,
