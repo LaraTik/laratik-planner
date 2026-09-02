@@ -1,5 +1,15 @@
 {
   "metaTitle": "المحتوى · {id}",
+  "tabs": {
+    "overview": "نظرة عامة",
+    "content": "المحتوى",
+    "messages": "الرسائل",
+    "preview": "المعاينة",
+    "publishing": "النشر",
+    "activity": "النشاط"
+  },
+  "aiAssistance": "مساعدة الذكاء الاصطناعي",
+  "aiSettings": "إعدادات الذكاء الاصطناعي",
   "publish": {
     "redirectFallbackMessage": "إعداد النشر أصبح الآن جزءًا من صفحة تفاصيل التخطيط. لا يمكن العثور على مساحة العمل هذه؛ اطلب رابطًا جديدًا من مديرك.",
     "redirectFallbackBack": "العودة إلى المحتوى",
@@ -184,6 +194,8 @@
     "approvedOf": "تمت الموافقة على {approved} من أصل {total}",
     "brief": "الملخص",
     "noBrief": "لا يوجد ملخص بعد.",
+    "noBriefInline": "لا يوجد ملخص بعد — اختر التعديل لإضافته.",
+    "briefPlaceholder": "الهدف والجمهور والنقاط الأساسية. حتى 2000 حرف.",
     "recentActivity": "النشاط الأخير",
     "viewAll": "عرض الكل",
     "noActivity": "لا يوجد نشاط بعد. ستظهر هنا التغييرات على هذا المحتوى.",
@@ -289,10 +301,101 @@
     "close": "إغلاق"
   },
   "deliveries": {
-    "emptyBody": "لا توجد تسليمات بعد. أرسل رابط https واحد على الأقل للمتابعة إلى المراجعة الإبداعية."
+    "title": "التسليمات",
+    "emptyBody": "لا توجد تسليمات بعد. أرسل رابط HTTPS واحدًا على الأقل للمتابعة إلى المراجعة الإبداعية.",
+    "versionOne": "يوجد إصدار واحد من أصل {count}",
+    "versionMany": "يوجد {count} إصدارات",
+    "submitNewVersion": "إرسال إصدار جديد",
+    "submitTitle": "إرسال تسليم",
+    "submitDelivery": "إرسال تسليم",
+    "description": "الوصف",
+    "descriptionRequired": "أضف وصفًا قبل الإرسال.",
+    "descriptionPlaceholder": "التصاميم النهائية، 3 نسخ للاختبار",
+    "designerNote": "ملاحظة المصمم",
+    "designerNotePlaceholder": "أي معلومات ينبغي أن يعرفها المراجع.",
+    "optionalHint": "اختياري",
+    "linksTitle": "روابط التسليم (مطلوب رابط واحد على الأقل)",
+    "linksHelp": "أضف مزودًا وتصنيفًا ورابط HTTPS صالحًا في صف واحد على الأقل.",
+    "provider": "المزود {count}",
+    "linkLabel": "تصنيف الرابط",
+    "linkUrl": "رابط HTTPS",
+    "linkLabelRequired": "أضف تصنيفًا لرابط التسليم هذا.",
+    "linkUrlRequired": "أضف رابط HTTPS صالحًا لتسليم هذا.",
+    "linkSummaryError": "أضف رابط تسليم مكتملًا واحدًا على الأقل للمتابعة.",
+    "preview": "معاينة",
+    "submitting": "جارٍ الإرسال…",
+    "submitForReview": "إرسال للمراجعة الإبداعية",
+    "providers": {
+      "google_drive": "Google Drive",
+      "dropbox": "Dropbox",
+      "onedrive": "OneDrive",
+      "frame_io": "Frame.io",
+      "figma": "Figma",
+      "canva": "Canva",
+      "other": "أخرى"
+    }
   },
   "preview": {
-    "noChannelsTitle": "لا توجد قنوات للمعاينة"
+    "noChannelsTitle": "لا توجد قنوات للمعاينة",
+    "noChannelsBody": "أضف قناة واحدة على الأقل لرؤية كيفية ظهور هذا المنشور على منصة الوجهة.",
+    "title": "معاينة المنصة",
+    "description": "هكذا سيظهر هذا المنشور على {platform} ({account}).",
+    "noChannel": "لا توجد قناة",
+    "showingFirst": "يتم عرض أول {count} قنوات. استخدم علامة تبويب {publishing} لإعداد البقية."
+  },
+  "publishReadiness": {
+    "title": "متطلبات النشر",
+    "missing_payload": "احفظ حزمة نشر هذه القناة أولًا.",
+    "missing_platform": "منصة حزمة النشر غير محددة.",
+    "invalid_payload": "حزمة النشر غير صالحة لهذه المنصة.",
+    "missing_caption": "أضف تعليقًا قبل النشر.",
+    "missing_destination": "اختر ملف وجهة.",
+    "final_copy_not_approved": "تجب الموافقة على النسخة النهائية قبل النشر.",
+    "missing_alt_text": "أضف نصًا بديلًا قبل النشر.",
+    "missing_audio_rights": "أكد حقوق صوت الريل.",
+    "transcript_not_reviewed": "راجع نص الريل.",
+    "missing_cover": "اختر غلافًا للريل.",
+    "missing_music_rights": "أكد حقوق الموسيقى قبل النشر.",
+    "missing_post_text": "أضف نص المنشور قبل النشر.",
+    "missing_title": "أضف عنوانًا قبل النشر.",
+    "missing_privacy": "اختر إعداد الخصوصية قبل النشر.",
+    "missing_thumbnail": "اختر صورة مصغرة قبل النشر.",
+    "missing_board": "اختر لوحة Pinterest قبل النشر.",
+    "missing_pin_title": "أضف عنوان الدبوس قبل النشر.",
+    "no_approved_delivery": "اعتمد إصدار تسليم قبل النشر.",
+    "delivery_version_missing": "إصدار التسليم المعتمد لم يعد متاحًا.",
+    "rights_not_confirmed": "أكد حقوق الوسائط قبل النشر.",
+    "synthetic_media_disclosure_recommended": "صرّح بالمحتوى الاصطناعي عندما يكون المحتوى مولدًا بالذكاء الاصطناعي.",
+    "approvals_open": "أكمل الاعتماد المعلّق قبل النشر."
+  },
+  "publishForm": {
+    "destinationCaption": "الوجهة والتعليق",
+    "channel": "القناة",
+    "itemTitle": "عنوان العنصر",
+    "format": "التنسيق",
+    "caption": "التعليق",
+    "captionHint": "حد 2200 حرفًا مطابق للمنصة المحددة.",
+    "hashtags": "الوسوم",
+    "hashtagsHint": "اضغط Enter أو الفاصلة أو المسافة للإضافة. حتى 30 وسمًا، 60 حرفًا لكل وسم.",
+    "firstComment": "التعليق الأول",
+    "destinationUrl": "رابط الوجهة",
+    "mediaDisclosures": "الوسائط والإفصاحات",
+    "altText": "النص البديل وإمكانية الوصول",
+    "rightsConfirmed": "تم تأكيد الحقوق (الوسائط مصرح باستخدامها)",
+    "aiGenerated": "محتوى مولد بالذكاء الاصطناعي",
+    "paidPartnership": "شراكة مدفوعة أو محتوى بعلامة تجارية",
+    "approvedVersion": "الإصدار المعتمد",
+    "previewApproval": "المعاينة والاعتماد",
+    "finalCopyApproved": "تم اعتماد النسخة النهائية",
+    "finalCopyAwaitingApproval": "النسخة النهائية بانتظار الاعتماد",
+    "approvedAt": "تم الاعتماد في {time}",
+    "revokeApproval": "سحب الاعتماد",
+    "approveFinalCopy": "اعتماد النسخة النهائية",
+    "adminApprovalRequired": "يجب على مسؤول الوكالة اعتماد الحزمة المحفوظة.",
+    "approvalResetHint": "يُعاد ضبط الاعتماد عند تغيير أي حقل جوهري.",
+    "note": "ملاحظة",
+    "addNote": "إضافة ملاحظة",
+    "noCaption": "لا يوجد تعليق"
   },
   "messages": {
     "captionLabel": "التعليق",
@@ -308,5 +411,16 @@
     "save": "حفظ الرسالة",
     "saving": "جارٍ الحفظ…",
     "saved": "تم الحفظ"
+  },
+  "inline": {
+    "titleRequired": "العنوان مطلوب.",
+    "titleTooShort": "يجب ألا يقل العنوان عن حرفين.",
+    "dateRequired": "اختر تاريخ نشر مخططًا صالحًا.",
+    "plannedPublishDate": "تاريخ النشر المخطط",
+    "maxLength": "يجب ألا يتجاوز هذا الحقل {count} حرف.",
+    "dateHint": "يُستخدم توقيت ساعتك المحلية. يُحفظ على أنه"
+  },
+  "footer": {
+    "updatedRevision": "آخر تحديث {time} · المراجعة {revision}"
   }
 }

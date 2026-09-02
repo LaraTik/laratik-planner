@@ -287,6 +287,14 @@ export function PublishPackageForm({
 
   const current = channels.find((c) => c.id === activeChannel);
   const currentDraft = current ? drafts[current.id] : undefined;
+  const currentReadiness = current
+    ? readiness.channels.find((channel) => channel.socialChannelId === current.socialChannelId)
+    : undefined;
+
+  function readinessIssueText(code: string, fallback: string) {
+    const localized = t(`contentDetail.publishReadiness.${code}`);
+    return localized.startsWith("[contentDetail.publishReadiness.") ? fallback : localized;
+  }
 
   function updateDraft(channelId: string, patch: Partial<PlatformPayload>) {
     setDrafts((prev) => {
@@ -448,25 +456,54 @@ export function PublishPackageForm({
           className="grid grid-cols-1 gap-4 lg:grid-cols-3"
           data-testid={`publish-channel-panel-${current.socialChannelId}`}
         >
+          {currentReadiness && currentReadiness.issues.length > 0 ? (
+            <div
+              role="alert"
+              aria-labelledby="publish-readiness-title"
+              className="border-danger bg-danger-container text-on-danger-container rounded-[var(--radius-control)] border p-3 lg:col-span-3"
+              data-testid="publish-readiness-issues"
+            >
+              <p id="publish-readiness-title" className="text-body font-semibold">
+                {t("contentDetail.publishReadiness.title")}
+              </p>
+              <ul className="text-label mt-1 list-disc space-y-1 ps-5">
+                {currentReadiness.issues.map((issue, index) => (
+                  <li key={`${issue.code}-${index}`}>
+                    {readinessIssueText(issue.code, issue.message)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {/* Left column — destination + caption/discovery */}
           <Card padding="lg" className="space-y-3">
-            <CardTitle>Destination & caption</CardTitle>
+            <CardTitle>{t("contentDetail.publishForm.destinationCaption")}</CardTitle>
             <Field
-              label="Channel"
+              label={t("contentDetail.publishForm.channel")}
               value={current.accountName}
               readOnly
               testId="publish-channel-name"
             />
-            <Field label="Item title" value={itemTitle} readOnly testId="publish-item-title" />
-            <Field label="Format" value={itemFormat} readOnly testId="publish-item-format" />
+            <Field
+              label={t("contentDetail.publishForm.itemTitle")}
+              value={itemTitle}
+              readOnly
+              testId="publish-item-title"
+            />
+            <Field
+              label={t("contentDetail.publishForm.format")}
+              value={itemFormat}
+              readOnly
+              testId="publish-item-format"
+            />
             <div>
               <CaptionField
                 id="publish-caption"
                 name="caption"
-                label="Caption"
+                label={t("contentDetail.publishForm.caption")}
                 value={(currentDraft as { caption?: string }).caption ?? ""}
                 onChange={(next) => updateDraft(current.id, { caption: next })}
-                hint="The 2 200-character cap matches the per-platform schema."
+                hint={t("contentDetail.publishForm.captionHint")}
                 testId="publish-caption"
               />
             </div>
@@ -474,21 +511,21 @@ export function PublishPackageForm({
               <HashtagEditor
                 id="publish-hashtags"
                 name="hashtags"
-                label="Hashtags"
+                label={t("contentDetail.publishForm.hashtags")}
                 value={(currentDraft as { hashtags?: string[] }).hashtags ?? []}
                 onChange={(next) => updateDraft(current.id, { hashtags: next })}
-                hint="Press Enter, comma, or space to add. Up to 30 tags, 60 chars each."
+                hint={t("contentDetail.publishForm.hashtagsHint")}
                 testId="publish-hashtags"
               />
             </div>
             <Field
-              label="First comment"
+              label={t("contentDetail.publishForm.firstComment")}
               value={(currentDraft as { firstComment?: string }).firstComment ?? ""}
               onChange={(v) => updateDraft(current.id, { firstComment: v })}
               testId="publish-first-comment"
             />
             <Field
-              label="Destination URL"
+              label={t("contentDetail.publishForm.destinationUrl")}
               value={(currentDraft as { destinationUrl?: string }).destinationUrl ?? ""}
               onChange={(v) => updateDraft(current.id, { destinationUrl: v })}
               placeholder="https://"
@@ -498,13 +535,13 @@ export function PublishPackageForm({
 
           {/* Center column — media, disclosures */}
           <Card padding="lg" className="space-y-3">
-            <CardTitle>Media & disclosures</CardTitle>
+            <CardTitle>{t("contentDetail.publishForm.mediaDisclosures")}</CardTitle>
             <div>
               <label
                 htmlFor="publish-alt-text"
                 className="text-body text-fg-primary mb-1 block font-semibold"
               >
-                Alt text / accessibility
+                {t("contentDetail.publishForm.altText")}
               </label>
               <Textarea
                 id="publish-alt-text"
@@ -515,7 +552,7 @@ export function PublishPackageForm({
               />
             </div>
             <Checkbox
-              label="Rights confirmed (media cleared for use)"
+              label={t("contentDetail.publishForm.rightsConfirmed")}
               checked={Boolean(
                 (currentDraft as { disclosures?: { rightsConfirmed?: boolean } }).disclosures
                   ?.rightsConfirmed,
@@ -542,7 +579,7 @@ export function PublishPackageForm({
               testId="publish-rights-confirmed"
             />
             <Checkbox
-              label="AI-generated content"
+              label={t("contentDetail.publishForm.aiGenerated")}
               checked={Boolean(
                 (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
                   ?.aiGenerated,
@@ -569,7 +606,7 @@ export function PublishPackageForm({
               testId="publish-ai-generated"
             />
             <Checkbox
-              label="Paid partnership / branded content"
+              label={t("contentDetail.publishForm.paidPartnership")}
               checked={Boolean(
                 (currentDraft as { disclosures?: { paidPartnership?: boolean } }).disclosures
                   ?.paidPartnership,
@@ -601,7 +638,9 @@ export function PublishPackageForm({
                   per the terminology sweep in the planning-detail
                   refactor (spec §10 / §16 — the DB column
                   `delivery_versions` is unchanged). */}
-              <CardTitle className="text-title-card">Approved version</CardTitle>
+              <CardTitle className="text-title-card">
+                {t("contentDetail.publishForm.approvedVersion")}
+              </CardTitle>
               {deliveryVersions.filter((d) => d.isFinalApproved).length === 0 ? (
                 <p
                   className="text-label text-warning mt-1"
@@ -623,17 +662,19 @@ export function PublishPackageForm({
 
           {/* Right column — preview + approval */}
           <Card padding="lg" className="space-y-3">
-            <CardTitle>Preview & approval</CardTitle>
+            <CardTitle>{t("contentDetail.publishForm.previewApproval")}</CardTitle>
             <PreviewPane payload={currentDraft} platform={current.platform} />
             <div className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3">
               <p className="text-body text-fg-primary font-semibold">
                 {currentDraft.approval.finalCopyApproved
-                  ? "Final copy approved"
-                  : "Final copy awaiting approval"}
+                  ? t("contentDetail.publishForm.finalCopyApproved")
+                  : t("contentDetail.publishForm.finalCopyAwaitingApproval")}
               </p>
               {currentDraft.approval.approvedAt ? (
                 <p className="text-label text-fg-muted mt-1">
-                  Approved {new Date(currentDraft.approval.approvedAt).toLocaleString()}
+                  {t("contentDetail.publishForm.approvedAt", {
+                    time: new Date(currentDraft.approval.approvedAt).toLocaleString(),
+                  })}
                 </p>
               ) : null}
               {canApproveFinalCopy ? (
@@ -647,17 +688,17 @@ export function PublishPackageForm({
                   data-testid="publish-final-copy-approved"
                 >
                   {currentDraft.approval.finalCopyApproved
-                    ? "Revoke approval"
-                    : "Approve final copy"}
+                    ? t("contentDetail.publishForm.revokeApproval")
+                    : t("contentDetail.publishForm.approveFinalCopy")}
                 </Button>
               ) : (
                 <p className="text-label text-fg-muted mt-2">
-                  An agency administrator must approve the saved package.
+                  {t("contentDetail.publishForm.adminApprovalRequired")}
                 </p>
               )}
             </div>
             <p className="text-label text-fg-muted">
-              Approving resets when any material field changes.
+              {t("contentDetail.publishForm.approvalResetHint")}
             </p>
           </Card>
         </div>
@@ -682,8 +723,8 @@ export function PublishPackageForm({
             }
             title={t("contentDetail.internalNote.title")}
             description={t("contentDetail.internalNote.description")}
-            label="Note"
-            confirmLabel="Add note"
+            label={t("contentDetail.publishForm.note")}
+            confirmLabel={t("contentDetail.publishForm.addNote")}
             onConfirm={handleInternalNote}
             closeAriaLabel={t("common.dialogCloseAria")}
           />
@@ -782,6 +823,7 @@ function Checkbox({
 }
 
 function PreviewPane({ payload, platform }: { payload: PlatformPayload; platform: string }) {
+  const t = useLocaleT();
   const caption = (payload as { caption?: string }).caption ?? "";
   const hashtags = (payload as { hashtags?: string[] }).hashtags ?? [];
   return (
@@ -794,7 +836,9 @@ function PreviewPane({ payload, platform }: { payload: PlatformPayload; platform
         className="text-body text-fg-primary mt-1 whitespace-pre-wrap"
         data-testid="publish-preview-caption"
       >
-        {caption || <span className="text-fg-muted italic">(no caption)</span>}
+        {caption || (
+          <span className="text-fg-muted italic">({t("contentDetail.publishForm.noCaption")})</span>
+        )}
       </p>
       {hashtags.length > 0 ? (
         <p className="text-label text-fg-muted mt-1">{hashtags.map((h) => `#${h}`).join(" ")}</p>

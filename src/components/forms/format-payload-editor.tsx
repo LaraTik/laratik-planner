@@ -267,6 +267,14 @@ export function FormatPayloadEditor({
               {t("formatEditor.editor.readOnlyCreative")}
             </p>
           ) : null}
+          {editable ? (
+            <p
+              id="format-payload-editor-guidance"
+              className="border-border bg-surface-subtle text-label text-fg-secondary rounded-[var(--radius-control)] border px-3 py-2"
+            >
+              {t("formatEditor.editor.optionalGuidance")}
+            </p>
+          ) : null}
 
           {/* Essential tier. Rendered directly, no disclosure. */}
           <div className="space-y-6" data-testid="essential-tier">
@@ -298,7 +306,11 @@ export function FormatPayloadEditor({
               action, single submit. The hidden inputs carry the
               payload + the content item id. */}
           {editable ? (
-            <form action={formAction} className="flex flex-wrap items-center gap-2 pt-2">
+            <form
+              action={formAction}
+              aria-describedby="format-payload-editor-guidance"
+              className="flex flex-wrap items-center gap-2 pt-2"
+            >
               <input type="hidden" name="contentItemId" value={contentItemId} />
               <input type="hidden" name="formatPayload" value={JSON.stringify(payload)} />
               <Button type="submit" size="sm" disabled={pending}>
@@ -312,7 +324,12 @@ export function FormatPayloadEditor({
                   : t("formatEditor.editor.saveCreative")}
               </Button>
               {state?.error ? (
-                <p role="alert" className="text-label text-danger">
+                <p
+                  role="alert"
+                  aria-live="assertive"
+                  data-testid="format-payload-save-error"
+                  className="text-label text-danger font-semibold"
+                >
                   {state.error}
                 </p>
               ) : null}

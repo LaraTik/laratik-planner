@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/forms/form-field";
 import { submitDeliveryAction } from "../actions";
-import { humanize } from "@/lib/content/status";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 import {
   DeliveryVersionList,
   type DeliveryVersion,
@@ -60,9 +60,11 @@ export function DeliverySection({
   deliveries: DeliveryVersion[];
   viewerIsClient?: boolean;
 }) {
+  const t = useLocaleT();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const canSubmit =
     (isDesigner || isManager) &&
     (contentStatus === "in_design" ||
@@ -76,14 +78,20 @@ export function DeliverySection({
         <Card data-testid="delivery-history">
           <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <CardTitle>Deliveries</CardTitle>
+              <CardTitle>{t("contentDetail.deliveries.title")}</CardTitle>
               <p className="text-label text-fg-muted mt-0.5">
-                {deliveries.length} version{deliveries.length === 1 ? "" : "s"} on file
+                {t(
+                  deliveries.length === 1
+                    ? "contentDetail.deliveries.versionOne"
+                    : "contentDetail.deliveries.versionMany",
+                  { count: deliveries.length },
+                )}
               </p>
             </div>
             {canSubmit ? (
               <Button size="sm" onClick={() => setOpen(true)} disabled={open}>
-                <Package className="h-3.5 w-3.5" aria-hidden="true" /> Submit new version
+                <Package className="h-3.5 w-3.5" aria-hidden="true" />{" "}
+                {t("contentDetail.deliveries.submitNewVersion")}
               </Button>
             ) : null}
           </header>
@@ -102,16 +110,47 @@ export function DeliverySection({
         open ? (
           <Card data-testid="delivery-submit-form">
             <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>Submit a delivery</CardTitle>
+              <CardTitle>{t("contentDetail.deliveries.submitTitle")}</CardTitle>
               <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </header>
 
             <form
+              noValidate
+              onSubmit={(event) => {
+                const form = event.currentTarget;
+                const data = new FormData(form);
+                const nextErrors: Record<string, string> = {};
+                if (!String(data.get("description") ?? "").trim()) {
+                  nextErrors.description = t("contentDetail.deliveries.descriptionRequired");
+                }
+                const labels = data.getAll("linkLabel").map(String);
+                const urls = data.getAll("linkUrl").map(String);
+                const hasCompleteLink = labels.some((label, i) => label.trim() && urls[i]?.trim());
+                if (!hasCompleteLink) {
+                  const row = labels.findIndex((label, i) => label.trim() || urls[i]?.trim());
+                  const index = row >= 0 ? row : 0;
+                  if (!labels[index]?.trim()) {
+                    nextErrors[`link-label-${index}`] = t(
+                      "contentDetail.deliveries.linkLabelRequired",
+                    );
+                  }
+                  if (!urls[index]?.trim()) {
+                    nextErrors[`link-url-${index}`] = t("contentDetail.deliveries.linkUrlRequired");
+                  }
+                }
+                setFieldErrors(nextErrors);
+                if (Object.keys(nextErrors).length > 0) {
+                  event.preventDefault();
+                  const firstInvalid = Object.keys(nextErrors)[0];
+                  form.querySelector<HTMLElement>(`#${firstInvalid}`)?.focus();
+                }
+              }}
               action={(fd) => {
                 start(async () => {
                   setFormError(null);
+                  setFieldErrors({});
                   try {
                     const res = await submitDeliveryAction(workspaceSlug, contentItemId, null, fd);
                     if (res && "error" in res && res.error) {
@@ -126,7 +165,12 @@ export function DeliverySection({
               }}
               className="space-y-4"
             >
-              <FormField id="description" label="Description" required>
+              <FormField
+                id="description"
+                label={t("contentDetail.deliveries.description")}
+                required
+                {...(fieldErrors.description ? { error: fieldErrors.description } : {})}
+              >
                 <Input
                   id="description"
                   type="text"
@@ -134,23 +178,33 @@ export function DeliverySection({
                   required
                   minLength={1}
                   maxLength={500}
-                  placeholder="Final creatives, 3 variants for testing"
+                  placeholder={t("contentDetail.deliveries.descriptionPlaceholder")}
                 />
               </FormField>
-              <FormField id="designerNote" label="Designer note (optional)">
+              <FormField
+                id="designerNote"
+                label={t("contentDetail.deliveries.designerNote")}
+                hint={t("contentDetail.deliveries.optionalHint")}
+              >
                 <Textarea
                   id="designerNote"
                   name="designerNote"
                   rows={3}
                   maxLength={2000}
-                  placeholder="Anything the reviewer should know."
+                  placeholder={t("contentDetail.deliveries.designerNotePlaceholder")}
                 />
               </FormField>
 
-              <fieldset className="space-y-2">
+              <fieldset
+                className="space-y-2"
+                aria-describedby="delivery-links-help delivery-links-error"
+              >
                 <legend className="text-body text-fg-primary font-semibold">
-                  Links (at least one)
+                  {t("contentDetail.deliveries.linksTitle")}
                 </legend>
+                <p id="delivery-links-help" className="text-label text-fg-muted">
+                  {t("contentDetail.deliveries.linksHelp")}
+                </p>
                 {[0, 1, 2].map((i) => (
                   <div
                     key={i}
@@ -161,7 +215,7 @@ export function DeliverySection({
                         htmlFor={`link-provider-${i}`}
                         className="text-label mb-1 block font-medium"
                       >
-                        Provider {i + 1}
+                        {t("contentDetail.deliveries.provider", { count: i + 1 })}
                       </label>
                       <select
                         id={`link-provider-${i}`}
@@ -171,7 +225,7 @@ export function DeliverySection({
                       >
                         {PROVIDERS.map((p) => (
                           <option key={p} value={p}>
-                            {humanize(p)}
+                            {t(`contentDetail.deliveries.providers.${p}`)}
                           </option>
                         ))}
                       </select>
@@ -181,32 +235,72 @@ export function DeliverySection({
                         htmlFor={`link-label-${i}`}
                         className="text-label mb-1 block font-medium"
                       >
-                        Link label
+                        {t("contentDetail.deliveries.linkLabel")}
                       </label>
-                      <Input id={`link-label-${i}`} type="text" name="linkLabel" maxLength={120} />
+                      <Input
+                        id={`link-label-${i}`}
+                        type="text"
+                        name="linkLabel"
+                        maxLength={120}
+                        aria-invalid={Boolean(fieldErrors[`link-label-${i}`])}
+                        aria-describedby={
+                          fieldErrors[`link-label-${i}`] ? `link-label-${i}-error` : undefined
+                        }
+                      />
+                      {fieldErrors[`link-label-${i}`] ? (
+                        <p
+                          id={`link-label-${i}-error`}
+                          role="alert"
+                          className="text-label text-danger mt-1 font-semibold"
+                        >
+                          {fieldErrors[`link-label-${i}`]}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="col-span-12 sm:col-span-5">
                       <label
                         htmlFor={`link-url-${i}`}
                         className="text-label mb-1 block font-medium"
                       >
-                        HTTPS URL
+                        {t("contentDetail.deliveries.linkUrl")}
                       </label>
                       <Input
                         id={`link-url-${i}`}
                         type="url"
                         name="linkUrl"
-                        placeholder="https://…"
+                        placeholder="https://"
+                        aria-invalid={Boolean(fieldErrors[`link-url-${i}`])}
+                        aria-describedby={
+                          fieldErrors[`link-url-${i}`] ? `link-url-${i}-error` : undefined
+                        }
                       />
+                      {fieldErrors[`link-url-${i}`] ? (
+                        <p
+                          id={`link-url-${i}-error`}
+                          role="alert"
+                          className="text-label text-danger mt-1 font-semibold"
+                        >
+                          {fieldErrors[`link-url-${i}`]}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="text-label text-fg-primary col-span-12 flex min-h-11 items-center gap-2 sm:col-span-1 sm:mt-5">
                       <Checkbox id={`link-preview-${i}`} name="linkPreview" value="on" />
                       <label htmlFor={`link-preview-${i}`} className="cursor-pointer">
-                        Preview
+                        {t("contentDetail.deliveries.preview")}
                       </label>
                     </div>
                   </div>
                 ))}
+                {Object.keys(fieldErrors).some((key) => key.startsWith("link-")) ? (
+                  <p
+                    id="delivery-links-error"
+                    role="alert"
+                    className="text-label text-danger font-semibold"
+                  >
+                    {t("contentDetail.deliveries.linkSummaryError")}
+                  </p>
+                ) : null}
               </fieldset>
 
               {formError ? (
@@ -216,16 +310,19 @@ export function DeliverySection({
               ) : null}
 
               <Button type="submit" disabled={pending}>
-                {pending ? "Submitting…" : "Submit for creative review"}
+                {pending
+                  ? t("contentDetail.deliveries.submitting")
+                  : t("contentDetail.deliveries.submitForReview")}
               </Button>
             </form>
           </Card>
         ) : deliveries.length === 0 ? (
           <Card data-testid="delivery-submit-cta">
             <header className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>Deliveries</CardTitle>
+              <CardTitle>{t("contentDetail.deliveries.title")}</CardTitle>
               <Button size="sm" onClick={() => setOpen(true)}>
-                <Package className="h-3.5 w-3.5" aria-hidden="true" /> Submit delivery
+                <Package className="h-3.5 w-3.5" aria-hidden="true" />{" "}
+                {t("contentDetail.deliveries.submitDelivery")}
               </Button>
             </header>
             <p className="text-body text-fg-muted mt-3">

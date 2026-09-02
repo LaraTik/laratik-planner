@@ -244,6 +244,23 @@ describe("inline-editable-fields wrappers (planning detail)", () => {
         "New title",
       );
     });
+
+    it("shows a required error and does not submit an empty title", async () => {
+      vi.mocked(inlineUpdateTitleAction).mockClear();
+      render(
+        <InlineTitleEditor
+          workspaceSlug="food-game"
+          contentItemId="260aa351-a049-4a1a-9437-546a1ad28e3d"
+          value="Valid title"
+        />,
+      );
+      await userEvent.click(screen.getByRole("button", { name: /Edit title/i }));
+      await userEvent.clear(screen.getByTestId("inline-edit-title-input"));
+      await userEvent.click(screen.getByRole("button", { name: /^Save$/i }));
+
+      expect(screen.getByTestId("inline-edit-title-error")).toHaveTextContent(/title is required/i);
+      expect(inlineUpdateTitleAction).not.toHaveBeenCalled();
+    });
   });
 
   describe("InlineDateEditor", () => {
@@ -285,6 +302,26 @@ describe("inline-editable-fields wrappers (planning detail)", () => {
         "260aa351-a049-4a1a-9437-546a1ad28e3d",
         expect.any(Date),
       );
+    });
+
+    it("shows a validation error when the planned date is cleared", async () => {
+      vi.mocked(inlineUpdateDateAction).mockClear();
+      render(
+        <InlineDateEditor
+          workspaceSlug="food-game"
+          contentItemId="260aa351-a049-4a1a-9437-546a1ad28e3d"
+          value={ISO}
+          timezone={TZ}
+        />,
+      );
+      await userEvent.click(screen.getByRole("button", { name: /Edit planned publish date/i }));
+      await userEvent.clear(screen.getByTestId("inline-edit-date-input"));
+      await userEvent.click(screen.getByRole("button", { name: /^Save$/i }));
+
+      expect(screen.getByTestId("inline-edit-date-error")).toHaveTextContent(
+        /valid planned publish date/i,
+      );
+      expect(inlineUpdateDateAction).not.toHaveBeenCalled();
     });
   });
 });

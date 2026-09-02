@@ -158,6 +158,7 @@
     "creativeBriefDescription": "Strategy, copy, and creative sections. Fields persist via the Save button below.",
     "moreDetails": "More details",
     "moreDetailsSubtitle": "Per-format creative contract — caption, hashtags, scenes, visual direction, translations. Everything is optional.",
+    "optionalGuidance": "These creative fields are optional while drafting. Publishing requirements are shown in the Readiness and Publishing sections.",
     "totalFilledSuffix": "total filled",
     "essentialSuffix": "essential",
     "totalFilledAria": "{filled} of {total} fields filled",

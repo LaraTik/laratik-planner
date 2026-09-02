@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Clock, Eye, Sparkles } from "lucide-react";
 import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { formatDate } from "@/lib/i18n/format-locale";
 
 /**
  * Localised platform name. We render the raw platform key in
@@ -112,7 +113,7 @@ export default async function ContentDetailPage({
 }: {
   params: Promise<{ slug: string; id: string }>;
 }) {
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const { slug, id } = await params;
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
@@ -517,18 +518,18 @@ export default async function ContentDetailPage({
   // proper Feed / Reel / Story / Carousel surfaces in a later
   // pass (master prompt §7 + AGENTS.md §B + §C).
   const tabs: WorkspaceTab[] = [
-    { id: "overview", label: "Overview" },
-    { id: "content", label: "Content" },
-    { id: "messages", label: "Messages" },
-    { id: "preview", label: "Preview" },
+    { id: "overview", label: t("contentDetail.tabs.overview") },
+    { id: "content", label: t("contentDetail.tabs.content") },
+    { id: "messages", label: t("contentDetail.tabs.messages") },
+    { id: "preview", label: t("contentDetail.tabs.preview") },
     {
       id: "publishing",
-      label: "Publishing",
+      label: t("contentDetail.tabs.publishing"),
       ...(readiness.blockers > 0 ? { count: readiness.blockers } : {}),
     },
     {
       id: "activity",
-      label: "Activity",
+      label: t("contentDetail.tabs.activity"),
       count: activityEvents.length,
     },
   ];
@@ -584,7 +585,11 @@ export default async function ContentDetailPage({
                 platform: ch.platform,
                 accountName: ch.accountName,
               }))}
-              plannedPublishAt={item.plannedPublishAt.toLocaleString()}
+              plannedPublishAt={formatDate(item.plannedPublishAt, code, {
+                dateStyle: "medium",
+                timeStyle: "short",
+                timeZone: ws.timezone,
+              })}
               owner={owner}
               primaryAction={primaryAction}
               meta={<WorkflowStepper status={item.status} size="compact" />}
@@ -636,7 +641,11 @@ export default async function ContentDetailPage({
                   title={item.title}
                   brief={item.brief ?? ""}
                   format={item.format}
-                  plannedPublishAt={item.plannedPublishAt.toLocaleString()}
+                  plannedPublishAt={formatDate(item.plannedPublishAt, code, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                    timeZone: ws.timezone,
+                  })}
                   workspaceTimezone={ws.timezone}
                   channels={item.channels.map((ch) => {
                     const cfg = channelConfigs.find((c) => c.id === ch.id);
@@ -766,7 +775,7 @@ export default async function ContentDetailPage({
                     data-testid="content-ai-section"
                   >
                     <p className="text-label text-fg-secondary font-semibold uppercase">
-                      AI assistance
+                      {t("contentDetail.aiAssistance")}
                     </p>
                     <div className="flex items-center gap-2">
                       {canEdit ? (
@@ -786,7 +795,7 @@ export default async function ContentDetailPage({
                         <Button variant="ghost" size="sm" asChild>
                           <Link href={`/app/w/${slug}/ai-settings`}>
                             <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                            AI settings
+                            {t("contentDetail.aiSettings")}
                           </Link>
                         </Button>
                       ) : null}
@@ -916,27 +925,29 @@ export default async function ContentDetailPage({
                     <h3 className="text-title-card text-fg-primary mb-1 font-semibold">
                       {t("contentDetail.preview.noChannelsTitle")}
                     </h3>
-                    <p className="text-body">
-                      Add at least one channel to the content item to see how the post will render
-                      on the destination platform.
-                    </p>
+                    <p className="text-body">{t("contentDetail.preview.noChannelsBody")}</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <header className="flex flex-wrap items-baseline justify-between gap-2">
                       <div>
                         <h2 className="text-section-title text-fg-primary font-semibold">
-                          Platform preview
+                          {t("contentDetail.preview.title")}
                         </h2>
                         <p className="text-body text-fg-secondary">
-                          How this post will look on {humanPlatform(item.channels[0]?.platform)} (
-                          {item.channels[0]?.accountName ?? "no channel"}).
+                          {t("contentDetail.preview.description", {
+                            platform: humanPlatform(item.channels[0]?.platform),
+                            account:
+                              item.channels[0]?.accountName ?? t("contentDetail.preview.noChannel"),
+                          })}
                         </p>
                       </div>
                       {item.channels.length > 1 ? (
                         <p className="text-label text-fg-muted">
-                          Showing the first of {item.channels.length} channels. Use the Publishing
-                          tab to configure the rest.
+                          {t("contentDetail.preview.showingFirst", {
+                            count: item.channels.length,
+                            publishing: t("contentDetail.tabs.publishing"),
+                          })}
                         </p>
                       ) : null}
                     </header>
@@ -1104,7 +1115,14 @@ export default async function ContentDetailPage({
         }}
         footer={
           <p className="text-label text-fg-muted text-center">
-            Last updated {item.updatedAt.toLocaleString()} · Revision {readiness.revision}
+            {t("contentDetail.footer.updatedRevision", {
+              time: formatDate(item.updatedAt, code, {
+                dateStyle: "medium",
+                timeStyle: "short",
+                timeZone: ws.timezone,
+              }),
+              revision: readiness.revision,
+            })}
           </p>
         }
       />

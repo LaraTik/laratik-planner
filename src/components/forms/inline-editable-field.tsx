@@ -4,6 +4,7 @@ import * as React from "react";
 import { useTransition } from "react";
 import { Pencil, X, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 
 /**
@@ -35,7 +36,11 @@ export interface InlineEditableFieldProps<TValue> {
    * `onChange` setter; the parent decides what input
    * controls to use.
    */
-  renderEditor: (args: { value: TValue; onChange: (next: TValue) => void }) => React.ReactNode;
+  renderEditor: (args: {
+    value: TValue;
+    onChange: (next: TValue) => void;
+    errorId: string;
+  }) => React.ReactNode;
   /** Initial value. */
   value: TValue;
   /**
@@ -46,6 +51,8 @@ export interface InlineEditableFieldProps<TValue> {
    * for symmetry with the existing server-action contract.
    */
   onSave: (next: TValue) => Promise<{ error?: string; ok?: true } | void | undefined>;
+  /** Optional synchronous validation for immediate field-level feedback. */
+  validate?: (value: TValue) => string | undefined;
   /** ARIA label for the edit button. */
   label: string;
   /** Test id prefix. */
@@ -67,12 +74,14 @@ export function InlineEditableField<TValue>({
   renderEditor,
   value,
   onSave,
+  validate,
   label,
   testId,
   revealOnHover = false,
   className,
   extraActions,
 }: InlineEditableFieldProps<TValue>) {
+  const t = useLocaleT();
   const [editing, setEditing] = React.useState(false);
   const [buffer, setBuffer] = React.useState<TValue>(value);
   const [error, setError] = React.useState<string | null>(null);
@@ -99,6 +108,11 @@ export function InlineEditableField<TValue>({
     setEditing(false);
   };
   const save = () => {
+    const validationError = validate?.(buffer);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     start(async () => {
       const result = await onSave(buffer);
       if (result?.error) {
@@ -135,6 +149,8 @@ export function InlineEditableField<TValue>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing, buffer]);
 
+  const errorId = testId ? `${testId}-error` : "inline-edit-error";
+
   return (
     <div
       ref={groupRef}
@@ -148,9 +164,15 @@ export function InlineEditableField<TValue>({
     >
       {editing ? (
         <div className="space-y-2">
-          {renderEditor({ value: buffer, onChange: setBuffer })}
+          {renderEditor({ value: buffer, onChange: setBuffer, errorId })}
           {error ? (
-            <p role="alert" className="text-label text-danger">
+            <p
+              id={errorId}
+              role="alert"
+              aria-live="assertive"
+              className="text-label text-danger font-semibold"
+              data-testid={`${testId ?? "inline-edit"}-error`}
+            >
               {error}
             </p>
           ) : null}
@@ -170,7 +192,7 @@ export function InlineEditableField<TValue>({
               ) : (
                 <Check className="h-3.5 w-3.5" aria-hidden="true" />
               )}
-              {pending ? "Saving…" : "Save"}
+              {pending ? t("common.saving") : t("common.save")}
             </Button>
             <Button
               size="default"
@@ -180,18 +202,18 @@ export function InlineEditableField<TValue>({
               data-testid={testId ? `${testId}-cancel` : undefined}
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
-              Cancel
+              {t("common.cancel")}
             </Button>
             {extraActions}
             <span className="text-label text-fg-muted ms-auto inline-flex items-center gap-1">
               <kbd className="border-border bg-canvas rounded border px-1.5 py-0.5 font-mono text-[10px]">
                 ⌘↵
               </kbd>{" "}
-              to save ·{" "}
+              {t("common.keyboardSave")} ·{" "}
               <kbd className="border-border bg-canvas rounded border px-1.5 py-0.5 font-mono text-[10px]">
                 Esc
               </kbd>{" "}
-              to cancel
+              {t("common.keyboardCancel")}
             </span>
           </div>
         </div>
@@ -206,7 +228,7 @@ export function InlineEditableField<TValue>({
             size="icon"
             variant="ghost"
             onClick={beginEdit}
-            aria-label={`Edit ${label}`}
+            aria-label={t("common.editField", { field: label })}
             data-testid={testId ? `${testId}-edit` : undefined}
             className={cn(
               // Two visibility modes:

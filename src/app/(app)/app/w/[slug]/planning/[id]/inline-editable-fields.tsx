@@ -61,6 +61,8 @@ import {
   inlineUpdateTitleAction,
 } from "@/lib/content/inline-update";
 import { formatDateForInput, parseInputAsLocalDate } from "@/lib/utils/date";
+import { formatDate } from "@/lib/i18n/format-locale";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 
 /**
@@ -103,10 +105,11 @@ export function InlineBriefEditor({
   contentItemId: string;
   value: string;
 }) {
+  const t = useLocaleT();
   return (
     <InlineEditableField
       testId="inline-edit-brief"
-      label="brief"
+      label={t("contentDetail.overview.brief")}
       value={value}
       render={(v) =>
         v ? (
@@ -117,31 +120,40 @@ export function InlineBriefEditor({
           // double-up. Same hierarchy as the rest of the
           // empty placeholders on the page.
           <p className="text-body text-fg-muted italic">
-            No brief yet — click the pencil to add one.
+            {t("contentDetail.overview.noBriefInline")}
           </p>
         )
       }
-      renderEditor={({ value, onChange }) => {
+      renderEditor={({ value, onChange, errorId }) => {
         const len = value.length;
         const overWarn = len >= BRIEF_WARN;
         const atMax = len >= BRIEF_MAX;
         return (
           <div className="space-y-1">
-            <textarea
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              rows={6}
-              maxLength={BRIEF_MAX}
-              // The counter sits *outside* the textarea so it
-              // never blocks the user's reading line; the
-              // colour class is reactive to the current length
-              // (state flows in via the `value` prop from the
-              // parent field component).
-              className={cn(INPUT_CHROME, "resize-y")}
-              placeholder="Goal, audience, key points. Up to 2 000 characters."
-              aria-describedby="inline-edit-brief-counter"
-              data-testid="inline-edit-brief-textarea"
-            />
+            <>
+              <label
+                htmlFor="inline-edit-brief-input"
+                className="text-label text-fg-primary font-semibold"
+              >
+                {t("contentDetail.overview.brief")}
+              </label>
+              <textarea
+                id="inline-edit-brief-input"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                rows={6}
+                maxLength={BRIEF_MAX}
+                // The counter sits *outside* the textarea so it
+                // never blocks the user's reading line; the
+                // colour class is reactive to the current length
+                // (state flows in via the `value` prop from the
+                // parent field component).
+                className={cn(INPUT_CHROME, "resize-y")}
+                placeholder={t("contentDetail.overview.briefPlaceholder")}
+                aria-describedby={`inline-edit-brief-counter ${errorId}`}
+                data-testid="inline-edit-brief-textarea"
+              />
+            </>
             <p
               id="inline-edit-brief-counter"
               data-testid="inline-edit-brief-counter"
@@ -157,6 +169,11 @@ export function InlineBriefEditor({
           </div>
         );
       }}
+      validate={(next) =>
+        next.length > BRIEF_MAX
+          ? t("contentDetail.inline.maxLength", { count: BRIEF_MAX })
+          : undefined
+      }
       onSave={(next) => inlineUpdateBriefAction(workspaceSlug, contentItemId, next)}
     />
   );
@@ -180,27 +197,37 @@ export function InlineTitleEditor({
   contentItemId: string;
   value: string;
 }) {
+  const t = useLocaleT();
   return (
     <InlineEditableField
       testId="inline-edit-title"
-      label="title"
+      label={t("contentDetail.overview.title")}
       value={value}
       render={(v) => <p className="text-body text-fg-primary font-semibold">{v}</p>}
-      renderEditor={({ value, onChange }) => {
+      renderEditor={({ value, onChange, errorId }) => {
         const len = value.length;
         const overWarn = len >= TITLE_WARN;
         const atMax = len >= TITLE_MAX;
         return (
           <div className="space-y-1">
-            <input
-              type="text"
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              maxLength={TITLE_MAX}
-              className={cn(INPUT_CHROME, "h-10")}
-              aria-describedby="inline-edit-title-counter"
-              data-testid="inline-edit-title-input"
-            />
+            <>
+              <label
+                htmlFor="inline-edit-title-input"
+                className="text-label text-fg-primary font-semibold"
+              >
+                {t("contentDetail.overview.title")}
+              </label>
+              <input
+                id="inline-edit-title-input"
+                type="text"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                maxLength={TITLE_MAX}
+                className={cn(INPUT_CHROME, "h-10")}
+                aria-describedby={`inline-edit-title-counter ${errorId}`}
+                data-testid="inline-edit-title-input"
+              />
+            </>
             <p
               id="inline-edit-title-counter"
               data-testid="inline-edit-title-counter"
@@ -215,6 +242,12 @@ export function InlineTitleEditor({
             </p>
           </div>
         );
+      }}
+      validate={(next) => {
+        const trimmed = next.trim();
+        if (!trimmed) return t("contentDetail.inline.titleRequired");
+        if (trimmed.length < 2) return t("contentDetail.inline.titleTooShort");
+        return undefined;
       }}
       onSave={(next) => inlineUpdateTitleAction(workspaceSlug, contentItemId, next)}
     />
@@ -250,27 +283,43 @@ export function InlineDateEditor({
   /** IANA timezone label, e.g. "Europe/Berlin". */
   timezone: string;
 }) {
+  const t = useLocaleT();
+  const locale = useLocaleCode();
   return (
     <InlineEditableField
       testId="inline-edit-date"
-      label="planned publish date"
+      label={t("contentDetail.inline.plannedPublishDate")}
       value={value}
       render={(v) => (
         <p className="text-body text-fg-primary">
-          {new Date(v).toLocaleString()}{" "}
+          {formatDate(new Date(v), locale, {
+            dateStyle: "medium",
+            timeStyle: "short",
+            timeZone: timezone,
+          })}{" "}
           <span className="text-label text-fg-muted">· {timezone}</span>
         </p>
       )}
-      renderEditor={({ value, onChange }) => (
+      renderEditor={({ value, onChange, errorId }) => (
         <div className="space-y-1">
+          <label
+            htmlFor="inline-edit-date-input"
+            className="text-label text-fg-primary font-semibold"
+          >
+            {t("contentDetail.inline.plannedPublishDate")}
+          </label>
           <input
+            id="inline-edit-date-input"
             type="datetime-local"
             value={formatDateForInput(value)}
-            onChange={(e) => onChange(parseInputAsLocalDate(e.target.value).toISOString())}
+            onChange={(e) => {
+              const parsed = parseInputAsLocalDate(e.target.value);
+              onChange(Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString());
+            }}
             // Shared focus ring + padding with the other
             // editors so the page reads as one surface.
             className={cn(INPUT_CHROME, "h-10")}
-            aria-describedby="inline-edit-date-timezone"
+            aria-describedby={`inline-edit-date-timezone ${errorId}`}
             data-testid="inline-edit-date-input"
           />
           <p
@@ -284,11 +333,15 @@ export function InlineDateEditor({
                 {timezone}. The view-mode label also says
                 this, but the editor is the place the user
                 actually decides what to type. */}
-            Times are in your local clock. Stored as{" "}
-            <span className="font-semibold">{timezone}</span>.
+            {t("contentDetail.inline.dateHint")} <span className="font-semibold">{timezone}</span>.
           </p>
         </div>
       )}
+      validate={(next) =>
+        !next || Number.isNaN(new Date(next).getTime())
+          ? t("contentDetail.inline.dateRequired")
+          : undefined
+      }
       onSave={(next) => inlineUpdateDateAction(workspaceSlug, contentItemId, new Date(next))}
     />
   );

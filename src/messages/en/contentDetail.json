@@ -1,5 +1,15 @@
 {
   "metaTitle": "Content · {id}",
+  "tabs": {
+    "overview": "Overview",
+    "content": "Content",
+    "messages": "Messages",
+    "preview": "Preview",
+    "publishing": "Publishing",
+    "activity": "Activity"
+  },
+  "aiAssistance": "AI assistance",
+  "aiSettings": "AI settings",
   "publish": {
     "redirectFallbackMessage": "The publishing setup is now part of the planning detail page. This workspace can't be resolved; ask your manager for a fresh link.",
     "redirectFallbackBack": "Back to content",
@@ -184,6 +194,8 @@
     "approvedOf": "{approved} approved of {total}",
     "brief": "Brief",
     "noBrief": "No brief yet.",
+    "noBriefInline": "No brief yet — select edit to add one.",
+    "briefPlaceholder": "Goal, audience, and key points. Up to 2,000 characters.",
     "recentActivity": "Recent activity",
     "viewAll": "View all",
     "noActivity": "No activity yet. Changes to this content will appear here.",
@@ -289,10 +301,101 @@
     "close": "Close"
   },
   "deliveries": {
-    "emptyBody": "No deliveries yet. Submit at least one https link to advance to creative review."
+    "title": "Deliveries",
+    "emptyBody": "No deliveries yet. Submit at least one HTTPS link to advance to creative review.",
+    "versionOne": "{count} version on file",
+    "versionMany": "{count} versions on file",
+    "submitNewVersion": "Submit new version",
+    "submitTitle": "Submit a delivery",
+    "submitDelivery": "Submit delivery",
+    "description": "Description",
+    "descriptionRequired": "Add a description before submitting.",
+    "descriptionPlaceholder": "Final creatives, 3 variants for testing",
+    "designerNote": "Designer note",
+    "designerNotePlaceholder": "Anything the reviewer should know.",
+    "optionalHint": "Optional",
+    "linksTitle": "Delivery links (at least one required)",
+    "linksHelp": "Add a provider, label, and HTTPS URL for at least one row.",
+    "provider": "Provider {count}",
+    "linkLabel": "Link label",
+    "linkUrl": "HTTPS URL",
+    "linkLabelRequired": "Add a label for this delivery link.",
+    "linkUrlRequired": "Add a valid HTTPS URL for this delivery link.",
+    "linkSummaryError": "Add at least one complete delivery link to continue.",
+    "preview": "Preview",
+    "submitting": "Submitting…",
+    "submitForReview": "Submit for creative review",
+    "providers": {
+      "google_drive": "Google Drive",
+      "dropbox": "Dropbox",
+      "onedrive": "OneDrive",
+      "frame_io": "Frame.io",
+      "figma": "Figma",
+      "canva": "Canva",
+      "other": "Other"
+    }
   },
   "preview": {
-    "noChannelsTitle": "No channels to preview"
+    "noChannelsTitle": "No channels to preview",
+    "noChannelsBody": "Add at least one channel to see how this post will render on its destination platform.",
+    "title": "Platform preview",
+    "description": "How this post will look on {platform} ({account}).",
+    "noChannel": "no channel",
+    "showingFirst": "Showing the first of {count} channels. Use the {publishing} tab to configure the rest."
+  },
+  "publishReadiness": {
+    "title": "Publishing requirements",
+    "missing_payload": "Save this channel's publishing package first.",
+    "missing_platform": "The publishing package is missing its platform.",
+    "invalid_payload": "The publishing package is not valid for this platform.",
+    "missing_caption": "Add a caption before publishing.",
+    "missing_destination": "Select a destination profile.",
+    "final_copy_not_approved": "Final copy approval is required before publishing.",
+    "missing_alt_text": "Add accessibility text before publishing.",
+    "missing_audio_rights": "Confirm the reel audio rights.",
+    "transcript_not_reviewed": "Review the reel transcript.",
+    "missing_cover": "Choose a reel cover frame.",
+    "missing_music_rights": "Confirm music rights before publishing.",
+    "missing_post_text": "Add post text before publishing.",
+    "missing_title": "Add a title before publishing.",
+    "missing_privacy": "Choose a privacy setting before publishing.",
+    "missing_thumbnail": "Choose a thumbnail before publishing.",
+    "missing_board": "Select a Pinterest board before publishing.",
+    "missing_pin_title": "Add a pin title before publishing.",
+    "no_approved_delivery": "Approve a delivery version before publishing.",
+    "delivery_version_missing": "The approved delivery version is no longer available.",
+    "rights_not_confirmed": "Confirm media rights before publishing.",
+    "synthetic_media_disclosure_recommended": "Declare synthetic media when content is AI-generated.",
+    "approvals_open": "Complete the outstanding approval before publishing."
+  },
+  "publishForm": {
+    "destinationCaption": "Destination & caption",
+    "channel": "Channel",
+    "itemTitle": "Item title",
+    "format": "Format",
+    "caption": "Caption",
+    "captionHint": "The 2,200-character cap matches the selected platform.",
+    "hashtags": "Hashtags",
+    "hashtagsHint": "Press Enter, comma, or space to add. Up to 30 tags, 60 characters each.",
+    "firstComment": "First comment",
+    "destinationUrl": "Destination URL",
+    "mediaDisclosures": "Media & disclosures",
+    "altText": "Alt text / accessibility",
+    "rightsConfirmed": "Rights confirmed (media cleared for use)",
+    "aiGenerated": "AI-generated content",
+    "paidPartnership": "Paid partnership / branded content",
+    "approvedVersion": "Approved version",
+    "previewApproval": "Preview & approval",
+    "finalCopyApproved": "Final copy approved",
+    "finalCopyAwaitingApproval": "Final copy awaiting approval",
+    "approvedAt": "Approved {time}",
+    "revokeApproval": "Revoke approval",
+    "approveFinalCopy": "Approve final copy",
+    "adminApprovalRequired": "An agency administrator must approve the saved package.",
+    "approvalResetHint": "Approval resets when any material field changes.",
+    "note": "Note",
+    "addNote": "Add note",
+    "noCaption": "No caption"
   },
   "messages": {
     "captionLabel": "Caption",
@@ -308,5 +411,16 @@
     "save": "Save message",
     "saving": "Saving…",
     "saved": "Saved"
+  },
+  "inline": {
+    "titleRequired": "Title is required.",
+    "titleTooShort": "Title must be at least 2 characters.",
+    "dateRequired": "Choose a valid planned publish date.",
+    "plannedPublishDate": "planned publish date",
+    "maxLength": "Keep this field to {count} characters or fewer.",
+    "dateHint": "Your local clock is used. Stored as"
+  },
+  "footer": {
+    "updatedRevision": "Last updated {time} · Revision {revision}"
   }
 }

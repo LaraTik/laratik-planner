@@ -6,6 +6,7 @@ import { WorkspaceShell } from "@/app/(app)/app/w/[slug]/planning/[id]/workspace
 import type { WorkspaceTab, WorkspaceTabId } from "./workspace-tabs";
 import type { CommentRecord, CommentRoleFlags } from "@/components/comments/comment-item";
 import type { ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Props that feed the right rail (workflow + approvals). Serialised
@@ -86,6 +87,7 @@ export function PlanningDetailShell({
   workflow,
   workspace,
 }: PlanningDetailShellProps) {
+  const t = useLocaleT();
   return (
     <div className="space-y-4" data-testid="planning-detail-shell">
       {/* Header — spans the full center column. */}
@@ -109,7 +111,7 @@ export function PlanningDetailShell({
         <section
           className="min-w-0 space-y-4"
           data-testid="planning-detail-center"
-          aria-label="Content workspace"
+          aria-label={t("common.contentWorkspace")}
         >
           <WorkspaceShell {...workspace} />
         </section>
@@ -125,7 +127,7 @@ export function PlanningDetailShell({
         <aside
           className="sticky top-16 hidden self-start lg:block"
           data-testid="planning-detail-rail"
-          aria-label="Workflow rail"
+          aria-label={t("common.workflowRail")}
         >
           <WorkflowRail {...workflow} />
         </aside>

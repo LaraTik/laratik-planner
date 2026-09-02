@@ -390,12 +390,12 @@ function ReadinessRow({
       <StatusIcon status={line.status} />
       <div className="min-w-0 flex-1">
         <p className="text-body text-fg-primary font-semibold">{line.label}</p>
-        {line.detail ? <p className="text-label text-fg-muted truncate">{line.detail}</p> : null}
+        {line.detail ? <p className="text-label text-fg-muted break-words">{line.detail}</p> : null}
       </div>
     </div>
   );
   const className =
-    "flex items-center gap-2 px-3 py-2 hover:bg-surface-subtle focus-visible:bg-surface-subtle focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none";
+    "flex min-h-11 items-center gap-2 px-3 py-2 hover:bg-surface-subtle focus-visible:bg-surface-subtle focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none";
   if (line.href) {
     // Phase 1 of the planning-workspace-v2 refactor (2026-08-30):
     // when the parent supplies an `onNavigate` callback we
@@ -437,7 +437,7 @@ function ReadinessRow({
     <li
       data-testid={`overview-readiness-row-${line.id}`}
       data-status={line.status}
-      className="px-3 py-2"
+      className="min-h-11 px-3 py-2"
     >
       {content}
     </li>
@@ -512,7 +512,7 @@ function DetailsSection({
         </h2>
         <Link
           href={editHref}
-          className="text-label text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-1.5 py-0.5 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
+          className="text-label text-primary focus-visible:ring-focus-ring inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] px-2 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
           data-testid="overview-edit-details"
           data-content-item-id={contentItemId}
         >
@@ -581,7 +581,7 @@ function SummaryRow({
   // each row (it was decorative anyway) to satisfy axe-core's
   // `definition-list` rule.
   return (
-    <div className="px-3 py-2.5">
+    <div className="min-h-11 px-3 py-2.5">
       <dt className="text-label text-fg-muted font-semibold uppercase">{label}</dt>
       <dd className="text-body text-fg-primary mt-0.5 break-words">{children ?? value}</dd>
     </div>
