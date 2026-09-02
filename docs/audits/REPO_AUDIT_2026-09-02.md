@@ -94,9 +94,10 @@ handled before unrelated cleanup.
    return stable error codes instead of raw domain messages, and the client
    translates them through `contentDetail.publishErrors` in `9dc243a`; mapping
    and render tests pass. Remaining localization work is a lower-priority
-   static scan for copy outside these audited surfaces. The scan must be
-   repeated after each localization batch because dynamic catalog keys are not
-   fully discoverable.
+   static scan for copy outside these audited surfaces. The account application
+   information card is now catalog-backed as well, with Arabic coverage in
+   `462db37`. The scan must be repeated after each localization batch because
+   dynamic catalog keys are not fully discoverable.
 4. **Exact-HEAD visual review is incomplete.** Exact-HEAD axe and RTL checks
    pass, but the visual suite still has reference deltas and the required
    keyboard, screen-reader, zoom, and reduced-motion review is not independently
