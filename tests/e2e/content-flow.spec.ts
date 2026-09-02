@@ -251,8 +251,19 @@ test.describe("Content: Quick Create + workflow transitions", () => {
 
       // ─── 5. Designer: submit a delivery → creative_review ───
       await bootstrapRoleSession(designerPage, "designer");
-      await designerPage.goto(detailUrl);
-      await designerPage.getByTestId("workspace-tab-content").click();
+      // Open the panel through its supported deep link and wait for the
+      // stateful tab shell to activate it. Clicking immediately after
+      // navigation can race the shell's initial hash synchronisation and
+      // leave the overview panel mounted.
+      await designerPage.goto(`${detailUrl}#content`);
+      await expect(designerPage.getByTestId("workspace-tab-content")).toHaveAttribute(
+        "data-active",
+        "true",
+        { timeout: 10_000 },
+      );
+      await expect(designerPage.getByTestId("workspace-tab-panel-content")).toBeVisible({
+        timeout: 10_000,
+      });
       // The delivery form starts open when the content is in_design
       // and no past deliveries exist. We assert the form is reachable
       // and fill it.
