@@ -77,8 +77,9 @@ handled before unrelated cleanup.
 
 1. Large components, especially the app shell/sidebar, should be split by
    responsibility without changing behavior.
-2. Add or remove the `@/hooks` alias target; `components.json` currently points
-   at a directory that is not present.
+2. **The stale `@/hooks` alias is resolved.** `components.json` now lists only
+   aliases that exist in this repository; add a hooks alias only when a real
+   `src/hooks` boundary is introduced.
 3. Add enforceable import boundaries between UI, routes, domain services, and
    persistence.
 4. Add SQL/migration linting and shell/config coverage to the staged quality
