@@ -131,6 +131,12 @@ handled before unrelated cleanup.
    and pagination/list-to-board links preserve every active filter. Coverage is
    3 parser/description unit tests, 2 disposable-Postgres integration tests,
    and a 5-context browser contract test.
+10. **The production dependency audit found four high `fast-uri` advisories.**
+    They were transitive through `@sentry/nextjs → @sentry/webpack-plugin →
+   webpack → schema-utils → ajv`; `bfb350d` adds a narrow pnpm override and
+    refreshes the lockfile to `fast-uri@4.1.4`. Frozen install, dependency-path,
+    and `pnpm audit --prod` checks confirm the patched tree and no known
+    vulnerabilities. Re-run this audit after dependency upgrades.
 
 ### P2 — maintainability and quality
 
@@ -296,12 +302,7 @@ EXPLAIN observations exist, while authenticated INP, throttled LCP/INP/CLS,
 approved asset budgets, and representative-volume plans remain open. The
 planning filter remediation is covered by focused unit, disposable-Postgres
 integration, and 5-context route-level E2E tests; the broader visual parity
-suite remains open. 10. **The production dependency audit found four high `fast-uri` advisories.**
-They were transitive through `@sentry/nextjs → @sentry/webpack-plugin →
-    webpack → schema-utils → ajv`; `bfb350d` adds a narrow pnpm override and
-refreshes the lockfile to `fast-uri@4.1.4`. `pnpm install --frozen-lockfile`,
-`pnpm why fast-uri`, and `pnpm audit --prod` confirm the patched tree and no
-known vulnerabilities. Re-run this audit after dependency upgrades.
+suite remains open.
 
 ### Step 7 — Reconcile operations and documentation
 
