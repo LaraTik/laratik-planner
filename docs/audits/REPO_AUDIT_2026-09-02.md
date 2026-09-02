@@ -1,7 +1,7 @@
 # LaraTik Planner — Repository Audit
 
 Date: 2026-09-02  
-Audit-fix baseline: `5d8b63c` (`main`, clean at audit close)
+Audit-fix baseline: `044adba` (`main`, clean at this audit checkpoint)
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
 responsive, performance, typography, motion, and data-display guidance.
@@ -9,13 +9,13 @@ responsive, performance, typography, motion, and data-display guidance.
 ## Executive verdict
 
 The repository has a strong production foundation and a broad quality harness.
-The current clean baseline passes formatting, ESLint, strict TypeScript, the
-full unit suite, and the production build. Focused browser contracts for
-health/auth, role authorization, Add Directly, a11y routes, and Brand Kit pass.
-It is not yet final-production-ready because the full cross-role content
-workflow still times out in the isolated Chromium run, the complete browser /
-visual matrix is pending, and independent visual/accessibility review remains
-open.
+The current checkpoint passes formatting, ESLint, strict TypeScript, the full
+unit suite, and a clean production build. The isolated Chromium suite passes
+190/190 tests, including the complete cross-role content workflow. Targeted
+cross-engine settings hydration/a11y and content-list checks also pass.
+It is not yet final-production-ready because the complete Stitch visual suite
+still has 50 baseline deltas, the mobile full-workflow path remains unstable,
+and independent visual/accessibility review remains open.
 
 The canonical product visual source is `designs/stitch/` and the tokens in
 `src/app/globals.css`. UI/UX Pro Max is used here as a review framework; its
@@ -23,19 +23,21 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 
 ## Baseline evidence
 
-| Gate                   | Result                | Evidence                                                                       |
-| ---------------------- | --------------------- | ------------------------------------------------------------------------------ |
-| Prettier               | Pass                  | `pnpm format:check`                                                            |
-| ESLint                 | Pass                  | `pnpm lint`                                                                    |
-| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                   |
-| Unit tests             | Pass                  | 302 files; 3,039 passed; 4 todo                                                |
-| Production build       | Pass                  | `pnpm build`                                                                   |
-| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                        |
-| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                               |
-| Focused E2E/a11y       | Pass                  | 24/24 a11y routes; 6/6 Brand Kit journeys; focused Publishing + Settings axe   |
-| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe |
-| Full E2E/visual        | Pending / investigate | §23 content workflow timed out; full browser + visual matrix pending           |
-| Working tree           | Clean                 | Exact audit-close SHA: `5d8b63c`                                               |
+| Gate                   | Result                | Evidence                                                                                 |
+| ---------------------- | --------------------- | ---------------------------------------------------------------------------------------- |
+| Prettier               | Pass                  | `pnpm format:check`                                                                      |
+| ESLint                 | Pass                  | `pnpm lint`                                                                              |
+| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                             |
+| Unit tests             | Pass                  | 303 files; 3,050 passed; 4 todo                                                          |
+| Production build       | Pass                  | `pnpm build`                                                                             |
+| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                                  |
+| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                         |
+| Focused E2E/a11y       | Pass                  | 24/24 a11y routes; 6/6 Brand Kit journeys; focused Publishing + Settings axe             |
+| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe           |
+| Full Chromium E2E      | Pass                  | 190/190 isolated Chromium tests, including full §23 workflow                             |
+| Cross-engine targeted  | Partial               | Settings 4/4; WebKit list + §23 pass; mobile Chrome list pass; mobile full path unstable |
+| Visual regression      | Partial / investigate | 62/112 pass; 50 Stitch baseline deltas; do not update snapshots blindly                  |
+| Working tree           | Clean                 | Exact checkpoint SHA: `044adba`                                                          |
 
 ## Repository inventory
 
@@ -90,10 +92,12 @@ handled before unrelated cleanup.
    flag; and sign-out escape controls use the existing CSRF-protected server
    action. Generated passwords now guarantee every class required by the strong
    password meter.
-8. **The full cross-role content journey remains unresolved.** The dedicated
-   Chromium run still exceeds its 90-second test budget after the planner,
-   reviewer, designer, and publisher setup sequence. This is a release-gate
-   investigation item, not a suppressed or weakened assertion.
+8. **The mobile full cross-role content journey remains unresolved.** The
+   dedicated Chromium run is now green at 190/190, and the WebKit §23 path
+   passes. Mobile Chrome and mobile Safari still time out during the full
+   four-context journey; the test is not suppressed or weakened. The latest
+   mobile Safari retry was additionally blocked when the local Docker runtime
+   failed to start, so that environment needs a clean rerun.
 
 ### P2 — maintainability and quality
 
@@ -112,8 +116,13 @@ handled before unrelated cleanup.
 7. Add repeatable LCP, INP, CLS, bundle, image, font, and slow-query evidence.
 8. Ensure isolated E2E server processes are reliably cleaned up before a build;
    this audit observed an orphan Next dev server competing with `next build`.
-   The runner now cleans its disposable upload directory, but interrupted runs
-   can still leave a development server behind and need a process-lifecycle fix.
+   The runner now cleans its disposable upload directory and restores generated
+   config files, but interrupted runs can still leave a development server or
+   `.next` lock behind and need a process-lifecycle fix.
+9. Reconcile the visual suite with the current canonical Stitch implementation.
+   The 50 failures are structural/token deltas, especially the intentionally
+   expanded anchor-based Settings surface; each needs reviewed evidence before
+   a snapshot is accepted.
 
 ### P3 — polish
 
@@ -218,9 +227,9 @@ as the sole release protection; browser and visual evidence remain in Step 6.
 Run the disposable database migration drill, integration suite, critical E2E,
 full browser matrix, visual snapshots, axe checks, manual accessibility review,
 and performance measurements at the exact clean commit. The migration drill,
-integration suite, focused axe checks, and focused functional E2E journeys are
-evidenced; the §23 content-flow timeout and full browser/visual matrix remain
-open.
+integration suite, focused axe checks, full isolated Chromium flow, targeted
+cross-engine checks, and unit/build gates are evidenced. Mobile full-workflow,
+visual parity, and performance evidence remain open.
 
 ### Step 7 — Reconcile operations and documentation
 
