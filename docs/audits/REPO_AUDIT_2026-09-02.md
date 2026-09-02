@@ -2,7 +2,7 @@
 
 Date: 2026-09-02  
 Broad browser/evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4`  
-Current audited HEAD: `de9fabf` (`main`, clean)
+Current audited HEAD: `013c1c9` (`main`, clean)
 Audit report update: committed after this evidence capture
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
@@ -36,7 +36,7 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                                                                                          |
 | Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                                                                                 |
 | Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow                                                                         |
-| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe                                                                   |
+| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; planning filter URL contract 5/5 browser contexts; isolated upload probe                |
 | Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                                                                                     |
 | Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths                                                                    |
 | Visual regression      | Partial / investigate | Full matrix at exact clean HEAD `ce9af68`: 73/112; 39 failed; no snapshot updates; route fixes and deliberate snapshot decisions remain required |
@@ -114,7 +114,8 @@ handled before unrelated cleanup.
    and channel are applied in the enriched list query, active channels populate
    the toolbar, health is applied through the existing post-enrichment contract,
    and pagination/list-to-board links preserve every active filter. Coverage is
-   3 parser/description unit tests plus 2 disposable-Postgres integration tests.
+   3 parser/description unit tests, 2 disposable-Postgres integration tests,
+   and a 5-context browser contract test.
 
 ### P2 — maintainability and quality
 
@@ -275,9 +276,9 @@ baselines. The performance protocol is now documented in
 `docs/testing/performance-report.md`; public-route LCP/FCP/CLS and minimal-fixture
 EXPLAIN observations exist, while authenticated INP, throttled LCP/INP/CLS,
 approved asset budgets, and representative-volume plans remain open. The
-planning filter remediation is covered by focused unit and disposable-Postgres
-integration tests; route-level filter E2E and the broader visual parity suite
-remain open.
+planning filter remediation is covered by focused unit, disposable-Postgres
+integration, and 5-context route-level E2E tests; the broader visual parity
+suite remains open.
 
 ### Step 7 — Reconcile operations and documentation
 
