@@ -57,7 +57,7 @@ export default async function SettingsApprovalsPage({
         description={t("settings.approvals.description")}
       />
       <SettingsSectionNav slug={slug} current="approvals" configured={{ approvals: true }} t={t} />
-      <SettingsHealth slug={slug} section="approvals" metrics={{ mode: currentMode }} />
+      <SettingsHealth slug={slug} section="approvals" metrics={{ mode: currentMode }} t={t} />
       <SectionCard
         id="approvals"
         title={t("settings.approvals.cardTitle")}

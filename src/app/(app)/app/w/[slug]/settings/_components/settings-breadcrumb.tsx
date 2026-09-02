@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home } from "lucide-react";
 import { DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 import { isActivePath } from "@/lib/utils";
 
 /**
@@ -15,30 +16,35 @@ import { isActivePath } from "@/lib/utils";
  */
 export function SettingsBreadcrumb({ workspaceName }: { workspaceName: string }) {
   const pathname = usePathname();
+  const t = useLocaleT();
   const segments = pathname.split("/").filter(Boolean);
   const settingsIndex = segments.lastIndexOf("settings");
   const currentSection = settingsIndex >= 0 ? (segments[settingsIndex + 1] ?? "") : "";
   const wsBase = pathname.split("/settings")[0] ?? "";
 
+  const sectionLabelKey: Record<string, string> = {
+    lifecycle: "settings.kpi.lifecycle",
+    "lead-times": "settings.kpi.leadTimes",
+    defaults: "settings.kpi.defaults",
+    approvals: "settings.kpi.approvals",
+    templates: "settings.templates.title",
+  };
   const sectionLabel = currentSection
-    ? currentSection
-        .split("-")
-        .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-        .join(" ")
+    ? t(sectionLabelKey[currentSection] ?? "settings.breadcrumb")
     : null;
 
   return (
     <nav
-      aria-label="Settings breadcrumb"
+      aria-label={t("settings.breadcrumb")}
       data-testid="settings-breadcrumb"
       className="text-label text-fg-muted flex items-center gap-1"
     >
       <Link
         href={wsBase}
-        className="hover:text-fg-primary inline-flex items-center gap-1 font-semibold transition-colors"
+        className="hover:text-fg-primary inline-flex min-h-11 items-center gap-1 font-semibold transition-colors"
       >
         <Home className="h-3.5 w-3.5" aria-hidden="true" />
-        {workspaceName}
+        <bdi dir="auto">{workspaceName}</bdi>
       </Link>
       <DirAwareChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
       <Link
@@ -46,9 +52,9 @@ export function SettingsBreadcrumb({ workspaceName }: { workspaceName: string })
         aria-current={
           isActivePath(`${wsBase}/settings`, pathname, { exact: true }) ? "page" : undefined
         }
-        className="hover:text-fg-primary font-semibold transition-colors"
+        className="hover:text-fg-primary inline-flex min-h-11 items-center font-semibold transition-colors"
       >
-        Settings
+        {t("settings.breadcrumb")}
       </Link>
       {sectionLabel ? (
         <>

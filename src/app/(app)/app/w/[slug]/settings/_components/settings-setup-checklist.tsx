@@ -43,6 +43,15 @@ export function SettingsSetupChecklist({ items, t }: SettingsSetupChecklistProps
   const total = items.length;
   const configured = items.filter((i) => i.configured).length;
   const remaining = total - configured;
+  const progressLabel = t
+    ? t("settings.checklist.progress", { configured, total })
+    : configured + " of " + total + " sections configured";
+  const remainingLabel = t
+    ? t("settings.checklist.remaining", { count: remaining })
+    : remaining + " to go";
+  const progressAriaLabel = t
+    ? t("settings.checklist.progressAria", { configured, total })
+    : configured + " of " + total + " configured";
   if (remaining === 0) return null;
 
   return (
@@ -61,15 +70,15 @@ export function SettingsSetupChecklist({ items, t }: SettingsSetupChecklistProps
               className="text-fg-primary font-bold"
               data-testid="settings-setup-checklist-progress"
             >
-              {configured} of {total} sections configured
+              {progressLabel}
             </span>
-            {remaining > 0 ? <span className="text-fg-muted"> — {remaining} to go</span> : null}
+            {remaining > 0 ? <span className="text-fg-muted"> — {remainingLabel}</span> : null}
           </p>
         </div>
         <div
           className="text-label text-fg-muted flex items-center gap-1"
           role="img"
-          aria-label={`${configured} of ${total} configured`}
+          aria-label={progressAriaLabel}
         >
           {items.map((i) => (
             <span
@@ -90,7 +99,7 @@ export function SettingsSetupChecklist({ items, t }: SettingsSetupChecklistProps
               href={i.href}
               data-testid={`settings-setup-checklist-item-${i.id}`}
               className={cn(
-                "flex items-center gap-3 rounded-[var(--radius-control)] border p-3 transition-colors",
+                "flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] border p-3 transition-colors",
                 i.configured
                   ? "border-border bg-surface-subtle"
                   : "border-warning/30 bg-warning/5 hover:bg-warning/10",

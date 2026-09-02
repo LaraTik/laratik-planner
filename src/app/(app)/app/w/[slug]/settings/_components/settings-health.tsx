@@ -64,25 +64,56 @@ const SECTION_BLURB: Record<Section, string> = {
     "How many approval steps a piece of content needs before publish. Internal only, or internal + client.",
 };
 
-function suggestionsFor(section: Section, m: Metrics): string[] {
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+const SECTION_LABEL_KEY: Record<Section, string> = {
+  lifecycle: "settings.kpi.lifecycle",
+  "lead-times": "settings.kpi.leadTimes",
+  defaults: "settings.kpi.defaults",
+  approvals: "settings.kpi.approvals",
+};
+
+function copy(t: Translator | undefined, key: string, fallback: string): string {
+  return t ? t(key) : fallback;
+}
+
+function suggestionsFor(section: Section, m: Metrics, t?: Translator): string[] {
   switch (section) {
     case "lifecycle": {
       const mt = m as LifecycleMetrics;
       if (!mt.hasTimezone)
-        return ["Pick a workspace timezone so the calendar renders in local time."];
+        return [
+          copy(
+            t,
+            "settings.health.suggestions.lifecycleTimezone",
+            "Pick a workspace timezone so the calendar renders in local time.",
+          ),
+        ];
       if (!mt.hasMonthlyTarget)
         return [
-          "Set a monthly content target so the planning KPI bar can show on-track / at-risk / off-track.",
+          copy(
+            t,
+            "settings.health.suggestions.lifecycleMonthlyTarget",
+            "Set a monthly content target so the planning KPI bar can show on-track / at-risk / off-track.",
+          ),
         ];
       if ((mt.monthlyTarget ?? 0) < 4)
         return [
-          "Your target is fewer than 1 post per week. Most agencies plan against 8-24 posts per month.",
+          copy(
+            t,
+            "settings.health.suggestions.lifecycleLowTarget",
+            "Your target is fewer than 1 post per week. Most agencies plan against 8-24 posts per month.",
+          ),
         ];
       if ((mt.monthlyTarget ?? 0) > 60)
         return [
-          "A target above 60 posts / month means more than 2 posts per business day. Consider whether the team can sustain it.",
+          copy(
+            t,
+            "settings.health.suggestions.lifecycleHighTarget",
+            "A target above 60 posts / month means more than 2 posts per business day. Consider whether the team can sustain it.",
+          ),
         ];
-      return ["Healthy lifecycle setup."];
+      return [copy(t, "settings.health.suggestions.lifecycleHealthy", "Healthy lifecycle setup.")];
     }
     case "lead-times": {
       const lt = m as LeadTimeMetrics;
@@ -91,28 +122,55 @@ function suggestionsFor(section: Section, m: Metrics): string[] {
       const cr = lt.creativeApprovalLeadDays ?? 0;
       const p = lt.readyToPublishLeadDays ?? 0;
       const total = c + d + cr + p;
-      if (total === 0) return ["Set at least one lead time before planning the first post."];
+      if (total === 0)
+        return [
+          copy(
+            t,
+            "settings.health.suggestions.leadTimesEmpty",
+            "Set at least one lead time before planning the first post.",
+          ),
+        ];
       if (total < 5)
         return [
-          "Total lead time under 5 business days. Most agencies need at least 8-12 to keep quality high.",
+          copy(
+            t,
+            "settings.health.suggestions.leadTimesShort",
+            "Total lead time under 5 business days. Most agencies need at least 8-12 to keep quality high.",
+          ),
         ];
       if (total > 30)
         return [
-          "Total lead time over 30 business days — a 6-week cycle. The planner may struggle to hit publishing windows.",
+          copy(
+            t,
+            "settings.health.suggestions.leadTimesLong",
+            "Total lead time over 30 business days — a 6-week cycle. The planner may struggle to hit publishing windows.",
+          ),
         ];
       if (c < 3)
         return [
-          "Content approval under 3 days. The writer may not have time to incorporate the content lead's feedback.",
+          copy(
+            t,
+            "settings.health.suggestions.leadTimesContentShort",
+            "Content approval under 3 days. The writer may not have time to incorporate the content lead's feedback.",
+          ),
         ];
       if (c > 14)
         return [
-          "Content approval over 14 days. The brief is sitting idle for too long before the first pass.",
+          copy(
+            t,
+            "settings.health.suggestions.leadTimesContentLong",
+            "Content approval over 14 days. The brief is sitting idle for too long before the first pass.",
+          ),
         ];
       if (d < 2)
         return [
-          "Design complete under 2 days. The designer is producing first-pass art in under 2 business days.",
+          copy(
+            t,
+            "settings.health.suggestions.leadTimesDesignShort",
+            "Design complete under 2 days. The designer is producing first-pass art in under 2 business days.",
+          ),
         ];
-      return ["Healthy lead-time spread."];
+      return [copy(t, "settings.health.suggestions.leadTimesHealthy", "Healthy lead-time spread.")];
     }
     case "defaults": {
       const df = m as DefaultsMetrics;
@@ -124,25 +182,53 @@ function suggestionsFor(section: Section, m: Metrics): string[] {
       ].filter(Boolean).length;
       if (filled === 0)
         return [
-          "No default assignees yet. Every new content item will require a manual pick on the Quick Create form.",
+          copy(
+            t,
+            "settings.health.suggestions.defaultsEmpty",
+            "No default assignees yet. Every new content item will require a manual pick on the Quick Create form.",
+          ),
         ];
       if (filled < 2)
         return [
-          "Only 1 default assignee. Plan against at least the designer + content reviewer so the team has a clear first stop.",
+          copy(
+            t,
+            "settings.health.suggestions.defaultsOne",
+            "Only 1 default assignee. Plan against at least the designer + content reviewer so the team has a clear first stop.",
+          ),
         ];
       if (filled < 4)
         return [
-          "Most slots have a default. Add the missing slot so every role is auto-pre-filled on new items.",
+          copy(
+            t,
+            "settings.health.suggestions.defaultsPartial",
+            "Most slots have a default. Add the missing slot so every role is auto-pre-filled on new items.",
+          ),
         ];
-      return ["All four roles have a default assignee."];
+      return [
+        copy(
+          t,
+          "settings.health.suggestions.defaultsHealthy",
+          "All four roles have a default assignee.",
+        ),
+      ];
     }
     case "approvals": {
       const ap = m as ApprovalsMetrics;
       if (ap.mode === "simple")
         return [
-          "Internal approval only. Switch to 'Internal, then client' if the brand has an external stakeholder who needs to sign off.",
+          copy(
+            t,
+            "settings.health.suggestions.approvalsSimple",
+            "Internal approval only. Switch to 'Internal, then client' if the brand has an external stakeholder who needs to sign off.",
+          ),
         ];
-      return ["Internal, then client. The creative_approval + client_review stages are active."];
+      return [
+        copy(
+          t,
+          "settings.health.suggestions.approvalsClient",
+          "Internal, then client. The creative_approval + client_review stages are active.",
+        ),
+      ];
     }
   }
 }
@@ -196,24 +282,39 @@ export interface SettingsHealthProps {
   section: Section;
   slug: string;
   metrics: Metrics;
+  t?: Translator;
 }
 
-export function SettingsHealth({ section, slug, metrics }: SettingsHealthProps) {
-  const suggestions = suggestionsFor(section, metrics);
+export function SettingsHealth({ section, slug, metrics, t }: SettingsHealthProps) {
+  const suggestions = suggestionsFor(section, metrics, t);
   const status = coverStatus(section, metrics);
   const { label: coverLabel, icon: CoverIcon } = COVER_LABEL[status];
+  const sectionLabel = copy(t, SECTION_LABEL_KEY[section], SECTION_LABEL[section]);
+  const localizedCoverLabel = t
+    ? t(
+        status === "empty"
+          ? "settings.health.statusEmpty"
+          : status === "thin"
+            ? "settings.health.statusThin"
+            : "settings.health.statusOk",
+      )
+    : coverLabel;
 
   return (
     <Card
       padding="md"
       className="bg-surface-subtle"
-      aria-label={`${SECTION_LABEL[section]} health`}
+      aria-label={
+        t ? t("settings.health.ariaLabel", { section: sectionLabel }) : sectionLabel + " health"
+      }
       data-testid={`settings-health-${section}`}
     >
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Sparkles className="text-primary h-4 w-4" aria-hidden="true" />
-          <CardTitle className="text-base">Settings Health</CardTitle>
+          <CardTitle className="text-base">
+            {copy(t, "settings.health.title", "Settings Health")}
+          </CardTitle>
           <span
             className={cn(
               "text-label inline-flex items-center gap-1 font-semibold",
@@ -222,17 +323,19 @@ export function SettingsHealth({ section, slug, metrics }: SettingsHealthProps) 
             data-testid={`settings-health-${section}-status`}
           >
             <CoverIcon className="h-3.5 w-3.5" aria-hidden="true" />
-            {coverLabel}
+            {localizedCoverLabel}
           </span>
           <Link
             href={`/app/w/${slug}/settings`}
             className="text-label text-primary ms-auto inline-flex items-center gap-1 font-semibold hover:underline"
           >
-            Settings overview
+            {copy(t, "settings.health.overviewLink", "Settings overview")}
             <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         </div>
-        <p className="text-label text-fg-muted">{SECTION_BLURB[section]}</p>
+        <p className="text-label text-fg-muted">
+          {copy(t, "settings.health.sectionBlurb." + section, SECTION_BLURB[section])}
+        </p>
         {suggestions.length > 0 ? (
           <ul className="space-y-1" data-testid={`settings-health-${section}-suggestions`}>
             {suggestions.map((s, i) => (

@@ -66,6 +66,7 @@ export default async function SettingsLifecyclePage({
           hasMonthlyTarget: monthlyTarget !== null,
           monthlyTarget,
         }}
+        t={t}
       />
       <SectionCard
         id="lifecycle"

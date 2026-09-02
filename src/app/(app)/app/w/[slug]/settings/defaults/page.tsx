@@ -97,6 +97,7 @@ export default async function SettingsDefaultsPage({
           internalCreative: !!settings?.defaultInternalCreativeReviewerId,
           clientReviewer: !!settings?.defaultClientReviewerId,
         }}
+        t={t}
       />
       <SectionCard
         id="defaults"

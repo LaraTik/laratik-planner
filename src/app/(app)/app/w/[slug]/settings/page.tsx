@@ -1,11 +1,11 @@
 import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { CalendarDays, Clock, CheckCircle2, UserCog, Hash, Sparkles } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { workspaceSettings as workspaceSettingsTable } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
-import { humanize } from "@/lib/content/status";
 import { hasPlatformPermission } from "@/lib/auth/platform-access";
 import { getResetAllIdeasCounts, EMPTY_RESET_ALL_COUNTS } from "@/lib/content/reset-all-ideas";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -88,6 +88,10 @@ export default async function WorkspaceSettingsPage({
   ].filter(Boolean).length;
 
   const wsBase = `/app/w/${slug}/settings`;
+  const approvalModeLabel =
+    values.approvalMode === "simple"
+      ? t("settings.approvals.modeSimple.label")
+      : t("settings.approvals.modeInternalThenClient.label");
 
   // Phase D — the setup checklist items. Each item carries a
   // configured flag derived from the current values. The
@@ -137,7 +141,7 @@ export default async function WorkspaceSettingsPage({
       id: "approvals",
       label: t("settings.items.approvals.label"),
       blurb: t("settings.items.approvals.configuredBlurb", {
-        mode: humanize(values.approvalMode),
+        mode: approvalModeLabel,
       }),
       href: `${wsBase}/approvals`,
       configured: true, // always configured (has a DB default)
@@ -160,14 +164,14 @@ export default async function WorkspaceSettingsPage({
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <a
+            <Link
               href={`/app/w/${slug}/settings/templates`}
               data-testid="settings-browse-presets"
               className="border-border bg-surface hover:bg-surface-subtle text-body text-fg-primary inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 font-semibold transition-colors"
             >
               <Sparkles className="h-4 w-4" aria-hidden="true" />
               {t("settings.browsePresets")}
-            </a>
+            </Link>
           </div>
         }
       />
@@ -218,7 +222,7 @@ export default async function WorkspaceSettingsPage({
           href={`${wsBase}/approvals`}
           icon={CheckCircle2}
           label={t("settings.kpi.approvals")}
-          summary={t("settings.kpiSummary.approvals", { mode: humanize(values.approvalMode) })}
+          summary={t("settings.kpiSummary.approvals", { mode: approvalModeLabel })}
           badge={
             values.approvalMode === "simple"
               ? t("settings.kpiBadge.oneStep")
@@ -252,7 +256,7 @@ function KpiCard({
 }) {
   return (
     <li>
-      <a
+      <Link
         href={href}
         data-testid={testId}
         className="border-border bg-surface hover:border-primary hover:bg-surface-subtle flex items-start gap-3 rounded-[var(--radius-card)] border p-4 transition-colors"
@@ -270,7 +274,7 @@ function KpiCard({
           <span className="text-section-title text-fg-primary block font-semibold">{summary}</span>
           <span className="text-label text-fg-muted mt-1 block">{badge}</span>
         </span>
-      </a>
+      </Link>
     </li>
   );
 }

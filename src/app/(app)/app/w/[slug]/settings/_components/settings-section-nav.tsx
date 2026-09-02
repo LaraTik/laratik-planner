@@ -64,12 +64,13 @@ export function SettingsSectionNav({
   const totalSteps = SETTINGS_SECTIONS.length;
 
   return (
-    <div
+    <nav
       className="border-border bg-surface-subtle flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border p-3"
+      aria-label={t("settings.sectionNav.ariaLabel")}
       data-testid="settings-section-nav"
     >
       <ol
-        className="flex items-center gap-1"
+        className="flex min-w-0 flex-1 flex-wrap items-center gap-1"
         aria-label={t("settings.stepAria", { current: stepNumber, total: totalSteps })}
       >
         {SETTINGS_SECTIONS.map((s, i) => {
@@ -85,7 +86,7 @@ export function SettingsSectionNav({
                 data-testid={`settings-section-nav-step-${s.id}`}
                 data-configured={isConfigured ? "true" : "false"}
                 className={cn(
-                  "text-label inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold transition-colors",
+                  "text-label inline-flex min-h-11 items-center gap-1 rounded-full px-2 font-semibold transition-colors",
                   active
                     ? "bg-primary text-primary-foreground"
                     : done
@@ -110,18 +111,18 @@ export function SettingsSectionNav({
           );
         })}
       </ol>
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
         {prev ? (
           <Link
             href={hrefFor(slug, prev.id)}
             data-testid="settings-section-nav-prev"
-            className="text-label text-fg-secondary hover:text-fg-primary hover:border-border inline-flex items-center gap-1 rounded-[var(--radius-control)] border border-transparent px-2 py-1 font-semibold transition-colors"
+            className="text-label text-fg-secondary hover:text-fg-primary hover:border-border inline-flex min-h-11 min-w-0 items-center gap-1 rounded-[var(--radius-control)] border border-transparent px-2 font-semibold transition-colors"
           >
             <DirAwareArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
             {t(prev.labelKey)}
           </Link>
         ) : (
-          <span className="text-label text-fg-muted inline-flex items-center gap-1 px-2 py-1">
+          <span className="text-label text-fg-muted inline-flex min-h-11 items-center gap-1 px-2">
             <DirAwareArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
             {t("settings.sectionNav.noPrevious")}
           </span>
@@ -130,18 +131,18 @@ export function SettingsSectionNav({
           <Link
             href={hrefFor(slug, next.id)}
             data-testid="settings-section-nav-next"
-            className="text-label text-primary border-border bg-surface hover:bg-primary-subtle inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2.5 py-1 font-semibold transition-colors"
+            className="text-label text-primary border-border bg-surface hover:bg-primary-subtle inline-flex min-h-11 min-w-0 items-center gap-1 rounded-[var(--radius-control)] border px-2.5 font-semibold transition-colors"
           >
             {t("settings.sectionNav.next", { label: t(next.labelKey) })}
             <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         ) : (
-          <span className="text-label text-fg-muted inline-flex items-center gap-1 px-2 py-1 font-semibold">
+          <span className="text-label text-fg-muted inline-flex min-h-11 items-center gap-1 px-2 font-semibold">
             {t("settings.sectionNav.lastStep")}
             <Check className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
         )}
       </div>
-    </div>
+    </nav>
   );
 }

@@ -28,7 +28,10 @@
   "checklist": {
     "ariaLabel": "Settings setup checklist",
     "heading": "Setup checklist",
-    "blurb": "Keep the workspace basics configured before the team starts planning."
+    "blurb": "Keep the workspace basics configured before the team starts planning.",
+    "progress": "{configured} of {total} sections configured",
+    "remaining": "{count} to go",
+    "progressAria": "{configured} of {total} configured"
   },
   "items": {
     "lifecycle": {
@@ -255,9 +258,37 @@
     "statusEmpty": "Empty",
     "statusThin": "Getting started",
     "statusOk": "Healthy",
-    "overviewLink": "Settings overview"
+    "overviewLink": "Settings overview",
+    "ariaLabel": "{section} settings health",
+    "sectionBlurb": {
+      "lifecycle": "Timezone + monthly target. Used for the calendar, lead-time math, and the planning KPI bar.",
+      "lead-times": "Four numbers that drive every auto-suggested planned date on the planning surface.",
+      "defaults": "Pre-fills on Quick Create. Per-item overrides always win — the default is a shortcut, not a rule.",
+      "approvals": "How many approval steps a piece of content needs before publish: internal only, or internal + client."
+    },
+    "suggestions": {
+      "lifecycleTimezone": "Pick a workspace timezone so the calendar renders in local time.",
+      "lifecycleMonthlyTarget": "Set a monthly content target so the planning KPI bar can show on-track / at-risk / off-track.",
+      "lifecycleLowTarget": "Your target is fewer than 1 post per week. Most agencies plan against 8-24 posts per month.",
+      "lifecycleHighTarget": "A target above 60 posts / month means more than 2 posts per business day. Consider whether the team can sustain it.",
+      "lifecycleHealthy": "Healthy lifecycle setup.",
+      "leadTimesEmpty": "Set at least one lead time before planning the first post.",
+      "leadTimesShort": "Total lead time under 5 business days. Most agencies need at least 8-12 to keep quality high.",
+      "leadTimesLong": "Total lead time over 30 business days — a 6-week cycle. The planner may struggle to hit publishing windows.",
+      "leadTimesContentShort": "Content approval under 3 days. The writer may not have time to incorporate the content lead's feedback.",
+      "leadTimesContentLong": "Content approval over 14 days. The brief is sitting idle for too long before the first pass.",
+      "leadTimesDesignShort": "Design complete under 2 days. The designer is producing first-pass art in under 2 business days.",
+      "leadTimesHealthy": "Healthy lead-time spread.",
+      "defaultsEmpty": "No default assignees yet. Every new content item will require a manual pick on the Quick Create form.",
+      "defaultsOne": "Only 1 default assignee. Plan against at least the designer + content reviewer so the team has a clear first stop.",
+      "defaultsPartial": "Most slots have a default. Add the missing slot so every role is auto-pre-filled on new items.",
+      "defaultsHealthy": "All four roles have a default assignee.",
+      "approvalsSimple": "Internal approval only. Switch to 'Internal, then client' if the brand has an external stakeholder who needs to sign off.",
+      "approvalsClient": "Internal, then client. The creative_approval + client_review stages are active."
+    }
   },
   "sectionNav": {
+    "ariaLabel": "Settings sections",
     "next": "Next: {label}",
     "lastStep": "Last step",
     "noPrevious": "No previous section"

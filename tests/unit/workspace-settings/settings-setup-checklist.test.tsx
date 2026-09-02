@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { SettingsSetupChecklist } from "@/app/(app)/app/w/[slug]/settings/_components/settings-setup-checklist";
+import { tFor } from "@/messages";
 
 /**
  * SettingsSetupChecklist — the "what still needs configuring"
@@ -72,5 +73,16 @@ describe("SettingsSetupChecklist", () => {
       expect(row).toHaveTextContent(item.label);
       expect(row.getAttribute("href")).toBe(item.href);
     }
+  });
+
+  it("uses the active locale for progress copy", () => {
+    render(<SettingsSetupChecklist items={sampleItems} t={tFor("ar")} />);
+    expect(screen.getByTestId("settings-setup-checklist-progress")).toHaveTextContent(
+      "تم إعداد 3 من أصل 5 أقسام",
+    );
+    expect(screen.getByTestId("settings-setup-checklist")).toHaveAttribute(
+      "aria-label",
+      "قائمة الإعداد",
+    );
   });
 });

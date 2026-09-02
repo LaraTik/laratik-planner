@@ -71,6 +71,7 @@ export default async function SettingsLeadTimesPage({
           total,
           ...values,
         }}
+        t={t}
       />
       <SectionCard
         id="lead-times-context"
