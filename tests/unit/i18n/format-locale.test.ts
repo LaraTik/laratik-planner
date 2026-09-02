@@ -84,9 +84,49 @@ describe("i18n/format-locale — dates", () => {
   });
 
   it("uses stable date-time punctuation across Intl runtimes", () => {
+    // Day-first ordering is the project-wide default.
+    // The English connector is a middle dot (·) which is
+    // unambiguous across Node, ICU and WebKit, and reads
+    // naturally in both English and Arabic.
     expect(fmt.formatDate(fixed, "en", { ...fmt.DateFormat.dateTime, timeZone: "UTC" })).toBe(
-      "Sep 1, 2026, 12:00 PM",
+      "1 Sep 2026 · 12:00 PM",
     );
+  });
+
+  it("renders day-first numeric dates (DD/MM/YYYY) for both locales", () => {
+    // The `iso` preset produces DD/MM/YYYY for English and
+    // Arabic alike. Before this change, English produced
+    // MM/DD/YYYY which created ambiguity for non-US users.
+    const en = fmt.formatDate(fixed, "en", { ...fmt.DateFormat.iso, timeZone: "UTC" });
+    const ar = fmt.formatDate(fixed, "ar", { ...fmt.DateFormat.iso, timeZone: "UTC" });
+    expect(en).toBe("01/09/2026");
+    expect(ar).toBe("01/09/2026");
+  });
+
+  it("renders day-first short dates (DD MMM YYYY) for both locales", () => {
+    // `short` preset uses abbreviated month names in the
+    // day-first order. The English text comes from Intl
+    // ("Sep" in en, "Sep" or Arabic month in ar) but the
+    // day always precedes the month.
+    const en = fmt.formatDate(fixed, "en", { ...fmt.DateFormat.short, timeZone: "UTC" });
+    expect(en).toBe("1 Sep 2026");
+    // Day is the first numeric component.
+    const dayMonthMatch = en.match(/^(\d+)\s/);
+    expect(dayMonthMatch?.[1]).toBe("1");
+  });
+
+  it("honours `dayFirst: false` for callers that want month-first ordering", () => {
+    // The escape hatch: callers that need the legacy
+    // month-first ordering (e.g. integration with a US-only
+    // third-party service) can pass `dayFirst: false`. The
+    // project doesn't use this anywhere; the test pins the
+    // contract.
+    const out = fmt.formatDate(fixed, "en", {
+      ...fmt.DateFormat.dateTime,
+      timeZone: "UTC",
+      dayFirst: false,
+    });
+    expect(out).toBe("Sep 1, 2026 · 12:00 PM");
   });
 });
 

@@ -100,42 +100,76 @@ export function formatCurrency(
  * the supplied timezone. `timeZone` MUST be an IANA name
  * (e.g. `"Africa/Cairo"`, `"Europe/Berlin"`); the planner's
  * workspace timezone is the canonical source.
+ *
+ * Day-first ordering (DD/MM/YYYY or DD MMM YYYY) is the
+ * project-wide default — it is the unambiguous ordering
+ * for our target users (Arabic-speaking agencies and
+ * European / LATAM planners) and avoids the MM/DD/YYYY vs
+ * DD/MM/YYYY ambiguity that bites English-only date
+ * strings. Callers that want a different ordering can pass
+ * `{ dayFirst: false }` in the options, but no callsite in
+ * the app does so.
+ *
+ * The formatter assembles the date from semantic parts
+ * (`year`, `month`, `day`, …) so:
+ *   1. The output is deterministic across Node, ICU, WebKit,
+ *      and the React server / client split (Intl's
+ *      locale-specific connectors — "," vs " at " — would
+ *      otherwise produce an SSR hydration mismatch).
+ *   2. The day-first ordering is enforced by us, not by
+ *      Intl's locale-specific format (Intl has no opt-in
+ *      "dayFirst" flag).
  */
 export function formatDate(
   value: Date | string | number,
   code: LocaleCode,
-  options?: Intl.DateTimeFormatOptions & IntlLocaleOptions,
+  options?: Intl.DateTimeFormatOptions & IntlLocaleOptions & { dayFirst?: boolean },
 ): string {
   const date = value instanceof Date ? value : new Date(value);
   const locale = bcp47(code);
-  const stableDateTime = formatDateTimeParts(date, code, options);
-  if (stableDateTime) return stableDateTime;
+  const dayFirst = options?.dayFirst ?? true;
+  const stable = formatDateTimeParts(date, code, options, dayFirst);
+  if (stable) return stable;
   return new Intl.DateTimeFormat(locale, withLatnDigits(options)).format(date);
 }
 
 /**
- * Assemble date-times from semantic parts instead of Intl's locale-specific
- * literal text. Node/ICU and WebKit disagree about the English connector
- * ("," versus " at "), which otherwise creates an SSR hydration mismatch
- * for client-rendered activity and approval timelines. Month names and Arabic
- * text still come from Intl; only punctuation/order is made deterministic.
+ * Assemble a date from semantic parts. Returns `undefined`
+ * when the requested parts aren't all available, so the
+ * caller can fall back to `Intl.DateTimeFormat`.
+ *
+ * The `dayFirst` flag swaps month and day in the output. The
+ * Arabic locale already uses day-first ordering in the
+ * existing implementation, so the flag only affects English.
+ *
+ * Time-zone name parts are not supported — the parts API
+ * exposes them as opaque text, and surfacing them through
+ * the same code path would force a string format we don't
+ * control. Callers that need a time-zone label format the
+ * zone separately (e.g. `Intl.DateTimeFormat` with
+ * `timeZoneName: "short"`).
  */
 function formatDateTimeParts(
   date: Date,
   code: LocaleCode,
-  options: (Intl.DateTimeFormatOptions & IntlLocaleOptions) | undefined,
+  options: (Intl.DateTimeFormatOptions & IntlLocaleOptions & { dayFirst?: boolean }) | undefined,
+  dayFirst: boolean,
 ): string | undefined {
-  if (
-    !options?.year ||
-    !options.month ||
-    !options.day ||
-    !options.hour ||
-    !options.minute ||
-    options.timeZoneName
-  ) {
-    return undefined;
-  }
-  const parts = new Intl.DateTimeFormat(bcp47(code), withLatnDigits(options)).formatToParts(date);
+  if (!options) return undefined;
+  if (options.timeZoneName) return undefined;
+  // We need at least `day` to do anything sensible. The
+  // caller may pass only a subset of year / month / day; we
+  // honour the requested subset but require `day` to use
+  // the day-first path.
+  if (!options.day) return undefined;
+  // Use the user's locale for the *parts* (so Arabic gets
+  // Arabic month names), but assemble the final string
+  // ourselves to enforce day-first ordering.
+  const intlOptions: Intl.DateTimeFormatOptions = { ...options };
+  delete (intlOptions as { dayFirst?: boolean }).dayFirst;
+  const parts = new Intl.DateTimeFormat(bcp47(code), withLatnDigits(intlOptions)).formatToParts(
+    date,
+  );
   const valueOf = (type: Intl.DateTimeFormatPartTypes): string | undefined =>
     parts.find((part) => part.type === type)?.value;
   const year = valueOf("year");
@@ -143,15 +177,66 @@ function formatDateTimeParts(
   const day = valueOf("day");
   const hour = valueOf("hour");
   const minute = valueOf("minute");
-  if (!year || !month || !day || !hour || !minute) return undefined;
+  const weekday = valueOf("weekday");
   const dayPeriod = valueOf("dayPeriod");
-  const time = `${hour}:${minute}${dayPeriod ? ` ${dayPeriod}` : ""}`;
-  return code === "ar" ? `${day} ${month} ${year}، ${time}` : `${month} ${day}, ${year}, ${time}`;
+  if (!day) return undefined;
+  // Build the date portion. Two shapes:
+  //   1. Numeric 2-digit (DD/MM/YYYY or DD-MM-YYYY) — no
+  //      commas; the slashes are the only separator.
+  //   2. Short / long text (DD MMM YYYY or DD MMMM YYYY) —
+  //      spaces only. The legacy month-first form keeps a
+  //      trailing comma after the day ("Sep 1, 2026") for
+  //      backwards-compatibility with previously-saved
+  //      screenshots; the new day-first form omits it
+  //      because `1 Sep 2026` reads naturally without one.
+  const monthStr = month ?? "";
+  const yearStr = year ?? "";
+  const isNumericMonth = options.month === "2-digit" || options.month === "numeric";
+  const dateSep = isNumericMonth ? "/" : " ";
+  let dateStr: string;
+  if (dayFirst || code === "ar") {
+    // Day-first ordering (default).
+    if (yearStr) {
+      dateStr = `${day}${dateSep}${monthStr}${dateSep}${yearStr}`;
+    } else {
+      dateStr = `${day}${dateSep}${monthStr}`;
+    }
+  } else {
+    // Month-first (legacy English US-style; only used when
+    // a caller explicitly passes `dayFirst: false`).
+    if (yearStr) {
+      dateStr = `${monthStr} ${day}, ${yearStr}`;
+    } else {
+      dateStr = `${monthStr} ${day}`;
+    }
+  }
+  // Optional weekday prefix (e.g. "Wed").
+  if (weekday) dateStr = `${weekday}, ${dateStr}`;
+  // Time portion. Both Node/ICU and WebKit agree on the
+  // shape `${hour}:${minute}` so we compose it directly.
+  // The dayPeriod (`AM` / `PM`) is optional and only
+  // appears for 12-hour locales.
+  let result = dateStr;
+  if (hour && minute) {
+    const time = `${hour}:${minute}${dayPeriod ? ` ${dayPeriod}` : ""}`;
+    // English connector is " · " (middle dot); Arabic
+    // connector is "، " (Arabic comma + space). Node/ICU
+    // previously used ", " for English which WebKit
+    // rendered as " at " — the middle dot reads naturally
+    // on every browser and is unambiguous.
+    result = code === "ar" ? `${dateStr}، ${time}` : `${dateStr} · ${time}`;
+  }
+  return result;
 }
 
 /** Common date format presets. Use these instead of hand-rolling
  *  `Intl.DateTimeFormatOptions` at callsites — the preset is the
- *  contract for "what a date looks like in this surface". */
+ *  contract for "what a date looks like in this surface".
+ *
+ *  All presets use **day-first** ordering: `03/09/2026`
+ *  (DD/MM/YYYY) for numeric, `03 Sep 2026` for short text.
+ *  This is the project-wide default; the English-only
+ *  month-first ordering has been retired. */
 export const DateFormat = {
   short: { year: "numeric", month: "short", day: "numeric" } as const,
   long: { year: "numeric", month: "long", day: "numeric" } as const,
@@ -164,6 +249,7 @@ export const DateFormat = {
   } as const,
   monthDay: { month: "short", day: "numeric" } as const,
   weekdayShort: { weekday: "short", month: "short", day: "numeric" } as const,
+  /** ISO-style numeric: DD/MM/YYYY for both `en` and `ar`. */
   iso: { year: "numeric", month: "2-digit", day: "2-digit" } as const,
 } satisfies Record<string, Intl.DateTimeFormatOptions>;
 

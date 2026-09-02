@@ -52,7 +52,10 @@ describe("formatRelativeDate", () => {
 
   it("formats older events as an absolute date", () => {
     const d = new Date("2024-10-12T00:00:00Z");
-    expect(formatRelativeDate(d, now, "en")).toMatch(/Oct 12, 2024/);
+    // Day-first ordering (DD MMM YYYY) is the project-wide
+    // default. The test pins the user-visible shape so a
+    // future regression to month-first ordering trips it.
+    expect(formatRelativeDate(d, now, "en")).toMatch(/12 Oct 2024/);
     expect(formatRelativeDate(d, now, "ar")).toMatch(/2024/);
   });
 
