@@ -39,7 +39,7 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe       |
 | Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                         |
 | Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths        |
-| Visual regression      | Partial / investigate | Clean-run selected planning cases 3/18; 15 failed; no snapshot updates               |
+| Visual regression      | Partial / investigate | Exact current full matrix 73/112; 39 failed; no snapshot updates                     |
 | Performance evidence   | Protocol only         | `docs/testing/performance-report.md`; LCP/INP/CLS, asset, and query evidence pending |
 | Working tree           | Clean                 | Current audited HEAD: `0c77e50`                                                      |
 
@@ -131,13 +131,15 @@ handled before unrelated cleanup.
    changing screenshot heights. Interrupted runs can still leave a development
    server or `.next` lock behind and need a process-lifecycle fix.
 9. Reconcile the visual suite with the current canonical Stitch implementation.
-   The broad pre-reset run produced 52 passes and 60 failures. After the reset,
-   the selected planning run at the current source produced 3 passes and 15
-   failures. The former 6,305px planning height was reduced to a deterministic
-   single-seed fixture; remaining differences include stale references containing
-   an `A11y detail <timestamp>` row, plus route-level spacing/copy deltas. These
-   require route-by-route comparison against Stitch and deliberate snapshot
-   decisions; no snapshots were updated automatically.
+   The broad pre-reset run produced 52 passes and 60 failures. The exact current
+   full matrix at `700b812` produced 73 passes and 39 failures. The former
+   6,305px planning height was reduced to a deterministic single-seed fixture;
+   remaining differences include stale planning references containing an
+   `A11y detail <timestamp>` row, the settings redesign (3,494px actual versus
+   a 900px reference), users/workspace overview responsive deltas, and one
+   `/setup` mobile timeout. These require route-by-route comparison against
+   Stitch and deliberate snapshot decisions; no snapshots were updated
+   automatically.
 
 ### P3 — polish
 
