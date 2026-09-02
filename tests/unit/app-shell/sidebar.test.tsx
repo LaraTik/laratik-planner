@@ -104,6 +104,19 @@ describe("Sidebar (workspace-aware)", () => {
     expect(screen.queryByTestId("sidebar-create-content")).toBeNull();
   });
 
+  it("keeps the tablet rail visually icon-only even when desktop sidebar is expanded", () => {
+    usePathnameMock.mockReturnValue("/app");
+    render(<Sidebar {...baseProps} />);
+
+    // AppShell uses a 72px rail below xl. Labels remain in the DOM for
+    // accessible names, but must not paint into the page at tablet widths.
+    expect(screen.getByText("StudioFlow").parentElement).toHaveClass("hidden", "xl:block");
+    const myWorkLabel = Array.from(
+      screen.getByRole("link", { name: "My work" }).querySelectorAll("span"),
+    ).find((span) => span.textContent === "My work");
+    expect(myWorkLabel).toHaveClass("hidden", "xl:block");
+  });
+
   it("hides admin items in the sidebar when the user is not an admin (global mode)", () => {
     usePathnameMock.mockReturnValue("/app");
     render(<Sidebar {...baseProps} user={{ name: "Lara", isAdmin: false }} />);

@@ -144,7 +144,10 @@ export function Sidebar({
   const createContentHref = workspaceNav?.createContentHref ?? null;
 
   return (
-    <nav className="flex h-full flex-col" aria-label={labelFor("sidebarAriaLabel", "Primary")}>
+    <nav
+      className="flex h-full min-w-0 flex-col overflow-x-hidden"
+      aria-label={labelFor("sidebarAriaLabel", "Primary")}
+    >
       {/* Brand + workspace switcher (top) */}
       <SidebarHeader
         collapsed={collapsed}
@@ -227,13 +230,16 @@ function SidebarHeader({
   return (
     <div className={cn("flex flex-col gap-1 px-2 pt-2 pb-2 xl:px-3")}>
       <div
-        className={cn("flex items-center gap-2", collapsed ? "justify-center" : "justify-between")}
+        className={cn(
+          "flex items-center gap-2",
+          collapsed ? "justify-center" : "justify-center xl:justify-between",
+        )}
       >
         <Link
           href="/app"
           className={cn(
             "focus-visible:ring-focus-ring flex items-center gap-2 rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2",
-            collapsed ? "justify-center" : "flex-1",
+            collapsed ? "justify-center" : "flex-1 justify-center xl:justify-start",
           )}
           aria-label={brand}
           title={brandTitle}
@@ -242,7 +248,7 @@ function SidebarHeader({
             S
           </div>
           {!collapsed ? (
-            <div className="min-w-0">
+            <div className="hidden min-w-0 xl:block">
               <p className="text-section-title text-fg-primary truncate font-semibold">
                 StudioFlow
               </p>
@@ -260,7 +266,7 @@ function SidebarHeader({
               footer; this label is just context, not a control. */}
           {agencySwitcher?.active ? (
             <p
-              className="text-label text-fg-muted truncate ps-1 font-semibold tracking-wide uppercase"
+              className="text-label text-fg-muted hidden truncate ps-1 font-semibold tracking-wide uppercase xl:block"
               title={`Agency: ${agencySwitcher.active.name}`}
               data-testid="sidebar-active-agency-label"
             >
@@ -347,11 +353,11 @@ function SidebarFooter({
           {workspaceSwitcherOptions.length === 0 ? (
             <Link
               href="/app/workspaces/new"
-              className="text-body text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex items-center gap-2 rounded-[var(--radius-control)] border border-dashed px-3 py-2 font-semibold focus:outline-none focus-visible:ring-2"
+              className="text-body text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-dashed px-3 py-2 font-semibold focus:outline-none focus-visible:ring-2 xl:justify-start"
               data-testid="sidebar-workspace-empty"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
-              Create your first workspace
+              <span className="hidden xl:inline">Create your first workspace</span>
             </Link>
           ) : (
             <WorkspaceSwitcher
@@ -593,10 +599,10 @@ function SidebarLinkRow({
       >
         <Icon className="h-4 w-4" />
       </span>
-      {!collapsed ? <span className="min-w-0 flex-1 truncate">{label}</span> : null}
+      {!collapsed ? <span className="hidden min-w-0 flex-1 truncate xl:block">{label}</span> : null}
       {badge !== null && !collapsed ? (
         <span
-          className="bg-warning-subtle text-warning text-label inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-1.5 font-semibold"
+          className="bg-warning-subtle text-warning text-label hidden min-w-[1.5rem] items-center justify-center rounded-full px-1.5 font-semibold xl:inline-flex"
           aria-label={pendingTemplate.replace("{label}", label).replace("{count}", String(badge))}
           data-testid={`sidebar-badge-${spec.key}`}
         >
@@ -655,7 +661,7 @@ function ExpandableNavGroup({
           >
             <Icon className="h-4 w-4" />
           </span>
-          {!collapsed ? <span>{spec.label}</span> : null}
+          {!collapsed ? <span className="hidden xl:inline">{label}</span> : null}
         </Link>
         {!collapsed ? (
           <button
