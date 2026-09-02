@@ -2,7 +2,7 @@
 
 Date: 2026-09-02  
 Broad browser/evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4`  
-Current audited commit: `0c77e50` (`main`, clean)
+Current audited commit: `a38d47c` (`main`, clean)
 Audit report update: committed after this evidence capture
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
@@ -41,7 +41,7 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths        |
 | Visual regression      | Partial / investigate | Exact current full matrix 73/112; 39 failed; no snapshot updates                     |
 | Performance evidence   | Protocol only         | `docs/testing/performance-report.md`; LCP/INP/CLS, asset, and query evidence pending |
-| Working tree           | Clean                 | Current audited HEAD: `0c77e50`                                                      |
+| Working tree           | Clean                 | Current audited HEAD: `a38d47c`                                                      |
 
 ## Repository inventory
 
