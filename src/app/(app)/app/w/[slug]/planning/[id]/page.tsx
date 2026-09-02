@@ -40,6 +40,7 @@ import { ChannelPublishingCard } from "@/components/planning/channel-publishing-
 import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
 import { OverviewNavigator } from "@/components/planning/overview-navigator";
 import { FormatAwareContentEditor } from "@/components/forms/format-aware-content-editor";
+import { MessagesPanel } from "@/components/planning/messages-panel";
 // Phase 6 of the planning-detail refactor (2026-08-30): the
 // inline title/date/brief editors used to live here. They
 // moved into the Overview's `DetailsSection` (see
@@ -57,7 +58,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { EditDetailsDrawer } from "@/components/planning/edit-details-drawer";
 import { isAiEnabled } from "@/lib/ai";
 import { AI_CAPABILITY_METADATA } from "@/lib/ai/capabilities";
-import { parseFormatPayload } from "@/lib/format-payload/schemas";
+import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
 import { WorkflowStepper } from "@/components/planning/workflow-stepper";
 import { PlatformPreview } from "@/components/planning/platform-preview";
 import { type WorkspaceTab } from "@/components/planning/workspace-tabs";
@@ -518,6 +519,7 @@ export default async function ContentDetailPage({
   const tabs: WorkspaceTab[] = [
     { id: "overview", label: "Overview" },
     { id: "content", label: "Content" },
+    { id: "messages", label: "Messages" },
     { id: "preview", label: "Preview" },
     {
       id: "publishing",
@@ -831,6 +833,70 @@ export default async function ContentDetailPage({
                     />
                   </PlanningSection>
                 </section>
+              </section>
+            ),
+            messages: (
+              <section
+                id="messages"
+                className="mt-6 scroll-mt-24"
+                data-testid="workspace-tab-panel-messages"
+              >
+                <MessagesPanel
+                  workspaceSlug={slug}
+                  contentItemId={item.id}
+                  format={item.format as ContentFormat}
+                  initialCaption={
+                    ((): string => {
+                      const fp = (item as { formatPayload?: unknown }).formatPayload;
+                      if (
+                        fp &&
+                        typeof fp === "object" &&
+                        "caption" in (fp as Record<string, unknown>)
+                      ) {
+                        const c = (fp as { caption?: unknown }).caption;
+                        return typeof c === "string" ? c : "";
+                      }
+                      return "";
+                    })()
+                  }
+                  initialHashtags={
+                    ((): string[] => {
+                      const fp = (item as { formatPayload?: unknown }).formatPayload;
+                      if (
+                        fp &&
+                        typeof fp === "object" &&
+                        "hashtags" in (fp as Record<string, unknown>)
+                      ) {
+                        const h = (fp as { hashtags?: unknown }).hashtags;
+                        return Array.isArray(h)
+                          ? h.filter((t): t is string => typeof t === "string")
+                          : [];
+                      }
+                      return [];
+                    })()
+                  }
+                  initialFirstComment={
+                    ((): string => {
+                      const fp = (item as { formatPayload?: unknown }).formatPayload;
+                      if (
+                        fp &&
+                        typeof fp === "object" &&
+                        "firstComment" in (fp as Record<string, unknown>)
+                      ) {
+                        const c = (fp as { firstComment?: unknown }).firstComment;
+                        return typeof c === "string" ? c : "";
+                      }
+                      return "";
+                    })()
+                  }
+                  channels={item.channels.map((ch) => ({
+                    id: ch.id,
+                    socialChannelId: ch.socialChannelId,
+                    platform: ch.platform,
+                    accountName: ch.accountName,
+                  }))}
+                  canEdit={canEdit}
+                />
               </section>
             ),
             preview: (

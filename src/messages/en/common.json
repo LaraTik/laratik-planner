@@ -565,6 +565,21 @@
     },
     "preview": {
       "noChannelsTitle": "No channels to preview"
+    },
+    "messages": {
+      "captionLabel": "Caption",
+      "captionHint": "What people will see when the post lands in their feed.",
+      "hashtagsLabel": "Hashtags",
+      "hashtagsHint": "Press Enter, comma, or space to add. Up to 30 tags.",
+      "firstCommentLabel": "First comment",
+      "firstCommentPlaceholder": "Optional — published as the first comment on the post.",
+      "perChannelPreviewTitle": "Per-channel preview",
+      "perChannelPreviewBlurb": "What the publisher will see for each channel. The publisher can still override per-channel on the Publishing tab.",
+      "perChannelEmpty": "No caption yet.",
+      "noChannels": "No channels selected yet.",
+      "save": "Save message",
+      "saving": "Saving…",
+      "saved": "Saved"
     }
   },
   "formatEditor": {

@@ -565,6 +565,21 @@
     },
     "preview": {
       "noChannelsTitle": "لا توجد قنوات للمعاينة"
+    },
+    "messages": {
+      "captionLabel": "التعليق",
+      "captionHint": "ما سيراه الناس عند ظهور المنشور في موجزهم.",
+      "hashtagsLabel": "الوسوم",
+      "hashtagsHint": "اضغط Enter أو فاصلة أو مسافة للإضافة. حتى 30 وسمًا.",
+      "firstCommentLabel": "التعليق الأول",
+      "firstCommentPlaceholder": "اختياري — يُنشر كأول تعليق على المنشور.",
+      "perChannelPreviewTitle": "معاينة لكل قناة",
+      "perChannelPreviewBlurb": "ما سيراه الناشر لكل قناة. يمكن للناشر تعديل كل قناة على حدة في علامة التبويب النشر.",
+      "perChannelEmpty": "لا يوجد تعليق بعد.",
+      "noChannels": "لم يتم اختيار قنوات بعد.",
+      "save": "حفظ الرسالة",
+      "saving": "جارٍ الحفظ…",
+      "saved": "تم الحفظ"
     }
   },
   "formatEditor": {
