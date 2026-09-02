@@ -1,4 +1,8 @@
 {
+  "title": "Application information",
+  "description": "Use these details when reporting a problem.",
+  "build": "Build",
+  "environment": "Environment",
   "copied": "Build information copied",
   "copy": "Copy build information",
   "copyFailed": "Could not copy build information",

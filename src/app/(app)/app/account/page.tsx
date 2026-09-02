@@ -170,7 +170,7 @@ export default async function AccountPage() {
         )}
       </Card>
 
-      <ApplicationInfoCard buildInfo={buildInfo} />
+      <ApplicationInfoCard buildInfo={buildInfo} t={t} />
 
       <Card
         aria-labelledby="signout-heading"
