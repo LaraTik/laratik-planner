@@ -1,6 +1,9 @@
 import { TrendingUp, Users, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import type { MetricSeriesPoint } from "@/lib/social/analytics";
+import type { LocaleCode } from "@/lib/i18n/locales";
+
+type Translator = (key: string, params?: Record<string, string | number>) => string;
 
 /**
  * M4 — social-analytics "feel" improvement.
@@ -90,10 +93,20 @@ function portfolioReach(channels: AggregateChannel[], windowDays: number): numbe
 export function SocialAggregateStrip({
   channels,
   windowDays,
+  locale = "en",
+  t,
 }: {
   channels: AggregateChannel[];
   windowDays: number;
+  locale?: LocaleCode;
+  t?: Translator;
 }) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : interpolate(fallback, params);
+  const formatNumber = (value: number) =>
+    new Intl.NumberFormat(locale, { numberingSystem: "latn", maximumFractionDigits: 0 }).format(
+      value,
+    );
   const totalFollowers = sumLatestFollowers(channels);
   const best = bestGrowth(channels);
   const reach = portfolioReach(channels, windowDays);
@@ -104,25 +117,33 @@ export function SocialAggregateStrip({
         <div data-testid="social-aggregate-strip-total-followers">
           <div className="flex items-center gap-2">
             <Users className="text-fg-muted h-3.5 w-3.5" aria-hidden={true} />
-            <p className="text-label text-fg-muted">Total followers</p>
+            <p className="text-label text-fg-muted">
+              {tr("analytics.aggregateTotalFollowers", "Total followers")}
+            </p>
           </div>
           <p className="text-title-section text-fg-primary mt-1 font-semibold">
-            {totalFollowers === null ? "—" : totalFollowers.toLocaleString()}
+            {totalFollowers === null ? "—" : formatNumber(totalFollowers)}
           </p>
           <p className="text-label text-fg-muted mt-0.5">
-            across {channels.length} channel{channels.length === 1 ? "" : "s"}
+            {channels.length === 1
+              ? tr("analytics.aggregateAcrossOne", "across one channel")
+              : tr("analytics.aggregateAcrossMany", "across {count} channels", {
+                  count: channels.length,
+                })}
           </p>
         </div>
 
         <div data-testid="social-aggregate-strip-best-growth">
           <div className="flex items-center gap-2">
             <TrendingUp className="text-fg-muted h-3.5 w-3.5" aria-hidden={true} />
-            <p className="text-label text-fg-muted">Best 7d growth</p>
+            <p className="text-label text-fg-muted">
+              {tr("analytics.aggregateBestGrowth", "Best 7d growth")}
+            </p>
           </div>
           {best && typeof best.growth7Absolute === "number" ? (
             <>
               <p className="text-title-section text-fg-primary mt-1 font-semibold">
-                +{best.growth7Absolute.toLocaleString()}
+                +{formatNumber(best.growth7Absolute)}
                 {typeof best.growth7Percent === "number" ? (
                   <span
                     className="text-label text-fg-secondary ms-1.5 font-medium"
@@ -138,7 +159,9 @@ export function SocialAggregateStrip({
           ) : (
             <>
               <p className="text-title-section text-fg-muted mt-1 font-semibold">—</p>
-              <p className="text-label text-fg-muted mt-0.5">Not enough data yet (need 7+ days)</p>
+              <p className="text-label text-fg-muted mt-0.5">
+                {tr("analytics.aggregateGrowthInsufficient", "Not enough data yet (need 7+ days)")}
+              </p>
             </>
           )}
         </div>
@@ -146,14 +169,26 @@ export function SocialAggregateStrip({
         <div data-testid="social-aggregate-strip-reach">
           <div className="flex items-center gap-2">
             <Eye className="text-fg-muted h-3.5 w-3.5" aria-hidden={true} />
-            <p className="text-label text-fg-muted">{windowDays}-day reach (views)</p>
+            <p className="text-label text-fg-muted">
+              {tr("analytics.aggregateReach", "{count}-day reach (views)", { count: windowDays })}
+            </p>
           </div>
           <p className="text-title-section text-fg-primary mt-1 font-semibold">
-            {reach === null ? "—" : reach.toLocaleString()}
+            {reach === null ? "—" : formatNumber(reach)}
           </p>
-          <p className="text-label text-fg-muted mt-0.5">profile + page views combined</p>
+          <p className="text-label text-fg-muted mt-0.5">
+            {tr("analytics.aggregateReachCombined", "profile + page views combined")}
+          </p>
         </div>
       </div>
     </Card>
+  );
+}
+
+function interpolate(value: string, params?: Record<string, string | number>): string {
+  if (!params) return value;
+  return Object.entries(params).reduce(
+    (result, [name, replacement]) => result.replaceAll(`{${name}}`, String(replacement)),
+    value,
   );
 }

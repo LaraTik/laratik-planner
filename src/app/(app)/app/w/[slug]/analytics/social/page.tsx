@@ -332,6 +332,8 @@ export default async function SocialAnalyticsPage({
             };
           })}
           windowDays={window}
+          locale={code}
+          t={t}
         />
       ) : null}
 

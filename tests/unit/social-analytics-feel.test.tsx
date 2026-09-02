@@ -13,6 +13,7 @@ import { SocialGrowthChart } from "@/app/(app)/app/w/[slug]/analytics/social/soc
 import { SocialMetricsTable } from "@/app/(app)/app/w/[slug]/analytics/social/social-metrics-table";
 import { SocialDataQuality } from "@/app/(app)/app/w/[slug]/analytics/social/social-data-quality";
 import type { MetricSeriesPoint } from "@/lib/social/analytics";
+import { makeTranslator } from "@/messages";
 
 /**
  * M4 "feel" round (2026-08-27) — component unit tests.
@@ -193,6 +194,24 @@ describe("SocialAggregateStrip", () => {
     render(<SocialAggregateStrip channels={channels} windowDays={7} />);
     const cell = screen.getByTestId("social-aggregate-strip-total-followers");
     expect(cell.textContent).toContain("—");
+  });
+
+  it("renders catalog-backed Arabic labels with Latin digits", () => {
+    const channels: AggregateChannel[] = [channel("a", "A", [100, 204], 12)];
+    render(
+      <SocialAggregateStrip
+        channels={channels}
+        windowDays={7}
+        locale="ar"
+        t={makeTranslator("ar")}
+      />,
+    );
+
+    const strip = screen.getByTestId("social-aggregate-strip");
+    expect(strip).toHaveTextContent("إجمالي المتابعين");
+    expect(strip).toHaveTextContent("عبر قناة واحدة");
+    expect(strip).toHaveTextContent("أفضل نمو خلال 7 أيام");
+    expect(strip).toHaveTextContent("204");
   });
 });
 
