@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -34,6 +36,38 @@ function collectKeys(value: unknown, prefix = ""): string[] {
   return out;
 }
 
+function collectLeaves(value: unknown, prefix = ""): Array<[string, string]> {
+  if (typeof value === "string") return [[prefix, value]];
+  if (value == null || typeof value !== "object") return [];
+  return Object.entries(value as Record<string, unknown>).flatMap(([key, child]) =>
+    collectLeaves(child, prefix ? `${prefix}.${key}` : key),
+  );
+}
+
+function collectSourceFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) return collectSourceFiles(path);
+    return entry.name.endsWith(".ts") || entry.name.endsWith(".tsx") ? [path] : [];
+  });
+}
+
+function collectStaticTranslationKeys(): string[] {
+  const keyPattern = /(?:^|[^\w.])(?:[A-Za-z_$][\w$]*\.)?t\(\s*["']([^"']+)["']/gm;
+  return collectSourceFiles(resolve(process.cwd(), "src")).flatMap((file) => {
+    const source = readFileSync(file, "utf8");
+    return Array.from(source.matchAll(keyPattern), ([, key]) => key).filter(
+      (key): key is string => key !== undefined,
+    );
+  });
+}
+
+function placeholders(value: string): string[] {
+  return Array.from(value.matchAll(/\{(\w+)\}/g), ([, name]) => name)
+    .filter((name): name is string => name !== undefined)
+    .sort();
+}
+
 describe("messages/catalogs — parity", () => {
   it("en and ar have identical key structure", () => {
     const enKeys = collectKeys(enCatalog).sort();
@@ -42,19 +76,26 @@ describe("messages/catalogs — parity", () => {
   });
 
   it("every leaf value in ar is a non-empty string", () => {
-    const walk = (node: unknown, prefix = ""): Array<[string, string]> => {
-      if (typeof node === "string") return [[prefix, node]];
-      if (node == null || typeof node !== "object") return [];
-      const out: Array<[string, string]> = [];
-      for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
-        out.push(...walk(v, prefix ? `${prefix}.${k}` : k));
-      }
-      return out;
-    };
-    for (const [key, value] of walk(arCatalog)) {
+    for (const [key, value] of collectLeaves(arCatalog)) {
       expect(value, key).toBeTypeOf("string");
       expect(value.length, key).toBeGreaterThan(0);
     }
+  });
+
+  it("en and ar preserve the same interpolation placeholders", () => {
+    const enLeaves = new Map(collectLeaves(enCatalog));
+    const arLeaves = new Map(collectLeaves(arCatalog));
+    for (const [key, enValue] of enLeaves) {
+      expect(placeholders(arLeaves.get(key) ?? ""), key).toEqual(placeholders(enValue));
+    }
+  });
+
+  it("every static t() key exists in the catalogs", () => {
+    const catalogKeys = new Set(collectKeys(enCatalog));
+    const missing = [...new Set(collectStaticTranslationKeys())].filter(
+      (key) => !catalogKeys.has(key),
+    );
+    expect(missing).toEqual([]);
   });
 });
 

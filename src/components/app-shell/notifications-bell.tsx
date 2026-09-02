@@ -177,7 +177,7 @@ export function NotificationsBell({
           aria-modal="false"
           aria-label={copy.dialogAriaLabel}
           tabIndex={-1}
-          className="border-border bg-surface fixed inset-x-2 top-14 z-50 max-h-[calc(100vh-4rem)] overflow-hidden rounded-[var(--radius-card)] border shadow-lg focus:outline-none sm:absolute sm:inset-auto sm:end-0 sm:top-auto sm:left-auto sm:mt-2 sm:w-96 sm:max-w-[calc(100vw-2rem)]"
+          className="border-border bg-surface fixed inset-x-2 top-14 z-50 max-h-[calc(100vh-4rem)] overflow-hidden rounded-[var(--radius-card)] border shadow-lg focus:outline-none sm:absolute sm:inset-auto sm:end-0 sm:top-auto sm:mt-2 sm:w-96 sm:max-w-[calc(100vw-2rem)]"
         >
           <header className="border-border flex items-center justify-between border-b px-3 py-2">
             <h3 className="text-body text-fg-primary font-semibold">{copy.title}</h3>

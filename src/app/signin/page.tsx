@@ -11,7 +11,10 @@ import { SignInOptions, type SignInCopy } from "./signin-options";
 import { serverEnv } from "@/lib/validation/env";
 import { tForActive } from "@/lib/i18n/t-for-active";
 
-export const metadata = { title: "Sign in" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("auth.signin.title") };
+}
 
 type SearchParams = {
   callbackUrl?: string;

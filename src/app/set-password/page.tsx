@@ -26,7 +26,10 @@ import { tForActive } from "@/lib/i18n/t-for-active";
  * returns locale-resolved error strings; the client never reads
  * the catalog itself.
  */
-export const metadata = { title: "Set your password" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("auth.firstLoginSetPassword.title") };
+}
 
 export default async function SetPasswordPage() {
   const { t } = await tForActive();

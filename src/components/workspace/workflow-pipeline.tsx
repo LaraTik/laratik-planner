@@ -97,7 +97,7 @@ export function WorkflowPipeline({ stages, buildHref, className, t }: WorkflowPi
                     </span>
                   </div>
                   <DirAwareArrowRight
-                    className="text-fg-muted h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+                    className="text-fg-muted h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5"
                     aria-hidden="true"
                   />
                 </div>

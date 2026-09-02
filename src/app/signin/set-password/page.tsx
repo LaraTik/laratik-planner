@@ -20,7 +20,10 @@ import { tForActive } from "@/lib/i18n/t-for-active";
  * the `auth.setPassword.errors` map, with a graceful English
  * fallback for any code we do not recognize.
  */
-export const metadata = { title: "Set a new password" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("auth.setPassword.title") };
+}
 
 async function setPasswordAction(formData: FormData) {
   "use server";

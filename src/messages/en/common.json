@@ -883,6 +883,7 @@
       "signOut": "Sign out"
     },
     "acceptInvitation": {
+      "title": "Accept invitation",
       "invalidTitle": "Invalid invitation",
       "invalidBody": "The link is missing the invitation token. Please check the link in your email.",
       "revokedTitle": "Invalid invitation",
@@ -969,7 +970,8 @@
     },
     "checklist": {
       "ariaLabel": "Settings setup checklist",
-      "heading": "Setup checklist"
+      "heading": "Setup checklist",
+      "blurb": "Keep the workspace basics configured before the team starts planning."
     },
     "items": {
       "lifecycle": {
@@ -2346,6 +2348,7 @@
   },
   "brandKit": {
     "title": "Brand Kit",
+    "description": "Brand identity, voice, and reusable guidance for every piece of content.",
     "breadcrumbAria": "Brand kit breadcrumb",
     "section": {
       "voice": "Voice",
@@ -2629,7 +2632,8 @@
       "nothingOverdue": "No overdue or blocked items this month.",
       "unassigned": "· Unassigned",
       "open": "Open →",
-      "deadlineOverdue": "{days} day{plural} overdue · {date}",
+      "deadlineOverdueOne": "{days} day overdue · {date}",
+      "deadlineOverdueMany": "{days} days overdue · {date}",
       "deadlineToday": "Due today · {date}",
       "deadlineTomorrow": "Due tomorrow · {date}",
       "deadlineInDays": "Due in {days} days · {date}",
@@ -2664,7 +2668,8 @@
       "plannedThisMonth": "planned this month",
       "plannedProgress": "/ {target} planned",
       "targetMet": "Target met ({percent}%)",
-      "coverageRemaining": "{percent}% coverage · {remaining} item{plural} to go",
+      "coverageRemainingOne": "{percent}% coverage · {remaining} item to go",
+      "coverageRemainingMany": "{percent}% coverage · {remaining} items to go",
       "noMonthlyTarget": "No monthly target",
       "setTargetHint": "No monthly target — set one to see coverage progress.",
       "coverageAria": "{percent} percent of monthly target"

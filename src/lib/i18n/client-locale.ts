@@ -22,9 +22,9 @@
  *
  */
 import { tFor } from "@/messages";
-import type { LocaleCode } from "@/lib/i18n/locales";
+import { SUPPORTED_LOCALES, type LocaleCode } from "@/lib/i18n/locales";
 
-const SUPPORTED: ReadonlySet<LocaleCode> = new Set(["en", "ar"]);
+const SUPPORTED = new Set(SUPPORTED_LOCALES.map(({ code }) => code));
 
 export function getClientT(): (key: string, params?: Record<string, string | number>) => string {
   return tFor(getClientLocale());

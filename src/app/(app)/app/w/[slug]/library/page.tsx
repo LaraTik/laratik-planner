@@ -7,6 +7,7 @@ import { campaigns, contentPillars, contentTemplates } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { formatDate } from "@/lib/i18n/format-locale";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
@@ -55,7 +56,7 @@ export default async function PlanningLibraryPage({
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const [campaignRows, pillars, templates] = await Promise.all([
     db
       .select()
@@ -84,10 +85,10 @@ export default async function PlanningLibraryPage({
     <div className="space-y-6" data-testid="library-campaigns">
       <PageHeader
         eyebrow={workspace.name}
-        title={t("library.title")}
+        title={t("users.library.title")}
         description={
           <>
-            {t("library.description")}
+            {t("users.library.description")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
@@ -102,7 +103,7 @@ export default async function PlanningLibraryPage({
             title={
               <span className="inline-flex items-center gap-2">
                 <Megaphone className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-                {t("library.campaigns")}
+                {t("users.library.campaigns")}
                 <Badge variant="info">{campaignRows.length}</Badge>
               </span>
             }
@@ -112,8 +113,8 @@ export default async function PlanningLibraryPage({
           <div className="px-4 py-6" data-testid="library-campaign-empty">
             <EmptyState
               icon={<Megaphone className="h-8 w-8" aria-hidden="true" />}
-              title={t("library.campaignsEmpty")}
-              description={t("library.campaignsEmptyDescription")}
+              title={t("users.library.campaignsEmpty")}
+              description={t("users.library.campaignsEmptyDescription")}
             />
           </div>
         ) : (
@@ -131,7 +132,7 @@ export default async function PlanningLibraryPage({
                 </div>
                 <div className="text-label text-fg-muted flex items-center gap-1.5">
                   <CalendarRange className="h-3 w-3" aria-hidden="true" />
-                  {formatCampaignWindow(row.startDate, row.endDate)}
+                  {formatCampaignWindow(row.startDate, row.endDate, t, code)}
                 </div>
                 <Badge variant={STATUS_VARIANT[row.status] ?? "outline"}>{row.status}</Badge>
                 {canEditLibrary ? <ArchiveCampaignButton slug={slug} id={row.id} /> : null}
@@ -152,7 +153,7 @@ export default async function PlanningLibraryPage({
             title={
               <span className="inline-flex items-center gap-2">
                 <Layers className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-                {t("library.pillars")}
+                {t("users.library.pillars")}
                 <Badge variant="info">{pillars.length}</Badge>
               </span>
             }
@@ -162,8 +163,8 @@ export default async function PlanningLibraryPage({
           <div className="px-4 py-6" data-testid="library-pillar-empty">
             <EmptyState
               icon={<Layers className="h-8 w-8" aria-hidden="true" />}
-              title={t("library.pillarsEmpty")}
-              description={t("library.pillarsEmptyDescription")}
+              title={t("users.library.pillarsEmpty")}
+              description={t("users.library.pillarsEmptyDescription")}
             />
           </div>
         ) : (
@@ -189,7 +190,7 @@ export default async function PlanningLibraryPage({
             title={
               <span className="inline-flex items-center gap-2">
                 <Layers className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-                {t("library.templates")}
+                {t("users.library.templates")}
                 <Badge variant="info">{templates.length}</Badge>
               </span>
             }
@@ -199,8 +200,8 @@ export default async function PlanningLibraryPage({
           <div className="px-4 py-6" data-testid="library-template-empty">
             <EmptyState
               icon={<Layers className="h-8 w-8" aria-hidden="true" />}
-              title={t("library.templatesEmpty")}
-              description={t("library.templatesEmptyDescription")}
+              title={t("users.library.templatesEmpty")}
+              description={t("users.library.templatesEmptyDescription")}
             />
           </div>
         ) : (
@@ -229,15 +230,20 @@ export default async function PlanningLibraryPage({
   );
 }
 
-function formatCampaignWindow(start: Date | string | null, end: Date | string | null): string {
+function formatCampaignWindow(
+  start: Date | string | null,
+  end: Date | string | null,
+  t: (key: string, params?: Record<string, string | number>) => string,
+  code: import("@/lib/i18n/locales").LocaleCode,
+): string {
   const fmt = (d: Date | string) => {
     const date = typeof d === "string" ? new Date(d) : d;
-    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return formatDate(date, code, { month: "short", day: "numeric" });
   };
   if (start && end) return `${fmt(start)} – ${fmt(end)}`;
-  if (start) return `From ${fmt(start)}`;
-  if (end) return `Until ${fmt(end)}`;
-  return "No window set";
+  if (start) return t("users.library.windowFrom", { date: fmt(start) });
+  if (end) return t("users.library.windowUntil", { date: fmt(end) });
+  return t("users.library.windowNone");
 }
 
 function pillarColumns(
@@ -248,12 +254,12 @@ function pillarColumns(
   return [
     {
       key: "name",
-      header: t("library.colPillar"),
+      header: t("users.library.colPillar"),
       cell: (p) => <span className="text-body text-fg-primary font-medium">{p.name}</span>,
     },
     {
       key: "description",
-      header: t("library.colDescription"),
+      header: t("users.library.colDescription"),
       cell: (p) =>
         p.description ? (
           <span className="text-body text-fg-secondary">{p.description}</span>
@@ -265,7 +271,7 @@ function pillarColumns(
       ? [
           {
             key: "actions",
-            header: t("library.colActions"),
+            header: t("users.library.colActions"),
             cell: (p: typeof contentPillars.$inferSelect) => (
               <ArchivePillarButton slug={slug} id={p.id} />
             ),

@@ -22,9 +22,9 @@
     "healthPublished": "نُشِر",
     "healthCancelled": "مُلغى",
     "healthScheduled": "مُجدوَل",
-    "healthDaysOverdueOne": "يوم واحد متأخر",
+    "healthDaysOverdueOne": "{count} يوم متأخر",
     "healthDaysOverdueMany": "{count} أيام تأخير",
-    "healthApprovalsPendingOne": "اعتماد واحد بانتظار",
+    "healthApprovalsPendingOne": "{count} اعتماد بانتظار",
     "healthApprovalsPendingMany": "{count} اعتمادات بانتظار",
     "stagePlanning": "تخطيط",
     "stageReview": "مراجعة",
@@ -285,11 +285,11 @@
       "reviewCta": "مراجعة عناصر الانتباه",
       "approvalsCta": "الاعتمادات",
       "blocked": "{count} محظور",
-      "atRiskOne": "عنصر واحد في خطر",
+      "atRiskOne": "{count} عنصر في خطر",
       "atRiskMany": "{count} عناصر في خطر",
-      "approachingOne": "موعد نهائي واحد يقترب",
+      "approachingOne": "{count} موعد نهائي يقترب",
       "approachingMany": "{count} مواعيد نهائية تقترب",
-      "approvalsWaitingOne": "اعتماد واحد بانتظارك",
+      "approvalsWaitingOne": "{count} اعتماد بانتظارك",
       "approvalsWaitingMany": "{count} اعتمادات بانتظارك"
     },
     "createContent": "إنشاء محتوى"
@@ -298,7 +298,7 @@
     "title": "التخطيط",
     "metaTitle": "التخطيط · {slug}",
     "editMetaTitle": "تعديل الفكرة · {id}",
-    "descriptionOne": "{month} · عنصر واحد",
+    "descriptionOne": "{month} · {count} عنصر",
     "descriptionMany": "{month} · {count} عناصر",
     "groupToday": "اليوم",
     "groupTomorrow": "غدًا",
@@ -501,14 +501,14 @@
       "rowAssets": "الأصول والإصدارات",
       "rowAssetsReady": "توجد نسخة معتمدة في الملف",
       "rowAssetsEmpty": "لا توجد إصدارات تصميم بعد",
-      "rowAssetsUnapprovedOne": "إصدار واحد، لم يُعتمد أي منها",
+      "rowAssetsUnapprovedOne": "{count} إصدار، لم يُعتمد أي منها",
       "rowAssetsUnapprovedMany": "{count} إصدارات، لم يُعتمد أي منها",
       "rowPublishing": "النشر",
       "rowPublishingReady": "تم إعداد القنوات",
       "rowPublishingNoChannels": "لا توجد قنوات",
-      "rowPublishingBlockerOne": "مانع واحد",
+      "rowPublishingBlockerOne": "{count} مانع",
       "rowPublishingBlockerMany": "{count} موانع",
-      "rowPublishingNeedSetupOne": "قناة واحدة تحتاج إعدادًا",
+      "rowPublishingNeedSetupOne": "{count} قناة تحتاج إعدادًا",
       "rowPublishingNeedSetupMany": "{count} قنوات تحتاج إعدادًا",
       "rowSchedule": "الجدول",
       "rowScheduleShipped": "تم النشر",
@@ -883,6 +883,7 @@
       "signOut": "تسجيل الخروج"
     },
     "acceptInvitation": {
+      "title": "قبول الدعوة",
       "invalidTitle": "دعوة غير صالحة",
       "invalidBody": "الرابط يفتقد إلى رمز الدعوة. يُرجى التحقق من الرابط في بريدك الإلكتروني.",
       "revokedTitle": "دعوة غير صالحة",
@@ -890,7 +891,7 @@
       "expiredTitle": "انتهت صلاحية الدعوة",
       "expiredBody": "انتهت صلاحية الرابط. اطلب من المسؤول إعادة الإرسال.",
       "successTitle": "تم قبول الدعوة",
-      "successOneWorkspace": "تمت إضافتك إلى مساحة عمل واحدة.",
+      "successOneWorkspace": "تمت إضافتك إلى {count} مساحة عمل.",
       "successManyWorkspaces": "تمت إضافتك إلى {count} مساحات عمل.",
       "successNoWorkspace": "عضويتك في الوكالة نشطة.",
       "goToMyWork": "الانتقال إلى «عملي»",
@@ -969,7 +970,8 @@
     },
     "checklist": {
       "ariaLabel": "قائمة الإعداد",
-      "heading": "قائمة الإعداد"
+      "heading": "قائمة الإعداد",
+      "blurb": "اضبط أساسيات مساحة العمل قبل أن يبدأ الفريق في التخطيط."
     },
     "items": {
       "lifecycle": {
@@ -1242,9 +1244,9 @@
     "colMembers": "الأعضاء",
     "colLastActivity": "آخر نشاط",
     "noChannels": "لا توجد قنوات",
-    "channelCount": "قناة واحدة",
+    "channelCount": "{count} قناة",
     "channelCountMany": "{count} قنوات",
-    "memberCount": "عضو واحد",
+    "memberCount": "{count} عضو",
     "memberCountMany": "{count} أعضاء"
   },
   "workspaceNew": {
@@ -1349,7 +1351,7 @@
     "addDirectlyError": "تعذّرت إضافة المستخدم",
     "addDirectlyAccountCreated": "تم إنشاء حساب لـ {email}",
     "addDirectlyShareCreds": "شارك هذه البيانات بشكل آمن — لن تظهر مرة أخرى.",
-    "addDirectlyAssigned": "تم تعيينه في مساحة عمل واحدة",
+    "addDirectlyAssigned": "تم تعيينه في {count} مساحة عمل",
     "addDirectlyAssignedMany": "تم تعيينه في {count} مساحات عمل",
     "addDirectlyPasswordLabel": "كلمة المرور المؤقتة",
     "addDirectlyPasswordHint": "٨ أحرف على الأقل، تحوي حرفًا ورقمًا. شاركها مع المستخدم الجديد خارج النظام — لن تظهر مجددًا بعد إعادة تعيين النموذج.",
@@ -1520,7 +1522,7 @@
       "statusDeactivated": "معطّل",
       "currentEffectiveRolesLabel": "الأدوار الفعّالة الحالية",
       "currentEffectiveRolesNone": "لا يوجد وصول في أي مساحة عمل",
-      "currentEffectiveRolesOne": "دور واحد عبر مساحة عمل واحدة",
+      "currentEffectiveRolesOne": "{count} دور عبر مساحة عمل واحدة",
       "currentEffectiveRolesMany": "{count} أدوار عبر {workspaces} مساحات عمل",
       "agencyAdminTitle": "مسؤول الوكالة",
       "grantAdmin": "منح صلاحية مسؤول الوكالة",
@@ -2346,6 +2348,7 @@
   },
   "brandKit": {
     "title": "هوية العلامة",
+    "description": "هوية العلامة ونبرتها وإرشاداتها القابلة لإعادة الاستخدام لكل محتوى.",
     "breadcrumbAria": "مسار تنقل هوية العلامة",
     "section": {
       "voice": "الصوت",
@@ -2629,7 +2632,8 @@
       "nothingOverdue": "لا توجد عناصر متأخرة أو محظورة هذا الشهر.",
       "unassigned": "· غير مسند",
       "open": "فتح ←",
-      "deadlineOverdue": "متأخر {days} يوم · {date}",
+      "deadlineOverdueOne": "متأخر {days} يوم · {date}",
+      "deadlineOverdueMany": "متأخر {days} أيام · {date}",
       "deadlineToday": "مستحق اليوم · {date}",
       "deadlineTomorrow": "مستحق غدًا · {date}",
       "deadlineInDays": "مستحق خلال {days} يوم · {date}",
@@ -2664,7 +2668,8 @@
       "plannedThisMonth": "مخطط له هذا الشهر",
       "plannedProgress": "/ {target} مخطط",
       "targetMet": "تم بلوغ الهدف ({percent}%)",
-      "coverageRemaining": "{percent}٪ تغطية · متبقي {remaining} عنصر",
+      "coverageRemainingOne": "{percent}٪ تغطية · متبقي {remaining} عنصر",
+      "coverageRemainingMany": "{percent}٪ تغطية · متبقي {remaining} عناصر",
       "noMonthlyTarget": "لا يوجد هدف شهري",
       "setTargetHint": "لا يوجد هدف شهري — عيّن هدفًا لرؤية تقدم التغطية.",
       "coverageAria": "{percent} بالمئة من الهدف الشهري"

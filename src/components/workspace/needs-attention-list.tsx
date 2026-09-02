@@ -85,9 +85,9 @@ function formatDeadline(input: {
     t ? t(key, params) : fallback;
   if (daysOverdue > 0) {
     return tr(
-      "workspaceOverviewDashboard.needsAttention.deadlineOverdue",
+      `workspaceOverviewDashboard.needsAttention.deadlineOverdue${daysOverdue === 1 ? "One" : "Many"}`,
       `${daysOverdue} day${daysOverdue === 1 ? "" : "s"} overdue · ${absolute}`,
-      { days: daysOverdue, plural: daysOverdue === 1 ? "" : "s", date: absolute },
+      { days: daysOverdue, date: absolute },
     );
   }
   const daysUntil = -differenceInDays(plannedPublishAt, now);

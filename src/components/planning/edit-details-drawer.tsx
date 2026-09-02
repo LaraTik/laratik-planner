@@ -81,12 +81,12 @@ export function EditDetailsDrawer({
       </DialogTrigger>
       <DialogContent
         // Override the centered `DialogContent` default to
-        // pin the panel to the right edge. We also widen it
+        // pin the panel to the inline end edge. We also widen it
         // to a comfortable reading width on desktop; the form
         // itself uses `space-y-4` and the page-level spacing
         // is preserved by the `<form>` element inside
         // `EditIdeaForm`.
-        className="end-0 top-0 bottom-0 left-auto h-screen max-h-screen w-full max-w-xl translate-x-0 translate-y-0 overflow-y-auto rounded-none border-y-0 border-s border-e-0 p-6 sm:rounded-none"
+        className="start-auto end-0 top-0 bottom-0 h-screen max-h-screen w-full max-w-xl translate-x-0 translate-y-0 overflow-y-auto rounded-none border-y-0 border-s border-e-0 p-6 sm:rounded-none"
         data-testid="edit-details-drawer"
       >
         <DialogHeader>

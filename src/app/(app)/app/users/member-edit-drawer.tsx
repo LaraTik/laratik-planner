@@ -129,8 +129,8 @@ export function MemberEditDrawer({
       }}
     >
       <DialogContent
-        // Right-side slide-in (override the centered default)
-        className="bg-surface fixed end-0 top-0 bottom-0 left-auto z-50 flex h-full w-full max-w-[560px] translate-x-0 translate-y-0 flex-col gap-0 overflow-y-auto rounded-none border-s border-e-0 border-t-0 border-b-0 p-0 shadow-xl"
+        // Inline-end slide-in (override the centered default)
+        className="bg-surface fixed start-auto end-0 top-0 bottom-0 z-50 flex h-full w-full max-w-[560px] translate-x-0 translate-y-0 flex-col gap-0 overflow-y-auto rounded-none border-s border-e-0 border-t-0 border-b-0 p-0 shadow-xl"
         data-testid="member-edit-drawer"
       >
         {subject ? (

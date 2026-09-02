@@ -1,5 +1,3 @@
-import "server-only";
-
 import { type LocaleCode } from "@/lib/i18n/locales";
 
 /**

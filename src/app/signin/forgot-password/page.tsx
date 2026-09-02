@@ -38,7 +38,10 @@ const ForgotEmailSchema = z.object({
  * is intentionally identical whether or not the user exists, so the
  * page can't be used to enumerate accounts.
  */
-export const metadata = { title: "Reset your password" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("auth.forgot.title") };
+}
 
 async function requestResetAction(formData: FormData) {
   "use server";

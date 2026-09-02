@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { LocaleCode } from "@/lib/i18n/locales";
 import { resolveActiveLocale } from "@/lib/i18n/resolve-active-locale";
 import { makeTranslator } from "@/messages";
 
@@ -28,7 +29,7 @@ import { makeTranslator } from "@/messages";
  */
 export async function tForActive(): Promise<{
   t: ReturnType<typeof makeTranslator>;
-  code: string;
+  code: LocaleCode;
   dir: "ltr" | "rtl";
   source: "user" | "cookie" | "fallback";
 }> {
