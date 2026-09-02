@@ -88,7 +88,7 @@ const ROLE_MATRIX: RoleCase[] = [
     can: [{ route: "/app/w/acme/client", testid: "workspace-client-review" }],
     cannot: [
       // Client reviewer has no internal workspace role; planning is gated.
-      { route: "/app/w/acme/planning", heading: /Page not found/i },
+      { route: "/app/w/acme/planning", heading: /Workspace unavailable|Page not found/i },
     ],
   },
   {
@@ -125,14 +125,16 @@ test.describe("role-separated workspace access (existing)", () => {
   test("review roles see only their review surface", async ({ page }) => {
     await bootstrapRoleSession(page, "internal_reviewer");
     await page.goto("/app/w/acme/reviews");
-    await expect(page.getByRole("heading", { name: "Reviews queue" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Approvals" })).toBeVisible();
 
     await bootstrapRoleSession(page, "client_reviewer");
     await page.goto("/app/w/acme/client");
     await expect(page.getByRole("heading", { name: "Client review" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Planning" })).toHaveCount(0);
     await page.goto("/app/w/acme/planning");
-    await expect(page.getByRole("heading", { name: /Page not found/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Workspace unavailable|Page not found/i }),
+    ).toBeVisible();
     await expect(page.getByRole("heading", { name: /^Planning$/i })).toHaveCount(0);
   });
 

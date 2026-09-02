@@ -21,8 +21,30 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  *  - sign-out-button       the submit button
  *  - sign-out-menuitem     the menuitem variant's submit
  */
-export function SignOutForm({ variant = "button" }: { variant?: "button" | "menuitem" }) {
+export function SignOutForm({
+  variant = "button",
+  label,
+  testId,
+}: {
+  variant?: "button" | "menuitem" | "link";
+  label?: React.ReactNode;
+  testId?: string;
+}) {
   const t = useLocaleT();
+  const actionLabel = label ?? t("account.signOutAction");
+  if (variant === "link") {
+    return (
+      <form action={signOutAction} data-testid="sign-out-form">
+        <button
+          type="submit"
+          data-testid={testId}
+          className="text-fg-muted text-label hover:text-fg-secondary focus-visible:ring-focus-ring inline-block min-h-0 cursor-pointer rounded-sm px-1 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
+        >
+          {actionLabel}
+        </button>
+      </form>
+    );
+  }
   if (variant === "menuitem") {
     return (
       <form action={signOutAction} data-testid="sign-out-form">
@@ -33,7 +55,7 @@ export function SignOutForm({ variant = "button" }: { variant?: "button" | "menu
           className="text-body text-fg-primary hover:bg-surface-subtle flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 text-start font-semibold"
         >
           <LogOut className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-          {t("account.signOutAction")}
+          {actionLabel}
         </button>
       </form>
     );
@@ -42,7 +64,7 @@ export function SignOutForm({ variant = "button" }: { variant?: "button" | "menu
     <form action={signOutAction} data-testid="sign-out-form">
       <Button type="submit" variant="destructive" data-testid="sign-out-button">
         <LogOut className="h-4 w-4" aria-hidden="true" />
-        {t("account.signOutAction")}
+        {actionLabel}
       </Button>
     </form>
   );

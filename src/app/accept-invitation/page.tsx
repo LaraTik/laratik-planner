@@ -4,25 +4,19 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { SignOutForm } from "@/app/(app)/app/account/sign-out-form";
 
 /**
  * "Not you? Sign out instead" — escape hatch rendered on every
  * non-redirect state of the invitation-accept flow. If a hijacked
  * cookie lands here, the legitimate user can leave without
  * devtools. Mirrors the same escape added to /set-password
- * (15f9f6d). The proxy allowlist (src/proxy.ts) already permits
- * /signout.
+ * (15f9f6d).
  */
 function SignOutLink({ label }: { label: string }) {
   return (
     <div className="mt-4">
-      <Link
-        href="/signout"
-        className="text-fg-muted text-label hover:text-fg-secondary focus-visible:ring-focus-ring inline-block rounded-sm focus:outline-none focus-visible:ring-2"
-        data-testid="accept-invitation-signout-link"
-      >
-        {label}
-      </Link>
+      <SignOutForm variant="link" label={label} testId="accept-invitation-signout-link" />
     </div>
   );
 }

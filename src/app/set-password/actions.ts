@@ -64,7 +64,12 @@ export async function setOwnPasswordAction(
   if (!session?.user?.id) {
     return { error: t("auth.firstLoginSetPassword.notSignedIn") };
   }
-  if (!session.user.mustChangePassword) {
+  const [user] = await db
+    .select({ mustChangePassword: users.mustChangePassword })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+  if (!user?.mustChangePassword) {
     // Defensive: the middleware should have routed this user away
     // from /set-password. If they got here anyway, don't let them
     // re-run the flow.

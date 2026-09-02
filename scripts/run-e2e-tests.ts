@@ -1,4 +1,7 @@
 import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 if (!databaseUrl) {
@@ -20,6 +23,7 @@ const port = process.env.PORT ?? "3011";
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
 const testOnlyAuthSecret = "laratik-e2e-auth-secret-not-for-production-2026";
 const testOnlyAgencyCookieSecret = "laratik-e2e-agency-cookie-secret-not-for-production-2026";
+const e2eUploadsDir = mkdtempSync(join(tmpdir(), "laratik-planner-e2e-uploads-"));
 const env: NodeJS.ProcessEnv = {
   ...process.env,
   DATABASE_URL: databaseUrl,
@@ -35,12 +39,20 @@ const env: NodeJS.ProcessEnv = {
   // script or inherits these values.
   AUTH_SECRET: process.env.AUTH_SECRET ?? testOnlyAuthSecret,
   AGENCY_COOKIE_SECRET: process.env.AGENCY_COOKIE_SECRET ?? testOnlyAgencyCookieSecret,
+  // The readiness probe verifies the upload volume as well as Postgres.
+  // Give isolated browser runs a disposable writable volume so the probe
+  // exercises the real contract without touching /data/uploads.
+  UPLOADS_DIR: process.env.UPLOADS_DIR ?? e2eUploadsDir,
 };
 
-for (const [command, args] of [
-  ["pnpm", ["db:migrate"]],
-  ["pnpm", ["exec", "playwright", "test", ...testArgs]],
-] as const) {
-  const result = spawnSync(command, args, { env, stdio: "inherit" });
-  if (result.status !== 0) process.exit(result.status ?? 1);
+try {
+  for (const [command, args] of [
+    ["pnpm", ["db:migrate"]],
+    ["pnpm", ["exec", "playwright", "test", ...testArgs]],
+  ] as const) {
+    const result = spawnSync(command, args, { env, stdio: "inherit" });
+    if (result.status !== 0) process.exit(result.status ?? 1);
+  }
+} finally {
+  rmSync(e2eUploadsDir, { recursive: true, force: true });
 }

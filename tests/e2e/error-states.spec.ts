@@ -24,7 +24,7 @@ test.describe("Error states", () => {
     // No bootstrap — no session cookie
     await page.goto("/app");
     await expect(page).toHaveURL(/\/signin/);
-    await expect(page.getByRole("heading", { name: /^Sign in$/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Sign in to your workspace/i })).toBeVisible();
     await expect(page.getByText(/Invitation-only access/i)).toBeVisible();
   });
 

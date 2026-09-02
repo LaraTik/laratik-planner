@@ -142,6 +142,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     const reviewerPage = await reviewerContext.newPage();
     const designerPage = await designerContext.newPage();
     const publisherPage = await publisherContext.newPage();
+    let designerSeeded: SeedResult;
 
     try {
       // ─── 1. Planner: create a draft ───
@@ -209,7 +210,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       const designerSeedContext = await context.browser()!.newContext();
       const designerSeedPage = await designerSeedContext.newPage();
       try {
-        await bootstrapRoleSession(designerSeedPage, "designer");
+        designerSeeded = await bootstrapRoleSession(designerSeedPage, "designer");
       } finally {
         await designerSeedContext.close();
       }
@@ -233,6 +234,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         // selection, so we can confirm without picking.
         const confirmBtn = managerPage.getByTestId("assign-designer-confirm");
         await expect(confirmBtn).toBeVisible({ timeout: 10_000 });
+        await managerPage.getByTestId("assign-designer-select").selectOption(designerSeeded.userId);
         await confirmBtn.click();
         // Real status assertion: the workflow bar's "current" badge
         // (the only element with `data-testid="status-current"`)

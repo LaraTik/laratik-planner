@@ -72,7 +72,12 @@ export async function signInDevUser(input: DevSignInInput): Promise<DevSignInRes
 
   // Find or create the user. Email-verified at sign-in time.
   const existing = await db
-    .select({ id: users.id, role: users.role, name: users.name })
+    .select({
+      id: users.id,
+      role: users.role,
+      name: users.name,
+      mustChangePassword: users.mustChangePassword,
+    })
     .from(users)
     .where(sql`lower(${users.email}) = ${email}`)
     .limit(1);
@@ -84,8 +89,10 @@ export async function signInDevUser(input: DevSignInInput): Promise<DevSignInRes
   const name = input.name?.trim() || existing[0]?.name || email.split("@")[0]!;
 
   let userId: string;
+  let mustChangePassword = false;
   if (existing[0]) {
     userId = existing[0].id;
+    mustChangePassword = existing[0].mustChangePassword === true;
     // Keep role in sync (idempotent for E2E and dev re-signs)
     if (existing[0].role !== role) {
       await db.update(users).set({ role }).where(eq(users.id, userId));
@@ -110,6 +117,7 @@ export async function signInDevUser(input: DevSignInInput): Promise<DevSignInRes
       sub: userId,
       id: userId,
       role,
+      mustChangePassword,
       email,
       name,
     },

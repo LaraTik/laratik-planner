@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
 import { SetPasswordForm, type FirstLoginSetPasswordCopy } from "./set-password-form";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { SignOutForm } from "@/app/(app)/app/account/sign-out-form";
 
 /**
  * First-login password reset page.
@@ -61,13 +61,11 @@ export default async function SetPasswordPage() {
         </div>
         <SetPasswordForm copy={copy} />
         <div className="text-center">
-          <Link
-            href="/signout"
-            className="text-fg-muted text-label hover:text-fg-secondary focus-visible:ring-focus-ring inline-block rounded-sm focus:outline-none focus-visible:ring-2"
-            data-testid="set-password-signout-link"
-          >
-            {t("auth.firstLoginSetPassword.signOut")}
-          </Link>
+          <SignOutForm
+            variant="link"
+            label={t("auth.firstLoginSetPassword.signOut")}
+            testId="set-password-signout-link"
+          />
         </div>
       </div>
     </main>

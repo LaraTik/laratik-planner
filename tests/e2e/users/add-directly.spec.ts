@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { bootstrapTestSession } from "../_helpers";
+import { bootstrapTestSession, setAuthCookie } from "../_helpers";
 
 /**
  * E2E tests for the "Add directly" tab on /app/users.
@@ -35,7 +35,7 @@ test.describe("User Management — Add directly flow", () => {
     await page.getByTestId("users-tab-add").click();
 
     const newEmail = `e2e-add-${Date.now()}@laratik.local`;
-    await page.getByLabel("Email", { exact: true }).fill(newEmail);
+    await page.getByRole("textbox", { name: /^Email/i }).fill(newEmail);
     await page.getByLabel("Name (optional)").fill("E2E Added User");
 
     // Click "Generate" to autofill a strong password
@@ -47,7 +47,7 @@ test.describe("User Management — Add directly flow", () => {
     const strength = page.getByTestId("add-directly-strength-meter");
     await expect(strength).toHaveAttribute("data-strength", /^(Strong|Very strong)$/);
 
-    await page.getByRole("button", { name: /Create user/i }).click();
+    await page.getByRole("button", { name: /Add user/i }).click();
 
     // Success strip
     const reveal = page.getByTestId("add-directly-reveal");
@@ -66,7 +66,7 @@ test.describe("User Management — Add directly flow", () => {
     await page.goto("/app/users");
     await page.getByTestId("users-tab-add").click();
 
-    await page.getByLabel("Email", { exact: true }).fill(`weak-${Date.now()}@laratik.local`);
+    await page.getByRole("textbox", { name: /^Email/i }).fill(`weak-${Date.now()}@laratik.local`);
     // Type a password that the form-level meter would reject.
     // We can't easily type one shorter than 8 chars because the
     // server's zod schema would also reject it; the goal here is to
@@ -98,9 +98,9 @@ test.describe("First-login redirect (mustChangePassword)", () => {
     await page.getByTestId("users-tab-add").click();
 
     const newEmail = `redirect-${Date.now()}@laratik.local`;
-    await page.getByLabel("Email", { exact: true }).fill(newEmail);
+    await page.getByRole("textbox", { name: /^Email/i }).fill(newEmail);
     await page.getByTestId("add-directly-generate").click();
-    await page.getByRole("button", { name: /Create user/i }).click();
+    await page.getByRole("button", { name: /Add user/i }).click();
 
     // Wait for the reveal strip and capture the password
     const reveal = page.getByTestId("add-directly-reveal");
@@ -108,25 +108,11 @@ test.describe("First-login redirect (mustChangePassword)", () => {
     const tempPassword = await page.getByTestId("add-directly-reveal-password").inputValue();
     expect(tempPassword.length).toBeGreaterThanOrEqual(8);
 
-    // Sign out the admin and sign in as the new user
-    await page.request
-      .post("/api/auth/signout", { data: { csrfToken: "" } })
-      .catch(() => undefined);
-    await page.goto("/signin");
-    await page.evaluate(() => {
-      // Clear cookies via the document so the next sign-in starts clean
-      document.cookie.split(";").forEach((c) => {
-        const eqPos = c.indexOf("=");
-        const name = eqPos > -1 ? c.substring(0, eqPos) : c;
-        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-      });
-    });
-
-    // The dev sign-in endpoint only signs in already-existing users
-    // matching the email; the new user was just created by the
-    // action, so it should be findable.
-    await page.goto("/signin");
-    await page.request.post("/api/dev/sign-in", { data: { email: newEmail, role: "user" } });
+    // Replace the admin's HttpOnly cookie with a browser cookie for the
+    // newly created user. This avoids relying on document.cookie, which
+    // cannot clear HttpOnly session cookies.
+    await page.context().clearCookies();
+    await setAuthCookie(page, page.request, { email: newEmail, role: "user" });
 
     // Visit any protected route; the middleware should redirect to /set-password
     await page.goto("/app");
@@ -156,25 +142,16 @@ test.describe("First-login redirect (mustChangePassword)", () => {
     await page.getByTestId("users-tab-add").click();
 
     const newEmail = `signout-${Date.now()}@laratik.local`;
-    await page.getByLabel("Email", { exact: true }).fill(newEmail);
+    await page.getByRole("textbox", { name: /^Email/i }).fill(newEmail);
     await page.getByTestId("add-directly-generate").click();
-    await page.getByRole("button", { name: /Create user/i }).click();
+    await page.getByRole("button", { name: /Add user/i }).click();
     await expect(page.getByTestId("add-directly-reveal")).toBeVisible({
       timeout: 10_000,
     });
 
     // Sign in as the new user; middleware redirects to /set-password
-    await page.evaluate(() => {
-      document.cookie.split(";").forEach((c) => {
-        const eqPos = c.indexOf("=");
-        const name = eqPos > -1 ? c.substring(0, eqPos) : c;
-        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-      });
-    });
-    await page.goto("/signin");
-    await page.request.post("/api/dev/sign-in", {
-      data: { email: newEmail, role: "user" },
-    });
+    await page.context().clearCookies();
+    await setAuthCookie(page, page.request, { email: newEmail, role: "user" });
     await page.goto("/app");
     await page.waitForURL(/\/set-password/, { timeout: 10_000 });
 

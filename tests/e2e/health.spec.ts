@@ -30,7 +30,9 @@ test.describe("GET /api/health", () => {
 
   test("home page renders the production entry point", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "laratik-planner" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Plan, review, and publish with clarity/i }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: /Sign in to StudioFlow/i })).toBeVisible();
   });
 });

@@ -37,35 +37,28 @@ export function hashPassword(plain: string): Promise<string> {
  * "Add directly" admin flow (see `lib/auth/user-creation.ts`).
  *
  * 16 characters. Composition is guaranteed to contain at least
- * one letter and one digit (the minimum bar for `isPasswordStrong`).
- * Symbols are sprinkled in as the random sampling draws them.
+ * one uppercase letter, one lowercase letter, one digit, and one symbol.
  *
  * **Why composition-by-construction (not random sampling alone):**
  * the previous implementation sampled 16 chars from a 70-char
- * alphabet uniformly. With a 10/70 ≈ 14% chance per char of being
- * a digit, the chance of a 16-char string having zero digits is
- * (60/70)^16 ≈ 9%. Empirically, ~1 in 11 generated passwords had
- * no digit and would be rejected by `isPasswordStrong`. The fix
- * reserves one slot for a guaranteed letter and one for a
- * guaranteed digit; the remaining 14 slots draw from the full
- * alphabet. The final string is shuffled so the position of the
- * guaranteed letter/digit is not predictable from the outside.
+ * alphabet uniformly. The generator reserves one slot for each
+ * character class, then draws the remaining 12 slots from the full
+ * alphabet. The final string is shuffled so the required positions
+ * are not predictable from the outside.
  *
  * Entropy: 16 chars from a 70-char alphabet is ~99 bits of
- * effective entropy even after the slot reservation (the two
- * guaranteed slots are 52*10 = 520 ≈ 9 bits of constraint, which
- * leaves 16*log2(70) - 9 ≈ 90 bits, well above the 60-bit floor
- * any sane policy needs). `randomBytes(17)` over-allocates to
- * give the Fisher-Yates shuffle a 256-way key (the shuffle is
- * uniformly random over the 16! permutations modulo 256 ≈ 0.002%
- * of permutations; the password composition is unaffected).
+ * effective entropy remains well above the 60-bit floor any sane
+ * policy needs. `randomBytes(32)` supplies independent bytes for
+ * the 16 character choices and the Fisher-Yates shuffle.
  */
 export function generateStrongPassword(): string {
-  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lowercase = "abcdefghijklmnopqrstuvwxyz";
+  const letters = uppercase + lowercase;
   const digits = "0123456789";
   const symbols = "!@#$%^&*";
   const fullAlphabet = letters + digits + symbols; // 70 chars
-  const bytes = randomBytes(17); // 16 chars + 1 shuffle key
+  const bytes = randomBytes(32);
   const chars: string[] = [];
   // Helper: index a string with a byte position. The `!` non-null
   // assertion + `as string` cast are both needed under
@@ -74,20 +67,18 @@ export function generateStrongPassword(): string {
   // `chars.push(string)` as a non-overlap).
   const charAt = (alphabet: string, byteIdx: number): string =>
     alphabet[bytes[byteIdx]! % alphabet.length] as string;
-  // 14 random from the full alphabet
-  for (let i = 0; i < 14; i++) {
+  // 12 random chars from the full alphabet
+  for (let i = 0; i < 12; i++) {
     chars.push(charAt(fullAlphabet, i));
   }
-  // 1 guaranteed letter
-  chars.push(charAt(letters, 14));
-  // 1 guaranteed digit
-  chars.push(charAt(digits, 15));
-  // Fisher-Yates shuffle so the guaranteed letter/digit positions
-  // are not predictable. One byte of shuffle key biases the
-  // distribution slightly (~1/256 chance of an off-by-one) but the
-  // password composition is still guaranteed.
+  // Guarantee every class required for a strong generated password.
+  chars.push(charAt(uppercase, 12));
+  chars.push(charAt(lowercase, 13));
+  chars.push(charAt(digits, 14));
+  chars.push(charAt(symbols, 15));
+  // Fisher-Yates shuffle so the required positions are not predictable.
   for (let i = chars.length - 1; i > 0; i--) {
-    const j = bytes[16]! % (i + 1);
+    const j = bytes[16 + (15 - i)]! % (i + 1);
     // Capture each side before the swap so the index access types
     // stay narrow (no `string | undefined` from
     // `noUncheckedIndexedAccess`).

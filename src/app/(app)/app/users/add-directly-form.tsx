@@ -167,12 +167,16 @@ export function AddDirectlyForm({
                   // length. Generated password is then re-typed into
                   // the controlled input so the strength meter
                   // reflects it.
-                  const alphabet =
-                    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+                  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                  const lowercase = "abcdefghijklmnopqrstuvwxyz";
+                  const digits = "0123456789";
+                  const symbols = "!@#$%^&*";
+                  const alphabet = uppercase + lowercase + digits + symbols;
                   const bytes = new Uint8Array(24);
                   crypto.getRandomValues(bytes);
-                  let out = "";
-                  for (let i = 0; i < 16; i++) {
+                  const required = [uppercase, lowercase, digits, symbols];
+                  let out = required.map((set, index) => set[bytes[index]! % set.length]).join("");
+                  for (let i = required.length; i < 16; i++) {
                     out += alphabet[bytes[i]! % alphabet.length];
                   }
                   setPassword(out);

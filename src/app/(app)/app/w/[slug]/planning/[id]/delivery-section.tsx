@@ -61,7 +61,7 @@ export function DeliverySection({
   viewerIsClient?: boolean;
 }) {
   const t = useLocaleT();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(deliveries.length === 0);
   const [pending, start] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
