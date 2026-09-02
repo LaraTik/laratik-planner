@@ -1,6 +1,6 @@
 # Performance Evidence Report
 
-Status: protocol defined; measurements pending
+Status: static-build inventory captured; browser and database measurements pending
 
 This document is the repeatable performance-evidence contract for the LaraTik
 Planner release candidate. It complements `docs/testing/strategy.md` and does
@@ -22,6 +22,30 @@ where the route is localized. Record the browser version, OS, network profile,
 database fixture, commit SHA, date, and whether the run is local or hosted.
 
 ## Required evidence
+
+### Captured static-build inventory
+
+Captured 2026-09-02 from `pnpm verify` at source commit `bf151a0` using
+`next build --webpack` on the local macOS runner. The generated `.next/static`
+directory contains:
+
+| Asset class | Files | Raw bytes | Notes                                                |
+| ----------- | ----: | --------: | ---------------------------------------------------- |
+| JavaScript  |   173 | 3,123,945 | Includes shared framework/runtime and route chunks   |
+| CSS         |     3 |   172,264 | Includes the global token sheet and font-face rules  |
+| WOFF2 fonts |    95 | 2,401,240 | Includes the app fonts plus the Brand Kit catalog    |
+| Source maps |     0 |         0 | Production static output does not expose client maps |
+
+Largest route/shared JavaScript files were 492,216 bytes (shared chunk),
+361,603 bytes (shared chunk), 234,749 bytes (planning detail), 51,010 bytes
+(settings), and 35,419 bytes (channels). The build also emits 147 font-face
+rules across two CSS files; the Brand Kit catalog imports 14 font families at
+module load. This is a measured optimization candidate: verify actual network
+requests on the Brand Kit route, then prefer route-local or interaction-triggered
+font loading if the catalog is included in initial critical CSS.
+
+This inventory is supporting evidence only. It does not establish browser
+LCP/INP/CLS or prove that every emitted font is downloaded on first view.
 
 ### Browser experience
 
@@ -74,7 +98,8 @@ production.
 ## Current repository status
 
 The repository currently has the prerequisites for this protocol—production
-build, disposable database, isolated browser runner, and Stitch route manifest—
-but no completed Lighthouse/WebPageTest report, route-level bundle budget, or
-EXPLAIN ANALYZE evidence. These remain release-candidate tasks and should not be
-marked `Verified` from build output alone.
+build, disposable database, isolated browser runner, Stitch route manifest, and
+the static-build inventory above—but no completed Lighthouse/WebPageTest report,
+route-level bundle budget, or `EXPLAIN ANALYZE` evidence. These remain
+release-candidate tasks and should not be marked `Verified` from build output
+alone.
