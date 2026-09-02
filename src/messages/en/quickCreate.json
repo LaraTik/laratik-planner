@@ -4,5 +4,21 @@
   "deniedTitle": "Creation access required",
   "deniedDescription": "Only workspace managers and content planners can create ideas.",
   "backToPlanning": "← Back to Planning",
-  "metaTitle": "Quick Create · {slug}"
+  "metaTitle": "Quick Create · {slug}",
+  "form": {
+    "title": "Title",
+    "titleHint": "Short, descriptive.",
+    "titlePlaceholder": "Spring drop teaser",
+    "format": "Format",
+    "plannedPublish": "Planned publish",
+    "briefSummary": "Brief",
+    "briefOptional": "Brief (optional)",
+    "briefHint": "Goal, audience, key points.",
+    "briefPlaceholder": "What's the message? Who's it for?",
+    "channels": "Channels",
+    "channelsDefault": "Channels (default: all active)",
+    "createDraft": "Create draft",
+    "creating": "Creating…",
+    "cancel": "Cancel"
+  }
 }

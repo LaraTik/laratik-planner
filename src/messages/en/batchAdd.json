@@ -1,4 +1,15 @@
 {
   "title": "Batch add",
-  "description": "Paste up to 50 ideas. All active channels and workspace defaults are applied automatically. The batch is atomic."
+  "description": "Paste up to 50 ideas. All active channels and workspace defaults are applied automatically. The batch is atomic.",
+  "form": {
+    "rowsLabel": "One idea per line",
+    "placeholder": "Launch teaser | short_form_video | 2026-09-01T09:00:00Z | Reveal the new collection\nBehind the scenes | story | 2026-09-03T12:00:00Z | A walkthrough of the studio\n# advanced — caption, hashtags, location:\nSpring drop | static_post | 2026-09-05T09:00:00Z | The reveal | Pre-order now | #spring #drop | Dubai Mall|fb-123",
+    "rowOne": "{count} row parsed",
+    "rowMany": "{count} rows parsed",
+    "withErrors": "{count} with errors",
+    "rowError": "Row {line}",
+    "createDrafts": "Create drafts",
+    "creating": "Creating…",
+    "cancel": "Cancel"
+  }
 }

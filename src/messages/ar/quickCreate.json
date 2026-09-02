@@ -4,5 +4,21 @@
   "deniedTitle": "صلاحية الإنشاء مطلوبة",
   "deniedDescription": "يمكن لمشرفي مساحة العمل ومخطّطي المحتوى فقط إنشاء الأفكار.",
   "backToPlanning": "← العودة إلى التخطيط",
-  "metaTitle": "إنشاء سريع · {slug}"
+  "metaTitle": "إنشاء سريع · {slug}",
+  "form": {
+    "title": "العنوان",
+    "titleHint": "قصير وواضح.",
+    "titlePlaceholder": "تشويق لإطلاق المجموعة الجديدة",
+    "format": "التنسيق",
+    "plannedPublish": "النشر المخطط له",
+    "briefSummary": "الوصف المختصر",
+    "briefOptional": "الوصف المختصر (اختياري)",
+    "briefHint": "الهدف والجمهور والنقاط الرئيسية.",
+    "briefPlaceholder": "ما الرسالة؟ ولمن هي؟",
+    "channels": "القنوات",
+    "channelsDefault": "القنوات (افتراضيًا: جميع النشطة)",
+    "createDraft": "إنشاء مسودة",
+    "creating": "جارٍ الإنشاء…",
+    "cancel": "إلغاء"
+  }
 }

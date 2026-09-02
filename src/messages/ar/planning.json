@@ -37,6 +37,20 @@
   "frozenStatusDescription": "حالتها الحالية {status} — وبمجرد انتقال الفكرة إلى ما بعد المسودة / التعديلات المطلوبة، يتوقف العنوان والتنسيق والجدول والقنوات حتى يعتمد عليها المراجعون.",
   "editIdeaTitle": "تعديل الفكرة",
   "editIdeaDescription": "أجرِ تغييرات على فكرة في حالة المسودة أو طُلب تعديلها.",
+  "editForm": {
+    "title": "العنوان",
+    "titleHint": "قصير وواضح.",
+    "format": "التنسيق",
+    "plannedPublish": "النشر المخطط له",
+    "briefSummary": "الوصف المختصر",
+    "briefOptional": "الوصف المختصر (اختياري)",
+    "briefHint": "الهدف والجمهور والنقاط الرئيسية.",
+    "briefPlaceholder": "ما الرسالة؟ ولمن هي؟",
+    "channels": "القنوات",
+    "saveChanges": "حفظ التغييرات",
+    "saving": "جارٍ الحفظ…",
+    "cancel": "إلغاء"
+  },
   "comingSoon": "قريبًا",
   "loadingListAria": "جارٍ تحميل قائمة التخطيط",
   "nextAction": {
