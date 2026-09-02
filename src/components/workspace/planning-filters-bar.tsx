@@ -127,7 +127,7 @@ export function PlanningFiltersBar({
 
   return (
     <div className="space-y-2" data-testid="planning-filters-bar">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         <div className="relative min-w-0">
           <Search
             className="text-fg-muted pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
