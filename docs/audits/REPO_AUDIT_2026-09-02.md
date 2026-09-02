@@ -2,7 +2,7 @@
 
 Date: 2026-09-02  
 Broad browser/evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4`  
-Current audited source commit: `fdc304e9fdbeb7582f85d046f2dd531d7ddd7cac` (`main`, clean)
+Current audited source commit: `75081f075da9fd91d45ef5bb1667284a80b3fa50` (`main`, clean)
 Audit report update: committed after this evidence capture
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
@@ -12,12 +12,13 @@ responsive, performance, typography, motion, and data-display guidance.
 
 The repository has a strong production foundation and a broad quality harness.
 The current checkpoint passes formatting, ESLint, strict TypeScript, the full
-unit suite, and a clean production build. The earlier exact browser baseline
-also passed 192/192 isolated Chromium tests and the complete mobile workflow.
-Both mobile browser engines now pass the complete cross-role content workflow.
-It is not yet final-production-ready because the complete Stitch visual suite
-still has 51 baseline deltas, repeatable performance evidence is incomplete,
-and independent visual/accessibility review remains open.
+unit suite, and a clean production build. Exact-HEAD accessibility coverage is
+29/29: 28 public/authenticated axe route checks plus the Arabic/RTL shell
+contract. The earlier browser baseline also passed 192/192 isolated Chromium
+tests and the complete mobile workflow. It is not yet final-production-ready
+because the Stitch visual suite still has substantial reference deltas,
+repeatable performance evidence is incomplete, and independent visual review
+remains open.
 
 The canonical product visual source is `designs/stitch/` and the tokens in
 `src/app/globals.css`. UI/UX Pro Max is used here as a review framework; its
@@ -30,16 +31,16 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | Prettier               | Pass                  | `pnpm format:check`                                                            |
 | ESLint                 | Pass                  | `pnpm lint`                                                                    |
 | TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                   |
-| Unit tests             | Pass                  | 305 files; 3,056 passed; 4 todo at current HEAD                                |
+| Unit tests             | Pass                  | 308 files; 3,068 passed; 4 todo at current HEAD                                |
 | Production build       | Pass                  | `pnpm build` at current HEAD                                                   |
 | Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                        |
 | Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                               |
-| Focused E2E/a11y       | Pass                  | 24/24 a11y routes; 6/6 Brand Kit journeys; focused Publishing + Settings axe   |
+| Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow       |
 | Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe |
 | Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                   |
 | Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths  |
-| Visual regression      | Partial / investigate | 61/112 pass; 51 Stitch baseline deltas; do not update snapshots blindly        |
-| Working tree           | Clean                 | Current audited HEAD: `fdc304e9fdbeb7582f85d046f2dd531d7ddd7cac`               |
+| Visual regression      | Partial / investigate | Broad run 52/112; exact-HEAD planning slice 2/24; do not update blindly        |
+| Working tree           | Clean                 | Current audited source HEAD: `75081f075da9fd91d45ef5bb1667284a80b3fa50`        |
 
 ## Repository inventory
 
@@ -73,15 +74,17 @@ handled before unrelated cleanup.
    exceptions are compatibility/fallback routes: four legacy settings redirects
    and the absorbed publish redirect.
 3. **User-facing copy is not fully catalog-backed.** This audit pass closed the
-   planning preview, workflow stepper, approval timeline, delivery-version card,
-   and AI launcher in commits `18b0da1`, `55a8c3c`, `fdc304e`, and `df2d994`.
-   Remaining hotspots include the larger AI assistance body, workflow-progress
-   explanations, library forms, quick create/edit, publish forms, social
-   analytics, and AI diagnostic UI. The static scan must be repeated after each
-   localization batch because dynamic catalog keys are not fully discoverable.
-4. **Exact-HEAD visual and accessibility evidence is incomplete.** Existing
-   candidate snapshots do not replace final human comparison, keyboard,
-   screen-reader, zoom, and reduced-motion sign-off.
+   planning preview, workflow stepper and rail explanations, approval timeline,
+   delivery-version card, AI assistance surface and platform selector, and the
+   quick-create/edit/batch forms in commits `18b0da1`, `55a8c3c`, `fdc304e`,
+   `df2d994`, `b610e52`, `d3f5b28`, `64cf4c9`, and `75081f0`. Remaining hotspots
+   include library forms, publish forms, social analytics, and AI diagnostic
+   UI. The static scan must be repeated after each localization batch because
+   dynamic catalog keys are not fully discoverable.
+4. **Exact-HEAD visual review is incomplete.** Exact-HEAD axe and RTL checks
+   pass, but the visual suite still has reference deltas and the required
+   keyboard, screen-reader, zoom, and reduced-motion review is not independently
+   signed off.
 5. **Release-gate ownership is now explicit in CI.** Formatting, lint,
    typecheck, unit, migration, integration, coverage, build, and operational
    checks are server-side gates; critical E2E and visual review remain documented
@@ -126,10 +129,12 @@ handled before unrelated cleanup.
    config files, but interrupted runs can still leave a development server or
    `.next` lock behind and need a process-lifecycle fix.
 9. Reconcile the visual suite with the current canonical Stitch implementation.
-   The earlier 51 failures were structural/token deltas, especially the
-   intentionally expanded anchor-based Settings surface. The localization
-   commits also change expected copy, so the visual suite must be rerun at the
-   current HEAD before any baseline is accepted.
+   The broad isolated run produced 52 passes and 60 failures; the exact current
+   planning slice produced 2 passes and 22 failures. Representative failures
+   include planning at 768px measuring 6,305px versus a 1,469px reference, and
+   current planning/detail/new/batch copy-height differences. These require
+   route-by-route comparison against Stitch and deliberate snapshot decisions;
+   no snapshots were updated automatically.
 
 ### P3 — polish
 
@@ -214,9 +219,10 @@ diverged.
 
 Run catalog parity, scan static translation keys, review route metadata, move
 known hard-coded copy into `src/messages/{en,ar}`, and verify Server/Client
-translation boundaries. This pass completed five planning surfaces with
-Arabic rendering tests and catalog parity; the remaining hotspots above still
-need the same treatment. Then run the bilingual route matrix at the final SHA.
+translation boundaries. This pass completed the planning preview, workflow
+explanations, AI assistance, delivery cards, and planning forms with Arabic
+rendering tests and catalog parity. Exact-HEAD RTL navigation passes 1/1; the
+remaining hotspots above still need the same treatment.
 
 ### Step 4 — Strengthen component and styling boundaries
 
@@ -236,10 +242,9 @@ as the sole release protection; browser and visual evidence remain in Step 6.
 Run the disposable database migration drill, integration suite, critical E2E,
 full browser matrix, visual snapshots, axe checks, manual accessibility review,
 and performance measurements at the exact clean commit. Migration, integration,
-axe, full isolated Chromium, mobile Chrome/Safari §23, targeted cross-engine,
-and the current unit/build gates are evidenced across the recorded baselines.
-The current localization HEAD still requires a final browser/visual rerun;
-visual parity and performance evidence remain open.
+exact-HEAD axe/RTL, full isolated Chromium, mobile Chrome/Safari §23,
+targeted cross-engine, and unit/build gates are evidenced across the recorded
+baselines. Visual parity and performance evidence remain open.
 
 ### Step 7 — Reconcile operations and documentation
 
