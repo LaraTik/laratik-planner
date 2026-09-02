@@ -13,7 +13,8 @@ import {
   PenSquare,
 } from "lucide-react";
 import { DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
-import { humanize } from "@/lib/content/status";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 
 /**
  * DeliveryVersionCard — Phase 3 of the planning-workspace-v2
@@ -102,26 +103,26 @@ function deriveStatus(
 const STATUS_BADGE: Record<
   DeliveryVersionStatus,
   {
-    label: string;
+    labelKey: string;
     icon: React.ComponentType<{ className?: string }>;
     className: string;
     testId: string;
   }
 > = {
   approved: {
-    label: "Final approved",
+    labelKey: "contentDetail.deliveries.statusFinalApproved",
     icon: CheckCircle2,
     className: "text-success border-success/30 bg-success-subtle",
     testId: "delivery-version-status-approved",
   },
   awaiting: {
-    label: "Awaiting review",
+    labelKey: "contentDetail.deliveries.statusAwaitingReview",
     icon: Clock,
     className: "text-info border-info/30 bg-info-subtle",
     testId: "delivery-version-status-awaiting",
   },
   changes_requested: {
-    label: "Changes requested",
+    labelKey: "contentDetail.deliveries.statusChangesRequested",
     icon: AlertCircle,
     className: "text-warning border-warning/30 bg-warning-subtle",
     testId: "delivery-version-status-changes-requested",
@@ -136,6 +137,8 @@ export function DeliveryVersionCard({
   onApprove,
   approving = false,
 }: DeliveryVersionCardProps) {
+  const locale = useLocaleCode();
+  const t = useLocaleT();
   const [expanded, setExpanded] = useState(version.isFinalApproved);
   const status = deriveStatus(version, contentStatus);
   const badge = STATUS_BADGE[status];
@@ -161,17 +164,22 @@ export function DeliveryVersionCard({
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-body text-fg-primary font-semibold">
-              {version.description || (isV1 ? "First version" : `Version ${version.versionNumber}`)}
+              {version.description ||
+                (isV1
+                  ? t("contentDetail.deliveries.firstVersion")
+                  : t("contentDetail.deliveries.versionNumber", {
+                      count: version.versionNumber,
+                    }))}
             </p>
             <p className="text-label text-fg-muted">
               <time dateTime={version.submittedAt}>
-                {new Date(version.submittedAt).toLocaleString(undefined, {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                })}
+                {formatDate(version.submittedAt, locale, DateFormat.dateTime)}
               </time>
               {!viewerIsClient && version.submittedBy.name ? (
-                <> · by {version.submittedBy.name}</>
+                <>
+                  {" "}
+                  · {t("contentDetail.deliveries.submittedBy", { name: version.submittedBy.name })}
+                </>
               ) : null}
             </p>
           </div>
@@ -181,7 +189,7 @@ export function DeliveryVersionCard({
           data-testid={badge.testId}
         >
           <BadgeIcon className="h-3.5 w-3.5" aria-hidden="true" />
-          {badge.label}
+          {t(badge.labelKey)}
         </span>
       </header>
 
@@ -211,7 +219,9 @@ export function DeliveryVersionCard({
               ) : (
                 <div className="text-fg-muted flex flex-col items-center gap-0.5 p-1 text-center">
                   <ImageIcon className="h-4 w-4" aria-hidden="true" />
-                  <span className="text-label truncate font-semibold">{humanize(l.provider)}</span>
+                  <span className="text-label truncate font-semibold">
+                    {t(`contentDetail.deliveries.providers.${l.provider}`)}
+                  </span>
                 </div>
               )}
             </li>
@@ -224,7 +234,7 @@ export function DeliveryVersionCard({
         <blockquote className="border-border bg-surface-subtle mt-3 rounded-[var(--radius-control)] border-s-2 px-3 py-2">
           <p className="text-label text-fg-muted mb-1 flex items-center gap-1 font-semibold">
             <PenSquare className="h-3 w-3" aria-hidden="true" />
-            Designer note
+            {t("contentDetail.deliveries.designerNote")}
           </p>
           <p className="text-body text-fg-secondary whitespace-pre-wrap">{version.designerNote}</p>
         </blockquote>
@@ -241,7 +251,7 @@ export function DeliveryVersionCard({
             data-testid={`delivery-version-open-assets-${version.versionNumber}`}
           >
             <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
-            Open assets
+            {t("contentDetail.deliveries.openAssets")}
             <ExternalLink className="h-3 w-3" aria-hidden="true" />
           </a>
         ) : null}
@@ -254,7 +264,7 @@ export function DeliveryVersionCard({
             data-testid={`delivery-version-preview-${version.versionNumber}`}
           >
             <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-            Preview
+            {t("contentDetail.deliveries.preview")}
             <ExternalLink className="h-3 w-3" aria-hidden="true" />
           </a>
         ) : null}
@@ -267,7 +277,9 @@ export function DeliveryVersionCard({
             data-testid={`delivery-version-approve-${version.versionNumber}`}
           >
             <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-            {approving ? "Approving…" : "Approve"}
+            {approving
+              ? t("contentDetail.deliveries.approving")
+              : t("contentDetail.deliveries.approve")}
           </button>
         ) : null}
         <button
@@ -283,7 +295,9 @@ export function DeliveryVersionCard({
           ) : (
             <DirAwareChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
           )}
-          {expanded ? "Hide details" : "View all links"}
+          {expanded
+            ? t("contentDetail.deliveries.hideDetails")
+            : t("contentDetail.deliveries.viewAllLinks")}
         </button>
       </div>
 
@@ -305,7 +319,7 @@ export function DeliveryVersionCard({
                   className="text-body text-fg-primary flex flex-wrap items-center gap-2"
                 >
                   <span className="text-label text-fg-muted bg-surface rounded-[var(--radius-control)] px-2 py-0.5 font-semibold">
-                    {humanize(l.provider)}
+                    {t(`contentDetail.deliveries.providers.${l.provider}`)}
                   </span>
                   <a
                     href={l.url}
@@ -318,14 +332,17 @@ export function DeliveryVersionCard({
                   </a>
                   {l.isPreview ? (
                     <span className="text-label text-fg-muted inline-flex items-center gap-1 font-semibold">
-                      <Eye className="h-3 w-3" aria-hidden="true" /> Preview
+                      <Eye className="h-3 w-3" aria-hidden="true" />
+                      {t("contentDetail.deliveries.preview")}
                     </span>
                   ) : null}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-body text-fg-muted italic">No links on this version.</p>
+            <p className="text-body text-fg-muted italic">
+              {t("contentDetail.deliveries.noLinks")}
+            </p>
           )}
         </div>
       ) : null}
@@ -372,10 +389,11 @@ export function DeliveryVersionList({
   onApprove,
   approvingVersionId = null,
 }: DeliveryVersionListProps) {
+  const t = useLocaleT();
   if (versions.length === 0) {
     return (
       <p className="text-body text-fg-muted italic" data-testid="delivery-version-list-empty">
-        No deliveries yet.
+        {t("contentDetail.deliveries.emptyList")}
       </p>
     );
   }

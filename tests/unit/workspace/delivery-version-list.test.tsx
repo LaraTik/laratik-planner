@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 import {
   DeliveryVersionList,
   type DeliveryVersion,
@@ -86,6 +87,22 @@ describe("DeliveryVersionCard", () => {
     expect(screen.getByTestId("delivery-version-status-changes-requested")).toHaveTextContent(
       /Changes requested/i,
     );
+  });
+
+  it("renders delivery status and controls from the active Arabic catalog", () => {
+    render(
+      <LocaleProvider locale="ar">
+        <DeliveryVersionList
+          versions={[baseVersion({ isFinalApproved: true })]}
+          contentStatus="ready_to_publish"
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByTestId("delivery-version-status-approved")).toHaveTextContent(
+      "تمت الموافقة النهائية",
+    );
+    expect(screen.getByRole("button", { name: "إخفاء التفاصيل" })).toBeInTheDocument();
   });
 
   it("hides the designer note for client viewers", () => {
