@@ -25,6 +25,7 @@ import {
   type AiCapabilityMetadata,
 } from "@/lib/ai/capabilities";
 import { DiffPreview } from "@/components/ai/diff-preview";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * AI assistance entry points on the content detail page.
@@ -80,10 +81,10 @@ function offReasonFor(
   return null;
 }
 
-const OFF_REASON_LABEL: Record<OffReason, string> = {
-  "agency-disabled": "Agency switch is off",
-  "no-key": "No AI key configured",
-  "capability-off": "Agency disabled this capability",
+const OFF_REASON_LABEL_KEY: Record<OffReason, string> = {
+  "agency-disabled": "contentDetail.aiAssistanceSurface.offReasons.agencyDisabled",
+  "no-key": "contentDetail.aiAssistanceSurface.offReasons.noKey",
+  "capability-off": "contentDetail.aiAssistanceSurface.offReasons.capabilityOff",
 };
 
 /**
@@ -95,33 +96,33 @@ const OFF_REASON_LABEL: Record<OffReason, string> = {
  */
 const CONTEXT_TOGGLES: ReadonlyArray<{
   key: "brandKit" | "campaign" | "pillars" | "channels" | "approvedContent";
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
 }> = [
   {
     key: "brandKit",
-    label: "Brand voice",
-    description: "Apply the workspace's tone / do / don't rules.",
+    labelKey: "contentDetail.aiAssistanceSurface.context.brandKitLabel",
+    descriptionKey: "contentDetail.aiAssistanceSurface.context.brandKitDescription",
   },
   {
     key: "campaign",
-    label: "Active campaign",
-    description: "Tie the rewrite to the current campaign objective.",
+    labelKey: "contentDetail.aiAssistanceSurface.context.campaignLabel",
+    descriptionKey: "contentDetail.aiAssistanceSurface.context.campaignDescription",
   },
   {
     key: "pillars",
-    label: "Content pillars",
-    description: "Reference the workspace's content pillars.",
+    labelKey: "contentDetail.aiAssistanceSurface.context.pillarsLabel",
+    descriptionKey: "contentDetail.aiAssistanceSurface.context.pillarsDescription",
   },
   {
     key: "channels",
-    label: "Target channels",
-    description: "Mention the platforms this will publish to.",
+    labelKey: "contentDetail.aiAssistanceSurface.context.channelsLabel",
+    descriptionKey: "contentDetail.aiAssistanceSurface.context.channelsDescription",
   },
   {
     key: "approvedContent",
-    label: "Approved content samples",
-    description: "Mirror the tone of recently shipped content.",
+    labelKey: "contentDetail.aiAssistanceSurface.context.approvedContentLabel",
+    descriptionKey: "contentDetail.aiAssistanceSurface.context.approvedContentDescription",
   },
 ];
 
@@ -171,6 +172,8 @@ export function AiAssistanceSection({
    */
   currentBrief: string;
 }) {
+  const t = useLocaleT();
+  const translatePath = (...segments: string[]) => t(segments.join("."));
   const [draft, setDraft] = React.useState<DraftState | null>(null);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -220,7 +223,10 @@ export function AiAssistanceSection({
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
-        setError(body.error ?? `Request failed (${res.status})`);
+        setError(
+          body.error ??
+            t("contentDetail.aiAssistanceSurface.requestFailed", { status: res.status }),
+        );
         return;
       }
       const body = (await res.json()) as {
@@ -308,7 +314,7 @@ export function AiAssistanceSection({
       <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Sparkles className="text-primary h-5 w-5" aria-hidden="true" />
-          <CardTitle>AI assistance</CardTitle>
+          <CardTitle>{t("contentDetail.aiAssistance")}</CardTitle>
         </div>
         {/* The previous "Status (read-only)" link was a developer
             affordance. The agency admin can still open the
@@ -321,11 +327,11 @@ export function AiAssistanceSection({
             className="text-label text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
             data-testid="ai-open-workspace-settings"
           >
-            AI settings
+            {t("contentDetail.aiSettings")}
           </a>
         ) : null}
       </header>
-      <CardDescription>Drafts only — the human inserts or replaces.</CardDescription>
+      <CardDescription>{t("contentDetail.aiAssistanceSurface.draftsOnly")}</CardDescription>
 
       {!agencyEnabled || !hasKey ? (
         <div
@@ -336,25 +342,25 @@ export function AiAssistanceSection({
           <div className="flex items-start gap-2">
             <AlertTriangle className="text-warning mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <div className="min-w-0 flex-1">
-              <p className="font-semibold">AI assistance is currently off</p>
+              <p className="font-semibold">{t("contentDetail.aiAssistanceSurface.currentlyOff")}</p>
               <p className="text-fg-secondary mt-1">
                 {!agencyEnabled
-                  ? "An agency admin needs to enable the AI master switch before any capability button can run."
-                  : "No AI API key is configured. The agency admin can paste one at Agency Settings → AI configuration."}
+                  ? t("contentDetail.aiAssistanceSurface.agencySwitchOff")
+                  : t("contentDetail.aiAssistanceSurface.noKeyConfigured")}
               </p>
             </div>
           </div>
           {isManager ? (
             <div className="border-border bg-surface-subtle text-label ms-6 flex flex-wrap items-center gap-2 rounded-[var(--radius-control)] border p-2">
               <span className="text-fg-secondary">
-                Need to know <em>why</em> it&apos;s off?
+                {t("contentDetail.aiAssistanceSurface.whyOff")}
               </span>
               <a
                 href="/app/agency-settings/ai"
                 className="text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
                 data-testid="ai-open-agency-config-from-banner"
               >
-                Open the AI diagnostic panel
+                {t("contentDetail.aiAssistanceSurface.openDiagnostic")}
               </a>
             </div>
           ) : null}
@@ -372,11 +378,10 @@ export function AiAssistanceSection({
             on the normal (collapsed) state is a single line that
             reads as a product affordance, not a configuration panel. */}
         <summary className="text-label text-fg-primary cursor-pointer font-semibold">
-          AI uses your brand, campaign and content context
+          {t("contentDetail.aiAssistanceSurface.contextSummary")}
         </summary>
         <p className="text-label text-fg-muted mt-2">
-          By default AI includes the workspace&apos;s brand voice, active campaign and content
-          pillars. Turn any of these off for a clean-room draft.
+          {t("contentDetail.aiAssistanceSurface.contextDescription")}
         </p>
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
           {CONTEXT_TOGGLES.map((toggle) => (
@@ -397,8 +402,8 @@ export function AiAssistanceSection({
                 htmlFor={`ai-context-${toggle.key}`}
                 className="text-label text-fg-primary flex min-w-0 flex-1 flex-col gap-0.5"
               >
-                <span className="font-semibold">{toggle.label}</span>
-                <span className="text-fg-muted">{toggle.description}</span>
+                <span className="font-semibold">{t(toggle.labelKey)}</span>
+                <span className="text-fg-muted">{t(toggle.descriptionKey)}</span>
               </label>
             </li>
           ))}
@@ -428,29 +433,35 @@ export function AiAssistanceSection({
               <div className="flex items-start justify-between gap-2">
                 <p className="text-body text-fg-primary flex items-center gap-2 font-semibold">
                   <Icon className="text-fg-secondary h-3.5 w-3.5" aria-hidden="true" />
-                  {cap.label}
+                  {translatePath("aiSettings", "capabilities", cap.id, "label")}
                 </p>
               </div>
-              <p className="text-label text-fg-muted">{cap.description}</p>
-              {cap.hint ? <p className="text-label text-fg-muted italic">{cap.hint}</p> : null}
+              <p className="text-label text-fg-muted">
+                {translatePath("aiSettings", "capabilities", cap.id, "description")}
+              </p>
+              {cap.hint ? (
+                <p className="text-label text-fg-muted italic">
+                  {translatePath("contentDetail", "aiAssistanceSurface", "hints", cap.id)}
+                </p>
+              ) : null}
               {!on && reason ? (
                 <p
                   className="text-label text-warning"
                   data-testid={`ai-action-off-reason-${cap.id}`}
                   data-ai-state="off"
                 >
-                  {OFF_REASON_LABEL[reason]}
+                  {t(OFF_REASON_LABEL_KEY[reason])}
                 </p>
               ) : null}
               {cap.id === "platform_adaptation" && on ? (
                 <label className="text-label text-fg-secondary grid gap-1">
-                  <span>Adapt for</span>
+                  <span>{t("contentDetail.aiAssistanceSurface.adaptFor")}</span>
                   <select
                     value={platformTarget}
                     onChange={(e) =>
                       setPlatformTarget(e.target.value as "instagram" | "tiktok" | "linkedin" | "x")
                     }
-                    className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-9 rounded-[var(--radius-control)] border px-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                    className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 rounded-[var(--radius-control)] border px-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                     data-testid="ai-action-platform-target"
                   >
                     <option value="instagram">Instagram</option>
@@ -469,7 +480,13 @@ export function AiAssistanceSection({
                 data-testid={`ai-action-${cap.id}-button`}
               >
                 <Wand2 className="h-3.5 w-3.5" aria-hidden="true" />
-                {isPending ? "Working…" : on ? "Run" : reason ? OFF_REASON_LABEL[reason] : "Off"}
+                {isPending
+                  ? t("contentDetail.aiAssistanceSurface.working")
+                  : on
+                    ? t("contentDetail.aiAssistanceSurface.run")
+                    : reason
+                      ? t(OFF_REASON_LABEL_KEY[reason])
+                      : t("contentDetail.aiAssistanceSurface.off")}
               </Button>
             </li>
           );
@@ -478,8 +495,7 @@ export function AiAssistanceSection({
 
       {usableCount === 0 && agencyEnabled && hasKey ? (
         <p className="text-label text-fg-muted mt-3" data-testid="ai-assistance-no-capabilities">
-          Every AI capability is currently off at the agency level. Ask an agency admin to turn on
-          at least one capability.
+          {t("contentDetail.aiAssistanceSurface.allCapabilitiesOff")}
         </p>
       ) : null}
 
@@ -500,8 +516,23 @@ export function AiAssistanceSection({
         >
           <p className="text-label text-fg-muted font-semibold">
             {draft.variants.length > 1
-              ? `${draft.variants.length} ${AI_CAPABILITY_METADATA.find((c) => c.id === draft.capabilityId)?.label ?? ""} drafts — pick one`
-              : `Draft from ${AI_CAPABILITY_METADATA.find((c) => c.id === draft.capabilityId)?.label ?? ""}`}
+              ? t("contentDetail.aiAssistanceSurface.draftVariants", {
+                  count: draft.variants.length,
+                  capability: translatePath(
+                    "aiSettings",
+                    "capabilities",
+                    draft.capabilityId,
+                    "label",
+                  ),
+                })
+              : t("contentDetail.aiAssistanceSurface.draftFrom", {
+                  capability: translatePath(
+                    "aiSettings",
+                    "capabilities",
+                    draft.capabilityId,
+                    "label",
+                  ),
+                })}
           </p>
 
           {draft.variants.length > 1 ? (
@@ -522,7 +553,7 @@ export function AiAssistanceSection({
                     data-testid={`ai-assistance-variant-${idx}`}
                   >
                     <p className="text-label text-fg-muted flex items-center justify-between font-semibold">
-                      Variant {idx + 1}
+                      {t("contentDetail.aiAssistanceSurface.variant", { count: idx + 1 })}
                       {isSelected ? (
                         <Check className="text-primary h-3.5 w-3.5" aria-hidden="true" />
                       ) : null}
@@ -535,7 +566,9 @@ export function AiAssistanceSection({
                       onClick={() => pickVariant(variant.id)}
                       data-testid={`ai-assistance-variant-${idx}-select`}
                     >
-                      {isSelected ? "Selected" : "Use this"}
+                      {isSelected
+                        ? t("contentDetail.aiAssistanceSurface.selected")
+                        : t("contentDetail.aiAssistanceSurface.useThis")}
                     </Button>
                   </li>
                 );
@@ -580,13 +613,15 @@ export function AiAssistanceSection({
                     disabled={applying || !canEditBrief}
                     title={
                       canEditBrief
-                        ? "Append this draft below the current brief"
-                        : "Insert is only available while the item is in draft or changes requested"
+                        ? t("contentDetail.aiAssistanceSurface.insertTitle")
+                        : t("contentDetail.aiAssistanceSurface.insertUnavailable")
                     }
                     data-testid="ai-assistance-insert"
                   >
                     <CornerDownLeft className="h-3.5 w-3.5" aria-hidden="true" />
-                    {applying ? "Working…" : "Insert (append below)"}
+                    {applying
+                      ? t("contentDetail.aiAssistanceSurface.working")
+                      : t("contentDetail.aiAssistanceSurface.insert")}
                   </Button>
                 ) : null}
                 <Button
@@ -597,15 +632,17 @@ export function AiAssistanceSection({
                   disabled={applying || !canEditBrief || (isBriefImprovement && !replaceConfirmed)}
                   title={
                     isBriefImprovement && !replaceConfirmed
-                      ? "Confirm the diff below to enable Replace"
+                      ? t("contentDetail.aiAssistanceSurface.replaceConfirmTitle")
                       : canEditBrief
-                        ? "Overwrite the current brief with this draft"
-                        : "Replace is only available while the item is in draft or changes requested"
+                        ? t("contentDetail.aiAssistanceSurface.replaceTitle")
+                        : t("contentDetail.aiAssistanceSurface.replaceUnavailable")
                   }
                   data-testid="ai-assistance-replace"
                 >
                   <Replace className="h-3.5 w-3.5" aria-hidden="true" />
-                  {applying ? "Working…" : "Replace brief"}
+                  {applying
+                    ? t("contentDetail.aiAssistanceSurface.working")
+                    : t("contentDetail.aiAssistanceSurface.replace")}
                 </Button>
                 <Button
                   type="button"
@@ -614,7 +651,7 @@ export function AiAssistanceSection({
                   onClick={() => onCopy(selectedVariant.text)}
                   data-testid="ai-assistance-copy"
                 >
-                  Copy
+                  {t("contentDetail.aiAssistanceSurface.copy")}
                 </Button>
                 <Button
                   type="button"
@@ -625,7 +662,9 @@ export function AiAssistanceSection({
                   data-testid="ai-assistance-try-again"
                 >
                   <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                  {pendingId === draft.capabilityId ? "Working…" : "Re-roll"}
+                  {pendingId === draft.capabilityId
+                    ? t("contentDetail.aiAssistanceSurface.working")
+                    : t("contentDetail.aiAssistanceSurface.reroll")}
                 </Button>
               </div>
             </> // close the contract + action button fragment
@@ -641,8 +680,8 @@ export function AiAssistanceSection({
             <DiffPreview
               before={currentBrief}
               after={selectedVariant.text}
-              beforeLabel="Current brief"
-              afterLabel="AI draft"
+              beforeLabel={t("contentDetail.aiAssistanceSurface.currentBrief")}
+              afterLabel={t("contentDetail.aiAssistanceSurface.aiDraft")}
               confirmed={replaceConfirmed}
               onConfirmedChange={setReplaceConfirmed}
               testIdPrefix="ai-diff"
@@ -664,14 +703,15 @@ export function AiAssistanceSection({
               className="text-body text-success font-semibold"
             >
               {applied === "insert"
-                ? "Added to the brief below the existing text."
-                : "Replaced the brief with this draft."}
+                ? t("contentDetail.aiAssistanceSurface.insertSuccess")
+                : t("contentDetail.aiAssistanceSurface.replaceSuccess")}
             </p>
           ) : null}
           {!canEditBrief ? (
             <p className="text-label text-fg-muted">
-              Item is in {contentStatus.replaceAll("_", " ")} — the brief is frozen for review. Use
-              &ldquo;Re-roll&rdquo; for a fresh draft, or copy the text manually.
+              {t("contentDetail.aiAssistanceSurface.briefFrozen", {
+                status: translatePath("contentDetail", "workflow", "statusLabels", contentStatus),
+              })}
             </p>
           ) : null}
         </div>
@@ -705,6 +745,8 @@ export function AiAssistanceSection({
  * Pure presentational — server-renderable, no client state.
  */
 function AiWillUpdateWillNotChange({ capabilityId }: { capabilityId: string }) {
+  const t = useLocaleT();
+  const translatePath = (...segments: string[]) => t(segments.join("."));
   const meta = getAiCapabilityMetadata(capabilityId);
   if (!meta) {
     return (
@@ -712,7 +754,7 @@ function AiWillUpdateWillNotChange({ capabilityId }: { capabilityId: string }) {
         data-testid="ai-assistance-contract-unknown"
         className="text-label text-fg-muted font-semibold"
       >
-        Unknown capability — nothing will be written.
+        {t("contentDetail.aiAssistanceSurface.unknownCapability")}
       </p>
     );
   }
@@ -724,7 +766,7 @@ function AiWillUpdateWillNotChange({ capabilityId }: { capabilityId: string }) {
         data-testid="ai-assistance-contract-readonly"
         className="text-label text-fg-muted font-semibold"
       >
-        Read-only suggestion — nothing is written to the content item.
+        {t("contentDetail.aiAssistanceSurface.readOnlyContract")}
       </p>
     );
   }
@@ -734,7 +776,7 @@ function AiWillUpdateWillNotChange({ capabilityId }: { capabilityId: string }) {
       data-testid="ai-assistance-contract"
     >
       <p className="text-label text-fg-muted font-semibold tracking-wide uppercase">
-        Clicking Replace will…
+        {t("contentDetail.aiAssistanceSurface.replaceContract")}
       </p>
       <ul className="mt-1 space-y-0.5" data-testid="ai-assistance-contract-will-update">
         {willUpdate.map((field) => (
@@ -744,7 +786,10 @@ function AiWillUpdateWillNotChange({ capabilityId }: { capabilityId: string }) {
           >
             <Check className="text-success h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>
-              update <span className="font-semibold">{field}</span>
+              {t("contentDetail.aiAssistanceSurface.updateField")}{" "}
+              <span className="font-semibold">
+                {translatePath("contentDetail", "aiAssistanceSurface", "fields", field)}
+              </span>
             </span>
           </li>
         ))}
@@ -752,7 +797,7 @@ function AiWillUpdateWillNotChange({ capabilityId }: { capabilityId: string }) {
       {willNotChange.length > 0 ? (
         <>
           <p className="text-label text-fg-muted mt-2 font-semibold tracking-wide uppercase">
-            …and will not touch
+            {t("contentDetail.aiAssistanceSurface.willNotTouch")}
           </p>
           <ul className="mt-1 space-y-0.5" data-testid="ai-assistance-contract-will-not-change">
             {willNotChange.map((field) => (
@@ -761,7 +806,9 @@ function AiWillUpdateWillNotChange({ capabilityId }: { capabilityId: string }) {
                 className="text-body text-fg-secondary inline-flex items-center gap-1.5 font-medium"
               >
                 <X className="text-fg-muted h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                <span className="italic">{field}</span>
+                <span className="italic">
+                  {translatePath("contentDetail", "aiAssistanceSurface", "fields", field)}
+                </span>
               </li>
             ))}
           </ul>
