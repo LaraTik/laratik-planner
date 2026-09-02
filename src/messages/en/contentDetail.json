@@ -9,6 +9,10 @@
     "activity": "Activity"
   },
   "aiAssistance": "AI assistance",
+  "aiAssistancePanel": {
+    "description": "Generate drafts, improve the brief, and check completeness.",
+    "closeAria": "Close"
+  },
   "aiSettings": "AI settings",
   "publish": {
     "redirectFallbackMessage": "The publishing setup is now part of the planning detail page. This workspace can't be resolved; ask your manager for a fresh link.",

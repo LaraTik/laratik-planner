@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { AiAssistanceSection } from "@/app/(app)/app/w/[slug]/planning/[id]/ai-assistance-section";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * AiAssistancePanel — a contextual launcher for the broad
@@ -63,8 +64,10 @@ export function AiAssistancePanel({
   hasKey,
   currentBrief,
   className,
-  triggerLabel = "AI assistance",
+  triggerLabel,
 }: AiAssistancePanelProps) {
+  const t = useLocaleT();
+  const resolvedTriggerLabel = triggerLabel ?? t("contentDetail.aiAssistance");
   const [open, setOpen] = React.useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -77,7 +80,7 @@ export function AiAssistancePanel({
         className={cn("inline-flex items-center gap-1.5", className)}
       >
         <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-        {triggerLabel}
+        {resolvedTriggerLabel}
       </Button>
       <DialogContent
         className="max-h-[85vh] w-[min(720px,calc(100vw-2rem))] overflow-hidden p-0"
@@ -88,16 +91,16 @@ export function AiAssistancePanel({
             <div>
               <DialogTitle className="flex items-center gap-2">
                 <Sparkles className="text-primary h-4 w-4" aria-hidden="true" />
-                AI assistance
+                {t("contentDetail.aiAssistance")}
               </DialogTitle>
               <DialogDescription>
-                Generate drafts, improve the brief, and check completeness.
+                {t("contentDetail.aiAssistancePanel.description")}
               </DialogDescription>
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              aria-label="Close"
+              aria-label={t("contentDetail.aiAssistancePanel.closeAria")}
               className="text-fg-muted hover:text-fg-primary focus-visible:ring-focus-ring -me-1 -mt-1 inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2"
             >
               <X className="h-4 w-4" aria-hidden="true" />
