@@ -416,3 +416,75 @@ export function getTranslation(
   if (!value || typeof value !== "object") return {};
   return value as Record<string, unknown>;
 }
+
+// ─── Field length limits (single source of truth) ────────────────────────
+
+/**
+ * Maximum character count for every planner-facing string
+ * field, mirrored from the per-format Zod schemas above. The
+ * frontend `maxLength` and the AI prompt constraints both
+ * read from this map so the three layers (schema validation,
+ * editor UX, AI generation) never disagree on a cap.
+ *
+ * Rationale: before this map, the field renderers hard-coded
+ * `maxLength={220}` or `maxLength={2200}` regardless of the
+ * field. A 2200-char `caption` was being silently truncated
+ * to 220 chars in the editor even though the schema allowed
+ * 2 200. `visualDirection` (schema: 2 000) let the user type
+ * 2 200 in the UI before the server rejected the save. Two
+ * separate bugs; one source of truth fixes both.
+ *
+ * Values are characters, not code points. `z.string().max()`
+ * and the HTML `maxLength` attribute both count UTF-16 code
+ * units, which is what users see as "characters" in the
+ * counter. Emoji and combining marks therefore consume
+ * multiple units, matching the schema's behaviour.
+ */
+export const FIELD_MAX_LENGTHS = {
+  // Long-form audience-facing text (caption + first comment).
+  caption: 2_200,
+  firstComment: 2_200,
+  // Creative direction — long enough for a paragraph.
+  visualDirection: 2_000,
+  additionalNotes: 2_000,
+  onScreenText: 2_000,
+  voiceOverNotes: 2_000,
+  // Long-form video descriptions can be much longer (YouTube
+  // accepts up to 5 000 characters in the description API;
+  // 10 000 here is a safety margin for future expansion).
+  description: 10_000,
+  // Cover / audio references — URL plus label fits in 500.
+  coverDirection: 500,
+  audioReference: 500,
+  // Short text — hook / main message / CTA / hook variants.
+  hook: 220,
+  mainMessage: 220,
+  callToAction: 220,
+  // Audience description.
+  audience: 200,
+  // Slide / scene / chapter / outline / chapter level.
+  slideOutlineSummary: 220,
+  slideOutlineVisual: 500,
+  sceneSummary: 220,
+  sceneDurationSeconds: 60,
+  chapterTitle: 220,
+  outlineTitle: 220,
+  outlineLevel: 6,
+  // Hashtags.
+  hashtag: 60,
+  hashtagMaxCount: 30,
+  // References / URLs.
+  referenceUrl: 500,
+  referencesMaxCount: 20,
+  // Live content.
+  liveGuestName: 120,
+  liveRunOfShowTopic: 220,
+} as const satisfies Record<string, number>;
+
+/** Type-safe reader. Returns `undefined` if the key is not
+ *  a planner-facing field. */
+export type FieldMaxLengthKey = keyof typeof FIELD_MAX_LENGTHS;
+
+export function fieldMaxLength(key: FieldMaxLengthKey): number {
+  return FIELD_MAX_LENGTHS[key];
+}

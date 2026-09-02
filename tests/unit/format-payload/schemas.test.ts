@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  FIELD_MAX_LENGTHS,
   FormatPayloadByFormat,
+  fieldMaxLength,
   getTranslation,
   parseFormatPayload,
   translatableFieldKeys,
@@ -136,6 +138,71 @@ describe("format-payload/schemas", () => {
       expect(getTranslation(payload, "static_post", "ar" as unknown as "en")).toEqual({
         caption: "X",
       });
+    });
+  });
+
+  /**
+   * FIELD_MAX_LENGTHS — single source of truth for the
+   * `maxLength` HTML attribute on the format-payload field
+   * renderers, and for the AI prompt's per-field cap. The
+   * test pins the contract: every planner-facing field has
+   * a value, and the value is large enough to be useful
+   * but never smaller than the underlying Zod schema.
+   */
+  describe("FIELD_MAX_LENGTHS", () => {
+    it("exposes a non-empty entry for every planner-facing string field", () => {
+      // The fields the Format Aware Content Editor renders
+      // today. The list is the rendered surface, not the
+      // full schema — a field that's never rendered doesn't
+      // need an entry.
+      const rendered = [
+        "caption",
+        "firstComment",
+        "hook",
+        "mainMessage",
+        "callToAction",
+        "visualDirection",
+        "additionalNotes",
+        "onScreenText",
+        "voiceOverNotes",
+        "description",
+        "coverDirection",
+        "audioReference",
+      ];
+      for (const key of rendered) {
+        const cap = fieldMaxLength(key as keyof typeof FIELD_MAX_LENGTHS);
+        expect(cap, `${key} should have a positive cap`).toBeGreaterThan(0);
+      }
+    });
+
+    it("aligns the `caption` cap with the static_post Zod schema (2 200)", () => {
+      // Sanity check: the UI cap must equal the schema cap.
+      // The previous TextFieldRenderer used 220, which let
+      // the user type up to 2 200 chars but truncated on
+      // submit silently. The new map pins the cap.
+      expect(fieldMaxLength("caption")).toBe(2_200);
+      expect(fieldMaxLength("firstComment")).toBe(2_200);
+    });
+
+    it("aligns the `visualDirection` cap with the static_post Zod schema (2 000)", () => {
+      expect(fieldMaxLength("visualDirection")).toBe(2_000);
+      expect(fieldMaxLength("additionalNotes")).toBe(2_000);
+      expect(fieldMaxLength("onScreenText")).toBe(2_000);
+      expect(fieldMaxLength("voiceOverNotes")).toBe(2_000);
+    });
+
+    it("aligns the URL / reference caps with the schema (500)", () => {
+      expect(fieldMaxLength("coverDirection")).toBe(500);
+      expect(fieldMaxLength("audioReference")).toBe(500);
+      expect(fieldMaxLength("referenceUrl")).toBe(500);
+    });
+
+    it("aligns the long-form video `description` cap with the schema (10 000)", () => {
+      // The YouTube API allows 5 000 chars; 10 000 is a
+      // safety margin for future expansion. The test pins
+      // the contract so a future refactor doesn't shrink
+      // it back to the 2 200 default.
+      expect(fieldMaxLength("description")).toBe(10_000);
     });
   });
 });
