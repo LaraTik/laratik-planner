@@ -104,30 +104,40 @@ export function WorkspaceShell({
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [resetOpen, setResetOpen] = React.useState(false);
 
-  // Sync the active tab to the URL hash so deep links and the
-  // back/forward buttons keep working. We only push to history
-  // when the active tab actually changes, and we use
-  // `replaceState` for the initial mount to avoid filling the
-  // back stack with a synthetic entry on first paint.
-  const isFirstHashSyncRef = React.useRef(true);
+  // Adopt a deep-link hash after hydration. This is deliberately
+  // separate from the URL-sync effect below: React Strict Mode may
+  // replay effects before the state transition commits, and combining
+  // the two effects can overwrite a valid `#publishing` hash with the
+  // hydration fallback `#overview`.
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    const isInitialSync = isFirstHashSyncRef.current;
-    if (isInitialSync) {
-      isFirstHashSyncRef.current = false;
-      const hash = window.location.hash.replace(/^#/, "") as WorkspaceTabId;
-      if (hash && tabs.some((tab) => tab.id === hash) && hash !== activeId) {
-        React.startTransition(() => setActiveId(hash));
+    const hash = window.location.hash.replace(/^#/, "") as WorkspaceTabId;
+    if (hash && tabs.some((tab) => tab.id === hash) && hash !== activeId) {
+      React.startTransition(() => setActiveId(hash));
+    }
+  }, [activeId, tabs]);
+
+  // Sync the active tab to the URL hash so deep links and the
+  // back/forward buttons keep working. During the initial hydration
+  // handoff, leave a valid incoming hash untouched until the state
+  // transition above has committed.
+  const initialHashPendingRef = React.useRef(true);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const incomingHash = window.location.hash.replace(/^#/, "") as WorkspaceTabId;
+    if (initialHashPendingRef.current) {
+      if (
+        incomingHash &&
+        tabs.some((tab) => tab.id === incomingHash) &&
+        incomingHash !== activeId
+      ) {
         return;
       }
+      initialHashPendingRef.current = false;
     }
     const target = `#${activeId}`;
     if (window.location.hash !== target) {
-      if (isInitialSync) {
-        window.history.replaceState(null, "", target);
-      } else {
-        window.history.pushState(null, "", target);
-      }
+      window.history.pushState(null, "", target);
     }
   }, [activeId, tabs]);
 

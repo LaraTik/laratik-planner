@@ -124,7 +124,7 @@ export function ApprovalsForm(props: ApprovalsFormProps) {
                       <p className="text-body text-fg-secondary">{m.blurb}</p>
                       {m.value === currentMode ? (
                         <span
-                          className="text-label text-success mt-1 inline-flex items-center gap-1 font-bold"
+                          className="text-label bg-success-subtle text-success mt-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-bold"
                           data-testid="approvals-current-mode-badge"
                         >
                           <Check className="h-3 w-3" aria-hidden="true" />

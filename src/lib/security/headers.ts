@@ -5,7 +5,10 @@ export function buildSecurityHeaders(_environment: RuntimeEnvironment): Array<{
   value: string;
 }> {
   const scriptSources = ["'self'", "'unsafe-inline'"];
-  if (_environment === "development") scriptSources.push("'unsafe-eval'");
+  // The isolated Playwright runner uses Next's development server with
+  // NODE_ENV=test. Webpack's dev client needs eval for source maps/HMR;
+  // this branch is never used by the production server policy below.
+  if (_environment !== "production") scriptSources.push("'unsafe-eval'");
   const directives = [
     "default-src 'self'",
     `script-src ${scriptSources.join(" ")}`,

@@ -21,6 +21,9 @@ describe("security headers", () => {
     expect(developmentCsp).toContain("'unsafe-eval'");
     expect(developmentCsp).not.toContain("upgrade-insecure-requests");
     expect(
+      buildSecurityHeaders("test").find((h) => h.key === "Content-Security-Policy")?.value,
+    ).toContain("'unsafe-eval'");
+    expect(
       buildSecurityHeaders("production").find((h) => h.key === "Content-Security-Policy")?.value,
     ).toContain("upgrade-insecure-requests");
   });
