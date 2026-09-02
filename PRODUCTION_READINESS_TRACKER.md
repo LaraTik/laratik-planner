@@ -37,9 +37,9 @@ migration-drill` passes 5/5; `TEST_DATABASE_URL=… pnpm test:integration`
 > format-payload edits are user work and remain preserved. The verdict stays
 > `READY FOR INDEPENDENT REVIEW`.
 
-> **2026-09-03 exact-clean verification** — At clean HEAD `024724e`,
+> **2026-09-03 exact-clean verification** — At clean HEAD `318bd56`,
 > `pnpm verify` passes: Prettier, ESLint, strict TypeScript, 314 unit files
-> with 3,101 passing tests and 4 TODOs, and the production build. This updates
+> with 3,102 passing tests and 4 TODOs, and the production build. This updates
 > the earlier `1b15de9` verification boundary; visual, performance, manual
 > accessibility/UAT, and independent-review gates remain open.
 
