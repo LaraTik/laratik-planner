@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import { OverviewNavigator } from "@/components/planning/overview-navigator";
 import type { OverviewReadinessLine } from "@/components/planning/overview-command-center";
 import { tFor } from "@/messages";
@@ -110,10 +110,9 @@ describe("OverviewNavigator", () => {
     );
     const scrollSpy = vi.spyOn(Element.prototype, "scrollIntoView");
     fireEvent.click(screen.getByTestId("overview-readiness-link-publishing"));
-    // The scroll is deferred to a requestAnimationFrame +
-    // setTimeout(50). Wait long enough for both to fire.
-    await new Promise((resolve) => setTimeout(resolve, 120));
-    expect(scrollSpy).toHaveBeenCalled();
+    // The scroll is deferred to a requestAnimationFrame + setTimeout(50).
+    // waitFor keeps the asynchronous React update inside act().
+    await waitFor(() => expect(scrollSpy).toHaveBeenCalled());
   });
 
   it("moves keyboard focus to the first interactive child of the target section", async () => {
@@ -126,9 +125,8 @@ describe("OverviewNavigator", () => {
       </div>,
     );
     fireEvent.click(screen.getByTestId("overview-readiness-link-content"));
-    await new Promise((resolve) => setTimeout(resolve, 120));
     const input = screen.getByTestId("content-first-input") as HTMLInputElement;
-    expect(document.activeElement).toBe(input);
+    await waitFor(() => expect(document.activeElement).toBe(input));
   });
 
   it("falls back to the section itself when the target has no interactive child", async () => {
@@ -141,8 +139,7 @@ describe("OverviewNavigator", () => {
       </div>,
     );
     fireEvent.click(screen.getByTestId("overview-readiness-link-publishing"));
-    await new Promise((resolve) => setTimeout(resolve, 120));
     const section = screen.getByTestId("target-section");
-    expect(document.activeElement).toBe(section);
+    await waitFor(() => expect(document.activeElement).toBe(section));
   });
 });

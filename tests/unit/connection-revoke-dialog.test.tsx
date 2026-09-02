@@ -200,5 +200,6 @@ describe("ConnectionActions Re-test", () => {
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute("aria-busy", "true");
     resolveAction({ success: true, lastSyncedAt: new Date().toISOString() } as Result);
+    await screen.findByTestId("retest-success");
   });
 });

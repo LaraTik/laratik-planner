@@ -1,3 +1,4 @@
+import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -5,6 +6,31 @@ import {
   NotificationItem,
   type NotificationListItem,
 } from "@/components/app-shell/notification-item";
+
+// The component's contract is the click callbacks; actual navigation belongs
+// to Next.js. Preventing navigation here keeps JSDOM from emitting its known
+// "Not implemented: navigation" warning while preserving the callback path.
+vi.mock("next/link", () => ({
+  default: function MockLink({
+    href,
+    children,
+    onClick,
+    ...rest
+  }: React.ComponentProps<"a"> & { href: string }) {
+    return (
+      <a
+        href={href}
+        {...rest}
+        onClick={(event) => {
+          event.preventDefault();
+          onClick?.(event);
+        }}
+      >
+        {children}
+      </a>
+    );
+  },
+}));
 
 const baseItem: NotificationListItem = {
   id: "n-1",
