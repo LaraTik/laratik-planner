@@ -19,7 +19,10 @@ import { tForActive } from "@/lib/i18n/t-for-active";
  * and the audit log is consistent. All copy is read from the message
  * catalog at the top of the request.
  */
-export const metadata = { title: "Bootstrap the agency" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("auth.setup.title") };
+}
 
 export default async function SetupPage() {
   const { t } = await tForActive();
