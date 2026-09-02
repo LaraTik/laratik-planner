@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AiDiagnosticPanel } from "@/components/ai/ai-diagnostic-panel";
+import { makeTranslator } from "@/messages";
 
 /**
  * Regression guard for the 2026-08-27 AI diagnostic panel.
@@ -101,5 +102,26 @@ describe("AiDiagnosticPanel", () => {
     expect(html).not.toContain("ai-prereq-kill-switch-fix");
     expect(html).not.toContain("ai-prereq-env-key-fix");
     expect(html).toContain("ai-prereq-managed-secret-fix");
+  });
+
+  it("renders the diagnostic from the Arabic catalog", () => {
+    const html = renderToStaticMarkup(
+      <AiDiagnosticPanel
+        envKillSwitch={false}
+        envHasKey={false}
+        hasManagedSecret
+        managedSecretSuffix="ab12"
+        masterSwitch
+        anyCapabilityOn={false}
+        effectiveLive={false}
+        aiEntryHref="/app"
+        t={makeTranslator("ar")}
+      />,
+    );
+
+    expect(html).toContain("كيف يعمل الذكاء الاصطناعي في هذا التطبيق");
+    expect(html).toContain("الذكاء الاصطناعي محظور حاليًا");
+    expect(html).toContain("ينتهي السر المُدار بـ …ab12");
+    expect(html).not.toContain("How AI works in this app");
   });
 });

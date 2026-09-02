@@ -147,6 +147,7 @@ export default async function AgencyAiSettingsPage() {
         anyCapabilityOn={anyCapabilityOn}
         effectiveLive={effectiveLive}
         aiEntryHref="/app"
+        t={t}
       />
 
       <AiSettingsForm
