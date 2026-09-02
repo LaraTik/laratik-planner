@@ -411,7 +411,7 @@ export default async function PlanningPage({
                         ownerId: ownerFilter,
                         search: searchTerm,
                         health: healthFilter[0],
-                        risk: parsedFilters.risk,
+                        risk: filters.risk,
                       }).filter(([, v]) => v != null),
                     ) as Parameters<typeof describeActiveFilter>[0],
                   ),
