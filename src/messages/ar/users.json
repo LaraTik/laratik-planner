@@ -78,7 +78,32 @@
     "colActions": "إجراءات",
     "windowFrom": "من {date}",
     "windowUntil": "حتى {date}",
-    "windowNone": "لا توجد فترة محددة"
+    "windowNone": "لا توجد فترة محددة",
+    "form": {
+      "campaignName": "اسم الحملة",
+      "objective": "الهدف (اختياري)",
+      "startDate": "تاريخ البدء",
+      "endDate": "تاريخ الانتهاء",
+      "coverColor": "لون الغلاف",
+      "pillarName": "اسم عمود المحتوى",
+      "pillarColor": "لون عمود المحتوى",
+      "description": "الوصف (اختياري)",
+      "templateName": "اسم القالب",
+      "format": "التنسيق",
+      "briefTemplate": "قالب الموجز (اختياري)",
+      "createCampaign": "إنشاء حملة",
+      "createPillar": "إنشاء عمود",
+      "createTemplate": "إنشاء قالب",
+      "submitting": "جارٍ الإرسال",
+      "staticPost": "منشور ثابت",
+      "carousel": "منشور متعدد الشرائح",
+      "story": "قصة",
+      "shortFormVideo": "فيديو قصير",
+      "longFormVideo": "فيديو طويل",
+      "liveContent": "محتوى مباشر",
+      "article": "مقال",
+      "other": "أخرى"
+    }
   },
   "channels": {
     "connectionStatus": {

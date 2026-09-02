@@ -42,6 +42,10 @@ export interface DirAwareTextareaProps extends Omit<
 
 export const DirAwareTextarea = React.forwardRef<HTMLTextAreaElement, DirAwareTextareaProps>(
   ({ locale, defaultDirFallback, value, defaultValue, onChange, className, ...props }, ref) => {
+    const isControlled = value !== undefined;
+    const [uncontrolledValue, setUncontrolledValue] = React.useState(
+      typeof defaultValue === "string" ? defaultValue : "",
+    );
     // Resolve the workspace fallback dir. The locale is passed
     // in by the caller (the editor sets it from the active
     // agency / user locale); we don't read it from the URL.
@@ -53,9 +57,13 @@ export const DirAwareTextarea = React.forwardRef<HTMLTextAreaElement, DirAwareTe
     // bias toward the controlled path (the editor always passes
     // value) and fall back to the uncontrolled initial value
     // when value is undefined.
-    const current =
-      typeof value === "string" ? value : typeof defaultValue === "string" ? defaultValue : "";
+    const current = typeof value === "string" ? value : isControlled ? "" : uncontrolledValue;
     const dir = detectDir(current, fallback);
+
+    const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      if (!isControlled) setUncontrolledValue(event.currentTarget.value);
+      onChange?.(event);
+    };
 
     return (
       <Textarea
@@ -63,7 +71,7 @@ export const DirAwareTextarea = React.forwardRef<HTMLTextAreaElement, DirAwareTe
         dir={dir}
         value={value}
         defaultValue={defaultValue}
-        onChange={onChange}
+        onChange={handleChange}
         className={cn(
           // Logical properties: text-start/text-end align with
           // the input's own `dir` so the caret + scrollbar
@@ -91,10 +99,18 @@ export interface DirAwareInputProps extends Omit<
 
 export const DirAwareInput = React.forwardRef<HTMLInputElement, DirAwareInputProps>(
   ({ locale, defaultDirFallback, value, defaultValue, onChange, className, ...props }, ref) => {
+    const isControlled = value !== undefined;
+    const [uncontrolledValue, setUncontrolledValue] = React.useState(
+      typeof defaultValue === "string" ? defaultValue : "",
+    );
     const fallback: "ltr" | "rtl" = defaultDirFallback ?? resolveLocale(locale).dir;
-    const current =
-      typeof value === "string" ? value : typeof defaultValue === "string" ? defaultValue : "";
+    const current = typeof value === "string" ? value : isControlled ? "" : uncontrolledValue;
     const dir = detectDir(current, fallback);
+
+    const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (!isControlled) setUncontrolledValue(event.currentTarget.value);
+      onChange?.(event);
+    };
 
     return (
       <input
@@ -102,7 +118,7 @@ export const DirAwareInput = React.forwardRef<HTMLInputElement, DirAwareInputPro
         dir={dir}
         value={value}
         defaultValue={defaultValue}
-        onChange={onChange}
+        onChange={handleChange}
         className={cn(
           "border-border bg-surface text-body text-fg-primary flex h-10 w-full rounded-[var(--radius-control)] border px-3 py-2",
           "placeholder:text-fg-muted",

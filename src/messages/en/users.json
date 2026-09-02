@@ -78,7 +78,32 @@
     "colActions": "Actions",
     "windowFrom": "From {date}",
     "windowUntil": "Until {date}",
-    "windowNone": "No window set"
+    "windowNone": "No window set",
+    "form": {
+      "campaignName": "Campaign name",
+      "objective": "Objective (optional)",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "coverColor": "Cover color",
+      "pillarName": "Pillar name",
+      "pillarColor": "Pillar color",
+      "description": "Description (optional)",
+      "templateName": "Template name",
+      "format": "Format",
+      "briefTemplate": "Brief template (optional)",
+      "createCampaign": "Create campaign",
+      "createPillar": "Create pillar",
+      "createTemplate": "Create template",
+      "submitting": "Submitting",
+      "staticPost": "Static post",
+      "carousel": "Carousel",
+      "story": "Story",
+      "shortFormVideo": "Short-form video",
+      "longFormVideo": "Long-form video",
+      "liveContent": "Live content",
+      "article": "Article",
+      "other": "Other"
+    }
   },
   "channels": {
     "connectionStatus": {
