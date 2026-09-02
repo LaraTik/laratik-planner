@@ -18,6 +18,7 @@ import {
 } from "./actions";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { TEST_ERROR_COPY, type TestErrorCode } from "@/lib/social/test-error-codes";
 
 /**
  * M4 — connection lifecycle client component.
@@ -64,7 +65,8 @@ type ChannelRow = {
 
 type AffectedChannel = Pick<ChannelRow, "id" | "accountName" | "platform">;
 
-type TestFlash = { kind: "success"; lastSyncedAt: Date } | { kind: "error"; message: string };
+type TestFlash =
+  { kind: "success"; lastSyncedAt: Date } | { kind: "error"; errorCode: TestErrorCode };
 
 type Translator = (key: string, params?: Record<string, string | number>) => string;
 
@@ -101,8 +103,12 @@ export function ConnectionActions({
     setFlash(null);
     startTransition(async () => {
       const result = await testChannelConnectionAction(slug, channel.id);
+      if ("errorCode" in result && result.errorCode) {
+        setFlash({ kind: "error", errorCode: result.errorCode });
+        return;
+      }
       if ("error" in result && result.error) {
-        setFlash({ kind: "error", message: result.error });
+        setError(result.error);
         return;
       }
       if ("success" in result && result.success && result.lastSyncedAt) {
@@ -220,7 +226,10 @@ export function ConnectionActions({
           data-testid="retest-error"
         >
           <AlertTriangle className="h-3 w-3" aria-hidden={true} />
-          {flash.message}
+          {(() => {
+            const copy = TEST_ERROR_COPY[flash.errorCode];
+            return tr(copy.key, copy.fallback);
+          })()}
         </span>
       ) : null}
       {error ? (

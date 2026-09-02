@@ -27,6 +27,7 @@ import {
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { archiveChannelAction, testChannelConnectionAction, updateChannelAction } from "./actions";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { TEST_ERROR_COPY, type TestErrorCode } from "@/lib/social/test-error-codes";
 
 /**
  * Channel edit form fields are kept inline here rather than extracted
@@ -121,13 +122,20 @@ export function ChannelEditDrawer({
   // but we want the chip to appear instantly).
   const [reTestPending, startReTest] = useTransition();
   const [reTestResult, setReTestResult] = useState<
-    { kind: "success"; lastSyncedAt: string } | { kind: "error"; message: string } | null
+    | { kind: "success"; lastSyncedAt: string }
+    | { kind: "error"; errorCode: TestErrorCode }
+    | { kind: "error"; message: string }
+    | null
   >(null);
 
   function reTest() {
     setReTestResult(null);
     startReTest(async () => {
       const result = await testChannelConnectionAction(slug, channel.id);
+      if ("errorCode" in result && result.errorCode) {
+        setReTestResult({ kind: "error", errorCode: result.errorCode });
+        return;
+      }
       if ("error" in result && result.error) {
         setReTestResult({ kind: "error", message: result.error });
         return;
@@ -501,7 +509,10 @@ function ConnectionHealthSection({
   onReTest: () => void;
   reTestPending: boolean;
   reTestResult:
-    { kind: "success"; lastSyncedAt: string } | { kind: "error"; message: string } | null;
+    | { kind: "success"; lastSyncedAt: string }
+    | { kind: "error"; errorCode: TestErrorCode }
+    | { kind: "error"; message: string }
+    | null;
   t?: Translator;
 }) {
   const locale = useLocaleCode();
@@ -512,9 +523,17 @@ function ConnectionHealthSection({
   // on failure, show the inline error and ignore the stale row
   // error columns (the row will be re-rendered after revalidate
   // with the new `last_sync_error_code`).
+  const reTestErrorMessage =
+    reTestResult?.kind === "error"
+      ? (() => {
+          if ("message" in reTestResult) return reTestResult.message;
+          const copy = TEST_ERROR_COPY[reTestResult.errorCode];
+          return tr(copy.key, copy.fallback);
+        })()
+      : null;
   const showError =
     reTestResult?.kind === "error"
-      ? reTestResult.message
+      ? reTestErrorMessage
       : connectionStatus !== "connected" && lastSyncErrorCode
         ? `${humanizeErrorCode(lastSyncErrorCode, tr)}${
             lastSyncErrorAt ? ` (${formatRelativeDate(lastSyncErrorAt, new Date(), locale)})` : ""
@@ -595,13 +614,11 @@ function ConnectionHealthSection({
 }
 
 /**
- * Local copy map for `lastSyncErrorCode` values. Mirrors the
- * `humanizeTestError` taxonomy in `src/lib/social/sync.ts` but
- * covers the subset of codes the user is likely to see in the
- * drawer's persistent health section. Provider error codes that
- * never reach the row (e.g. `platform_kek_missing`) are omitted —
- * those are operator-only and would never appear in a user-visible
- * "last error" chip.
+ * Local copy map for persistent `lastSyncErrorCode` values. The
+ * user-triggered Re-test path uses the complete stable-code map in
+ * `src/lib/social/test-error-codes.ts`; this compact map keeps the
+ * persistent health chip focused on the provider errors that can be
+ * written to a channel row by the scheduled worker.
  */
 function humanizeErrorCode(code: string, tr: (key: string, fallback: string) => string): string {
   switch (code) {

@@ -2,10 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   backoffAt,
   BACKOFF_MS,
-  humanizeTestError,
   nextSyncAt,
+  TEST_ERROR_CODES,
   type TestErrorCode,
 } from "@/lib/social/sync";
+import { TEST_ERROR_COPY } from "@/lib/social/test-error-codes";
 
 /**
  * M4 — sync worker unit tests.
@@ -78,11 +79,10 @@ describe("backoffAt", () => {
   });
 });
 
-describe("humanizeTestError", () => {
-  // Exhaustive coverage is the point: every entry in the
-  // `TestErrorCode` union must produce a non-empty user-facing
-  // string. The `Object.keys(codes)` list is the single source of
-  // truth so adding a new code forces a test update.
+describe("channel test error taxonomy", () => {
+  // The domain layer exposes stable codes only. User-facing copy is
+  // owned by the active interface catalog and tested for EN/AR parity
+  // in the i18n catalog suite.
   const codes: TestErrorCode[] = [
     "auth_expired",
     "permission_denied",
@@ -92,60 +92,15 @@ describe("humanizeTestError", () => {
     "invalid_response",
     "platform_kek_missing",
     "social_not_enabled",
+    "not_configured",
     "no_connection",
     "not_connected",
     "unknown",
   ];
 
   it("covers every documented code", () => {
-    expect(new Set(codes)).toEqual(
-      new Set([
-        "auth_expired",
-        "permission_denied",
-        "rate_limited",
-        "provider_unavailable",
-        "not_found",
-        "invalid_response",
-        "platform_kek_missing",
-        "social_not_enabled",
-        "no_connection",
-        "not_connected",
-        "unknown",
-      ]),
-    );
-  });
-
-  it("humanizes invalid_response distinctly from provider_unavailable", () => {
-    // 2026-08-28: invalid_response was added to the union so the
-    // Re-test path can surface "Meta returned an unrecognized
-    // response" instead of the generic "validation request failed".
-    // The copy must be distinct from provider_unavailable (which
-    // implies Meta is down) because invalid_response is a parse /
-    // schema mismatch, not an outage.
-    const inv = humanizeTestError("invalid_response");
-    const unavail = humanizeTestError("provider_unavailable");
-    expect(inv).not.toBe(unavail);
-    expect(inv.length).toBeGreaterThan(8);
-    expect(inv).not.toMatch(/^[a-z_]+$/);
-  });
-
-  it.each(codes)("returns a non-empty human string for %s", (code) => {
-    const message = humanizeTestError(code);
-    expect(message.length).toBeGreaterThan(8);
-    // User-facing copy must be a complete sentence, not a code
-    // (codes are surfaced via the chip, copy is for the body).
-    expect(message).not.toMatch(/^[a-z_]+$/);
-  });
-
-  it("distinguishes recoverable errors from 'reconnect needed' errors", () => {
-    // auth_expired + permission_denied are user-actionable; the copy
-    // must say "Reconnect" so the user knows the recovery path.
-    expect(humanizeTestError("auth_expired")).toMatch(/Reconnect/);
-    expect(humanizeTestError("permission_denied")).toMatch(/Reconnect/);
-    // rate_limited + provider_unavailable are NOT user-actionable;
-    // the copy must suggest waiting, not reconnecting.
-    expect(humanizeTestError("rate_limited")).not.toMatch(/Reconnect/);
-    expect(humanizeTestError("provider_unavailable")).not.toMatch(/Reconnect/);
+    expect(TEST_ERROR_CODES).toEqual(codes);
+    expect(Object.keys(TEST_ERROR_COPY).sort()).toEqual([...TEST_ERROR_CODES].sort());
   });
 });
 

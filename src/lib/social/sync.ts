@@ -32,6 +32,10 @@ import {
   MissingKekError,
 } from "./key-management";
 import { getAgencyProviderConfig, type SocialProvider } from "./provider-config";
+import type { TestErrorCode } from "./test-error-codes";
+
+export { TEST_ERROR_CODES } from "./test-error-codes";
+export type { TestErrorCode } from "./test-error-codes";
 
 type SocialChannel = typeof socialChannels.$inferSelect;
 type SocialConnection = typeof socialConnections.$inferSelect;
@@ -193,7 +197,7 @@ export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResul
 // ─── Per-channel sync core (shared by cron tick + user "Re-test") ─────────
 
 type SyncOutcome = "ok" | "needs_reauth" | "failed" | "skipped";
-type SyncErrorCode =
+export type SyncErrorCode =
   | "auth_expired"
   | "permission_denied"
   | "rate_limited"
@@ -523,68 +527,17 @@ export function nextSyncAt(now: Date): Date {
 /**
  * Closed union of every error code the user "Re-test" path can
  * surface. Kept as a named type (not a derived conditional) so the
- * component can import it directly and the `humanizeTestError`
- * switch stays exhaustively typed under `noUncheckedIndexedAccess`.
+ * component can import it directly and translate it through the
+ * active interface catalog.
  */
-export type TestErrorCode = SyncErrorCode | "no_connection" | "not_connected";
-
 /**
  * UI-facing result for the workspace-manager "Re-test" action.
  * Discriminated by `ok` so the component can render a single ternary
- * without an additional discriminator field.
+ * without an additional discriminator field. The domain layer returns
+ * only this stable code; user-facing prose belongs to the UI locale.
  */
 export type TestChannelResult =
-  { ok: true; lastSyncedAt: Date } | { ok: false; errorCode: TestErrorCode; message: string };
-
-/**
- * Human-readable copy for each error code. Kept in one place so the
- * table status badge, the edit-drawer health section, and any future
- * toast all stay in sync. The function is a tiny pure helper — no
- * React, no i18n, no DB.
- */
-export function humanizeTestError(code: TestErrorCode): string {
-  switch (code) {
-    case "auth_expired":
-      return "Your Meta access has expired. Reconnect to resume.";
-    case "permission_denied":
-      return "The connected account is missing the analytics permission. Reconnect and grant access.";
-    case "rate_limited":
-      return "Meta is rate-limiting this account. The next scheduled sync will retry.";
-    case "provider_unavailable":
-      return "Meta is temporarily unavailable. Try again in a few minutes.";
-    case "not_found":
-      return "The connected account could not be found. It may have been deleted or renamed.";
-    case "invalid_response":
-      // 2026-08-28: the Meta endpoint returned a body we could not
-      // parse, or a non-error HTTP status we did not classify. The
-      // UI copy is intentionally distinct from "provider unavailable"
-      // (which implies Meta is down) — this is "Meta returned
-      // something we don't know how to read", which often means a
-      // temporary schema or version mismatch.
-      return "Meta returned an unrecognized response. The endpoint may be temporarily unavailable; try again in a few minutes.";
-    case "platform_kek_missing":
-      return "Platform credential envelope is not configured. Contact your agency admin.";
-    case "social_not_enabled":
-      return "Social sync is not enabled for this agency. Contact your agency admin.";
-    case "no_connection":
-      return "This channel is not currently linked to a provider grant.";
-    case "not_connected":
-      return "This channel is not in a connected state. Reconnect to resume.";
-    case "not_configured":
-      // 2026-08-28: two distinct cases land here — (a) the agency
-      // admin hasn't configured the app credentials in Agency
-      // Settings (pre-M4.6 connections), and (b) the Meta app
-      // doesn't have a specific insight metric enabled (App Review
-      // allowlist / app mode). Both are "the data we need isn't
-      // reachable" — operator action required — and the next sync
-      // tick won't help. The analytics page surfaces the actual
-      // reason via `source_metadata.providerErrorCode` + the row's
-      // `partial: true` flag, so the operator can drill in.
-      return "This channel's analytics are not configured. Ask your agency admin to check the app credentials in Agency Settings, or ask Meta to enable the missing insights metric for the app.";
-    case "unknown":
-      return "The validation request failed. Try again, or check the system status.";
-  }
-}
+  { ok: true; lastSyncedAt: Date } | { ok: false; errorCode: TestErrorCode };
 
 /**
  * Run a single "Re-test" against one channel. Used by the
@@ -601,15 +554,14 @@ export function humanizeTestError(code: TestErrorCode): string {
  * Returns a typed discriminated union, never throws. Application
  * errors (KEK missing, agency disabled) and provider errors
  * (auth_expired, rate_limited, ...) are all mapped to the same
- * `{ ok: false, errorCode, message }` shape so the UI can render
- * one inline error block.
+ * `{ ok: false, errorCode }` shape so the UI can render one inline
+ * error block in the active locale.
  */
 export async function runChannelTest(channelId: string): Promise<TestChannelResult> {
   if (!isKekAvailable()) {
     return {
       ok: false,
       errorCode: "platform_kek_missing",
-      message: humanizeTestError("platform_kek_missing"),
     };
   }
 
@@ -650,12 +602,11 @@ export async function runChannelTest(channelId: string): Promise<TestChannelResu
       return {
         ok: false,
         errorCode: "no_connection",
-        message: humanizeTestError("no_connection"),
       };
     }
     const code: TestErrorCode =
       chan.connectionStatus === "connected" ? "no_connection" : "not_connected";
-    return { ok: false, errorCode: code, message: humanizeTestError(code) };
+    return { ok: false, errorCode: code };
   }
 
   const { channel, connection } = row;
@@ -668,7 +619,6 @@ export async function runChannelTest(channelId: string): Promise<TestChannelResu
     return {
       ok: false,
       errorCode: "not_connected",
-      message: humanizeTestError("not_connected"),
     };
   }
 
@@ -684,7 +634,6 @@ export async function runChannelTest(channelId: string): Promise<TestChannelResu
     return {
       ok: false,
       errorCode: "not_configured",
-      message: humanizeTestError("not_configured"),
     };
   }
   const config = await getAgencyProviderConfig(db, ws.agencyId, provider);
@@ -692,14 +641,12 @@ export async function runChannelTest(channelId: string): Promise<TestChannelResu
     return {
       ok: false,
       errorCode: "not_configured",
-      message: humanizeTestError("not_configured"),
     };
   }
   if (!config.enabled) {
     return {
       ok: false,
       errorCode: "not_connected",
-      message: humanizeTestError("not_connected"),
     };
   }
 
@@ -720,7 +667,7 @@ export async function runChannelTest(channelId: string): Promise<TestChannelResu
     return { ok: true, lastSyncedAt: result.lastSyncedAt };
   }
   const errorCode: TestErrorCode = result.errorCode ?? "unknown";
-  return { ok: false, errorCode, message: humanizeTestError(errorCode) };
+  return { ok: false, errorCode };
 }
 
 // Silence the unused import linter for `socialProfileDailyMetrics`,
