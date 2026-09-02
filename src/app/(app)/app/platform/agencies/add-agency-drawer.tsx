@@ -65,7 +65,7 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
           <Plus className="h-4 w-4" aria-hidden="true" /> Add agency
         </Button>
       </DialogTrigger>
-      <DialogContent className="end-0 top-0 left-auto flex h-dvh w-full max-w-2xl translate-x-0 translate-y-0 flex-col rounded-none p-0 sm:w-[640px]">
+      <DialogContent className="start-auto end-0 top-0 flex h-dvh w-full max-w-2xl translate-x-0 translate-y-0 flex-col rounded-none p-0 sm:w-[640px]">
         <DialogHeader className="border-border border-b px-6 py-5 pe-14">
           <DialogTitle>Add agency</DialogTitle>
           <DialogDescription>

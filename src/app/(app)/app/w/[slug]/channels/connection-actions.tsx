@@ -17,7 +17,7 @@ import {
   testChannelConnectionAction,
 } from "./actions";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * M4 — connection lifecycle client component.
@@ -88,6 +88,7 @@ export function ConnectionActions({
   t?: Translator;
 }) {
   const localeT = useLocaleT();
+  const locale = useLocaleCode();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t ? t(key, params) : localeT(key, params) || fallback;
   const [pending, startTransition] = useTransition();
@@ -207,8 +208,8 @@ export function ConnectionActions({
           <Check className="text-success h-3 w-3" aria-hidden={true} />
           {tr(
             "users.channelsConnectionActions.validatedAt",
-            `Validated ${formatRelativeDate(flash.lastSyncedAt)}`,
-            { when: formatRelativeDate(flash.lastSyncedAt) },
+            `Validated ${formatRelativeDate(flash.lastSyncedAt, new Date(), locale)}`,
+            { when: formatRelativeDate(flash.lastSyncedAt, new Date(), locale) },
           )}
         </span>
       ) : null}

@@ -116,7 +116,7 @@ export default async function PlatformAgencyDetailPage({
 }: {
   params: Promise<{ agencyId: string }>;
 }) {
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const actor = await currentActor();
   if (!actor) {
     return (
@@ -162,13 +162,13 @@ export default async function PlatformAgencyDetailPage({
             <span className="text-fg-primary font-semibold">{detail.slug}</span>
             {" · "}
             {t("platform.agencyDetailCreated", {
-              date: formatRelativeDate(detail.createdAt),
+              date: formatRelativeDate(detail.createdAt, new Date(), code),
             })}
             {detail.bootstrapCompletedAt ? (
               <>
                 {" · "}
                 {t("platform.agencyDetailBootstrap", {
-                  date: formatRelativeDate(detail.bootstrapCompletedAt),
+                  date: formatRelativeDate(detail.bootstrapCompletedAt, new Date(), code),
                 })}
               </>
             ) : null}
@@ -285,7 +285,7 @@ export default async function PlatformAgencyDetailPage({
             getRowKey={(w) => w.id}
             getRowTestId={(w) => `platform-agency-ws-row-${w.id}`}
             rows={detail.recentWorkspaces}
-            columns={workspaceColumns(t)}
+            columns={workspaceColumns(t, code)}
           />
         )}
       </Card>
@@ -306,6 +306,7 @@ export default async function PlatformAgencyDetailPage({
             agencyName={detail.name}
             workspaces={detail.recentWorkspaces.map(({ id, name }) => ({ id, name }))}
             canRequestSupport={capabilities.canRequestSupport}
+            locale={code}
           />
         </div>
       ) : null}
@@ -313,7 +314,10 @@ export default async function PlatformAgencyDetailPage({
   );
 }
 
-function workspaceColumns(t: Translator): DataTableColumnDef<{
+function workspaceColumns(
+  t: Translator,
+  locale: import("@/lib/i18n/locales").LocaleCode,
+): DataTableColumnDef<{
   id: string;
   name: string;
   slug: string;
@@ -334,7 +338,7 @@ function workspaceColumns(t: Translator): DataTableColumnDef<{
     {
       key: "updated",
       header: t("platform.agencyWsColLastActivity"),
-      cell: (w) => formatRelativeDate(w.updatedAt),
+      cell: (w) => formatRelativeDate(w.updatedAt, new Date(), locale),
     },
     {
       key: "hint",

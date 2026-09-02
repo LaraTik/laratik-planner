@@ -40,7 +40,7 @@ const CATALOGS: Record<LocaleCode, Catalog> = {
   ar: ar as Catalog,
 };
 
-export type Namespaces = "common" | "navigation" | "languageSwitcher" | "auth";
+export type Namespaces = keyof typeof en;
 
 /**
  * Read a dotted key from a catalog. Returns `undefined` when

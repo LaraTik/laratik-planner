@@ -14,7 +14,7 @@ import {
   testProviderConfigAction,
   type ProviderConfigFormState,
 } from "./actions";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
 // Hydration-aware `window.location.origin` reader. Mirrors the
 // pattern in `edit-agency-form.tsx` (browser-only value, server
@@ -137,6 +137,7 @@ export function ProviderConfigCard({
   existing: ExistingSummary | null;
 }) {
   const tr: Translator = useLocaleT() ?? EN_FALLBACK;
+  const locale = useLocaleCode();
   const meta = PROVIDER_META[provider];
   const [appId, setAppId] = useState(existing?.appId ?? "");
   const [appSecret, setAppSecret] = useState("");
@@ -514,9 +515,9 @@ export function ProviderConfigCard({
           >
             {existing.lastTestedOk
               ? tr("agencyProviders.verifiedAt", {
-                  date: formatRelativeDate(existing.lastTestedAt),
+                  date: formatRelativeDate(existing.lastTestedAt, new Date(), locale),
                 })
-              : `${tr("agencyProviders.lastFailedWithCode", { code: existing.lastTestErrorCode ?? "—" })} ${formatRelativeDate(existing.lastTestedAt)}.`}
+              : `${tr("agencyProviders.lastFailedWithCode", { code: existing.lastTestErrorCode ?? "—" })} ${formatRelativeDate(existing.lastTestedAt, new Date(), locale)}.`}
           </p>
         ) : null}
       </form>

@@ -22,9 +22,9 @@
     "healthPublished": "نُشِر",
     "healthCancelled": "مُلغى",
     "healthScheduled": "مُجدوَل",
-    "healthDaysOverdueOne": "يوم واحد متأخر",
+    "healthDaysOverdueOne": "{count} يوم متأخر",
     "healthDaysOverdueMany": "{count} أيام تأخير",
-    "healthApprovalsPendingOne": "اعتماد واحد بانتظار",
+    "healthApprovalsPendingOne": "{count} اعتماد بانتظار",
     "healthApprovalsPendingMany": "{count} اعتمادات بانتظار",
     "stagePlanning": "تخطيط",
     "stageReview": "مراجعة",
@@ -285,11 +285,11 @@
       "reviewCta": "مراجعة عناصر الانتباه",
       "approvalsCta": "الاعتمادات",
       "blocked": "{count} محظور",
-      "atRiskOne": "عنصر واحد في خطر",
+      "atRiskOne": "{count} عنصر في خطر",
       "atRiskMany": "{count} عناصر في خطر",
-      "approachingOne": "موعد نهائي واحد يقترب",
+      "approachingOne": "{count} موعد نهائي يقترب",
       "approachingMany": "{count} مواعيد نهائية تقترب",
-      "approvalsWaitingOne": "اعتماد واحد بانتظارك",
+      "approvalsWaitingOne": "{count} اعتماد بانتظارك",
       "approvalsWaitingMany": "{count} اعتمادات بانتظارك"
     },
     "createContent": "إنشاء محتوى"
@@ -298,7 +298,7 @@
     "title": "التخطيط",
     "metaTitle": "التخطيط · {slug}",
     "editMetaTitle": "تعديل الفكرة · {id}",
-    "descriptionOne": "{month} · عنصر واحد",
+    "descriptionOne": "{month} · {count} عنصر",
     "descriptionMany": "{month} · {count} عناصر",
     "groupToday": "اليوم",
     "groupTomorrow": "غدًا",
@@ -503,14 +503,14 @@
       "rowAssets": "الأصول والإصدارات",
       "rowAssetsReady": "توجد نسخة معتمدة في الملف",
       "rowAssetsEmpty": "لا توجد إصدارات تصميم بعد",
-      "rowAssetsUnapprovedOne": "إصدار واحد، لم يُعتمد أي منها",
+      "rowAssetsUnapprovedOne": "{count} إصدار، لم يُعتمد أي منها",
       "rowAssetsUnapprovedMany": "{count} إصدارات، لم يُعتمد أي منها",
       "rowPublishing": "النشر",
       "rowPublishingReady": "تم إعداد القنوات",
       "rowPublishingNoChannels": "لا توجد قنوات",
-      "rowPublishingBlockerOne": "مانع واحد",
+      "rowPublishingBlockerOne": "{count} مانع",
       "rowPublishingBlockerMany": "{count} موانع",
-      "rowPublishingNeedSetupOne": "قناة واحدة تحتاج إعدادًا",
+      "rowPublishingNeedSetupOne": "{count} قناة تحتاج إعدادًا",
       "rowPublishingNeedSetupMany": "{count} قنوات تحتاج إعدادًا",
       "rowSchedule": "الجدول",
       "rowScheduleShipped": "تم النشر",
@@ -900,6 +900,7 @@
       "signOut": "تسجيل الخروج"
     },
     "acceptInvitation": {
+      "title": "قبول الدعوة",
       "invalidTitle": "دعوة غير صالحة",
       "invalidBody": "الرابط يفتقد إلى رمز الدعوة. يُرجى التحقق من الرابط في بريدك الإلكتروني.",
       "revokedTitle": "دعوة غير صالحة",
@@ -907,7 +908,7 @@
       "expiredTitle": "انتهت صلاحية الدعوة",
       "expiredBody": "انتهت صلاحية الرابط. اطلب من المسؤول إعادة الإرسال.",
       "successTitle": "تم قبول الدعوة",
-      "successOneWorkspace": "تمت إضافتك إلى مساحة عمل واحدة.",
+      "successOneWorkspace": "تمت إضافتك إلى {count} مساحة عمل.",
       "successManyWorkspaces": "تمت إضافتك إلى {count} مساحات عمل.",
       "successNoWorkspace": "عضويتك في الوكالة نشطة.",
       "goToMyWork": "الانتقال إلى «عملي»",
@@ -986,7 +987,8 @@
     },
     "checklist": {
       "ariaLabel": "قائمة الإعداد",
-      "heading": "قائمة الإعداد"
+      "heading": "قائمة الإعداد",
+      "blurb": "اضبط أساسيات مساحة العمل قبل أن يبدأ الفريق في التخطيط."
     },
     "items": {
       "lifecycle": {
@@ -1259,9 +1261,9 @@
     "colMembers": "الأعضاء",
     "colLastActivity": "آخر نشاط",
     "noChannels": "لا توجد قنوات",
-    "channelCount": "قناة واحدة",
+    "channelCount": "{count} قناة",
     "channelCountMany": "{count} قنوات",
-    "memberCount": "عضو واحد",
+    "memberCount": "{count} عضو",
     "memberCountMany": "{count} أعضاء"
   },
   "workspaceNew": {
@@ -1366,7 +1368,7 @@
     "addDirectlyError": "تعذّرت إضافة المستخدم",
     "addDirectlyAccountCreated": "تم إنشاء حساب لـ {email}",
     "addDirectlyShareCreds": "شارك هذه البيانات بشكل آمن — لن تظهر مرة أخرى.",
-    "addDirectlyAssigned": "تم تعيينه في مساحة عمل واحدة",
+    "addDirectlyAssigned": "تم تعيينه في {count} مساحة عمل",
     "addDirectlyAssignedMany": "تم تعيينه في {count} مساحات عمل",
     "addDirectlyPasswordLabel": "كلمة المرور المؤقتة",
     "addDirectlyPasswordHint": "٨ أحرف على الأقل، تحوي حرفًا ورقمًا. شاركها مع المستخدم الجديد خارج النظام — لن تظهر مجددًا بعد إعادة تعيين النموذج.",
@@ -1397,6 +1399,31 @@
       "windowNone": "لا توجد فترة محددة"
     },
     "channels": {
+      "connectionStatus": {
+        "manual": {
+          "label": "يدوي",
+          "description": "لا يوجد اتصال بمزوّد للقناة. تتم إدارتها يدويًا."
+        },
+        "connected": {
+          "label": "متصلة",
+          "description": "المزوّد نشط. تُجمع المقاييس اليومية."
+        },
+        "needs_reauth": {
+          "label": "تحتاج إلى إعادة الاتصال",
+          "description": "حدثت ثلاث إخفاقات متتالية في المصادقة أو الصلاحيات. أعد الاتصال للمتابعة."
+        },
+        "sync_error": {
+          "label": "تأخر المزامنة",
+          "description": "حدث خطأ مؤقت لدى المزوّد. سيعيد cron المحاولة."
+        },
+        "disconnected": {
+          "label": "غير متصلة",
+          "description": "أزيل اتصال المزوّد. ستبقى المقاييس التاريخية محفوظة."
+        },
+        "lastSynced": "آخر مزامنة {when}",
+        "synced": "تمت المزامنة {when}",
+        "waiting": "بانتظار أول مزامنة"
+      },
       "title": "القنوات",
       "description": "احتفظ بمعلومات حسابات العلامة في مكان واحد. الاتصالات والتحليلات مخططة لإصدار مستقبلي.",
       "colPlatform": "المنصة",
@@ -1537,7 +1564,7 @@
       "statusDeactivated": "معطّل",
       "currentEffectiveRolesLabel": "الأدوار الفعّالة الحالية",
       "currentEffectiveRolesNone": "لا يوجد وصول في أي مساحة عمل",
-      "currentEffectiveRolesOne": "دور واحد عبر مساحة عمل واحدة",
+      "currentEffectiveRolesOne": "{count} دور عبر مساحة عمل واحدة",
       "currentEffectiveRolesMany": "{count} أدوار عبر {workspaces} مساحات عمل",
       "agencyAdminTitle": "مسؤول الوكالة",
       "grantAdmin": "منح صلاحية مسؤول الوكالة",
@@ -1724,7 +1751,31 @@
     "noAgencyYet": "لست عضوًا في أي وكالة بعد. إذا كانت هذه أول جلسة لك، فسيسندك مسار التهيئة كمسؤول للوكالة في التحميل التالي.",
     "signOut": "تسجيل الخروج",
     "signOutBlurb": "إنهاء هذه الجلسة على هذا الجهاز. يمكنك تسجيل الدخول مجددًا في أي وقت.",
-    "signOutAction": "تسجيل الخروج"
+    "signOutAction": "تسجيل الخروج",
+    "errors": {
+      "sessionExpired": "انتهت جلستك. سجّل الدخول مجددًا وحاول مرة أخرى.",
+      "unsupportedLocale": "هذه اللغة غير مدعومة بعد.",
+      "displayNameRequired": "اسم العرض مطلوب.",
+      "displayNameTooLong": "يجب ألا يتجاوز اسم العرض 80 حرفًا.",
+      "nameRequired": "الاسم مطلوب.",
+      "nameTooLong": "يجب ألا يتجاوز الاسم 80 حرفًا.",
+      "avatarInvalid": "يجب أن يكون رابط الصورة الشخصية صالحًا.",
+      "avatarTooLong": "يجب ألا يتجاوز رابط الصورة الشخصية 2048 حرفًا.",
+      "profileInvalid": "تحقق من قيم الملف الشخصي وحاول مرة أخرى.",
+      "accountNotFound": "الحساب غير موجود.",
+      "passwordWeak": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل وتتضمن حرفًا ورقمًا.",
+      "passwordMismatch": "كلمتا المرور غير متطابقتين.",
+      "currentPasswordRequired": "أدخل كلمة المرور الحالية.",
+      "currentPasswordIncorrect": "كلمة المرور الحالية غير صحيحة.",
+      "savePreferencesFailed": "تعذر حفظ تفضيلات الإشعارات. حاول مرة أخرى.",
+      "localeCookieSyncFailed": "تم حفظ الملف الشخصي، وستُطبّق اللغة بعد تسجيل الدخول التالي."
+    }
+  },
+  "buildInfo": {
+    "copied": "تم نسخ معلومات الإصدار",
+    "copy": "نسخ معلومات الإصدار",
+    "copyFailed": "تعذر نسخ معلومات الإصدار",
+    "checkBrowserPermissions": "تحقق من أذونات المتصفح."
   },
   "errors": {
     "notFoundTitle": "الصفحة غير موجودة",
@@ -2363,6 +2414,7 @@
   },
   "brandKit": {
     "title": "هوية العلامة",
+    "description": "هوية العلامة ونبرتها وإرشاداتها القابلة لإعادة الاستخدام لكل محتوى.",
     "breadcrumbAria": "مسار تنقل هوية العلامة",
     "section": {
       "voice": "الصوت",
@@ -2433,7 +2485,9 @@
       "downloadZipEmpty": "أضف شعارًا أو لونًا أو خطًا واحدًا على الأقل قبل التنزيل.",
       "browseTemplates": "استعراض القوالب",
       "recentUpdates": "آخر التحديثات",
-      "seeAllActivity": "← عرض كل النشاط"
+      "seeAllActivity": "← عرض كل النشاط",
+      "lastUpdatedLabel": "آخر تحديث",
+      "noActivity": "لا يوجد نشاط بعد"
     },
     "logosAria": "أصول الشعار",
     "colorsAria": "لوحة الألوان",
@@ -2646,7 +2700,8 @@
       "nothingOverdue": "لا توجد عناصر متأخرة أو محظورة هذا الشهر.",
       "unassigned": "· غير مسند",
       "open": "فتح ←",
-      "deadlineOverdue": "متأخر {days} يوم · {date}",
+      "deadlineOverdueOne": "متأخر {days} يوم · {date}",
+      "deadlineOverdueMany": "متأخر {days} أيام · {date}",
       "deadlineToday": "مستحق اليوم · {date}",
       "deadlineTomorrow": "مستحق غدًا · {date}",
       "deadlineInDays": "مستحق خلال {days} يوم · {date}",
@@ -2681,7 +2736,8 @@
       "plannedThisMonth": "مخطط له هذا الشهر",
       "plannedProgress": "/ {target} مخطط",
       "targetMet": "تم بلوغ الهدف ({percent}%)",
-      "coverageRemaining": "{percent}٪ تغطية · متبقي {remaining} عنصر",
+      "coverageRemainingOne": "{percent}٪ تغطية · متبقي {remaining} عنصر",
+      "coverageRemainingMany": "{percent}٪ تغطية · متبقي {remaining} عناصر",
       "noMonthlyTarget": "لا يوجد هدف شهري",
       "setTargetHint": "لا يوجد هدف شهري — عيّن هدفًا لرؤية تقدم التغطية.",
       "coverageAria": "{percent} بالمئة من الهدف الشهري"

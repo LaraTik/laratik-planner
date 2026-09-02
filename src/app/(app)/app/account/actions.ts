@@ -6,6 +6,7 @@ import {
   changeOwnPassword,
   getPasswordState,
   updateOwnProfile,
+  type ProfileErrorCode,
   type Locale,
 } from "@/lib/auth/profile";
 import { setNotificationPreferencesForUser } from "@/lib/notifications/service";
@@ -36,29 +37,39 @@ import { setPublicLocale } from "@/lib/i18n/cookie";
  */
 
 export type ProfileActionState =
-  { saved: true } | { error: string; field?: string } | Record<string, never>;
+  | { saved: true; warningCode?: "localeCookieSyncFailed" }
+  | { errorCode: ProfileErrorCode | "sessionExpired"; field?: string }
+  | Record<string, never>;
 
 export type PasswordActionState =
   | { saved: true; mode: "set" | "change" }
   | {
-      error: string;
+      errorCode:
+        | "sessionExpired"
+        | "accountNotFound"
+        | "passwordWeak"
+        | "passwordMismatch"
+        | "currentPasswordRequired"
+        | "currentPasswordIncorrect";
       field?: string;
     }
   | Record<string, never>;
 
 export type NotificationPreferencesActionState =
-  { saved: true } | { error: string } | Record<string, never>;
+  | { saved: true }
+  | { errorCode: "sessionExpired" | "savePreferencesFailed" }
+  | Record<string, never>;
 
 export async function updateProfileAction(
   _previous: ProfileActionState,
   formData: FormData,
 ): Promise<ProfileActionState> {
   const session = await auth();
-  if (!session?.user?.id) return { error: "Sign in again to save your profile." };
+  if (!session?.user?.id) return { errorCode: "sessionExpired" };
 
   const rawLocale = String(formData.get("locale") ?? "en");
   const locale: Locale | undefined = SUPPORTED_LOCALES.find((l) => l.code === rawLocale)?.code;
-  if (!locale) return { error: "That locale isn't supported yet.", field: "locale" };
+  if (!locale) return { errorCode: "unsupportedLocale", field: "locale" };
 
   const result = await updateOwnProfile(session.user.id, {
     displayName: String(formData.get("displayName") ?? ""),
@@ -68,9 +79,9 @@ export async function updateProfileAction(
   });
   if (!result.ok) {
     if (result.field) {
-      return { error: result.message, field: result.field };
+      return { errorCode: result.code, field: result.field };
     }
-    return { error: result.message };
+    return { errorCode: result.code };
   }
   // The DB row is the source of truth for authenticated
   // requests. The cookie is the source of truth for the
@@ -81,10 +92,15 @@ export async function updateProfileAction(
   // payload for the request, so without the cookie the
   // first paint after a language switch would still show
   // the old language until the next navigation.
-  await setPublicLocale(locale);
+  let warningCode: "localeCookieSyncFailed" | undefined;
+  try {
+    if (!(await setPublicLocale(locale))) warningCode = "localeCookieSyncFailed";
+  } catch {
+    warningCode = "localeCookieSyncFailed";
+  }
   revalidatePath("/app/account");
   revalidatePath("/app", "layout");
-  return { saved: true };
+  return warningCode ? { saved: true, warningCode } : { saved: true };
 }
 
 export async function changePasswordAction(
@@ -92,10 +108,10 @@ export async function changePasswordAction(
   formData: FormData,
 ): Promise<PasswordActionState> {
   const session = await auth();
-  if (!session?.user?.id) return { error: "Sign in again to change your password." };
+  if (!session?.user?.id) return { errorCode: "sessionExpired" };
 
   const state = await getPasswordState(session.user.id);
-  if (!state) return { error: "Account not found." };
+  if (!state) return { errorCode: "accountNotFound" };
 
   const current = String(formData.get("current") ?? "");
   const next = String(formData.get("next") ?? "");
@@ -107,10 +123,10 @@ export async function changePasswordAction(
     confirm,
   });
   if (!result.ok) {
-    if (result.reason === "weak") return { error: result.message, field: "next" };
-    if (result.reason === "mismatch") return { error: result.message, field: "confirm" };
-    if (result.reason === "current_wrong") return { error: result.message, field: "current" };
-    return { error: result.message };
+    if (result.reason === "weak") return { errorCode: result.code, field: "next" };
+    if (result.reason === "mismatch") return { errorCode: result.code, field: "confirm" };
+    if (result.reason === "current_wrong") return { errorCode: result.code, field: "current" };
+    return { errorCode: result.code };
   }
   return { saved: true, mode: result.mode };
 }
@@ -139,14 +155,15 @@ export async function setNotificationPreferencesAction(
   formData: FormData,
 ): Promise<NotificationPreferencesActionState> {
   const session = await auth();
-  if (!session?.user?.id) return { error: "Sign in again to save your preferences." };
+  if (!session?.user?.id) return { errorCode: "sessionExpired" };
   try {
     await setNotificationPreferencesForUser(session.user.id, {
       emailOnMention: formData.get("emailOnMention") === "on",
       dailyDigest: formData.get("dailyDigest") === "on",
     });
   } catch (e) {
-    return { error: (e as Error).message };
+    console.error("Failed to save notification preferences", e);
+    return { errorCode: "savePreferencesFailed" };
   }
   revalidatePath("/app/account");
   return { saved: true };

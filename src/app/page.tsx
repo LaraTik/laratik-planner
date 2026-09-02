@@ -8,11 +8,13 @@ import { auth } from "@/lib/auth/config";
 import { firstAgencyForBootstrap } from "@/lib/auth/policy";
 import { tForActive } from "@/lib/i18n/t-for-active";
 
-export const metadata = {
-  title: "laratik-planner",
-  description:
-    "Social media planning, design, and approvals for one agency. Self-hosted Next.js + Drizzle + Postgres on the LaraTik VPS.",
-};
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return {
+    title: t("auth.productName"),
+    description: t("auth.landing.subhead"),
+  };
+}
 
 /**
  * Public product entry point. Returning users skip this surface and go directly

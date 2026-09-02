@@ -70,7 +70,7 @@ export default async function WorkspaceOverviewPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ month?: string }>;
 }) {
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const { slug } = await params;
   const filters = await searchParams;
   const session = await auth();
@@ -422,6 +422,7 @@ export default async function WorkspaceOverviewPage({
             viewAllHref={buildPlanningHref({ status: null, risk: null })}
             createHref={`/app/w/${slug}/planning/new`}
             t={t}
+            locale={code}
           />
         </div>
       </div>

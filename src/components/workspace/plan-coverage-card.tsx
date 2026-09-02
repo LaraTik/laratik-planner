@@ -160,9 +160,9 @@ function CoverageBar({
               { percent: coveragePercent },
             )
           : tr(
-              "workspaceOverviewDashboard.planCoverage.coverageRemaining",
+              `workspaceOverviewDashboard.planCoverage.coverageRemaining${remaining === 1 ? "One" : "Many"}`,
               `${coveragePercent}% coverage · ${remaining} item${remaining === 1 ? "" : "s"} to go`,
-              { percent: coveragePercent, remaining, plural: remaining === 1 ? "" : "s" },
+              { percent: coveragePercent, remaining },
             )}
       </p>
     </div>

@@ -68,7 +68,7 @@ type RequestRow = {
 };
 
 export default async function PlatformSecurityPage() {
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const actor = await currentActor();
   if (!actor) {
     return (
@@ -120,7 +120,7 @@ export default async function PlatformSecurityPage() {
     {
       key: "expires",
       header: t("platform.securityColExpires"),
-      cell: (row) => formatRelativeDate(row.expiresAt),
+      cell: (row) => formatRelativeDate(row.expiresAt, new Date(), code),
     },
   ];
 
@@ -151,7 +151,7 @@ export default async function PlatformSecurityPage() {
     {
       key: "createdAt",
       header: t("platform.securityColWhen"),
-      cell: (row) => formatRelativeDate(row.createdAt),
+      cell: (row) => formatRelativeDate(row.createdAt, new Date(), code),
     },
   ];
 
@@ -256,7 +256,7 @@ export default async function PlatformSecurityPage() {
                           </span>
                           <span className="text-label text-fg-muted">
                             {req.status} · {req.requestedDurationHours}h ·{" "}
-                            {formatRelativeDate(req.createdAt)}
+                            {formatRelativeDate(req.createdAt, new Date(), code)}
                           </span>
                         </div>
                         <p className="text-body text-fg-muted line-clamp-2">{req.reason}</p>

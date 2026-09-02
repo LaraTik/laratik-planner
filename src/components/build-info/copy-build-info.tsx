@@ -7,24 +7,27 @@ import type { BuildInfo } from "@/lib/build-info";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 function useCopyBuildInfo(buildInfo: BuildInfo) {
+  const t = useLocaleT();
   const [copied, setCopied] = React.useState(false);
 
   async function copy() {
     try {
       await navigator.clipboard.writeText(buildInfo.copyText);
       setCopied(true);
-      toast.success("Build information copied", { duration: 1500 });
+      toast.success(t("buildInfo.copied"), { duration: 1500 });
       window.setTimeout(() => setCopied(false), 1500);
     } catch (error) {
-      toast.error("Couldn't copy build information", {
-        description: error instanceof Error ? error.message : "Check your browser permissions.",
+      toast.error(t("buildInfo.copyFailed"), {
+        description:
+          error instanceof Error ? error.message : t("buildInfo.checkBrowserPermissions"),
       });
     }
   }
 
-  return { copied, copy };
+  return { copied, copy, t };
 }
 
 export function CopyBuildInfoButton({
@@ -34,7 +37,7 @@ export function CopyBuildInfoButton({
   buildInfo: BuildInfo;
   className?: string;
 }) {
-  const { copied, copy } = useCopyBuildInfo(buildInfo);
+  const { copied, copy, t } = useCopyBuildInfo(buildInfo);
 
   return (
     <Button
@@ -51,13 +54,13 @@ export function CopyBuildInfoButton({
       ) : (
         <Copy className="h-4 w-4" aria-hidden="true" />
       )}
-      {copied ? "Build information copied" : "Copy build information"}
+      {copied ? t("buildInfo.copied") : t("buildInfo.copy")}
     </Button>
   );
 }
 
 export function CopyBuildInfoMenuItem({ buildInfo }: { buildInfo: BuildInfo }) {
-  const { copied, copy } = useCopyBuildInfo(buildInfo);
+  const { copied, copy, t } = useCopyBuildInfo(buildInfo);
 
   return (
     <DropdownMenuItem
@@ -77,13 +80,13 @@ export function CopyBuildInfoMenuItem({ buildInfo }: { buildInfo: BuildInfo }) {
       ) : (
         <Copy className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
       )}
-      <span className="sr-only">Copy build information</span>
+      <span className="sr-only">{t("buildInfo.copy")}</span>
     </DropdownMenuItem>
   );
 }
 
 export function CopyBuildInfoSheetAction({ buildInfo }: { buildInfo: BuildInfo }) {
-  const { copied, copy } = useCopyBuildInfo(buildInfo);
+  const { copied, copy, t } = useCopyBuildInfo(buildInfo);
 
   return (
     <button
@@ -105,7 +108,7 @@ export function CopyBuildInfoSheetAction({ buildInfo }: { buildInfo: BuildInfo }
       ) : (
         <Copy className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
       )}
-      <span className="sr-only">Copy build information</span>
+      <span className="sr-only">{t("buildInfo.copy")}</span>
     </button>
   );
 }

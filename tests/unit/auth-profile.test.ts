@@ -215,7 +215,7 @@ describe("changeOwnPassword", () => {
     expect(out.ok).toBe(false);
     if (!out.ok) {
       expect(out.reason).toBe("current_wrong");
-      expect(out.message).toMatch(/current password/i);
+      expect(out.code).toBe("currentPasswordRequired");
     }
   });
 

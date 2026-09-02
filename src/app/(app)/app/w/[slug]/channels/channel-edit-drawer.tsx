@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { archiveChannelAction, testChannelConnectionAction, updateChannelAction } from "./actions";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Channel edit form fields are kept inline here rather than extracted
@@ -149,12 +149,12 @@ export function ChannelEditDrawer({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        // Sheet (drawer) styling: right-anchored, full height, 520px
+        // Sheet (drawer) styling: end-anchored, full height, 520px
         // max width. The base DialogContent centers itself; we reset
         // every centering offset here. The built-in X close button
         // (rendered by DialogContent at `top-4 end-4`) lands in the
         // top-right corner, matching the Stitch header.
-        className="bg-surface inset-y-0 end-0 top-0 left-auto m-0 h-screen w-screen max-w-[520px] translate-x-0 translate-y-0 overflow-hidden p-0 sm:rounded-none"
+        className="bg-surface inset-y-0 start-auto end-0 top-0 m-0 h-screen w-screen max-w-[520px] translate-x-0 translate-y-0 overflow-hidden p-0 sm:rounded-none"
         data-testid={`channel-edit-drawer-${channel.id}`}
       >
         <form action={formAction} className="flex h-full flex-col">
@@ -504,6 +504,7 @@ function ConnectionHealthSection({
     { kind: "success"; lastSyncedAt: string } | { kind: "error"; message: string } | null;
   t?: Translator;
 }) {
+  const locale = useLocaleCode();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t ? t(key, params) : fallback;
   // Prefer the in-flight Re-test result (fresher than the row
@@ -516,7 +517,7 @@ function ConnectionHealthSection({
       ? reTestResult.message
       : connectionStatus !== "connected" && lastSyncErrorCode
         ? `${humanizeErrorCode(lastSyncErrorCode, tr)}${
-            lastSyncErrorAt ? ` (${formatRelativeDate(lastSyncErrorAt)})` : ""
+            lastSyncErrorAt ? ` (${formatRelativeDate(lastSyncErrorAt, new Date(), locale)})` : ""
           }`
         : null;
   const showSuccess = reTestResult?.kind === "success";
@@ -547,7 +548,7 @@ function ConnectionHealthSection({
           <dt className="text-fg-muted">{tr("users.channelsHealth.lastSyncLabel", "Last sync")}</dt>
           <dd className="text-fg-primary font-medium">
             {lastSyncedAt
-              ? formatRelativeDate(lastSyncedAt)
+              ? formatRelativeDate(lastSyncedAt, new Date(), locale)
               : tr("users.channelsHealth.lastSyncNever", "Never")}
           </dd>
         </div>
@@ -570,8 +571,8 @@ function ConnectionHealthSection({
           <Check className="text-success h-3 w-3" aria-hidden={true} />
           {tr(
             "users.channelsHealth.validatedAt",
-            `Validated ${formatRelativeDate(new Date(reTestResult.lastSyncedAt))}`,
-            { when: formatRelativeDate(new Date(reTestResult.lastSyncedAt)) },
+            `Validated ${formatRelativeDate(new Date(reTestResult.lastSyncedAt), new Date(), locale)}`,
+            { when: formatRelativeDate(new Date(reTestResult.lastSyncedAt), new Date(), locale) },
           )}
         </p>
       ) : null}

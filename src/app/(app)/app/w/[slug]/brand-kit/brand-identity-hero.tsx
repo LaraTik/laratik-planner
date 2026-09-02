@@ -6,6 +6,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { cn } from "@/lib/utils";
+import type { LocaleCode } from "@/lib/i18n/locales";
 
 /**
  * BrandIdentityHero — the row-1 "Brand identity" card on the brand-kit
@@ -44,6 +45,8 @@ export interface BrandIdentityHeroProps {
   logoCount: number;
   /** Most recent brand-kit update timestamp; null when the workspace has no activity. */
   lastUpdatedAt?: Date | null;
+  locale?: LocaleCode;
+  t?: (key: string, params?: Record<string, string | number>) => string;
   /** Callback fired when the empty-state CTA is clicked. */
   onAddFirstAsset?: () => void;
 }
@@ -65,8 +68,12 @@ export function BrandIdentityHero({
   assetCount,
   logoCount,
   lastUpdatedAt,
+  locale = "en",
+  t,
   onAddFirstAsset,
 }: BrandIdentityHeroProps) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
+    t ? t(key, params) : fallback;
   return (
     <Card
       id="overview"
@@ -153,7 +160,7 @@ export function BrandIdentityHero({
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-label text-fg-muted font-semibold tracking-wider uppercase">
-                Last updated
+                {tr("brandKit.overview.lastUpdatedLabel", "Last updated")}
               </span>
               {lastUpdatedAt ? (
                 <span
@@ -162,7 +169,7 @@ export function BrandIdentityHero({
                 >
                   <History className="text-fg-muted h-4 w-4" aria-hidden="true" />
                   <time dateTime={lastUpdatedAt.toISOString()}>
-                    {formatRelativeDate(lastUpdatedAt)}
+                    {formatRelativeDate(lastUpdatedAt, new Date(), locale)}
                   </time>
                 </span>
               ) : (
@@ -171,7 +178,7 @@ export function BrandIdentityHero({
                   data-testid="brand-kit-hero-last-updated-empty"
                 >
                   <History className="text-fg-muted h-4 w-4" aria-hidden="true" />
-                  No activity yet
+                  {tr("brandKit.overview.noActivity", "No activity yet")}
                 </span>
               )}
             </div>

@@ -4,6 +4,7 @@ import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { SectionEmptyState } from "@/components/workspace/section-empty-state";
 import { History } from "lucide-react";
 import { UserAvatar } from "./user-avatar";
+import type { LocaleCode } from "@/lib/i18n/locales";
 
 /**
  * RecentUpdatesTable — the row-6 "Recent Updates" table.
@@ -39,10 +40,11 @@ export interface RecentUpdatesTableProps {
    * when omitted, the hard-coded English copy is used.
    */
   t?: (key: string, params?: Record<string, string | number>) => string;
+  locale?: LocaleCode;
 }
 
-function absoluteDateLabel(d: Date): string {
-  return d.toLocaleString(undefined, {
+function absoluteDateLabel(d: Date, locale: LocaleCode): string {
+  return d.toLocaleString(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -51,7 +53,7 @@ function absoluteDateLabel(d: Date): string {
   });
 }
 
-export function RecentUpdatesTable({ rows, t }: RecentUpdatesTableProps) {
+export function RecentUpdatesTable({ rows, t, locale = "en" }: RecentUpdatesTableProps) {
   const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   if (rows.length === 0) {
     return (
@@ -90,9 +92,9 @@ export function RecentUpdatesTable({ rows, t }: RecentUpdatesTableProps) {
                 <td className="text-fg-secondary py-2 pe-3">
                   <time
                     dateTime={row.updatedAt.toISOString()}
-                    title={absoluteDateLabel(row.updatedAt)}
+                    title={absoluteDateLabel(row.updatedAt, locale)}
                   >
-                    {formatRelativeDate(row.updatedAt)}
+                    {formatRelativeDate(row.updatedAt, new Date(), locale)}
                   </time>
                 </td>
                 <td className="text-fg-primary py-2 pe-3">{row.description}</td>

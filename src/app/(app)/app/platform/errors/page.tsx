@@ -72,7 +72,7 @@ export default async function PlatformErrorsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const actor = await currentActor();
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   if (!actor) {
     return (
       <PermissionNotice
@@ -127,7 +127,7 @@ export default async function PlatformErrorsPage({
       header: t("platform.colWhen"),
       cell: (row) => (
         <div className="text-body text-fg-secondary">
-          <p>{formatRelativeDate(row.createdAt)}</p>
+          <p>{formatRelativeDate(row.createdAt, new Date(), code)}</p>
           <p className="text-label text-fg-muted font-mono">
             {row.createdAt.toISOString().replace("T", " ").slice(0, 19)}Z
           </p>

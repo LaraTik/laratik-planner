@@ -48,7 +48,8 @@ export function NotificationPreferencesForm({
     }
   }, [state]);
 
-  const errorMessage = "error" in state && state.error ? state.error : null;
+  const errorMessage =
+    "errorCode" in state && state.errorCode ? t(`account.errors.${state.errorCode}`) : null;
 
   const toggleClass =
     "border-border bg-surface focus-visible:ring-focus-ring flex w-full items-start gap-3 rounded-[var(--radius-control)] border p-3 hover:bg-surface-subtle focus-within:ring-2 focus-within:ring-offset-1";

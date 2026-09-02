@@ -45,7 +45,7 @@ export default async function WorkspacesPage() {
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) return null;
   const isAdmin = await isAgencyAdmin(actor, agencyId);
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const nowMs = now.getTime();
@@ -223,6 +223,7 @@ export default async function WorkspacesPage() {
                 canArchive: isAdmin,
                 canEditSettings: isAdmin,
                 t,
+                locale: code,
               })}
             />
           </div>
@@ -250,6 +251,7 @@ function workspacesColumns(props: {
   canArchive: boolean;
   canEditSettings: boolean;
   t: (key: string, params?: Record<string, string | number>) => string;
+  locale: import("@/lib/i18n/locales").LocaleCode;
 }): DataTableColumnDef<WorkspaceRow>[] {
   return [
     {
@@ -314,7 +316,7 @@ function workspacesColumns(props: {
     {
       key: "last-activity",
       header: props.t("workspaces.colLastActivity"),
-      cell: (ws) => formatRelativeDate(ws.updatedAt),
+      cell: (ws) => formatRelativeDate(ws.updatedAt, new Date(), props.locale),
     },
     {
       key: "actions",

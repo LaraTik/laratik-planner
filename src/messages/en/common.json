@@ -900,6 +900,7 @@
       "signOut": "Sign out"
     },
     "acceptInvitation": {
+      "title": "Accept invitation",
       "invalidTitle": "Invalid invitation",
       "invalidBody": "The link is missing the invitation token. Please check the link in your email.",
       "revokedTitle": "Invalid invitation",
@@ -986,7 +987,8 @@
     },
     "checklist": {
       "ariaLabel": "Settings setup checklist",
-      "heading": "Setup checklist"
+      "heading": "Setup checklist",
+      "blurb": "Keep the workspace basics configured before the team starts planning."
     },
     "items": {
       "lifecycle": {
@@ -1397,6 +1399,31 @@
       "windowNone": "No window set"
     },
     "channels": {
+      "connectionStatus": {
+        "manual": {
+          "label": "Manual",
+          "description": "Channel has no provider connection. Manually managed."
+        },
+        "connected": {
+          "label": "Connected",
+          "description": "Provider active. Daily metrics are being collected."
+        },
+        "needs_reauth": {
+          "label": "Needs reconnect",
+          "description": "Three consecutive auth/permission failures. Reconnect to resume."
+        },
+        "sync_error": {
+          "label": "Sync delayed",
+          "description": "Transient provider error. The cron will retry."
+        },
+        "disconnected": {
+          "label": "Disconnected",
+          "description": "Provider connection removed. Historical metrics are preserved."
+        },
+        "lastSynced": "Last synced {when}",
+        "synced": "Synced {when}",
+        "waiting": "Waiting for first sync"
+      },
       "title": "Channels",
       "description": "Keep the brand's account information in one place. Connections and analytics are planned for a future version.",
       "colPlatform": "Platform",
@@ -1724,7 +1751,31 @@
     "noAgencyYet": "You're not yet a member of any agency. If this is your first sign-in, the bootstrap flow will assign you as the agency admin on the next page load.",
     "signOut": "Sign out",
     "signOutBlurb": "End this session on this device. You can sign back in at any time.",
-    "signOutAction": "Sign out"
+    "signOutAction": "Sign out",
+    "errors": {
+      "sessionExpired": "Your session expired. Sign in again and retry.",
+      "unsupportedLocale": "That language is not supported yet.",
+      "displayNameRequired": "Display name is required.",
+      "displayNameTooLong": "Display name must be 80 characters or fewer.",
+      "nameRequired": "Name is required.",
+      "nameTooLong": "Name must be 80 characters or fewer.",
+      "avatarInvalid": "Avatar URL must be a valid link.",
+      "avatarTooLong": "Avatar URL must be 2,048 characters or fewer.",
+      "profileInvalid": "Check the profile values and try again.",
+      "accountNotFound": "Account not found.",
+      "passwordWeak": "Password must be at least 8 characters and contain a letter and a digit.",
+      "passwordMismatch": "The two passwords do not match.",
+      "currentPasswordRequired": "Enter your current password.",
+      "currentPasswordIncorrect": "That current password is incorrect.",
+      "savePreferencesFailed": "We could not save your notification preferences. Try again.",
+      "localeCookieSyncFailed": "Profile saved, but the language will apply after your next sign-in."
+    }
+  },
+  "buildInfo": {
+    "copied": "Build information copied",
+    "copy": "Copy build information",
+    "copyFailed": "Could not copy build information",
+    "checkBrowserPermissions": "Check your browser permissions."
   },
   "errors": {
     "notFoundTitle": "Page not found",
@@ -2363,6 +2414,7 @@
   },
   "brandKit": {
     "title": "Brand Kit",
+    "description": "Brand identity, voice, and reusable guidance for every piece of content.",
     "breadcrumbAria": "Brand kit breadcrumb",
     "section": {
       "voice": "Voice",
@@ -2433,7 +2485,9 @@
       "downloadZipEmpty": "Add at least one logo, color, or font before downloading.",
       "browseTemplates": "Browse templates",
       "recentUpdates": "Recent updates",
-      "seeAllActivity": "See all activity →"
+      "seeAllActivity": "See all activity →",
+      "lastUpdatedLabel": "Last updated",
+      "noActivity": "No activity yet"
     },
     "logosAria": "Logo assets",
     "colorsAria": "Color palette",
@@ -2646,7 +2700,8 @@
       "nothingOverdue": "No overdue or blocked items this month.",
       "unassigned": "· Unassigned",
       "open": "Open →",
-      "deadlineOverdue": "{days} day{plural} overdue · {date}",
+      "deadlineOverdueOne": "{days} day overdue · {date}",
+      "deadlineOverdueMany": "{days} days overdue · {date}",
       "deadlineToday": "Due today · {date}",
       "deadlineTomorrow": "Due tomorrow · {date}",
       "deadlineInDays": "Due in {days} days · {date}",
@@ -2681,7 +2736,8 @@
       "plannedThisMonth": "planned this month",
       "plannedProgress": "/ {target} planned",
       "targetMet": "Target met ({percent}%)",
-      "coverageRemaining": "{percent}% coverage · {remaining} item{plural} to go",
+      "coverageRemainingOne": "{percent}% coverage · {remaining} item to go",
+      "coverageRemainingMany": "{percent}% coverage · {remaining} items to go",
       "noMonthlyTarget": "No monthly target",
       "setTargetHint": "No monthly target — set one to see coverage progress.",
       "coverageAria": "{percent} percent of monthly target"

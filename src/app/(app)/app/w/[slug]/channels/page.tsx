@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import type { LocaleCode } from "@/lib/i18n/locales";
 import { ConnectionStatusBadge } from "./connection-status-badge";
 import { ConnectionActions } from "./connection-actions";
 import { AddChannelButton } from "./add-channel-button";
@@ -40,11 +41,12 @@ function channelsColumns(props: {
     Array<{ id: string; accountName: string; platform: "instagram" | "facebook" | "tiktok" }>
   >;
   t: (key: string) => string;
+  locale: LocaleCode;
 }): DataTableColumnDef<ChannelRow>[] {
   return [
     {
       key: "platform",
-      header: props.t("channels.colPlatform"),
+      header: props.t("users.channels.colPlatform"),
       cell: (row) => (
         <div className="flex items-center gap-3">
           <PlatformIcon platform={row.platform} tile />
@@ -56,7 +58,7 @@ function channelsColumns(props: {
     },
     {
       key: "account",
-      header: props.t("channels.colAccount"),
+      header: props.t("users.channels.colAccount"),
       cell: (row) => (
         <div className="text-body text-fg-primary flex flex-col">
           <span className="font-medium">{row.accountName}</span>
@@ -66,7 +68,7 @@ function channelsColumns(props: {
     },
     {
       key: "url",
-      header: props.t("channels.colUrl"),
+      header: props.t("users.channels.colUrl"),
       hideOn: "lg",
       cellClassName: "text-body text-fg-muted hidden max-w-[200px] truncate lg:table-cell",
       cell: (row) =>
@@ -86,7 +88,7 @@ function channelsColumns(props: {
     },
     {
       key: "state",
-      header: props.t("channels.colState"),
+      header: props.t("users.channels.colState"),
       cell: (row) => (
         <ConnectionStatusBadge
           status={
@@ -94,20 +96,22 @@ function channelsColumns(props: {
               "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected"
           }
           lastSyncedAt={row.lastSyncedAt}
+          locale={props.locale}
+          t={props.t}
         />
       ),
     },
     {
       key: "owner",
-      header: props.t("channels.colOwner"),
+      header: props.t("users.channels.colOwner"),
       hideOn: "md",
       cell: (row) => row.accountType || <span className="text-fg-muted">&mdash;</span>,
     },
     {
       key: "updated",
-      header: props.t("channels.colUpdated"),
+      header: props.t("users.channels.colUpdated"),
       hideOn: "xl",
-      cell: (row) => formatRelativeDate(row.updatedAt),
+      cell: (row) => formatRelativeDate(row.updatedAt, new Date(), props.locale),
     },
     {
       key: "actions",
@@ -196,7 +200,7 @@ export default async function ChannelsPage({
   const sp = await searchParams;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const canManage = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
     "workspace_manager",
   ]);
@@ -269,24 +273,24 @@ export default async function ChannelsPage({
     ? metaErrorDescRaw[0]
     : metaErrorDescRaw;
   const META_ERROR_KEY: Record<string, string> = {
-    access_denied: "channels.metaErrorAccessDenied",
-    not_configured: "channels.metaErrorNotConfigured",
-    missing_code: "channels.metaErrorMissingCode",
-    provider_error: "channels.metaErrorProviderError",
-    exchange_failed: "channels.metaErrorExchangeFailed",
-    invalid_state: "channels.metaErrorInvalidState",
+    access_denied: "users.channels.metaErrorAccessDenied",
+    not_configured: "users.channels.metaErrorNotConfigured",
+    missing_code: "users.channels.metaErrorMissingCode",
+    provider_error: "users.channels.metaErrorProviderError",
+    exchange_failed: "users.channels.metaErrorExchangeFailed",
+    invalid_state: "users.channels.metaErrorInvalidState",
   };
   const metaErrorMessage = metaError
-    ? t(META_ERROR_KEY[metaError] ?? "channels.metaErrorGeneric", { code: metaError })
+    ? t(META_ERROR_KEY[metaError] ?? "users.channels.metaErrorGeneric", { code: metaError })
     : null;
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow={workspace.name}
-        title={t("channels.title")}
+        title={t("users.channels.title")}
         description={
           <>
-            {t("channels.description")}
+            {t("users.channels.description")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
@@ -336,17 +340,17 @@ export default async function ChannelsPage({
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="text-body text-fg-primary font-semibold">
-                  {t("channels.connectMetaTitle")}
+                  {t("users.channels.connectMetaTitle")}
                 </h3>
                 <p className="text-label text-fg-muted mt-1">
-                  {t("channels.connectMetaDescription")}
+                  {t("users.channels.connectMetaDescription")}
                 </p>
               </div>
               <form action="/api/social/meta/connect" method="POST">
                 <input type="hidden" name="slug" value={slug} />
                 <Button type="submit" variant="secondary" data-testid="connect-meta-button">
                   <PlugZap className="h-4 w-4" aria-hidden={true} />{" "}
-                  {t("channels.connectMetaButton")}
+                  {t("users.channels.connectMetaButton")}
                 </Button>
               </form>
             </div>
@@ -356,10 +360,10 @@ export default async function ChannelsPage({
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="text-body text-fg-primary font-semibold">
-                  {t("channels.connectMetaTitle")}
+                  {t("users.channels.connectMetaTitle")}
                 </h3>
                 <p className="text-label text-fg-muted mt-1">
-                  {t("channels.setupMetaDescription")}
+                  {t("users.channels.setupMetaDescription")}
                 </p>
               </div>
               <a
@@ -367,7 +371,8 @@ export default async function ChannelsPage({
                 className="border-border bg-surface text-fg-primary text-body hover:bg-surface-subtle inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-4 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                 data-testid="setup-meta-cta"
               >
-                <PlugZap className="h-4 w-4" aria-hidden={true} /> {t("channels.setupMetaButton")}
+                <PlugZap className="h-4 w-4" aria-hidden={true} />{" "}
+                {t("users.channels.setupMetaButton")}
               </a>
             </div>
           </Card>
@@ -389,6 +394,7 @@ export default async function ChannelsPage({
                 canManage,
                 affectedByConnection: affectedByConnection,
                 t,
+                locale: code,
               })}
             />
           </div>
@@ -397,8 +403,10 @@ export default async function ChannelsPage({
         <Card variant="dashed" padding="lg" data-testid="channels-empty-state">
           <EmptyState
             icon={<Radio className="h-8 w-8" />}
-            title={t("channels.emptyTitle")}
-            description={canManage ? t("channels.adminEmpty") : t("channels.memberEmpty")}
+            title={t("users.channels.emptyTitle")}
+            description={
+              canManage ? t("users.channels.adminEmpty") : t("users.channels.memberEmpty")
+            }
           />
         </Card>
       )}

@@ -59,7 +59,7 @@ export async function generateMetadata() {
 }
 
 export default async function BrandKitPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -163,6 +163,8 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
         assetCount={totalAssetCount}
         logoCount={assetsByKind.logo.length}
         lastUpdatedAt={recent[0]?.updatedAt ?? null}
+        locale={code}
+        t={t}
       />
 
       <ul
@@ -244,7 +246,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
             {t("brandKit.overview.seeAllActivity")}
           </a>
         </header>
-        <RecentUpdatesTable rows={recent.slice(0, 5)} t={t} />
+        <RecentUpdatesTable rows={recent.slice(0, 5)} t={t} locale={code} />
       </section>
     </div>
   );

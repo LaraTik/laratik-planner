@@ -11,7 +11,10 @@ import { tForActive } from "@/lib/i18n/t-for-active";
  * Server Component shape and the first surface a brand-new user
  * sees in the verification half of the magic-link flow.
  */
-export const metadata = { title: "Check your email" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("auth.verify.title") };
+}
 
 export default async function VerifyRequestPage() {
   const { t } = await tForActive();

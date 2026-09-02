@@ -48,23 +48,19 @@ const LOCALE_VALUES = SUPPORTED_LOCALES.map((l) => l.code) as unknown as readonl
 export type Locale = LocaleCode;
 
 const profileSchema = z.object({
-  displayName: z
-    .string()
-    .trim()
-    .min(1, "Display name is required.")
-    .max(80, "Display name is too long (max 80)."),
+  displayName: z.string().trim().min(1).max(80),
   name: z
     .string()
     .trim()
-    .min(1, "Name is required.")
-    .max(80, "Name is too long (max 80).")
+    .min(1)
+    .max(80)
     .optional()
     .or(z.literal("").transform(() => undefined)),
   image: z
     .string()
     .trim()
-    .url("Avatar URL must be a valid https://… link.")
-    .max(2048, "Avatar URL is too long.")
+    .url()
+    .max(2048)
     .optional()
     .or(z.literal("").transform(() => undefined)),
   locale: z.enum(LOCALE_VALUES),
@@ -72,8 +68,43 @@ const profileSchema = z.object({
 
 export type ProfileInput = z.infer<typeof profileSchema>;
 
+export type ProfileErrorCode =
+  | "displayNameRequired"
+  | "displayNameTooLong"
+  | "nameRequired"
+  | "nameTooLong"
+  | "avatarInvalid"
+  | "avatarTooLong"
+  | "unsupportedLocale"
+  | "profileInvalid"
+  | "accountNotFound";
+
 export type UpdateProfileResult =
-  { ok: true } | { ok: false; reason: "invalid" | "not_found"; message: string; field?: string };
+  | { ok: true }
+  | {
+      ok: false;
+      reason: "invalid" | "not_found";
+      code: ProfileErrorCode;
+      field?: string;
+    };
+
+function profileIssueCode(issue: z.ZodIssue): ProfileErrorCode {
+  const field = issue.path[0];
+  if (field === "displayName") {
+    if (issue.code === "too_small") return "displayNameRequired";
+    if (issue.code === "too_big") return "displayNameTooLong";
+  }
+  if (field === "name") {
+    if (issue.code === "too_small") return "nameRequired";
+    if (issue.code === "too_big") return "nameTooLong";
+  }
+  if (field === "image") {
+    if (issue.code === "too_big") return "avatarTooLong";
+    return "avatarInvalid";
+  }
+  if (field === "locale") return "unsupportedLocale";
+  return "profileInvalid";
+}
 
 /**
  * Update the actor's own profile row. Returns a discriminated result
@@ -89,7 +120,7 @@ export async function updateOwnProfile(userId: string, raw: unknown): Promise<Up
       ok: false,
       reason: "invalid",
       ...(field ? { field } : {}),
-      message: issue?.message ?? "Check the form values and try again.",
+      code: issue ? profileIssueCode(issue) : "profileInvalid",
     };
   }
   const { displayName, name, image, locale } = parsed.data;
@@ -105,7 +136,7 @@ export async function updateOwnProfile(userId: string, raw: unknown): Promise<Up
     .where(eq(users.id, userId))
     .returning({ id: users.id });
   if (updated.length === 0) {
-    return { ok: false, reason: "not_found", message: "Account not found." };
+    return { ok: false, reason: "not_found", code: "accountNotFound" };
   }
   return { ok: true };
 }
@@ -117,7 +148,12 @@ export type ChangePasswordResult =
   | {
       ok: false;
       reason: "weak" | "mismatch" | "current_wrong" | "not_found";
-      message: string;
+      code:
+        | "passwordWeak"
+        | "passwordMismatch"
+        | "currentPasswordRequired"
+        | "currentPasswordIncorrect"
+        | "accountNotFound";
     };
 
 /**
@@ -140,11 +176,11 @@ export async function changeOwnPassword(
     return {
       ok: false,
       reason: "weak",
-      message: "Password must be at least 8 characters and contain a letter and a digit.",
+      code: "passwordWeak",
     };
   }
   if (next !== confirm) {
-    return { ok: false, reason: "mismatch", message: "The two passwords don't match." };
+    return { ok: false, reason: "mismatch", code: "passwordMismatch" };
   }
 
   const [existing] = await db
@@ -153,19 +189,19 @@ export async function changeOwnPassword(
     .where(eq(users.id, userId))
     .limit(1);
   if (!existing) {
-    return { ok: false, reason: "not_found", message: "Account not found." };
+    return { ok: false, reason: "not_found", code: "accountNotFound" };
   }
 
   if (existing.passwordHash) {
     if (!current) {
-      return { ok: false, reason: "current_wrong", message: "Enter your current password." };
+      return { ok: false, reason: "current_wrong", code: "currentPasswordRequired" };
     }
     const ok = await verifyPassword(current, existing.passwordHash);
     if (!ok) {
       return {
         ok: false,
         reason: "current_wrong",
-        message: "That current password is incorrect.",
+        code: "currentPasswordIncorrect",
       };
     }
   }

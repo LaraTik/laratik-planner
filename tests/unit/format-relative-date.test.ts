@@ -26,34 +26,39 @@ describe("formatRelativeDate", () => {
   // the same value without re-importing the constant.
   const now = new Date("2026-08-20T12:00:00Z");
 
-  it("returns 'just now' for events in the last minute", () => {
+  it("returns a locale-aware now label for events in the last minute", () => {
     const d = new Date("2026-08-20T11:59:30Z");
-    expect(formatRelativeDate(d, now)).toBe("just now");
+    expect(formatRelativeDate(d, now, "en")).toMatch(/now/i);
+    expect(formatRelativeDate(d, now, "ar")).toMatch(/الآن/);
   });
 
   it("formats minutes within the hour", () => {
     const d = new Date("2026-08-20T11:55:00Z");
-    expect(formatRelativeDate(d, now)).toBe("5m ago");
+    expect(formatRelativeDate(d, now, "en")).toMatch(/5 min/);
+    expect(formatRelativeDate(d, now, "ar")).toMatch(/5/);
   });
 
   it("formats hours within the day", () => {
     const d = new Date("2026-08-20T10:00:00Z");
-    expect(formatRelativeDate(d, now)).toBe("2h ago");
+    expect(formatRelativeDate(d, now, "en")).toMatch(/2 hr/);
+    expect(formatRelativeDate(d, now, "ar")).toMatch(/قبل/);
   });
 
   it("formats days within the week", () => {
     const d = new Date("2026-08-17T12:00:00Z");
-    expect(formatRelativeDate(d, now)).toBe("3d ago");
+    expect(formatRelativeDate(d, now, "en")).toMatch(/3 days/);
+    expect(formatRelativeDate(d, now, "ar")).toMatch(/3/);
   });
 
   it("formats older events as an absolute date", () => {
     const d = new Date("2024-10-12T00:00:00Z");
-    expect(formatRelativeDate(d, now)).toMatch(/Oct 12, 2024/);
+    expect(formatRelativeDate(d, now, "en")).toMatch(/Oct 12, 2024/);
+    expect(formatRelativeDate(d, now, "ar")).toMatch(/2024/);
   });
 
   it("accepts ISO strings", () => {
     const d = "2026-08-20T11:55:00Z";
-    expect(formatRelativeDate(d, now)).toBe("5m ago");
+    expect(formatRelativeDate(d, now, "en")).toMatch(/5 min/);
   });
 
   it("returns an absolute date for future events", () => {

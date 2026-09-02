@@ -37,7 +37,10 @@ function SignOutLink({ label }: { label: string }) {
  * ICU `plural` so the hand-rolled translator keeps its narrow
  * placeholder contract.
  */
-export const metadata = { title: "Accept invitation" };
+export async function generateMetadata() {
+  const { t } = await tForActive();
+  return { title: t("auth.acceptInvitation.title") };
+}
 
 export default async function AcceptInvitationPage({
   searchParams,
