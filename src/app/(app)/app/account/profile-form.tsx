@@ -67,9 +67,12 @@ export function ProfileForm({
     }
   }, [state]);
 
-  const errorMessage = "error" in state && state.error ? state.error : null;
+  const errorMessage =
+    "errorCode" in state && state.errorCode ? t(`account.errors.${state.errorCode}`) : null;
   const fieldError =
-    "error" in state && state.field && typeof state.field === "string" ? state.field : null;
+    "errorCode" in state && state.field && typeof state.field === "string" ? state.field : null;
+  const warningMessage =
+    "saved" in state && state.warningCode ? t(`account.errors.${state.warningCode}`) : null;
 
   return (
     <div className="space-y-4" data-testid="profile-form-wrapper">
@@ -91,6 +94,14 @@ export function ProfileForm({
         >
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="text-body">{t("account.profileSaved")}</span>
+        </div>
+      ) : null}
+      {warningMessage ? (
+        <div
+          role="status"
+          className="border-warning/20 bg-warning-subtle text-warning rounded-[var(--radius-control)] border p-3"
+        >
+          <span className="text-body">{warningMessage}</span>
         </div>
       ) : null}
 

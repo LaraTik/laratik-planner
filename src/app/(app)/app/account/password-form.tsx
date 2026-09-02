@@ -51,9 +51,10 @@ export function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
     }
   }, [state]);
 
-  const errorMessage = "error" in state && state.error ? state.error : null;
+  const errorMessage =
+    "errorCode" in state && state.errorCode ? t(`account.errors.${state.errorCode}`) : null;
   const fieldError =
-    "error" in state && state.field && typeof state.field === "string" ? state.field : null;
+    "errorCode" in state && state.field && typeof state.field === "string" ? state.field : null;
   const successMode = "saved" in state && state.saved ? state.mode : null;
 
   return (

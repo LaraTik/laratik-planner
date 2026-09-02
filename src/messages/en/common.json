@@ -1709,7 +1709,25 @@
     "noAgencyYet": "You're not yet a member of any agency. If this is your first sign-in, the bootstrap flow will assign you as the agency admin on the next page load.",
     "signOut": "Sign out",
     "signOutBlurb": "End this session on this device. You can sign back in at any time.",
-    "signOutAction": "Sign out"
+    "signOutAction": "Sign out",
+    "errors": {
+      "sessionExpired": "Your session expired. Sign in again and retry.",
+      "unsupportedLocale": "That language is not supported yet.",
+      "displayNameRequired": "Display name is required.",
+      "displayNameTooLong": "Display name must be 80 characters or fewer.",
+      "nameRequired": "Name is required.",
+      "nameTooLong": "Name must be 80 characters or fewer.",
+      "avatarInvalid": "Avatar URL must be a valid link.",
+      "avatarTooLong": "Avatar URL must be 2,048 characters or fewer.",
+      "profileInvalid": "Check the profile values and try again.",
+      "accountNotFound": "Account not found.",
+      "passwordWeak": "Password must be at least 8 characters and contain a letter and a digit.",
+      "passwordMismatch": "The two passwords do not match.",
+      "currentPasswordRequired": "Enter your current password.",
+      "currentPasswordIncorrect": "That current password is incorrect.",
+      "savePreferencesFailed": "We could not save your notification preferences. Try again.",
+      "localeCookieSyncFailed": "Profile saved, but the language will apply after your next sign-in."
+    }
   },
   "errors": {
     "notFoundTitle": "Page not found",
