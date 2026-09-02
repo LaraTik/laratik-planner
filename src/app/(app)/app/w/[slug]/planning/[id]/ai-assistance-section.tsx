@@ -464,10 +464,10 @@ export function AiAssistanceSection({
                     className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 rounded-[var(--radius-control)] border px-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                     data-testid="ai-action-platform-target"
                   >
-                    <option value="instagram">Instagram</option>
-                    <option value="tiktok">TikTok</option>
-                    <option value="linkedin">LinkedIn</option>
-                    <option value="x">X (Twitter)</option>
+                    <option value="instagram">{t("platform.platformKey.instagram")}</option>
+                    <option value="tiktok">{t("platform.platformKey.tiktok")}</option>
+                    <option value="linkedin">{t("platform.platformKey.linkedin")}</option>
+                    <option value="x">{t("platform.platformKey.x")}</option>
                   </select>
                 </label>
               ) : null}
