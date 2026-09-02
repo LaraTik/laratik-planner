@@ -375,8 +375,9 @@ pnpm test:visual
 
 `pnpm test:e2e:isolated`, `pnpm test:e2e:critical`, and `pnpm test:visual`
 all run through `scripts/run-e2e-tests.ts`. The runner refuses a URL that does
-not contain `test` or `ci`, applies migrations before starting Playwright, and
-injects deterministic test-only `AUTH_SECRET`, `AGENCY_COOKIE_SECRET`,
+not contain `test` or `ci`, resets only the disposable test database while
+preserving the migration ledger, applies migrations before starting Playwright,
+and injects deterministic test-only `AUTH_SECRET`, `AGENCY_COOKIE_SECRET`,
 `AUTH_URL`, and `NEXTAUTH_URL` values. This is why a missing
 `TEST_DATABASE_URL` is a configuration error rather than a test skip.
 
