@@ -389,7 +389,7 @@ export function buildWorkspaceNavigation(input: {
             {
               kind: "link",
               key: "settings-lifecycle",
-              href: `${wsBase}/settings/lifecycle`,
+              href: `${wsBase}/settings#lifecycle`,
               label: "Lifecycle",
               labelKey: "sidebar.settingsLifecycle",
               icon: History,
@@ -397,7 +397,7 @@ export function buildWorkspaceNavigation(input: {
             {
               kind: "link",
               key: "settings-lead-times",
-              href: `${wsBase}/settings/lead-times`,
+              href: `${wsBase}/settings#lead-times`,
               label: "Lead times",
               labelKey: "sidebar.settingsLeadTimes",
               icon: Clock,
@@ -405,7 +405,7 @@ export function buildWorkspaceNavigation(input: {
             {
               kind: "link",
               key: "settings-defaults",
-              href: `${wsBase}/settings/defaults`,
+              href: `${wsBase}/settings#defaults`,
               label: "Assignment defaults",
               labelKey: "sidebar.settingsAssignmentDefaults",
               icon: Users,
@@ -413,7 +413,7 @@ export function buildWorkspaceNavigation(input: {
             {
               kind: "link",
               key: "settings-approvals",
-              href: `${wsBase}/settings/approvals`,
+              href: `${wsBase}/settings#approvals`,
               label: "Approval mode",
               labelKey: "sidebar.settingsApprovalMode",
               icon: MessageSquare,

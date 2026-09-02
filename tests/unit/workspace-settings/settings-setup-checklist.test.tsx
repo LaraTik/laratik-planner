@@ -9,42 +9,42 @@ import { tFor } from "@/messages";
  * when every item is configured (no onboarding noise for a
  * fully-configured workspace); otherwise it shows a per-item
  * row with a configured/unconfigured indicator, a progress
- * count, and per-row jumps to the matching per-section page.
+ * count, and per-row jumps to the matching anchor section.
  */
 const sampleItems = [
   {
     id: "lifecycle",
     label: "Pick a workspace timezone",
     blurb: "Timezone set to Europe/Vienna.",
-    href: "/app/w/acme/settings/lifecycle",
+    href: "/app/w/acme/settings#lifecycle",
     configured: true,
   },
   {
     id: "monthly-target",
     label: "Set a monthly content target",
     blurb: "Planning target: 24 posts / month.",
-    href: "/app/w/acme/settings/lifecycle",
+    href: "/app/w/acme/settings#lifecycle",
     configured: true,
   },
   {
     id: "lead-times",
     label: "Tune the lead-time buffers",
     blurb: "Current cycle: 18 business days.",
-    href: "/app/w/acme/settings/lead-times",
+    href: "/app/w/acme/settings#lead-times",
     configured: false,
   },
   {
     id: "defaults",
     label: "Set default assignees",
     blurb: "0 of 4 roles have a default assignee.",
-    href: "/app/w/acme/settings/defaults",
+    href: "/app/w/acme/settings#defaults",
     configured: false,
   },
   {
     id: "approvals",
     label: "Pick an approval mode",
     blurb: "Current: Internal approval only.",
-    href: "/app/w/acme/settings/approvals",
+    href: "/app/w/acme/settings#approvals",
     configured: true,
   },
 ];
@@ -65,7 +65,7 @@ describe("SettingsSetupChecklist", () => {
     );
   });
 
-  it("renders one row per item with the matching label + a link to the per-section page", () => {
+  it("renders one row per item with the matching label + a link to the anchor section", () => {
     render(<SettingsSetupChecklist items={sampleItems} />);
     for (const item of sampleItems) {
       const row = screen.getByTestId(`settings-setup-checklist-item-${item.id}`);

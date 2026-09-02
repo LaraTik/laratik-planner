@@ -5,13 +5,10 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { SettingsBreadcrumb } from "./_components/settings-breadcrumb";
 
 /**
- * Settings route group layout — shared auth + workspace gate + a
- * breadcrumb that makes the per-section state obvious. Phase A
- * (Settings refactor) splits the previous single-page settings
- * surface (one Card with 5 anchor fieldsets) into 4 per-section
- * routes plus an overview. The layout wraps every page in the
- * group so the breadcrumb is consistent and we don't repeat the
- * auth/workspace check in each page.
+ * Settings route group layout — shared auth + workspace gate and
+ * the workspace breadcrumb. All editable settings sections live
+ * on the overview page and use anchors; legacy section paths are
+ * compatibility redirects to those anchors.
  *
  * Per-page PageHeader still lives inside each page so the title
  * and per-section actions stay contextual.

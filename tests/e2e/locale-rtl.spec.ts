@@ -51,19 +51,13 @@ test("authenticated shell resolves Arabic RTL without horizontal overflow @a11y"
   await expect(page.getByTestId("settings-setup-checklist-progress")).toContainText("تم إعداد");
   await expect(page.getByTestId("sidebar-settings-lifecycle")).toHaveAttribute(
     "href",
-    "/app/w/acme/settings/lifecycle",
+    "/app/w/acme/settings#lifecycle",
   );
+  await expect(page.getByRole("heading", { name: "أوقات التسليم", level: 2 })).toBeVisible();
   const settingsOverflowsHorizontally = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   );
   expect(settingsOverflowsHorizontally).toBe(false);
 
-  await page.goto("/app/w/acme/settings/lead-times");
-  await expect(page.getByRole("heading", { name: "أوقات التسليم", level: 1 })).toBeVisible();
-  await expect(page.getByTestId("settings-breadcrumb-section")).toHaveText("أوقات التسليم");
   await expect(page.getByTestId("settings-health-lead-times")).toContainText("صحة الإعدادات");
-  const leadTimesOverflowsHorizontally = await page.evaluate(
-    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
-  );
-  expect(leadTimesOverflowsHorizontally).toBe(false);
 });

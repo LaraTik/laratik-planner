@@ -194,7 +194,7 @@ export function ApprovalsForm(props: ApprovalsFormProps) {
               </ul>
             )}
             <Link
-              href={`/app/w/${slug}/settings/lead-times`}
+              href={`/app/w/${slug}/settings#lead-times`}
               className="text-label text-primary inline-flex items-center gap-1 font-semibold hover:underline"
               data-testid="approvals-impact-lead-times-link"
             >

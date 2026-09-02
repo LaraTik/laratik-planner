@@ -10,7 +10,7 @@ import { updateLeadTimesSettingsAction, type SettingsActionState } from "../acti
 import { suggestLeadTimesAction } from "../ai-suggestions";
 import { LeadTimeTimeline } from "./lead-time-timeline";
 import { LeadTimeDeadline } from "./lead-time-deadline";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * LeadTimesForm — per-section form for the Settings → Lead
@@ -29,11 +29,11 @@ export interface LeadTimeValues {
   readyToPublishLeadDays: number;
 }
 
-const STAGE_LABELS: Array<{ key: keyof LeadTimeValues; label: string }> = [
-  { key: "contentApprovalLeadDays", label: "Content" },
-  { key: "designCompleteLeadDays", label: "Design" },
-  { key: "creativeApprovalLeadDays", label: "Creative" },
-  { key: "readyToPublishLeadDays", label: "Publish" },
+const STAGE_LABELS: Array<{ key: keyof LeadTimeValues; labelKey: string }> = [
+  { key: "contentApprovalLeadDays", labelKey: "settings.leadTimes.stageContent" },
+  { key: "designCompleteLeadDays", labelKey: "settings.leadTimes.stageDesign" },
+  { key: "creativeApprovalLeadDays", labelKey: "settings.leadTimes.stageCreative" },
+  { key: "readyToPublishLeadDays", labelKey: "settings.leadTimes.stagePublish" },
 ];
 
 function totalOf(v: LeadTimeValues): number {
@@ -57,6 +57,7 @@ export function LeadTimesForm({
 }) {
   const localeT = useLocaleT();
   const t = tProp ?? localeT;
+  const locale = useLocaleCode();
   // `today` is captured once at component mount so the AI
   // preview's deadline-impact line is stable while the user
   // is interacting (and matches the page-level "What this
@@ -82,7 +83,7 @@ export function LeadTimesForm({
     const res = await suggestLeadTimesAction(slug, { approvalMode });
     if (!res.ok) {
       setSuggestStatus("error");
-      setSuggestError(res.error ?? "AI suggestion failed.");
+      setSuggestError(res.error ?? t("settings.leadTimes.suggestError"));
       return;
     }
     if (res.suggestion) {
@@ -90,7 +91,7 @@ export function LeadTimesForm({
       setSuggestStatus("preview");
     } else {
       setSuggestStatus("error");
-      setSuggestError("AI returned no suggestion.");
+      setSuggestError(t("settings.leadTimes.noSuggestion"));
     }
   }
 
@@ -134,7 +135,7 @@ export function LeadTimesForm({
             ) : (
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
             )}
-            Suggest lead times
+            {t("settings.leadTimes.suggest")}
           </button>
           {suggestStatus === "applied" ? (
             <span
@@ -168,12 +169,12 @@ export function LeadTimesForm({
             className="border-border bg-primary-subtle space-y-3 rounded-[var(--radius-control)] border p-4"
             data-testid="lead-times-ai-preview"
             role="region"
-            aria-label="AI suggestion preview"
+            aria-label={t("settings.leadTimes.previewAria")}
           >
             <div className="flex flex-wrap items-center gap-2">
               <Sparkles className="text-primary h-4 w-4" aria-hidden="true" />
               <h3 className="text-section-title text-fg-primary font-semibold">
-                AI suggestion — preview
+                {t("settings.leadTimes.previewHeading")}
               </h3>
               <span
                 className={cn(
@@ -186,17 +187,19 @@ export function LeadTimesForm({
                 )}
                 data-testid="lead-times-ai-preview-delta"
               >
-                {previewTotal} business days
+                {t("settings.leadTimes.businessDays", { count: previewTotal })}
                 {previewTotal !== total
-                  ? ` (was ${total} — ${previewTotal < total ? "faster" : "slower"})`
+                  ? ` (${t("settings.leadTimes.previewWas", { count: total })} — ${previewTotal < total ? t("settings.leadTimes.faster") : t("settings.leadTimes.slower")})`
                   : ""}
               </span>
             </div>
             <p className="text-label text-fg-secondary">
-              A sensible default for the{" "}
-              {approvalMode === "internal_then_client" ? "internal + client" : "internal-only"}{" "}
-              approval flow. Review the before/after per stage, then Apply to commit or Discard to
-              ignore.
+              {t("settings.leadTimes.previewDescription", {
+                flow:
+                  approvalMode === "internal_then_client"
+                    ? t("settings.leadTimes.internalClientFlow")
+                    : t("settings.leadTimes.internalOnlyFlow"),
+              })}
             </p>
             {previewTotal !== total && previewTotal > 0 ? (
               <p
@@ -204,19 +207,25 @@ export function LeadTimesForm({
                 data-testid="lead-times-ai-preview-deadline-impact"
               >
                 <CalendarCheck2 className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />
-                If applied, the deadline moves from{" "}
+                {t("settings.leadTimes.deadlineImpactBefore")}{" "}
                 <span className="text-fg-primary line-through">
-                  {formatDeadlineLabel(addBusinessDaysInline(today, total), timezone)}
+                  {formatDeadlineLabel(addBusinessDaysInline(today, total), timezone, locale)}
                 </span>{" "}
-                to{" "}
                 <span className="text-fg-primary font-bold">
-                  {formatDeadlineLabel(addBusinessDaysInline(today, previewTotal), timezone)}
+                  {t("settings.leadTimes.deadlineTo")}{" "}
+                  {formatDeadlineLabel(
+                    addBusinessDaysInline(today, previewTotal),
+                    timezone,
+                    locale,
+                  )}
                 </span>
-                {previewTotal < total ? " — earlier." : " — later."}
+                {previewTotal < total
+                  ? t("settings.leadTimes.earlier")
+                  : t("settings.leadTimes.later")}
               </p>
             ) : null}
             <ul className="grid gap-2 sm:grid-cols-2">
-              {STAGE_LABELS.map(({ key, label }) => {
+              {STAGE_LABELS.map(({ key, labelKey }) => {
                 const before = draft[key];
                 const after = preview[key];
                 const changed = before !== after;
@@ -228,7 +237,7 @@ export function LeadTimesForm({
                     )}
                     data-testid={`lead-times-ai-preview-stage-${key}`}
                   >
-                    <span className="text-label text-fg-muted min-w-16">{label}</span>
+                    <span className="text-label text-fg-muted min-w-16">{t(labelKey)}</span>
                     <span
                       className={cn(
                         "text-body tabular-nums",
@@ -261,7 +270,7 @@ export function LeadTimesForm({
                 data-testid="lead-times-ai-discard"
               >
                 <X className="h-3.5 w-3.5" aria-hidden="true" />
-                Discard
+                {t("settings.leadTimes.discard")}
               </Button>
               <Button
                 type="button"
@@ -270,7 +279,7 @@ export function LeadTimesForm({
                 data-testid="lead-times-ai-apply"
               >
                 <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                Apply
+                {t("settings.leadTimes.apply")}
               </Button>
             </div>
           </div>
@@ -410,16 +419,17 @@ function addBusinessDaysInline(start: Date, days: number): Date {
   return d;
 }
 
-function formatDeadlineLabel(date: Date, timezone: string): string {
+function formatDeadlineLabel(date: Date, timezone: string, locale: string): string {
+  const dateLocale = locale === "ar" ? "ar-u-nu-latn" : "en-GB";
   try {
-    return new Intl.DateTimeFormat("en-GB", {
+    return new Intl.DateTimeFormat(dateLocale, {
       weekday: "short",
       day: "numeric",
       month: "short",
       timeZone: timezone,
     }).format(date);
   } catch {
-    return new Intl.DateTimeFormat("en-GB", {
+    return new Intl.DateTimeFormat(dateLocale, {
       weekday: "short",
       day: "numeric",
       month: "short",

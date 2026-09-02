@@ -10,7 +10,6 @@ import {
   workspaces as workspacesTable,
   workspaceSettings as workspaceSettingsTable,
 } from "@/lib/db/schema/workspaces";
-import { humanize } from "@/lib/content/status";
 import {
   nullableIdFromForm,
   nullableNumberFromForm,
@@ -128,7 +127,6 @@ export async function updateLifecycleSettingsAction(
     return { error: "Settings could not be saved." };
   }
   revalidatePath(`/app/w/${slug}/settings`);
-  revalidatePath(`/app/w/${slug}/settings/lifecycle`);
   return { saved: true };
 }
 
@@ -155,7 +153,6 @@ export async function updateLeadTimesSettingsAction(
     return { error: "Settings could not be saved." };
   }
   revalidatePath(`/app/w/${slug}/settings`);
-  revalidatePath(`/app/w/${slug}/settings/lead-times`);
   return { saved: true };
 }
 
@@ -184,7 +181,6 @@ export async function updateDefaultsSettingsAction(
     return { error: "Settings could not be saved." };
   }
   revalidatePath(`/app/w/${slug}/settings`);
-  revalidatePath(`/app/w/${slug}/settings/defaults`);
   return { saved: true };
 }
 
@@ -209,7 +205,6 @@ export async function updateApprovalsSettingsAction(
     return { error: "Settings could not be saved." };
   }
   revalidatePath(`/app/w/${slug}/settings`);
-  revalidatePath(`/app/w/${slug}/settings/approvals`);
   return { saved: true };
 }
 
@@ -220,5 +215,3 @@ function clampLeadDays(value: FormDataEntryValue | null): number {
   if (n > 90) return 90;
   return Math.round(n);
 }
-
-void humanize;

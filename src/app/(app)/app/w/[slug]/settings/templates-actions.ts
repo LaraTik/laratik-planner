@@ -64,8 +64,6 @@ export async function applyLeadTimeTemplateAction(
     return { ok: false, error: "Could not apply preset." };
   }
   revalidatePath(`/app/w/${slug}/settings`);
-  revalidatePath(`/app/w/${slug}/settings/lead-times`);
-  revalidatePath(`/app/w/${slug}/settings/approvals`);
   return { ok: true, applied: 1 };
 }
 
@@ -86,7 +84,6 @@ export async function applyApprovalTemplateAction(
     return { ok: false, error: "Could not apply preset." };
   }
   revalidatePath(`/app/w/${slug}/settings`);
-  revalidatePath(`/app/w/${slug}/settings/approvals`);
   return { ok: true, applied: 1 };
 }
 
@@ -107,6 +104,5 @@ export async function applyMonthlyTargetTemplateAction(
     return { ok: false, error: "Could not apply preset." };
   }
   revalidatePath(`/app/w/${slug}/settings`);
-  revalidatePath(`/app/w/${slug}/settings/lifecycle`);
   return { ok: true, applied: 1 };
 }
