@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, Lock } from "lucide-react";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 /**
  * M3.5 — Persistent support-session banner.
@@ -39,10 +40,11 @@ export interface SupportSessionGrant {
   remainingMinutes: number;
 }
 
-export function SupportSessionBanner({ grants }: { grants: SupportSessionGrant[] }) {
+export async function SupportSessionBanner({ grants }: { grants: SupportSessionGrant[] }) {
   if (grants.length === 0) return null;
   const first = grants[0];
   if (!first) return null;
+  const { t } = await tForActive();
   const hoursRemaining = Math.floor(first.remainingMinutes / 60);
   const minutesRemaining = first.remainingMinutes % 60;
   return (
@@ -56,34 +58,39 @@ export function SupportSessionBanner({ grants }: { grants: SupportSessionGrant[]
     >
       <div className="flex items-center gap-2 text-sm">
         <Lock className="h-4 w-4" aria-hidden="true" />
-        <span className="font-semibold">Support session active</span>
+        <span className="font-semibold">{t("common.supportSession.active")}</span>
         <span className="text-on-warning-container/80">
           {grants.length === 1
-            ? `You are viewing tenant data for agency ${first.targetAgencyId.slice(0, 8)}…`
-            : `You have ${grants.length} active support sessions`}
+            ? t("common.supportSession.viewingAgency", {
+                agency: `${first.targetAgencyId.slice(0, 8)}…`,
+              })
+            : t("common.supportSession.activeMany", { count: grants.length })}
           {" · "}
           {hoursRemaining > 0
-            ? `expires in ${hoursRemaining}h ${minutesRemaining}m`
-            : `expires in ${minutesRemaining}m`}
+            ? t("common.supportSession.expiresHours", {
+                hours: hoursRemaining,
+                minutes: minutesRemaining,
+              })
+            : t("common.supportSession.expiresMinutes", { minutes: minutesRemaining })}
           {" · "}
           {first.scopeMetadataOnly
-            ? "metadata only"
+            ? t("common.supportSession.metadataOnly")
             : first.downloadsAllowed
-              ? "downloads allowed"
-              : "downloads off"}
+              ? t("common.supportSession.downloadsAllowed")
+              : t("common.supportSession.downloadsOff")}
         </span>
       </div>
       <div className="flex items-center gap-2 text-sm">
         <AlertTriangle className="h-4 w-4" aria-hidden="true" />
         <span className="text-on-warning-container/80">
-          Every view is recorded in the platform audit log.
+          {t("common.supportSession.auditNotice")}
         </span>
         <Link
           href="/app/platform/security"
           className="focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-2 py-1 font-semibold underline underline-offset-4 focus:outline-none focus-visible:ring-2"
           data-testid="support-session-banner-link"
         >
-          Manage session
+          {t("common.supportSession.manage")}
         </Link>
       </div>
     </div>

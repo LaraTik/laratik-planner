@@ -32,12 +32,6 @@ export interface PlanningFiltersBarProps {
   members: { id: string; label: string }[];
   /** Channels for the channel filter (sourced server-side). */
   channels?: { id: string; platform: string; accountName: string }[];
-  /**
-   * Optional translator. When provided, the 7 filter aria-labels +
-   * the search placeholder render from `planningFilters.*`; when
-   * omitted, the hard-coded English copy is used.
-   */
-  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const HEALTH_LABEL: Record<HealthSnapshot, string> = {
@@ -70,12 +64,10 @@ export function PlanningFiltersBar({
   monthParam,
   members,
   channels = [],
-  t: tProp,
 }: PlanningFiltersBarProps) {
-  const localeT = useLocaleT();
-  const t = tProp ?? localeT;
-  const tr = (key: string, fallback: string) => {
-    const value = t(key);
+  const t = useLocaleT();
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
+    const value = t(key, params);
     return value === key ? fallback : value;
   };
   const router = useRouter();
@@ -167,10 +159,10 @@ export function PlanningFiltersBar({
           className={selectClass}
           data-testid="planning-status-filter"
         >
-          <option value="">All statuses</option>
+          <option value="">{tr("planningFilters.allStatuses", "All statuses")}</option>
           {ALL_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {humanStatus(s)}
+              {tr(`planningFilters.statusLabels.${s}`, humanStatus(s))}
             </option>
           ))}
         </select>
@@ -182,10 +174,10 @@ export function PlanningFiltersBar({
           className={selectClass}
           data-testid="planning-format-filter"
         >
-          <option value="">All formats</option>
+          <option value="">{tr("planningFilters.allFormats", "All formats")}</option>
           {ALL_FORMATS.map((f) => (
             <option key={f} value={f}>
-              {humanFormat(f)}
+              {tr(`planningFilters.formatLabels.${f}`, humanFormat(f))}
             </option>
           ))}
         </select>
@@ -197,10 +189,10 @@ export function PlanningFiltersBar({
           className={selectClass}
           data-testid="planning-stage-filter"
         >
-          <option value="">All workflow stages</option>
+          <option value="">{tr("planningFilters.allWorkflowStages", "All workflow stages")}</option>
           {WORKFLOW_STAGES.map((s) => (
             <option key={s.value} value={s.value}>
-              {s.label}
+              {tr(`planningFilters.stageLabels.${s.value}`, s.label)}
             </option>
           ))}
         </select>
@@ -212,7 +204,7 @@ export function PlanningFiltersBar({
           className={selectClass}
           data-testid="planning-channel-filter"
         >
-          <option value="">All channels</option>
+          <option value="">{tr("planningFilters.allChannels", "All channels")}</option>
           {channels.map((c) => (
             <option key={c.id} value={c.id}>
               {c.accountName}
@@ -227,7 +219,7 @@ export function PlanningFiltersBar({
           className={selectClass}
           data-testid="planning-owner-filter"
         >
-          <option value="">All owners</option>
+          <option value="">{tr("planningFilters.allOwners", "All owners")}</option>
           {members.map((m) => (
             <option key={m.id} value={m.id}>
               {m.label}
@@ -242,15 +234,19 @@ export function PlanningFiltersBar({
           className={selectClass}
           data-testid="planning-health-filter"
         >
-          <option value="">All health</option>
+          <option value="">{tr("planningFilters.allHealth", "All health")}</option>
           {ATTENTION_HEALTHS.map((h) => (
             <option key={h} value={h}>
-              {HEALTH_LABEL[h]}
+              {tr(`planningFilters.healthLabels.${h}`, HEALTH_LABEL[h])}
             </option>
           ))}
-          <option value="ready">Ready</option>
-          <option value="not_started">Not started</option>
-          <option value="scheduled">Scheduled</option>
+          <option value="ready">{tr("planningFilters.healthLabels.ready", "Ready")}</option>
+          <option value="not_started">
+            {tr("planningFilters.healthLabels.not_started", "Not started")}
+          </option>
+          <option value="scheduled">
+            {tr("planningFilters.healthLabels.scheduled", "Scheduled")}
+          </option>
         </select>
 
         <select
@@ -262,8 +258,8 @@ export function PlanningFiltersBar({
           className={selectClass}
           data-testid="planning-density-filter"
         >
-          <option value="comfortable">Comfortable</option>
-          <option value="compact">Compact</option>
+          <option value="comfortable">{tr("planningFilters.comfortable", "Comfortable")}</option>
+          <option value="compact">{tr("planningFilters.compact", "Compact")}</option>
         </select>
       </div>
       <div className="text-label text-fg-secondary flex flex-wrap items-center gap-2">
@@ -274,7 +270,13 @@ export function PlanningFiltersBar({
               data-testid="planning-filters-active-count"
             >
               <FilterIcon className="h-3 w-3" aria-hidden="true" />
-              {activeCount} active filter{activeCount === 1 ? "" : "s"}
+              {activeCount === 1
+                ? tr("planningFilters.activeFilterOne", "{count} active filter", {
+                    count: activeCount,
+                  })
+                : tr("planningFilters.activeFilterMany", "{count} active filters", {
+                    count: activeCount,
+                  })}
             </span>
             <Link
               href={`${basePath}?month=${monthParam}`}
@@ -282,7 +284,7 @@ export function PlanningFiltersBar({
               data-testid="planning-clear-filters"
             >
               <X className="h-3 w-3" aria-hidden="true" />
-              Clear all
+              {tr("planningFilters.clearAll", "Clear all")}
             </Link>
           </>
         ) : null}

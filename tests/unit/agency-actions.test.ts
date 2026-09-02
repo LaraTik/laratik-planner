@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   setActiveAgencyCookie: vi.fn(),
   isActiveMember: vi.fn(),
+  isAgencyAdmin: vi.fn(),
   rows: [] as { slug: string }[],
 }));
 
@@ -17,7 +18,7 @@ function buildDrizzleChain() {
   const orderBy = vi.fn().mockReturnValue({ limit });
   const where = vi.fn().mockReturnValue({ orderBy, limit });
   const innerJoin = vi.fn().mockReturnValue({ where });
-  const from = vi.fn().mockReturnValue({ innerJoin });
+  const from = vi.fn().mockReturnValue({ innerJoin, where });
   const select = vi.fn().mockReturnValue({ from });
   return { select, from, innerJoin, where, orderBy, limit };
 }
@@ -27,6 +28,7 @@ vi.mock("@/lib/auth/agency-context", () => ({
   setActiveAgencyCookie: mocks.setActiveAgencyCookie,
   isActiveMember: mocks.isActiveMember,
 }));
+vi.mock("@/lib/auth/policy", () => ({ isAgencyAdmin: mocks.isAgencyAdmin }));
 vi.mock("@/lib/db", () => ({ db: buildDrizzleChain() }));
 
 const { switchActiveAgency, switchActiveAgencyAndRedirect } =
@@ -35,6 +37,7 @@ const { switchActiveAgency, switchActiveAgencyAndRedirect } =
 describe("switchActiveAgency", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.isAgencyAdmin.mockResolvedValue(false);
   });
 
   it("fails closed without an authenticated user", async () => {
@@ -133,6 +136,20 @@ describe("switchActiveAgencyAndRedirect", () => {
       ok: true,
       agencyId: "agency-2",
       firstWorkspaceSlug: null,
+    });
+  });
+
+  it("lets an agency admin enter an active workspace without a workspace membership row", async () => {
+    mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
+    mocks.isActiveMember.mockResolvedValue(true);
+    mocks.isAgencyAdmin.mockResolvedValue(true);
+    mocks.setActiveAgencyCookie.mockResolvedValue(true);
+    mocks.rows = [{ slug: "admin-only-workspace" }];
+
+    await expect(switchActiveAgencyAndRedirect("agency-1")).resolves.toEqual({
+      ok: true,
+      agencyId: "agency-1",
+      firstWorkspaceSlug: "admin-only-workspace",
     });
   });
 });

@@ -7,5 +7,61 @@
   "channelAria": "Filter by channel",
   "ownerAria": "Filter by owner",
   "healthAria": "Filter by health",
-  "densityAria": "List density"
+  "densityAria": "List density",
+  "allStatuses": "All statuses",
+  "allFormats": "All formats",
+  "allWorkflowStages": "All workflow stages",
+  "allChannels": "All channels",
+  "allOwners": "All owners",
+  "allHealth": "All health",
+  "comfortable": "Comfortable",
+  "compact": "Compact",
+  "apply": "Apply",
+  "clear": "Clear",
+  "clearAll": "Clear all",
+  "activeFilterOne": "{count} active filter",
+  "activeFilterMany": "{count} active filters",
+  "statusLabels": {
+    "draft": "Planning",
+    "content_review": "Content review",
+    "approved_for_design": "Approved for design",
+    "in_design": "In design",
+    "creative_review": "Creative review",
+    "ready_to_publish": "Ready to publish",
+    "partially_published": "Partially published",
+    "published": "Published",
+    "changes_requested": "Changes requested",
+    "blocked": "Blocked",
+    "cancelled": "Cancelled"
+  },
+  "formatLabels": {
+    "static_post": "Static post",
+    "carousel": "Carousel",
+    "story": "Story",
+    "short_form_video": "Short-form video",
+    "long_form_video": "Long-form video",
+    "live_content": "Live content",
+    "article": "Article",
+    "other": "Other"
+  },
+  "stageLabels": {
+    "draft": "Planning",
+    "content_review": "Review",
+    "approved_for_design": "Design",
+    "creative_review": "Creative review",
+    "ready_to_publish": "Ready to publish",
+    "published": "Published"
+  },
+  "healthLabels": {
+    "at_risk": "At risk",
+    "overdue": "Overdue",
+    "blocked": "Blocked",
+    "needs_review": "Needs review",
+    "not_started": "Not started",
+    "ready": "Ready",
+    "in_progress": "In progress",
+    "published": "Published",
+    "cancelled": "Cancelled",
+    "scheduled": "Scheduled"
+  }
 }

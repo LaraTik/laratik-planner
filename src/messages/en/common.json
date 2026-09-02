@@ -64,5 +64,17 @@
   "nextPageAria": "Next page",
   "nextPageText": "Next",
   "lastPageAria": "Last page",
-  "dialogCloseAria": "Close"
+  "dialogCloseAria": "Close",
+  "supportSession": {
+    "active": "Support session active",
+    "viewingAgency": "You are viewing tenant data for agency {agency}",
+    "activeMany": "You have {count} active support sessions",
+    "expiresHours": "expires in {hours}h {minutes}m",
+    "expiresMinutes": "expires in {minutes}m",
+    "metadataOnly": "metadata only",
+    "downloadsAllowed": "downloads allowed",
+    "downloadsOff": "downloads off",
+    "auditNotice": "Every view is recorded in the platform audit log.",
+    "manage": "Manage session"
+  }
 }

@@ -7,5 +7,61 @@
   "channelAria": "تصفية حسب القناة",
   "ownerAria": "تصفية حسب المالك",
   "healthAria": "تصفية حسب الحالة الصحية",
-  "densityAria": "كثافة القائمة"
+  "densityAria": "كثافة القائمة",
+  "allStatuses": "كل الحالات",
+  "allFormats": "كل الصيغ",
+  "allWorkflowStages": "كل مراحل سير العمل",
+  "allChannels": "كل القنوات",
+  "allOwners": "كل المالكين",
+  "allHealth": "كل مؤشرات الحالة",
+  "comfortable": "مريح",
+  "compact": "مضغوط",
+  "apply": "تطبيق",
+  "clear": "مسح",
+  "clearAll": "مسح الكل",
+  "activeFilterOne": "{count} مرشح نشط",
+  "activeFilterMany": "{count} مرشحات نشطة",
+  "statusLabels": {
+    "draft": "تخطيط",
+    "content_review": "مراجعة المحتوى",
+    "approved_for_design": "معتمد للتصميم",
+    "in_design": "قيد التصميم",
+    "creative_review": "مراجعة إبداعية",
+    "ready_to_publish": "جاهز للنشر",
+    "partially_published": "منشور جزئيًا",
+    "published": "منشور",
+    "changes_requested": "طُلبت تغييرات",
+    "blocked": "محظور",
+    "cancelled": "ملغى"
+  },
+  "formatLabels": {
+    "static_post": "منشور ثابت",
+    "carousel": "منشور متتابع",
+    "story": "قصة",
+    "short_form_video": "فيديو قصير",
+    "long_form_video": "فيديو طويل",
+    "live_content": "محتوى مباشر",
+    "article": "مقال",
+    "other": "أخرى"
+  },
+  "stageLabels": {
+    "draft": "تخطيط",
+    "content_review": "مراجعة",
+    "approved_for_design": "تصميم",
+    "creative_review": "مراجعة إبداعية",
+    "ready_to_publish": "جاهز للنشر",
+    "published": "منشور"
+  },
+  "healthLabels": {
+    "at_risk": "معرّض للخطر",
+    "overdue": "متأخر",
+    "blocked": "محظور",
+    "needs_review": "يحتاج مراجعة",
+    "not_started": "لم يبدأ",
+    "ready": "جاهز",
+    "in_progress": "قيد التنفيذ",
+    "published": "منشور",
+    "cancelled": "ملغى",
+    "scheduled": "مجدول"
+  }
 }

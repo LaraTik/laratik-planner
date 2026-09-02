@@ -125,10 +125,10 @@ export function PlanningFilters({
         className={controlClass}
         data-testid={`${testIdPrefix}-status-filter`}
       >
-        <option value="">All statuses</option>
+        <option value="">{tr("planningFilters.allStatuses", "All statuses")}</option>
         {ALL_STATUSES.map((status) => (
           <option key={status} value={status}>
-            {humanStatus(status)}
+            {tr(`planningFilters.statusLabels.${status}`, humanStatus(status))}
           </option>
         ))}
       </select>
@@ -139,10 +139,10 @@ export function PlanningFilters({
         className={controlClass}
         data-testid={`${testIdPrefix}-format-filter`}
       >
-        <option value="">All formats</option>
+        <option value="">{tr("planningFilters.allFormats", "All formats")}</option>
         {ALL_FORMATS.map((format) => (
           <option key={format} value={format}>
-            {humanFormat(format)}
+            {tr(`planningFilters.formatLabels.${format}`, humanFormat(format))}
           </option>
         ))}
       </select>
@@ -153,7 +153,7 @@ export function PlanningFilters({
         className={controlClass}
         data-testid={`${testIdPrefix}-owner-filter`}
       >
-        <option value="">All owners</option>
+        <option value="">{tr("planningFilters.allOwners", "All owners")}</option>
         {members.map((m) => (
           <option key={m.id} value={m.id}>
             {m.label}
@@ -170,13 +170,13 @@ export function PlanningFilters({
         >
           {DENSITY_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}
+              {tr(`planningFilters.${opt.value}`, opt.label)}
             </option>
           ))}
         </select>
       ) : null}
       <Button variant="outline" type="submit" data-testid={`${testIdPrefix}-apply-filters`}>
-        Apply
+        {tr("planningFilters.apply", "Apply")}
       </Button>
       {hasFilter && targetPath ? (
         <Button variant="ghost" asChild>
@@ -184,7 +184,7 @@ export function PlanningFilters({
             href={`${targetPath}?month=${monthParam}`}
             data-testid={`${testIdPrefix}-clear-filters`}
           >
-            Clear
+            {tr("planningFilters.clear", "Clear")}
           </Link>
         </Button>
       ) : null}

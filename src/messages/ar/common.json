@@ -64,5 +64,17 @@
   "nextPageAria": "الصفحة التالية",
   "nextPageText": "التالي",
   "lastPageAria": "الصفحة الأخيرة",
-  "dialogCloseAria": "إغلاق"
+  "dialogCloseAria": "إغلاق",
+  "supportSession": {
+    "active": "جلسة الدعم نشطة",
+    "viewingAgency": "أنت تعرض بيانات المستأجر للوكالة {agency}",
+    "activeMany": "لديك {count} جلسات دعم نشطة",
+    "expiresHours": "تنتهي خلال {hours}س {minutes}د",
+    "expiresMinutes": "تنتهي خلال {minutes}د",
+    "metadataOnly": "بيانات وصفية فقط",
+    "downloadsAllowed": "التنزيلات مسموحة",
+    "downloadsOff": "التنزيلات متوقفة",
+    "auditNotice": "يتم تسجيل كل عرض في سجل تدقيق المنصة.",
+    "manage": "إدارة الجلسة"
+  }
 }

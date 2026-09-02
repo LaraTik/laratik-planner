@@ -31,7 +31,7 @@ import { isActiveMember, setActiveAgencyCookie } from "@/lib/auth/agency-context
 import { db } from "@/lib/db";
 import { workspaces, workspaceMemberships } from "@/lib/db/schema";
 import { and, asc, eq } from "drizzle-orm";
-import type { Actor } from "@/lib/auth/policy";
+import { isAgencyAdmin, type Actor } from "@/lib/auth/policy";
 
 /**
  * Set the active agency for the currently signed-in user.
@@ -107,34 +107,39 @@ export async function switchActiveAgencyAndRedirect(
   if (!cookieWritten) return { ok: false, reason: "no-secret" };
 
   // First accessible workspace in the new agency, ordered by name.
-  // We project via UNION to keep a single round-trip; admins get the
-  // union of member + all-active rows, members get their memberships.
-  // Workspace status = active only (soft-deleted / archived are
-  // excluded at the SQL layer).
-  const memberRows = await db
-    .select({ slug: workspaces.slug })
-    .from(workspaceMemberships)
-    .innerJoin(workspaces, eq(workspaces.id, workspaceMemberships.workspaceId))
-    .where(
-      and(
-        eq(workspaceMemberships.userId, actor.id),
-        eq(workspaceMemberships.status, "active"),
-        eq(workspaces.agencyId, agencyId),
-        eq(workspaces.status, "active"),
-      ),
-    )
-    .orderBy(asc(workspaces.name))
-    .limit(1);
+  // Agency admins are allowed to enter every active workspace even when
+  // they do not have an explicit workspace_membership row. Regular
+  // members remain restricted to their own active memberships.
+  // Workspace status = active only (soft-deleted / archived are excluded
+  // at the SQL layer).
+  const admin = await isAgencyAdmin(actor, agencyId);
+  const memberRows = admin
+    ? await db
+        .select({ slug: workspaces.slug })
+        .from(workspaces)
+        .where(and(eq(workspaces.agencyId, agencyId), eq(workspaces.status, "active")))
+        .orderBy(asc(workspaces.name))
+        .limit(1)
+    : await db
+        .select({ slug: workspaces.slug })
+        .from(workspaceMemberships)
+        .innerJoin(workspaces, eq(workspaces.id, workspaceMemberships.workspaceId))
+        .where(
+          and(
+            eq(workspaceMemberships.userId, actor.id),
+            eq(workspaceMemberships.status, "active"),
+            eq(workspaces.agencyId, agencyId),
+            eq(workspaces.status, "active"),
+          ),
+        )
+        .orderBy(asc(workspaces.name))
+        .limit(1);
   if (memberRows.length > 0) {
     return { ok: true, agencyId, firstWorkspaceSlug: memberRows[0]!.slug };
   }
 
-  // Admin fallback: a user with no membership in the new agency but
-  // with admin access (rare — the agency switcher normally only lists
-  // agencies the user is a member of) would otherwise get a no-workspace
-  // result. We still allow the switch but with `firstWorkspaceSlug: null`.
-  // The client falls back to `/app` and the app layout handles the rest.
-  // We do not enumerate non-member workspaces here; that would leak
-  // the existence of private workspaces to a non-member.
+  // A member can legitimately belong to an agency without having an
+  // active workspace assignment. Keep the context switch successful,
+  // but let the global app surface explain that no workspace is available.
   return { ok: true, agencyId, firstWorkspaceSlug: null };
 }
