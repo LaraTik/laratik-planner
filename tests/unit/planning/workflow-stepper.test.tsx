@@ -20,6 +20,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 import {
   stageForStatus,
   WorkflowStepper,
@@ -79,5 +80,21 @@ describe("WorkflowStepper — render", () => {
   it("renders compact size", () => {
     render(<WorkflowStepper status="content_review" size="compact" />);
     expect(screen.getByTestId("workflow-stepper-compact")).toBeInTheDocument();
+  });
+
+  it("renders stage and status labels from the active Arabic catalog", () => {
+    render(
+      <LocaleProvider locale="ar">
+        <WorkflowStepper status="changes_requested" size="full" />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText("التخطيط")).toBeInTheDocument();
+    expect(screen.getByText("مراجعة المحتوى")).toBeInTheDocument();
+    expect(screen.getByText("التعديلات المطلوبة")).toBeInTheDocument();
+    expect(screen.getByTestId("workflow-stepper-rail")).toHaveAttribute(
+      "aria-label",
+      "مراحل سير العمل",
+    );
   });
 });

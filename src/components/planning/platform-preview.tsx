@@ -21,6 +21,7 @@ import {
 } from "@/lib/preview/instagram-aspect-ratios";
 import { AspectRatioDiagnosticView } from "@/components/preview/aspect-ratio-diagnostic";
 import { SafeAreaOverlay, type SafeAreaShape } from "@/components/preview/safe-area-overlay";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * PlatformPreview — a recognisable, format-aware preview of a
@@ -118,6 +119,7 @@ export function PlatformPreview({
   className,
   contentFormat,
 }: PlatformPreviewProps) {
+  const t = useLocaleT();
   const options = formatOptionsFor(platform);
   const [format, setFormat] = React.useState<PreviewFormat>(
     initialFormat && options.includes(initialFormat) ? initialFormat : options[0]!,
@@ -141,7 +143,7 @@ export function PlatformPreview({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={thumbnailUrl}
-          alt={`${accountName} preview`}
+          alt={t("contentDetail.preview.alt", { account: accountName })}
           className="h-full w-full object-cover"
           loading="lazy"
           decoding="async"
@@ -156,7 +158,7 @@ export function PlatformPreview({
           ) : (
             <ImageIcon className="h-12 w-12" aria-hidden="true" />
           )}
-          <p className="text-label">No media yet</p>
+          <p className="text-label">{t("contentDetail.preview.noMedia")}</p>
         </div>
       )}
       {format === "reel" ? (
@@ -165,7 +167,7 @@ export function PlatformPreview({
           aria-hidden="true"
         >
           <Play className="h-3 w-3" />
-          Reel
+          {t("contentDetail.preview.reelBadge")}
         </span>
       ) : null}
     </div>
@@ -181,7 +183,10 @@ export function PlatformPreview({
       data-platform={platform}
       data-format={format}
       role="figure"
-      aria-label={`Preview for ${accountName} on ${platform}`}
+      aria-label={t("contentDetail.preview.ariaLabel", {
+        account: accountName,
+        platform,
+      })}
     >
       {options.length > 1 ? (
         <div
@@ -196,13 +201,13 @@ export function PlatformPreview({
               data-testid={`platform-preview-format-${opt}`}
               data-active={opt === format || undefined}
               className={cn(
-                "text-label rounded-full px-2.5 py-1 font-semibold tracking-wide uppercase",
+                "text-label focus-visible:ring-focus-ring min-h-11 min-w-11 rounded-full px-2.5 py-1 font-semibold tracking-wide uppercase",
                 opt === format
                   ? "bg-primary text-primary-foreground"
                   : "text-fg-secondary hover:text-fg-primary",
               )}
             >
-              {opt}
+              {t(`contentDetail.preview.formats.${opt}`)}
             </button>
           ))}
           {contentFormat === "carousel" ? (
@@ -210,7 +215,7 @@ export function PlatformPreview({
               className="text-label text-fg-muted ms-auto inline-flex items-center gap-1 px-2 font-semibold tracking-wide uppercase"
               data-testid="platform-preview-carousel-label"
             >
-              Carousel preview
+              {t("contentDetail.preview.carouselLabel")}
             </span>
           ) : null}
         </div>
@@ -226,7 +231,9 @@ export function PlatformPreview({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-label text-fg-primary truncate font-semibold">{accountName}</p>
-          <p className="text-label text-fg-muted truncate">{platform}</p>
+          <p className="text-label text-fg-muted truncate">
+            <bdi>{platform}</bdi>
+          </p>
         </div>
         <MoreHorizontal className="text-fg-muted h-4 w-4" aria-hidden="true" />
       </header>
@@ -272,7 +279,9 @@ export function PlatformPreview({
         >
           <span className="font-semibold">{accountName}</span>{" "}
           {caption || (
-            <span className="text-fg-muted italic">Caption preview will appear here.</span>
+            <span className="text-fg-muted italic">
+              {t("contentDetail.preview.captionPlaceholder")}
+            </span>
           )}
         </p>
         {hashtags && hashtags.length > 0 ? (
@@ -280,7 +289,7 @@ export function PlatformPreview({
             {hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" ")}
           </p>
         ) : null}
-        <p className="text-label text-fg-muted mt-2">Just now</p>
+        <p className="text-label text-fg-muted mt-2">{t("contentDetail.preview.justNow")}</p>
       </div>
     </div>
   );

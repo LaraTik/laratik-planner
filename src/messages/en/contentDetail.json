@@ -243,6 +243,7 @@
     "stageComplete": "Complete",
     "stageCurrent": "Current",
     "stageCurrentStep": "Current step",
+    "stageAriaLabel": "{stage} — {state}",
     "stageBlocked": "Blocked",
     "stageUpcoming": "Upcoming",
     "label": "Workflow",
@@ -342,7 +343,20 @@
     "title": "Platform preview",
     "description": "How this post will look on {platform} ({account}).",
     "noChannel": "no channel",
-    "showingFirst": "Showing the first of {count} channels. Use the {publishing} tab to configure the rest."
+    "showingFirst": "Showing the first of {count} channels. Use the {publishing} tab to configure the rest.",
+    "alt": "{account} preview",
+    "ariaLabel": "Preview for {account} on {platform}",
+    "noMedia": "No media yet",
+    "reelBadge": "Reel",
+    "carouselLabel": "Carousel preview",
+    "captionPlaceholder": "Caption preview will appear here.",
+    "justNow": "Just now",
+    "formats": {
+      "feed": "Feed",
+      "reel": "Reel",
+      "story": "Story",
+      "post": "Post"
+    }
   },
   "publishReadiness": {
     "title": "Publishing requirements",

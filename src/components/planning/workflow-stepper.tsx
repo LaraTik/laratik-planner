@@ -4,6 +4,7 @@ import * as React from "react";
 import { Check, Circle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ContentStatus } from "@/lib/content/status";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Workflow stepper — compact 4-stage visualization of the
@@ -88,6 +89,14 @@ export interface WorkflowStepperProps {
 
 export function WorkflowStepper({ status, size = "full", className }: WorkflowStepperProps) {
   const { stage, detailed, variant } = stageForStatus(status);
+  const t = useLocaleT();
+  const translate = (key: string, fallback: string) => {
+    const value = t(key);
+    return value.startsWith(`[${key}]`) ? fallback : value;
+  };
+  const stageLabel = (id: WorkflowStage) =>
+    translate(`contentDetail.workflow.stageLabels.${id}`, id);
+  const detailedLabel = translate(`contentDetail.workflow.statusLabels.${status}`, detailed);
   const stageIndex = STAGES.findIndex((s) => s.id === stage);
   const isNonLinear = variant !== "linear";
 
@@ -118,7 +127,7 @@ export function WorkflowStepper({ status, size = "full", className }: WorkflowSt
               data-past={past || undefined}
             >
               {past ? <Check className="h-3 w-3" aria-hidden="true" /> : null}
-              {s.label}
+              {stageLabel(s.id)}
             </span>
           );
         })}
@@ -136,7 +145,7 @@ export function WorkflowStepper({ status, size = "full", className }: WorkflowSt
       <ol
         className="flex items-center gap-1"
         role="list"
-        aria-label="Workflow stages"
+        aria-label={t("contentDetail.workflow.railStages")}
         data-testid="workflow-stepper-rail"
       >
         {STAGES.map((s, i) => {
@@ -160,7 +169,16 @@ export function WorkflowStepper({ status, size = "full", className }: WorkflowSt
                       : "border-border bg-surface text-fg-muted",
                 )}
                 aria-current={current ? "step" : undefined}
-                aria-label={`${s.label}${past ? " — done" : current ? " — current" : " — upcoming"}`}
+                aria-label={t("contentDetail.workflow.stageAriaLabel", {
+                  stage: stageLabel(s.id),
+                  state: t(
+                    past
+                      ? "contentDetail.workflow.stageComplete"
+                      : current
+                        ? "contentDetail.workflow.stageCurrent"
+                        : "contentDetail.workflow.stageUpcoming",
+                  ),
+                })}
               >
                 {past ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : i + 1}
               </span>
@@ -170,7 +188,7 @@ export function WorkflowStepper({ status, size = "full", className }: WorkflowSt
                   current ? "text-fg-primary" : past ? "text-fg-secondary" : "text-fg-muted",
                 )}
               >
-                {s.label}
+                {stageLabel(s.id)}
               </span>
               {i < STAGES.length - 1 ? (
                 <span
@@ -186,7 +204,7 @@ export function WorkflowStepper({ status, size = "full", className }: WorkflowSt
         className="text-label text-fg-secondary inline-flex flex-wrap items-center gap-1.5"
         data-testid="workflow-stepper-current"
       >
-        <span className="text-fg-muted">Current:</span>
+        <span className="text-fg-muted">{t("contentDetail.workflow.stageCurrent")}:</span>
         {isNonLinear ? (
           <span
             className={cn(
@@ -207,10 +225,10 @@ export function WorkflowStepper({ status, size = "full", className }: WorkflowSt
             ) : (
               <Circle className="h-3 w-3" aria-hidden="true" />
             )}
-            {detailed}
+            {detailedLabel}
           </span>
         ) : (
-          <span className="text-fg-primary font-semibold">{detailed}</span>
+          <span className="text-fg-primary font-semibold">{detailedLabel}</span>
         )}
       </p>
     </div>

@@ -243,6 +243,7 @@
     "stageComplete": "مكتمل",
     "stageCurrent": "حالي",
     "stageCurrentStep": "الخطوة الحالية",
+    "stageAriaLabel": "{stage} — {state}",
     "stageBlocked": "محظور",
     "stageUpcoming": "قادم",
     "label": "سير العمل",
@@ -342,7 +343,20 @@
     "title": "معاينة المنصة",
     "description": "هكذا سيظهر هذا المنشور على {platform} ({account}).",
     "noChannel": "لا توجد قناة",
-    "showingFirst": "يتم عرض أول {count} قنوات. استخدم علامة تبويب {publishing} لإعداد البقية."
+    "showingFirst": "يتم عرض أول {count} قنوات. استخدم علامة تبويب {publishing} لإعداد البقية.",
+    "alt": "معاينة {account}",
+    "ariaLabel": "معاينة {account} على {platform}",
+    "noMedia": "لا توجد وسائط بعد",
+    "reelBadge": "ريل",
+    "carouselLabel": "معاينة منشور متعدد الصور",
+    "captionPlaceholder": "ستظهر معاينة النص هنا.",
+    "justNow": "الآن",
+    "formats": {
+      "feed": "الموجز",
+      "reel": "ريل",
+      "story": "قصة",
+      "post": "منشور"
+    }
   },
   "publishReadiness": {
     "title": "متطلبات النشر",

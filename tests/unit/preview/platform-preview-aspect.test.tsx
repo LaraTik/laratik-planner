@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { PlatformPreview } from "@/components/planning/platform-preview";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 
 /**
  * Phase 4 of the planning-workspace-v2 refactor (2026-08-30):
@@ -81,5 +82,18 @@ describe("PlatformPreview — aspect ratio + safe area", () => {
   it("shows the 'Carousel preview' label when contentFormat is carousel", () => {
     render(<PlatformPreview {...baseProps} contentFormat="carousel" />);
     expect(screen.getByTestId("platform-preview-carousel-label")).toBeInTheDocument();
+  });
+
+  it("renders preview chrome from the active Arabic catalog", () => {
+    render(
+      <LocaleProvider locale="ar">
+        <PlatformPreview {...baseProps} thumbnailUrl={null} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText("لا توجد وسائط بعد")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "الموجز" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "قصة" })).toBeInTheDocument();
+    expect(screen.getByText("الآن")).toBeInTheDocument();
   });
 });
