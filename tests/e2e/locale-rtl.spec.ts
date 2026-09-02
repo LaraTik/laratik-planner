@@ -1,6 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { bootstrapTestSession } from "./_helpers";
 
+// This contract visits four authenticated routes. A cold isolated Next.js
+// server can spend more than the default 30s budget compiling the final
+// settings route, so keep the assertion budget explicit without weakening
+// any individual navigation or assertion.
+test.setTimeout(60_000);
+
 /**
  * The interface locale is a server-resolved setting, not just a CSS flip.
  * Keep one browser-level contract for the authenticated shell so regressions
