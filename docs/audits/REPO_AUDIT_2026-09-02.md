@@ -26,22 +26,23 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 
 ## Baseline evidence
 
-| Gate                   | Result                | Evidence                                                                                                                                                |
-| ---------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Prettier               | Pass                  | `pnpm format:check`                                                                                                                                     |
-| ESLint                 | Pass                  | `pnpm lint`                                                                                                                                             |
-| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                                                                                            |
-| Unit tests             | Pass                  | 310 files; 3,073 passed; 4 todo at exact clean verification HEAD `1b15de9`                                                                              |
-| Production build       | Pass                  | `pnpm verify` at exact clean verification HEAD `1b15de9`                                                                                                |
-| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                                                                                                 |
-| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                                                                                        |
-| Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow                                                                                |
-| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; planning filter URL contract 5/5 browser contexts; isolated upload probe                       |
-| Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                                                                                            |
-| Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths                                                                           |
-| Visual regression      | Partial / investigate | Full matrix at exact clean audit state `c0a8a9f`: 73/112; 39 failed; no snapshot updates; route fixes and deliberate snapshot decisions remain required |
-| Performance evidence   | Partial / baseline    | Static inventory, local public-route baseline, and tiny-fixture query plans; throttled/authenticated/INP/scale evidence pending                         |
-| Working tree           | Audit changes clean   | Exact audit verification was clean at `1b15de9`; later unrelated user edits in format-payload files remain uncommitted and were preserved               |
+| Gate                   | Result                | Evidence                                                                                                                                                       |
+| ---------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prettier               | Pass                  | `pnpm format:check`                                                                                                                                            |
+| ESLint                 | Pass                  | `pnpm lint`                                                                                                                                                    |
+| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                                                                                                   |
+| Unit tests             | Pass                  | 310 files; 3,073 passed; 4 todo at exact clean verification HEAD `1b15de9`                                                                                     |
+| Production build       | Pass                  | `pnpm verify` at exact clean verification HEAD `1b15de9`                                                                                                       |
+| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                                                                                                        |
+| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                                                                                               |
+| Dependency audit       | Pass                  | Four transitive `fast-uri` highs were found and resolved by the `>=3.1.6` pnpm override in `bfb350d`; `pnpm audit --prod` now reports no known vulnerabilities |
+| Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow                                                                                       |
+| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; planning filter URL contract 5/5 browser contexts; isolated upload probe                              |
+| Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                                                                                                   |
+| Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths                                                                                  |
+| Visual regression      | Partial / investigate | Full matrix at exact clean audit state `c0a8a9f`: 73/112; 39 failed; no snapshot updates; route fixes and deliberate snapshot decisions remain required        |
+| Performance evidence   | Partial / baseline    | Static inventory, local public-route baseline, and tiny-fixture query plans; throttled/authenticated/INP/scale evidence pending                                |
+| Working tree           | Audit changes clean   | Exact audit verification was clean at `1b15de9`; later unrelated user edits in format-payload files remain uncommitted and were preserved                      |
 
 ## Repository inventory
 
@@ -283,7 +284,12 @@ EXPLAIN observations exist, while authenticated INP, throttled LCP/INP/CLS,
 approved asset budgets, and representative-volume plans remain open. The
 planning filter remediation is covered by focused unit, disposable-Postgres
 integration, and 5-context route-level E2E tests; the broader visual parity
-suite remains open.
+suite remains open. 10. **The production dependency audit found four high `fast-uri` advisories.**
+They were transitive through `@sentry/nextjs → @sentry/webpack-plugin →
+    webpack → schema-utils → ajv`; `bfb350d` adds a narrow pnpm override and
+refreshes the lockfile to `fast-uri@4.1.4`. `pnpm install --frozen-lockfile`,
+`pnpm why fast-uri`, and `pnpm audit --prod` confirm the patched tree and no
+known vulnerabilities. Re-run this audit after dependency upgrades.
 
 ### Step 7 — Reconcile operations and documentation
 
