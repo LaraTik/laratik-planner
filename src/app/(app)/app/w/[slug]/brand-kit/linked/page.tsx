@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { Link2 } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -11,6 +12,11 @@ import { BrandKitHealth } from "../_components/brand-kit-health";
 import { BrandKitBackLink } from "../_components/brand-kit-back-link";
 import { LinkedResourceForm } from "../linked-resource-form";
 import { LinkedResourceList } from "../linked-resource-list";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.brandLinked") };
+}
 
 /**
  * /app/w/[slug]/brand-kit/linked — the Linked Resources section

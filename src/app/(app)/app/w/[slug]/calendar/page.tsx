@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -8,6 +9,11 @@ import { MonthNav } from "@/components/workspace/month-nav";
 import { CalendarEventCard } from "@/components/workspace/calendar-event-card";
 import { cn } from "@/lib/utils";
 import { tForActive } from "@/lib/i18n/t-for-active";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.planningCalendar") };
+}
 import type { LocaleCode } from "@/lib/i18n/locales";
 
 /**

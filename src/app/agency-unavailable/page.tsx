@@ -1,6 +1,12 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { tForActive } from "@/lib/i18n/t-for-active";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("operational.agencyUnavailableTitle") };
+}
 
 export default async function AgencyUnavailablePage() {
   const { t } = await tForActive();

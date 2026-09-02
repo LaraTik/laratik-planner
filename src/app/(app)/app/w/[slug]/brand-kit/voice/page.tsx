@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { and, eq, isNull } from "drizzle-orm";
 import { MessageCircle } from "lucide-react";
 import { auth } from "@/lib/auth/config";
@@ -13,6 +14,11 @@ import { BrandKitHealth } from "../_components/brand-kit-health";
 import { BrandKitBackLink } from "../_components/brand-kit-back-link";
 import { VoiceForm } from "../voice-form";
 import { VoiceRuleList } from "../voice-rule-list";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.brandVoice") };
+}
 
 /**
  * /app/w/[slug]/brand-kit/voice — the Voice & tone section

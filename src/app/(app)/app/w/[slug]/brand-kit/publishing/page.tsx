@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { BookOpen } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -11,6 +12,11 @@ import { BrandKitHealth } from "../_components/brand-kit-health";
 import { BrandKitBackLink } from "../_components/brand-kit-back-link";
 import { PublishingRuleForm } from "../publishing-rule-form";
 import { PublishingRuleList } from "../publishing-rule-list";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.brandPublishing") };
+}
 
 /**
  * /app/w/[slug]/brand-kit/publishing — the Publishing Rules

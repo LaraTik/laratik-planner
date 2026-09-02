@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
@@ -10,6 +11,11 @@ import { BrandKitHealth } from "../_components/brand-kit-health";
 import { BrandKitBackLink } from "../_components/brand-kit-back-link";
 import { PillarForm } from "../pillar-form";
 import { PillarList } from "../pillar-list";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.brandPillars") };
+}
 
 /**
  * /app/w/[slug]/brand-kit/pillars — the Content Pillars section.

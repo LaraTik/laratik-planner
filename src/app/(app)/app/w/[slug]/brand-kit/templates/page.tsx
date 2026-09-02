@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { Tag, MessageCircle, Palette, Type, BookOpen } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -15,6 +16,11 @@ import {
   voiceTemplates,
 } from "@/lib/brand/templates";
 import { fontClassFor } from "@/lib/brand/typography-families";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.brandTemplates") };
+}
 
 /**
  * /app/w/[slug]/brand-kit/templates — the curated template

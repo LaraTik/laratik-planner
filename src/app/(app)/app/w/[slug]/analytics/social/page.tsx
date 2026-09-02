@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { and, desc, eq, gte, inArray, isNull } from "drizzle-orm";
 import { Activity, BarChart3, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { auth } from "@/lib/auth/config";
@@ -35,6 +36,11 @@ import { SegmentedControl, type SegmentedOption } from "./social-segmented-contr
 import { SocialSparkline, socialSparklineTestId } from "./social-sparkline";
 import { SocialEngagementRateCard } from "./social-engagement-rate";
 import { tForActive } from "@/lib/i18n/t-for-active";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.analytics") };
+}
 import { SocialCsvExport, type CsvRow } from "./social-csv-export";
 
 /**

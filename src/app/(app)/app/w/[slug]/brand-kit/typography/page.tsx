@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { and, eq, isNull } from "drizzle-orm";
 import { Type } from "lucide-react";
 import { auth } from "@/lib/auth/config";
@@ -13,6 +14,11 @@ import { BrandKitHealth } from "../_components/brand-kit-health";
 import { BrandKitBackLink } from "../_components/brand-kit-back-link";
 import { TypographyForm } from "../typography-form";
 import { TypographyCards } from "../typography-cards";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.brandTypography") };
+}
 
 type FontRole = "headline" | "body" | "accent" | "mono";
 

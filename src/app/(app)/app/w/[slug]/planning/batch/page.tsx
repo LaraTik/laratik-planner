@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -6,6 +7,11 @@ import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { PageHeader } from "@/components/workspace/page-header";
 import { BatchForm } from "./batch-form";
 import { tForActive } from "@/lib/i18n/t-for-active";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("batchAdd.title") };
+}
 
 export default async function BatchAddPage({ params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();

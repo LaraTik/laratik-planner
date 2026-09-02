@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { Clock, UserPlus, Users } from "lucide-react";
@@ -23,6 +24,11 @@ import { IconTile } from "@/components/workspace/icon-button";
 import { PageHeader } from "@/components/workspace/page-header";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { tForActive } from "@/lib/i18n/t-for-active";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.team") };
+}
 import { MemberEditTrigger } from "./member-edit-trigger";
 
 type MemberRow = {

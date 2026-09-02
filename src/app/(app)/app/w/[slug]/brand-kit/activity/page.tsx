@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { History } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -8,6 +9,11 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { BrandKitBackLink } from "../_components/brand-kit-back-link";
 import { RecentUpdatesTable } from "../recent-updates-table";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.activity") };
+}
 
 /**
  * /app/w/[slug]/brand-kit/activity — the Recent Updates page

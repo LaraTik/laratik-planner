@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { and, eq, isNull } from "drizzle-orm";
 import { ImageIcon } from "lucide-react";
 import { auth } from "@/lib/auth/config";
@@ -13,6 +14,11 @@ import { BrandKitHealth } from "../_components/brand-kit-health";
 import { BrandKitBackLink } from "../_components/brand-kit-back-link";
 import { LogoForm } from "../logo-form";
 import { LogoGrid } from "../logo-grid";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.brandLogos") };
+}
 
 /**
  * /app/w/[slug]/brand-kit/logos — the Logo Assets section, broken

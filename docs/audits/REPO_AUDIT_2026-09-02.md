@@ -57,9 +57,10 @@ handled before unrelated cleanup.
    surface with anchor sections because the values share one `workspace_settings`
    row. The former section paths remain compatibility redirects, and navigation,
    action revalidation, tests, and the RTL contract now target the anchors.
-2. **Route metadata coverage is incomplete.** Review all 65 pages and ensure
-   meaningful route titles are produced through localized `generateMetadata`, or
-   document a deliberate inherited-title exception.
+2. **Route metadata coverage is now explicit for meaningful pages.** 60 of 65
+   page files expose localized `generateMetadata`. The five deliberate
+   exceptions are compatibility/fallback routes: four legacy settings redirects
+   and the absorbed publish redirect.
 3. **User-facing copy is not fully catalog-backed.** Known hotspots include
    library forms, quick create/edit, delivery, AI assistance, publish forms,
    social analytics, approval timeline, platform preview, workflow stepper, and

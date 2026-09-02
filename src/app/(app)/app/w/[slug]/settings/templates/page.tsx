@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
 import { Clock, CheckCircle2, Hash, ArrowDown, ArrowUp, Equal, Sparkles } from "lucide-react";
 import { auth } from "@/lib/auth/config";
@@ -16,6 +17,11 @@ import {
   settingsTemplateSections,
 } from "@/lib/workspaces/settings-templates";
 import { cn } from "@/lib/utils";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("settings.templates.title") };
+}
 
 /**
  * /app/w/[slug]/settings/templates — the settings preset

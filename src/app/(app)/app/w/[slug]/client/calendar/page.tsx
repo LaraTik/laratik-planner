@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { and, eq, gte, inArray, isNull, lt } from "drizzle-orm";
 import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
@@ -7,6 +8,11 @@ import { db } from "@/lib/db";
 import { contentItems } from "@/lib/db/schema";
 import { getClientWorkspace } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.clientCalendarPage.title") };
+}
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { StatusBadge } from "@/components/content/status-badge";

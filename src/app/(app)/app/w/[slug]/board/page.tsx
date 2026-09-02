@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { asc, eq } from "drizzle-orm";
 import { Clock, LayoutGrid, List } from "lucide-react";
 import { auth } from "@/lib/auth/config";
@@ -19,6 +20,11 @@ import { db } from "@/lib/db";
 import { users, workspaceMemberships } from "@/lib/db/schema";
 import { describeActiveFilter } from "../planning/filter-describe";
 import { tForActive } from "@/lib/i18n/t-for-active";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.planningBoard") };
+}
 
 /**
  * The board column set is defined inside the component so the

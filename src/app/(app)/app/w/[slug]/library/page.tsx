@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { and, eq, isNull } from "drizzle-orm";
 import { CalendarRange, Clock, Layers, Megaphone } from "lucide-react";
 import { auth } from "@/lib/auth/config";
@@ -7,6 +8,11 @@ import { campaigns, contentPillars, contentTemplates } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { tForActive } from "@/lib/i18n/t-for-active";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.library") };
+}
 import { formatDate } from "@/lib/i18n/format-locale";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";

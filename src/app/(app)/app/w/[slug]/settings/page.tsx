@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { and, eq } from "drizzle-orm";
@@ -27,6 +28,11 @@ import { LeadTimesForm } from "./_components/lead-times-form";
 import { DefaultsForm } from "./_components/defaults-form";
 import { ApprovalsForm } from "./_components/approvals-form";
 import { currentActor } from "@/lib/auth/current-actor";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("settings.title") };
+}
 
 /**
  * Workspace settings overview (Settings refactor Phase A + D).

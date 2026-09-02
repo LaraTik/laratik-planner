@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { Calendar, Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
@@ -8,6 +9,11 @@ import { db } from "@/lib/db";
 import { approvalRequests, contentItems, deliveryLinks, deliveryVersions } from "@/lib/db/schema";
 import { getClientWorkspace } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.clientReview") };
+}
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { ClientReviewCard } from "./client-review-card";

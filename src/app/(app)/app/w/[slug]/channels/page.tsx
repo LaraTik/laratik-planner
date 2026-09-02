@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { AlertCircle, Clock, ExternalLink, MoreHorizontal, PlugZap, Radio } from "lucide-react";
 import { auth } from "@/lib/auth/config";
@@ -23,6 +24,11 @@ import { AddChannelButton } from "./add-channel-button";
 import { ChannelForm } from "./channel-form";
 import { ChannelRowActions } from "./channel-edit-drawer";
 import { MetaAccountPicker } from "./meta-account-picker";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.channels") };
+}
 
 type ChannelRow = typeof socialChannels.$inferSelect;
 

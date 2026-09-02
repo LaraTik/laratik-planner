@@ -1,10 +1,16 @@
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { listUnassignedDesignWork } from "@/lib/content/service";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.designQueue") };
+}
 import { PageHeader } from "@/components/workspace/page-header";
 import { Clock } from "lucide-react";
 import { db } from "@/lib/db";
