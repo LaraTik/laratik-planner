@@ -5,9 +5,8 @@ import { Save, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Checkbox as UiCheckbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
+import { DirAwareInput, DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
 import { CaptionField } from "@/components/forms/caption-field";
 import { HashtagEditor } from "@/components/forms/hashtag-editor";
 import { ReasonDialog } from "@/components/forms/reason-dialog";
@@ -19,7 +18,7 @@ import {
 } from "./actions";
 import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
 import type { MappedPlatformFields } from "@/lib/format-payload/mapper";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * M4 — Publish package form (client component).
@@ -234,6 +233,7 @@ export function PublishPackageForm({
   t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const localeT = useLocaleT();
+  const locale = useLocaleCode();
   const t = tProp ?? localeT;
   const [activeChannel, setActiveChannel] = useState<string>(channels[0]?.id ?? "");
   const [drafts, setDrafts] = useState<Record<string, PlatformPayload>>(() => {
@@ -543,8 +543,9 @@ export function PublishPackageForm({
               >
                 {t("contentDetail.publishForm.altText")}
               </label>
-              <Textarea
+              <DirAwareTextarea
                 id="publish-alt-text"
+                locale={locale}
                 rows={3}
                 value={(currentDraft as { altText?: string }).altText ?? ""}
                 onChange={(e) => updateDraft(current.id, { altText: e.target.value })}
@@ -718,7 +719,7 @@ export function PublishPackageForm({
                 className="min-h-11"
                 data-testid="publish-internal-note"
               >
-                Add internal note
+                {t("contentDetail.internalNote.title")}
               </Button>
             }
             title={t("contentDetail.internalNote.title")}
@@ -779,14 +780,16 @@ function Field({
   placeholder?: string;
   testId?: string;
 }) {
+  const locale = useLocaleCode();
   const id = `field-${testId ?? label.replace(/\s+/g, "-").toLowerCase()}`;
   return (
     <div>
       <label htmlFor={id} className="text-body text-fg-primary mb-1 block font-semibold">
         {label}
       </label>
-      <Input
+      <DirAwareInput
         id={id}
+        locale={locale}
         value={value}
         readOnly={readOnly}
         onChange={(e) => onChange?.(e.target.value)}
