@@ -56,6 +56,14 @@ migration-drill` passes 5/5; `TEST_DATABASE_URL=… pnpm test:integration`
 > the active English/Arabic catalog, with a focused Arabic regression in
 > `462db37`. The full catalog parity and static localization checks remain
 > required after subsequent copy batches.
+
+> **2026-09-03 visual follow-up** — The overview attention banner now uses a
+> narrow-screen grid, keeps its message readable at 360px, and gives its CTA a
+> 44px touch target (`85d026b`, focused unit coverage). The targeted visual
+> assertion remains intentionally red: the committed reference has two seeded
+> overview items while the current deterministic fixture has one, producing a
+> 2949px expected image versus 2792px actual. No snapshot was updated; fixture
+> and Stitch-reference reconciliation remains a reviewer-owned decision.
 >
 > **2026-08-26 update — landing entry and sign-in refinement** — Commit `caa349f` redirects authenticated `/` visits directly to `/app`, exposes one contextual public CTA, and redesigns `/signin` around one active method at a time. Password remains the default for returning users, Google is secondary, magic link is progressively disclosed, and first-time setup offers only identity-verifying providers. Evidence: clean-snapshot `pnpm verify` passes with 2,110 runnable unit tests and the Next.js production build; Chromium entry checks pass 4/4, public accessibility checks pass 4/4, and the `/signin` Stitch/responsive visual set passes 4/4. Full pre-merge browser gates were attempted against disposable Postgres but remain non-green on unrelated social-analytics/agency-switcher cases and a parallel authenticated visual-seed race; no unrelated test or production code was changed. The verdict remains `READY FOR INDEPENDENT REVIEW`.
 >

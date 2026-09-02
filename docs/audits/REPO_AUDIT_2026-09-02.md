@@ -101,7 +101,12 @@ handled before unrelated cleanup.
 4. **Exact-HEAD visual review is incomplete.** Exact-HEAD axe and RTL checks
    pass, but the visual suite still has reference deltas and the required
    keyboard, screen-reader, zoom, and reduced-motion review is not independently
-   signed off.
+   signed off. A targeted 360px overview run after `85d026b` confirms the
+   attention banner no longer collapses its message into one-word lines and its
+   CTA meets the touch-target rule, but the assertion remains red because the
+   committed reference contains two seeded items while the current deterministic
+   fixture contains one (`2949px` expected versus `2792px` actual). No snapshot
+   was updated; the fixture/reference decision still requires deliberate review.
 5. **Release-gate ownership is now explicit in CI.** Formatting, lint,
    typecheck, unit, migration, integration, coverage, build, and operational
    checks are server-side gates; critical E2E and visual review remain documented
@@ -187,7 +192,11 @@ handled before unrelated cleanup.
    snapshot decisions. The `/setup` run also emitted one Next.js development
    instrumentation console error about a negative performance timestamp; it did
    not affect the passing screenshot assertion and should be rechecked outside
-   the visual harness before being treated as an application defect.
+   the visual harness before being treated as an application defect. The
+   targeted overview rerun after `85d026b` additionally confirms that the
+   attention-banner mobile layout was a real product defect; its remaining
+   assertion difference is data/height reconciliation, not a reason to accept a
+   blind snapshot update.
 
 ### P3 — polish
 
