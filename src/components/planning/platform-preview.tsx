@@ -21,6 +21,7 @@ import {
 } from "@/lib/preview/instagram-aspect-ratios";
 import { AspectRatioDiagnosticView } from "@/components/preview/aspect-ratio-diagnostic";
 import { SafeAreaOverlay, type SafeAreaShape } from "@/components/preview/safe-area-overlay";
+import { LinkifyText } from "@/components/ui/linkify-text";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
@@ -273,17 +274,27 @@ export function PlatformPreview({
       ) : null}
 
       <div className="px-3 pb-3">
-        <p
+        <div
           className="text-body text-fg-primary break-words whitespace-pre-wrap"
           data-testid="platform-preview-caption"
         >
           <span className="font-semibold">{accountName}</span>{" "}
-          {caption || (
+          {caption ? (
+            // LinkifyText renders URLs in the caption as
+            // clickable links (no target=_self; rel=noopener;
+            // user-generated content flagged with nofollow).
+            // The wrapper inherits the parent text styling so
+            // the link sits inside the same `<div>` paragraph
+            // as the bold account name.
+            <LinkifyText as="span" userGenerated testId="platform-preview-caption-text">
+              {caption}
+            </LinkifyText>
+          ) : (
             <span className="text-fg-muted italic">
               {t("contentDetail.preview.captionPlaceholder")}
             </span>
           )}
-        </p>
+        </div>
         {hashtags && hashtags.length > 0 ? (
           <p className="text-label text-primary mt-1" data-testid="platform-preview-hashtags">
             {hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" ")}

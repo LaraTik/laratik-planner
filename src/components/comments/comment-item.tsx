@@ -5,6 +5,7 @@ import { CheckCircle, Reply } from "lucide-react";
 import { resolveCommentAction } from "@/app/(app)/app/w/[slug]/planning/actions";
 import { useLocaleCode } from "@/components/i18n/locale-provider";
 import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
+import { LinkifyText } from "@/components/ui/linkify-text";
 
 export type CommentAuthor = {
   id: string;
@@ -123,7 +124,11 @@ export function CommentItem({
               </span>
             ) : null}
           </div>
-          <p className="text-body text-fg-primary mt-1 whitespace-pre-wrap">{c.body}</p>
+          <p className="text-body text-fg-primary mt-1 whitespace-pre-wrap">
+            <LinkifyText as="span" userGenerated testId={`comment-body-${c.id}`}>
+              {c.body}
+            </LinkifyText>
+          </p>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             <button
               type="button"
