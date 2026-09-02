@@ -44,7 +44,7 @@ test.describe("Workspace navigation (admin)", () => {
     // Fill the form
     const uniqueSlug = `ws-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     await page.getByLabel(/Workspace name/i).fill("My New Brand");
-    await page.getByLabel(/URL slug/i).fill(uniqueSlug);
+    await page.getByLabel(/Workspace slug/i).fill(uniqueSlug);
 
     // Submit
     await page.getByRole("button", { name: /Create workspace/i }).click();
@@ -65,7 +65,7 @@ test.describe("Workspace navigation (admin)", () => {
     await bootstrapTestSession(page);
 
     await page.goto("/app/workspaces/new");
-    const slugField = page.getByLabel(/URL slug/i);
+    const slugField = page.getByLabel(/Workspace slug/i);
     // HTML5 pattern blocks uppercase / special chars at the client side
     await slugField.fill("INVALID UPPERCASE");
     // Try submitting — the form should refuse
@@ -97,7 +97,7 @@ test.describe("Workspace switcher keyboard (sidebar)", () => {
     });
     await page.goto("/app");
 
-    // The switcher now lives in the sidebar bottom (per Stitch design),
+    // The switcher lives in the shared sidebar context block,
     // not the topbar. The desktop sidebar is hidden < 768px so we
     // assert the trigger is visible at the default Playwright viewport.
     const trigger = page.locator('[data-testid="sidebar-workspace-switcher-trigger"]');

@@ -51,6 +51,7 @@ type MobileNavProps = {
   agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   canCreateWorkspace: boolean;
   platformAccess: PlatformNavigationAccess;
+  labels?: Record<string, string>;
 };
 
 /**
@@ -66,8 +67,10 @@ export function MobileNav({
   agencySwitcher,
   canCreateWorkspace,
   platformAccess,
+  labels = {},
 }: MobileNavProps) {
   const pathname = usePathname();
+  const labelFor = (key: string, fallback: string) => labels[key] ?? fallback;
   const slug = pathname.match(/^\/app\/w\/([^/]+)/)?.[1];
   const currentWorkspace = slug
     ? (workspaces.find((workspace) => workspace.slug === slug) ?? null)
@@ -83,20 +86,54 @@ export function MobileNav({
   }> = currentWorkspace
     ? clientOnly
       ? [
-          mobileLink("/app", "My Work", <Home />, pathname, true),
-          mobileLink(`${wsBase}/client`, "Reviews", <MessageSquare />, pathname, true),
-          mobileLink(`${wsBase}/client/calendar`, "Calendar", <CalendarDays />, pathname),
+          mobileLink("/app", labelFor("my-work", "My Work"), <Home />, pathname, true),
+          mobileLink(
+            `${wsBase}/client`,
+            labelFor("client-review", "Reviews"),
+            <MessageSquare />,
+            pathname,
+            true,
+          ),
+          mobileLink(
+            `${wsBase}/client/calendar`,
+            labelFor("calendar", "Calendar"),
+            <CalendarDays />,
+            pathname,
+          ),
         ]
       : [
-          mobileLink("/app", "My Work", <Home />, pathname, true),
-          mobileLink(wsBase, "Overview", <LayoutDashboard />, pathname, true),
-          mobileLink(`${wsBase}/planning`, "Planning", <ClipboardList />, pathname),
-          mobileLink(`${wsBase}/reviews`, "Reviews", <MessageSquare />, pathname),
+          mobileLink("/app", labelFor("my-work", "My Work"), <Home />, pathname, true),
+          mobileLink(
+            wsBase,
+            labelFor("workspace-overview", "Overview"),
+            <LayoutDashboard />,
+            pathname,
+            true,
+          ),
+          mobileLink(
+            `${wsBase}/planning`,
+            labelFor("planning", "Planning"),
+            <ClipboardList />,
+            pathname,
+          ),
+          mobileLink(
+            `${wsBase}/reviews`,
+            labelFor("approvals", "Reviews"),
+            <MessageSquare />,
+            pathname,
+          ),
         ]
     : [
-        mobileLink("/app", "My Work", <Home />, pathname, true),
-        mobileLink("/app/workspaces", "Workspaces", <Briefcase />, pathname),
-        ...(user.isAdmin ? [mobileLink("/app/users", "People", <Users />, pathname)] : []),
+        mobileLink("/app", labelFor("my-work", "My Work"), <Home />, pathname, true),
+        mobileLink(
+          "/app/workspaces",
+          labelFor("workspaces", "Workspaces"),
+          <Briefcase />,
+          pathname,
+        ),
+        ...(user.isAdmin
+          ? [mobileLink("/app/users", labelFor("users", "People"), <Users />, pathname)]
+          : []),
       ];
 
   const onPlatformRoute = pathname.startsWith("/app/platform/");
@@ -109,14 +146,16 @@ export function MobileNav({
       : canCreateWorkspace
         ? "/app/workspaces/new"
         : null;
-  const createLabel = currentWorkspace ? "Create content" : "Create workspace";
+  const createLabel = currentWorkspace
+    ? labelFor("createContent", "Create content")
+    : labelFor("workspaceCreate", "Create workspace");
 
   return (
     <>
       <Dialog>
         <nav
           className="bg-surface border-border fixed inset-x-0 bottom-0 z-30 border-t pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden"
-          aria-label="Primary"
+          aria-label={labelFor("sidebarAriaLabel", "Primary")}
           data-testid="mobile-navigation"
         >
           <ul
@@ -133,11 +172,11 @@ export function MobileNav({
                 <button
                   type="button"
                   className="text-label text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-[var(--control-touch)] w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-1 font-semibold transition-colors focus:outline-none focus-visible:ring-2"
-                  aria-label="Open all navigation"
+                  aria-label={labelFor("mobileMoreAria", "Open all navigation")}
                   data-testid="mobile-navigation-more"
                 >
                   <Menu className="h-5 w-5" aria-hidden="true" />
-                  <span>More</span>
+                  <span>{labelFor("mobileMore", "More")}</span>
                 </button>
               </DialogTrigger>
             </li>
@@ -146,9 +185,11 @@ export function MobileNav({
 
         <DialogContent className="inset-x-0 start-0 top-auto bottom-0 max-h-[min(86dvh,760px)] w-full max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-t-[var(--radius-card)] rounded-b-none p-0 md:hidden">
           <DialogHeader className="border-border border-b px-4 py-4 pe-14">
-            <DialogTitle>Navigate</DialogTitle>
+            <DialogTitle>{labelFor("mobileNavigate", "Navigate")}</DialogTitle>
             <DialogDescription>
-              {currentWorkspace ? currentWorkspace.name : "Agency and platform destinations"}
+              {currentWorkspace
+                ? currentWorkspace.name
+                : labelFor("mobileGlobalDescription", "Agency and platform destinations")}
             </DialogDescription>
           </DialogHeader>
 
@@ -159,103 +200,133 @@ export function MobileNav({
                 options={agencySwitcher.options}
                 isPlatformAdmin={platformAccess.canEnter}
                 testId="mobile-agency-switcher-trigger"
+                copy={agencySwitcherCopy(labels)}
               />
               <WorkspaceSwitcher
-                active={currentWorkspace ?? workspaces[0] ?? null}
+                active={currentWorkspace}
                 options={workspaces}
                 canCreate={canCreateWorkspace}
                 testId="mobile-workspace-switcher-trigger"
+                copy={workspaceSwitcherCopy(labels)}
               />
             </div>
 
             {currentWorkspace && !clientOnly ? (
-              <MenuSection label="Workspace">
-                <MobileMenuLink href={`${wsBase}/board`} icon={<Kanban />} label="Board" />
+              <MenuSection label={labelFor("workspaceSection", "Workspace")}>
+                <MobileMenuLink
+                  href={`${wsBase}/board`}
+                  icon={<Kanban />}
+                  label={labelFor("planning-board", "Board")}
+                />
                 <MobileMenuLink
                   href={`${wsBase}/calendar`}
                   icon={<CalendarDays />}
-                  label="Calendar"
+                  label={labelFor("planning-calendar", "Calendar")}
                 />
                 <MobileMenuLink
                   href={`${wsBase}/design-queue`}
                   icon={<Palette />}
-                  label="Design queue"
+                  label={labelFor("design-queue", "Design queue")}
                 />
-                <MobileMenuLink href={`${wsBase}/library`} icon={<Library />} label="Library" />
+                <MobileMenuLink
+                  href={`${wsBase}/library`}
+                  icon={<Library />}
+                  label={labelFor("library", "Library")}
+                />
                 <MobileMenuLink
                   href={`${wsBase}/channels`}
                   icon={<Share2 />}
-                  label="Social channels"
+                  label={labelFor("channels", "Social channels")}
                 />
-                <MobileMenuLink href={`${wsBase}/brand-kit`} icon={<Package />} label="Brand kit" />
-                <MobileMenuLink href={`${wsBase}/team`} icon={<Users />} label="Team" />
-                <MobileMenuLink href={`${wsBase}/settings`} icon={<Settings />} label="Settings" />
+                <MobileMenuLink
+                  href={`${wsBase}/brand-kit`}
+                  icon={<Package />}
+                  label={labelFor("brand-kit", "Brand kit")}
+                />
+                <MobileMenuLink
+                  href={`${wsBase}/team`}
+                  icon={<Users />}
+                  label={labelFor("team", "Team")}
+                />
+                <MobileMenuLink
+                  href={`${wsBase}/settings`}
+                  icon={<Settings />}
+                  label={labelFor("settings", "Settings")}
+                />
                 <MobileMenuLink
                   href={`${wsBase}/ai-settings`}
                   icon={<Bot />}
-                  label="AI assistance"
+                  label={labelFor("settings-ai-assistance", "AI assistance")}
                 />
               </MenuSection>
             ) : null}
 
             {user.isAdmin && !currentWorkspace ? (
-              <MenuSection label="Agency">
-                <MobileMenuLink href="/app/users" icon={<Users />} label="User management" />
+              <MenuSection label={labelFor("agency", "Agency")}>
+                <MobileMenuLink
+                  href="/app/users"
+                  icon={<Users />}
+                  label={labelFor("users", "User management")}
+                />
                 <MobileMenuLink
                   href="/app/agency-settings"
                   icon={<Shield />}
-                  label="Agency settings"
+                  label={labelFor("agency-settings", "Agency settings")}
                 />
                 <MobileMenuLink
                   href="/app/agency-settings/plan"
                   icon={<Gauge />}
-                  label="Plan and usage"
+                  label={labelFor("agency-settings-plan", "Plan and usage")}
                 />
                 <MobileMenuLink
                   href="/app/agency-settings/ai"
                   icon={<Bot />}
-                  label="AI configuration"
+                  label={labelFor("agency-settings-ai", "AI configuration")}
                 />
               </MenuSection>
             ) : null}
 
             {platformAccess.canEnter && !currentWorkspace ? (
-              <MenuSection label="Platform">
+              <MenuSection label={labelFor("platform", "Platform")}>
                 <MobileMenuLink
                   href="/app/platform/overview"
                   icon={<LayoutDashboard />}
-                  label="Platform overview"
+                  label={labelFor("platform-overview", "Platform overview")}
                 />
                 {platformAccess.canReadAgencies ? (
                   <MobileMenuLink
                     href="/app/platform/agencies"
                     icon={<Shield />}
-                    label="Agencies"
+                    label={labelFor("platform-agencies", "Agencies")}
                   />
                 ) : null}
                 {platformAccess.canReadSecurity ? (
                   <MobileMenuLink
                     href="/app/platform/security"
                     icon={<Lock />}
-                    label="Security and support"
+                    label={labelFor("platform-security", "Security and support")}
                   />
                 ) : null}
                 {platformAccess.canReadAccess ? (
                   <MobileMenuLink
                     href="/app/platform/access"
                     icon={<ShieldCheck />}
-                    label="Platform access"
+                    label={labelFor("platform-access", "Platform access")}
                   />
                 ) : null}
               </MenuSection>
             ) : null}
 
-            <MenuSection label="Personal">
-              <MobileMenuLink href="/app/account" icon={<UserRound />} label="Account" />
+            <MenuSection label={labelFor("personal", "Personal")}>
+              <MobileMenuLink
+                href="/app/account"
+                icon={<UserRound />}
+                label={labelFor("account", "Account")}
+              />
               <MobileMenuLink
                 href="https://github.com/LaraTik/laratik-planner"
                 icon={<HelpCircle />}
-                label="Help"
+                label={labelFor("help", "Help")}
               />
             </MenuSection>
           </div>
@@ -337,4 +408,43 @@ function MobileMenuLink({ href, icon, label }: { href: string; icon: ReactNode; 
       </Link>
     </DialogClose>
   );
+}
+
+function agencySwitcherCopy(labels: Record<string, string>) {
+  return {
+    activeAria: labels["agencySwitcherActiveAria"] ?? "Active agency: {name}. Click to switch.",
+    selectAria: labels["agencySwitcherSelectAria"] ?? "Select an agency. Click to open.",
+    selectAgency: labels["agencySwitcherSelect"] ?? "Select agency",
+    noAgenciesAria: labels["agencySwitcherNoAgenciesAria"] ?? "No agencies",
+    noAgency: labels["agencySwitcherNoAgency"] ?? "No agency",
+    switchTitle: labels["agencySwitcherSwitchTitle"] ?? "Switch agency",
+    listAria: labels["agencySwitcherListAria"] ?? "Agencies",
+    noAgenciesYet: labels["agencySwitcherNoAgenciesYet"] ?? "No agencies yet.",
+    createNew: labels["agencySwitcherCreateNew"] ?? "Create new agency",
+    adminLabel: labels["agencySwitcherAdminLabel"] ?? "Agency admin",
+    switchNotMember:
+      labels["agencySwitcherSwitchNotMember"] ?? "You're no longer a member of that agency.",
+    sessionExpired:
+      labels["agencySwitcherSessionExpired"] ?? "Your session expired. Please sign in again.",
+    switchFailed:
+      labels["agencySwitcherSwitchFailed"] ??
+      "Couldn't switch agencies. Please try again or contact support.",
+    switchFailedShort:
+      labels["agencySwitcherSwitchFailedShort"] ?? "Couldn't switch agencies. Please try again.",
+  };
+}
+
+function workspaceSwitcherCopy(labels: Record<string, string>) {
+  return {
+    activeAria:
+      labels["workspaceSwitcherActiveAria"] ?? "Active workspace: {name}. Click to switch.",
+    selectAria: labels["workspaceSwitcherSelectAria"] ?? "Select a workspace. Click to open.",
+    selectWorkspace: labels["workspaceSwitcherSelect"] ?? "Select workspace",
+    noWorkspacesAria: labels["workspaceSwitcherNoWorkspacesAria"] ?? "No workspaces",
+    createFirst: labels["workspaceSwitcherCreateFirst"] ?? "Create your first workspace",
+    switchTitle: labels["workspaceSwitcherSwitchTitle"] ?? "Switch workspace",
+    listAria: labels["workspaceSwitcherListAria"] ?? "Workspaces",
+    noWorkspacesYet: labels["workspaceSwitcherNoWorkspacesYet"] ?? "No workspaces yet.",
+    newWorkspace: labels["workspaceSwitcherNew"] ?? "New workspace",
+  };
 }

@@ -172,6 +172,18 @@ button,
   touch-action: manipulation;
 }
 
+/* Keep interactive affordances obvious across route-local compositions. */
+a[href],
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* Reduced motion — respect OS preference */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -164,3 +164,21 @@ None. The Forgot Password screen was previously listed as an approved
 deviation (the product uses OAuth and email magic links, not
 passwords); it is now a real implemented row above because password
 reset has been added as a parity target.
+
+## Refinement review update — 2026-09-02
+
+The shared shell was refined after a full-screen review. Agency and workspace
+selection now use one consistent context group at the top of the desktop and
+mobile navigation, with agency first and workspace second. Global routes no
+longer mark the first workspace as selected when no workspace is resolved;
+both selectors expose a neutral selection state until the server confirms the
+active tenant context. Shell and mobile navigation copy is catalog-backed for
+English and Arabic, and the RTL direction audit corrected the remaining
+physical margin utility in social analytics.
+
+The current visual candidate set contains all 112 exact/responsive captures,
+and strict assertion passed after five race-affected viewports were cleanly
+recaptured. This refinement remains a candidate until manual EN/LTR + AR/RTL
+review and the independent `Verified` review are recorded at the exact clean
+release-candidate commit. The matrix statuses above are intentionally
+unchanged.

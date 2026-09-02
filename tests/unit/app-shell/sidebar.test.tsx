@@ -104,6 +104,17 @@ describe("Sidebar (workspace-aware)", () => {
     expect(screen.queryByTestId("sidebar-create-content")).toBeNull();
   });
 
+  it("keeps global context neutral instead of marking the first workspace active", () => {
+    usePathnameMock.mockReturnValue("/app/workspaces");
+    render(<Sidebar {...baseProps} />);
+
+    const context = screen.getByTestId("sidebar-context-switchers");
+    const workspace = screen.getByTestId("sidebar-workspace-switcher-trigger");
+    expect(context).toContainElement(screen.getByTestId("sidebar-agency-switcher-trigger"));
+    expect(workspace).toHaveAttribute("aria-label", "Select a workspace. Click to open.");
+    expect(workspace).toHaveTextContent("Select workspace");
+  });
+
   it("keeps the tablet rail visually icon-only even when desktop sidebar is expanded", () => {
     usePathnameMock.mockReturnValue("/app");
     render(<Sidebar {...baseProps} />);
@@ -499,15 +510,17 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
     expect(screen.queryByTestId("sidebar-badge-design-queue")).toBeNull();
   });
 
-  it("collapses to icon-rail when collapsed=true; hides labels and footer switchers", () => {
+  it("collapses to icon-rail when collapsed=true while preserving context switchers", () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
     render(<Sidebar {...baseProps} collapsed={true} />);
     // Brand block: the logo (icon) is still discoverable via the link's
     // accessible name; the text label is hidden in icon-rail mode.
     expect(screen.getByLabelText("StudioFlow home")).toBeInTheDocument();
-    // In collapsed mode the workspace switcher is hidden (icon-only
-    // affordances only render on the footer toggle)
-    expect(screen.queryByTestId("sidebar-workspace-switcher-trigger")).toBeNull();
+    // Context switching remains available in the icon rail; labels are
+    // visually hidden but both controls keep their accessible names.
+    expect(screen.getByTestId("sidebar-context-switchers")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-workspace-switcher-trigger")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-agency-switcher-trigger")).toBeInTheDocument();
     // Create content CTA still rendered (per spec §18)
     expect(screen.getByTestId("sidebar-create-content")).toBeInTheDocument();
     // Footer collapse toggle is visible so the user can expand again

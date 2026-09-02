@@ -3,11 +3,39 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import { Briefcase, Check, ChevronsUpDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type Workspace = { id: string; name: string; slug: string };
+
+export type WorkspaceSwitcherCopy = {
+  activeAria: string;
+  selectAria: string;
+  selectWorkspace: string;
+  noWorkspacesAria: string;
+  createFirst: string;
+  switchTitle: string;
+  listAria: string;
+  noWorkspacesYet: string;
+  newWorkspace: string;
+};
+
+const DEFAULT_COPY: WorkspaceSwitcherCopy = {
+  activeAria: "Active workspace: {name}. Click to switch.",
+  selectAria: "Select a workspace. Click to open.",
+  selectWorkspace: "Select workspace",
+  noWorkspacesAria: "No workspaces",
+  createFirst: "Create your first workspace",
+  switchTitle: "Switch workspace",
+  listAria: "Workspaces",
+  noWorkspacesYet: "No workspaces yet.",
+  newWorkspace: "New workspace",
+};
+
+function withName(template: string, name: string) {
+  return template.replace("{name}", name);
+}
 
 /**
  * Workspace-scoped sub-action segments that survive a slug swap.
@@ -46,12 +74,14 @@ export function WorkspaceSwitcher({
   canCreate,
   compact = false,
   testId,
+  copy = DEFAULT_COPY,
 }: {
   active: Workspace | null;
   options: Workspace[];
   canCreate: boolean;
   compact?: boolean;
   testId?: string;
+  copy?: WorkspaceSwitcherCopy;
 }) {
   const [open, setOpen] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -171,14 +201,14 @@ export function WorkspaceSwitcher({
     }
   };
 
-  if (!active) {
+  if (!active && options.length === 0) {
     return (
       <Link
         href="/app/workspaces/new"
         className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
-        Create your first workspace
+        {copy.createFirst}
       </Link>
     );
   }
@@ -190,17 +220,19 @@ export function WorkspaceSwitcher({
           type="button"
           aria-haspopup="listbox"
           aria-expanded={open}
-          aria-label={`Active workspace: ${active.name}. Click to switch.`}
+          aria-label={active ? withName(copy.activeAria, active.name) : copy.selectAria}
           data-testid={testId}
           className={cn(
-            "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-surface-subtle inline-flex min-h-11 min-w-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2",
+            "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-surface-subtle inline-flex min-h-11 w-full min-w-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2",
             compact ? "justify-center xl:justify-start" : "justify-start",
           )}
         >
           <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
-            {active.name.charAt(0).toUpperCase()}
+            {active ? active.name.charAt(0).toUpperCase() : <Briefcase className="h-3.5 w-3.5" />}
           </span>
-          <span className={compact ? "hidden xl:inline" : "inline"}>{active.name}</span>
+          <span className={compact ? "hidden xl:inline" : "inline"}>
+            {active?.name ?? copy.selectWorkspace}
+          </span>
           <ChevronsUpDown
             className={cn("text-fg-muted h-3.5 w-3.5", compact && "hidden xl:block")}
             aria-hidden="true"
@@ -218,12 +250,12 @@ export function WorkspaceSwitcher({
           role="presentation"
         >
           <div className="text-label text-fg-muted border-border border-b px-3 py-2 font-semibold tracking-wide uppercase">
-            Switch workspace
+            {copy.switchTitle}
           </div>
           <ul
             ref={listRef}
             role="listbox"
-            aria-label="Workspaces"
+            aria-label={copy.listAria}
             aria-activedescendant={
               options[activeIndex] ? `ws-${options[activeIndex]!.id}` : undefined
             }
@@ -232,10 +264,10 @@ export function WorkspaceSwitcher({
             className="max-h-72 overflow-y-auto py-1 focus:outline-none"
           >
             {options.length === 0 ? (
-              <li className="text-body text-fg-muted px-3 py-2">No workspaces yet.</li>
+              <li className="text-body text-fg-muted px-3 py-2">{copy.noWorkspacesYet}</li>
             ) : (
               options.map((w, i) => {
-                const isActive = active.id === w.id;
+                const isActive = active?.id === w.id;
                 const isHighlighted = i === activeIndex;
                 return (
                   <li
@@ -270,7 +302,7 @@ export function WorkspaceSwitcher({
                   className="text-body text-fg-primary hover:bg-surface-subtle flex items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 font-semibold"
                 >
                   <Plus className="h-4 w-4" aria-hidden="true" />
-                  New workspace
+                  {copy.newWorkspace}
                 </Link>
               </PopoverClose>
             </div>

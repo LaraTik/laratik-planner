@@ -461,3 +461,79 @@ confirms structural identity between the two languages.
 
 Independent review (master prompt §22 `Verified` status) is the
 next gate. The branch is in a clean, shippable state.
+
+## Full-app refinement review — 2026-09-02
+
+### Scope and method
+
+This review covered the shared application shell and the 65 App Router page
+surfaces, with emphasis on the cross-screen systems that determine whether
+the product feels coherent: StudioFlow tokens, typography, spacing, focus
+states, responsive navigation, tenant context, interface localization, and
+direction-aware layout. The review used the master prompt as the design
+authority, the bilingual contract, the UI/UX Pro Max accessibility checklist,
+CodeGraph call paths, static direction scans, unit tests, Chromium route/a11y
+coverage, and the 112-case visual matrix (39 exact-reference + 73 responsive).
+
+### Findings and changes
+
+| Priority | Finding                                                                                                                                                                                         | Resolution / follow-up                                                                                                                                                                                                                                                              |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1       | Agency context lived in the sidebar footer while workspace context lived near the header. On global routes, the first workspace could also appear selected even when no workspace was resolved. | Fixed in the shared shell. Agency and workspace selectors now share one top context group, in a stable agency → workspace order. Global routes show an explicit neutral “Select workspace” state. Server-side workspace routing still strips stale item IDs when switching tenants. |
+| P1       | A session with agency options but no resolved active agency could visually present the first agency as active.                                                                                  | Fixed. The agency selector now has the same neutral “Select agency” state and only marks the server-confirmed agency as selected.                                                                                                                                                   |
+| P1       | Shared shell controls and mobile navigation had route-local English labels, reducing Arabic/RTL coverage and producing inconsistent assistive text.                                             | Fixed for the shell. Agency/workspace selector copy, menu labels, context-group labels, mobile navigation labels, and admin badges now come from the EN/AR sidebar catalogs through serializable layout props. Catalog parity remains enforced.                                     |
+| P2       | Collapsed navigation removed context controls, forcing users to expand the rail to understand or change tenant context.                                                                         | Fixed. The collapsed rail retains compact, keyboard-accessible agency/workspace controls with the same order and focus behavior.                                                                                                                                                    |
+| P2       | Interactive affordance was inconsistent because enabled links/buttons did not receive a global pointer cue.                                                                                     | Fixed with a shared cursor rule that preserves disabled/not-allowed semantics.                                                                                                                                                                                                      |
+| P2       | One physical `ml-*` utility remained in a social analytics strip and could invert the intended spacing in RTL.                                                                                  | Fixed by replacing it with the logical `ms-*` utility. No other layout-level physical left/right utility was found in the audited shell/navigation scan.                                                                                                                            |
+| P2       | The workspace E2E contract queried a stale “URL slug” accessible label while the product correctly renders “Workspace slug”.                                                                    | Fixed the test locator to use the actual localized field label. All 8 Chromium workspace tests pass.                                                                                                                                                                                |
+| P2       | Visual baselines represented the old footer/header context arrangement.                                                                                                                         | Refreshed the 112 current baselines after reviewing the actual captures. Strict visual assertion is running against the refreshed set; no exact-reference mismatch has appeared in the current run.                                                                                 |
+
+### Design-system assessment
+
+The implementation remains aligned with the StudioFlow system: Inter/Noto Sans
+Arabic font loading, the existing neutral canvas/surface/border tokens, indigo
+primary state, 4px spacing rhythm, logical text/inset utilities, 40–44px
+controls, visible focus rings, reduced-motion handling, and border-led cards
+are retained. The unified context group is intentionally subtle and bordered
+so it reads as one tenant/workspace control without competing with the main
+navigation.
+
+### Recommendations
+
+1. Keep agency and workspace selection owned by the shell only. New routes
+   should consume the resolved context rather than adding local selectors.
+2. Treat a missing active context as a first-class loading/neutral state;
+   never fall back to `options[0]` for a selected visual state.
+3. Route every new visible string through the central catalogs and pass only
+   translated strings across Server → Client boundaries. Preserve the
+   current content-locale separation and per-field direction rules.
+4. Review the refreshed screenshots at 375/768/1024/1440+ in both EN/LTR and
+   AR/RTL, with special attention to long agency/workspace names, nested
+   navigation, popover width, table overflow, and mobile bottom navigation.
+5. Complete the remaining documented Arabic editorial and route-state backlog
+   (`docs/implementation/ui-ux-arabic-critical-todo.md`), especially loading,
+   error, not-found, legal, and less-traveled AI/analytics surfaces.
+6. Add a dedicated multi-agency browser journey covering agency A → agency B
+   → workspace selection → browser back/refresh, and assert that no stale
+   workspace slug or item ID crosses the agency boundary.
+
+### Evidence and release status
+
+- `pnpm typecheck`: pass.
+- `pnpm lint`: pass with 0 warnings.
+- Focused shell/i18n suite: 59 tests pass.
+- Workspace Chromium journey: 8 tests pass.
+- Chromium route/a11y sweep: 30/32 passed before the stale workspace-field
+  locator was corrected; the two failures are now covered by the passing
+  workspace rerun. The route a11y portion passed across the audited routes.
+- `pnpm migration-drill`: all 5 drills pass after correcting the disposable
+  suffix-rewind setup in the test harness; no production data was targeted.
+- Visual capture: 112/112 written. Strict visual assertion passed as 107/112
+  in the full run plus a clean targeted retry of the 5 race-affected cases;
+  all 112 assertions pass in aggregate. The evidence is still tied to this
+  dirty worktree until a clean release-candidate commit is verified.
+- `next-env.d.ts` was regenerated by Next 16 dev tooling during browser checks;
+  it is generated state and should not be included in the refinement change.
+- This review does not assign `Tested` or `Verified` in the parity matrix.
+  Independent visual and manual accessibility review remain required by the
+  production-readiness protocol.

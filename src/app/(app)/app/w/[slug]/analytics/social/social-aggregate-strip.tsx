@@ -125,7 +125,7 @@ export function SocialAggregateStrip({
                 +{best.growth7Absolute.toLocaleString()}
                 {typeof best.growth7Percent === "number" ? (
                   <span
-                    className="text-label text-fg-secondary ml-1.5 font-medium"
+                    className="text-label text-fg-secondary ms-1.5 font-medium"
                     data-testid="social-aggregate-strip-best-growth-percent"
                   >
                     ({best.growth7Percent > 0 ? "+" : ""}

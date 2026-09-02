@@ -28,7 +28,7 @@ import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-ac
  * The shape changes based on the current pathname:
  *
  *  - Inside /app/w/[slug]/* (workspace context):
- *      - Brand: logo + workspace switcher (at the top)
+ *      - Brand: logo + unified agency/workspace context switchers (at the top)
  *      - Workspace tabs (vertical): Overview, Content group, Performance,
  *        Brand group, Manage group (when admin)
  *      - Persistent bottom area: Create content + user menu
@@ -39,7 +39,8 @@ import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-ac
  *      - Workspaces
  *      - (admin only) User Management, Agency Settings
  *      - (platform admin only) Platform console
- *      - Bottom: agency switcher (if multi-agency) + user menu
+ *      - The same context switchers stay at the top so tenant selection is
+ *        predictable on both global and workspace routes.
  *
  *  - Inside a client-reviewer workspace:
  *      - Minimal: Client review + Calendar
@@ -148,13 +149,14 @@ export function Sidebar({
       className="flex h-full min-w-0 flex-col overflow-x-hidden"
       aria-label={labelFor("sidebarAriaLabel", "Primary")}
     >
-      {/* Brand + workspace switcher (top) */}
+      {/* Brand + unified agency/workspace context (top) */}
       <SidebarHeader
         collapsed={collapsed}
         currentWorkspace={currentWorkspace}
         workspaceSwitcherOptions={workspaceSwitcherOptions}
         canCreateWorkspace={canCreateWorkspace}
         agencySwitcher={agencySwitcher}
+        platformAccess={platformAccess}
         onCollapsedChange={onCollapsedChange}
         labels={labels}
       />
@@ -191,11 +193,6 @@ export function Sidebar({
         collapsed={collapsed}
         inWorkspace={Boolean(inWorkspace)}
         createContentHref={createContentHref}
-        workspaceSwitcherOptions={workspaceSwitcherOptions}
-        currentWorkspace={currentWorkspace}
-        canCreateWorkspace={canCreateWorkspace}
-        agencySwitcher={agencySwitcher}
-        platformAccess={platformAccess}
         labels={labels}
       />
     </nav>
@@ -210,6 +207,7 @@ function SidebarHeader({
   workspaceSwitcherOptions,
   canCreateWorkspace,
   agencySwitcher,
+  platformAccess,
   onCollapsedChange,
   labels = {},
 }: {
@@ -218,15 +216,12 @@ function SidebarHeader({
   workspaceSwitcherOptions: { id: string; name: string; slug: string }[];
   canCreateWorkspace: boolean;
   agencySwitcher?: { active: AgencyRow | null; options: AgencyRow[] };
+  platformAccess: PlatformNavigationAccess;
   onCollapsedChange?: ((next: boolean) => void) | undefined;
   labels?: Record<string, string>;
 }) {
   const brand = labels["studioFlowHome"] ?? "StudioFlow home";
   const brandTitle = labels["agencyLabelFallback"] ?? "StudioFlow";
-  // Header is a stacked Agency → Workspace context strip so the
-  // user always sees "I am in agency X, workspace Y" without
-  // having to dig into a switcher. The agency label is small
-  // and the workspace switcher is the primary control.
   return (
     <div className={cn("flex flex-col gap-1 px-2 pt-2 pb-2 xl:px-3")}>
       <div
@@ -259,25 +254,67 @@ function SidebarHeader({
           <SidebarCollapseToggle collapsed={collapsed} variant="header" />
         ) : null}
       </div>
-      {!collapsed && currentWorkspace ? (
-        <div className="space-y-0.5 pt-1">
-          {/* Agency label (small, eyebrow-style) so the user sees the
-              hierarchy at a glance. The agency switcher lives in the
-              footer; this label is just context, not a control. */}
-          {agencySwitcher?.active ? (
-            <p
-              className="text-label text-fg-muted hidden truncate ps-1 font-semibold tracking-wide uppercase xl:block"
-              title={`Agency: ${agencySwitcher.active.name}`}
-              data-testid="sidebar-active-agency-label"
-            >
-              {agencySwitcher.active.name}
-            </p>
+      {!collapsed || currentWorkspace || workspaceSwitcherOptions.length > 0 ? (
+        <div
+          className="border-border bg-surface-subtle mt-2 flex flex-col gap-0.5 rounded-[var(--radius-card)] border p-1"
+          role="group"
+          aria-label={labels["contextLabel"] ?? "Agency and workspace context"}
+          data-testid="sidebar-context-switchers"
+        >
+          {agencySwitcher && (agencySwitcher.options.length > 0 || platformAccess.canEnter) ? (
+            <AgencySwitcher
+              active={agencySwitcher.active}
+              options={agencySwitcher.options}
+              isPlatformAdmin={platformAccess.canEnter}
+              compact
+              copy={{
+                activeAria:
+                  labels["agencySwitcherActiveAria"] ?? "Active agency: {name}. Click to switch.",
+                selectAria:
+                  labels["agencySwitcherSelectAria"] ?? "Select an agency. Click to open.",
+                selectAgency: labels["agencySwitcherSelect"] ?? "Select agency",
+                noAgenciesAria: labels["agencySwitcherNoAgenciesAria"] ?? "No agencies",
+                noAgency: labels["agencySwitcherNoAgency"] ?? "No agency",
+                switchTitle: labels["agencySwitcherSwitchTitle"] ?? "Switch agency",
+                listAria: labels["agencySwitcherListAria"] ?? "Agencies",
+                noAgenciesYet: labels["agencySwitcherNoAgenciesYet"] ?? "No agencies yet.",
+                createNew: labels["agencySwitcherCreateNew"] ?? "Create new agency",
+                adminLabel: labels["agencySwitcherAdminLabel"] ?? "Agency admin",
+                switchNotMember:
+                  labels["agencySwitcherSwitchNotMember"] ??
+                  "You're no longer a member of that agency.",
+                sessionExpired:
+                  labels["agencySwitcherSessionExpired"] ??
+                  "Your session expired. Please sign in again.",
+                switchFailed:
+                  labels["agencySwitcherSwitchFailed"] ??
+                  "Couldn't switch agencies. Please try again or contact support.",
+                switchFailedShort:
+                  labels["agencySwitcherSwitchFailedShort"] ??
+                  "Couldn't switch agencies. Please try again.",
+              }}
+              testId="sidebar-agency-switcher-trigger"
+            />
           ) : null}
           <WorkspaceSwitcher
             active={currentWorkspace}
             options={workspaceSwitcherOptions}
             canCreate={canCreateWorkspace}
             compact
+            copy={{
+              activeAria:
+                labels["workspaceSwitcherActiveAria"] ??
+                "Active workspace: {name}. Click to switch.",
+              selectAria:
+                labels["workspaceSwitcherSelectAria"] ?? "Select a workspace. Click to open.",
+              selectWorkspace: labels["workspaceSwitcherSelect"] ?? "Select workspace",
+              noWorkspacesAria: labels["workspaceSwitcherNoWorkspacesAria"] ?? "No workspaces",
+              createFirst: labels["workspaceSwitcherCreateFirst"] ?? "Create your first workspace",
+              switchTitle: labels["workspaceSwitcherSwitchTitle"] ?? "Switch workspace",
+              listAria: labels["workspaceSwitcherListAria"] ?? "Workspaces",
+              noWorkspacesYet: labels["workspaceSwitcherNoWorkspacesYet"] ?? "No workspaces yet.",
+              newWorkspace: labels["workspaceSwitcherNew"] ?? "New workspace",
+            }}
             testId="sidebar-workspace-switcher-trigger"
           />
         </div>
@@ -290,21 +327,11 @@ function SidebarFooter({
   collapsed,
   inWorkspace,
   createContentHref,
-  workspaceSwitcherOptions,
-  currentWorkspace,
-  canCreateWorkspace,
-  agencySwitcher,
-  platformAccess,
   labels = {},
 }: {
   collapsed: boolean;
   inWorkspace: boolean;
   createContentHref: string | null;
-  workspaceSwitcherOptions: { id: string; name: string; slug: string }[];
-  currentWorkspace: { id: string; name: string; slug: string } | null;
-  canCreateWorkspace: boolean;
-  agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
-  platformAccess: PlatformNavigationAccess;
   labels?: Record<string, string>;
 }) {
   const createContentLabel = labels["createContent"] ?? "Create content";
@@ -324,51 +351,6 @@ function SidebarFooter({
           <Plus className="h-4 w-4" aria-hidden="true" />
           <span className="hidden xl:inline">{createContentLabel}</span>
         </Link>
-      ) : null}
-
-      {/* Agency + workspace context.
-          The agency switcher is the OUTER context — it stays
-          reachable in BOTH global and workspace modes when the
-          user has multiple agencies. Hiding it in workspace mode
-          (the previous behavior) meant a multi-agency user had to
-          navigate back to /app just to switch agency, even though
-          they were sitting in a workspace that was about to become
-          cross-tenant invalid. The workspace switcher stays in the
-          footer only on global routes; on workspace routes the
-          header is the primary surface. */}
-      {agencySwitcher.options.length > 0 || platformAccess.canEnter ? (
-        <div className="pt-1">
-          <AgencySwitcher
-            active={agencySwitcher.active}
-            options={agencySwitcher.options}
-            isPlatformAdmin={platformAccess.canEnter}
-            compact
-            testId="sidebar-agency-switcher-trigger"
-          />
-        </div>
-      ) : null}
-
-      {!inWorkspace ? (
-        <div className="pt-1">
-          {workspaceSwitcherOptions.length === 0 ? (
-            <Link
-              href="/app/workspaces/new"
-              className="text-body text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-dashed px-3 py-2 font-semibold focus:outline-none focus-visible:ring-2 xl:justify-start"
-              data-testid="sidebar-workspace-empty"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden xl:inline">Create your first workspace</span>
-            </Link>
-          ) : (
-            <WorkspaceSwitcher
-              active={currentWorkspace ?? workspaceSwitcherOptions[0] ?? null}
-              options={workspaceSwitcherOptions}
-              canCreate={canCreateWorkspace}
-              compact
-              testId="sidebar-workspace-switcher-trigger"
-            />
-          )}
-        </div>
       ) : null}
 
       {/* Footer toggle (only visible when collapsed — header toggle covers expanded). */}

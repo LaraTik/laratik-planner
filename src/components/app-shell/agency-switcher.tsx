@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronsUpDown, Plus, Shield } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Plus, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -15,6 +15,44 @@ import { switchActiveAgencyAndRedirect } from "@/lib/auth/agency-actions";
  * data loader can pass the result directly without remapping.
  */
 export type AgencyRow = { id: string; name: string; slug: string; isAdmin: boolean };
+
+export type AgencySwitcherCopy = {
+  activeAria: string;
+  selectAria: string;
+  selectAgency: string;
+  noAgenciesAria: string;
+  noAgency: string;
+  switchTitle: string;
+  listAria: string;
+  noAgenciesYet: string;
+  createNew: string;
+  adminLabel: string;
+  switchNotMember: string;
+  sessionExpired: string;
+  switchFailed: string;
+  switchFailedShort: string;
+};
+
+const DEFAULT_COPY: AgencySwitcherCopy = {
+  activeAria: "Active agency: {name}. Click to switch.",
+  selectAria: "Select an agency. Click to open.",
+  selectAgency: "Select agency",
+  noAgenciesAria: "No agencies",
+  noAgency: "No agency",
+  switchTitle: "Switch agency",
+  listAria: "Agencies",
+  noAgenciesYet: "No agencies yet.",
+  createNew: "Create new agency",
+  adminLabel: "Agency admin",
+  switchNotMember: "You're no longer a member of that agency.",
+  sessionExpired: "Your session expired. Please sign in again.",
+  switchFailed: "Couldn't switch agencies. Please try again or contact support.",
+  switchFailedShort: "Couldn't switch agencies. Please try again.",
+};
+
+function withName(template: string, name: string) {
+  return template.replace("{name}", name);
+}
 
 /**
  * Agency switcher — opens a popover listing every agency the user is
@@ -40,12 +78,14 @@ export function AgencySwitcher({
   testId,
   isPlatformAdmin = false,
   compact = false,
+  copy = DEFAULT_COPY,
 }: {
   active: AgencyRow | null;
   options: AgencyRow[];
   testId?: string;
   isPlatformAdmin?: boolean;
   compact?: boolean;
+  copy?: AgencySwitcherCopy;
 }) {
   const [open, setOpen] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -99,10 +139,10 @@ export function AgencySwitcher({
         // contract.
         toast.error(
           result.reason === "not-a-member"
-            ? "You're no longer a member of that agency."
+            ? copy.switchNotMember
             : result.reason === "unauthenticated"
-              ? "Your session expired. Please sign in again."
-              : "Couldn't switch agencies. Please try again or contact support.",
+              ? copy.sessionExpired
+              : copy.switchFailed,
         );
         return;
       }
@@ -111,7 +151,7 @@ export function AgencySwitcher({
       router.refresh();
     } catch (error) {
       console.error("agency switch failed", error);
-      toast.error("Couldn't switch agencies. Please try again.");
+      toast.error(copy.switchFailedShort);
     } finally {
       setPending(false);
     }
@@ -146,18 +186,16 @@ export function AgencySwitcher({
       <button
         type="button"
         disabled
-        aria-label="No agencies"
+        aria-label={copy.noAgenciesAria}
         className="text-body text-fg-muted inline-flex min-h-11 min-w-11 cursor-not-allowed items-center justify-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold xl:justify-start"
       >
         <span className="bg-surface-subtle text-fg-muted flex h-6 w-6 items-center justify-center rounded font-bold">
           —
         </span>
-        <span className={compact ? "hidden xl:inline" : "inline"}>No agency</span>
+        <span className={compact ? "hidden xl:inline" : "inline"}>{copy.noAgency}</span>
       </button>
     );
   }
-
-  const display = active ?? options[0]!;
 
   return (
     <Popover open={open} onOpenChange={onPopoverOpenChange}>
@@ -166,22 +204,24 @@ export function AgencySwitcher({
           type="button"
           aria-haspopup="listbox"
           aria-expanded={open}
-          aria-label={`Active agency: ${display.name}. Click to switch.`}
+          aria-label={active ? withName(copy.activeAria, active.name) : copy.selectAria}
           data-testid={testId}
           disabled={pending}
           className={cn(
-            "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-surface-subtle inline-flex min-h-11 min-w-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2 disabled:opacity-50",
+            "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-surface-subtle inline-flex min-h-11 w-full min-w-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2 disabled:opacity-50",
             compact ? "justify-center xl:justify-start" : "justify-start",
           )}
         >
           <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
-            {display.name.charAt(0).toUpperCase()}
+            {active ? active.name.charAt(0).toUpperCase() : <Building2 className="h-3.5 w-3.5" />}
           </span>
-          <span className={compact ? "hidden xl:inline" : "inline"}>{display.name}</span>
-          {display.isAdmin ? (
+          <span className={compact ? "hidden xl:inline" : "inline"}>
+            {active?.name ?? copy.selectAgency}
+          </span>
+          {active?.isAdmin ? (
             <Shield
               className="text-primary h-3.5 w-3.5"
-              aria-label="Agency admin"
+              aria-label={copy.adminLabel}
               data-testid={testId ? `${testId}-admin-badge` : undefined}
             />
           ) : null}
@@ -202,12 +242,12 @@ export function AgencySwitcher({
           role="presentation"
         >
           <div className="text-label text-fg-muted border-border border-b px-3 py-2 font-semibold tracking-wide uppercase">
-            Switch agency
+            {copy.switchTitle}
           </div>
           <ul
             ref={listRef}
             role="listbox"
-            aria-label="Agencies"
+            aria-label={copy.listAria}
             aria-activedescendant={
               options[activeIndex] ? `ag-${options[activeIndex]!.id}` : undefined
             }
@@ -216,7 +256,7 @@ export function AgencySwitcher({
             className="max-h-72 overflow-y-auto py-1 focus:outline-none"
           >
             {options.length === 0 ? (
-              <li className="text-body text-fg-muted px-3 py-2">No agencies yet.</li>
+              <li className="text-body text-fg-muted px-3 py-2">{copy.noAgenciesYet}</li>
             ) : (
               options.map((a, i) => {
                 const isActive = active?.id === a.id;
@@ -241,7 +281,7 @@ export function AgencySwitcher({
                     {a.isAdmin ? (
                       <Shield
                         className="text-primary h-3.5 w-3.5 shrink-0"
-                        aria-label="Agency admin"
+                        aria-label={copy.adminLabel}
                       />
                     ) : null}
                     {isActive ? (
@@ -260,7 +300,7 @@ export function AgencySwitcher({
                 data-testid="agency-switcher-create"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
-                Create new agency
+                {copy.createNew}
               </Link>
             </div>
           ) : null}

@@ -231,6 +231,7 @@ export function AppShell({
         agencySwitcher={agencySwitcher}
         canCreateWorkspace={canCreateWorkspace}
         platformAccess={platformAccess}
+        labels={chrome.sidebar}
       />
     </div>
   );

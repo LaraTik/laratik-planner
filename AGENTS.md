@@ -626,6 +626,7 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 - `docs/implementation/progress.md` — live task list (per master prompt §0)
 - `docs/visual-parity/PLAN.md` — M0–M6 plan that consumed the Stitch design
 - `docs/visual-parity/MCP.md` — how to refresh the captured Stitch copy from the live MCP (auth, tools, gotchas, commit recipe)
+- `docs/operations/meta-devtools-mcp.md` — Meta Developer Tools MCP (`meta-devtools` on streamable-http) for the Just Halal GmbH business; OAuth flow, tools, app anchors, gotchas, when _not_ to use it
 - `docs/production-readiness/DESIGN_AUDIT.md` — structural audit that drove the M2/M3 refactor
 - `docs/production-readiness/SCREEN_PARITY.md` — 27-row matrix tracking each Stitch screen against a laratik-planner route; the responsive matrix (23 route surfaces with 73 scoped baselines) lives in `tests/e2e/visual-regression.spec.ts` and is gated by `tests/unit/stitch-cases.test.ts`
 - `docs/content/format-payload-schemas.md` — per-format `formatPayload` jsonb schemas (the structured fields under "More details")

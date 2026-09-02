@@ -337,13 +337,14 @@ async function drillSkippedMigrationRepair(): Promise<void> {
   try {
     await withClient(TEST_DB_URL, async (c) => {
       // Reproduce a skipped migration by removing only the latest additive
-      // columns and its ledger row. This remains valid as new migrations are
-      // appended because no later schema needs to be rewound.
+      // columns and the target migration plus any later ledger rows. Drizzle
+      // migrates forward from the last applied row, so a target in the middle
+      // of the ledger cannot be replayed while a later row remains recorded.
       await c.query('ALTER TABLE "notification" DROP COLUMN IF EXISTS "message_key"');
       await c.query('ALTER TABLE "notification" DROP COLUMN IF EXISTS "message_params"');
       await c.query('ALTER TABLE "activity_event" DROP COLUMN IF EXISTS "message_key"');
       await c.query('ALTER TABLE "activity_event" DROP COLUMN IF EXISTS "message_params"');
-      await c.query("DELETE FROM drizzle.__drizzle_migrations WHERE created_at = $1", [
+      await c.query("DELETE FROM drizzle.__drizzle_migrations WHERE created_at >= $1", [
         migrationTimestamp,
       ]);
     });
