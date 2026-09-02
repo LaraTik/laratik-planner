@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { listWorkspaceContent } from "@/lib/content/service";
 import { listWorkspaceContentEnriched, resolveActorRoles } from "@/lib/content/enriched-list";
-import { ALL_FORMATS, ALL_STATUSES } from "@/lib/content/status";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Clock, Files, Plus, FileText, Download, AlertTriangle, LayoutGrid } from "lucide-react";
@@ -25,9 +24,10 @@ import {
 } from "@/lib/dashboard/kpis";
 import { aggregateHealth } from "@/lib/dashboard/health";
 import { db } from "@/lib/db";
-import { users, workspaceMemberships } from "@/lib/db/schema";
+import { socialChannels, users, workspaceMemberships } from "@/lib/db/schema";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import type { LocaleCode } from "@/lib/i18n/locales";
+import { parsePlanningFilterParams } from "@/lib/planning/filter-params";
 
 /**
  * Planning list (Goal 6 master prompt §3 Monthly Planning List).
@@ -72,6 +72,9 @@ export default async function PlanningPage({
     search?: string;
     owner?: string;
     format?: string;
+    stage?: string;
+    channel?: string;
+    health?: string;
     /**
      * 1-indexed page number. Defaults to 1. Invalid values
      * (non-numeric, <1) are clamped to 1.
@@ -92,22 +95,19 @@ export default async function PlanningPage({
   ]);
 
   const filters = await searchParams;
+  const parsedFilters = parsePlanningFilterParams(filters);
   const match = filters.month?.match(/^(\d{4})-(\d{2})$/);
   const now = match ? new Date(Number(match[1]), Number(match[2]) - 1, 1) : new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const selectedStatus =
-    filters.status && (ALL_STATUSES as readonly string[]).includes(filters.status)
-      ? filters.status
-      : undefined;
-  const selectedFormat =
-    filters.format && (ALL_FORMATS as readonly string[]).includes(filters.format as never)
-      ? filters.format
-      : undefined;
-  const searchTerm = filters.search?.trim() || undefined;
-  const ownerFilter =
-    filters.owner && /^[0-9a-f-]{36}$/i.test(filters.owner) ? filters.owner : undefined;
-  const density = filters.density === "compact" ? "compact" : "comfortable";
+  const selectedStatus = parsedFilters.status;
+  const selectedFormat = parsedFilters.format;
+  const selectedStage = parsedFilters.stage;
+  const searchTerm = parsedFilters.searchTerm;
+  const ownerFilter = parsedFilters.ownerId;
+  const channelFilter = parsedFilters.channelId;
+  const healthFilter = parsedFilters.healthIn ?? [];
+  const density = parsedFilters.density;
   // Per-page cap. 20 keeps the first paint fast; the pagination
   // control below handles deeper history.
   const pageSize = 20;
@@ -123,9 +123,12 @@ export default async function PlanningPage({
     monthStart,
     monthEnd,
     ...(selectedStatus ? { status: selectedStatus } : {}),
+    ...(selectedStage ? { stage: selectedStage } : {}),
     ...(selectedFormat ? { format: selectedFormat } : {}),
     ...(ownerFilter ? { ownerId: ownerFilter } : {}),
+    ...(channelFilter ? { channelId: channelFilter } : {}),
     ...(searchTerm ? { search: searchTerm } : {}),
+    ...(healthFilter.length > 0 ? { healthIn: healthFilter } : {}),
   } as const;
 
   // Two parallel queries: the enriched list (one base + 5 fan-out
@@ -212,13 +215,36 @@ export default async function PlanningPage({
     .where(eq(workspaceMemberships.workspaceId, ws.id))
     .orderBy(asc(users.displayName), asc(users.name));
 
+  const channelRows = await db
+    .select({
+      id: socialChannels.id,
+      platform: socialChannels.platform,
+      accountName: socialChannels.accountName,
+    })
+    .from(socialChannels)
+    .where(
+      and(
+        eq(socialChannels.workspaceId, ws.id),
+        eq(socialChannels.isActive, true),
+        isNull(socialChannels.archivedAt),
+      ),
+    )
+    .orderBy(asc(socialChannels.accountName), asc(socialChannels.id));
+
   const monthParam = (offset: number) => {
     const date = new Date(now.getFullYear(), now.getMonth() + offset, 1);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
   };
   const buildMonthHref = (offset: number) => `?month=${monthParam(offset)}`;
   const hasFilter = Boolean(
-    selectedStatus || selectedFormat || ownerFilter || searchTerm || filters.risk,
+    selectedStatus ||
+    selectedFormat ||
+    selectedStage ||
+    ownerFilter ||
+    channelFilter ||
+    searchTerm ||
+    healthFilter.length > 0 ||
+    parsedFilters.risk,
   );
 
   // Page href builder. Preserves every filter / density param so a
@@ -232,10 +258,14 @@ export default async function PlanningPage({
     params.set("month", monthParam(0));
     if (page !== 1) params.set("page", String(page));
     if (selectedStatus) params.set("status", selectedStatus);
+    if (selectedStage) params.set("stage", selectedStage);
     if (selectedFormat) params.set("format", selectedFormat);
     if (ownerFilter) params.set("owner", ownerFilter);
+    if (channelFilter) params.set("channel", channelFilter);
+    if (healthFilter.length > 0) params.set("health", healthFilter.join(","));
+    if (parsedFilters.risk) params.set("risk", parsedFilters.risk);
     if (searchTerm) params.set("search", searchTerm);
-    if (filters.density === "compact") params.set("density", "compact");
+    if (density === "compact") params.set("density", "compact");
     return `?${params.toString()}`;
   };
 
@@ -295,8 +325,12 @@ export default async function PlanningPage({
                 href={(() => {
                   const params = new URLSearchParams();
                   if (selectedStatus) params.set("status", selectedStatus);
+                  if (selectedStage) params.set("stage", selectedStage);
                   if (selectedFormat) params.set("format", selectedFormat);
                   if (ownerFilter) params.set("owner", ownerFilter);
+                  if (channelFilter) params.set("channel", channelFilter);
+                  if (healthFilter.length > 0) params.set("health", healthFilter.join(","));
+                  if (parsedFilters.risk) params.set("risk", parsedFilters.risk);
                   if (searchTerm) params.set("search", searchTerm);
                   const qs = params.toString();
                   return qs ? `/app/w/${slug}/board?${qs}` : `/app/w/${slug}/board`;
@@ -355,7 +389,7 @@ export default async function PlanningPage({
               id: m.id,
               label: m.displayName ?? m.name ?? m.id.slice(0, 8),
             }))}
-            channels={[]}
+            channels={channelRows}
           />
         </div>
       </div>
@@ -372,9 +406,12 @@ export default async function PlanningPage({
                       Object.entries({
                         status: selectedStatus,
                         format: selectedFormat,
+                        stage: selectedStage,
+                        channelId: channelFilter,
                         ownerId: ownerFilter,
                         search: searchTerm,
-                        risk: filters.risk,
+                        health: healthFilter[0],
+                        risk: parsedFilters.risk,
                       }).filter(([, v]) => v != null),
                     ) as Parameters<typeof describeActiveFilter>[0],
                   ),

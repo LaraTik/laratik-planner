@@ -22,15 +22,21 @@ import { humanFormat, humanStatus } from "@/lib/content/status";
 export function describeActiveFilter(filters: {
   status?: string;
   format?: string;
+  stage?: string;
+  channelId?: string;
   ownerId?: string;
   search?: string;
+  health?: string;
   risk?: string;
 }): string {
   const clauses: string[] = [];
   if (filters.status) clauses.push(`status "${humanStatus(filters.status)}"`);
   if (filters.format) clauses.push(`format "${humanFormat(filters.format)}"`);
+  if (filters.stage) clauses.push(`stage "${humanStatus(filters.stage)}"`);
+  if (filters.channelId) clauses.push("the selected channel");
   if (filters.ownerId) clauses.push("the selected owner");
   if (filters.search) clauses.push(`search "${filters.search}"`);
+  if (filters.health) clauses.push(`health "${humanStatus(filters.health)}"`);
   if (filters.risk === "at_risk") clauses.push('"at risk"');
   if (clauses.length === 0) return "the active filter";
   if (clauses.length === 1) return clauses[0]!;

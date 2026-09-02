@@ -80,9 +80,13 @@ export interface ListEnrichedOptions {
   monthStart?: Date;
   monthEnd?: Date;
   status?: string;
+  /** Additional workflow-stage status selected alongside the status filter. */
+  stage?: string;
   search?: string;
   ownerId?: string;
   format?: string;
+  /** Restrict rows to items attached to this workspace channel. */
+  channelId?: string;
   /** Health filter — accepts one or more `HealthSnapshot` values. */
   healthIn?: readonly HealthSnapshot[];
   limit?: number;
@@ -135,11 +139,29 @@ export async function listWorkspaceContentEnriched(
   if (opts.status) {
     conditions.push(sql`${contentItems.status} = ${opts.status}`);
   }
+  if (opts.stage) {
+    conditions.push(sql`${contentItems.status} = ${opts.stage}`);
+  }
   if (opts.ownerId) {
     conditions.push(eq(contentItems.contentOwnerId, opts.ownerId));
   }
   if (opts.format) {
     conditions.push(eq(contentItems.format, opts.format as never));
+  }
+  if (opts.channelId) {
+    conditions.push(
+      sql`exists (
+        select 1
+        from content_item_channel as filtered_channel
+        inner join social_channel as filtered_social_channel
+          on filtered_social_channel.id = filtered_channel.social_channel_id
+        where filtered_channel.content_item_id = ${contentItems.id}
+          and filtered_channel.social_channel_id = ${opts.channelId}
+          and filtered_social_channel.workspace_id = ${contentItems.workspaceId}
+          and filtered_social_channel.is_active = true
+          and filtered_social_channel.archived_at is null
+      )`,
+    );
   }
   if (opts.search) {
     const needle = `%${opts.search.toLowerCase()}%`;
@@ -370,11 +392,29 @@ async function countWorkspaceContentEnriched(
   if (opts.status) {
     conditions.push(sql`${contentItems.status} = ${opts.status}`);
   }
+  if (opts.stage) {
+    conditions.push(sql`${contentItems.status} = ${opts.stage}`);
+  }
   if (opts.ownerId) {
     conditions.push(eq(contentItems.contentOwnerId, opts.ownerId));
   }
   if (opts.format) {
     conditions.push(eq(contentItems.format, opts.format as never));
+  }
+  if (opts.channelId) {
+    conditions.push(
+      sql`exists (
+        select 1
+        from content_item_channel as filtered_channel
+        inner join social_channel as filtered_social_channel
+          on filtered_social_channel.id = filtered_channel.social_channel_id
+        where filtered_channel.content_item_id = ${contentItems.id}
+          and filtered_channel.social_channel_id = ${opts.channelId}
+          and filtered_social_channel.workspace_id = ${contentItems.workspaceId}
+          and filtered_social_channel.is_active = true
+          and filtered_social_channel.archived_at is null
+      )`,
+    );
   }
   if (opts.search) {
     const needle = `%${opts.search.toLowerCase()}%`;

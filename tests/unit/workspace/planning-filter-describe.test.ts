@@ -37,6 +37,16 @@ describe("describeActiveFilter", () => {
     expect(describeActiveFilter({ risk: "at_risk" })).toBe('"at risk"');
   });
 
+  it("names the modern planning toolbar filters", () => {
+    expect(
+      describeActiveFilter({
+        stage: "approved_for_design",
+        channelId: "ch-1",
+        health: "needs_review",
+      }),
+    ).toBe('stage "Approved For Design", the selected channel, and health "Needs Review"');
+  });
+
   it("ignores an unknown risk value rather than naming it", () => {
     // Defensive: a future risk value (e.g. "behind") should not leak
     // raw into the description. The user gets a fallback phrase.
