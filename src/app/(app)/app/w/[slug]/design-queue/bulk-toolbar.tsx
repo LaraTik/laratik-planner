@@ -101,7 +101,7 @@ export function DesignQueueBulkToolbar({
             : t("sidebar.designQueuePage.archiveSelected")}
       </Button>
       {error ? (
-        <p className="text-label text-danger-fg" role="alert">
+        <p className="text-label text-danger" role="alert">
           {error}
         </p>
       ) : null}
