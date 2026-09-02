@@ -18,9 +18,16 @@ export interface ChannelIconsProps {
   max?: number;
   /** Tailwind class additions for the surrounding <span>. */
   className?: string;
+  /** Localized fallback for items without connected channels. */
+  emptyLabel?: string;
 }
 
-export function ChannelIcons({ channels, max = 3, className }: ChannelIconsProps) {
+export function ChannelIcons({
+  channels,
+  max = 3,
+  className,
+  emptyLabel = "No channels",
+}: ChannelIconsProps) {
   if (channels.length === 0) {
     return (
       <span
@@ -28,9 +35,9 @@ export function ChannelIcons({ channels, max = 3, className }: ChannelIconsProps
         data-testid="channel-icons"
         data-empty="true"
         role="status"
-        aria-label="No channels"
+        aria-label={emptyLabel}
       >
-        No channels
+        {emptyLabel}
       </span>
     );
   }

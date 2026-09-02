@@ -9,6 +9,12 @@
   "groupThisWeek": "هذا الأسبوع · {start}–{end}",
   "groupNextWeek": "الأسبوع القادم · {start}–{end}",
   "groupOverdue": "متأخر",
+  "scheduleToday": "اليوم · {time}",
+  "scheduleTomorrow": "غدًا · {time}",
+  "scheduleInDays": "خلال {count} أيام · {time}",
+  "scheduleOverdueOne": "متأخر يومًا واحدًا",
+  "scheduleOverdueMany": "متأخر {count} أيام",
+  "noChannels": "لا توجد قنوات",
   "batchAdd": "إضافة دفعة",
   "quickCreate": "إنشاء سريع",
   "boardView": "عرض اللوحة",
@@ -32,5 +38,22 @@
   "editIdeaTitle": "تعديل الفكرة",
   "editIdeaDescription": "أجرِ تغييرات على فكرة في حالة المسودة أو طُلب تعديلها.",
   "comingSoon": "قريبًا",
-  "loadingListAria": "جارٍ تحميل قائمة التخطيط"
+  "loadingListAria": "جارٍ تحميل قائمة التخطيط",
+  "nextAction": {
+    "draft": "أرسلها لمراجعة المحتوى عند اكتمال الوصف المختصر.",
+    "content_review": "اعتمدها للانتقال إلى التصميم أو اطلب تعديلات.",
+    "changes_requested": "أعد الإرسال بعد تنفيذ التعديلات.",
+    "approved_for_design": "يتولى المصمم المهمة ويبدأ مرحلة التصميم.",
+    "in_design": "أرسل نسخة التسليم عند اكتمال التصميم.",
+    "creative_review": "اعتمدها للنشر أو اطلب تعديلات على التصميم.",
+    "ready_to_publish": "انشرها على كل قناة ثم سجّل النتيجة.",
+    "partially_published": "سجّل القنوات المتبقية.",
+    "published": "اعرض الأداء المباشر في لوحة مساحة العمل.",
+    "blocked": "عالج سبب التعطيل لاستئناف سير العمل.",
+    "cancelled": "أعد إنشاء العنصر إذا أردت إحياءه.",
+    "approvalOne": "عالج موافقة واحدة ({count})",
+    "approvalMany": "عالج {count} موافقات",
+    "overdueOne": "متأخر يومًا واحدًا — {next}",
+    "overdueMany": "متأخر {count} أيام — {next}"
+  }
 }

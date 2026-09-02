@@ -22,4 +22,15 @@ test("authenticated shell resolves Arabic RTL without horizontal overflow @a11y"
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   );
   expect(overflowsHorizontally).toBe(false);
+
+  await page.goto("/app/w/acme/planning");
+  await expect(page.getByRole("heading", { name: "التخطيط", level: 1 })).toBeVisible();
+  await expect(page.getByTestId("planning-search-input")).toHaveAttribute(
+    "placeholder",
+    "ابحث في العنوان أو الوصف",
+  );
+  const planningOverflowsHorizontally = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(planningOverflowsHorizontally).toBe(false);
 });

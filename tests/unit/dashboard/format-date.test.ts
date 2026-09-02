@@ -55,4 +55,20 @@ describe("formatOperationalDate", () => {
     const r = formatOperationalDate(new Date("2026-08-14T12:00:00.000Z"), NOW, TZ);
     expect(r.label).toMatch(/^1 day /);
   });
+
+  it("uses the workspace timezone for day boundaries", () => {
+    const r = formatOperationalDate(
+      new Date("2026-08-16T00:30:00.000Z"),
+      new Date("2026-08-15T22:30:00.000Z"),
+      "Europe/Berlin",
+    );
+    expect(r.relative).toBe("today");
+    expect(r.timeLabel).toBe("02:30");
+  });
+
+  it("keeps Arabic date parts localized while retaining Western digits", () => {
+    const r = formatOperationalDate(new Date("2026-08-25T12:00:00.000Z"), NOW, TZ, "ar");
+    expect(r.monthDayLabel).toContain("أغسطس");
+    expect(r.monthDayLabel).toMatch(/25/);
+  });
 });

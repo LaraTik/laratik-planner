@@ -11,39 +11,38 @@
  * signals, not timestamps.
  */
 
+import type { LocaleCode } from "@/lib/i18n/locales";
+
 const MS_PER_DAY = 86_400_000;
 
-function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+function zonedDateKey(d: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day));
 }
 
-function daysBetween(a: Date, b: Date): number {
-  const aStart = startOfDay(a).getTime();
-  const bStart = startOfDay(b).getTime();
-  return Math.round((aStart - bStart) / MS_PER_DAY);
+function formatTime(d: Date, locale: LocaleCode, timeZone: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    numberingSystem: "latn",
+  }).format(d);
 }
 
-const SHORT_MONTH = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
-function formatTime(d: Date): string {
-  return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
-}
-
-function formatMonthDay(d: Date): string {
-  return `${SHORT_MONTH[d.getMonth()]} ${d.getDate()}`;
+function formatMonthDay(d: Date, locale: LocaleCode, timeZone: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    timeZone,
+    day: "numeric",
+    month: "short",
+    numberingSystem: "latn",
+  }).format(d);
 }
 
 export interface OperationalDate {
@@ -58,6 +57,10 @@ export interface OperationalDate {
    * tooltip on hover.
    */
   title: string;
+  /** Localized building blocks for callers that provide interface copy. */
+  timeLabel: string;
+  monthDayLabel: string;
+  daysFromToday: number;
 }
 
 /**
@@ -78,13 +81,14 @@ export function formatOperationalDate(
   plannedPublishAt: Date,
   now: Date,
   workspaceTimezone: string,
+  locale: LocaleCode = "en",
 ): OperationalDate {
-  void workspaceTimezone; // The TZ chip already shows the workspace TZ; the
-  // row time is rendered in the user's local TZ. Acceptable for v1
-  // because every Just Halal user is in one TZ; revisit when a
-  // cross-TZ workspace needs it.
-  const dayDelta = daysBetween(plannedPublishAt, now);
-  const time = formatTime(plannedPublishAt);
+  const dayDelta = Math.round(
+    (zonedDateKey(plannedPublishAt, workspaceTimezone) - zonedDateKey(now, workspaceTimezone)) /
+      MS_PER_DAY,
+  );
+  const time = formatTime(plannedPublishAt, locale, workspaceTimezone);
+  const monthDay = formatMonthDay(plannedPublishAt, locale, workspaceTimezone);
   let label: string;
   let relative: OperationalDate["relative"];
   let overdueDays = 0;
@@ -98,7 +102,7 @@ export function formatOperationalDate(
     label = `In ${dayDelta} days · ${time}`;
     relative = "future";
   } else if (dayDelta > 3) {
-    label = formatMonthDay(plannedPublishAt);
+    label = formatMonthDay(plannedPublishAt, "en", workspaceTimezone);
     relative = "future";
   } else {
     // Past-due, regardless of how many days back. The user wants
@@ -109,6 +113,19 @@ export function formatOperationalDate(
     label = `${overdueDays} day${overdueDays === 1 ? "" : "s"} overdue`;
     relative = overdueDays === 1 ? "yesterday" : "past";
   }
-  const title = plannedPublishAt.toLocaleString();
-  return { label, relative, overdueDays, title };
+  const title = new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: workspaceTimezone,
+    numberingSystem: "latn",
+  }).format(plannedPublishAt);
+  return {
+    label,
+    relative,
+    overdueDays,
+    title,
+    timeLabel: time,
+    monthDayLabel: monthDay,
+    daysFromToday: dayDelta,
+  };
 }

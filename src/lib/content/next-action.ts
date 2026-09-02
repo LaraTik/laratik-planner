@@ -87,6 +87,10 @@ export interface NextAction {
    * tab on the detail page (workflow / publishing / etc.).
    */
   tab: "workflow" | "publishing" | "content" | "activity" | null;
+  /** Catalog metadata for rendering the same action in the active interface locale. */
+  translationKey: string;
+  translationParams?: Record<string, string | number>;
+  nextTranslationKey?: string;
 }
 
 /**
@@ -127,6 +131,7 @@ export function deriveNextAction(input: {
       label: "Resolve blocker",
       canCurrentUserAct: canAct(new Set<WorkspaceRole>(["workspace_manager"])),
       tab: "workflow",
+      translationKey: "planning.nextAction.blocked",
     };
   }
 
@@ -141,6 +146,11 @@ export function deriveNextAction(input: {
           new Set<WorkspaceRole>(["internal_reviewer", "client_reviewer", "workspace_manager"]),
         ),
         tab: "publishing",
+        translationKey:
+          openApprovalCount === 1
+            ? "planning.nextAction.approvalOne"
+            : "planning.nextAction.approvalMany",
+        translationParams: { count: openApprovalCount },
       };
     }
     // No open approval — the publisher is clear to act. The label
@@ -151,6 +161,7 @@ export function deriveNextAction(input: {
       label: explanation.next,
       canCurrentUserAct: canAct(new Set<WorkspaceRole>(["publisher", "workspace_manager"])),
       tab: "publishing",
+      translationKey: `planning.nextAction.${status}`,
     };
   }
 
@@ -164,6 +175,10 @@ export function deriveNextAction(input: {
       label: `${days} day${days === 1 ? "" : "s"} overdue — ${explanation.next}`,
       canCurrentUserAct: canAct(rolesThatCanActForStatus(status)),
       tab: REVIEW_STATUSES.has(status) || IN_PROGRESS_STATUSES.has(status) ? "workflow" : "content",
+      translationKey:
+        days === 1 ? "planning.nextAction.overdueOne" : "planning.nextAction.overdueMany",
+      translationParams: { count: days },
+      nextTranslationKey: `planning.nextAction.${status}`,
     };
   }
 
@@ -178,5 +193,6 @@ export function deriveNextAction(input: {
         : status === "draft" || status === "changes_requested"
           ? "content"
           : null,
+    translationKey: `planning.nextAction.${status}`,
   };
 }

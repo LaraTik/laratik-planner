@@ -22,9 +22,10 @@ export interface NextActionChipProps {
   /** Detail-page href (e.g. /app/w/{slug}/planning/{id}). */
   detailHref: string;
   className?: string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
-export function NextActionChip({ action, detailHref, className }: NextActionChipProps) {
+export function NextActionChip({ action, detailHref, className, t }: NextActionChipProps) {
   // The chip is interactive only when the row's main interaction
   // is also a Link — the deep link target shares the detail URL
   // with the row, but anchors to the specific tab so a planner
@@ -32,20 +33,27 @@ export function NextActionChip({ action, detailHref, className }: NextActionChip
   // instead of the overview.
   const href = action.tab ? `${detailHref}#${action.tab}` : detailHref;
   const isActionable = action.canCurrentUserAct;
+  const nextLabel = action.nextTranslationKey && t ? t(action.nextTranslationKey) : undefined;
+  const label = t
+    ? t(action.translationKey, {
+        ...(action.translationParams ?? {}),
+        ...(nextLabel ? { next: nextLabel } : {}),
+      })
+    : action.label;
   return (
     <a
       href={href}
       data-testid="next-action-chip"
       data-actionable={isActionable ? "true" : "false"}
       data-tab={action.tab ?? "none"}
-      aria-label={action.label}
+      aria-label={label}
       className={cn(
         "text-label focus-visible:ring-focus-ring inline-flex max-w-[28ch] items-center gap-1 truncate rounded-[var(--radius-control)] py-0.5 font-medium transition-colors focus:outline-none focus-visible:ring-2",
         isActionable ? "text-primary hover:underline hover:underline-offset-2" : "text-fg-muted",
         className,
       )}
     >
-      <span className="truncate">{action.label}</span>
+      <span className="min-w-0 truncate">{label}</span>
       {isActionable ? <DirAwareArrowRight className="h-3 w-3 shrink-0" aria-hidden="true" /> : null}
     </a>
   );

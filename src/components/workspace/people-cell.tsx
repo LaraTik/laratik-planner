@@ -62,7 +62,7 @@ function PersonRow({
     roleAccent === "primary" ? "bg-primary-subtle text-primary" : "bg-warning-subtle text-warning";
   return (
     <span
-      className="text-label inline-flex min-w-0 items-center gap-1.5"
+      className="text-label inline-flex max-w-full min-w-0 items-center gap-1.5 overflow-hidden"
       data-testid={testId}
       data-role={roleLabel.toLowerCase()}
       data-person-id={person?.id ?? null}
@@ -81,9 +81,11 @@ function PersonRow({
         {roleLabel}
       </span>
       {person ? (
-        <span className="text-fg-primary truncate font-medium">{person.displayName}</span>
+        <bdi dir="auto" className="text-fg-primary min-w-0 truncate font-medium">
+          {person.displayName}
+        </bdi>
       ) : (
-        <span className="text-fg-muted truncate font-medium italic">{emptyLabel}</span>
+        <span className="text-fg-muted min-w-0 truncate font-medium italic">{emptyLabel}</span>
       )}
     </span>
   );
@@ -92,7 +94,10 @@ function PersonRow({
 export function PeopleCell({ owner, designer, className, t }: PeopleCellProps) {
   const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   return (
-    <div className={cn("flex min-w-0 flex-col gap-0.5", className)} data-testid="people-cell">
+    <div
+      className={cn("flex max-w-full min-w-0 flex-col gap-0.5", className)}
+      data-testid="people-cell"
+    >
       <PersonRow
         icon={User}
         roleLabel={tr("common.peopleRoleOwner", "Owner")}

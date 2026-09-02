@@ -20,6 +20,7 @@ import { ChannelIcons } from "@/components/workspace/channel-icons";
 import { StagePill } from "@/components/workspace/stage-pill";
 import { ReadinessIndicator } from "@/components/workspace/readiness-indicator";
 import { NextActionChip } from "@/components/workspace/next-action-chip";
+import type { LocaleCode } from "@/lib/i18n/locales";
 
 /**
  * PlanningListItem — the enriched row for `/app/w/[slug]/planning`.
@@ -90,6 +91,7 @@ export interface PlanningListItemProps {
    * stored English copy is used.
    */
   t?: (key: string, params?: Record<string, string | number>) => string;
+  locale?: LocaleCode;
 }
 
 function FormatIcon({ format }: { format: string }) {
@@ -105,14 +107,15 @@ function FormatIcon({ format }: { format: string }) {
   );
 }
 
-function StatusChip({ status }: { status: string }) {
+function StatusChip({ status, t }: { status: string; t?: PlanningListItemProps["t"] }) {
+  const label = t ? t(`planningFilters.statusLabels.${status}`) : humanFormat(status);
   return (
     <span
       className="border-border bg-surface text-label text-fg-secondary inline-flex items-center rounded-full border px-2 py-0.5 font-semibold"
       data-testid="row-status-chip"
       data-status={status}
     >
-      {humanFormat(status)}
+      {label}
     </span>
   );
 }
@@ -125,11 +128,28 @@ export function PlanningListItem({
   now,
   actions,
   t,
+  locale = "en",
 }: PlanningListItemProps) {
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t ? t(key, params) : fallback;
   const detailHref = `/app/w/${workspaceSlug}/planning/${item.id}`;
-  const opDate = formatOperationalDate(item.plannedPublishAt, now, workspaceTimezone);
+  const opDate = formatOperationalDate(item.plannedPublishAt, now, workspaceTimezone, locale);
+  const scheduleLabel = t
+    ? opDate.relative === "today"
+      ? t("planning.scheduleToday", { time: opDate.timeLabel })
+      : opDate.relative === "tomorrow"
+        ? t("planning.scheduleTomorrow", { time: opDate.timeLabel })
+        : opDate.relative === "future" && opDate.daysFromToday > 1 && opDate.daysFromToday <= 3
+          ? t("planning.scheduleInDays", {
+              count: opDate.daysFromToday,
+              time: opDate.timeLabel,
+            })
+          : opDate.relative === "yesterday"
+            ? t("planning.scheduleOverdueOne", { count: opDate.overdueDays })
+            : opDate.relative === "past"
+              ? t("planning.scheduleOverdueMany", { count: opDate.overdueDays })
+              : opDate.monthDayLabel
+    : opDate.label;
   const padding = density === "compact" ? "py-2" : "py-3";
 
   return (
@@ -153,7 +173,7 @@ export function PlanningListItem({
         )}
       >
         {/* IDENTITY */}
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3 overflow-hidden">
           <FormatIcon format={item.format} />
           <div className="min-w-0 flex-1">
             <Link
@@ -165,21 +185,27 @@ export function PlanningListItem({
               )}
               data-testid="row-title"
             >
-              {item.title}
+              <bdi dir="auto">{item.title}</bdi>
             </Link>
             <div className="text-label text-fg-muted mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              <span className="font-medium">{humanFormat(item.format)}</span>
+              <span className="min-w-0 truncate font-medium">
+                {t ? t(`planningFilters.formatLabels.${item.format}`) : humanFormat(item.format)}
+              </span>
               <span aria-hidden="true">·</span>
-              <ChannelIcons channels={item.channels} max={3} />
+              <ChannelIcons
+                channels={item.channels}
+                max={3}
+                emptyLabel={tr("planning.noChannels", "No channels")}
+              />
             </div>
           </div>
           <div className="hidden shrink-0 lg:block">
-            <StatusChip status={item.status} />
+            <StatusChip status={item.status} {...(t ? { t } : {})} />
           </div>
         </div>
 
         {/* SCHEDULE */}
-        <div className="text-label flex items-center gap-2 lg:flex-col lg:items-start lg:gap-0.5">
+        <div className="text-label flex min-w-0 items-center gap-2 overflow-hidden lg:flex-col lg:items-start lg:gap-0.5">
           <span className="text-fg-muted font-semibold tracking-wide uppercase lg:sr-only">
             {tr("workspaceOverviewDashboard.rowScheduleAria", "Schedule")}
           </span>
@@ -197,7 +223,9 @@ export function PlanningListItem({
             data-relative={opDate.relative}
             data-overdue-days={opDate.overdueDays}
           >
-            {opDate.label}
+            <bdi dir="auto" className="max-w-full truncate">
+              {scheduleLabel}
+            </bdi>
           </span>
         </div>
 
@@ -205,7 +233,7 @@ export function PlanningListItem({
             The same column width as the previous single owner badge;
             stacking vertically keeps the row's horizontal footprint
             stable on tablet. */}
-        <div className="flex items-center gap-2 lg:flex-col lg:items-start lg:gap-0.5">
+        <div className="flex min-w-0 items-center gap-2 overflow-hidden lg:flex-col lg:items-start lg:gap-0.5">
           <span className="text-fg-muted text-label hidden font-semibold tracking-wide uppercase lg:inline">
             {tr("workspaceOverviewDashboard.rowPeopleAria", "People")}
           </span>
@@ -218,7 +246,7 @@ export function PlanningListItem({
         {/* WORKFLOW — stage pill replaces the full inline stepper.
             The full stepper is one click away in the detail page's
             workflow inspector. See AGENTS.md §B + §C for the rule. */}
-        <div className="text-label flex items-center gap-2 lg:flex-col lg:items-start lg:gap-0.5">
+        <div className="text-label flex min-w-0 items-center gap-2 overflow-hidden lg:flex-col lg:items-start lg:gap-0.5">
           <span className="text-fg-muted font-semibold tracking-wide uppercase lg:sr-only">
             {tr("workspaceOverviewDashboard.rowStageAria", "Stage")}
           </span>
@@ -233,7 +261,7 @@ export function PlanningListItem({
             openApprovalCount={item.openApprovalCount}
             {...(t ? { t } : {})}
           />
-          <NextActionChip action={item.nextAction} detailHref={detailHref} />
+          <NextActionChip action={item.nextAction} detailHref={detailHref} {...(t ? { t } : {})} />
         </div>
 
         {/* COUNTERS + ACTIONS (mobile / tablet) */}
@@ -271,7 +299,7 @@ export function PlanningListItem({
             ) : null}
           </div>
           <div className="flex items-center gap-2">
-            <StatusChip status={item.status} />
+            <StatusChip status={item.status} {...(t ? { t } : {})} />
             {actions}
           </div>
         </div>

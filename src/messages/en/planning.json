@@ -9,6 +9,12 @@
   "groupThisWeek": "This week · {start}–{end}",
   "groupNextWeek": "Next week · {start}–{end}",
   "groupOverdue": "Overdue",
+  "scheduleToday": "Today · {time}",
+  "scheduleTomorrow": "Tomorrow · {time}",
+  "scheduleInDays": "In {count} days · {time}",
+  "scheduleOverdueOne": "1 day overdue",
+  "scheduleOverdueMany": "{count} days overdue",
+  "noChannels": "No channels",
   "batchAdd": "Batch add",
   "quickCreate": "Quick Create",
   "boardView": "Board view",
@@ -32,5 +38,22 @@
   "editIdeaTitle": "Edit idea",
   "editIdeaDescription": "Make changes to a draft or changes-requested idea.",
   "comingSoon": "Coming soon",
-  "loadingListAria": "Loading planning list"
+  "loadingListAria": "Loading planning list",
+  "nextAction": {
+    "draft": "Submit for content review when the brief is ready.",
+    "content_review": "Approve to move to design, or request changes.",
+    "changes_requested": "Resubmit once the changes are in.",
+    "approved_for_design": "A designer claims the task and starts the design pass.",
+    "in_design": "Submit a delivery version when the design is ready.",
+    "creative_review": "Approve for publishing, or request design changes.",
+    "ready_to_publish": "Publish on each channel, then record the outcome.",
+    "partially_published": "Record the remaining channels.",
+    "published": "View live performance in the workspace dashboard.",
+    "blocked": "Resolve the blocker to resume the workflow.",
+    "cancelled": "Re-create the item if it should be revived.",
+    "approvalOne": "Resolve {count} approval",
+    "approvalMany": "Resolve {count} approvals",
+    "overdueOne": "1 day overdue — {next}",
+    "overdueMany": "{count} days overdue — {next}"
+  }
 }

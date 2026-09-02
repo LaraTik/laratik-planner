@@ -1,6 +1,8 @@
 import * as React from "react";
 import { PlanningListItem, PlanningListItemList } from "@/components/workspace/planning-list-item";
 import type { EnrichedContentItem } from "@/lib/content/enriched-list";
+import { formatDate } from "@/lib/i18n/format-locale";
+import type { LocaleCode } from "@/lib/i18n/locales";
 
 /**
  * PlanningListGrouped — the planning list with sticky date group
@@ -27,13 +29,19 @@ function isoWeekStart(d: Date): Date {
   return new Date(day.getTime() - dow * MS_PER_DAY);
 }
 
-function fmtDate(d: Date): string {
-  return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+function fmtDate(d: Date, locale: LocaleCode, timeZone: string): string {
+  return formatDate(d, locale, { day: "numeric", month: "short", timeZone });
 }
 
 type Translator = (key: string, params?: Record<string, string | number>) => string;
 
-function groupKey(d: Date, now: Date, t: Translator | undefined): { key: string; label: string } {
+function groupKey(
+  d: Date,
+  now: Date,
+  timeZone: string,
+  locale: LocaleCode,
+  t: Translator | undefined,
+): { key: string; label: string } {
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t ? t(key, params) : fallback;
   const start = startOfDay(d).getTime();
@@ -46,10 +54,14 @@ function groupKey(d: Date, now: Date, t: Translator | undefined): { key: string;
     const weekEnd = new Date(weekStart.getTime() + 6 * MS_PER_DAY);
     return {
       key: `week-${weekStart.toISOString()}`,
-      label: tr("planning.groupThisWeek", `This week · ${fmtDate(weekStart)}–${fmtDate(weekEnd)}`, {
-        start: fmtDate(weekStart),
-        end: fmtDate(weekEnd),
-      }),
+      label: tr(
+        "planning.groupThisWeek",
+        `This week · ${fmtDate(weekStart, locale, timeZone)}–${fmtDate(weekEnd, locale, timeZone)}`,
+        {
+          start: fmtDate(weekStart, locale, timeZone),
+          end: fmtDate(weekEnd, locale, timeZone),
+        },
+      ),
     };
   }
   if (daysAhead > 7 && daysAhead <= 14) {
@@ -57,10 +69,14 @@ function groupKey(d: Date, now: Date, t: Translator | undefined): { key: string;
     const weekEnd = new Date(weekStart.getTime() + 6 * MS_PER_DAY);
     return {
       key: `week-${weekStart.toISOString()}`,
-      label: tr("planning.groupNextWeek", `Next week · ${fmtDate(weekStart)}–${fmtDate(weekEnd)}`, {
-        start: fmtDate(weekStart),
-        end: fmtDate(weekEnd),
-      }),
+      label: tr(
+        "planning.groupNextWeek",
+        `Next week · ${fmtDate(weekStart, locale, timeZone)}–${fmtDate(weekEnd, locale, timeZone)}`,
+        {
+          start: fmtDate(weekStart, locale, timeZone),
+          end: fmtDate(weekEnd, locale, timeZone),
+        },
+      ),
     };
   }
   if (daysAhead < 0) {
@@ -69,7 +85,12 @@ function groupKey(d: Date, now: Date, t: Translator | undefined): { key: string;
   // > 14 days: group by month-day
   return {
     key: `day-${start}`,
-    label: d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" }),
+    label: formatDate(d, locale, {
+      weekday: "long",
+      day: "numeric",
+      month: "short",
+      timeZone,
+    }),
   };
 }
 
@@ -81,6 +102,7 @@ export interface PlanningListGroupedProps {
   now: Date;
   /** When true, render with sticky date headers; when false, render flat. */
   grouped: boolean;
+  locale?: LocaleCode;
   actions?: (item: EnrichedContentItem) => React.ReactNode;
   /**
    * Optional translator. When provided, the date group headers
@@ -100,6 +122,7 @@ export function PlanningListGrouped({
   grouped,
   actions,
   t,
+  locale = "en",
 }: PlanningListGroupedProps) {
   if (!grouped) {
     return (
@@ -113,6 +136,7 @@ export function PlanningListGrouped({
             density={density}
             now={now}
             actions={actions?.(it)}
+            locale={locale}
             {...(t !== undefined ? { t } : {})}
           />
         ))}
@@ -123,7 +147,7 @@ export function PlanningListGrouped({
   // Group by date header, preserving sort order (plannedPublishAt ASC).
   const groups: { key: string; label: string; items: EnrichedContentItem[] }[] = [];
   for (const it of items) {
-    const g = groupKey(it.plannedPublishAt, now, t);
+    const g = groupKey(it.plannedPublishAt, now, workspaceTimezone, locale, t);
     const last = groups[groups.length - 1];
     if (last && last.key === g.key) {
       last.items.push(it);
@@ -153,6 +177,7 @@ export function PlanningListGrouped({
                 density={density}
                 now={now}
                 actions={actions?.(it)}
+                locale={locale}
                 {...(t !== undefined ? { t } : {})}
               />
             ))}

@@ -82,7 +82,7 @@ export default async function PlanningPage({
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
 
-  const { t, dir } = await tForActive();
+  const { t, code, dir } = await tForActive();
   const ws = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!ws) notFound();
   const canCreate = await hasWorkspaceRole({ id: session.user.id }, ws.id, [
@@ -342,17 +342,21 @@ export default async function PlanningPage({
         t={t}
       />
 
-      <div className="border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-card)] border p-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
-        <MonthNav month={now} buildHref={buildMonthHref} />
-        <PlanningFiltersBar
-          basePath={`/app/w/${slug}/planning`}
-          monthParam={monthParam(0)}
-          members={memberRows.map((m) => ({
-            id: m.id,
-            label: m.displayName ?? m.name ?? m.id.slice(0, 8),
-          }))}
-          channels={[]}
-        />
+      <div className="border-border bg-surface rounded-[var(--radius-card)] border p-3">
+        <div className="border-border flex items-center justify-between gap-3 border-b pb-3">
+          <MonthNav month={now} buildHref={buildMonthHref} />
+        </div>
+        <div className="pt-3">
+          <PlanningFiltersBar
+            basePath={`/app/w/${slug}/planning`}
+            monthParam={monthParam(0)}
+            members={memberRows.map((m) => ({
+              id: m.id,
+              label: m.displayName ?? m.name ?? m.id.slice(0, 8),
+            }))}
+            channels={[]}
+          />
+        </div>
       </div>
 
       {totalCount === 0 ? (
@@ -452,6 +456,7 @@ export default async function PlanningPage({
             now={nowRef}
             grouped={!hasFilter}
             t={t}
+            locale={code}
             actions={(it) => (
               <PlanningListActions
                 workspaceSlug={slug}

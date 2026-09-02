@@ -57,7 +57,7 @@ const WORKFLOW_STAGES: { value: string; label: string }[] = [
 ];
 
 const selectClass =
-  "border-border bg-surface text-body h-10 rounded-[var(--radius-control)] border px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1";
+  "border-border bg-surface text-body h-10 w-full min-w-0 rounded-[var(--radius-control)] border px-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1";
 
 export function PlanningFiltersBar({
   basePath,
@@ -127,8 +127,8 @@ export function PlanningFiltersBar({
 
   return (
     <div className="space-y-2" data-testid="planning-filters-bar">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="relative min-w-0">
           <Search
             className="text-fg-muted pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
             aria-hidden="true"
@@ -147,7 +147,8 @@ export function PlanningFiltersBar({
             }}
             placeholder={tr("planningFilters.searchPlaceholder", "Search title or brief")}
             maxLength={80}
-            className={cn(selectClass, "w-48 ps-7")}
+            dir="auto"
+            className={cn(selectClass, "ps-7")}
             data-testid="planning-search-input"
           />
         </div>
