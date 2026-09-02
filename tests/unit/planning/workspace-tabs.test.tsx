@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import * as React from "react";
 import { render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
@@ -10,6 +10,18 @@ import {
   type WorkspaceTab,
   type WorkspaceTabId,
 } from "@/components/planning/workspace-tabs";
+import { WorkspaceShell } from "@/app/(app)/app/w/[slug]/planning/[id]/workspace-shell";
+import { EMPTY_RESET_IDEA_COUNTS } from "@/lib/content/reset-idea-shared";
+
+// WorkspaceShell's optional operator and discussion surfaces import
+// server-action modules. They are not part of this tab-state contract,
+// so keep this unit test focused on the shell without loading Auth.js.
+vi.mock("@/components/forms/destructive-confirm-dialog", () => ({
+  DestructiveConfirmDialog: () => null,
+}));
+vi.mock("@/components/planning/discussion-drawer", () => ({
+  DiscussionDrawer: () => null,
+}));
 
 /**
  * WorkspaceTabs — the in-page tab strip for the content detail
@@ -103,5 +115,51 @@ describe("WorkspaceTabs — Preview tab (/ui-ux-pro-max)", () => {
     window.location.hash = "#not-a-tab";
     expect(initialActiveTabFromHash(tabs)).toBe("overview");
     window.location.hash = "";
+  });
+});
+
+describe("WorkspaceShell — initial hash handoff", () => {
+  it("keeps a user-selected tab after hydration has finished", async () => {
+    window.location.hash = "";
+    const user = userEvent.setup();
+
+    render(
+      <WorkspaceShell
+        workspaceSlug="acme"
+        contentItemId="content-1"
+        ideaTitle="Summer launch"
+        comments={[]}
+        currentUserId="user-1"
+        roles={{
+          isManager: false,
+          isPlanner: true,
+          isDesigner: false,
+          isInternalReviewer: false,
+          isClientReviewer: false,
+          isPublisher: false,
+        }}
+        canPostInternal={true}
+        canPostClientVisible={false}
+        tabs={tabs}
+        panels={{
+          overview: <div data-testid="shell-panel-overview">overview</div>,
+          content: <div data-testid="shell-panel-content">content</div>,
+          preview: <div data-testid="shell-panel-preview">preview</div>,
+          publishing: <div data-testid="shell-panel-publishing">publishing</div>,
+          activity: <div data-testid="shell-panel-activity">activity</div>,
+        }}
+        canResetIdea={false}
+        resetCounts={EMPTY_RESET_IDEA_COUNTS}
+        activityCount={0}
+        openCommentCount={0}
+        mentionCount={0}
+      />,
+    );
+
+    await user.click(screen.getByTestId("workspace-tab-publishing"));
+
+    expect(screen.getByTestId("shell-panel-publishing")).toBeInTheDocument();
+    expect(screen.queryByTestId("shell-panel-overview")).toBeNull();
+    expect(window.location.hash).toBe("#publishing");
   });
 });

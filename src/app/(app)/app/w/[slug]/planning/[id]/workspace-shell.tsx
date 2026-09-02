@@ -103,6 +103,7 @@ export function WorkspaceShell({
   const [activeId, setActiveId] = React.useState<WorkspaceTabId>(() => tabs[0]?.id ?? "overview");
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [resetOpen, setResetOpen] = React.useState(false);
+  const initialHashAdoptedRef = React.useRef(false);
 
   // Adopt a deep-link hash after hydration. This is deliberately
   // separate from the URL-sync effect below: React Strict Mode may
@@ -111,6 +112,12 @@ export function WorkspaceShell({
   // hydration fallback `#overview`.
   React.useEffect(() => {
     if (typeof window === "undefined") return;
+    // This is a one-time hydration handoff. Running it again after
+    // a user clicks a tab would read the old hash before the sync
+    // effect below has written the new one, causing the active tab
+    // and URL to oscillate (especially visible in mobile WebKit).
+    if (initialHashAdoptedRef.current) return;
+    initialHashAdoptedRef.current = true;
     const hash = window.location.hash.replace(/^#/, "") as WorkspaceTabId;
     if (hash && tabs.some((tab) => tab.id === hash) && hash !== activeId) {
       React.startTransition(() => setActiveId(hash));
