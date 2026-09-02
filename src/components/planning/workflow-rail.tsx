@@ -29,7 +29,11 @@ import {
 import { humanize, humanStatus } from "@/lib/content/status";
 import { ApprovalTimeline } from "@/components/workspace/approval-timeline";
 import { ReasonDialog } from "@/components/forms/reason-dialog";
-import { STEP_EXPLANATIONS, explainStatus } from "@/lib/content/workflow-explanations";
+import {
+  STEP_EXPLANATIONS,
+  explainStatus,
+  localizeStepExplanation,
+} from "@/lib/content/workflow-explanations";
 import { type WorkflowStage, stageForStatus } from "./workflow-stepper";
 import { cn } from "@/lib/utils";
 import { useLocaleT } from "@/components/i18n/locale-provider";
@@ -418,7 +422,7 @@ function WorkflowRailBody({
 
   const currentStep = (() => {
     try {
-      return explainStatus(status as Parameters<typeof explainStatus>[0]);
+      return localizeStepExplanation(status as Parameters<typeof explainStatus>[0], t);
     } catch {
       return null;
     }

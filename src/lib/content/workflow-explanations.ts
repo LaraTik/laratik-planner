@@ -31,6 +31,8 @@ export type StepExplanation = {
   next: string;
 };
 
+export type WorkflowTranslator = (key: string, params?: Record<string, string | number>) => string;
+
 const ROLE_LABEL: Record<WorkspaceRole, string> = {
   workspace_manager: "Workspace manager",
   content_planner: "Content planner",
@@ -138,4 +140,38 @@ export const STEP_EXPLANATIONS: Record<ContentStatus, StepExplanation> = {
 
 export function explainStatus(status: ContentStatus): StepExplanation {
   return STEP_EXPLANATIONS[status];
+}
+
+/**
+ * Resolve the user-facing workflow explanation for the active locale.
+ * The English data remains the compatibility fallback for callers that
+ * only need the domain explanation, while UI surfaces can opt into the
+ * bilingual catalog without duplicating the workflow state machine.
+ */
+export function localizeStepExplanation(
+  status: ContentStatus,
+  t: WorkflowTranslator,
+): StepExplanation {
+  const step = explainStatus(status);
+  const key = "contentDetail.workflow.explanations." + status;
+  const translate = (suffix: string, fallback: string) => {
+    const fullKey = key + "." + suffix;
+    const value = t(fullKey);
+    return value.startsWith("[" + fullKey + "]") ? fallback : value;
+  };
+
+  return {
+    ...step,
+    label: translate("label", step.label),
+    description: translate("description", step.description),
+    next: translate("next", step.next),
+    responsibleRoles: step.responsibleRoles.map((role) => ({
+      ...role,
+      label: (() => {
+        const fullKey = "contentDetail.workflow.roleLabels." + role.role;
+        const value = t(fullKey);
+        return value.startsWith("[" + fullKey + "]") ? role.label : value;
+      })(),
+    })),
+  };
 }

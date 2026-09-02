@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { WorkflowProgress } from "@/components/planning/workflow-progress";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 
 const ROLES = {
   isManager: true,
@@ -71,5 +72,20 @@ describe("WorkflowProgress", () => {
     // The full ladder lists every step.
     const items = within(detail).getAllByRole("listitem");
     expect(items.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it("renders the workflow explanation from the active Arabic catalog", () => {
+    render(
+      <LocaleProvider locale="ar">
+        <WorkflowProgress status="draft" roles={ROLES} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText("فكرة مسودة")).toBeInTheDocument();
+    expect(screen.getByText("يمكنك التنفيذ")).toBeInTheDocument();
+    expect(screen.getByTestId("workflow-progress-stepper")).toHaveAttribute(
+      "aria-label",
+      "خطوات سير العمل",
+    );
   });
 });

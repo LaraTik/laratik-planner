@@ -12,6 +12,8 @@ import {
 } from "@/lib/content/workflow-explanations";
 import { humanize } from "@/lib/content/status";
 import { cn } from "@/lib/utils";
+import { localizeStepExplanation } from "@/lib/content/workflow-explanations";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * WorkflowProgress — compact, scannable view of where a content
@@ -111,10 +113,12 @@ export function WorkflowProgress({
   roles,
   primaryAction,
 }: WorkflowProgressProps) {
+  const t = useLocaleT();
+  const translatePath = (...segments: string[]) => t(segments.join("."));
   const [expanded, setExpanded] = React.useState(false);
   const step: StepExplanation | null = (() => {
     try {
-      return explainStatus(status as Parameters<typeof explainStatus>[0]);
+      return localizeStepExplanation(status as Parameters<typeof explainStatus>[0], t);
     } catch {
       return null;
     }
@@ -134,14 +138,14 @@ export function WorkflowProgress({
             {step ? (
               <Badge variant={canAct ? "primary" : "outline"}>
                 {canAct
-                  ? "You can act on this"
+                  ? t("contentDetail.workflow.progress.youCanAct")
                   : TERMINAL_STATUSES.has(status)
                     ? status === "published"
-                      ? "Published"
+                      ? t("contentDetail.workflow.statusLabels.published")
                       : status === "cancelled"
-                        ? "Cancelled"
-                        : "Blocked"
-                    : "Awaiting another role"}
+                        ? t("contentDetail.workflow.statusLabels.cancelled")
+                        : t("contentDetail.workflow.statusLabels.blocked")
+                    : t("contentDetail.workflow.progress.awaitingAnotherRole")}
               </Badge>
             ) : null}
           </div>
@@ -150,7 +154,7 @@ export function WorkflowProgress({
           {/* Compact stepper — past, current, next */}
           <ol
             className="mt-3 flex flex-wrap items-center gap-1.5"
-            aria-label="Workflow steps"
+            aria-label={t("contentDetail.workflow.progress.stepsAria")}
             data-testid="workflow-progress-stepper"
           >
             {ORDER.map((s, i) => {
@@ -175,7 +179,7 @@ export function WorkflowProgress({
                   data-current={isCurrent ? "true" : undefined}
                 >
                   <Icon className="h-3 w-3" aria-hidden="true" />
-                  {humanize(s)}
+                  {translatePath("contentDetail", "workflow", "statusLabels", s)}
                 </li>
               );
             })}
@@ -185,10 +189,16 @@ export function WorkflowProgress({
           {next && !TERMINAL_STATUSES.has(status) ? (
             <p className="text-label text-fg-muted mt-2 inline-flex items-center gap-1.5">
               <DirAwareArrowRight className="h-3 w-3" aria-hidden="true" />
-              Next: <span className="text-fg-secondary font-semibold">{humanize(next)}</span> · held
-              by{" "}
+              {t("contentDetail.workflow.next")}{" "}
               <span className="text-fg-secondary font-semibold">
-                {(STEP_EXPLANATIONS[next as keyof typeof STEP_EXPLANATIONS]?.responsibleRoles ?? [])
+                {translatePath("contentDetail", "workflow", "statusLabels", next)}
+              </span>{" "}
+              · {t("contentDetail.workflow.progress.heldBy")}{" "}
+              <span className="text-fg-secondary font-semibold">
+                {(
+                  localizeStepExplanation(next as Parameters<typeof explainStatus>[0], t)
+                    .responsibleRoles ?? []
+                )
                   .map((r) => r.label)
                   .join(" / ") || "—"}
               </span>
@@ -202,7 +212,7 @@ export function WorkflowProgress({
               data-testid="workflow-blocked-reason"
             >
               <Ban className="h-4 w-4" aria-hidden="true" />
-              Blocked: {blockedReason}
+              {t("contentDetail.workflow.blockedReason", { reason: blockedReason })}
             </p>
           ) : null}
           {status === "cancelled" && cancellationReason ? (
@@ -211,14 +221,14 @@ export function WorkflowProgress({
               data-testid="workflow-cancelled-reason"
             >
               <Ban className="h-4 w-4" aria-hidden="true" />
-              Cancelled: {cancellationReason}
+              {t("contentDetail.workflow.cancelledReason", { reason: cancellationReason })}
             </p>
           ) : null}
 
           {/* Responsible roles for the current step */}
           {step && step.responsibleRoles.length > 0 ? (
             <div className="text-label text-fg-secondary mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="text-fg-muted">Responsible:</span>
+              <span className="text-fg-muted">{t("contentDetail.workflow.responsible")}</span>
               {step.responsibleRoles.map((r) => (
                 <Badge
                   key={r.role}
@@ -237,7 +247,7 @@ export function WorkflowProgress({
               data-testid="workflow-awaiting-others"
             >
               <Lock className="h-3.5 w-3.5" aria-hidden="true" />
-              Awaiting{" "}
+              {t("contentDetail.workflow.awaiting")}{" "}
               {step.responsibleRoles
                 .filter((r) => !roles[ROLE_TO_FLAG[r.role] ?? "isManager"])
                 .map((r) => r.label)
@@ -259,7 +269,9 @@ export function WorkflowProgress({
         aria-expanded={expanded}
         data-testid="workflow-progress-toggle"
       >
-        {expanded ? "Hide detail" : "Show all steps"}
+        {expanded
+          ? t("contentDetail.workflow.progress.hideDetail")
+          : t("contentDetail.workflow.progress.showAllSteps")}
       </button>
       {expanded ? (
         <ul
@@ -291,9 +303,15 @@ export function WorkflowProgress({
                   )}
                 </span>
                 <span>
-                  <span>{explanation.label}</span>
+                  <span>{step ? localizeStepExplanation(s, t).label : explanation.label}</span>
                   <span className="text-fg-muted ms-1.5">
-                    · {explanation.responsibleRoles.map((r) => r.label).join(" / ")}
+                    ·{" "}
+                    {(step
+                      ? localizeStepExplanation(s, t).responsibleRoles
+                      : explanation.responsibleRoles
+                    )
+                      .map((r) => r.label)
+                      .join(" / ")}
                   </span>
                 </span>
               </li>

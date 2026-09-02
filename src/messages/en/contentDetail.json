@@ -378,6 +378,80 @@
       "blocked": "Blocked",
       "cancelled": "Cancelled"
     },
+    "progress": {
+      "youCanAct": "You can act on this",
+      "awaitingAnotherRole": "Awaiting another role",
+      "stepsAria": "Workflow steps",
+      "heldBy": "held by",
+      "showAllSteps": "Show all steps",
+      "hideDetail": "Hide detail"
+    },
+    "roleLabels": {
+      "workspace_manager": "Workspace manager",
+      "content_planner": "Content planner",
+      "designer": "Designer",
+      "internal_reviewer": "Internal reviewer",
+      "client_reviewer": "Client reviewer",
+      "publisher": "Publisher",
+      "viewer": "Viewer"
+    },
+    "explanations": {
+      "draft": {
+        "label": "Idea drafted",
+        "description": "A planner wrote the brief. Nothing has been submitted yet. The item lives here until it's ready for review.",
+        "next": "Submit for content review when the brief is ready."
+      },
+      "content_review": {
+        "label": "Awaiting content review",
+        "description": "An internal reviewer is checking the brief against the brand voice and the brief's acceptance criteria.",
+        "next": "Approve to move to design, or request changes to send it back to the planner."
+      },
+      "changes_requested": {
+        "label": "Changes requested",
+        "description": "A reviewer left feedback. The planner updates the brief and resubmits for another review pass.",
+        "next": "Resubmit once the changes are in."
+      },
+      "approved_for_design": {
+        "label": "Approved for design",
+        "description": "The brief is locked in. A designer can claim this item, or a manager can assign one.",
+        "next": "A designer claims the task and starts the design pass."
+      },
+      "in_design": {
+        "label": "In design",
+        "description": "A designer is working on the visual. Once they submit a delivery, the item moves into creative review.",
+        "next": "Submit a delivery version when the design is ready."
+      },
+      "creative_review": {
+        "label": "Creative review",
+        "description": "An internal reviewer (and the client for client-facing work) is checking the design against the brief.",
+        "next": "Approve to mark it ready for publishing, or request changes to send it back to design."
+      },
+      "ready_to_publish": {
+        "label": "Ready to publish",
+        "description": "All approvals are in. A publisher or manager can record per-channel publication outcomes once the item is live.",
+        "next": "Publish on each channel, then record the outcome (published / skipped / failed) here."
+      },
+      "partially_published": {
+        "label": "Partially published",
+        "description": "Some channels have gone live; the rest are still pending. Once every channel is recorded, the item moves to fully published.",
+        "next": "Record the remaining channels."
+      },
+      "published": {
+        "label": "Published",
+        "description": "Every channel is live. The item is read-only for archival purposes; analytics are tracked in the dashboard.",
+        "next": "View live performance in the workspace dashboard."
+      },
+      "blocked": {
+        "label": "Blocked",
+        "description": "A manager parked this item because something is preventing progress. The reason is shown next to the status.",
+        "next": "Resolve the blocker, then unblock to resume the workflow."
+      },
+      "cancelled": {
+        "label": "Cancelled",
+        "description": "This item is no longer being worked on. The cancellation reason is shown next to the status.",
+        "next": "Re-create the item if it should be revived."
+      }
+    },
     "submitForReview": "Submit for review",
     "approveContent": "Approve content",
     "resubmitForReview": "Resubmit for review",
