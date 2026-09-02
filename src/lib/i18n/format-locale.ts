@@ -108,7 +108,45 @@ export function formatDate(
 ): string {
   const date = value instanceof Date ? value : new Date(value);
   const locale = bcp47(code);
+  const stableDateTime = formatDateTimeParts(date, code, options);
+  if (stableDateTime) return stableDateTime;
   return new Intl.DateTimeFormat(locale, withLatnDigits(options)).format(date);
+}
+
+/**
+ * Assemble date-times from semantic parts instead of Intl's locale-specific
+ * literal text. Node/ICU and WebKit disagree about the English connector
+ * ("," versus " at "), which otherwise creates an SSR hydration mismatch
+ * for client-rendered activity and approval timelines. Month names and Arabic
+ * text still come from Intl; only punctuation/order is made deterministic.
+ */
+function formatDateTimeParts(
+  date: Date,
+  code: LocaleCode,
+  options: (Intl.DateTimeFormatOptions & IntlLocaleOptions) | undefined,
+): string | undefined {
+  if (
+    !options?.year ||
+    !options.month ||
+    !options.day ||
+    !options.hour ||
+    !options.minute ||
+    options.timeZoneName
+  ) {
+    return undefined;
+  }
+  const parts = new Intl.DateTimeFormat(bcp47(code), withLatnDigits(options)).formatToParts(date);
+  const valueOf = (type: Intl.DateTimeFormatPartTypes): string | undefined =>
+    parts.find((part) => part.type === type)?.value;
+  const year = valueOf("year");
+  const month = valueOf("month");
+  const day = valueOf("day");
+  const hour = valueOf("hour");
+  const minute = valueOf("minute");
+  if (!year || !month || !day || !hour || !minute) return undefined;
+  const dayPeriod = valueOf("dayPeriod");
+  const time = `${hour}:${minute}${dayPeriod ? ` ${dayPeriod}` : ""}`;
+  return code === "ar" ? `${day} ${month} ${year}، ${time}` : `${month} ${day}, ${year}, ${time}`;
 }
 
 /** Common date format presets. Use these instead of hand-rolling

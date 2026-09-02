@@ -39,6 +39,7 @@ export function OverviewNavigator(props: OverviewNavigatorProps) {
   const handleNavigate = React.useCallback((href: string) => {
     if (typeof window === "undefined") return;
     const anchor = href.startsWith("#") ? href : `#${href}`;
+    const hashChanged = window.location.hash !== anchor;
     // Update the URL hash via a synthetic `hashchange` so the
     // existing `WorkspaceShell` listener picks it up and
     // switches the tab. We use `replaceState` to avoid
@@ -47,8 +48,10 @@ export function OverviewNavigator(props: OverviewNavigatorProps) {
     // `hashchange` manually because `replaceState` does not
     // fire it on its own.
     try {
-      window.history.replaceState(null, "", anchor);
-      window.dispatchEvent(new HashChangeEvent("hashchange"));
+      if (hashChanged) {
+        window.history.replaceState(null, "", anchor);
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
+      }
     } catch {
       // Some test environments disable history — fall back
       // to the default behaviour (the row's <Link> would

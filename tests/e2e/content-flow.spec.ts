@@ -29,7 +29,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     // Server action redirects to the content detail page
     await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
       timeout: 20_000,
-      waitUntil: "commit",
+      waitUntil: "load",
     });
 
     // The detail page shows the title + status badge "draft"
@@ -56,11 +56,22 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     await page.getByRole("button", { name: /Create draft/i }).click();
     await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
       timeout: 20_000,
-      waitUntil: "commit",
+      waitUntil: "load",
     });
+    // WebKit can resolve the URL commitment before the server-action
+    // redirect has finished painting the detail page. Wait for its stable
+    // landmark before starting the second navigation.
+    await expect(page.getByRole("heading", { name: title })).toBeVisible();
+    await expect(page).toHaveURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+#overview$/);
 
-    // Navigate back to the planning list
-    await page.goto(`/app/w/acme/planning?search=${encodeURIComponent(title)}`);
+    // Navigate back through the product's own detail-page link. This
+    // waits for the action redirect to settle before the list navigation,
+    // which is important in WebKit where a hard navigation can race the
+    // final server-action redirect.
+    await page.getByRole("link", { name: /← Acme/ }).click();
+    await expect(page).toHaveURL(/\/app\/w\/acme\/planning(?:\?.*)?$/);
+    await page.getByTestId("planning-search-input").fill(title);
+    await expect(page).toHaveURL(/\/app\/w\/acme\/planning\?[^#]*search=/);
     await expect(page.getByText(title).first()).toBeVisible();
   });
 
@@ -156,6 +167,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         waitUntil: "commit",
       });
       const detailUrl = plannerPage.url();
+      await expect(plannerPage.getByRole("heading", { name: title })).toBeVisible();
 
       // Publish-package drafts are material edits and are intentionally
       // writable by planners/managers only. Save a package for each seeded
@@ -307,6 +319,9 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       // ─── 7. Publisher: record publications for each of the 3 channels → published ───
       await bootstrapRoleSession(publisherPage, "publisher");
       await publisherPage.goto(detailUrl);
+      await expect(publisherPage.getByTestId("workspace-tab-publishing")).toBeVisible({
+        timeout: 10_000,
+      });
       await publisherPage.getByTestId("workspace-tab-publishing").click();
       // The publishing section shows a "Record" button per channel.
       // We click each one, fill the published URL, and save.
@@ -326,6 +341,9 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         // the previous card's transition from racing the next submit.
         await publisherPage.goto(`${detailUrl}?channel=${channelId}#publishing`, {
           waitUntil: "commit",
+        });
+        await expect(publisherPage.getByTestId("workspace-tab-publishing")).toBeVisible({
+          timeout: 10_000,
         });
         await publisherPage.getByTestId("workspace-tab-publishing").click();
         const card = publisherPage.locator(

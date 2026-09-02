@@ -82,6 +82,12 @@ describe("i18n/format-locale — dates", () => {
     // / `hourCycle` defaults.
     expect(out).toMatch(/GMT\+3/);
   });
+
+  it("uses stable date-time punctuation across Intl runtimes", () => {
+    expect(fmt.formatDate(fixed, "en", { ...fmt.DateFormat.dateTime, timeZone: "UTC" })).toBe(
+      "Sep 1, 2026, 12:00 PM",
+    );
+  });
 });
 
 describe("i18n/format-locale — relative + list", () => {
