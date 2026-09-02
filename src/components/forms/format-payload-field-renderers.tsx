@@ -5,7 +5,9 @@ import { DirAwareInput, DirAwareTextarea } from "@/components/forms/dir-aware-te
 import { PerFieldAiSuggest, type PerFieldAiField } from "@/components/forms/per-field-ai-suggest";
 import { TranslationFieldButton } from "@/components/forms/translation-field-button";
 import { NavigableArrayField } from "@/components/forms/navigable-array-field";
+import { CaptionField } from "@/components/forms/caption-field";
 import { resolveLocale, getByCode, type LocaleCode } from "@/lib/i18n/locales";
+import { FIELD_MAX_LENGTHS, type FieldMaxLengthKey } from "@/lib/format-payload/schemas";
 
 /**
  * Field-renderer registry for the format-payload editor.
@@ -113,7 +115,9 @@ function LabeledField({
 
 // ─── Per-kind renderers ────────────────────────────────────────────
 
-/** Single-line text input (max 220 chars). AI + translations. */
+/** Single-line text input. Max length is derived from the
+ *  central `FIELD_MAX_LENGTHS` map keyed by `fieldKey`. The
+ *  AI + translation sidecar are unchanged. */
 function TextFieldRenderer({
   fieldKey,
   label,
@@ -130,6 +134,13 @@ function TextFieldRenderer({
 }: FieldRendererProps) {
   const value = stringField(payload, fieldKey);
   const sourceLocale = getByCode(resolveLocale(locale).code).code;
+  // The renderer is reused for `hook`, `mainMessage`,
+  // `callToAction` (ShortText, 220), `caption` and
+  // `firstComment` (2200). Read the per-field cap so the
+  // `maxLength` attribute matches the schema, not a global
+  // constant. A field that isn't in the map defaults to 220
+  // (the ShortText cap) for safety.
+  const maxLength = FIELD_MAX_LENGTHS[fieldKey as FieldMaxLengthKey] ?? 220;
   return (
     <div className="space-y-1.5" data-testid={`field-${fieldKey}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -154,9 +165,16 @@ function TextFieldRenderer({
         value={value}
         readOnly={!editable}
         onChange={(e) => onField(fieldKey, e.target.value || undefined)}
-        maxLength={220}
+        maxLength={maxLength}
         placeholder={hint}
       />
+      <p
+        className="text-label text-fg-muted text-end font-mono tabular-nums"
+        data-testid={`field-${fieldKey}-counter`}
+        aria-live="polite"
+      >
+        {value.length} / {maxLength}
+      </p>
       {editable ? (
         <PerFieldAiSuggest
           locale={locale}
@@ -178,7 +196,15 @@ function TextFieldRenderer({
   );
 }
 
-/** Long-form text (max 2200 chars). AI + translations. */
+/** Long-form text. Max length is derived from the central
+ *  `FIELD_MAX_LENGTHS` map keyed by `fieldKey`. The renderer
+ *  is reused for `visualDirection` (2 000), `additionalNotes`
+ *  (2 000), `onScreenText` (2 000), `voiceOverNotes` (2 000)
+ *  and `description` (10 000). The hard-coded 2 200 cap that
+ *  used to live here was wrong for both ends — `description`
+ *  was being truncated and `visualDirection` was being
+ *  over-allowed (the user could type 2 200 chars even though
+ *  the schema only accepts 2 000). */
 function LongTextFieldRenderer({
   fieldKey,
   label,
@@ -195,6 +221,10 @@ function LongTextFieldRenderer({
 }: FieldRendererProps) {
   const value = stringField(payload, fieldKey);
   const sourceLocale = getByCode(resolveLocale(locale).code).code;
+  // Per-field cap from the central map. A field that isn't
+  // in the map defaults to 2 000 (the common long-text cap)
+  // for safety.
+  const maxLength = FIELD_MAX_LENGTHS[fieldKey as FieldMaxLengthKey] ?? 2_000;
   return (
     <div className="space-y-1.5" data-testid={`field-${fieldKey}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -219,10 +249,17 @@ function LongTextFieldRenderer({
         value={value}
         readOnly={!editable}
         onChange={(e) => onField(fieldKey, e.target.value || undefined)}
-        maxLength={2200}
-        rows={Math.min(6, Math.max(2, value.split("\n").length + 1))}
+        maxLength={maxLength}
+        rows={Math.min(8, Math.max(3, value.split("\n").length + 1))}
         placeholder={hint}
       />
+      <p
+        className="text-label text-fg-muted text-end font-mono tabular-nums"
+        data-testid={`field-${fieldKey}-counter`}
+        aria-live="polite"
+      >
+        {value.length} / {maxLength}
+      </p>
       {editable ? (
         <PerFieldAiSuggest
           locale={locale}
@@ -319,7 +356,12 @@ function TagFieldRenderer({
   );
 }
 
-/** Plain text input — no AI, no translations. For enums/URLs. */
+/** Plain text input — no AI, no translations. For enums/URLs.
+ *  Max length is derived from the central `FIELD_MAX_LENGTHS`
+ *  map keyed by `fieldKey`. Used for `coverDirection` (500)
+ *  and `audioReference` (500) — the 220-char hard cap that
+ *  used to live here silently truncated URLs and short
+ *  reference labels. */
 function PlainTextFieldRenderer({
   fieldKey,
   label,
@@ -332,6 +374,9 @@ function PlainTextFieldRenderer({
   onField,
 }: FieldRendererProps) {
   const value = stringField(payload, fieldKey);
+  // Per-field cap from the central map. Default to 220 (the
+  // legacy ShortText cap) for fields not in the map.
+  const maxLength = FIELD_MAX_LENGTHS[fieldKey as FieldMaxLengthKey] ?? 220;
   return (
     <div className="space-y-1.5" data-testid={`field-${fieldKey}`}>
       <LabeledField fieldKey={fieldKey} label={label} hint={hint} />
@@ -341,9 +386,16 @@ function PlainTextFieldRenderer({
         value={value}
         readOnly={!editable}
         onChange={(e) => onField(fieldKey, e.target.value || undefined)}
-        maxLength={220}
+        maxLength={maxLength}
         placeholder={hint}
       />
+      <p
+        className="text-label text-fg-muted text-end font-mono tabular-nums"
+        data-testid={`field-${fieldKey}-counter`}
+        aria-live="polite"
+      >
+        {value.length} / {maxLength}
+      </p>
     </div>
   );
 }
@@ -845,6 +897,87 @@ function ObjectiveAudienceRenderer({ payload, locale, editable, t, onField }: Fi
   );
 }
 
+/**
+ * CaptionFieldRenderer — long-form, audience-facing copy
+ * (`caption` and `firstComment`).
+ *
+ * Wraps the shared `CaptionField` component (8 rows, 2 200
+ * character cap, live counter, warning at 90%, danger at
+ * 100%) so the Content tab's caption editor matches the
+ * quality of the dedicated Messages tab and the publish
+ * form's per-channel adaptation. Before this renderer, the
+ * caption and firstComment fields used `TextFieldRenderer`,
+ * which is a single-line 220-char input — the user was
+ * silently truncated to ~one tweet, even though the schema
+ * allows 2 200 characters.
+ *
+ * The translations sidecar (the "Translations (N)" button)
+ * is rendered as a row above the field so the planner can
+ * jump to a localised variant without losing the editing
+ * context. The translations themselves live in
+ * `payload.translations[<locale>][fieldKey]` and are wired
+ * through `writeTranslationsFor` so a future translation
+ * panel (popover, side sheet, etc.) can read or write the
+ * same map.
+ */
+function CaptionFieldRenderer({
+  fieldKey,
+  label,
+  hint,
+  payload,
+  translations,
+  locale,
+  editable,
+  contentItemId,
+  aiEnabled,
+  t,
+  onField,
+  onTranslation,
+}: FieldRendererProps) {
+  const value = stringField(payload, fieldKey);
+  const sourceLocale = getByCode(resolveLocale(locale).code).code;
+  // Always 2 200 for caption / firstComment. The map is the
+  // single source of truth for the cap; if the schema grows
+  // the cap, the central map and this renderer follow.
+  const maxLength = FIELD_MAX_LENGTHS[fieldKey as FieldMaxLengthKey] ?? 2_200;
+  return (
+    <div className="space-y-2" data-testid={`field-${fieldKey}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <LabeledField fieldKey={fieldKey} label={label} hint={hint} />
+        {editable ? (
+          <TranslationFieldButton
+            locale={locale}
+            sourceLocale={sourceLocale}
+            fieldKey={fieldKey}
+            kind="long"
+            translations={readTranslationsFor(translations, fieldKey)}
+            contentItemId={contentItemId}
+            aiEnabled={aiEnabled}
+            t={t}
+            onChange={(next) => writeTranslationsFor(onTranslation, fieldKey, next)}
+          />
+        ) : null}
+      </div>
+      <CaptionField
+        id={fieldKey}
+        name={fieldKey}
+        label={label}
+        value={value}
+        onChange={(next) => onField(fieldKey, next || undefined)}
+        disabled={!editable}
+        testId={`field-${fieldKey}-caption`}
+        {...(hint ? { hint } : {})}
+      />
+      {/* Hidden marker so tests can assert the cap the
+          renderer applied. The counter itself lives inside
+          CaptionField. */}
+      <span className="sr-only" data-testid={`field-${fieldKey}-maxlength`}>
+        {maxLength}
+      </span>
+    </div>
+  );
+}
+
 // ─── Dispatch ───────────────────────────────────────────────────────
 
 /**
@@ -861,12 +994,16 @@ function ObjectiveAudienceRenderer({ payload, locale, editable, t, onField }: Fi
  *     (or reuse an existing one).
  */
 export const RENDERERS: Record<string, FieldRenderer> = {
-  caption: TextFieldRenderer,
+  // Caption + firstComment use the shared `CaptionField`
+  // (8 rows, 2 200 cap, live counter) so the Content tab's
+  // editing experience matches the dedicated Messages tab
+  // and the publish form's per-channel adaptation.
+  caption: CaptionFieldRenderer,
+  firstComment: CaptionFieldRenderer,
   hashtags: TagFieldRenderer,
   hook: TextFieldRenderer,
   mainMessage: TextFieldRenderer,
   callToAction: TextFieldRenderer,
-  firstComment: TextFieldRenderer,
   visualDirection: LongTextFieldRenderer,
   additionalNotes: LongTextFieldRenderer,
   description: LongTextFieldRenderer,
