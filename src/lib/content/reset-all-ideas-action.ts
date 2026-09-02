@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { contentItems, securityAuditEvents } from "@/lib/db/schema";
+import { contentItems, securityAuditEvents, activityEvents } from "@/lib/db/schema";
 import { currentActor } from "@/lib/auth/current-actor";
 import { requirePlatformPermission } from "@/lib/auth/platform-access";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -235,6 +235,34 @@ export async function resetAllIdeasAction(
         outcome: "success",
         reason: parsed.data.reason,
         typedPhraseMatch: true,
+      });
+
+      // Activity log (plan §1). One row per bulk operation,
+      // NOT one row per idea — the same granularity as the
+      // security_audit row above. The `summary` carries the
+      // count + includePublished toggle so the activity
+      // timeline can render a one-line entry without
+      // dereferencing the metadata. `content_item_id` is
+      // null on this row (a bulk delete doesn't belong to a
+      // single idea) and the FK is `ON DELETE SET NULL`, so
+      // the row survives the cascade.
+      const liveCount = byStatus.published ?? 0;
+      const summary = parsed.data.includePublished
+        ? `Deleted ${targetIds.length} ${targetIds.length === 1 ? "idea" : "ideas"} (all)`
+        : `Deleted ${targetIds.length} ${targetIds.length === 1 ? "idea" : "ideas"} (${liveCount} live skipped)`;
+      await tx.insert(activityEvents).values({
+        workspaceId: workspace.id,
+        contentItemId: null,
+        actorId: actor.id,
+        kind: "bulk_delete",
+        summary,
+        metadata: {
+          reason: parsed.data.reason,
+          includePublished: parsed.data.includePublished,
+          count: targetIds.length,
+          byStatus,
+          contentItemIds: targetIds,
+        },
       });
     });
   } catch (error) {

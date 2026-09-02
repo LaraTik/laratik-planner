@@ -491,6 +491,8 @@
       "kindCreate": "created the item",
       "kindUpdate": "updated the item",
       "kindSystem": "ran a system action",
+      "kindDelete": "deleted the item",
+      "kindBulkDelete": "bulk-deleted ideas",
       "emptyTitle": "No activity yet",
       "emptyBody": "Activity appears here as this item moves through creation, review and publishing."
     },

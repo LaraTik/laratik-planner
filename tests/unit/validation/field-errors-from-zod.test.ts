@@ -43,8 +43,8 @@ describe("fieldErrorsFromZod", () => {
     const { error, fieldErrors } = fieldErrorsFromZod<keyof z.infer<typeof IdeaSchema> & string>(
       parsed.error,
     );
-    expect(fieldErrors.title).toBe("Title must be at least 2 characters");
-    expect(fieldErrors.plannedPublishAt).toBe("Pick a date");
+    expect(fieldErrors?.title).toBe("Title must be at least 2 characters");
+    expect(fieldErrors?.plannedPublishAt).toBe("Pick a date");
     expect(error).toContain("title: Title must be at least 2 characters");
     expect(error).toContain("plannedPublishAt: Pick a date");
   });
@@ -60,7 +60,7 @@ describe("fieldErrorsFromZod", () => {
     // Even when Zod has multiple issues for the same path
     // (e.g. min + max on the same field), the user sees
     // the first one.
-    expect(Object.keys(fieldErrors)).toEqual(["title"]);
+    expect(Object.keys(fieldErrors ?? {})).toEqual(["title"]);
   });
 
   it("uses the per-issue formatter when provided", () => {
@@ -71,7 +71,7 @@ describe("fieldErrorsFromZod", () => {
     });
     if (parsed.success) throw new Error("expected failure");
     const { fieldErrors } = fieldErrorsFromZod<"title">(parsed.error, () => "Title is required");
-    expect(fieldErrors.title).toBe("Title is required");
+    expect(fieldErrors?.title).toBe("Title is required");
   });
 });
 

@@ -183,6 +183,13 @@
       "when": 1789100000000,
       "tag": "0025_notification_message_key",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1789200000000,
+      "tag": "0026_activity_event_delete_kind",
+      "breakpoints": true
     }
   ]
 }

@@ -10,6 +10,7 @@ import {
   Eye,
   ShieldX,
   Play,
+  Trash2,
 } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/card";
 import { humanStatus, humanFormat } from "@/lib/content/status";
@@ -74,6 +75,8 @@ const ICON_BY_KIND: Record<string, React.ComponentType<{ className?: string }>> 
   create: Sparkles,
   update: FileEdit,
   system: ArrowRight,
+  delete: Trash2,
+  bulk_delete: Trash2,
 };
 
 const TONE_BY_KIND: Record<string, string> = {
@@ -96,6 +99,8 @@ const TONE_BY_KIND: Record<string, string> = {
   create: "border-primary/30 bg-primary-subtle text-primary",
   update: "border-info/30 bg-info-subtle text-info",
   system: "border-border bg-surface text-fg-secondary",
+  delete: "border-danger/30 bg-danger-subtle text-danger",
+  bulk_delete: "border-danger/30 bg-danger-subtle text-danger",
 };
 
 export function ActivityTimeline({ events, title, maxEvents = 25, t }: ActivityTimelineProps) {
@@ -201,6 +206,10 @@ function humanizeKind(
       return t("contentDetail.activity.kindUpdate");
     case "system":
       return t("contentDetail.activity.kindSystem");
+    case "delete":
+      return t("contentDetail.activity.kindDelete");
+    case "bulk_delete":
+      return t("contentDetail.activity.kindBulkDelete");
     default:
       // Last-resort fallback: turn `creative_internal_decision` into
       // "creative internal decision" so we never render raw enum

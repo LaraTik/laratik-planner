@@ -69,7 +69,9 @@ const FILTERS: ReadonlyArray<{
       k === "archive" ||
       k === "restore" ||
       k === "invitation" ||
-      k === "ai_assistance",
+      k === "ai_assistance" ||
+      k === "delete" ||
+      k === "bulk_delete",
   },
 ];
 
