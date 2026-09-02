@@ -14,7 +14,7 @@ The current checkpoint passes formatting, ESLint, strict TypeScript, the full
 unit suite, a clean production build, and 192/192 isolated Chromium tests.
 Both mobile browser engines now pass the complete cross-role content workflow.
 It is not yet final-production-ready because the complete Stitch visual suite
-still has 50 baseline deltas, repeatable performance evidence is incomplete,
+still has 51 baseline deltas, repeatable performance evidence is incomplete,
 and independent visual/accessibility review remains open.
 
 The canonical product visual source is `designs/stitch/` and the tokens in
@@ -36,7 +36,7 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe  |
 | Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                    |
 | Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths   |
-| Visual regression      | Partial / investigate | 62/112 pass; 50 Stitch baseline deltas; do not update snapshots blindly         |
+| Visual regression      | Partial / investigate | 61/112 pass; 51 Stitch baseline deltas; do not update snapshots blindly         |
 | Working tree           | Clean                 | Exact source/test evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4` |
 
 ## Repository inventory
@@ -121,7 +121,7 @@ handled before unrelated cleanup.
    config files, but interrupted runs can still leave a development server or
    `.next` lock behind and need a process-lifecycle fix.
 9. Reconcile the visual suite with the current canonical Stitch implementation.
-   The 50 failures are structural/token deltas, especially the intentionally
+   The 51 failures are structural/token deltas, especially the intentionally
    expanded anchor-based Settings surface; each needs reviewed evidence before
    a snapshot is accepted.
 
