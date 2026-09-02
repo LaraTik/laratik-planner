@@ -2,7 +2,7 @@
 
 Date: 2026-09-02  
 Broad browser/evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4`  
-Current audited HEAD: `013c1c9` (`main`, clean)
+Current audited HEAD: `1b15de9` (`main`, clean at verification)
 Audit report update: committed after this evidence capture
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
@@ -31,8 +31,8 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | Prettier               | Pass                  | `pnpm format:check`                                                                                                                                     |
 | ESLint                 | Pass                  | `pnpm lint`                                                                                                                                             |
 | TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                                                                                            |
-| Unit tests             | Pass                  | 309 files; 3,072 passed; 4 todo at exact current HEAD `de9fabf`                                                                                         |
-| Production build       | Pass                  | `pnpm verify` at exact current HEAD `de9fabf`                                                                                                           |
+| Unit tests             | Pass                  | 310 files; 3,073 passed; 4 todo at exact clean verification HEAD `1b15de9`                                                                              |
+| Production build       | Pass                  | `pnpm verify` at exact clean verification HEAD `1b15de9`                                                                                                |
 | Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                                                                                                 |
 | Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                                                                                        |
 | Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow                                                                                |
@@ -41,7 +41,7 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths                                                                           |
 | Visual regression      | Partial / investigate | Full matrix at exact clean audit state `c0a8a9f`: 73/112; 39 failed; no snapshot updates; route fixes and deliberate snapshot decisions remain required |
 | Performance evidence   | Partial / baseline    | Static inventory, local public-route baseline, and tiny-fixture query plans; throttled/authenticated/INP/scale evidence pending                         |
-| Working tree           | Clean                 | Clean at exact current HEAD `de9fabf`; no production data or visual snapshots changed                                                                   |
+| Working tree           | Audit changes clean   | Exact audit verification was clean at `1b15de9`; later unrelated user edits in format-payload files remain uncommitted and were preserved               |
 
 ## Repository inventory
 
