@@ -3,6 +3,7 @@ import {
   getSupportedSocialMetrics,
   getUniversalSocialMetrics,
   isSocialMetricSupported,
+  resolveMetricStatus,
   resolveSocialMetric,
   type SocialMetric,
 } from "@/lib/social/metrics";
@@ -43,5 +44,27 @@ describe("social metric capabilities", () => {
     expect(resolveSocialMetric("engagedAccounts", "facebook")).toBe("followerCount");
     expect(resolveSocialMetric("unknown" as SocialMetric, "instagram")).toBe("followerCount");
     expect(resolveSocialMetric("interactions", "tiktok")).toBe("followerCount");
+  });
+
+  it("distinguishes unsupported, provider error, no-data, and available values", () => {
+    expect(
+      resolveMetricStatus({ platform: "facebook", metric: "engagedAccounts", value: null }),
+    ).toEqual({ status: "unsupported" });
+    expect(
+      resolveMetricStatus({
+        platform: "facebook",
+        metric: "reach",
+        value: null,
+        sourceMetadata: {
+          metricStatuses: { reach: { status: "error", providerErrorCode: "permission_denied" } },
+        },
+      }),
+    ).toEqual({ status: "error", providerErrorCode: "permission_denied" });
+    expect(resolveMetricStatus({ platform: "instagram", metric: "reach", value: null })).toEqual({
+      status: "no_data",
+    });
+    expect(resolveMetricStatus({ platform: "instagram", metric: "reach", value: 12 })).toEqual({
+      status: "available",
+    });
   });
 });

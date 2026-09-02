@@ -10,6 +10,8 @@ import { SocialEngagementRateCard } from "@/app/(app)/app/w/[slug]/analytics/soc
 import { SegmentedControl } from "@/app/(app)/app/w/[slug]/analytics/social/social-segmented-control";
 import { SocialHealthyStatus } from "@/app/(app)/app/w/[slug]/analytics/social/social-healthy-status";
 import { SocialGrowthChart } from "@/app/(app)/app/w/[slug]/analytics/social/social-growth-chart";
+import { SocialMetricsTable } from "@/app/(app)/app/w/[slug]/analytics/social/social-metrics-table";
+import { SocialDataQuality } from "@/app/(app)/app/w/[slug]/analytics/social/social-data-quality";
 import type { MetricSeriesPoint } from "@/lib/social/analytics";
 
 /**
@@ -233,25 +235,43 @@ describe("SocialSparkline", () => {
 
 describe("SocialEngagementRateCard", () => {
   it("shows the percent to 1 decimal place when rate is set", () => {
-    render(<SocialEngagementRateCard channelId="c1" rate={{ percent: 6.048, partial: false }} />);
+    render(
+      <SocialEngagementRateCard
+        channelId="c1"
+        rate={{ percent: 6.048, partial: false, denominator: "reach" }}
+      />,
+    );
     const cell = screen.getByTestId("social-engagement-rate-c1");
     expect(cell.textContent).toBe("6.0%");
   });
 
   it("shows the partial pill when the underlying series was partial", () => {
-    render(<SocialEngagementRateCard channelId="c1" rate={{ percent: 4.2, partial: true }} />);
+    render(
+      <SocialEngagementRateCard
+        channelId="c1"
+        rate={{ percent: 4.2, partial: true, denominator: "followers" }}
+      />,
+    );
     expect(screen.getByTestId("social-engagement-rate-partial")).toBeInTheDocument();
   });
 
   it("shows an em-dash when the rate is null", () => {
-    render(<SocialEngagementRateCard channelId="c1" rate={{ percent: null, partial: false }} />);
+    render(
+      <SocialEngagementRateCard
+        channelId="c1"
+        rate={{ percent: null, partial: false, denominator: null }}
+      />,
+    );
     const cell = screen.getByTestId("social-engagement-rate-c1");
     expect(cell.textContent).toBe("—");
   });
 
   it("renders inside the social-engagement-rate container", () => {
     const { container } = render(
-      <SocialEngagementRateCard channelId="c1" rate={{ percent: 5, partial: false }} />,
+      <SocialEngagementRateCard
+        channelId="c1"
+        rate={{ percent: 5, partial: false, denominator: "reach" }}
+      />,
     );
     const card = container.querySelector('[data-testid="social-engagement-rate"]');
     expect(card).toBeInTheDocument();
@@ -260,6 +280,58 @@ describe("SocialEngagementRateCard", () => {
     expect(
       within(card as HTMLElement).getByTestId("social-engagement-rate-c1"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("platform-aware social metrics UI", () => {
+  const rows = [
+    {
+      metricDate: "2026-09-01",
+      followerCount: 100,
+      reach: 80,
+      views: 120,
+      engagedAccounts: 12,
+      interactions: 15,
+    },
+  ];
+
+  it("keeps engaged accounts out of the Facebook table", () => {
+    render(<SocialMetricsTable rows={rows} tableId="facebook-table" platform="facebook" />);
+    expect(screen.queryByRole("columnheader", { name: /engaged/i })).toBeNull();
+    expect(screen.getByRole("columnheader", { name: /interactions/i })).toBeInTheDocument();
+  });
+
+  it("keeps engaged accounts available in the Instagram table", () => {
+    render(<SocialMetricsTable rows={rows} tableId="instagram-table" platform="instagram" />);
+    expect(screen.getByRole("columnheader", { name: /engaged/i })).toBeInTheDocument();
+  });
+
+  it("explains partial data with the available count and missing metrics", () => {
+    render(
+      <SocialDataQuality
+        platform="facebook"
+        values={{ followerCount: 100, reach: null, views: null, interactions: 15 }}
+        labels={{
+          partial: "Partial data",
+          metrics: "metrics available",
+          unavailableReason: "Unavailable metrics",
+          metricLabels: {
+            followerCount: "Followers",
+            reach: "Reach",
+            views: "Views",
+            engagedAccounts: "Engaged accounts",
+            interactions: "Interactions",
+          },
+          statusLabels: { error: "provider error", noData: "no data" },
+        }}
+      />,
+    );
+    expect(screen.getByTestId("social-data-quality").textContent).toContain(
+      "Partial data · 2/4 metrics available",
+    );
+    expect(screen.getByTestId("social-data-quality").textContent).toContain(
+      "Reach (no data), Views (no data)",
+    );
   });
 });
 

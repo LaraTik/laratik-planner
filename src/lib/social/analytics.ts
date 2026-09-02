@@ -1,3 +1,12 @@
+import { UNIVERSAL_SOCIAL_METRICS, type MetricStatus, type SocialMetric } from "./metrics";
+
+export {
+  getUniversalSocialMetrics,
+  SOCIAL_METRIC_CAPABILITIES,
+  UNIVERSAL_SOCIAL_METRICS,
+} from "./metrics";
+export type { MetricStatus, SocialMetric } from "./metrics";
+
 /**
  * M4 — social growth analytics.
  *
@@ -27,6 +36,7 @@ export type MetricSeriesPoint = {
   engagedAccounts: number | null;
   interactions: number | null;
   partial?: boolean;
+  metricStatuses?: Partial<Record<SocialMetric, MetricStatus>>;
 };
 
 export type Growth = {
@@ -66,14 +76,8 @@ export function parseSocialWindow(value: string | number | null | undefined): So
  * `MetricSeriesPoint` type — that would let a typo or a forgotten
  * field slip into the UI. Closed set, parsed at the boundary.
  */
-export const SOCIAL_METRICS = [
-  "followerCount",
-  "reach",
-  "views",
-  "engagedAccounts",
-  "interactions",
-] as const;
-export type SocialMetric = (typeof SOCIAL_METRICS)[number];
+/** The metrics that are comparable across all supported social platforms. */
+export const SOCIAL_METRICS = UNIVERSAL_SOCIAL_METRICS;
 
 function isSocialMetric(s: string): s is SocialMetric {
   return (SOCIAL_METRICS as readonly string[]).includes(s);
@@ -137,28 +141,47 @@ export function calculateGrowth(
  * (e.g. toFixed(1) in the component, or skip the percent sign if
  * the surrounding context implies "per 100 followers").
  */
-export type EngagementRate = { percent: number | null; partial: boolean };
+export type EngagementRate = {
+  percent: number | null;
+  partial: boolean;
+  denominator: "reach" | "followers" | null;
+};
 
 export function calculateEngagementRate(series: MetricSeriesPoint[]): EngagementRate {
-  // Walk the series from the most recent day backwards and find the
-  // first day where both followerCount and engagedAccounts are
-  // observed. If they come from different days (the IG API may
-  // observe engaged_accounts a day later than followers), use the
-  // latest of each. If neither side is observed, return null with
-  // the partial flag set if any day in the 7-day window was partial.
+  // Use interactions as the numerator. Reach is the preferred
+  // denominator because it reflects the people exposed to the content;
+  // fall back to followers when reach is unavailable. This keeps the
+  // rate meaningful on Facebook and TikTok without treating the
+  // Instagram-only engagedAccounts field as universal.
+  const partial = series.some((p) => p.partial === true);
+  const latestInteractions = [...series].reverse().find((p) => typeof p.interactions === "number")
+    ?.interactions as number | undefined;
   const latestFollower = [...series].reverse().find((p) => typeof p.followerCount === "number")
     ?.followerCount as number | undefined;
-  const latestEngaged = [...series].reverse().find((p) => typeof p.engagedAccounts === "number")
-    ?.engagedAccounts as number | undefined;
 
-  if (latestFollower === undefined || latestEngaged === undefined) {
-    return { percent: null, partial: series.some((p) => p.partial === true) };
+  if (latestInteractions === undefined) {
+    return { percent: null, partial: partial || series.length > 0, denominator: null };
   }
-  if (latestFollower === 0) {
-    return { percent: null, partial: series.some((p) => p.partial === true) };
+
+  const latestReach = [...series].reverse().find((p) => typeof p.reach === "number")?.reach as
+    number | undefined;
+  if (latestReach !== undefined && latestReach > 0) {
+    return {
+      percent: (latestInteractions / latestReach) * 100,
+      partial,
+      denominator: "reach",
+    };
   }
-  const percent = (latestEngaged / latestFollower) * 100;
-  return { percent, partial: series.some((p) => p.partial === true) };
+
+  if (latestFollower !== undefined && latestFollower > 0) {
+    return {
+      percent: (latestInteractions / latestFollower) * 100,
+      partial: true,
+      denominator: "followers",
+    };
+  }
+
+  return { percent: null, partial, denominator: null };
 }
 
 export function seriesInWindow(

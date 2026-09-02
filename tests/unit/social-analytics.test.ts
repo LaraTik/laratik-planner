@@ -40,22 +40,23 @@ function series(values: Array<number | null>, dates?: string[]): MetricSeriesPoi
 }
 
 /**
- * Engagement-rate test fixture. Unlike `series()`, this populates
- * `engagedAccounts` so the engagement-rate calc has both sides.
+ * Engagement-rate test fixture. The second argument represents
+ * `interactions`; reach mirrors the follower baseline so the test can
+ * exercise the preferred reach denominator.
  * Pass `null` for either side to simulate a partial day.
  */
 function engagementSeries(
   followers: Array<number | null>,
-  engaged: Array<number | null>,
+  interactions: Array<number | null>,
   dates?: string[],
 ): MetricSeriesPoint[] {
   return followers.map((f, i) => ({
     metricDate: dates?.[i] ?? `2026-08-${(i + 1).toString().padStart(2, "0")}`,
     followerCount: f,
-    reach: null,
+    reach: f,
     views: null,
-    engagedAccounts: engaged[i] ?? null,
-    interactions: null,
+    engagedAccounts: null,
+    interactions: interactions[i] ?? null,
   }));
 }
 
@@ -179,18 +180,17 @@ describe("chartSeries", () => {
     expect(chartSeries(s, "followerCount").map((p) => p.value)).toEqual([1, 2]);
     expect(chartSeries(s, "reach").map((p) => p.value)).toEqual([10, 20]);
     expect(chartSeries(s, "views").map((p) => p.value)).toEqual([100, 200]);
-    expect(chartSeries(s, "engagedAccounts").map((p) => p.value)).toEqual([5, 6]);
     expect(chartSeries(s, "interactions").map((p) => p.value)).toEqual([7, 8]);
   });
 });
 
 describe("parseSocialMetric", () => {
-  it("accepts the five canonical metrics", () => {
+  it("accepts the four universal metrics", () => {
     expect(parseSocialMetric("followerCount")).toBe("followerCount");
     expect(parseSocialMetric("reach")).toBe("reach");
     expect(parseSocialMetric("views")).toBe("views");
-    expect(parseSocialMetric("engagedAccounts")).toBe("engagedAccounts");
     expect(parseSocialMetric("interactions")).toBe("interactions");
+    expect(parseSocialMetric("engagedAccounts")).toBe("followerCount");
   });
   it("defaults to followerCount for unknown / nullish values", () => {
     expect(parseSocialMetric("xyz")).toBe("followerCount");
@@ -205,20 +205,13 @@ describe("metricLabel", () => {
     expect(metricLabel("followerCount")).toBe("Followers");
     expect(metricLabel("reach")).toBe("Reach");
     expect(metricLabel("views")).toBe("Views");
-    expect(metricLabel("engagedAccounts")).toBe("Engaged accounts");
     expect(metricLabel("interactions")).toBe("Interactions");
   });
 });
 
 describe("SOCIAL_METRICS", () => {
-  it("is a closed set of exactly five", () => {
-    expect(SOCIAL_METRICS).toEqual([
-      "followerCount",
-      "reach",
-      "views",
-      "engagedAccounts",
-      "interactions",
-    ]);
+  it("is the universal set of exactly four", () => {
+    expect(SOCIAL_METRICS).toEqual(["followerCount", "reach", "views", "interactions"]);
   });
 });
 
@@ -291,38 +284,49 @@ describe("buildProfileSummary", () => {
 });
 
 describe("calculateEngagementRate", () => {
-  it("computes the canonical case (15 engaged / 248 followers ≈ 6.05%)", () => {
-    // Matches the Food Game IG pre-flight result: 15 engaged / 248 followers.
+  it("computes the canonical case (15 interactions / 248 reach ≈ 6.05%)", () => {
+    // Matches the Food Game IG pre-flight result: 15 interactions / 248 reach.
     const s = engagementSeries([200, 210, 220, 230, 240, 245, 248], [10, 11, 12, 13, 14, 15, 15]);
     // 15 / 248 * 100 = 6.048387096774194
     expect(calculateEngagementRate(s).percent).toBeCloseTo(6.0484, 3);
     expect(calculateEngagementRate(s).partial).toBe(false);
+    expect(calculateEngagementRate(s).denominator).toBe("reach");
   });
 
   it("returns null percent when both sides are null", () => {
     const s = engagementSeries([100, null, 110], [null, null, null]);
-    expect(calculateEngagementRate(s)).toEqual({ percent: null, partial: false });
+    expect(calculateEngagementRate(s)).toEqual({
+      percent: null,
+      partial: true,
+      denominator: null,
+    });
   });
 
   it("uses the latest non-null of each side independently when the latest day has a null", () => {
-    // The latest day has followerCount=null but engaged=10 observed.
+    // The latest day has followerCount=null but interactions=10 observed.
     // The function walks each side back to its latest non-null and
     // divides: follower=120, engaged=10 → 8.33%.
-    // (The IG API may observe engaged_accounts a day later than
-    // followers, so the two sides coming from different days is the
-    // common case the API produces.)
+    // Reach and followers may be observed on a different day than the
+    // latest interaction count.
     const s = engagementSeries([100, 110, 120, null], [5, 6, 7, 10]);
     const result = calculateEngagementRate(s);
     expect(result.percent).toBeCloseTo((10 / 120) * 100, 6);
     expect(result.partial).toBe(false);
+    expect(result.denominator).toBe("reach");
   });
 
-  it("returns null percent when only engagedAccounts is missing", () => {
-    // The latest day has engagedAccounts=null; the function looks back
-    // to the previous day for the latest non-null engaged value (6).
-    // Latest non-null follower is 120 (day 3). 6 / 120 = 5%.
+  it("uses followers when reach is unavailable", () => {
+    // Reach is unavailable, so the latest interactions value (6) is
+    // divided by the latest follower total (120): 5%.
     const s = engagementSeries([100, 110, 120], [5, 6, null]);
-    expect(calculateEngagementRate(s)).toEqual({ percent: 5, partial: false });
+    s.forEach((point) => {
+      point.reach = null;
+    });
+    expect(calculateEngagementRate(s)).toEqual({
+      percent: 5,
+      partial: true,
+      denominator: "followers",
+    });
   });
 
   it("returns null percent when the latest observed followers is zero (zero baseline)", () => {
@@ -332,7 +336,11 @@ describe("calculateEngagementRate", () => {
     // follower is 0 (the function looks back only when the value is
     // null, not when it is 0).
     const s = engagementSeries([0], [0]);
-    expect(calculateEngagementRate(s)).toEqual({ percent: null, partial: false });
+    expect(calculateEngagementRate(s)).toEqual({
+      percent: null,
+      partial: false,
+      denominator: null,
+    });
   });
 
   it("propagates partial when any day in the window is marked partial", () => {
@@ -347,12 +355,20 @@ describe("calculateEngagementRate", () => {
   });
 
   it("handles an empty series", () => {
-    expect(calculateEngagementRate([])).toEqual({ percent: null, partial: false });
+    expect(calculateEngagementRate([])).toEqual({
+      percent: null,
+      partial: false,
+      denominator: null,
+    });
   });
 
   it("handles a single-day series", () => {
     const s = engagementSeries([200], [10]);
-    expect(calculateEngagementRate(s)).toEqual({ percent: 5, partial: false });
+    expect(calculateEngagementRate(s)).toEqual({
+      percent: 5,
+      partial: false,
+      denominator: "reach",
+    });
   });
 });
 
@@ -363,6 +379,26 @@ import {
 } from "@/app/(app)/app/w/[slug]/analytics/social/social-csv";
 
 describe("toCsv", () => {
+  it("omits Instagram-only engaged accounts from a Facebook export", () => {
+    const csv = toCsv(
+      [
+        {
+          metricDate: "2026-08-22",
+          followerCount: 248,
+          reach: 1200,
+          views: 3400,
+          engagedAccounts: 15,
+          interactions: 42,
+        },
+      ],
+      "facebook",
+    );
+    expect(csv.split("\n")).toEqual([
+      "Date,Followers,Reach,Views,Interactions,Partial",
+      "2026-08-22,248,1200,3400,42,",
+    ]);
+  });
+
   it("produces a header row followed by one row per input", () => {
     const csv = toCsv([
       {

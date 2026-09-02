@@ -11,6 +11,7 @@ import {
   platformAdministrators,
   platformPlanTemplates,
   socialChannels,
+  socialProfileDailyMetrics,
   users,
   workspaceMembershipRoles,
   workspaceMemberships,
@@ -93,6 +94,8 @@ type SeedBody = {
   platformAdmin?: boolean;
   /** Explicit role for platform authorization tests. Takes precedence over the legacy alias. */
   platformRole?: PlatformRole;
+  /** Seed connected Facebook/Instagram/TikTok channels with metric rows for E2E UI coverage. */
+  socialAnalyticsFixture?: boolean;
 };
 
 const PlatformRoleSchema = z.enum(PLATFORM_ROLE_VALUES);
@@ -154,6 +157,7 @@ export async function POST(req: NextRequest) {
     platformAdmin: body.platformAdmin ?? false,
     platformRole:
       explicitPlatformRole?.data ?? (body.platformAdmin ? ("platform_owner" as const) : null),
+    socialAnalyticsFixture: body.socialAnalyticsFixture ?? false,
   };
 
   try {
@@ -188,6 +192,7 @@ async function seedInternal(f: {
   )[];
   platformAdmin: boolean;
   platformRole: PlatformRole | null;
+  socialAnalyticsFixture: boolean;
 }) {
   // ─── User ────────────────────────────────────────────────────────────────
   let userId: string;
@@ -433,6 +438,95 @@ async function seedInternal(f: {
         })
         .returning({ id: socialChannels.id });
       channelIds.push(created!.id);
+    }
+  }
+
+  if (f.socialAnalyticsFixture) {
+    const analyticsFixtures = [
+      { platform: "facebook" as const, accountName: "Acme Facebook", handle: "acme_fb" },
+      { platform: "instagram" as const, accountName: "Acme Instagram", handle: "@acme_ig" },
+      { platform: "tiktok" as const, accountName: "Acme TikTok Analytics", handle: "@acme_tt" },
+    ];
+    const now = new Date();
+    for (const fixture of analyticsFixtures) {
+      const existing = await db
+        .select({ id: socialChannels.id })
+        .from(socialChannels)
+        .where(
+          and(
+            eq(socialChannels.workspaceId, workspaceId),
+            eq(socialChannels.platform, fixture.platform),
+            eq(socialChannels.accountName, fixture.accountName),
+          ),
+        )
+        .limit(1);
+      const channelId = existing[0]
+        ? existing[0].id
+        : (
+            await db
+              .insert(socialChannels)
+              .values({
+                workspaceId,
+                platform: fixture.platform,
+                accountName: fixture.accountName,
+                handle: fixture.handle,
+                isActive: true,
+                connectionStatus: "connected",
+                lastSyncedAt: now,
+              })
+              .returning({ id: socialChannels.id })
+          )[0]!.id;
+      if (!existing[0]) channelIds.push(channelId);
+      await db
+        .update(socialChannels)
+        .set({ connectionStatus: "connected", lastSyncedAt: now, lastSyncErrorCode: null })
+        .where(eq(socialChannels.id, channelId));
+
+      for (const dayOffset of [2, 1, 0]) {
+        const metricDate = new Date(now.getTime() - dayOffset * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10);
+        const followerCount = 100 + (2 - dayOffset) * 5;
+        const isTikTok = fixture.platform === "tiktok";
+        const isInstagram = fixture.platform === "instagram";
+        const metricStatuses = isTikTok
+          ? {
+              followerCount: { status: "available" },
+              reach: { status: "unsupported" },
+              views: { status: "unsupported" },
+              interactions: { status: "unsupported" },
+              engagedAccounts: { status: "unsupported" },
+            }
+          : {
+              followerCount: { status: "available" },
+              reach: { status: "available" },
+              views: { status: "available" },
+              interactions: { status: "available" },
+              ...(isInstagram
+                ? { engagedAccounts: { status: "available" } }
+                : { engagedAccounts: { status: "unsupported" } }),
+            };
+        await db
+          .insert(socialProfileDailyMetrics)
+          .values({
+            socialChannelId: channelId,
+            metricDate,
+            observedAt: now,
+            followerCount,
+            followingCount: null,
+            mediaCount: null,
+            likesCount: null,
+            reach: isTikTok ? null : 80 + (2 - dayOffset) * 10,
+            views: isTikTok ? null : 140 + (2 - dayOffset) * 20,
+            engagedAccounts: isInstagram ? 8 + (2 - dayOffset) * 2 : null,
+            interactions: isTikTok ? null : 12 + (2 - dayOffset) * 3,
+            providerApiVersion: "e2e-fixture",
+            providerRequestId: `e2e-${fixture.platform}-${metricDate}`,
+            responseHash: `e2e-${fixture.platform}-${metricDate}`,
+            sourceMetadata: { metricStatuses },
+          })
+          .onConflictDoNothing();
+      }
     }
   }
 

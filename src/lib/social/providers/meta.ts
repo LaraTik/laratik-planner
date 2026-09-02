@@ -13,7 +13,9 @@ import type {
   ConnectedProfile,
   RefreshedCredentials,
   SocialProviderAdapter,
+  SocialSourceMetadata,
 } from "@/lib/social/types";
+import type { MetricStatus, SocialMetric } from "@/lib/social/metrics";
 
 /**
  * M2 — Meta (Facebook Login for Business) provider adapter.
@@ -394,7 +396,7 @@ export type MetaPageSnapshot = {
   providerApiVersion: string;
   providerRequestId: string | null;
   responseHash: string;
-  sourceMetadata: Record<string, string | number | boolean | null>;
+  sourceMetadata: SocialSourceMetadata;
 };
 
 import { createHash as _createHash } from "node:crypto";
@@ -426,7 +428,7 @@ function hashSnapshot(parts: Array<string | number | null | undefined>): string 
  * whether to throttle.
  */
 function writeRateLimitUsage(
-  sourceMetadata: Record<string, string | number | boolean | null>,
+  sourceMetadata: SocialSourceMetadata,
   latestUsage: MetaRateLimitUsage,
   fallbackUsage: MetaRateLimitUsage,
 ): void {
@@ -644,8 +646,30 @@ export async function fetchMetaFacebookPageSnapshot(args: {
     insights.reach === null ||
     insights.views === null ||
     insights.interactions === null;
-  const sourceMetadata: Record<string, string | number | boolean | null> = {
+  const statusFor = (value: number | null, errorCode?: string | null): MetricStatus =>
+    errorCode
+      ? {
+          status: "error",
+          providerErrorCode: errorCode,
+          ...(insightsErrorRequestId ? { providerRequestId: insightsErrorRequestId } : {}),
+        }
+      : { status: value === null ? "no_data" : "available" };
+  const metricStatuses = {
+    followerCount: {
+      status: follower === null ? "no_data" : "available",
+    } satisfies MetricStatus,
+    reach: statusFor(insights?.reach ?? null, insightsErrorCode),
+    views: statusFor(insights?.views ?? null, insightsErrorCode),
+    interactions: statusFor(insights?.interactions ?? null, insightsErrorCode),
+    engagedAccounts: { status: "unsupported" },
+  } satisfies SocialSourceMetadata["metricStatuses"];
+  const failedMetrics = (["followerCount", "reach", "views", "interactions"] as const).filter(
+    (metric) => metricStatuses[metric]?.status !== "available",
+  ) as SocialMetric[];
+  const sourceMetadata: SocialSourceMetadata = {
     partial: follower === null || insightsPartial,
+    metricStatuses,
+    ...(failedMetrics.length > 0 ? { failedMetrics } : {}),
   };
   if (follower === null && !insightsPartial) {
     sourceMetadata.reason = "fan_count_unavailable";
@@ -848,8 +872,30 @@ export async function fetchMetaInstagramSnapshot(args: {
     insights.views === null ||
     insights.engagedAccounts === null ||
     insights.interactions === null;
-  const sourceMetadata: Record<string, string | number | boolean | null> = {
+  const statusFor = (value: number | null, errorCode?: string | null): MetricStatus =>
+    errorCode
+      ? {
+          status: "error",
+          providerErrorCode: errorCode,
+          ...(insightsErrorRequestId ? { providerRequestId: insightsErrorRequestId } : {}),
+        }
+      : { status: value === null ? "no_data" : "available" };
+  const metricStatuses = {
+    followerCount: {
+      status: follower === null ? "no_data" : "available",
+    } satisfies MetricStatus,
+    reach: statusFor(insights?.reach ?? null, insightsErrorCode),
+    views: statusFor(insights?.views ?? null, insightsErrorCode),
+    engagedAccounts: statusFor(insights?.engagedAccounts ?? null, insightsErrorCode),
+    interactions: statusFor(insights?.interactions ?? null, insightsErrorCode),
+  } satisfies SocialSourceMetadata["metricStatuses"];
+  const failedMetrics = (
+    ["followerCount", "reach", "views", "engagedAccounts", "interactions"] as const
+  ).filter((metric) => metricStatuses[metric]?.status !== "available") as SocialMetric[];
+  const sourceMetadata: SocialSourceMetadata = {
     partial: follower === null || insightsPartial,
+    metricStatuses,
+    ...(failedMetrics.length > 0 ? { failedMetrics } : {}),
   };
   if (follower === null && !insightsPartial) {
     sourceMetadata.reason = "below_provider_threshold";

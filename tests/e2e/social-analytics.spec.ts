@@ -16,6 +16,48 @@ import { bootstrapRoleSession } from "./_helpers";
  */
 
 test.describe("M4 — social analytics dashboard", () => {
+  test("renders platform-aware metrics and readable partial-data contracts", async ({ page }) => {
+    await bootstrapRoleSession(page, "workspace_manager", "analytics-platform-aware", {
+      socialAnalyticsFixture: true,
+    });
+    await page.goto("/app/w/analytics-platform-aware/analytics/social");
+
+    await expect(page.getByTestId("social-analytics-page")).toBeVisible();
+    await expect(page.getByTestId("metric-engagedAccounts")).toHaveCount(0);
+
+    const facebookCard = page.locator('[data-testid^="social-card-"]').filter({
+      hasText: "Acme Facebook",
+    });
+    await expect(facebookCard).toBeVisible();
+    await expect(facebookCard.getByRole("columnheader", { name: /engaged/i })).toHaveCount(0);
+    await expect(facebookCard.getByRole("columnheader", { name: /interactions/i })).toBeVisible();
+
+    const instagramCard = page.locator('[data-testid^="social-card-"]').filter({
+      hasText: "Acme Instagram",
+    });
+    await expect(instagramCard).toBeVisible();
+    await expect(instagramCard.getByRole("columnheader", { name: /engaged/i })).toBeVisible();
+    await expect(instagramCard.getByTestId("social-engagement-rate")).toContainText("rate");
+    await expect(page.getByTestId("social-data-quality")).toHaveCount(0);
+  });
+
+  test("keeps the analytics surface usable in Arabic RTL on a narrow viewport", async ({
+    page,
+  }) => {
+    await bootstrapRoleSession(page, "workspace_manager", "analytics-arabic", {
+      socialAnalyticsFixture: true,
+      locale: "ar",
+    });
+    await page.goto("/app/w/analytics-arabic/analytics/social");
+    await page.setViewportSize({ width: 375, height: 812 });
+    await expect(page.getByTestId("social-analytics-page")).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .toBe(true);
+  });
+
   test("renders the empty state when no channels are connected", async ({ page }) => {
     await bootstrapRoleSession(page, "workspace_manager");
     await page.goto("/app/w/acme/analytics/social");

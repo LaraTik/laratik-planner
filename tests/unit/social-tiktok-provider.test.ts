@@ -5,6 +5,7 @@ import {
   fetchTikTokProfile,
   refreshTikTokCredentials,
   TIKTOK_SCOPES,
+  tiktokAdapter,
 } from "@/lib/social/providers/tiktok";
 import { SocialProviderError, isSocialProviderError } from "@/lib/social/http";
 
@@ -204,6 +205,36 @@ describe("fetchTikTokProfile", () => {
     expect(p.followerCount).toBeNull();
     expect(p.likesCount).toBeNull();
     expect(p.avatarUrl).toBeNull();
+  });
+});
+
+describe("tiktokAdapter.fetchSnapshot", () => {
+  it("marks unsupported metrics explicitly while preserving follower data", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse(200, {
+        data: {
+          user: {
+            open_id: "open-1",
+            display_name: "Test User",
+            username: "testuser",
+            follower_count: 12345,
+          },
+        },
+      }),
+    ) as typeof fetch;
+    const snapshot = await tiktokAdapter.fetchSnapshot(
+      { providerAccountId: "open-1", platform: "tiktok", parentProviderAccountId: null },
+      { accessToken: "tok" },
+      { appId: "app", appSecret: "secret" },
+    );
+    expect(snapshot.followerCount).toBe(12345);
+    expect(snapshot.sourceMetadata.metricStatuses).toEqual({
+      followerCount: { status: "available" },
+      reach: { status: "unsupported" },
+      views: { status: "unsupported" },
+      engagedAccounts: { status: "unsupported" },
+      interactions: { status: "unsupported" },
+    });
   });
 });
 

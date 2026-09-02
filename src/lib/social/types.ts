@@ -1,4 +1,7 @@
 import type { SocialCredentials } from "./crypto";
+import type { SocialSourceMetadata } from "./metrics";
+
+export type { SocialSourceMetadata } from "./metrics";
 
 /**
  * M4 — provider-neutral contracts.
@@ -57,7 +60,7 @@ export type ProfileSnapshot = {
    * prove the snapshot was unchanged without keeping the body.
    */
   responseHash: string;
-  sourceMetadata: Record<string, string | number | boolean | null>;
+  sourceMetadata: SocialSourceMetadata;
 };
 
 export type ConnectedProfileRef = Pick<

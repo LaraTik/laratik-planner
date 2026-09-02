@@ -43,6 +43,22 @@ export type SocialSourceMetadata = {
   [key: string]: JsonValue | undefined;
 };
 
+export function resolveMetricStatus(args: {
+  platform: SocialPlatform;
+  metric: SocialMetric;
+  value: number | null;
+  sourceMetadata?: SocialSourceMetadata | null | undefined;
+}): MetricStatus {
+  if (!isSocialMetricSupported(args.platform, args.metric)) {
+    return { status: "unsupported" };
+  }
+
+  const stored = args.sourceMetadata?.metricStatuses?.[args.metric];
+  if (stored) return stored;
+
+  return { status: args.value === null ? "no_data" : "available" };
+}
+
 export function getUniversalSocialMetrics(): readonly SocialMetric[] {
   return UNIVERSAL_SOCIAL_METRICS;
 }

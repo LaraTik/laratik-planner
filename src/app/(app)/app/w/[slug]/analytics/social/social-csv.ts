@@ -7,6 +7,7 @@
  * separation lets us unit-test the CSV format without
  * `@testing-library/jsdom` Blob/URL workarounds.
  */
+import type { SocialPlatform } from "@/lib/social/types";
 
 export type CsvRow = {
   metricDate: string;
@@ -34,21 +35,21 @@ export function escapeCsvCell(v: string | number | null | undefined): string {
   return s;
 }
 
-export function toCsv(rows: CsvRow[]): string {
-  const header = ["Date", "Followers", "Reach", "Views", "Engaged", "Interactions", "Partial"];
+export function toCsv(rows: CsvRow[], platform: SocialPlatform = "instagram"): string {
+  const header = ["Date", "Followers", "Reach", "Views"];
+  if (platform === "instagram") header.push("Engaged");
+  header.push("Interactions", "Partial");
   const lines = [header.join(",")];
   for (const r of rows) {
-    lines.push(
-      [
-        escapeCsvCell(r.metricDate),
-        escapeCsvCell(r.followerCount),
-        escapeCsvCell(r.reach),
-        escapeCsvCell(r.views),
-        escapeCsvCell(r.engagedAccounts),
-        escapeCsvCell(r.interactions),
-        escapeCsvCell(r.partial ? "true" : ""),
-      ].join(","),
-    );
+    const cells = [
+      escapeCsvCell(r.metricDate),
+      escapeCsvCell(r.followerCount),
+      escapeCsvCell(r.reach),
+      escapeCsvCell(r.views),
+    ];
+    if (platform === "instagram") cells.push(escapeCsvCell(r.engagedAccounts));
+    cells.push(escapeCsvCell(r.interactions), escapeCsvCell(r.partial ? "true" : ""));
+    lines.push(cells.join(","));
   }
   return lines.join("\n");
 }

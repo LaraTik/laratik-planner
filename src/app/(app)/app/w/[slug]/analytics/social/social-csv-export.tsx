@@ -2,6 +2,7 @@
 
 import { Download } from "lucide-react";
 import { csvFilename, toCsv, type CsvRow } from "./social-csv";
+import type { SocialPlatform } from "@/lib/social/types";
 
 /**
  * M5 — per-channel CSV export.
@@ -23,10 +24,18 @@ import { csvFilename, toCsv, type CsvRow } from "./social-csv";
  */
 export type { CsvRow };
 
-export function SocialCsvExport({ channelName, rows }: { channelName: string; rows: CsvRow[] }) {
+export function SocialCsvExport({
+  channelName,
+  platform,
+  rows,
+}: {
+  channelName: string;
+  platform: SocialPlatform;
+  rows: CsvRow[];
+}) {
   function handleClick() {
     if (rows.length === 0) return;
-    const csv = toCsv(rows);
+    const csv = toCsv(rows, platform);
     // Prepend a UTF-8 BOM so Excel on Windows detects the
     // encoding correctly.
     const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
