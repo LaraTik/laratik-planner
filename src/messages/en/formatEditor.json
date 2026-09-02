@@ -1,0 +1,189 @@
+{
+  "sections": {
+    "strategy": {
+      "title": "Strategy",
+      "description": "Why are we publishing this?"
+    },
+    "copy": {
+      "title": "Copy",
+      "description": "Caption, hashtags, first comment."
+    },
+    "creative": {
+      "title": "Creative",
+      "description": "Visual direction, references, design notes."
+    },
+    "creativeDirection": {
+      "title": "Creative direction",
+      "description": "Format-specific creative direction fields."
+    }
+  },
+  "fields": {
+    "caption": "Caption",
+    "hashtags": "Hashtags",
+    "hook": "Hook",
+    "mainMessage": "Main message",
+    "callToAction": "CTA",
+    "firstComment": "First comment",
+    "visualDirection": "Visual direction",
+    "visualSlides": "Visual slides",
+    "references": "References",
+    "location": "Location",
+    "additionalNotes": "Additional notes",
+    "slideOutline": "Slide outline",
+    "scenes": "Scenes",
+    "coverDirection": "Cover direction",
+    "onScreenText": "On-screen text",
+    "voiceOverNotes": "Voice-over notes",
+    "audioReference": "Audio reference",
+    "title": "Title",
+    "summary": "Summary",
+    "durationSeconds": "Sec",
+    "visual": "Visual",
+    "keyMessage": "Key message",
+    "objective": "Objective",
+    "audience": "Audience",
+    "keyVisualHook": "Key visual hook",
+    "ratio": "Ratio",
+    "duration": "Duration",
+    "startSeconds": "Start (s)",
+    "level": "Level",
+    "keyTakeaways": "Key takeaways",
+    "talkingPoints": "Talking points",
+    "qaPrompts": "Q&A prompts",
+    "keyTakeawaysMeta": {
+      "hint": "One per line",
+      "placeholder": "3-5 takeaways"
+    },
+    "talkingPointsMeta": {
+      "hint": "One per line",
+      "placeholder": "3-7 talking points"
+    },
+    "qaPromptsMeta": {
+      "hint": "One per line",
+      "placeholder": "Open the floor with..."
+    },
+    "referencesMeta": {
+      "hint": "One URL per line",
+      "placeholder": "https://…"
+    },
+    "hashtagsMeta": {
+      "placeholder": "#tag1 #tag2"
+    },
+    "locationMeta": {
+      "hint": "Optional venue / city",
+      "namePlaceholder": "Dubai Mall",
+      "externalIdPlaceholder": "fb-123 (optional)"
+    },
+    "scheduledStartMeta": {
+      "hint": "Local time"
+    },
+    "objectiveMeta": {
+      "hint": "awareness / consideration / conversion / retention",
+      "placeholder": "awareness"
+    },
+    "audienceMeta": {
+      "placeholder": "Who is this for?"
+    },
+    "scenesMeta": {
+      "hint": "Position · summary · duration (seconds)"
+    },
+    "slideOutlineMeta": {
+      "hint": "Position · summary · visual direction"
+    },
+    "visualSlidesMeta": {
+      "hint": "Per-slide visual direction (single-image posts)"
+    },
+    "chaptersMeta": {
+      "hint": "Position · title · starts at (seconds)"
+    },
+    "outlineMeta": {
+      "hint": "Heading level · title"
+    },
+    "primaryText": "Primary text",
+    "headline": "Headline",
+    "subhead": "Subhead",
+    "footer": "Footer",
+    "legalDisclosure": "Legal disclosure",
+    "ratioTag": "Ratio",
+    "durationTag": "Duration",
+    "positionTag": "#",
+    "scenePosition": "#",
+    "slideCount": "Slide count",
+    "frameCount": "Frame count",
+    "wordCount": "Word count",
+    "chapters": "Chapters",
+    "description": "Description",
+    "transcriptNotes": "Transcript notes",
+    "thumbnailDirection": "Thumbnail direction",
+    "scheduledStart": "Scheduled start",
+    "expectedDuration": "Expected duration",
+    "segments": "Segments",
+    "outline": "Outline"
+  },
+  "editor": {
+    "save": "Save content details",
+    "savePending": "Saving…",
+    "saveCreative": "Save creative details",
+    "ai": {
+      "suggest": "AI suggest",
+      "suggestFieldAria": "Suggest {field} with AI",
+      "drafting": "Drafting…",
+      "suggestionHeader": "AI suggestion",
+      "suggestionHeaderWithLanguage": "AI suggestion · {language}",
+      "insert": "Insert",
+      "insertAria": "Insert AI suggestion after current value",
+      "replace": "Replace",
+      "replaceAria": "Replace current value with AI suggestion",
+      "replaceConfirm": "Replace the current value with the AI suggestion?",
+      "tryAgain": "Try again",
+      "tryAgainAria": "Try again — generate a new suggestion",
+      "dismiss": "Dismiss",
+      "dismissAria": "Dismiss AI suggestion",
+      "emptyDraft": "AI returned an empty draft.",
+      "unknownError": "Unknown error",
+      "requestFailed": "Request failed ({status})"
+    },
+    "translations": {
+      "label": "Translations",
+      "buttonAria": "{field} translations ({count} added)",
+      "popoverHeader": "Translations · {field}",
+      "emptyState": "No translations yet. Add one when this post will publish in a second language.",
+      "addLanguage": "Add language",
+      "addLanguageAria": "Add another language",
+      "removeAria": "Remove {language} translation"
+    },
+    "readOnly": "Read-only — this item is past the editable window.",
+    "readOnlyCreative": "Read-only — this item is past changes_requested.",
+    "creativeBriefTitle": "{format} content",
+    "creativeBriefDescription": "Strategy, copy, and creative sections. Fields persist via the Save button below.",
+    "moreDetails": "More details",
+    "moreDetailsSubtitle": "Per-format creative contract — caption, hashtags, scenes, visual direction, translations. Everything is optional.",
+    "totalFilledSuffix": "total filled",
+    "essentialSuffix": "essential",
+    "totalFilledAria": "{filled} of {total} fields filled",
+    "essentialAria": "{filled} of {total} essential fields filled",
+    "show": "Show",
+    "hide": "Hide",
+    "emptySection": "No fields in this section for {format}.",
+    "goalAudience": "Goal & audience",
+    "objectiveLabel": "Objective",
+    "structuredArraySlideOutline": "Slides",
+    "structuredArrayScenes": "Scenes",
+    "structuredArrayVisualSlides": "Visual slides",
+    "structuredArrayChapters": "Chapters",
+    "structuredArrayOutline": "Outline",
+    "structuredArrayKeyTakeaways": "Key takeaways",
+    "structuredArraySlideEntity": "Slide",
+    "structuredArraySceneEntity": "Scene",
+    "structuredArrayChapterEntity": "Chapter",
+    "structuredArrayKeyTakeawaysHint": "One per line",
+    "structuredArrayScenesHint": "Position · summary · duration (seconds)",
+    "structuredArraySlideOutlineHint": "Position · summary · visual direction",
+    "structuredArrayVisualSlidesHint": "Per-slide visual direction (single-image posts)",
+    "structuredArrayChaptersHint": "Position · title · starts at (seconds)",
+    "structuredArrayOutlineHint": "Heading level · title",
+    "structuredArrayHint": "Drag chips to reorder, or focus and press Alt + ↑ / ↓. ⌘D duplicates, Delete removes.",
+    "structuredArrayCarouselHint": "Add, reorder, and edit each slide. Drag chips or use Alt + ↑ / ↓ to reorder; ⌘D to duplicate.",
+    "structuredArrayReelHint": "Scenes, cover, on-screen text, voice-over and audio reference. Use Alt + ↑ / ↓ to reorder scenes."
+  }
+}

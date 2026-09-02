@@ -1,0 +1,189 @@
+{
+  "sections": {
+    "strategy": {
+      "title": "الاستراتيجية",
+      "description": "لماذا ننشر هذا؟"
+    },
+    "copy": {
+      "title": "النص",
+      "description": "التعليق، الهاشتاجات، التعليق الأول."
+    },
+    "creative": {
+      "title": "الإبداع",
+      "description": "التوجيه البصري، المراجع، ملاحظات التصميم."
+    },
+    "creativeDirection": {
+      "title": "التوجيه الإبداعي",
+      "description": "حقول التوجيه الإبداعي الخاصة بكل تنسيق."
+    }
+  },
+  "fields": {
+    "caption": "التعليق",
+    "hashtags": "الهاشتاجات",
+    "hook": "الخطاف",
+    "mainMessage": "الرسالة الرئيسية",
+    "callToAction": "الدعوة لاتخاذ إجراء",
+    "firstComment": "التعليق الأول",
+    "visualDirection": "التوجيه البصري",
+    "visualSlides": "الشرائح البصرية",
+    "references": "المراجع",
+    "location": "الموقع",
+    "additionalNotes": "ملاحظات إضافية",
+    "slideOutline": "مخطط الشرائح",
+    "scenes": "المشاهد",
+    "coverDirection": "توجيه الغلاف",
+    "onScreenText": "النص على الشاشة",
+    "voiceOverNotes": "ملاحظات التعليق الصوتي",
+    "audioReference": "مرجع صوتي",
+    "title": "العنوان",
+    "summary": "الملخص",
+    "durationSeconds": "ثانية",
+    "visual": "بصري",
+    "keyMessage": "الرسالة الأساسية",
+    "objective": "الهدف",
+    "audience": "الجمهور",
+    "keyVisualHook": "الخطاف البصري الرئيسي",
+    "ratio": "النسبة",
+    "duration": "المدة",
+    "startSeconds": "البدء (ث)",
+    "level": "المستوى",
+    "keyTakeawaysMeta": {
+      "hint": "عنصر واحد في كل سطر",
+      "placeholder": "3-5 نتائج"
+    },
+    "talkingPointsMeta": {
+      "hint": "عنصر واحد في كل سطر",
+      "placeholder": "3-7 نقاط حديث"
+    },
+    "qaPromptsMeta": {
+      "hint": "عنصر واحد في كل سطر",
+      "placeholder": "ابدأ النقاش بسؤال..."
+    },
+    "referencesMeta": {
+      "hint": "رابط واحد في كل سطر",
+      "placeholder": "https://…"
+    },
+    "hashtagsMeta": {
+      "placeholder": "#وسم1 #وسم2"
+    },
+    "locationMeta": {
+      "hint": "مكان / مدينة (اختياري)",
+      "namePlaceholder": "دبي مول",
+      "externalIdPlaceholder": "fb-123 (اختياري)"
+    },
+    "scheduledStartMeta": {
+      "hint": "التوقيت المحلي"
+    },
+    "objectiveMeta": {
+      "hint": "الوعي / التفكير / التحويل / الاحتفاظ",
+      "placeholder": "الوعي"
+    },
+    "audienceMeta": {
+      "placeholder": "لمن هذا المحتوى؟"
+    },
+    "scenesMeta": {
+      "hint": "الموضع · الملخص · المدة (بالثواني)"
+    },
+    "slideOutlineMeta": {
+      "hint": "الموضع · الملخص · التوجيه البصري"
+    },
+    "visualSlidesMeta": {
+      "hint": "توجيه بصري لكل شريحة (منشورات الصورة الواحدة)"
+    },
+    "chaptersMeta": {
+      "hint": "الموضع · العنوان · وقت البدء (بالثواني)"
+    },
+    "outlineMeta": {
+      "hint": "مستوى العنوان · العنوان"
+    },
+    "primaryText": "النص الأساسي",
+    "headline": "العنوان الرئيسي",
+    "subhead": "العنوان الفرعي",
+    "footer": "التذييل",
+    "legalDisclosure": "الإفصاح القانوني",
+    "ratioTag": "النسبة",
+    "durationTag": "المدة",
+    "positionTag": "#",
+    "scenePosition": "#",
+    "slideCount": "عدد الشرائح",
+    "frameCount": "عدد الإطارات",
+    "wordCount": "عدد الكلمات",
+    "chapters": "الفصول",
+    "description": "الوصف",
+    "transcriptNotes": "ملاحظات النص",
+    "thumbnailDirection": "توجيه الصورة المصغرة",
+    "scheduledStart": "وقت البدء المجدول",
+    "expectedDuration": "المدة المتوقعة",
+    "talkingPoints": "نقاط الحديث",
+    "segments": "الشرائح الزمنية",
+    "qaPrompts": "أسئلة وأجوبة",
+    "outline": "المخطط",
+    "keyTakeaways": "النتائج الرئيسية"
+  },
+  "editor": {
+    "save": "حفظ تفاصيل المحتوى",
+    "savePending": "جارٍ الحفظ…",
+    "saveCreative": "حفظ التفاصيل الإبداعية",
+    "ai": {
+      "suggest": "اقتراح بالذكاء الاصطناعي",
+      "suggestFieldAria": "اقتراح {field} بالذكاء الاصطناعي",
+      "drafting": "جارٍ الصياغة…",
+      "suggestionHeader": "اقتراح الذكاء الاصطناعي",
+      "suggestionHeaderWithLanguage": "اقتراح الذكاء الاصطناعي · {language}",
+      "insert": "إدراج",
+      "insertAria": "إدراج اقتراح الذكاء الاصطناعي بعد القيمة الحالية",
+      "replace": "استبدال",
+      "replaceAria": "استبدال القيمة الحالية باقتراح الذكاء الاصطناعي",
+      "replaceConfirm": "هل تريد استبدال القيمة الحالية باقتراح الذكاء الاصطناعي؟",
+      "tryAgain": "إعادة المحاولة",
+      "tryAgainAria": "إعادة المحاولة — إنشاء اقتراح جديد",
+      "dismiss": "إخفاء",
+      "dismissAria": "إخفاء اقتراح الذكاء الاصطناعي",
+      "emptyDraft": "أعاد الذكاء الاصطناعي مسودة فارغة.",
+      "unknownError": "خطأ غير معروف",
+      "requestFailed": "فشل الطلب ({status})"
+    },
+    "translations": {
+      "label": "الترجمات",
+      "buttonAria": "ترجمات {field} ({count} مُضافة)",
+      "popoverHeader": "الترجمات · {field}",
+      "emptyState": "لا توجد ترجمات بعد. أضف ترجمة عندما يُنشر هذا المنشور بلغة ثانية.",
+      "addLanguage": "إضافة لغة",
+      "addLanguageAria": "إضافة لغة أخرى",
+      "removeAria": "إزالة ترجمة {language}"
+    },
+    "readOnly": "للقراءة فقط — تجاوز هذا العنصر نافذة التعديل.",
+    "readOnlyCreative": "للقراءة فقط — تجاوز هذا العنصر مرحلة طلب التعديلات.",
+    "creativeBriefTitle": "محتوى {format}",
+    "creativeBriefDescription": "أقسام الاستراتيجية والنص والإبداع. تُحفظ الحقول عبر زر الحفظ أدناه.",
+    "moreDetails": "تفاصيل إضافية",
+    "moreDetailsSubtitle": "عقد المحتوى الخاص بكل تنسيق — تعليق، هاشتاجات، مشاهد، توجيه بصري، ترجمات. كل شيء اختياري.",
+    "totalFilledSuffix": "مكتمل من المجموع",
+    "essentialSuffix": "أساسي",
+    "totalFilledAria": "تم ملء {filled} من {total} حقل",
+    "essentialAria": "تم ملء {filled} من {total} حقل أساسي",
+    "show": "عرض",
+    "hide": "إخفاء",
+    "emptySection": "لا توجد حقول في هذا القسم لـ {format}.",
+    "goalAudience": "الهدف والجمهور",
+    "objectiveLabel": "الهدف",
+    "structuredArraySlideOutline": "الشرائح",
+    "structuredArrayScenes": "المشاهد",
+    "structuredArrayVisualSlides": "الشرائح البصرية",
+    "structuredArrayChapters": "الفصول",
+    "structuredArrayOutline": "المخطط",
+    "structuredArrayKeyTakeaways": "النتائج الرئيسية",
+    "structuredArraySlideEntity": "شريحة",
+    "structuredArraySceneEntity": "مشهد",
+    "structuredArrayChapterEntity": "فصل",
+    "structuredArrayKeyTakeawaysHint": "عنصر واحد في كل سطر",
+    "structuredArrayScenesHint": "الموضع · الملخص · المدة (بالثواني)",
+    "structuredArraySlideOutlineHint": "الموضع · الملخص · التوجيه البصري",
+    "structuredArrayVisualSlidesHint": "توجيه بصري لكل شريحة (منشورات الصورة الواحدة)",
+    "structuredArrayChaptersHint": "الموضع · العنوان · وقت البدء (بالثواني)",
+    "structuredArrayOutlineHint": "مستوى العنوان · العنوان",
+    "structuredArrayHint": "اسحب الرقائق لإعادة الترتيب، أو ركّز واضغط Alt + ↑ / ↓. ⌘D للنسخ، Delete للحذف.",
+    "structuredArrayCarouselHint": "أضف الشرائح وأعد ترتيبها وعدّلها. اسحب الرقائق أو استخدم Alt + ↑ / ↓ لإعادة الترتيب؛ ⌘D للنسخ.",
+    "structuredArrayReelHint": "المشاهد والغلاف والنص على الشاشة والتعليق الصوتي والمرجع الصوتي. استخدم Alt + ↑ / ↓ لإعادة ترتيب المشاهد."
+  }
+}

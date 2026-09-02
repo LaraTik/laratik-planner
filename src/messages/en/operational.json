@@ -1,0 +1,8 @@
+{
+  "agencyUnavailableTitle": "Agency access is paused",
+  "agencyUnavailableBody": "This agency is suspended or archived. Its content is preserved, but new and existing tenant operations are unavailable until a platform administrator restores access.",
+  "agencyUnavailableCta": "Return to sign in",
+  "workspaceNotFoundTitle": "Workspace unavailable",
+  "workspaceNotFoundBody": "The workspace you tried to open does not exist, is archived, or has been moved. Check the workspace switcher, or return to My Work for a current list.",
+  "workspaceNotFoundCta": "Back to My Work"
+}

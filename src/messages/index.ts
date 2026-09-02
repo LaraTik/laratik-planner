@@ -1,15 +1,14 @@
 /**
  * Message catalog loader.
  *
- * Hand-rolled for Phase 1 — the plan's "Common + Navigation"
- * namespace pair is small (≈ 80 keys) and a bespoke loader
- * gives us a single, testable source of truth without pulling
+ * Hand-rolled for Phase 1 — a bespoke loader gives us a single,
+ * testable source of truth without pulling
  * `next-intl`'s plugin + middleware into the build before the
  * rest of the catalog is wired up.
  *
  * `next-intl` will replace this module in a follow-up commit
- * once the rest of the namespaces (Auth, Profile, Planning,
- * Content, …) are translated. The exported `t()` signature is
+ * once the remaining framework concerns are translated. The
+ * exported `t()` signature is
  * the same one `next-intl` exposes for `getTranslations` /
  * `useTranslations`, so the migration is a body-only change
  * at every call site.
@@ -29,8 +28,8 @@
  * `src/lib/i18n/t-for-active.ts`; the split keeps the test
  * surface small.
  */
-import en from "./en/common.json";
-import ar from "./ar/common.json";
+import en from "./en";
+import ar from "./ar";
 import { resolveLocale, type LocaleCode } from "@/lib/i18n/locales";
 
 type Catalog = Record<string, unknown>;

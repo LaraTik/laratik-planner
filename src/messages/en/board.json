@@ -1,0 +1,20 @@
+{
+  "title": "Workflow board",
+  "description": "Every idea, grouped by its current production stage.",
+  "listView": "List view",
+  "listViewTitle": "Switch to the list view with the same filters applied",
+  "boardView": "Board view",
+  "emptyFilterTitle": "No items match your filters",
+  "emptyFilterDescription": "No items match {filter}. Try clearing the filter to see everything.",
+  "emptyNothingTitle": "Nothing on the board yet",
+  "emptyNothingDescription": "Use Quick Create to add a draft — it'll show up here when it lands in the workflow.",
+  "clearFilters": "Clear filters",
+  "quickCreate": "Quick Create",
+  "columnIdeas": "Ideas",
+  "columnContentReview": "Content review",
+  "columnApproved": "Approved",
+  "columnDesign": "Design",
+  "columnCreativeReview": "Creative review",
+  "columnReady": "Ready",
+  "columnPublished": "Published"
+}

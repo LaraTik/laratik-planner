@@ -1,0 +1,15 @@
+{
+  "title": "My Work",
+  "kpiAssigned": "Assigned to me",
+  "kpiAwaitingReview": "Awaiting my review",
+  "kpiAtRisk": "At risk",
+  "kpiReadyToPublish": "Ready to publish",
+  "newWorkspace": "New workspace",
+  "emptyTitle": "Nothing assigned yet",
+  "emptyDescription": "Once a planner creates content and assigns it to you, it'll show up here. You can also start by creating a workspace.",
+  "emptyAction": "Create a workspace",
+  "needsAttention": "Needs your attention",
+  "needsAttentionEmpty": "Nothing overdue. You're on top of it.",
+  "upcoming": "Upcoming this week",
+  "upcomingEmpty": "No items planned in the next 7 days."
+}

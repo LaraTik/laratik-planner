@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Pencil, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 import {
   Dialog,
   DialogContent,
@@ -70,13 +71,16 @@ export function EditDetailsDrawer({
   triggerClassName,
 }: EditDetailsDrawerProps) {
   const [open, setOpen] = React.useState(false);
+  const t = useLocaleT();
+  const resolvedTriggerLabel =
+    triggerLabel === "Edit content" ? t("contentDetail.overview.editContent") : triggerLabel;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" data-testid="open-edit-details-drawer" className={triggerClassName}>
           <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-          {triggerLabel}
+          {resolvedTriggerLabel}
         </Button>
       </DialogTrigger>
       <DialogContent
@@ -90,15 +94,15 @@ export function EditDetailsDrawer({
         data-testid="edit-details-drawer"
       >
         <DialogHeader>
-          <DialogTitle>Edit details</DialogTitle>
+          <DialogTitle>{t("contentDetail.overview.editDrawerTitle")}</DialogTitle>
           <DialogDescription>
-            Change the title, format, planned publish date, channels, or brief.{" "}
+            {t("contentDetail.overview.editDrawerDescription")}{" "}
             <Link
               href={`/app/w/${workspaceSlug}/planning/edit/${contentItemId}`}
               className="text-primary inline-flex items-center gap-1 underline-offset-4 hover:underline"
               data-testid="edit-details-drawer-full-editor"
             >
-              Open the full editor
+              {t("contentDetail.overview.openFullEditor")}
               <ExternalLink className="h-3 w-3" aria-hidden="true" />
             </Link>
           </DialogDescription>

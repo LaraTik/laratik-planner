@@ -18,8 +18,8 @@ import { describe, expect, it } from "vitest";
  * test and forces the second locale to follow.
  */
 
-const enCatalog = (await import("@/messages/en/common.json")).default;
-const arCatalog = (await import("@/messages/ar/common.json")).default;
+const enCatalog = (await import("@/messages/en")).default;
+const arCatalog = (await import("@/messages/ar")).default;
 const messages = await import("@/messages");
 
 function collectKeys(value: unknown, prefix = ""): string[] {

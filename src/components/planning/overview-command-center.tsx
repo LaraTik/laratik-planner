@@ -64,10 +64,9 @@ export interface OverviewCommandCenterProps {
    * Bound translator from the parent (planning detail page).
    * Threaded to the embedded `<ActivityTimeline>` so the
    * activity tab's title / empty state / kind-based
-   * humanised phrases render in the active locale.
-   * (The overview command center's own chrome — KPI labels,
-   * status pills, etc. — stays English for now; that work
-   * belongs to a dedicated overview-tab commit.)
+   * humanised phrases render in the active locale. The overview
+   * chrome uses the same translator so Arabic/RTL never silently
+   * falls back to English.
    */
   t?: (key: string, params?: Record<string, string | number>) => string;
   /** Name of the content owner, when present. */
@@ -142,6 +141,7 @@ export function OverviewCommandCenter({
         readinessCanPublish={readinessCanPublish}
         canEdit={canEdit}
         editHref={editHref}
+        t={t}
         {...(primaryActionLabel ? { primaryActionLabel } : {})}
         {...(reviewChangesHref ? { reviewChangesHref } : {})}
       />
@@ -150,6 +150,7 @@ export function OverviewCommandCenter({
         canPublish={readinessCanPublish}
         lines={readiness}
         onNavigate={onReadinessNavigate}
+        t={t}
       />
       <DetailsSection
         contentItemId={contentItemId}
@@ -163,6 +164,7 @@ export function OverviewCommandCenter({
         deliveryCount={deliveryCount}
         finalApprovedCount={finalApprovedCount}
         editHref={editHref}
+        t={t}
       />
       <RecentActivity
         events={recentActivity}
@@ -183,6 +185,7 @@ function NextActionCard({
   contentStatus,
   readinessBlockers,
   readinessCanPublish,
+  t,
 }: {
   contentStatus: string;
   readinessBlockers: number;
@@ -191,6 +194,7 @@ function NextActionCard({
   editHref: string;
   primaryActionLabel?: string;
   reviewChangesHref?: string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   // "Healthy" item — no action required.
   if (readinessCanPublish && readinessBlockers === 0 && !stepIsActionable(contentStatus)) {
@@ -204,8 +208,8 @@ function NextActionCard({
   // the work that needs attention and links each item to the
   // relevant workspace section. The right rail handles the
   // actual transition.
-  const headline = nextHeadline(contentStatus, readinessBlockers);
-  const body = nextBody(contentStatus, safeExplain(contentStatus)?.next);
+  const headline = nextHeadline(contentStatus, readinessBlockers, t);
+  const body = nextBody(contentStatus, safeExplain(contentStatus)?.next, t);
 
   const tone =
     readinessBlockers > 0
@@ -217,7 +221,9 @@ function NextActionCard({
   return (
     <Card padding="md" data-testid="overview-next-action" className={tone}>
       <div className="space-y-1.5">
-        <p className="text-label text-fg-muted font-semibold uppercase">Action required</p>
+        <p className="text-label text-fg-muted font-semibold uppercase">
+          {t("contentDetail.overview.actionRequired")}
+        </p>
         <CardTitle className="text-body text-fg-primary text-lg font-semibold">
           {headline}
         </CardTitle>
@@ -227,48 +233,63 @@ function NextActionCard({
   );
 }
 
-function nextHeadline(status: string, blockers: number): string {
-  if (blockers > 0) return `${blockers} blocker${blockers === 1 ? "" : "s"} to publish`;
+function nextHeadline(
+  status: string,
+  blockers: number,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  if (blockers > 0) {
+    return t(
+      blockers === 1
+        ? "contentDetail.overview.blockersToPublish"
+        : "contentDetail.overview.blockersToPublishMany",
+      { count: blockers },
+    );
+  }
   switch (status) {
     case "draft":
-      return "Ready to submit for review";
+      return t("contentDetail.overview.readyToSubmit");
     case "content_review":
-      return "Awaiting internal review";
+      return t("contentDetail.overview.awaitingInternalReview");
     case "changes_requested":
-      return "Changes requested — update and resubmit";
+      return t("contentDetail.overview.changesRequested");
     case "approved_for_design":
-      return "Approved for design — start the creative";
+      return t("contentDetail.overview.approvedForDesign");
     case "in_design":
-      return "In design — submit a delivery to advance";
+      return t("contentDetail.overview.inDesign");
     case "creative_review":
-      return "Awaiting creative review";
+      return t("contentDetail.overview.awaitingCreativeReview");
     case "ready_to_publish":
-      return "Ready to publish";
+      return t("contentDetail.overview.readyToPublish");
     case "partially_published":
-      return "Partially published — finish the remaining channels";
+      return t("contentDetail.overview.partiallyPublished");
     case "published":
-      return "Published";
+      return t("contentDetail.overview.published");
     case "blocked":
-      return "Blocked — needs an unblock reason";
+      return t("contentDetail.overview.blocked");
     case "cancelled":
-      return "Cancelled";
+      return t("contentDetail.overview.cancelled");
     default:
       return humanStatus(status);
   }
 }
 
-function nextBody(status: string, fallback: string | undefined): string | null {
+function nextBody(
+  status: string,
+  fallback: string | undefined,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string | null {
   if (status === "changes_requested") {
-    return "A reviewer left feedback. Update the requested content and resubmit for review.";
+    return t("contentDetail.overview.changesRequestedBody");
   }
   if (status === "approved_for_design") {
-    return "A designer can claim this item and start the creative, or a manager can assign a designer.";
+    return t("contentDetail.overview.approvedForDesignBody");
   }
   if (status === "in_design") {
-    return "Submit a delivery version to advance to creative review.";
+    return t("contentDetail.overview.inDesignBody");
   }
   if (status === "ready_to_publish") {
-    return "Open Publishing to schedule or publish to the configured channels.";
+    return t("contentDetail.overview.readyToPublishBody");
   }
   return fallback ?? null;
 }
@@ -304,11 +325,13 @@ function ReadinessSummary({
   canPublish,
   lines,
   onNavigate,
+  t,
 }: {
   blockers: number;
   canPublish: boolean;
   lines: OverviewReadinessLine[];
   onNavigate: ((href: string) => void) | undefined;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   return (
     <section
@@ -322,19 +345,24 @@ function ReadinessSummary({
           id="overview-readiness-heading"
           className="text-label text-fg-secondary font-semibold uppercase"
         >
-          Readiness
+          {t("contentDetail.overview.readiness")}
         </h2>
         {blockers > 0 ? (
           <p className="text-label text-fg-muted inline-flex items-center gap-1.5">
             <AlertTriangle className="text-danger h-3.5 w-3.5" aria-hidden="true" />
             <span data-testid="overview-readiness-blocker-count">
-              {blockers} blocker{blockers === 1 ? "" : "s"} prevent publishing
+              {t(
+                blockers === 1
+                  ? "contentDetail.overview.blockerPreventsPublishing"
+                  : "contentDetail.overview.blockersPreventPublishing",
+                { count: blockers },
+              )}
             </span>
           </p>
         ) : canPublish ? (
           <p className="text-label text-fg-muted inline-flex items-center gap-1.5">
             <CheckCircle2 className="text-success h-3.5 w-3.5" aria-hidden="true" />
-            Ready to publish
+            {t("contentDetail.overview.readyToPublish")}
           </p>
         ) : null}
       </header>
@@ -458,6 +486,7 @@ function DetailsSection({
   deliveryCount,
   finalApprovedCount,
   editHref,
+  t,
 }: {
   contentItemId: string;
   title: string;
@@ -470,6 +499,7 @@ function DetailsSection({
   deliveryCount: number;
   finalApprovedCount: number;
   editHref: string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   return (
     <section aria-labelledby="overview-details-heading" data-testid="overview-content-summary">
@@ -478,7 +508,7 @@ function DetailsSection({
           id="overview-details-heading"
           className="text-label text-fg-secondary font-semibold uppercase"
         >
-          Details
+          {t("contentDetail.overview.details")}
         </h2>
         <Link
           href={editHref}
@@ -487,7 +517,7 @@ function DetailsSection({
           data-content-item-id={contentItemId}
         >
           <Pencil className="h-3 w-3" aria-hidden="true" />
-          Edit details
+          {t("contentDetail.overview.editDetails")}
         </Link>
       </header>
       <dl
@@ -495,15 +525,18 @@ function DetailsSection({
         data-testid="overview-content-summary-list"
       >
         <SummaryRow
-          label="Title"
+          label={t("contentDetail.overview.title")}
           value={
             <span className="text-body text-fg-primary font-semibold break-words">{title}</span>
           }
         />
-        <SummaryRow label="Format" value={humanFormat(format)} />
-        <SummaryRow label="Channels" value={channelSummary(channels)} />
+        <SummaryRow label={t("contentDetail.overview.format")} value={humanFormat(format)} />
         <SummaryRow
-          label="Planned publish"
+          label={t("contentDetail.overview.channels")}
+          value={channelSummary(channels, t)}
+        />
+        <SummaryRow
+          label={t("contentDetail.overview.plannedPublish")}
           value={
             <>
               {plannedPublishAt}{" "}
@@ -511,15 +544,20 @@ function DetailsSection({
             </>
           }
         />
-        {ownerName ? <SummaryRow label="Owner" value={ownerName} /> : null}
-        <SummaryRow label="Versions" value={versionsSummary(deliveryCount, finalApprovedCount)} />
+        {ownerName ? (
+          <SummaryRow label={t("contentDetail.overview.owner")} value={ownerName} />
+        ) : null}
         <SummaryRow
-          label="Brief"
+          label={t("contentDetail.overview.versions")}
+          value={versionsSummary(deliveryCount, finalApprovedCount, t)}
+        />
+        <SummaryRow
+          label={t("contentDetail.overview.brief")}
           value={
             brief ? (
               <span className="text-body text-fg-primary whitespace-pre-wrap">{brief}</span>
             ) : (
-              <span className="text-body text-fg-muted">No brief yet.</span>
+              <span className="text-body text-fg-muted">{t("contentDetail.overview.noBrief")}</span>
             )
           }
         />
@@ -550,17 +588,34 @@ function SummaryRow({
   );
 }
 
-function channelSummary(channels: OverviewSummaryChannel[]): string {
-  if (channels.length === 0) return "No channels";
+function channelSummary(
+  channels: OverviewSummaryChannel[],
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  if (channels.length === 0) return t("contentDetail.overview.noChannels");
   if (channels.length === 1) return `${channels[0]!.platform} · ${channels[0]!.accountName}`;
   const configured = channels.filter((c) => c.configured).length;
-  return `${channels.length} channels (${configured} configured)`;
+  return t("contentDetail.overview.channelsConfigured", {
+    count: channels.length,
+    configured,
+  });
 }
 
-function versionsSummary(total: number, finalApproved: number): string {
-  if (total === 0) return "No versions yet";
-  if (finalApproved === 0) return `${total} version${total === 1 ? "" : "s"}, none approved`;
-  return `${finalApproved} approved of ${total}`;
+function versionsSummary(
+  total: number,
+  finalApproved: number,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  if (total === 0) return t("contentDetail.overview.noVersions");
+  if (finalApproved === 0) {
+    return t(
+      total === 1
+        ? "contentDetail.overview.versionNoneApproved"
+        : "contentDetail.overview.versionsNoneApproved",
+      { count: total },
+    );
+  }
+  return t("contentDetail.overview.approvedOf", { approved: finalApproved, total });
 }
 
 /* ────────────────────────────────────────────────────────────────────── *
@@ -590,7 +645,7 @@ function RecentActivity({
           id="overview-recent-activity-heading"
           className="text-label text-fg-secondary font-semibold uppercase"
         >
-          Recent activity
+          {t("contentDetail.overview.recentActivity")}
         </h2>
         {totalCount > events.length ? (
           <Link
@@ -600,7 +655,7 @@ function RecentActivity({
             data-workspace-slug={workspaceSlug}
             data-content-item-id={contentItemId}
           >
-            View all
+            {t("contentDetail.overview.viewAll")}
             <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         ) : null}
@@ -611,9 +666,7 @@ function RecentActivity({
         </div>
       ) : (
         <Card padding="md" data-testid="overview-recent-activity-empty">
-          <p className="text-body text-fg-muted">
-            No activity yet. Changes to this content will appear here.
-          </p>
+          <p className="text-body text-fg-muted">{t("contentDetail.overview.noActivity")}</p>
         </Card>
       )}
     </section>
