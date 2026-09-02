@@ -1,5 +1,24 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator } from "@playwright/test";
 import { bootstrapRoleSession, bootstrapTestSession, type SeedResult } from "./_helpers";
+
+/** Open the responsive workflow surface when the test is running on a
+ * mobile project. Desktop projects render the same actions in the rail,
+ * so the helper is intentionally a no-op there. */
+async function openWorkflowSurface(page: Parameters<typeof bootstrapRoleSession>[0]) {
+  const viewport = page.viewportSize();
+  if (!viewport || viewport.width >= 1024) return;
+  const trigger = page.getByTestId("workflow-mobile-trigger");
+  await expect(trigger).toBeVisible({ timeout: 10_000 });
+  await trigger.click();
+  await expect(page.getByTestId("workflow-mobile-panel")).toBeVisible();
+}
+
+function workflowSurface(page: Parameters<typeof bootstrapRoleSession>[0]): Locator {
+  const viewport = page.viewportSize();
+  return viewport && viewport.width < 1024
+    ? page.getByTestId("workflow-mobile-panel")
+    : page.getByTestId("workflow-rail");
+}
 
 /**
  * Content flow E2E tests — the master prompt §10 state machine.
@@ -37,7 +56,10 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     await expect(page.getByText(/draft/i).first()).toBeVisible();
 
     // Submit for content review (button label is "Submit for review")
-    const submitReview = page.getByRole("button", { name: /submit.*review/i }).first();
+    await openWorkflowSurface(page);
+    const submitReview = workflowSurface(page)
+      .getByRole("button", { name: /submit.*review/i })
+      .first();
     await submitReview.click();
     // Wait for the badge to update
     await expect(
@@ -95,7 +117,8 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     expect(itemId).toMatch(/^[0-9a-f-]{36}$/);
 
     // ─── Planner submits the draft for content review ───
-    await page
+    await openWorkflowSurface(page);
+    await workflowSurface(page)
       .getByRole("button", { name: /submit.*review/i })
       .first()
       .click();
@@ -111,7 +134,10 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     try {
       await bootstrapRoleSession(reviewerPage, "internal_reviewer");
       await reviewerPage.goto(detailUrl);
-      const approveBtn = reviewerPage.getByRole("button", { name: /approve/i }).first();
+      await openWorkflowSurface(reviewerPage);
+      const approveBtn = workflowSurface(reviewerPage)
+        .getByRole("button", { name: /approve/i })
+        .first();
       await expect(approveBtn).toBeVisible({ timeout: 10_000 });
       await approveBtn.click();
       await expect(
@@ -184,9 +210,9 @@ test.describe("Content: Quick Create + workflow transitions", () => {
           timeout: 10_000,
         });
       }
-
       // ─── 2. Planner: submit for content review ───
-      await plannerPage
+      await openWorkflowSurface(plannerPage);
+      await workflowSurface(plannerPage)
         .getByRole("button", { name: /submit.*review/i })
         .first()
         .click();
@@ -199,7 +225,8 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       // ─── 3. Internal reviewer: approve content → approved_for_design ───
       await bootstrapRoleSession(reviewerPage, "internal_reviewer");
       await reviewerPage.goto(detailUrl);
-      await reviewerPage
+      await openWorkflowSurface(reviewerPage);
+      await workflowSurface(reviewerPage)
         .getByRole("button", { name: /approve/i })
         .first()
         .click();
@@ -233,11 +260,12 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       try {
         await bootstrapRoleSession(managerPage, "workspace_manager");
         await managerPage.goto(detailUrl);
+        await openWorkflowSurface(managerPage);
         // The picker trigger is the only "Assign designer" button
         // on the page (the old direct-call button was removed). It
         // is disabled when the workspace has no designers; the seed
         // above guarantees at least one.
-        const assignBtn = managerPage.getByTestId("assign-designer-trigger");
+        const assignBtn = workflowSurface(managerPage).getByTestId("assign-designer-trigger");
         await expect(assignBtn).toBeVisible({ timeout: 10_000 });
         await expect(assignBtn).toBeEnabled();
         await assignBtn.click();
@@ -303,9 +331,12 @@ test.describe("Content: Quick Create + workflow transitions", () => {
 
       // ─── 6. Internal reviewer: approve internal creative → ready_to_publish ───
       await reviewerPage.goto(detailUrl);
+      await openWorkflowSurface(reviewerPage);
       // The ApprovalTimeline is rendered when an approval is pending.
       // The "Approve" button on the timeline advances the gate.
-      const approveCreativeBtn = reviewerPage.getByRole("button", { name: /^Approve$/i }).first();
+      const approveCreativeBtn = workflowSurface(reviewerPage)
+        .getByRole("button", { name: /^Approve$/i })
+        .first();
       await expect(approveCreativeBtn).toBeVisible({ timeout: 10_000 });
       await approveCreativeBtn.click();
       await expect(

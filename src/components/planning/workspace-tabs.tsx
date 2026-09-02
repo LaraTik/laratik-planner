@@ -91,11 +91,14 @@ export function WorkspaceTabs({
       aria-label={ariaLabel}
       data-testid="workspace-tabs"
       className={cn(
-        "border-border bg-surface sticky top-0 z-10 -mx-1 -mb-2 border-b backdrop-blur-sm",
+        "border-border bg-surface sticky top-0 z-10 -mx-1 -mb-2 max-w-full min-w-0 border-b backdrop-blur-sm",
         className,
       )}
     >
-      <ul className="flex flex-wrap items-stretch gap-1 overflow-x-auto" role="list">
+      <ul
+        className="flex flex-nowrap items-stretch gap-1 overflow-x-auto overscroll-x-contain"
+        role="list"
+      >
         {tabs.map((tab) => {
           const Icon = WORKSPACE_TAB_ICONS[tab.id];
           const isActive = tab.id === value;
