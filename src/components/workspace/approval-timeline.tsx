@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { humanize } from "@/lib/content/status";
 import { ReasonDialog } from "@/components/forms/reason-dialog";
+import { useLocaleCode } from "@/components/i18n/locale-provider";
+import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 
 /**
  * ApprovalTimeline — the "Approval requests" list under the workflow
@@ -78,6 +80,7 @@ export function ApprovalTimeline({
   disabled = false,
   t,
 }: ApprovalTimelineProps) {
+  const locale = useLocaleCode();
   const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   if (approvals.length === 0) return null;
   return (
@@ -95,7 +98,7 @@ export function ApprovalTimeline({
             <span className="font-semibold">{humanize(a.gate)}</span>
             <Badge variant={statusVariant(a.status)}>{a.status}</Badge>
             <span className="text-label text-fg-muted">
-              {new Date(a.requestedAt).toLocaleString()}
+              {formatDate(a.requestedAt, locale, DateFormat.dateTime)}
             </span>
             {canAct ? (
               <div className="ms-auto flex gap-2">

@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/i18n/format-locale";
+import { useLocaleCode } from "@/components/i18n/locale-provider";
 
 /**
  * CaptionField — shared audience-facing caption composer.
@@ -72,6 +74,7 @@ export function CaptionField({
   testId = "caption-field",
   ariaLabel,
 }: CaptionFieldProps) {
+  const locale = useLocaleCode();
   const len = value.length;
   const overWarn = len >= CAPTION_WARN;
   const atMax = len >= CAPTION_MAX;
@@ -125,7 +128,7 @@ export function CaptionField({
             atMax && "text-danger font-semibold",
           )}
         >
-          {len.toLocaleString()} / {CAPTION_MAX.toLocaleString()}
+          {formatNumber(len, locale)} / {formatNumber(CAPTION_MAX, locale)}
         </p>
       </div>
     </div>

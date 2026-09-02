@@ -24,6 +24,7 @@ import { IconTile } from "@/components/workspace/icon-button";
 import { PageHeader } from "@/components/workspace/page-header";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -158,7 +159,7 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const canInvite = await isAgencyAdmin({ id: session.user.id }, workspace.agencyId);
 
   // Active members (join users + roles)
@@ -308,7 +309,9 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
                 <div className="min-w-0 flex-1">
                   <p className="text-body text-fg-primary font-semibold">{inv.email}</p>
                   <p className="text-label text-fg-muted">
-                    {t("team.expiresOn", { date: new Date(inv.expiresAt).toLocaleDateString() })}
+                    {t("team.expiresOn", {
+                      date: formatDate(inv.expiresAt, code, DateFormat.short),
+                    })}
                   </p>
                 </div>
                 <Badge variant="info">{t(ROLE_LABEL_KEY[inv.role] ?? inv.role)}</Badge>

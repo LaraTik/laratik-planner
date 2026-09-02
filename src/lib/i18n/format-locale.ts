@@ -117,6 +117,13 @@ export function formatDate(
 export const DateFormat = {
   short: { year: "numeric", month: "short", day: "numeric" } as const,
   long: { year: "numeric", month: "long", day: "numeric" } as const,
+  dateTime: {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  } as const,
   monthDay: { month: "short", day: "numeric" } as const,
   weekdayShort: { weekday: "short", month: "short", day: "numeric" } as const,
   iso: { year: "numeric", month: "2-digit", day: "2-digit" } as const,

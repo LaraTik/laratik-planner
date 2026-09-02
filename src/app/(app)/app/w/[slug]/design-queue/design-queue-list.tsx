@@ -11,7 +11,8 @@ import { StatusBadge } from "@/components/content/status-badge";
 import { humanFormat } from "@/lib/content/status";
 import { DesignQueueBulkToolbar } from "./bulk-toolbar";
 import { cn } from "@/lib/utils";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { formatDate } from "@/lib/i18n/format-locale";
 
 /**
  * Client-side design-queue list (FEAT-14, GAP-FULL-REVIEW-2026-08-25).
@@ -62,6 +63,7 @@ export function DesignQueueList({
   t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const localeT = useLocaleT();
+  const locale = useLocaleCode();
   const t = tProp ?? localeT;
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const router = useRouter();
@@ -144,7 +146,11 @@ export function DesignQueueList({
                     data-testid="design-queue-row-required-by"
                   >
                     {t("sidebar.designQueuePage.rowRequiredBy", {
-                      date: new Date(item.plannedPublishAtIso).toLocaleDateString(),
+                      date: formatDate(new Date(item.plannedPublishAtIso), locale, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      }),
                     })}
                   </p>
                   <p

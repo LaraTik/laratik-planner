@@ -8,6 +8,7 @@ import type { KpiContentFormat, KpiContentStatus } from "@/lib/dashboard/kpis";
 import { CONTENT_FORMAT_LABELS } from "@/lib/dashboard/kpis";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import type { LocaleCode } from "@/lib/i18n/locales";
+import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 
 /**
  * RecentlyUpdatedList — the refactored "Recently updated" panel on
@@ -120,7 +121,7 @@ export function RecentlyUpdatedList({
             // future publish date floated to the top regardless
             // of how stale it was. P3.1 in the master prompt.
             const updatedAt = it.updatedAt instanceof Date ? it.updatedAt : new Date(it.updatedAt);
-            const exactTimestamp = updatedAt.toLocaleString();
+            const exactTimestamp = formatDate(updatedAt, locale, DateFormat.dateTime);
             return (
               <li key={it.id} className="py-2.5 first:pt-0 last:pb-0">
                 <Link

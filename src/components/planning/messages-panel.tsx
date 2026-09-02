@@ -11,7 +11,8 @@ import { FormSummary } from "@/components/forms/form-summary";
 import { focusFirstInvalid } from "@/lib/forms/focus-first-invalid";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
 import { updateFormatPayloadAction } from "@/app/(app)/app/w/[slug]/planning/actions";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { formatNumber } from "@/lib/i18n/format-locale";
 import { mapFormatPayloadToPlatform } from "@/lib/format-payload/mapper";
 import { type ContentFormat } from "@/lib/format-payload/schemas";
 import { type ActionState } from "@/lib/validation/action-state";
@@ -79,6 +80,7 @@ export function MessagesPanel({
   channels,
   canEdit,
 }: MessagesPanelProps) {
+  const locale = useLocaleCode();
   const t = useLocaleT();
   const tr = (key: string, fallback: string) => (t(key) === key ? fallback : t(key));
   const [caption, setCaption] = React.useState(initialCaption);
@@ -202,7 +204,7 @@ export function MessagesPanel({
             aria-live="polite"
             data-testid="messages-first-comment-counter"
           >
-            {firstComment.length.toLocaleString()} / {FIRST_COMMENT_MAX.toLocaleString()}
+            {formatNumber(firstComment.length, locale)} / {formatNumber(FIRST_COMMENT_MAX, locale)}
           </p>
         </div>
 

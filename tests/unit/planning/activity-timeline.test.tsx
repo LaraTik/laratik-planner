@@ -101,7 +101,7 @@ describe("ActivityTimeline", () => {
       kind: k,
       summary: "",
       actorName: "Ada",
-      occurredAt: `2026-08-29T10:00:0${i}.000Z`,
+      occurredAt: new Date(Date.parse("2026-08-29T10:00:00.000Z") + i * 1_000).toISOString(),
     }));
     render(<ActivityTimeline events={events} t={t} />);
     const rendered = screen.getAllByTestId("activity-event");

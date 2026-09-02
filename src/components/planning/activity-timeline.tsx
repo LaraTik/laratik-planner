@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/card";
 import { humanStatus, humanFormat } from "@/lib/content/status";
+import { useLocaleCode } from "@/components/i18n/locale-provider";
+import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 
 /**
  * ActivityTimeline — visual history of meaningful lifecycle
@@ -104,6 +106,7 @@ const TONE_BY_KIND: Record<string, string> = {
 };
 
 export function ActivityTimeline({ events, title, maxEvents = 25, t }: ActivityTimelineProps) {
+  const locale = useLocaleCode();
   const visible = events.slice(0, maxEvents);
   // Default title comes from the catalog; callers can still
   // override (the planning detail's overview-command-center
@@ -145,7 +148,9 @@ export function ActivityTimeline({ events, title, maxEvents = 25, t }: ActivityT
                   <span className="text-fg-secondary">{humanizeKind(t, e.kind, e.summary)}</span>
                 </p>
                 <p className="text-label text-fg-muted">
-                  <time dateTime={e.occurredAt}>{new Date(e.occurredAt).toLocaleString()}</time>
+                  <time dateTime={e.occurredAt}>
+                    {formatDate(e.occurredAt, locale, DateFormat.dateTime)}
+                  </time>
                 </p>
               </div>
             </li>

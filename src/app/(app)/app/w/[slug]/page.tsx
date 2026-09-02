@@ -19,6 +19,7 @@ import { OverviewKpiStrip, OVERVIEW_KPI_ICONS } from "@/components/workspace/ove
 import { calculateOverviewDashboardMetrics } from "@/lib/dashboard/kpis";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { formatDate } from "@/lib/i18n/format-locale";
 
 /**
  * Workspace Overview — refactored dashboard (ADR-0007).
@@ -93,7 +94,7 @@ export default async function WorkspaceOverviewPage({
   const month = activeMonth.getMonth();
   const monthStart = fromZonedTime(new Date(year, month, 1, 0, 0, 0), ws.timezone);
   const monthEnd = fromZonedTime(new Date(year, month + 1, 1, 0, 0, 0), ws.timezone);
-  const monthLabel = activeMonth.toLocaleString("en-US", { month: "long", year: "numeric" });
+  const monthLabel = formatDate(activeMonth, code, { month: "long", year: "numeric" });
   const now = new Date();
 
   // Single SQL: pull the dashboard items + the workspace owner's
@@ -273,11 +274,11 @@ export default async function WorkspaceOverviewPage({
     return `/app/w/${slug}?month=${y}-${m}`;
   };
   const isCurrentMonth = year === zonedNow.getFullYear() && month === zonedNow.getMonth();
-  const previousMonthLabel = new Date(year, month - 1, 1).toLocaleString("default", {
+  const previousMonthLabel = formatDate(new Date(year, month - 1, 1), code, {
     month: "long",
     year: "numeric",
   });
-  const nextMonthLabel = new Date(year, month + 1, 1).toLocaleString("default", {
+  const nextMonthLabel = formatDate(new Date(year, month + 1, 1), code, {
     month: "long",
     year: "numeric",
   });

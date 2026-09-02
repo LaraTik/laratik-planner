@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
 import { decideApprovalAction } from "../planning/actions";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 
 type ClientReviewCardProps = {
   workspaceSlug: string;
@@ -31,6 +32,7 @@ type ClientReviewCardProps = {
 
 export function ClientReviewCard(props: ClientReviewCardProps) {
   const localeT = useLocaleT();
+  const locale = useLocaleCode();
   const t = props.t ?? localeT;
   const router = useRouter();
   const [feedback, setFeedback] = useState("");
@@ -74,7 +76,7 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
       <p className="text-label text-fg-muted mt-3">
         {t("sidebar.clientReviewPage.versionPublishes", {
           version: props.deliveryVersion ?? t("sidebar.clientReviewPage.noVersion"),
-          date: new Date(props.plannedPublishAt).toLocaleDateString(),
+          date: formatDate(props.plannedPublishAt, locale, DateFormat.short),
         })}
       </p>
 

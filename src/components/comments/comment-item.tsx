@@ -3,6 +3,8 @@
 import * as React from "react";
 import { CheckCircle, Reply } from "lucide-react";
 import { resolveCommentAction } from "@/app/(app)/app/w/[slug]/planning/actions";
+import { useLocaleCode } from "@/components/i18n/locale-provider";
+import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 
 export type CommentAuthor = {
   id: string;
@@ -73,6 +75,7 @@ export function CommentItem({
   isReply = false,
   t,
 }: CommentItemProps) {
+  const locale = useLocaleCode();
   const isAuthor = c.authorId === currentUserId;
   const canResolve = isAuthor || roles.isManager || roles.isPlanner;
   return (
@@ -92,7 +95,9 @@ export function CommentItem({
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="text-body text-fg-primary font-semibold">{c.authorDisplayName}</span>
             <span className="text-label text-fg-muted">
-              <time dateTime={c.createdAt}>{new Date(c.createdAt).toLocaleString()}</time>
+              <time dateTime={c.createdAt}>
+                {formatDate(c.createdAt, locale, DateFormat.dateTime)}
+              </time>
             </span>
             <span
               className={[

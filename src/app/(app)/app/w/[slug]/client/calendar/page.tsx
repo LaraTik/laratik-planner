@@ -17,13 +17,14 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { StatusBadge } from "@/components/content/status-badge";
 import { humanFormat } from "@/lib/content/status";
+import { formatDate } from "@/lib/i18n/format-locale";
 
 export default async function ClientCalendarPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -79,7 +80,7 @@ export default async function ClientCalendarPage({
             <li key={row.id} className="flex flex-wrap items-center gap-3 p-4 sm:gap-4">
               <time className="bg-surface-subtle text-label flex h-12 w-12 flex-col items-center justify-center rounded-[var(--radius-control)]">
                 <strong className="text-title-card">{row.plannedPublishAt.getDate()}</strong>
-                {row.plannedPublishAt.toLocaleString("default", { month: "short" })}
+                {formatDate(row.plannedPublishAt, code, { month: "short" })}
               </time>
               <div className="min-w-0 flex-1">
                 <p className="text-body font-semibold">{row.title}</p>
