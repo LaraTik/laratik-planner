@@ -17,7 +17,7 @@ A deploy is a single `Deploy` workflow run. The gate is the evidence the operato
 | Pre-deploy `pg_dump` taken and verified                        | `scripts/vps/backup.sh` exit code 0; backup on `/opt/laratik-planner/backups/` and offsite |           ✅           |
 | `/api/health` returns the new SHA + `db: up` + `schema: ready` | `curl https://planner.laratik.com/api/health`                                              |           ✅           |
 | Critical browser + visual smoke                                | `pnpm test:e2e:critical` on the live URL                                                   |           ✅           |
-| Release-candidate full 5-browser + visual matrix               | `pnpm test:e2e:isolated` + `pnpm test:visual` (workflow_dispatch on `e2e.yml`)             | ✅ for `READY` verdict |
+| Release-candidate full 5-browser + visual matrix               | `pnpm test:e2e:isolated` + `pnpm test:visual` (local/manual)                               | ✅ for `READY` verdict |
 | `pg_dump` post-deploy captures the new SHA's schema            | `pg_dump --schema-only` includes the migration set                                         |           ✅           |
 
 A deploy with any required gate failing is rolled back. The rollback procedure is in `docs/production-readiness/MIGRATION_DEPLOYMENT.md:102` and `docs/operations/READY_TO_DEPLOY.md` §"First-deploy rollback". The deploy record (the workflow run URL, the SHA, the operator, the date) is the artifact that ties the deploy to the evidence.

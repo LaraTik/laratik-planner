@@ -21,7 +21,7 @@ machine. The same Postgres, the same OAuth credentials, and the
 same Sentry project back both. The acceptance flow is:
 
 1. Local dev (`pnpm dev` against `localhost`) — full feature work, integration tests run against `TEST_DATABASE_URL`.
-2. CI on every push / PR — `pnpm verify` (format + lint + typecheck + unit + audit + integration + coverage) and the deploy-gate e2e (`pnpm test:e2e:critical`).
+2. CI on every push / PR — authoritative format, lint, typecheck, unit, audit, integration, coverage, build, and operational gates; local hooks additionally run the critical E2E subset (`pnpm test:e2e:critical`).
 3. Deploy workflow (CI green) — immutable SHA-tagged images to GHCR, VPS deploy script, post-deploy health probe.
 4. Production handoff — owner-driven UAT, P0/P1 items in [`PRODUCTION_READINESS_TRACKER.md`](../production-readiness/PRODUCTION_READINESS_TRACKER.md), a verified `Verified` row per item.
 
@@ -29,7 +29,7 @@ same Sentry project back both. The acceptance flow is:
 
 - **Operator count:** the project owner is the solo on-call. A second VPS doubles the deploy + backup + monitoring surface, which is significant for a one-person team. See [`incident-response.md`](./incident-response.md) § "Scope and on-call model".
 - **Tenant count:** v1 has one production agency. The staging environment cannot have realistic tenant data without either an anonymised data export (a real engineering cost — see [`backup-recovery.md`](./backup-recovery.md) for the offsite-restore pattern) or a separate demo agency, which means a second round of seed fixtures.
-- **CI coverage:** the Playwright e2e suite, the integration tests against `TEST_DATABASE_URL`, the `pnpm migration-drill` script, and the full release contract (`pnpm verify` + `pnpm test:e2e:critical`) all run on every push. The deploy gate is a `head_sha`-pinned GHCR image; a bad SHA cannot land in production without first failing CI.
+- **CI coverage:** the integration tests against `TEST_DATABASE_URL`, the `pnpm migration-drill` script, and the static/unit/coverage/build release contract run on every push. The critical E2E subset runs in the local pre-push hook and the full browser/visual matrix is a manual release-candidate check. The deploy gate is a `head_sha`-pinned GHCR image; a bad SHA cannot land in production without first failing CI.
 - **Migration discipline:** the migration journal is forward-only and is checked at boot by `/api/health/ready` (see [`../production-readiness/MIGRATION_DEPLOYMENT.md`](../production-readiness/MIGRATION_DEPLOYMENT.md) § "2026-08-24 incident" for the post-incident hardening). A bad migration cannot silently land in production.
 
 The decision is recorded in [`AGENTS.md`](../../AGENTS.md) §169 as
@@ -43,7 +43,7 @@ home for the multi-tenant-hardening items (row 40) that follow.
 
 ### Risks the single env accepts
 
-- A bad release that passes the deploy-gate e2e but breaks a flow the e2e suite does not cover is caught only by the production handoff UAT. The blast radius is one production agency; the rollback path is [`runbook.md`](./runbook.md) § Rollback.
+- A bad release that passes the automated gates but breaks a flow the browser suite does not cover is caught only by the production handoff UAT. The blast radius is one production agency; the rollback path is [`runbook.md`](./runbook.md) § Rollback.
 - AI / SMTP / social provider OAuth credentials are the **same** in CI, dev, and production. The dev-only `/api/dev/*` routes are gated by `NODE_ENV !== "production"` (route handler + proxy allowlist), so a production build never accepts the dev seed. The `META_APP_SECRET` and `TIKTOK_CLIENT_SECRET` are real in every env; misuse is mitigated by the per-agency provider config (M4.6) which scopes them per-agency, and the per-agency DEK (M4.5) which seals the social connection credentials.
 - A failed migration leaves production down until the [`incident-response.md`](./incident-response.md) P0 procedure is run. The migration-drill script's "Failed-migration abort" (drill 4/4 PASS) is the test gate; a real production migration failure has not been observed since the 2026-08-24 incident was repaired.
 
@@ -70,8 +70,8 @@ When staging lands, the deployment is **three-environment**:
 A change may be promoted from `staging` to `production` only when
 **all** of the following are green on the `head_sha`:
 
-1. **CI quality** — `pnpm verify` (format + lint + typecheck + unit + audit + integration + coverage) on the `head_sha`. The release-gate coverage thresholds are 95/90 critical and 85/80 service, per [`../testing/strategy.md`](../testing/strategy.md).
-2. **CI browser** — `pnpm test:e2e:critical` (Chromium + visual baseline) on the `head_sha`.
+1. **CI quality** — the CI workflow runs format, lint, strict typecheck, unit, audit, integration, coverage, build, and smoke gates on the `head_sha`. The release-gate coverage thresholds are 95/90 critical and 85/80 service, per [`../testing/strategy.md`](../testing/strategy.md).
+2. **Release-candidate browser** — `pnpm test:e2e:critical` locally, followed by the full 5-browser and visual matrix, on the `head_sha`.
 3. **CI migration** — `pnpm migration-drill` 4/4 PASS on the `head_sha`. The drill proves the from-zero, in-place upgrade, backup/restore, and failed-migration abort paths against a disposable Postgres.
 4. **CI build** — `pnpm build` (Next.js production build) and `docker build` (immutable SHA-tagged images for `laratik-planner` and `laratik-planner-migrator`) both succeed.
 5. **Staging release candidate** — the same SHA is deployed to `staging` automatically on green CI; the full 5-browser Playwright matrix (`pnpm test:e2e:isolated`) plus the visual-chromium project pass.

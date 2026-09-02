@@ -7,7 +7,7 @@
 ## What is already wired (no action needed)
 
 - `.github/workflows/ci.yml` — quality + Docker build + smoke health, gates the deploy.
-- `.github/workflows/e2e.yml` — Playwright 5-project suite, runs in parallel, does not gate deploy.
+- Playwright 5-project suite — run locally with `pnpm test:e2e:isolated`; the critical subset runs in the pre-push hook and the full matrix is a manual release-candidate check.
 - `.github/workflows/deploy.yml` — `workflow_run: workflows: [CI], types: [completed]` + `if: github.event.workflow_run.conclusion == 'success'`; builds `ghcr.io/laratik/laratik-planner:<sha>` and `ghcr.io/laratik/laratik-planner-migrator:<sha>`; pulls previous image; runs `scripts/deploy.sh` via `appleboy/ssh-action` on the VPS.
 - `scripts/deploy.sh` — backups the local Postgres (`scripts/vps/backup.sh`), runs the migrator (aborts on failure), recreates the app container pinned to the new SHA, hits `/api/health`, rolls back on any failure.
 - `src/app/api/health/route.ts` — reports the real release SHA at container runtime.

@@ -18,12 +18,13 @@ SSHes to the VPS.
 
 | Gate                                                                | Where                                                                                     | Required for deploy     | Release-candidate |
 | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------- | ----------------- |
-| Format (`pnpm format:check`)                                        | `.husky/pre-commit` (lint-staged → prettier --write)                                      | ✅ (pre-commit)         | ✅                |
-| Lint (`pnpm lint`)                                                  | `.husky/pre-commit` (lint-staged → eslint --fix)                                          | ✅ (pre-commit)         | ✅                |
-| Typecheck (`pnpm typecheck`)                                        | `.husky/pre-commit` (sentinel-driven)                                                     | ✅ (pre-commit)         | ✅                |
-| Full unit suite (`pnpm test:unit`)                                  | `.husky/pre-push`                                                                         | ✅ (pre-push)           | ✅                |
+| Format (`pnpm format:check`)                                        | `.github/workflows/ci.yml` + `.husky/pre-commit` (lint-staged → prettier --write)         | ✅ (CI + pre-commit)    | ✅                |
+| Lint (`pnpm lint`)                                                  | `.github/workflows/ci.yml` + `.husky/pre-commit` (lint-staged → eslint --fix)             | ✅ (CI + pre-commit)    | ✅                |
+| Typecheck (`pnpm typecheck`)                                        | `.github/workflows/ci.yml` + `.husky/pre-commit` (sentinel-driven)                        | ✅ (CI + pre-commit)    | ✅                |
+| Full unit suite (`pnpm test:unit`)                                  | `.github/workflows/ci.yml` + `.husky/pre-push`                                            | ✅ (CI + pre-push)      | ✅                |
 | Vitest `related` on staged TS files                                 | `.husky/pre-commit`                                                                       | ✅ (pre-commit)         | ✅                |
 | Integration + migration drill (`pnpm test:integration`)             | `.husky/pre-push` (pre-push) + `ci.yml` `unit-quality` `Integration tests` (audit re-run) | ✅ (CI audit)           | ✅                |
+| Migration drill (`pnpm migration-drill`)                            | `ci.yml` `unit-quality` `Migration drill` + release checklist                             | ✅                      | ✅                |
 | Critical E2E (chromium + visual-chromium, `pnpm test:e2e:critical`) | `.husky/pre-push`                                                                         | ✅ (pre-push)           | ✅                |
 | Full 5-browser matrix (`pnpm test:e2e:isolated`)                    | Local (manual pre-merge step)                                                             | ❌ (manual pre-merge)   | ✅                |
 | Visual matrix (`pnpm test:visual`)                                  | Local (manual pre-merge step)                                                             | ❌ (manual pre-merge)   | ✅                |
@@ -48,8 +49,9 @@ Dockerfile + shell linters (cheap but the only place that catches
 template-injection / unpinned action refs).
 
 Format, lint, typecheck, the full unit suite, integration, and the
-critical E2E subset run in `.husky/pre-commit` / `.husky/pre-push`
-so a regression is caught before CI minutes are spent. The full
+critical E2E subset run in `.github/workflows/ci.yml` and/or the local
+`.husky/pre-commit` / `.husky/pre-push` hooks. This gives fast local
+feedback and an authoritative server-side gate. The full
 5-browser E2E matrix and the visual matrix are run locally as a
 manual pre-merge step (see the runbook for recipes); they are not
 on the deploy critical path.

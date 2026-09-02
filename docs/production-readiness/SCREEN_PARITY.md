@@ -156,7 +156,7 @@ The matrix ladder is therefore: every row `Implemented` (today) → `Tested` aft
 
 ## Responsive baselines
 
-Tablet and mobile reference IDs are in `STUDIOFLOW_MASTER_PROMPT.md`; the 5 Playwright projects (`chromium`, `firefox`, `webkit`, `mobile-chrome`, `mobile-safari`) are configured in `playwright.config.ts` and run in the dedicated `.github/workflows/e2e.yml` so the slow suite does not gate the deploy workflow.
+Tablet and mobile reference IDs are in `STUDIOFLOW_MASTER_PROMPT.md`; the 5 Playwright projects (`chromium`, `firefox`, `webkit`, `mobile-chrome`, `mobile-safari`) are configured in `playwright.config.ts`. Run them locally with `pnpm test:e2e:isolated`; the critical subset is pre-push feedback and the full matrix is a manual release-candidate gate.
 
 ## Approved deviations
 

@@ -233,10 +233,10 @@ exact-reference comparisons** (27 canonical + 11 responsive + 1
 supporting) at the Stitch capture viewport and the **138 responsive
 baselines** (23 unique routes × 6 viewports). The 5 functional
 browser projects (chromium / firefox / webkit / mobile-chrome /
-mobile-safari) run role-journey and a11y specs in `.github/workflows/e2e.yml`.
-The deploy gate now depends on the critical visual tests via
-`.github/workflows/ci.yml` + `.github/workflows/deploy.yml` (Task 7
-commit `3d40183`).
+mobile-safari) run role-journey and a11y specs through the isolated local
+runner during the release-candidate checklist. The critical E2E subset is
+also run by the local pre-push hook; CI independently gates the static,
+unit, integration, coverage, build, and operational checks.
 
 **No outstanding visual baseline gap.** The previous "1 of 6 viewports"
 wording is superseded; see `docs/production-readiness/SCREEN_PARITY.md`

@@ -4,24 +4,18 @@ name: CI
 # when this workflow is green on `main`, so every required release
 # contract must run here:
 #
-#   1. integration + migration drill
-#   2. coverage thresholds (runs the unit suite instrumented)
-#   3. production build + Docker smoke
-#   4. zero critical/high production audit findings
-#   5. SMTP cert probe (deploy-blocker)
-#   6. workflow / Dockerfile / shell linters (deploy-blocker)
+#   1. format, lint, typecheck, and unit correctness
+#   2. integration + migration drill
+#   3. coverage thresholds (runs the unit suite instrumented)
+#   4. production build + Docker smoke
+#   5. zero critical/high production audit findings
+#   6. SMTP cert probe (deploy-blocker)
+#   7. workflow / Dockerfile / shell linters (deploy-blocker)
 #
-# Contract (2026-08-26, CI-minimization plan): the following checks
-# moved OUT of CI to the local dev loop and to the release-candidate
-# `e2e.yml` dispatch:
-#   - format / lint     → pre-commit (lint-staged)
-#   - typecheck         → pre-commit (sentinel-driven)
-#   - full unit suite   → pre-push  (`.husky/pre-push`)
-#   - visual regression → release-candidate dispatch only
-#     (`.github/workflows/e2e.yml`; `deploy.yml` now requires a
-#      recent successful E2E before deploying)
-# See `docs/testing/strategy.md` (Release gates) and the
-# 2026-08-26 plan for the full rationale.
+# Local hooks remain the fast feedback loop, but CI repeats the static
+# and unit gates authoritatively. Browser and visual suites remain local
+# release-candidate checks because they require the isolated runner and
+# committed baselines. See `docs/testing/strategy.md` for the contract.
 on:
   push:
     branches: [main]
@@ -67,14 +61,12 @@ permissions:
 
 jobs:
   unit-quality:
-    # 2026-08-26 (CI-minimization plan): format / lint / typecheck /
-    # full unit suite moved out of this job — pre-commit handles
-    # format + lint, pre-commit (sentinel) handles typecheck, and
-    # pre-push handles the full unit suite. CI's authoritative
-    # remaining job is the integration + coverage + audit gate.
-    name: Integration, coverage, audit
+    # Local hooks provide fast feedback; these same checks run here so
+    # deploy eligibility never depends on a developer machine or hook
+    # configuration.
+    name: Quality, integration, coverage, audit
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
 
     services:
       postgres:
@@ -155,11 +147,25 @@ jobs:
         run: pnpm install --frozen-lockfile
         timeout-minutes: 15
 
-      # 2026-08-26: Format / Lint / Typecheck / Unit tests steps
-      # removed (see .husky/pre-commit + .husky/pre-push). The
-      # coverage step below still runs the unit suite under v8
-      # instrumentation, so the suite's correctness is still
-      # asserted in CI — just under the coverage-threshold gate.
+      - name: Format check
+        run: pnpm format:check
+        timeout-minutes: 5
+
+      - name: Lint
+        run: pnpm lint
+        timeout-minutes: 10
+
+      - name: Typecheck
+        run: pnpm typecheck
+        timeout-minutes: 10
+
+      - name: Unit tests
+        run: pnpm test:unit
+        timeout-minutes: 15
+
+      - name: Migration drill
+        run: pnpm migration-drill
+        timeout-minutes: 20
 
       - name: Apply migrations
         run: pnpm db:migrate
