@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 type Workspace = { id: string; name: string; slug: string };
 
@@ -12,6 +13,7 @@ type Workspace = { id: string; name: string; slug: string };
  */
 export function MobileContextHeader({ workspaces }: { workspaces: Workspace[] }) {
   const pathname = usePathname();
+  const t = useLocaleT();
   const slug = pathname.match(/^\/app\/w\/([^/]+)/)?.[1];
   const workspace = slug ? workspaces.find((candidate) => candidate.slug === slug) : undefined;
   const href = workspace ? `/app/w/${workspace.slug}` : "/app";
@@ -20,17 +22,21 @@ export function MobileContextHeader({ workspaces }: { workspaces: Workspace[] })
     <Link
       href={href}
       className="focus-visible:ring-focus-ring flex min-w-0 items-center gap-2 rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2"
-      aria-label={workspace ? `${workspace.name} overview` : "StudioFlow home"}
+      aria-label={
+        workspace
+          ? t("sidebar.mobileWorkspaceOverviewAria", { name: workspace.name })
+          : t("sidebar.mobileMyWorkAria")
+      }
     >
       <span className="bg-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] font-bold text-white">
         {workspace?.name.charAt(0).toUpperCase() ?? "S"}
       </span>
       <span className="min-w-0">
-        <span className="text-body text-fg-primary block truncate font-semibold">
+        <span className="text-body text-fg-primary block truncate font-semibold" dir="auto">
           {workspace?.name ?? "StudioFlow"}
         </span>
         <span className="text-label text-fg-muted block truncate">
-          {workspace ? "Workspace" : "My work"}
+          {workspace ? t("sidebar.mobileWorkspaceLabel") : t("sidebar.mobileMyWorkLabel")}
         </span>
       </span>
     </Link>
