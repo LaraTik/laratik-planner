@@ -6,6 +6,7 @@ import {
   History,
   LayoutDashboard,
   MessageCircle,
+  MessageSquare,
   Pencil,
   Send,
   type LucideIcon,
@@ -42,7 +43,13 @@ import { cn } from "@/lib/utils";
  *   - Touch targets are 44px on small viewports.
  */
 
-export type WorkspaceTabId = "overview" | "content" | "preview" | "publishing" | "activity";
+export type WorkspaceTabId =
+  | "overview"
+  | "content"
+  | "messages"
+  | "preview"
+  | "publishing"
+  | "activity";
 
 /**
  * Serialisable tab descriptor passed from a Server Component
@@ -60,6 +67,7 @@ export interface WorkspaceTab {
 export const WORKSPACE_TAB_ICONS: Record<WorkspaceTabId, LucideIcon> = {
   overview: LayoutDashboard,
   content: Pencil,
+  messages: MessageSquare,
   preview: Eye,
   publishing: Send,
   activity: History,

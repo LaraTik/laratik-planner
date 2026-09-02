@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { contentItems, securityAuditEvents } from "@/lib/db/schema";
+import { contentItems, securityAuditEvents, activityEvents } from "@/lib/db/schema";
 import { currentActor } from "@/lib/auth/current-actor";
 import { requirePlatformPermission } from "@/lib/auth/platform-access";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -224,16 +224,15 @@ export async function resetIdeaAction(
 
       // `exactOptionalPropertyTypes` is enabled in tsconfig, so
       // we conditionally spread rather than passing `undefined`.
-      const successMetadata = row
+      const bucketCounts = row
         ? {
-            bucketCounts: {
-              contentItemChannels: Number(row.cic),
-              contentAssignments: Number(row.ca),
-              comments: Number(row.c),
-              deliveryVersions: Number(row.dv),
-            },
+            contentItemChannels: Number(row.cic),
+            contentAssignments: Number(row.ca),
+            comments: Number(row.c),
+            deliveryVersions: Number(row.dv),
           }
-        : {};
+        : null;
+      const successMetadata = bucketCounts ? { bucketCounts } : {};
       recordAudit({
         actorId: actor.id,
         contentItemId: idea.id,
@@ -241,6 +240,30 @@ export async function resetIdeaAction(
         reason: parsed.data.reason,
         typedPhraseMatch: true,
         ...successMetadata,
+      });
+
+      // Activity log (plan §1). The row is written inside the
+      // same transaction as the DELETE so the activity timeline
+      // only records the delete when the delete commits. The
+      // `summary` carries the human-readable string the
+      // `ActivityTimeline` component renders by default; the
+      // `metadata` mirrors the audit row's bucket counts so a
+      // "why did the operator delete this idea?" review needs
+      // only one join. `content_item_id` becomes `NULL` after
+      // the cascade delete (the FK is `ON DELETE SET NULL`),
+      // which the timeline renders as a "deleted" badge.
+      await tx.insert(activityEvents).values({
+        workspaceId: idea.workspaceId,
+        contentItemId: idea.id,
+        actorId: actor.id,
+        kind: "delete",
+        summary: `Deleted idea: ${idea.title}`,
+        beforeData: { title: idea.title },
+        metadata: {
+          reason: parsed.data.reason,
+          crossTenantGuard: "passed",
+          ...(bucketCounts ? { bucketCounts } : {}),
+        },
       });
     });
   } catch (error) {

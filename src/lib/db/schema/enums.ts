@@ -170,4 +170,6 @@ export const activityKindEnum = pgEnum("activity_kind", [
   "restore",
   "invitation",
   "ai_assistance",
+  "delete",
+  "bulk_delete",
 ]);

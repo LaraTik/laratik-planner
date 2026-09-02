@@ -130,11 +130,33 @@ export function CommentItem({
             </button>
             {canResolve ? (
               <form
-                action={resolveCommentAction.bind(null, {
-                  workspaceSlug,
-                  commentId: c.id,
-                  resolved: !c.resolvedAt,
-                })}
+                action={async () => {
+                  const result = await resolveCommentAction({
+                    workspaceSlug,
+                    commentId: c.id,
+                    resolved: !c.resolvedAt,
+                  });
+                  if (result?.error) {
+                    // The form's submit handler is hidden in a
+                    // no-form-chrome button; surface the error
+                    // via a one-shot toast on the next render.
+                    // (Plan §4: fieldErrors map back to the
+                    // specific input; this surface is a single
+                    // button so the form-level summary is the
+                    // appropriate error surface.)
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(
+                        new CustomEvent("laratik:form-error", {
+                          detail: { error: result.error },
+                        }),
+                      );
+                    }
+                    // Re-throw so the form's pending state is
+                    // cleared by React and the form remains
+                    // interactive.
+                    throw new Error(result.error);
+                  }
+                }}
               >
                 <button
                   type="submit"

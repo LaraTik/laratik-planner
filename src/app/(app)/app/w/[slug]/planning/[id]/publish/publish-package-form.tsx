@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Checkbox as UiCheckbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { CaptionField } from "@/components/forms/caption-field";
+import { HashtagEditor } from "@/components/forms/hashtag-editor";
 import { ReasonDialog } from "@/components/forms/reason-dialog";
 import {
   confirmPublishReadinessAction,
@@ -458,39 +460,25 @@ export function PublishPackageForm({
             <Field label="Item title" value={itemTitle} readOnly testId="publish-item-title" />
             <Field label="Format" value={itemFormat} readOnly testId="publish-item-format" />
             <div>
-              <label
-                htmlFor="publish-caption"
-                className="text-body text-fg-primary mb-1 block font-semibold"
-              >
-                Caption
-              </label>
-              <Textarea
+              <CaptionField
                 id="publish-caption"
-                rows={4}
+                name="caption"
+                label="Caption"
                 value={(currentDraft as { caption?: string }).caption ?? ""}
-                onChange={(e) => updateDraft(current.id, { caption: e.target.value })}
-                data-testid="publish-caption"
+                onChange={(next) => updateDraft(current.id, { caption: next })}
+                hint="The 2 200-character cap matches the per-platform schema."
+                testId="publish-caption"
               />
             </div>
             <div>
-              <label
-                htmlFor="publish-hashtags"
-                className="text-body text-fg-primary mb-1 block font-semibold"
-              >
-                Hashtags
-              </label>
-              <Input
+              <HashtagEditor
                 id="publish-hashtags"
-                value={((currentDraft as { hashtags?: string[] }).hashtags ?? []).join(" ")}
-                onChange={(e) =>
-                  updateDraft(current.id, {
-                    hashtags: e.target.value
-                      .split(/\s+/)
-                      .map((s) => s.replace(/^#/, ""))
-                      .filter((s) => s.length > 0),
-                  })
-                }
-                data-testid="publish-hashtags"
+                name="hashtags"
+                label="Hashtags"
+                value={(currentDraft as { hashtags?: string[] }).hashtags ?? []}
+                onChange={(next) => updateDraft(current.id, { hashtags: next })}
+                hint="Press Enter, comma, or space to add. Up to 30 tags, 60 chars each."
+                testId="publish-hashtags"
               />
             </div>
             <Field

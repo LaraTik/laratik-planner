@@ -65,12 +65,17 @@ const dbMock = vi.hoisted(() => {
 
   const transaction = vi.fn(
     async (
-      fn: (tx: { execute: ReturnType<typeof vi.fn>; delete: typeof del }) => Promise<unknown>,
+      fn: (tx: {
+        execute: ReturnType<typeof vi.fn>;
+        delete: typeof del;
+        insert: typeof insert;
+      }) => Promise<unknown>,
     ) => {
       state.transactionExecutions += 1;
       const tx = {
         execute: vi.fn(async () => [{ cic: "2", ca: "1", c: "3", dv: "1" }]),
         delete: del,
+        insert,
       };
       return fn(tx);
     },
@@ -266,6 +271,29 @@ describe("resetIdeaAction", () => {
       comments: 3,
       deliveryVersions: 1,
     });
+
+    // Plan §1: an activity_event row is also written in the same
+    // transaction so the user-facing activity feed records the
+    // delete. The kind is "delete", the summary carries the title,
+    // and the metadata mirrors the audit row's bucket counts.
+    const activityEvent = dbMock.state.insertCalls.find((c) => {
+      const v = c.values as Record<string, unknown>;
+      return v.kind === "delete";
+    });
+    expect(activityEvent).toBeDefined();
+    const aev = activityEvent!.values as Record<string, unknown>;
+    expect(aev.workspaceId).toBe(WORKSPACE_ID);
+    expect(aev.contentItemId).toBe(IDEA_ID);
+    expect(aev.summary).toBe("Deleted idea: Spring sale — Instagram carousel");
+    const aem = aev.metadata as Record<string, unknown>;
+    expect(aem.crossTenantGuard).toBe("passed");
+    expect(aem.bucketCounts).toEqual({
+      contentItemChannels: 2,
+      contentAssignments: 1,
+      comments: 3,
+      deliveryVersions: 1,
+    });
+
     // We bounced the operator back to the planning list with a
     // confirmation flag the page can use for a toast.
     expect(navMock.redirect).toHaveBeenCalledWith(expect.stringMatching(/\/planning\?reset=1/));
