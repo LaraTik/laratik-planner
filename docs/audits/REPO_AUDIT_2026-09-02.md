@@ -2,7 +2,7 @@
 
 Date: 2026-09-02  
 Broad browser/evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4`  
-Current audited HEAD: `1b15de9` (`main`, clean at verification)
+Last exact-clean verification HEAD: `1b15de9` (`main`, clean at verification)
 Audit report update: committed after this evidence capture
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
@@ -82,9 +82,13 @@ handled before unrelated cleanup.
    delivery-version card, AI assistance surface and platform selector, and the
    quick-create/edit/batch forms in commits `18b0da1`, `55a8c3c`, `fdc304e`,
    `df2d994`, `b610e52`, `d3f5b28`, `64cf4c9`, and `75081f0`. Remaining hotspots
-   include library forms, publish forms, social analytics, and AI diagnostic
-   UI. The static scan must be repeated after each localization batch because
-   dynamic catalog keys are not fully discoverable.
+   include publish forms and AI diagnostic UI. The planning library forms are
+   now catalog-backed in both locales and use direction-aware fields, with
+   focused Arabic/RTL coverage in `50bf278`. The social analytics aggregate
+   summary and growth chart now use the active catalog, server-resolved locale,
+   accessible translated SVG copy, and Latin-digit number formatting in
+   `a1d7963` and `443092c`. The static scan must be repeated after each
+   localization batch because dynamic catalog keys are not fully discoverable.
 4. **Exact-HEAD visual review is incomplete.** Exact-HEAD axe and RTL checks
    pass, but the visual suite still has reference deltas and the required
    keyboard, screen-reader, zoom, and reduced-motion review is not independently
