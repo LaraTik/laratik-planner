@@ -5,7 +5,7 @@ import { Clock, LayoutGrid, List } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { listWorkspaceContent } from "@/lib/content/service";
-import { ALL_FORMATS, ALL_STATUSES, humanFormat } from "@/lib/content/status";
+import { ALL_FORMATS, ALL_STATUSES } from "@/lib/content/status";
 import { PageHeader } from "@/components/workspace/page-header";
 import {
   WorkflowBoard,
@@ -70,7 +70,7 @@ export default async function WorkflowBoardPage({
     search?: string;
   }>;
 }) {
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const { slug } = await params;
   const columns = buildColumns(t);
   const session = await auth();
@@ -228,6 +228,9 @@ export default async function WorkflowBoardPage({
           items={items}
           columns={columns}
           workspaceSlug={slug}
+          locale={code}
+          workspaceTimezone={workspace.timezone}
+          t={t}
           memberDirectory={Object.fromEntries(
             memberRows.map((m) => [m.id, m satisfies BoardMemberEntry]),
           )}
@@ -241,4 +244,3 @@ export default async function WorkflowBoardPage({
 // the columns definition uses it indirectly through the format
 // enum, but the lint pass treats it as a util-only import. Keeping
 // a single reference here keeps the column metadata self-contained.
-void humanFormat;

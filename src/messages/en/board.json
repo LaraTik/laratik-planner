@@ -16,5 +16,6 @@
   "columnDesign": "Design",
   "columnCreativeReview": "Creative review",
   "columnReady": "Ready",
-  "columnPublished": "Published"
+  "columnPublished": "Published",
+  "noItems": "No items"
 }

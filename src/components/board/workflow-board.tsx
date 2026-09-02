@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Palette, User } from "lucide-react";
 import { StatusBadge } from "@/components/content/status-badge";
 import { humanFormat, type ContentStatus } from "@/lib/content/status";
+import { formatDate } from "@/lib/i18n/format-locale";
+import type { LocaleCode } from "@/lib/i18n/locales";
 import { cn } from "@/lib/utils";
 
 /**
@@ -51,6 +53,9 @@ export interface WorkflowBoardProps {
   items: readonly WorkflowBoardItem[];
   columns: readonly WorkflowBoardColumn[];
   workspaceSlug: string;
+  locale?: LocaleCode;
+  workspaceTimezone?: string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
   /**
    * Map of user id → display name. Optional — when omitted,
    * the card renders the role label only ("Owner" / "Designer")
@@ -95,10 +100,15 @@ export function WorkflowBoard({
   items,
   columns,
   workspaceSlug,
+  locale,
+  workspaceTimezone,
+  t,
   memberDirectory,
 }: WorkflowBoardProps) {
+  const activeLocale = locale ?? "en";
+  const activeTimezone = workspaceTimezone ?? "UTC";
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
+    <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-7">
       {columns.map((column) => {
         const rows = items.filter((item) =>
           (column.statuses as readonly string[]).includes(item.status),
@@ -107,7 +117,7 @@ export function WorkflowBoard({
         return (
           <section
             key={column.label}
-            className="border-border bg-surface-subtle min-w-0 rounded-[var(--radius-card)] border p-3"
+            className="border-border bg-surface-subtle min-w-0 overflow-hidden rounded-[var(--radius-card)] border p-3"
             data-testid={`board-column-${testIdKey}`}
           >
             <header className="mb-3 flex items-center justify-between">
@@ -127,10 +137,15 @@ export function WorkflowBoard({
                     item={item}
                     workspaceSlug={workspaceSlug}
                     {...(memberDirectory ? { memberDirectory } : {})}
+                    locale={activeLocale}
+                    workspaceTimezone={activeTimezone}
+                    {...(t ? { t } : {})}
                   />
                 ))
               ) : (
-                <p className="text-label text-fg-muted py-4 text-center">No items</p>
+                <p className="text-label text-fg-muted py-4 text-center">
+                  {t ? t("board.noItems") : "No items"}
+                </p>
               )}
             </div>
           </section>
@@ -146,18 +161,20 @@ function PersonRow({
   name,
   roleAccent,
   testId,
+  t,
 }: {
   Icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   roleLabel: string;
   name: string | null;
   roleAccent: "primary" | "warning";
   testId: string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const tone =
     roleAccent === "primary" ? "bg-primary-subtle text-primary" : "bg-warning-subtle text-warning";
   return (
     <span
-      className="text-label text-fg-secondary inline-flex min-w-0 items-center gap-1"
+      className="text-label text-fg-secondary inline-flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
       data-testid={testId}
       data-role={roleLabel.toLowerCase()}
       data-empty={name ? null : "true"}
@@ -171,11 +188,16 @@ function PersonRow({
       >
         {name ? <Icon className="h-2.5 w-2.5" aria-hidden={true} /> : null}
       </span>
-      <span className="text-fg-muted font-semibold tracking-wide uppercase">{roleLabel}</span>
+      <span className="text-fg-muted shrink-0 font-semibold tracking-wide uppercase">
+        {roleLabel}
+      </span>
       <span
-        className={cn("truncate font-medium", name ? "text-fg-primary" : "text-fg-muted italic")}
+        className={cn(
+          "min-w-0 truncate font-medium",
+          name ? "text-fg-primary" : "text-fg-muted italic",
+        )}
       >
-        {name ?? "Unassigned"}
+        <bdi dir="auto">{name ?? (t ? t("common.ownerUnassigned") : "Unassigned")}</bdi>
       </span>
     </span>
   );
@@ -185,10 +207,16 @@ function BoardCard({
   item,
   workspaceSlug,
   memberDirectory,
+  locale,
+  workspaceTimezone,
+  t,
 }: {
   item: WorkflowBoardItem;
   workspaceSlug: string;
   memberDirectory?: Readonly<Record<string, BoardMemberEntry>>;
+  locale: LocaleCode;
+  workspaceTimezone: string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const publishDate =
     item.plannedPublishAt instanceof Date ? item.plannedPublishAt : new Date(item.plannedPublishAt);
@@ -198,30 +226,35 @@ function BoardCard({
     <Link
       href={`/app/w/${workspaceSlug}/planning/${item.id}`}
       data-testid={`board-card-${item.id}`}
-      className="border-border bg-surface hover:border-primary focus-visible:ring-focus-ring block rounded-[var(--radius-control)] border p-3 transition-colors focus:outline-none focus-visible:ring-2"
+      className="border-border bg-surface hover:border-primary focus-visible:ring-focus-ring block min-w-0 overflow-hidden rounded-[var(--radius-control)] border p-3 transition-colors focus:outline-none focus-visible:ring-2"
     >
-      <p className="text-body text-fg-primary line-clamp-2 font-semibold">{item.title}</p>
-      <p className="text-label text-fg-muted my-2">
-        {humanFormat(item.format)} · {publishDate.toLocaleDateString()}
+      <p className="text-body text-fg-primary line-clamp-2 min-w-0 font-semibold">
+        <bdi dir="auto">{item.title}</bdi>
+      </p>
+      <p className="text-label text-fg-muted my-2 min-w-0 truncate" dir="auto">
+        {t ? t(`planningFilters.formatLabels.${item.format}`) : humanFormat(item.format)} ·{" "}
+        <bdi dir="auto">{formatDate(publishDate, locale, { timeZone: workspaceTimezone })}</bdi>
       </p>
       <div className="space-y-0.5" data-testid="board-card-people">
         <PersonRow
           Icon={User}
-          roleLabel="Owner"
+          roleLabel={t ? t("common.peopleRoleOwner") : "Owner"}
           name={ownerName}
           roleAccent="primary"
           testId="board-card-owner"
+          {...(t ? { t } : {})}
         />
         <PersonRow
           Icon={Palette}
-          roleLabel="Designer"
+          roleLabel={t ? t("common.peopleRoleDesigner") : "Designer"}
           name={designerName}
           roleAccent="warning"
           testId="board-card-designer"
+          {...(t ? { t } : {})}
         />
       </div>
       <div className="mt-2">
-        <StatusBadge status={item.status} />
+        <StatusBadge status={item.status} {...(t ? { t } : {})} />
       </div>
     </Link>
   );

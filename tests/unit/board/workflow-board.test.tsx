@@ -7,6 +7,7 @@ import {
   type WorkflowBoardItem,
 } from "@/components/board/workflow-board";
 import type { ContentStatus } from "@/lib/content/status";
+import { tFor } from "@/messages";
 
 const COLUMNS: readonly WorkflowBoardColumn[] = [
   { label: "Ideas", statuses: ["draft", "changes_requested", "blocked"] },
@@ -43,6 +44,7 @@ describe("WorkflowBoard", () => {
     expect(root).not.toBeNull();
     expect(root!.className).toMatch(/\bxl:grid-cols-7\b/);
     expect(root!.className).not.toMatch(/\bxl:grid-cols-4\b/);
+    expect(root!.className).toMatch(/\bitems-start\b/);
   });
 
   it("renders one section per column with the column label as heading", () => {
@@ -132,6 +134,36 @@ describe("WorkflowBoard", () => {
     const items = [makeItem({ id: "a", status: "draft", format: "short_form_video" })];
     render(<WorkflowBoard items={items} columns={COLUMNS} workspaceSlug="acme" />);
     expect(screen.getByText(/Short Form Video/)).toBeInTheDocument();
+  });
+
+  it("localizes board copy and isolates bilingual card content", () => {
+    render(
+      <WorkflowBoard
+        items={[
+          makeItem({
+            id: "ar-1",
+            title: "اختبار المحتوى",
+            format: "static_post",
+            status: "draft",
+            contentOwnerId: null,
+            designerId: null,
+          }),
+        ]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+        locale="ar"
+        workspaceTimezone="Asia/Riyadh"
+        t={tFor("ar")}
+      />,
+    );
+
+    expect(screen.getByText("اختبار المحتوى")).toHaveAttribute("dir", "auto");
+    const card = screen.getByTestId("board-card-ar-1");
+    expect(card).toHaveTextContent("منشور ثابت");
+    expect(card).toHaveTextContent("تخطيط");
+    expect(card).toHaveTextContent("مالك");
+    expect(card).toHaveTextContent("غير مُسنَّد");
+    expect(screen.getAllByText("لا توجد عناصر")).toHaveLength(COLUMNS.length - 1);
   });
 
   it("ignores items with a status that does not match any column", () => {

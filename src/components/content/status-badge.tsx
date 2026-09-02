@@ -26,12 +26,18 @@ const ICONS = {
   cancelled: Ban,
 } as const;
 
-export function StatusBadge({ status }: { status: string }) {
+export function StatusBadge({
+  status,
+  t,
+}: {
+  status: string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
+}) {
   const Icon = ICONS[status as keyof typeof ICONS] ?? CircleDashed;
   return (
     <Badge variant={statusBadgeVariant(status)}>
       <Icon className="h-3 w-3" aria-hidden="true" />
-      {humanStatus(status)}
+      {t ? t(`planningFilters.statusLabels.${status}`) : humanStatus(status)}
     </Badge>
   );
 }

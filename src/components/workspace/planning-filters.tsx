@@ -98,11 +98,11 @@ export function PlanningFilters({
     <form
       method="get"
       action={targetPath}
-      className="flex flex-wrap items-center gap-2"
+      className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
       data-testid={`${testIdPrefix}-filters-form`}
     >
       <input type="hidden" name="month" value={monthParam} />
-      <div className="relative">
+      <div className="relative min-w-0">
         <Search
           className="text-fg-muted pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
           aria-hidden="true"
@@ -114,7 +114,8 @@ export function PlanningFilters({
           defaultValue={searchValue ?? ""}
           placeholder={tr("planningFilters.searchPlaceholder", "Search title or brief")}
           maxLength={80}
-          className={`${controlClass} w-44 ps-7`}
+          className={`${controlClass} ps-7`}
+          dir="auto"
           data-testid={`${testIdPrefix}-search-input`}
         />
       </div>
@@ -175,11 +176,16 @@ export function PlanningFilters({
           ))}
         </select>
       ) : null}
-      <Button variant="outline" type="submit" data-testid={`${testIdPrefix}-apply-filters`}>
+      <Button
+        className="w-full"
+        variant="outline"
+        type="submit"
+        data-testid={`${testIdPrefix}-apply-filters`}
+      >
         {tr("planningFilters.apply", "Apply")}
       </Button>
       {hasFilter && targetPath ? (
-        <Button variant="ghost" asChild>
+        <Button className="w-full" variant="ghost" asChild>
           <Link
             href={`${targetPath}?month=${monthParam}`}
             data-testid={`${testIdPrefix}-clear-filters`}

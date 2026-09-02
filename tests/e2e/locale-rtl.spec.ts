@@ -33,4 +33,16 @@ test("authenticated shell resolves Arabic RTL without horizontal overflow @a11y"
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   );
   expect(planningOverflowsHorizontally).toBe(false);
+
+  await page.goto("/app/w/acme/board");
+  await expect(page.getByRole("heading", { name: "لوحة سير العمل", level: 1 })).toBeVisible();
+  await expect(page.getByTestId("board-search-input")).toHaveAttribute(
+    "placeholder",
+    "ابحث في العنوان أو الوصف",
+  );
+  await expect(page.getByTestId("board-column-ideas")).toBeVisible();
+  const boardOverflowsHorizontally = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(boardOverflowsHorizontally).toBe(false);
 });
