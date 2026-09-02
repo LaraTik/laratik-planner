@@ -87,8 +87,11 @@ handled before unrelated cleanup.
    focused Arabic/RTL coverage in `50bf278`. The social analytics aggregate
    summary and growth chart now use the active catalog, server-resolved locale,
    accessible translated SVG copy, and Latin-digit number formatting in
-   `a1d7963` and `443092c`. The static scan must be repeated after each
-   localization batch because dynamic catalog keys are not fully discoverable.
+   `a1d7963` and `443092c`. The AI diagnostic panel is now catalog-backed and
+   receives the server-resolved translator, with Arabic coverage in `b6efac8`.
+   Remaining hotspots include publish forms. The static scan must be repeated
+   after each localization batch because dynamic catalog keys are not fully
+   discoverable.
 4. **Exact-HEAD visual review is incomplete.** Exact-HEAD axe and RTL checks
    pass, but the visual suite still has reference deltas and the required
    keyboard, screen-reader, zoom, and reduced-motion review is not independently
