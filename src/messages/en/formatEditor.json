@@ -124,6 +124,8 @@
     "save": "Save content details",
     "savePending": "Saving…",
     "saveCreative": "Save creative details",
+    "saveSuccess": "Saved",
+    "unsavedGuard": "You have unsaved changes in the Content tab. Leave and lose them?",
     "ai": {
       "suggest": "AI suggest",
       "suggestFieldAria": "Suggest {field} with AI",

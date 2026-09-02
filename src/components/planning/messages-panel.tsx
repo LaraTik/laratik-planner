@@ -10,6 +10,7 @@ import { HashtagEditor } from "@/components/forms/hashtag-editor";
 import { FormSummary } from "@/components/forms/form-summary";
 import { focusFirstInvalid } from "@/lib/forms/focus-first-invalid";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
+import { useNavigationDirtyGuard } from "@/lib/forms/use-navigation-dirty-guard";
 import { updateFormatPayloadAction } from "@/app/(app)/app/w/[slug]/planning/actions";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { formatNumber } from "@/lib/i18n/format-locale";
@@ -120,6 +121,19 @@ export function MessagesPanel({
   // beforeunload prompt doesn't fire for already-saved data.
   const isClean = state.ok === true;
   useBeforeunloadDirtyGuard(formRef, isClean);
+  // In-app navigation guard (Next.js router events +
+  // popstate) — covers tab switches, "back to list" links,
+  // and keyboard back/forward. Together with the
+  // beforeunload guard above, the user can never silently
+  // lose work in the Messages tab.
+  useNavigationDirtyGuard({
+    formRef,
+    isClean,
+    confirmMessage: tr(
+      "contentDetail.messages.unsavedGuard",
+      "You have unsaved changes in the Message tab. Leave and lose them?",
+    ),
+  });
 
   // Per-channel preview: derive the per-platform fields
   // from the planner's current draft. The publisher may

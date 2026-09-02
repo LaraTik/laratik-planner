@@ -607,7 +607,8 @@
     "noChannels": "No channels selected yet.",
     "save": "Save message",
     "saving": "Saving…",
-    "saved": "Saved"
+    "saved": "Saved",
+    "unsavedGuard": "You have unsaved changes in the Message tab. Leave and lose them?"
   },
   "inline": {
     "titleRequired": "Title is required.",
