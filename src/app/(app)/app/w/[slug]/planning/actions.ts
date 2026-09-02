@@ -38,6 +38,40 @@ import {
   resolveComment,
   ResolveCommentSchema,
 } from "@/lib/discussions/service";
+import {
+  actionFailure,
+  fieldErrorsFromZod,
+  type ActionState,
+} from "@/lib/validation/action-state";
+
+/**
+ * Per-action field maps (plan §4 — "Per-action field map").
+ *
+ * Each field name is the *form* field name (what the form
+ * reads off `formData.get(name)`), not the Zod schema key
+ * (which may use camelCase for objects like `plannedPublishAt`).
+ * The two usually match for these actions, but the form name
+ * is the source of truth because the form's `<FormField id>`
+ * is what the user sees + clicks on the form-summary card.
+ */
+type QuickCreateFields = "title" | "format" | "plannedPublishAt" | "brief" | "channelIds";
+type UpdateContentFields = QuickCreateFields;
+type BatchCreateFields = "rows";
+type TransitionFields = "action" | "reason";
+type AssignDesignerFields = "designerId";
+type ApplyAiDraftFields = "draftText" | "mode";
+type SubmitDeliveryFields = "description" | "designerNote" | "linkLabel" | "linkUrl";
+type DecideApprovalFields = "decision" | "feedback";
+type RecordPublicationFields =
+  | "contentItemChannelId"
+  | "status"
+  | "publishedUrl"
+  | "note"
+  | "failureReason";
+type CreateCommentFields = "contentItemId" | "body" | "visibility" | "label";
+type UpdateFormatPayloadFields = "contentItemId" | "format" | "formatPayload";
+type ResolveCommentFields = "commentId" | "resolved";
+
 async function requireWorkspaceContext(workspaceSlug: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Not signed in");
@@ -49,7 +83,12 @@ async function requireWorkspaceContext(workspaceSlug: string) {
   return { actor, workspace };
 }
 
-export async function quickCreateAction(workspaceSlug: string, _prev: unknown, formData: FormData) {
+// ─── Quick create ─────────────────────────────────────────────────────
+export async function quickCreateAction(
+  workspaceSlug: string,
+  _prev: unknown,
+  formData: FormData,
+): Promise<ActionState<QuickCreateFields>> {
   const { actor, workspace } = await requireWorkspaceContext(workspaceSlug);
   const channelIdsRaw = formData.getAll("channelIds").map(String);
   const parsed = QuickCreateSchema.safeParse({
@@ -61,21 +100,25 @@ export async function quickCreateAction(workspaceSlug: string, _prev: unknown, f
     channelIds: channelIdsRaw.length > 0 ? channelIdsRaw : undefined,
   });
   if (!parsed.success) {
-    return {
-      error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
-    };
+    return fieldErrorsFromZod<QuickCreateFields>(parsed.error);
   }
-  const id = await quickCreateContentItem(actor, parsed.data);
+  let id: string;
+  try {
+    id = await quickCreateContentItem(actor, parsed.data);
+  } catch (error) {
+    return actionFailure<QuickCreateFields>(error, "The idea could not be created.");
+  }
   revalidatePath(`/app/w/${workspaceSlug}/planning`);
   redirect(`/app/w/${workspaceSlug}/planning/${id}`);
 }
 
+// ─── Update content item ──────────────────────────────────────────────
 export async function updateContentItemAction(
   workspaceSlug: string,
   contentItemId: string,
   _prev: unknown,
   formData: FormData,
-) {
+): Promise<ActionState<UpdateContentFields>> {
   const { actor } = await requireWorkspaceContext(workspaceSlug);
   const channelIdsRaw = formData.getAll("channelIds").map(String);
   const parsed = UpdateContentSchema.safeParse({
@@ -86,9 +129,7 @@ export async function updateContentItemAction(
     channelIds: channelIdsRaw,
   });
   if (!parsed.success) {
-    return {
-      error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
-    };
+    return fieldErrorsFromZod<UpdateContentFields>(parsed.error);
   }
   try {
     await updateContentItem(actor, {
@@ -99,14 +140,15 @@ export async function updateContentItemAction(
       plannedPublishAt: parsed.data.plannedPublishAt,
       channelIds: parsed.data.channelIds,
     });
-  } catch (e) {
-    return { error: (e as Error).message };
+  } catch (error) {
+    return actionFailure<UpdateContentFields>(error, "The idea could not be saved.");
   }
   revalidatePath(`/app/w/${workspaceSlug}/planning`);
   revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
   redirect(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
 }
 
+// ─── Apply AI draft ───────────────────────────────────────────────────
 const ApplyAiDraftSchema = z.object({
   contentItemId: z.string().uuid(),
   draftText: z.string().min(1).max(4000),
@@ -118,7 +160,7 @@ const ApplyAiDraftSchema = z.object({
  * stays in control — Insert appends, Replace overwrites). Reuses the
  * `updateContentItem` service so the editability guard and the
  * `content_updated` activity event fire once, identically to the manual
- * edit form. Returns the new brief text on success; an error string on
+ * edit form. Returns the new brief text on success; an error object on
  * failure (e.g. the item is past `draft | changes_requested`).
  */
 export async function applyAiDraftAction(input: {
@@ -126,14 +168,14 @@ export async function applyAiDraftAction(input: {
   contentItemId: string;
   draftText: string;
   mode: "insert" | "replace";
-}): Promise<{ error?: string; brief?: string }> {
+}): Promise<ActionState<ApplyAiDraftFields> & { brief?: string }> {
   const parsed = ApplyAiDraftSchema.safeParse({
     contentItemId: input.contentItemId,
     draftText: input.draftText,
     mode: input.mode,
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues.map((i) => i.message).join("; ") };
+    return fieldErrorsFromZod<ApplyAiDraftFields>(parsed.error);
   }
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
   const [item] = await db
@@ -158,14 +200,19 @@ export async function applyAiDraftAction(input: {
       plannedPublishAt: item.plannedPublishAt,
       channelIds: undefined,
     });
-  } catch (e) {
-    return { error: (e as Error).message };
+  } catch (error) {
+    return actionFailure<ApplyAiDraftFields>(error, "The AI draft could not be applied.");
   }
   revalidatePath(`/app/w/${input.workspaceSlug}/planning/${input.contentItemId}`);
-  return { brief: newBrief };
+  return { ok: true, brief: newBrief };
 }
 
-export async function batchCreateAction(workspaceSlug: string, _prev: unknown, formData: FormData) {
+// ─── Batch create ─────────────────────────────────────────────────────
+export async function batchCreateAction(
+  workspaceSlug: string,
+  _prev: unknown,
+  formData: FormData,
+): Promise<ActionState<BatchCreateFields>> {
   const { actor, workspace } = await requireWorkspaceContext(workspaceSlug);
   const rawRows = String(formData.get("rows") ?? "");
   const rows = parseBatchRows(rawRows);
@@ -173,10 +220,12 @@ export async function batchCreateAction(workspaceSlug: string, _prev: unknown, f
   // format, etc.) before the server tries to write the batch.
   const bad = rows.filter((r) => "parseError" in r);
   if (bad.length > 0) {
+    const message = `Row ${bad
+      .map((b) => b.lineNumber)
+      .join(", ")}: ${bad.map((b) => ("parseError" in b ? b.parseError : "")).join("; ")}`;
     return {
-      error: `Row ${bad.map((b) => b.lineNumber).join(", ")}: ${bad
-        .map((b) => ("parseError" in b ? b.parseError : ""))
-        .join("; ")}`,
+      error: message,
+      fieldErrors: { rows: message },
     };
   }
   const parsed = BatchCreateSchema.safeParse({
@@ -197,9 +246,7 @@ export async function batchCreateAction(workspaceSlug: string, _prev: unknown, f
     })),
   });
   if (!parsed.success) {
-    return {
-      error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
-    };
+    return fieldErrorsFromZod<BatchCreateFields>(parsed.error);
   }
   // The base `BatchCreateInput` doesn't carry per-row
   // extensions (caption / hashtags / location). We pass them
@@ -211,29 +258,41 @@ export async function batchCreateAction(workspaceSlug: string, _prev: unknown, f
     const ext = rows[idx]?.extensions ?? {};
     return { ...item, extensions: ext };
   });
-  await batchCreateContentItems(actor, {
-    ...parsed.data,
-    items: itemsWithExtensions,
-  });
+  try {
+    await batchCreateContentItems(actor, {
+      ...parsed.data,
+      items: itemsWithExtensions,
+    });
+  } catch (error) {
+    return actionFailure<BatchCreateFields>(error, "The batch could not be saved.");
+  }
   revalidatePath(`/app/w/${workspaceSlug}/planning`);
   redirect(`/app/w/${workspaceSlug}/planning`);
 }
 
+// ─── Workflow transition ──────────────────────────────────────────────
 export async function transitionAction(input: {
   workspaceSlug: string;
   contentItemId: string;
   action: WorkflowAction;
   reason?: string;
   returnTarget?: string;
-}): Promise<{ error?: string; from?: string; to?: string }> {
+}): Promise<ActionState<TransitionFields> & { from?: string; to?: string }> {
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  if (!input.action) {
+    return {
+      error: "Missing action",
+      fieldErrors: { action: "Choose an action" },
+    };
+  }
   try {
-    return await transitionContent(actor, {
+    const result = await transitionContent(actor, {
       contentItemId: input.contentItemId,
       action: input.action,
       ...(input.reason ? { reason: input.reason } : {}),
       ...(input.returnTarget ? { returnTarget: input.returnTarget } : {}),
     });
+    return { ok: true, from: result?.from, to: result?.to };
   } catch (error) {
     // Return the error as a value rather than re-throwing. Next.js 16
     // encodes thrown server-action errors as a hashed digest in the RSC
@@ -243,24 +302,29 @@ export async function transitionAction(input: {
     // a value keeps the message in the RSC payload. Matches the
     // pattern already used by `applyAiDraftAction`, `submitDeliveryAction`,
     // and `decideApprovalAction` in this file.
-    return { error: error instanceof Error ? error.message : "The workflow action failed." };
+    return actionFailure<TransitionFields>(
+      error,
+      "The workflow action failed.",
+    );
   }
 }
 
+// ─── Designer claim ───────────────────────────────────────────────────
 export async function claimAction(input: {
   workspaceSlug: string;
   contentItemId: string;
-}): Promise<{ error?: string }> {
+}): Promise<ActionState> {
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
   try {
     await claimAsDesigner(actor, input.contentItemId);
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "The claim action failed." };
+    return actionFailure(error, "The claim action failed.");
   }
   revalidatePath(`/app/w/${input.workspaceSlug}/planning/${input.contentItemId}`);
-  return {};
+  return { ok: true };
 }
 
+// ─── Assign designer ──────────────────────────────────────────────────
 /**
  * FEAT-FULL-REVIEW-2026-08-26 — manager assigns a specific designer to
  * an item in `approved_for_design`, then transitions the item to
@@ -283,19 +347,19 @@ export async function assignDesignerAction(input: {
   workspaceSlug: string;
   contentItemId: string;
   designerId: string;
-}): Promise<{ error?: string }> {
+}): Promise<ActionState<AssignDesignerFields>> {
   const parsed = AssignDesignerActionSchema.safeParse({
     contentItemId: input.contentItemId,
     designerId: input.designerId,
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues.map((i) => i.message).join("; ") };
+    return fieldErrorsFromZod<AssignDesignerFields>(parsed.error);
   }
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
   try {
     await assignDesigner(actor, parsed.data);
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "The assign action failed." };
+    return actionFailure<AssignDesignerFields>(error, "The assign action failed.");
   }
   // Now move the item to `in_design`. The workflow transition does
   // its own role gate; the design row was set in the previous call
@@ -307,18 +371,19 @@ export async function assignDesignerAction(input: {
       action: "assign_designer",
     });
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "The assign action failed." };
+    return actionFailure<AssignDesignerFields>(error, "The assign action failed.");
   }
   revalidatePath(`/app/w/${input.workspaceSlug}/planning/${input.contentItemId}`);
-  return {};
+  return { ok: true };
 }
 
+// ─── Submit delivery ──────────────────────────────────────────────────
 export async function submitDeliveryAction(
   workspaceSlug: string,
   contentItemId: string,
   _prev: unknown,
   formData: FormData,
-) {
+): Promise<ActionState<SubmitDeliveryFields>> {
   const { actor } = await requireWorkspaceContext(workspaceSlug);
   // Parse links: each pair of label + url fields
   const labels = formData.getAll("linkLabel").map((v) => String(v));
@@ -328,7 +393,13 @@ export async function submitDeliveryAction(
   const links = labels
     .map((label, i: number) => ({
       provider: (providers[i] ?? "other") as
-        "google_drive" | "dropbox" | "onedrive" | "frame_io" | "figma" | "canva" | "other",
+        | "google_drive"
+        | "dropbox"
+        | "onedrive"
+        | "frame_io"
+        | "figma"
+        | "canva"
+        | "other",
       label,
       url: urls[i] ?? "",
       isPreview: previews[i] === "on",
@@ -342,19 +413,27 @@ export async function submitDeliveryAction(
     links,
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues.map((i) => i.message).join("; ") };
+    return fieldErrorsFromZod<SubmitDeliveryFields>(parsed.error);
   }
-  const result = await submitDelivery(actor, parsed.data);
+  try {
+    const result = await submitDelivery(actor, parsed.data);
+    if (result && typeof result === "object" && "error" in result && result.error) {
+      return { error: String(result.error) };
+    }
+  } catch (error) {
+    return actionFailure<SubmitDeliveryFields>(error, "The delivery could not be submitted.");
+  }
   revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
-  return result;
+  return { ok: true };
 }
 
+// ─── Decide approval ──────────────────────────────────────────────────
 export async function decideApprovalAction(input: {
   workspaceSlug: string;
   approvalRequestId: string;
   decision: "approved" | "changes_requested";
   feedback?: string;
-}): Promise<{ error?: string }> {
+}): Promise<ActionState<DecideApprovalFields>> {
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
   const parsed = DecideApprovalSchema.safeParse({
     approvalRequestId: input.approvalRequestId,
@@ -362,12 +441,12 @@ export async function decideApprovalAction(input: {
     ...(input.feedback ? { feedback: input.feedback } : {}),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues.map((i) => i.message).join("; ") };
+    return fieldErrorsFromZod<DecideApprovalFields>(parsed.error);
   }
   try {
     await decideApproval(actor, parsed.data);
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "The approval action failed." };
+    return actionFailure<DecideApprovalFields>(error, "The approval action failed.");
   }
   revalidatePath(`/app/w/${input.workspaceSlug}/planning`);
   // Publication outcomes change the workflow status rendered by the
@@ -375,9 +454,10 @@ export async function decideApprovalAction(input: {
   // detail route so a publisher's next visit cannot see a stale
   // ready-to-publish snapshot.
   revalidatePath(`/app/w/${input.workspaceSlug}/planning/[id]`, "page");
-  return {};
+  return { ok: true };
 }
 
+// ─── Record publication ───────────────────────────────────────────────
 export async function recordPublicationAction(input: {
   workspaceSlug: string;
   contentItemChannelId: string;
@@ -385,7 +465,7 @@ export async function recordPublicationAction(input: {
   publishedUrl?: string;
   note?: string;
   failureReason?: string;
-}): Promise<{ error?: string }> {
+}): Promise<ActionState<RecordPublicationFields>> {
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
   const parsed = RecordPublicationSchema.safeParse({
     contentItemChannelId: input.contentItemChannelId,
@@ -395,25 +475,23 @@ export async function recordPublicationAction(input: {
     ...(input.failureReason ? { failureReason: input.failureReason } : {}),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues.map((i) => i.message).join("; ") };
+    return fieldErrorsFromZod<RecordPublicationFields>(parsed.error);
   }
   try {
     await recordPublication(actor, parsed.data);
   } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "The publication action failed.",
-    };
+    return actionFailure<RecordPublicationFields>(error, "The publication action failed.");
   }
   revalidatePath(`/app/w/${input.workspaceSlug}/planning`);
-  return {};
+  return { ok: true };
 }
 
-// ─── Discussion actions (Goal 8) ────────────────────────────────────────
+// ─── Discussion actions (Goal 8) ─────────────────────────────────────
 export async function createCommentAction(
   workspaceSlug: string,
-  _prev: { error?: string } | null,
+  _prev: unknown,
   formData: FormData,
-): Promise<{ error?: string } | null> {
+): Promise<ActionState<CreateCommentFields> & { mentionedUserIds?: string[] }> {
   const { actor, workspace } = await requireWorkspaceContext(workspaceSlug);
   const parsed = CreateCommentSchema.safeParse({
     contentItemId: formData.get("contentItemId"),
@@ -423,9 +501,7 @@ export async function createCommentAction(
     label: formData.get("label") ?? "general",
   });
   if (!parsed.success) {
-    return {
-      error: parsed.error.issues.map((i) => i.message).join("; "),
-    };
+    return fieldErrorsFromZod<CreateCommentFields>(parsed.error);
   }
   // The new <CommentComposer> posts a structured mention list
   // alongside the body (the picker tracks user ids, not just
@@ -454,24 +530,25 @@ export async function createCommentAction(
   await createComment(actor, parsed.data, structuredMentionIds);
   revalidatePath(`/app/w/${workspaceSlug}/planning/${formData.get("contentItemId")}`);
   void workspace;
-  return null;
+  return { ok: true, mentionedUserIds: structuredMentionIds };
 }
 
 export async function resolveCommentAction(input: {
   workspaceSlug: string;
   commentId: string;
   resolved: boolean;
-}) {
+}): Promise<ActionState<ResolveCommentFields>> {
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
   const parsed = ResolveCommentSchema.safeParse({
     commentId: input.commentId,
     resolved: input.resolved,
   });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
+    return fieldErrorsFromZod<ResolveCommentFields>(parsed.error);
   }
   await resolveComment(actor, parsed.data);
   revalidatePath(`/app/w/${input.workspaceSlug}/planning/`);
+  return { ok: true };
 }
 
 /**
@@ -511,14 +588,17 @@ export async function updateFormatPayloadAction(
   workspaceSlug: string,
   _prev: unknown,
   formData: FormData,
-) {
+): Promise<ActionState<UpdateFormatPayloadFields>> {
   const { actor } = await requireWorkspaceContext(workspaceSlug);
   const rawPayload = String(formData.get("formatPayload") ?? "{}");
   let formatPayload: unknown;
   try {
     formatPayload = JSON.parse(rawPayload);
   } catch {
-    return { error: "Invalid formatPayload JSON" };
+    return {
+      error: "Invalid formatPayload JSON",
+      fieldErrors: { formatPayload: "The format payload is not valid JSON." },
+    };
   }
   const parsed = UpdateFormatPayloadFormSchema.safeParse({
     contentItemId: formData.get("contentItemId"),
@@ -526,9 +606,7 @@ export async function updateFormatPayloadAction(
     formatPayload: rawPayload,
   });
   if (!parsed.success) {
-    return {
-      error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
-    };
+    return fieldErrorsFromZod<UpdateFormatPayloadFields>(parsed.error);
   }
   try {
     await updateFormatPayload(actor, {
@@ -537,8 +615,8 @@ export async function updateFormatPayloadAction(
       formatPayload: formatPayload as Record<string, unknown>,
     });
   } catch (e) {
-    return { error: (e as Error).message };
+    return actionFailure<UpdateFormatPayloadFields>(e, "The format payload could not be saved.");
   }
   revalidatePath(`/app/w/${workspaceSlug}/planning/${parsed.data.contentItemId}`);
-  return { ok: true as const };
+  return { ok: true };
 }
