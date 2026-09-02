@@ -59,7 +59,7 @@ export default async function SocialAnalyticsPage({
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const { slug } = await params;
   const sp = await searchParams;
   const rawWindow = Array.isArray(sp.window) ? sp.window[0] : sp.window;
@@ -322,7 +322,9 @@ export default async function SocialAnalyticsPage({
                       >
                         <Activity className="h-3 w-3" aria-hidden={true} />
                         Last synced{" "}
-                        {channel.lastSyncedAt ? formatRelativeDate(channel.lastSyncedAt) : "—"}
+                        {channel.lastSyncedAt
+                          ? formatRelativeDate(channel.lastSyncedAt, new Date(), code)
+                          : "—"}
                       </div>
                     </div>
                   </header>

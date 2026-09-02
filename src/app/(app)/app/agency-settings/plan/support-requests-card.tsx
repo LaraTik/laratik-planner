@@ -23,7 +23,7 @@ import { tForActive } from "@/lib/i18n/t-for-active";
  * dedicated decision page where the approve / reject UI lives.
  */
 export async function SupportAccessRequestsCard({ agencyId }: { agencyId: string }) {
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const requests = await listRequestsForAgency(agencyId, { limit: 25 });
   const pending = requests.filter((r) => r.status === "pending");
   const recent = requests.filter((r) => r.status !== "pending").slice(0, 5);
@@ -71,7 +71,7 @@ export async function SupportAccessRequestsCard({ agencyId }: { agencyId: string
     {
       key: "createdAt",
       header: t("agencyPlan.supportColWhen"),
-      cell: (row) => formatRelativeDate(row.createdAt),
+      cell: (row) => formatRelativeDate(row.createdAt, new Date(), code),
     },
   ];
 

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Building2 } from "lucide-react";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import type { LocaleCode } from "@/lib/i18n/locales";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Row shape for the platform-agencies table. Owned by the server
@@ -42,8 +43,12 @@ export function AgenciesTable({
   relativeNow: string;
 }) {
   const t = useLocaleT();
+  const locale = useLocaleCode();
   const [query, setQuery] = React.useState("");
-  const columns = React.useMemo(() => createColumns(new Date(relativeNow), t), [relativeNow, t]);
+  const columns = React.useMemo(
+    () => createColumns(new Date(relativeNow), t, locale),
+    [relativeNow, t, locale],
+  );
 
   // Wire up to the page-level search input (rendered above the table
   // by the server component). The input is server-rendered; this
@@ -105,6 +110,7 @@ export function AgenciesTable({
 function createColumns(
   relativeNow: Date,
   t: (key: string, params?: Record<string, string | number>) => string,
+  locale: LocaleCode,
 ): DataTableColumnDef<PlatformAgencyRow>[] {
   return [
     {
@@ -162,7 +168,7 @@ function createColumns(
     {
       key: "created",
       header: t("platform.colCreated"),
-      cell: (r) => formatRelativeDate(r.createdAt, relativeNow),
+      cell: (r) => formatRelativeDate(r.createdAt, relativeNow, locale),
     },
     {
       key: "actions",

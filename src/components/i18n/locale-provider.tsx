@@ -8,6 +8,7 @@ import type { LocaleCode } from "@/lib/i18n/locales";
 export type ClientTranslator = ReturnType<typeof makeTranslator>;
 
 const LocaleContext = React.createContext<ClientTranslator | null>(null);
+const LocaleCodeContext = React.createContext<LocaleCode>("en");
 
 /**
  * Client-side translation boundary. The server passes only the
@@ -22,7 +23,11 @@ export function LocaleProvider({
   children: React.ReactNode;
 }) {
   const t = React.useMemo(() => makeTranslator(locale), [locale]);
-  return <LocaleContext.Provider value={t}>{children}</LocaleContext.Provider>;
+  return (
+    <LocaleCodeContext.Provider value={locale}>
+      <LocaleContext.Provider value={t}>{children}</LocaleContext.Provider>
+    </LocaleCodeContext.Provider>
+  );
 }
 
 /** Read the translator for the active server-resolved interface locale. */
@@ -31,4 +36,9 @@ export function useLocaleT(): ClientTranslator {
   // Keep isolated component previews and tests usable while production
   // trees still receive the active locale from the root provider.
   return t ?? makeTranslator("en");
+}
+
+/** Read the active locale for locale-aware formatting in client components. */
+export function useLocaleCode(): LocaleCode {
+  return React.useContext(LocaleCodeContext);
 }

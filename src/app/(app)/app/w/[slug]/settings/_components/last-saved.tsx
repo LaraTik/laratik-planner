@@ -1,6 +1,9 @@
+"use client";
+
 import * as React from "react";
 import { Clock } from "lucide-react";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * LastSaved — a compact "saved X ago" indicator rendered at the
@@ -10,6 +13,8 @@ import { formatRelativeDate } from "@/lib/utils/format-relative-date";
  * missing (the row was never written — defaults applied).
  */
 export function LastSaved({ at }: { at: Date | null | undefined }) {
+  const t = useLocaleT();
+  const locale = useLocaleCode();
   if (!at) {
     return (
       <p
@@ -17,7 +22,7 @@ export function LastSaved({ at }: { at: Date | null | undefined }) {
         data-testid="settings-last-saved"
       >
         <Clock className="h-3 w-3" aria-hidden="true" />
-        Defaults applied — never edited.
+        {t("settings.lastSaved.never")}
       </p>
     );
   }
@@ -28,7 +33,12 @@ export function LastSaved({ at }: { at: Date | null | undefined }) {
     >
       <Clock className="h-3 w-3" aria-hidden="true" />
       <span>
-        Last saved <span className="text-fg-secondary font-semibold">{formatRelativeDate(at)}</span>
+        {t("settings.lastSaved.label")}{" "}
+        <span className="text-fg-secondary font-semibold">
+          {t("settings.lastSaved.relative", {
+            date: formatRelativeDate(at, new Date(), locale),
+          })}
+        </span>
       </span>
     </p>
   );

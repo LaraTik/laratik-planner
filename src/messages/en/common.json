@@ -1382,6 +1382,31 @@
       "windowNone": "No window set"
     },
     "channels": {
+      "connectionStatus": {
+        "manual": {
+          "label": "Manual",
+          "description": "Channel has no provider connection. Manually managed."
+        },
+        "connected": {
+          "label": "Connected",
+          "description": "Provider active. Daily metrics are being collected."
+        },
+        "needs_reauth": {
+          "label": "Needs reconnect",
+          "description": "Three consecutive auth/permission failures. Reconnect to resume."
+        },
+        "sync_error": {
+          "label": "Sync delayed",
+          "description": "Transient provider error. The cron will retry."
+        },
+        "disconnected": {
+          "label": "Disconnected",
+          "description": "Provider connection removed. Historical metrics are preserved."
+        },
+        "lastSynced": "Last synced {when}",
+        "synced": "Synced {when}",
+        "waiting": "Waiting for first sync"
+      },
       "title": "Channels",
       "description": "Keep the brand's account information in one place. Connections and analytics are planned for a future version.",
       "colPlatform": "Platform",
@@ -1728,6 +1753,12 @@
       "savePreferencesFailed": "We could not save your notification preferences. Try again.",
       "localeCookieSyncFailed": "Profile saved, but the language will apply after your next sign-in."
     }
+  },
+  "buildInfo": {
+    "copied": "Build information copied",
+    "copy": "Copy build information",
+    "copyFailed": "Could not copy build information",
+    "checkBrowserPermissions": "Check your browser permissions."
   },
   "errors": {
     "notFoundTitle": "Page not found",
@@ -2437,7 +2468,9 @@
       "downloadZipEmpty": "Add at least one logo, color, or font before downloading.",
       "browseTemplates": "Browse templates",
       "recentUpdates": "Recent updates",
-      "seeAllActivity": "See all activity →"
+      "seeAllActivity": "See all activity →",
+      "lastUpdatedLabel": "Last updated",
+      "noActivity": "No activity yet"
     },
     "logosAria": "Logo assets",
     "colorsAria": "Color palette",

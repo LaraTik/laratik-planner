@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/content/status-badge";
 import type { KpiContentFormat, KpiContentStatus } from "@/lib/dashboard/kpis";
 import { CONTENT_FORMAT_LABELS } from "@/lib/dashboard/kpis";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import type { LocaleCode } from "@/lib/i18n/locales";
 
 /**
  * RecentlyUpdatedList — the refactored "Recently updated" panel on
@@ -47,6 +48,7 @@ export interface RecentlyUpdatedListProps {
   workspaceSlug: string;
   viewAllHref: string;
   createHref?: string;
+  locale?: LocaleCode;
   /**
    * Optional translator. When provided, the panel renders
    * `workspaceOverviewDashboard.recentlyUpdated.*`; when omitted,
@@ -61,6 +63,7 @@ export function RecentlyUpdatedList({
   viewAllHref,
   createHref,
   t,
+  locale = "en",
 }: RecentlyUpdatedListProps) {
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t ? t(key, params) : fallback;
@@ -139,7 +142,7 @@ export function RecentlyUpdatedList({
                       { time: exactTimestamp },
                     )}
                   >
-                    {formatRelativeDate(updatedAt)}
+                    {formatRelativeDate(updatedAt, new Date(), locale)}
                   </span>
                   <StatusBadge status={it.status} />
                 </Link>

@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import type { LocaleCode } from "@/lib/i18n/locales";
 import { ConnectionStatusBadge } from "./connection-status-badge";
 import { ConnectionActions } from "./connection-actions";
 import { AddChannelButton } from "./add-channel-button";
@@ -40,6 +41,7 @@ function channelsColumns(props: {
     Array<{ id: string; accountName: string; platform: "instagram" | "facebook" | "tiktok" }>
   >;
   t: (key: string) => string;
+  locale: LocaleCode;
 }): DataTableColumnDef<ChannelRow>[] {
   return [
     {
@@ -94,6 +96,8 @@ function channelsColumns(props: {
               "manual" | "connected" | "needs_reauth" | "sync_error" | "disconnected"
           }
           lastSyncedAt={row.lastSyncedAt}
+          locale={props.locale}
+          t={props.t}
         />
       ),
     },
@@ -107,7 +111,7 @@ function channelsColumns(props: {
       key: "updated",
       header: props.t("users.channels.colUpdated"),
       hideOn: "xl",
-      cell: (row) => formatRelativeDate(row.updatedAt),
+      cell: (row) => formatRelativeDate(row.updatedAt, new Date(), props.locale),
     },
     {
       key: "actions",
@@ -196,7 +200,7 @@ export default async function ChannelsPage({
   const sp = await searchParams;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const canManage = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
     "workspace_manager",
   ]);
@@ -390,6 +394,7 @@ export default async function ChannelsPage({
                 canManage,
                 affectedByConnection: affectedByConnection,
                 t,
+                locale: code,
               })}
             />
           </div>

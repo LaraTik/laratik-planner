@@ -1,6 +1,9 @@
 import { CircleCheck, CircleAlert, CircleX, CircleDashed } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import type { LocaleCode } from "@/lib/i18n/locales";
+
+type Translator = (key: string, params?: Record<string, string | number>) => string;
 
 /**
  * M4 — connection status badge.
@@ -58,10 +61,14 @@ export function ConnectionStatusBadge({
   status,
   lastSyncedAt,
   variant = "outline",
+  locale = "en",
+  t,
 }: {
   status: ConnectionStatus;
   lastSyncedAt?: Date | null;
   variant?: "outline" | "success" | "warning" | "danger";
+  locale?: LocaleCode;
+  t?: Translator;
 }) {
   // `Date.now()` is impure; we read the staleness from a prop-derived
   // computation only. The parent server component passes a
@@ -72,6 +79,7 @@ export function ConnectionStatusBadge({
   const stale = false;
   const effective: ConnectionStatus = stale ? "sync_error" : status;
   const effectiveMeta = STATUS_COPY[effective];
+  const label = t ? t(`users.channels.connectionStatus.${effective}.label`) : effectiveMeta.label;
   const EffectiveIcon = effectiveMeta.icon;
   return (
     <span
@@ -80,17 +88,29 @@ export function ConnectionStatusBadge({
     >
       <Badge variant={variant}>
         <EffectiveIcon className="h-3 w-3" aria-hidden={true} />
-        {effectiveMeta.label}
+        {label}
       </Badge>
       {lastSyncedAt ? (
         <span
           className="text-label text-fg-muted"
-          aria-label={`Last synced ${formatRelativeDate(lastSyncedAt)}`}
+          aria-label={
+            t
+              ? t("users.channels.connectionStatus.lastSynced", {
+                  when: formatRelativeDate(lastSyncedAt, new Date(), locale),
+                })
+              : `Last synced ${formatRelativeDate(lastSyncedAt, new Date(), locale)}`
+          }
         >
-          Synced {formatRelativeDate(lastSyncedAt)}
+          {t
+            ? t("users.channels.connectionStatus.synced", {
+                when: formatRelativeDate(lastSyncedAt, new Date(), locale),
+              })
+            : `Synced ${formatRelativeDate(lastSyncedAt, new Date(), locale)}`}
         </span>
       ) : status === "connected" ? (
-        <span className="text-label text-fg-muted">Waiting for first sync</span>
+        <span className="text-label text-fg-muted">
+          {t ? t("users.channels.connectionStatus.waiting") : "Waiting for first sync"}
+        </span>
       ) : null}
     </span>
   );
@@ -98,13 +118,17 @@ export function ConnectionStatusBadge({
 
 // Re-export the icon-only dot for use in compact contexts (e.g.,
 // the workspace overview). Not used in the channels table itself.
-export function ConnectionStatusDot({ status }: { status: ConnectionStatus }) {
+export function ConnectionStatusDot({ status, t }: { status: ConnectionStatus; t?: Translator }) {
   const Icon = STATUS_COPY[status].icon;
   return (
     <span
       className="inline-flex h-3 w-3 items-center justify-center"
       title={STATUS_COPY[status].label}
-      aria-label={STATUS_COPY[status].description}
+      aria-label={
+        t
+          ? t(`users.channels.connectionStatus.${status}.description`)
+          : STATUS_COPY[status].description
+      }
       data-testid={`connection-status-dot-${status}`}
     >
       <Icon className="h-3 w-3" aria-hidden={true} />

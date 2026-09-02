@@ -68,7 +68,7 @@ function auditActionLabel(action: string, t: Translator): string {
 
 export default async function PlatformAccessPage() {
   const actor = await currentActor();
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   if (!actor) {
     return (
       <PermissionNotice
@@ -137,7 +137,7 @@ export default async function PlatformAccessPage() {
       hideOn: "md",
       cell: (row) => (
         <div className="text-body text-fg-secondary">
-          <p>{formatRelativeDate(row.updatedAt)}</p>
+          <p>{formatRelativeDate(row.updatedAt, new Date(), code)}</p>
           <p className="text-label text-fg-muted">
             {row.grantedByEmail
               ? t("platform.colChangedByPrefix", { name: row.grantedByEmail })
@@ -195,7 +195,9 @@ export default async function PlatformAccessPage() {
       header: t("platform.colWhen"),
       hideOn: "md",
       cell: (row) => (
-        <span className="text-body text-fg-secondary">{formatRelativeDate(row.createdAt)}</span>
+        <span className="text-body text-fg-secondary">
+          {formatRelativeDate(row.createdAt, new Date(), code)}
+        </span>
       ),
     },
   ];
@@ -319,7 +321,9 @@ export default async function PlatformAccessPage() {
                   </p>
                   <div className="mt-3 flex min-h-11 items-center justify-between gap-3">
                     <span className="text-label text-fg-muted">
-                      {t("platform.colMobileChanged", { date: formatRelativeDate(row.updatedAt) })}
+                      {t("platform.colMobileChanged", {
+                        date: formatRelativeDate(row.updatedAt, new Date(), code),
+                      })}
                     </span>
                     {canManage ? (
                       <div className="flex shrink-0 gap-1">

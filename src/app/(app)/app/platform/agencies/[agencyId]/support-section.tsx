@@ -2,6 +2,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import type { LocaleCode } from "@/lib/i18n/locales";
 import { listRequestsForAgency, type SupportAccessRequestRow } from "@/lib/support";
 import { SupportAccessRequestForm } from "../../security/request-access-form";
 
@@ -51,12 +52,14 @@ export async function SupportAccessSection({
   workspaces,
   canRequestSupport,
   t,
+  locale = "en",
 }: {
   agencyId: string;
   agencyName: string;
   workspaces: ReadonlyArray<{ id: string; name: string }>;
   canRequestSupport: boolean;
   t?: Translator;
+  locale?: LocaleCode;
 }) {
   const tr: Translator = t ?? EN_FALLBACK;
   const requests = await listRequestsForAgency(agencyId, { limit: 10 });
@@ -86,7 +89,7 @@ export async function SupportAccessSection({
     {
       key: "createdAt",
       header: tr("platform.supportColWhen"),
-      cell: (row) => formatRelativeDate(row.createdAt),
+      cell: (row) => formatRelativeDate(row.createdAt, new Date(), locale),
     },
   ];
 

@@ -81,7 +81,7 @@ function formatCadenceI18n(ms: number, t: Translator): string {
 }
 
 export default async function PlatformCronHealthPage() {
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const actor = await currentActor();
   if (!actor) {
     return (
@@ -180,7 +180,7 @@ export default async function PlatformCronHealthPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4" data-testid="platform-cron-cards">
           {crons.map((c) => (
-            <CronCard key={c.cronName} cron={c} now={now} t={t} />
+            <CronCard key={c.cronName} cron={c} now={now} t={t} locale={code} />
           ))}
         </div>
       )}
@@ -235,7 +235,7 @@ export default async function PlatformCronHealthPage() {
                     data-testid={`platform-cron-log-row-${row.id}`}
                   >
                     <td className="text-body text-fg-secondary px-3 py-2 font-mono">
-                      {formatRelativeDate(row.startedAt, now)}
+                      {formatRelativeDate(row.startedAt, now, code)}
                     </td>
                     <td className="text-body text-fg-primary px-3 py-2 font-mono">
                       {row.cronName}
@@ -367,7 +367,17 @@ function EnvSwitch({
   );
 }
 
-function CronCard({ cron, now, t }: { cron: CronHealth; now: Date; t: Translator }) {
+function CronCard({
+  cron,
+  now,
+  t,
+  locale,
+}: {
+  cron: CronHealth;
+  now: Date;
+  t: Translator;
+  locale: import("@/lib/i18n/locales").LocaleCode;
+}) {
   const ageMs = cron.latest
     ? now.getTime() - cron.latest.startedAt.getTime()
     : Number.POSITIVE_INFINITY;
@@ -407,7 +417,7 @@ function CronCard({ cron, now, t }: { cron: CronHealth; now: Date; t: Translator
           >
             {cron.latest
               ? t("platform.cronLastTickAt", {
-                  date: formatRelativeDate(cron.latest.startedAt, now),
+                  date: formatRelativeDate(cron.latest.startedAt, now, locale),
                 })
               : t("platform.cronNoTicksRecorded")}
           </p>

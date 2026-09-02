@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { archiveChannelAction, testChannelConnectionAction, updateChannelAction } from "./actions";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Channel edit form fields are kept inline here rather than extracted
@@ -504,6 +504,7 @@ function ConnectionHealthSection({
     { kind: "success"; lastSyncedAt: string } | { kind: "error"; message: string } | null;
   t?: Translator;
 }) {
+  const locale = useLocaleCode();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t ? t(key, params) : fallback;
   // Prefer the in-flight Re-test result (fresher than the row
@@ -516,7 +517,7 @@ function ConnectionHealthSection({
       ? reTestResult.message
       : connectionStatus !== "connected" && lastSyncErrorCode
         ? `${humanizeErrorCode(lastSyncErrorCode, tr)}${
-            lastSyncErrorAt ? ` (${formatRelativeDate(lastSyncErrorAt)})` : ""
+            lastSyncErrorAt ? ` (${formatRelativeDate(lastSyncErrorAt, new Date(), locale)})` : ""
           }`
         : null;
   const showSuccess = reTestResult?.kind === "success";
@@ -547,7 +548,7 @@ function ConnectionHealthSection({
           <dt className="text-fg-muted">{tr("users.channelsHealth.lastSyncLabel", "Last sync")}</dt>
           <dd className="text-fg-primary font-medium">
             {lastSyncedAt
-              ? formatRelativeDate(lastSyncedAt)
+              ? formatRelativeDate(lastSyncedAt, new Date(), locale)
               : tr("users.channelsHealth.lastSyncNever", "Never")}
           </dd>
         </div>
@@ -570,8 +571,8 @@ function ConnectionHealthSection({
           <Check className="text-success h-3 w-3" aria-hidden={true} />
           {tr(
             "users.channelsHealth.validatedAt",
-            `Validated ${formatRelativeDate(new Date(reTestResult.lastSyncedAt))}`,
-            { when: formatRelativeDate(new Date(reTestResult.lastSyncedAt)) },
+            `Validated ${formatRelativeDate(new Date(reTestResult.lastSyncedAt), new Date(), locale)}`,
+            { when: formatRelativeDate(new Date(reTestResult.lastSyncedAt), new Date(), locale) },
           )}
         </p>
       ) : null}
