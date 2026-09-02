@@ -2,7 +2,7 @@
 
 Date: 2026-09-02  
 Broad browser/evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4`  
-Current audited code commit: `bf151a0` (`main`, clean before this audit-only update)
+Current audited code commit: `a7011a5` (`main`, clean before this audit-only update)
 Audit report update: committed after this evidence capture
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
@@ -32,7 +32,7 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | ESLint                 | Pass                  | `pnpm lint`                                                                                                           |
 | TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                                                          |
 | Unit tests             | Pass                  | 308 files; 3,068 passed; 4 todo at current HEAD                                                                       |
-| Production build       | Pass                  | `pnpm verify` at `bf151a0`                                                                                            |
+| Production build       | Pass                  | `pnpm verify` at `a7011a5`                                                                                            |
 | Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                                                               |
 | Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                                                      |
 | Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow                                              |
@@ -122,9 +122,17 @@ handled before unrelated cleanup.
    undefined design tokens cannot silently disappear from compiled CSS.
 4. Add SQL/migration linting and shell/config coverage to the staged quality
    path.
-5. Remove React `act` warnings and JSDOM navigation warnings from unit output.
-6. Replace the four pending TODO tests with explicit tracked coverage or an
-   approved reason for keeping them pending.
+5. **The observed React `act` and JSDOM navigation warnings are resolved.**
+   The connection re-test, overview navigator, and notification-link tests now
+   await asynchronous work inside Testing Library's `act`-aware helpers and
+   mock framework navigation at the test boundary. Remaining stderr is from
+   intentional security/provider diagnostic assertions, not test-harness noise.
+6. **The four pending TODO tests are explicitly tracked.** They are negative
+   `safeHref` inputs (`null`, `undefined`, number, object) that are outside the
+   public `safeHref(url: string)` contract; accepting them would weaken the
+   type boundary. Keep them as backlog candidates only if the API is
+   intentionally widened, rather than treating the current TODOs as missing
+   production coverage.
 7. Add repeatable LCP, INP, CLS, bundle, image, font, and slow-query evidence.
    The static build inventory and unthrottled public-route baseline are now
    recorded in `docs/production-readiness/PERFORMANCE_LOCAL_2026-09-02.md`;
