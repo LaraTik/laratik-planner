@@ -70,6 +70,12 @@ import {
 const isCaptureMode = process.env.PW_VISUAL_CAPTURE === "1";
 console.log(`[visual] capture mode: ${isCaptureMode ? "WRITE" : "ASSERT"}`);
 
+// Compare-mode routes also pay the first-hit Next.js dev compilation cost.
+// Keep the outer budget explicit so a cold route cannot fail before its
+// screenshot or accessibility assertion starts; route stabilization and the
+// screenshot matcher keep their own bounded timeouts below this budget.
+test.setTimeout(60_000);
+
 /**
  * Resolved snapshot directory used by `page.screenshot({ path })` in
  * capture mode. Hard-coding the relative path keeps the filename
