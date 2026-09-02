@@ -3,6 +3,7 @@
 import { useId, useMemo, useState } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * M4 — accessible SVG growth chart.
@@ -63,6 +64,12 @@ export function SocialGrowthChart({
    */
   growthPercent?: number | null;
 }) {
+  const t = useLocaleT();
+  const locale = useLocaleCode();
+  const formatValue = (value: number) =>
+    new Intl.NumberFormat(locale, { numberingSystem: "latn", maximumFractionDigits: 0 }).format(
+      value,
+    );
   const reactId = useId();
   const chartId = `${reactId}-chart`;
   const descId = `${reactId}-desc`;
@@ -89,6 +96,20 @@ export function SocialGrowthChart({
           if (latest < earliest) return "down" as const;
           return "flat" as const;
         })();
+  const trendLabel =
+    trend === "up"
+      ? t("analytics.chartTrendGrowing")
+      : trend === "down"
+        ? t("analytics.chartTrendDeclining")
+        : t("analytics.chartTrendFlat");
+  const chartDescription = t(
+    points.length === 1 ? "analytics.chartDescriptionOne" : "analytics.chartDescriptionMany",
+    {
+      metric: metricLabel.toLocaleLowerCase(locale),
+      count: points.length,
+      profileName,
+    },
+  );
 
   return (
     <figure
@@ -113,11 +134,7 @@ export function SocialGrowthChart({
           )}
           {typeof growthPercent === "number"
             ? `${growthPercent > 0 ? "+" : ""}${growthPercent.toFixed(1)}%`
-            : trend === "up"
-              ? "Growing"
-              : trend === "down"
-                ? "Declining"
-                : "Flat"}
+            : trendLabel}
         </Badge>
       </figcaption>
 
@@ -126,16 +143,16 @@ export function SocialGrowthChart({
         viewBox="0 0 600 220"
         className="mt-4 w-full"
         role="img"
-        aria-label={`${title} for ${profileName}, plotting ${metricLabel}. Numeric values are in the table below.`}
+        aria-label={t("analytics.chartAria", {
+          title,
+          profileName,
+          metric: metricLabel,
+        })}
         preserveAspectRatio="none"
         style={{ transition: "none" }}
       >
         <title>{title}</title>
-        <desc id={descId}>
-          A line chart showing {metricLabel.toLowerCase()} over {points.length} day
-          {points.length === 1 ? "" : "s"} for {profileName}. Numeric values are in the adjacent
-          table.
-        </desc>
+        <desc id={descId}>{chartDescription}</desc>
         {/* Gridlines + y-axis labels */}
         {[0, 0.25, 0.5, 0.75, 1].map((g) => {
           const y = 20 + g * 160;
@@ -188,7 +205,11 @@ export function SocialGrowthChart({
                       onBlur={() => setHover(null)}
                       tabIndex={0}
                       role="button"
-                      aria-label={`${p.date}: ${p.value.toLocaleString()} ${metricLabel.toLowerCase()}`}
+                      aria-label={t("analytics.chartPointAria", {
+                        date: p.date,
+                        value: formatValue(p.value),
+                        metric: metricLabel.toLocaleLowerCase(locale),
+                      })}
                     />
                   );
                 })}
@@ -225,7 +246,7 @@ export function SocialGrowthChart({
                             className="fill-fg-primary"
                             fontSize={11}
                           >
-                            {p.date}: {p.value.toLocaleString()}
+                            {p.date}: {formatValue(p.value)}
                           </text>
                         </g>
                       );
@@ -236,7 +257,7 @@ export function SocialGrowthChart({
           })()
         ) : (
           <text x={300} y={110} textAnchor="middle" className="fill-fg-muted" fontSize={14}>
-            Not enough data to chart yet
+            {t("analytics.chartNotEnoughData")}
           </text>
         )}
 
@@ -256,7 +277,7 @@ export function SocialGrowthChart({
       </svg>
 
       <p className="text-label text-fg-muted sr-only" id={tableId}>
-        Numeric values for {profileName} are in the table below the chart.
+        {t("analytics.chartNumericValues", { profileName })}
       </p>
     </figure>
   );

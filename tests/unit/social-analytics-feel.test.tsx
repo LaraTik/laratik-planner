@@ -14,6 +14,7 @@ import { SocialMetricsTable } from "@/app/(app)/app/w/[slug]/analytics/social/so
 import { SocialDataQuality } from "@/app/(app)/app/w/[slug]/analytics/social/social-data-quality";
 import type { MetricSeriesPoint } from "@/lib/social/analytics";
 import { makeTranslator } from "@/messages";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 
 /**
  * M4 "feel" round (2026-08-27) — component unit tests.
@@ -530,5 +531,26 @@ describe("SocialGrowthChart (M5)", () => {
     );
     const svg = screen.getByRole("img");
     expect(svg.getAttribute("aria-label")).toContain("Views");
+  });
+
+  it("uses the active locale for trend and chart accessibility copy", () => {
+    render(
+      <LocaleProvider locale="ar">
+        <SocialGrowthChart
+          title="الوصول · 7 أيام"
+          platform="Instagram"
+          profileName="Food Game"
+          metricLabel="الوصول"
+          points={makePoints()}
+          tableId="t1"
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText("متزايد")).toBeInTheDocument();
+    expect(screen.getByRole("img")).toHaveAttribute(
+      "aria-label",
+      "الوصول · 7 أيام لـ Food Game، يعرض الوصول. القيم الرقمية في الجدول أدناه.",
+    );
   });
 });
