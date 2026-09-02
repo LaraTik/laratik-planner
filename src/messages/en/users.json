@@ -184,7 +184,21 @@
     "permissionDenied": "Missing analytics permission",
     "rateLimited": "Meta rate-limited this account",
     "providerUnavailable": "Meta was temporarily unavailable",
-    "notFound": "Connected account not found"
+    "notFound": "Connected account not found",
+    "retest": {
+      "auth_expired": "Your Meta access has expired. Reconnect to resume.",
+      "permission_denied": "The connected account is missing the analytics permission. Reconnect and grant access.",
+      "rate_limited": "Meta is rate-limiting this account. The next scheduled sync will retry.",
+      "provider_unavailable": "Meta is temporarily unavailable. Try again in a few minutes.",
+      "not_found": "The connected account could not be found. It may have been deleted or renamed.",
+      "invalid_response": "Meta returned an unrecognized response. The endpoint may be temporarily unavailable; try again in a few minutes.",
+      "platform_kek_missing": "Platform credential envelope is not configured. Contact your agency admin.",
+      "social_not_enabled": "Social sync is not enabled for this agency. Contact your agency admin.",
+      "not_configured": "This channel's analytics are not configured. Ask your agency admin to check the app credentials in Agency Settings, or ask Meta to enable the missing insights metric for the app.",
+      "no_connection": "This channel is not currently linked to a provider grant.",
+      "not_connected": "This channel is not in a connected state. Reconnect to resume.",
+      "unknown": "The validation request failed. Try again, or check the system status."
+    }
   },
   "channelsConnectionActions": {
     "retestLabel": "Re-test",

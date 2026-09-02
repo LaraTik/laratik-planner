@@ -171,18 +171,17 @@ describe("ConnectionActions Re-test", () => {
     expect(success).toHaveTextContent(/Validated/);
   });
 
-  it("surfaces the server error in an aria-live alert on failure", async () => {
+  it("translates the stable server error code in an aria-live alert", async () => {
     const user = userEvent.setup();
     const action = vi.mocked(testChannelConnectionAction);
     action.mockResolvedValueOnce({
-      error: "Meta rate-limited this account",
       errorCode: "rate_limited",
     });
     render(<ConnectionActions slug="acme" channel={channel} affectedChannels={[]} />);
     await user.click(screen.getByTestId("retest-button"));
     const error = await screen.findByTestId("retest-error");
     expect(error).toHaveAttribute("role", "alert");
-    expect(error).toHaveTextContent(/Meta rate-limited/);
+    expect(error).toHaveTextContent(/Meta is rate-limiting/);
   });
 
   it("disables the button while the action is in flight", async () => {

@@ -309,7 +309,7 @@ export async function testChannelConnectionAction(slug: string, channelId: strin
     revalidatePath(`/app/w/${slug}/analytics/social`);
     return { success: true, lastSyncedAt: result.lastSyncedAt.toISOString() } as const;
   }
-  return { error: result.message, errorCode: result.errorCode } as const;
+  return { errorCode: result.errorCode } as const;
 }
 
 /**
