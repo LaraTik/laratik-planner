@@ -426,7 +426,6 @@ describe("fetchMetaInstagramSnapshot — IG insights response shape (cumulative 
   // valid 200 with the actual numbers. The pre-fix tests mocked
   // the WRONG shape (`values[]` with `metric_type=total_value`),
   // which is exactly why the bug slipped past CI.
-  const baseGraph = "https://graph.facebook.com/v25.0";
   const igUserId = "17841480087235357";
   const accessToken = "page-token";
 
@@ -435,47 +434,36 @@ describe("fetchMetaInstagramSnapshot — IG insights response shape (cumulative 
     // Food Game IG account (17841480087235357) on 2026-08-28.
     // Note: NO `values` field. Pre-fix this returned `undefined`
     // for every metric.
+    //
+    // 2026-09-02 (Rice n Spices fix): each per-metric call now asks
+    // for a single metric, so the mock returns a one-entry `data`
+    // array matching the `metric=` URL param.
+    const cumulative: Record<string, { value: number }> = {
+      reach: { value: 2164 },
+      profile_views: { value: 67 },
+      accounts_engaged: { value: 13 },
+      total_interactions: { value: 27 },
+    };
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.startsWith(`${baseGraph}/${igUserId}/insights`)) {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith(`/${igUserId}/insights`)) {
+        const metric = url.searchParams.get("metric") ?? "";
+        const entry = cumulative[metric];
+        if (!entry) throw new Error(`unexpected metric: ${metric}`);
         return jsonResponse(200, {
           data: [
             {
-              name: "reach",
+              name: metric,
               period: "day",
-              title: "Accounts reached",
-              description: "The number of unique accounts that have seen your content…",
-              total_value: { value: 2164 },
-              id: `${igUserId}/insights/reach/day`,
-            },
-            {
-              name: "profile_views",
-              period: "day",
-              title: "Profile visits",
-              description: "The number of times that your profile was visited.",
-              total_value: { value: 67 },
-              id: `${igUserId}/insights/profile_views/day`,
-            },
-            {
-              name: "accounts_engaged",
-              period: "day",
-              title: "Accounts engaged",
-              description: "The number of accounts that have interacted with your content…",
-              total_value: { value: 13 },
-              id: `${igUserId}/insights/accounts_engaged/day`,
-            },
-            {
-              name: "total_interactions",
-              period: "day",
-              title: "Content interactions",
-              description: "The total number of post interactions…",
-              total_value: { value: 27 },
-              id: `${igUserId}/insights/total_interactions/day`,
+              title: `${metric} metric`,
+              description: "Cumulative daily total.",
+              total_value: entry,
+              id: `${igUserId}/insights/${metric}/day`,
             },
           ],
         });
       }
-      if (url.startsWith(`${baseGraph}/${igUserId}?`)) {
+      if (url.pathname.endsWith(`/${igUserId}`)) {
         return jsonResponse(200, {
           id: igUserId,
           username: "__foodgame",
@@ -516,19 +504,26 @@ describe("fetchMetaInstagramSnapshot — IG insights response shape (cumulative 
     // follower_count) return the time-series shape. The parser
     // must support both so a future URL that doesn't set
     // metric_type doesn't silently return nulls.
+    //
+    // 2026-09-02 (Rice n Spices fix): mock now returns a
+    // one-entry time-series `data` array per metric.
+    const timeSeries: Record<string, { value: number }> = {
+      reach: { value: 1714 },
+      profile_views: { value: 22 },
+      accounts_engaged: { value: 5 },
+      total_interactions: { value: 9 },
+    };
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.startsWith(`${baseGraph}/${igUserId}/insights`)) {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith(`/${igUserId}/insights`)) {
+        const metric = url.searchParams.get("metric") ?? "";
+        const entry = timeSeries[metric];
+        if (!entry) throw new Error(`unexpected metric: ${metric}`);
         return jsonResponse(200, {
-          data: [
-            { name: "reach", period: "day", values: [{ value: 1714 }] },
-            { name: "profile_views", period: "day", values: [{ value: 22 }] },
-            { name: "accounts_engaged", period: "day", values: [{ value: 5 }] },
-            { name: "total_interactions", period: "day", values: [{ value: 9 }] },
-          ],
+          data: [{ name: metric, period: "day", values: [entry] }],
         });
       }
-      if (url.startsWith(`${baseGraph}/${igUserId}?`)) {
+      if (url.pathname.endsWith(`/${igUserId}`)) {
         return jsonResponse(200, {
           id: igUserId,
           username: "__foodgame",
@@ -562,19 +557,27 @@ describe("fetchMetaInstagramSnapshot — IG insights response shape (cumulative 
     // that exposes `reach` as `total_value.value` while the other
     // three keep the time-series shape. The parser must NOT
     // assume uniform shape.
+    //
+    // 2026-09-02 (Rice n Spices fix): the mock now returns one
+    // entry per per-metric call, alternating between the
+    // cumulative and the time-series shape.
+    const mixedByMetric: Record<string, unknown> = {
+      reach: { total_value: { value: 2164 } },
+      profile_views: { values: [{ value: 67 }] },
+      accounts_engaged: { total_value: { value: 13 } },
+      total_interactions: { values: [{ value: 27 }] },
+    };
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.startsWith(`${baseGraph}/${igUserId}/insights`)) {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith(`/${igUserId}/insights`)) {
+        const metric = url.searchParams.get("metric") ?? "";
+        const extra = mixedByMetric[metric];
+        if (!extra) throw new Error(`unexpected metric: ${metric}`);
         return jsonResponse(200, {
-          data: [
-            { name: "reach", period: "day", total_value: { value: 2164 } },
-            { name: "profile_views", period: "day", values: [{ value: 67 }] },
-            { name: "accounts_engaged", period: "day", total_value: { value: 13 } },
-            { name: "total_interactions", period: "day", values: [{ value: 27 }] },
-          ],
+          data: [{ name: metric, period: "day", ...(extra as object) }],
         });
       }
-      if (url.startsWith(`${baseGraph}/${igUserId}?`)) {
+      if (url.pathname.endsWith(`/${igUserId}`)) {
         return jsonResponse(200, {
           id: igUserId,
           username: "__foodgame",
@@ -615,44 +618,43 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
   const accessToken = "page-token";
 
   it("sends metric_type=total_value on the Page insights call", async () => {
-    let capturedInsightsUrl: string | null = null;
+    // 2026-09-02 (Rice n Spices fix): the snapshot now makes three
+    // per-metric calls (one per Page metric), not one combined
+    // call. The captured URL is whichever per-metric call landed
+    // first; we assert that every per-metric call carries
+    // `metric_type=total_value` + `period=day` and that exactly
+    // one metric is requested at a time.
+    const capturedUrls: string[] = [];
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.startsWith(`${baseGraph}/${pageId}/insights`)) {
-        capturedInsightsUrl = url;
+      const url = new URL(String(input));
+      if (url.pathname.endsWith(`/${pageId}/insights`)) {
+        capturedUrls.push(url.toString());
         // Live Meta response shape for `metric_type=total_value`:
         // each entry has `total_value.value`, NOT `values[]`. The
         // pre-fix test mock used the wrong shape (`values[]`), which
         // is exactly why the parser bug slipped past CI. The pre-fix
         // parser would have read `values?.[0]?.value` and returned
         // `undefined` for every metric, failing the assertions below.
+        const metric = url.searchParams.get("metric") ?? "";
+        const value: Record<string, number> = {
+          page_impressions_unique: 2401,
+          page_views: 91,
+          page_post_engagements: 28,
+        } as Record<string, number>;
+        if (!(metric in value)) throw new Error(`unexpected metric: ${metric}`);
         return jsonResponse(200, {
           data: [
             {
-              name: "page_impressions_unique",
+              name: metric,
               period: "day",
-              title: "Daily unique page impressions",
-              total_value: { value: 2401 },
-              id: `${pageId}/insights/page_impressions_unique/day`,
-            },
-            {
-              name: "page_views",
-              period: "day",
-              title: "Daily page views",
-              total_value: { value: 91 },
-              id: `${pageId}/insights/page_views/day`,
-            },
-            {
-              name: "page_post_engagements",
-              period: "day",
-              title: "Daily post engagements",
-              total_value: { value: 28 },
-              id: `${pageId}/insights/page_post_engagements/day`,
+              title: `Daily ${metric}`,
+              total_value: { value: value[metric] },
+              id: `${pageId}/insights/${metric}/day`,
             },
           ],
         });
       }
-      if (url.startsWith(`${baseGraph}/${pageId}?`)) {
+      if (url.pathname.endsWith(`/${pageId}`)) {
         return jsonResponse(200, {
           id: pageId,
           name: "Food Game",
@@ -670,14 +672,21 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
       requestIdHint: "test-req",
     });
 
-    expect(capturedInsightsUrl).not.toBeNull();
-    const params = new URL(capturedInsightsUrl!).searchParams;
-    // The bug regression: the URL MUST include `metric_type=total_value`.
-    // If a future refactor drops this parameter, the test fails and
-    // `page_views` + `page_post_engagements` silently go to null.
-    expect(params.get("metric_type")).toBe("total_value");
-    expect(params.get("period")).toBe("day");
-    expect(params.get("metric")).toBe("page_impressions_unique,page_views,page_post_engagements");
+    expect(capturedUrls.length).toBe(3);
+    for (const captured of capturedUrls) {
+      const params = new URL(captured).searchParams;
+      // The bug regression: EVERY per-metric URL MUST include
+      // `metric_type=total_value`. If a future refactor drops this
+      // parameter, the test fails and `page_views` +
+      // `page_post_engagements` silently go to null.
+      expect(params.get("metric_type")).toBe("total_value");
+      expect(params.get("period")).toBe("day");
+      // Exactly one metric per call — the joined-metric string
+      // from the pre-fix code is gone.
+      const metric = params.get("metric") ?? "";
+      expect(metric).not.toContain(",");
+      expect(["page_impressions_unique", "page_views", "page_post_engagements"]).toContain(metric);
+    }
     // And the snapshot actually populated the values from the
     // cumulative shape (the real Meta wire format).
     expect(snapshot.followerCount).toBe(69);
@@ -853,6 +862,57 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     expect(meta.reason).toBe("page_insights_unavailable");
     expect(meta.providerErrorCode).toBe("not_configured");
   });
+
+  it("marks only the failed Page metric as an error while preserving successful metric statuses", async () => {
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith(`/${pageId}/insights`)) {
+        const metric = url.searchParams.get("metric");
+        if (metric === "page_views") {
+          return jsonResponse(400, {
+            error: {
+              code: 100,
+              message: "(#100) The value must be a valid insights metric",
+            },
+          });
+        }
+        const values: Record<string, number> = {
+          page_impressions_unique: 2401,
+          page_post_engagements: 28,
+        };
+        const value = metric ? values[metric] : undefined;
+        if (value === undefined) throw new Error(`unexpected metric: ${metric}`);
+        return jsonResponse(200, {
+          data: [{ name: metric, period: "day", total_value: { value } }],
+        });
+      }
+      if (url.pathname.endsWith(`/${pageId}`)) {
+        return jsonResponse(200, {
+          id: pageId,
+          name: "Food Game",
+          fan_count: 69,
+          followers_count: 69,
+        });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaFacebookPageSnapshot({
+      accessToken,
+      pageId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+
+    expect(snapshot.sourceMetadata.metricStatuses).toEqual({
+      followerCount: { status: "available" },
+      reach: { status: "available" },
+      views: { status: "error", providerErrorCode: "not_configured" },
+      interactions: { status: "available" },
+      engagedAccounts: { status: "unsupported" },
+    });
+    expect(snapshot.sourceMetadata.failedMetrics).toEqual(["views"]);
+  });
 });
 
 /**
@@ -886,11 +946,22 @@ describe("metaAdapter.fetchSnapshot — Facebook Page token acquisition", () => 
       if (url.startsWith(`${baseGraph}/${pageId}/insights`)) {
         const used = new URL(url).searchParams.get("access_token");
         expect(used).toBe(pageToken);
+        // 2026-09-02 (Rice n Spices fix): per-metric call shape —
+        // one entry per request, matching the `metric=` URL param.
+        const metric = new URL(url).searchParams.get("metric") ?? "";
+        const value: Record<string, number> = {
+          page_impressions_unique: 2401,
+          page_views: 91,
+          page_post_engagements: 28,
+        } as Record<string, number>;
+        if (!(metric in value)) throw new Error(`unexpected metric: ${metric}`);
         return jsonResponse(200, {
           data: [
-            { name: "page_impressions_unique", period: "day", total_value: { value: 2401 } },
-            { name: "page_views", period: "day", total_value: { value: 91 } },
-            { name: "page_post_engagements", period: "day", total_value: { value: 28 } },
+            {
+              name: metric,
+              period: "day",
+              total_value: { value: value[metric] },
+            },
           ],
         });
       }

@@ -30,6 +30,10 @@ metric is `available`, `error`, or `no_data`; a metric that the platform does
 not expose is `unsupported`. Existing rows without status metadata are safely
 inferred from the platform and nullable value.
 
+Meta Insights requests isolate each metric. If one metric is unsupported or
+permission-denied, valid sibling metrics are still persisted and only the
+affected metric is marked `error`.
+
 Engagement rate is `interactions / reach * 100`. When reach is unavailable,
 the calculation falls back to `interactions / followers * 100` and the UI
 identifies the denominator so the result is not misread.

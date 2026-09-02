@@ -549,6 +549,69 @@ function readMetricValue(entry: PageInsightsResponse["data"][number] | undefined
   return typeof first === "number" ? first : null;
 }
 
+/**
+ * Fetch a single Meta Insights metric. Returns `value: null` and a
+ * `not_configured` / `permission_denied` errorCode for the two
+ * "silent" failure modes the outer snapshot already documents
+ * (metric name not in the account allowlist, or scope missing).
+ * Any other provider error is re-thrown so the outer caller can
+ * route it to the channel-failed path.
+ *
+ * 2026-09-02: introduced as part of the Rice n Spices fix. The
+ * pre-fix implementation requested all 3 Page (or 4 IG) metrics
+ * in a single URL, so a single bad metric name made Meta return
+ * `error.code: 100` for the whole request and the outer code
+ * nulled reach/views/interactions together. Per-metric calls
+ * isolate the failure: a Page whose `page_views` is not in the
+ * allowlist now still gets `reach` and `interactions` captured.
+ */
+async function fetchMetaInsightsMetric(args: {
+  baseUrl: string;
+  accessToken: string;
+  metricName: string;
+}): Promise<{
+  value: number | null;
+  errorCode: "not_configured" | "permission_denied" | null;
+  requestId: string | null;
+  usage: MetaRateLimitUsage;
+}> {
+  const url = new URL(args.baseUrl);
+  url.searchParams.set("metric", args.metricName);
+  url.searchParams.set("period", "day");
+  url.searchParams.set("metric_type", "total_value");
+  url.searchParams.set("access_token", args.accessToken);
+  try {
+    const { body, requestId, usage } = await providerRequest(url.toString());
+    let parsed: PageInsightsResponse;
+    try {
+      parsed = JSON.parse(body) as PageInsightsResponse;
+    } catch {
+      throw new SocialProviderError("invalid_response", false, requestId);
+    }
+    if (!Array.isArray(parsed.data)) {
+      throw new SocialProviderError("invalid_response", false, requestId);
+    }
+    return {
+      value: readMetricValue(parsed.data[0]),
+      errorCode: null,
+      requestId,
+      usage,
+    };
+  } catch (err) {
+    if (isSocialProviderError(err)) {
+      if (err.code === "not_configured" || err.code === "permission_denied") {
+        return {
+          value: null,
+          errorCode: err.code,
+          requestId: err.requestId,
+          usage: { app: null, business: null },
+        };
+      }
+    }
+    throw err;
+  }
+}
+
 export async function fetchMetaFacebookPageSnapshot(args: {
   accessToken: string;
   pageId: string;
@@ -586,7 +649,12 @@ export async function fetchMetaFacebookPageSnapshot(args: {
   // saved row's sourceMetadata (visible in the analytics page's
   // "partial" cell + any DB query). Operators without Sentry
   // access can grep the container log or query the row directly.
-  let insights: Awaited<ReturnType<typeof fetchMetaPageDailyInsights>>["insights"] = null;
+  let insights: MetaDailyInsights = {
+    reach: null,
+    views: null,
+    engagedAccounts: null,
+    interactions: null,
+  };
   let insightsErrorCode: string | null = null;
   let insightsErrorRequestId: string | null = null;
   // 2026-08-28: capture the per-call rate-limit usage from the most
@@ -594,6 +662,15 @@ export async function fetchMetaFacebookPageSnapshot(args: {
   // query (or the future rate-limit dashboard) can see which
   // channels contributed to the cumulative app/business quota.
   let latestUsage: MetaRateLimitUsage = { app: null, business: null };
+  // 2026-09-02 (Rice n Spices fix): the inner helper now isolates
+  // per-metric failures and returns a `partial: true` insights
+  // object plus an `errors[]` array for the metrics Meta would not
+  // serve. The outer try/catch now only sees network / 5xx /
+  // `invalid_response` errors that the inner helper decided were
+  // not safe to swallow. The `not_configured` and
+  // `permission_denied` cases the old code special-cased here are
+  // already inside `insightsResult.errors`.
+  let insightsResultErrors: MetaInsightsError[] = [];
   try {
     const insightsResult = await fetchMetaPageDailyInsights({
       accessToken,
@@ -602,6 +679,7 @@ export async function fetchMetaFacebookPageSnapshot(args: {
     });
     insights = insightsResult.insights;
     latestUsage = insightsResult.usage;
+    insightsResultErrors = insightsResult.errors;
   } catch (insightsErr) {
     const code = isSocialProviderError(insightsErr) ? insightsErr.code : "unknown";
     insightsErrorCode = code;
@@ -618,20 +696,39 @@ export async function fetchMetaFacebookPageSnapshot(args: {
       errorCode: code,
       requestId: insightsErrorRequestId,
     });
-    if (code === "permission_denied" || code === "not_configured") {
-      // Documented contract: permission_denied AND not_configured
-      // on the insights endpoint are both "metrics not available
-      // right now" — permission_denied is a scope/App Review issue,
-      // not_configured is a metric-name-not-in-allowlist issue
-      // (`error.code: 100, "The value must be a valid insights
-      // metric"`). Both are silent (null insights, partial: true
-      // row) so the Re-test succeeds and the UI shows the partial
-      // pill instead of a red error chip. Other errors propagate
-      // to the outer worker handler so the channel marks failed.
-      insights = null;
-    } else {
-      throw insightsErr;
-    }
+    throw insightsErr;
+  }
+  // Triply visible per-metric failures from the inner helper. Each
+  // failed metric is logged + Sentry'd so an operator can see which
+  // specific metric is missing for this Page.
+  for (const e of insightsResultErrors) {
+    logError("social.meta.page_insights_metric_failed", {
+      pageId,
+      accessTokenLast4: accessToken.slice(-4),
+      metric: e.metric,
+      errorCode: e.code,
+      requestId: e.requestId,
+    });
+    captureError(
+      "social.meta.page_insights_metric_failed",
+      new Error(`Meta insights metric "${e.metric}" returned ${e.code}`),
+      {
+        pageId,
+        accessTokenLast4: accessToken.slice(-4),
+        metric: e.metric,
+        errorCode: e.code,
+        requestId: e.requestId,
+      },
+    );
+  }
+  if (insightsResultErrors.length > 0) {
+    // First failed metric wins for the row's `providerErrorCode` so
+    // the existing UI / DB-query diagnostic path keeps working. The
+    // full list of failed metrics is also surfaced as a comma-joined
+    // string for operators who want all of them at a glance.
+    const first = insightsResultErrors[0]!;
+    insightsErrorCode = first.code;
+    insightsErrorRequestId = first.requestId;
   }
   // The `partial` flag is set when ANY field the worker tried to
   // capture is null. Pre-2026-08-28 the flag was set only when the
@@ -640,27 +737,18 @@ export async function fetchMetaFacebookPageSnapshot(args: {
   // but the follower is captured. The page-level insights call
   // frequently returns null for brand-new pages or for pages whose
   // access token is missing a scope, and the operator needs to see
-  // that.
+  // that. 2026-09-02: `insights` is no longer nullable — every field
+  // is individually nullable, so the `insights === null` branch
+  // is gone.
   const insightsPartial =
-    insights === null ||
-    insights.reach === null ||
-    insights.views === null ||
-    insights.interactions === null;
-  const statusFor = (value: number | null, errorCode?: string | null): MetricStatus =>
-    errorCode
-      ? {
-          status: "error",
-          providerErrorCode: errorCode,
-          ...(insightsErrorRequestId ? { providerRequestId: insightsErrorRequestId } : {}),
-        }
-      : { status: value === null ? "no_data" : "available" };
+    insights.reach === null || insights.views === null || insights.interactions === null;
   const metricStatuses = {
     followerCount: {
       status: follower === null ? "no_data" : "available",
     } satisfies MetricStatus,
-    reach: statusFor(insights?.reach ?? null, insightsErrorCode),
-    views: statusFor(insights?.views ?? null, insightsErrorCode),
-    interactions: statusFor(insights?.interactions ?? null, insightsErrorCode),
+    reach: statusForInsight("reach", insights.reach, insightsResultErrors),
+    views: statusForInsight("views", insights.views, insightsResultErrors),
+    interactions: statusForInsight("interactions", insights.interactions, insightsResultErrors),
     engagedAccounts: { status: "unsupported" },
   } satisfies SocialSourceMetadata["metricStatuses"];
   const failedMetrics = (["followerCount", "reach", "views", "interactions"] as const).filter(
@@ -680,6 +768,10 @@ export async function fetchMetaFacebookPageSnapshot(args: {
       // row so a DB query shows why the insights are null. For
       // Sentry-less operators, this is the fastest diagnostic —
       // see tests/unit/social-analytics.test.ts for the contract.
+      // 2026-09-02: the code is now the first failed metric's
+      // errorCode, NOT an aggregation of all per-metric failures.
+      // Operators who want the full list of failed metrics read
+      // `failedMetrics` below.
       sourceMetadata.providerErrorCode = insightsErrorCode;
       if (insightsErrorRequestId) {
         sourceMetadata.providerRequestId = insightsErrorRequestId;
@@ -699,8 +791,8 @@ export async function fetchMetaFacebookPageSnapshot(args: {
     requestIdHint,
     pageId,
     follower,
-    insights?.reach ?? null,
-    insights?.views ?? null,
+    insights.reach ?? null,
+    insights.views ?? null,
   ]);
   return {
     observedAt,
@@ -708,10 +800,10 @@ export async function fetchMetaFacebookPageSnapshot(args: {
     followingCount: null,
     mediaCount: null,
     likesCount: null,
-    reach: insights?.reach ?? null,
-    views: insights?.views ?? null,
-    engagedAccounts: insights?.engagedAccounts ?? null,
-    interactions: insights?.interactions ?? null,
+    reach: insights.reach ?? null,
+    views: insights.views ?? null,
+    engagedAccounts: insights.engagedAccounts ?? null,
+    interactions: insights.interactions ?? null,
     providerApiVersion: apiVersion,
     providerRequestId: requestId,
     responseHash: hash,
@@ -719,68 +811,91 @@ export async function fetchMetaFacebookPageSnapshot(args: {
   };
 }
 
-async function fetchMetaPageDailyInsights(args: {
+export type MetaInsightsError = {
+  metric: "reach" | "views" | "engagedAccounts" | "interactions";
+  code: "not_configured" | "permission_denied";
+  requestId: string | null;
+};
+
+export type MetaDailyInsights = {
+  reach: number | null;
+  views: number | null;
+  engagedAccounts: number | null;
+  interactions: number | null;
+};
+
+export type FetchMetaInsightsResult = {
+  insights: MetaDailyInsights;
+  errors: MetaInsightsError[];
+  usage: MetaRateLimitUsage;
+};
+
+function statusForInsight(
+  metric: MetaInsightsError["metric"],
+  value: number | null,
+  errors: readonly MetaInsightsError[],
+): MetricStatus {
+  const error = errors.find((candidate) => candidate.metric === metric);
+  if (error) {
+    return {
+      status: "error",
+      providerErrorCode: error.code,
+      ...(error.requestId ? { providerRequestId: error.requestId } : {}),
+    };
+  }
+  return { status: value === null ? "no_data" : "available" };
+}
+
+const PAGE_INSIGHTS_METRICS = [
+  { name: "page_impressions_unique", field: "reach" as const },
+  { name: "page_views", field: "views" as const },
+  { name: "page_post_engagements", field: "interactions" as const },
+] as const;
+
+export async function fetchMetaPageDailyInsights(args: {
   accessToken: string;
   pageId: string;
   apiVersion: string;
-}): Promise<{
-  insights: {
-    reach: number | null;
-    views: number | null;
-    engagedAccounts: number | null;
-    interactions: number | null;
-  } | null;
-  usage: MetaRateLimitUsage;
-}> {
-  const url = new URL(`${graphBaseUrl(args.apiVersion)}/${args.pageId}/insights`);
-  // `page_impressions_unique` is a daily time-series metric. `page_views`
-  // and `page_post_engagements` are daily total metrics. Meta requires
-  // `metric_type=total_value` for the total ones, parallel to the IG
-  // fix in 3dc7fa2. Without it, the Graph API returns either an error
-  // or only the time-series metric (silently dropping the total ones
-  // and producing all-null insights for `reach` / `views` /
-  // `interactions`). Pre-2026-08-28 this param was missing here and
-  // the analytics page showed only the follower count for Page
-  // channels.
-  url.searchParams.set("metric", "page_impressions_unique,page_views,page_post_engagements");
-  url.searchParams.set("period", "day");
-  url.searchParams.set("metric_type", "total_value");
-  url.searchParams.set("access_token", args.accessToken);
-  let parsed: PageInsightsResponse;
-  // 2026-08-28: re-throw every error (including permission_denied).
-  // The outer caller `fetchMetaFacebookPageSnapshot` records the
-  // error in sourceMetadata + logError + captureError, then
-  // swallows permission_denied so the worker keeps going with
-  // null insights. Previously the inner function silently
-  // returned null on permission_denied, which prevented the
-  // outer catch from running — the operator had no way to know
-  // the failure was a scope issue.
-  //
-  // 2026-08-28 (round 2): the response shape for `metric_type=total_value`
-  // is `{ total_value: { value: <number> } }` — a SINGLE number, not
-  // a `values[]` time series. The pre-fix parser read
-  // `values?.[0]?.value` and silently returned `undefined` for every
-  // Page channel's `views` and `interactions` when the URL included
-  // `metric_type=total_value` (added in 7c5def5). The row was marked
-  // `partial: true` for views/interactions while the basic followers
-  // call returned `fan_count` correctly. `readMetricValue` (below)
-  // prefers the cumulative `total_value.value` shape and falls back
-  // to the time-series `values?.[0]?.value` shape.
-  const { body, usage } = await providerRequest(url.toString());
-  try {
-    parsed = JSON.parse(body) as PageInsightsResponse;
-  } catch {
-    throw new SocialProviderError("invalid_response", false, null);
-  }
-  return {
-    insights: {
-      reach: readMetricValue(parsed.data.find((m) => m.name === "page_impressions_unique")),
-      views: readMetricValue(parsed.data.find((m) => m.name === "page_views")),
-      engagedAccounts: null, // Page-level engagement is rarely available as a single number
-      interactions: readMetricValue(parsed.data.find((m) => m.name === "page_post_engagements")),
-    },
-    usage,
+}): Promise<FetchMetaInsightsResult> {
+  const baseUrl = `${graphBaseUrl(args.apiVersion)}/${args.pageId}/insights`;
+  // 2026-09-02 (Rice n Spices fix): request each Page metric in its
+  // own URL so a single bad metric name (Meta `error.code: 100`,
+  // "value must be a valid insights metric") only nulls that one
+  // field. The previous all-in-one URL (`metric=reach,views,interactions`)
+  // made the whole request fail when any one of them was missing
+  // from the Page's allowlist, so the row's reach/views/interactions
+  // went null together even though Meta was happy to serve the
+  // other two. `engagedAccounts` is not requested for Pages — see
+  // `metaAdapter.fetchDailySnapshot` notes for the rationale (Page
+  // has no direct equivalent of IG's `accounts_engaged`).
+  const results = await Promise.all(
+    PAGE_INSIGHTS_METRICS.map(async (m) => {
+      const r = await fetchMetaInsightsMetric({
+        baseUrl,
+        accessToken: args.accessToken,
+        metricName: m.name,
+      });
+      return { field: m.field, ...r };
+    }),
+  );
+  const insights: MetaDailyInsights = {
+    reach: null,
+    views: null,
+    engagedAccounts: null,
+    interactions: null,
   };
+  const errors: MetaInsightsError[] = [];
+  let latestUsage: MetaRateLimitUsage = { app: null, business: null };
+  for (const r of results) {
+    insights[r.field] = r.value;
+    if (r.errorCode) {
+      errors.push({ metric: r.field, code: r.errorCode, requestId: r.requestId });
+    }
+    if (r.usage.app || r.usage.business) {
+      latestUsage = r.usage;
+    }
+  }
+  return { insights, errors, usage: latestUsage };
 }
 
 export async function fetchMetaInstagramSnapshot(args: {
@@ -827,13 +942,24 @@ export async function fetchMetaInstagramSnapshot(args: {
   // interactions. Empty datasets are `null`, never `0`.
   // 2026-08-28: same triply-visible error handling as the Page
   // branch (Sentry + stdout JSON + sourceMetadata in the row).
-  let insights: Awaited<ReturnType<typeof fetchMetaIgAccountDailyInsights>>["insights"] = null;
+  let insights: MetaDailyInsights = {
+    reach: null,
+    views: null,
+    engagedAccounts: null,
+    interactions: null,
+  };
   let insightsErrorCode: string | null = null;
   let insightsErrorRequestId: string | null = null;
   // 2026-08-28: capture the per-call rate-limit usage; same logic
   // as the Page branch. The IG basic+insights pair runs at most
   // 2 calls per snapshot.
   let latestUsage: MetaRateLimitUsage = { app: null, business: null };
+  // 2026-09-02 (Rice n Spices / Just Halal tr fix): mirror of the
+  // Page branch. The inner helper isolates per-metric failures and
+  // returns a partial insights object plus an errors[] array. The
+  // outer try/catch only sees network / 5xx / `invalid_response`
+  // errors that are not safe to swallow.
+  let insightsResultErrors: MetaInsightsError[] = [];
   try {
     const igResult = await fetchMetaIgAccountDailyInsights({
       accessToken,
@@ -842,6 +968,7 @@ export async function fetchMetaInstagramSnapshot(args: {
     });
     insights = igResult.insights;
     latestUsage = igResult.usage;
+    insightsResultErrors = igResult.errors;
   } catch (insightsErr) {
     const code = isSocialProviderError(insightsErr) ? insightsErr.code : "unknown";
     insightsErrorCode = code;
@@ -858,36 +985,54 @@ export async function fetchMetaInstagramSnapshot(args: {
       errorCode: code,
       requestId: insightsErrorRequestId,
     });
-    if (code === "permission_denied" || code === "not_configured") {
-      insights = null;
-    } else {
-      throw insightsErr;
-    }
+    throw insightsErr;
+  }
+  // Triply visible per-metric failures from the inner helper.
+  for (const e of insightsResultErrors) {
+    logError("social.meta.ig_insights_metric_failed", {
+      igUserId,
+      accessTokenLast4: accessToken.slice(-4),
+      metric: e.metric,
+      errorCode: e.code,
+      requestId: e.requestId,
+    });
+    captureError(
+      "social.meta.ig_insights_metric_failed",
+      new Error(`Meta insights metric "${e.metric}" returned ${e.code}`),
+      {
+        igUserId,
+        accessTokenLast4: accessToken.slice(-4),
+        metric: e.metric,
+        errorCode: e.code,
+        requestId: e.requestId,
+      },
+    );
+  }
+  if (insightsResultErrors.length > 0) {
+    const first = insightsResultErrors[0]!;
+    insightsErrorCode = first.code;
+    insightsErrorRequestId = first.requestId;
   }
   // Same partial-flag rule as the Page branch: ANY null field
-  // makes the row partial, not just the follower.
+  // makes the row partial, not just the follower. 2026-09-02:
+  // `insights` is no longer nullable.
   const insightsPartial =
-    insights === null ||
     insights.reach === null ||
     insights.views === null ||
     insights.engagedAccounts === null ||
     insights.interactions === null;
-  const statusFor = (value: number | null, errorCode?: string | null): MetricStatus =>
-    errorCode
-      ? {
-          status: "error",
-          providerErrorCode: errorCode,
-          ...(insightsErrorRequestId ? { providerRequestId: insightsErrorRequestId } : {}),
-        }
-      : { status: value === null ? "no_data" : "available" };
   const metricStatuses = {
     followerCount: {
       status: follower === null ? "no_data" : "available",
     } satisfies MetricStatus,
-    reach: statusFor(insights?.reach ?? null, insightsErrorCode),
-    views: statusFor(insights?.views ?? null, insightsErrorCode),
-    engagedAccounts: statusFor(insights?.engagedAccounts ?? null, insightsErrorCode),
-    interactions: statusFor(insights?.interactions ?? null, insightsErrorCode),
+    reach: statusForInsight("reach", insights.reach, insightsResultErrors),
+    views: statusForInsight("views", insights.views, insightsResultErrors),
+    engagedAccounts: statusForInsight(
+      "engagedAccounts",
+      insights.engagedAccounts,
+      insightsResultErrors,
+    ),
+    interactions: statusForInsight("interactions", insights.interactions, insightsResultErrors),
   } satisfies SocialSourceMetadata["metricStatuses"];
   const failedMetrics = (
     ["followerCount", "reach", "views", "engagedAccounts", "interactions"] as const
@@ -940,10 +1085,10 @@ export async function fetchMetaInstagramSnapshot(args: {
     follower,
     media,
     following,
-    insights?.views ?? null,
-    insights?.reach ?? null,
-    insights?.engagedAccounts ?? null,
-    insights?.interactions ?? null,
+    insights.views ?? null,
+    insights.reach ?? null,
+    insights.engagedAccounts ?? null,
+    insights.interactions ?? null,
   ]);
   return {
     observedAt,
@@ -951,10 +1096,10 @@ export async function fetchMetaInstagramSnapshot(args: {
     followingCount: following,
     mediaCount: media,
     likesCount: null,
-    reach: insights?.reach ?? null,
-    views: insights?.views ?? null,
-    engagedAccounts: insights?.engagedAccounts ?? null,
-    interactions: insights?.interactions ?? null,
+    reach: insights.reach ?? null,
+    views: insights.views ?? null,
+    engagedAccounts: insights.engagedAccounts ?? null,
+    interactions: insights.interactions ?? null,
     providerApiVersion: apiVersion,
     providerRequestId: requestId,
     responseHash: hash,
@@ -962,95 +1107,57 @@ export async function fetchMetaInstagramSnapshot(args: {
   };
 }
 
-async function fetchMetaIgAccountDailyInsights(args: {
+const IG_INSIGHTS_METRICS = [
+  { name: "reach", field: "reach" as const },
+  { name: "profile_views", field: "views" as const },
+  { name: "accounts_engaged", field: "engagedAccounts" as const },
+  { name: "total_interactions", field: "interactions" as const },
+] as const;
+
+export async function fetchMetaIgAccountDailyInsights(args: {
   accessToken: string;
   igUserId: string;
   apiVersion: string;
-}): Promise<{
-  insights: {
-    reach: number | null;
-    views: number | null;
-    engagedAccounts: number | null;
-    interactions: number | null;
-  } | null;
-  usage: MetaRateLimitUsage;
-}> {
-  const url = new URL(`${graphBaseUrl(args.apiVersion)}/${args.igUserId}/insights`);
+}): Promise<FetchMetaInsightsResult> {
+  const baseUrl = `${graphBaseUrl(args.apiVersion)}/${args.igUserId}/insights`;
+  // 2026-09-02 (Rice n Spices / Just Halal tr fix): per-metric calls
+  // (parallel `Promise.all`) for the same reason as the Page branch.
+  // The previous all-in-one URL meant a single bad metric name
+  // nulled the whole row, so the analytics page's partial-pill
+  // hid the fact that 3 of 4 metrics were actually available.
   // `metric_type=total_value` is required for `profile_views`,
-  // `accounts_engaged`, and `total_interactions` (these are daily
-  // total metrics, not time-series). Without it, the Graph API returns
-  // `(#100) The following metrics (...) should be specified with
-  // parameter metric_type=total_value`, and the function would surface
-  // `null` for every IG account. `reach` accepts either `metric_type`
-  // value, so setting it globally is safe and matches the API docs.
-  // Pre-flight verification 2026-08-27: this was a latent bug; the
-  // existing Food Game IG connection was silently missing
-  // `accounts_engaged` and `total_interactions` until this fix.
-  url.searchParams.set("metric", "reach,profile_views,accounts_engaged,total_interactions");
-  url.searchParams.set("period", "day");
-  url.searchParams.set("metric_type", "total_value");
-  url.searchParams.set("access_token", args.accessToken);
-  let parsed: PageInsightsResponse;
-  // 2026-08-28: re-throw every error (including permission_denied).
-  // The outer caller `fetchMetaInstagramSnapshot` records the
-  // error in sourceMetadata + logError + captureError, then
-  // swallows permission_denied so the worker keeps going with
-  // null insights. Previously the inner function silently
-  // returned null on permission_denied, which prevented the
-  // outer catch from running — the operator had no way to know
-  // the failure was a scope issue.
-  //
-  // 2026-08-28 (round 2): the response shape for `metric_type=total_value`
-  // is `{ total_value: { value: <number> } }` — a SINGLE number per
-  // metric, not a `values[]` time series. The pre-fix parser read
-  // `values?.[0]?.value` and silently returned `undefined` for every
-  // metric when the URL included `metric_type=total_value` (added in
-  // 3dc7fa2). The result: every IG channel's `views`,
-  // `engagedAccounts`, and `interactions` came back as `null` even
-  // though Meta returned a perfectly valid 200 with the actual
-  // numbers. The row was marked `partial: true` with
-  // `reason: "ig_insights_unavailable"` and no `providerErrorCode` —
-  // the operator saw "Meta returned an unrecognized response" in the
-  // UI even though the basic followers call had succeeded. The
-  // `reach` field was the only one that happened to populate,
-  // because Meta's response also has a `description` field that
-  // happens to include the number string the test mock could parse
-  // (it did NOT — see the live response below). `readMetricValue`
-  // (defined at module scope, used by both the Page and IG branches)
-  // prefers the cumulative `total_value.value` shape and falls back
-  // to the time-series `values?.[0]?.value` shape.
-  //
-  // Live response shape (Meta v25-v26, Food Game IG 17841480087235357,
-  // measured 2026-08-28 with the user's page access token):
-  //   { "data": [
-  //     { "name": "reach", "period": "day", "title": "…",
-  //       "description": "…", "total_value": { "value": 2164 },
-  //       "id": "…/reach/day" },
-  //     { "name": "profile_views", "period": "day", "title": "…",
-  //       "description": "…", "total_value": { "value": 67 },
-  //       "id": "…/profile_views/day" },
-  //     { "name": "accounts_engaged", "period": "day", …,
-  //       "total_value": { "value": 13 }, … },
-  //     { "name": "total_interactions", "period": "day", …,
-  //       "total_value": { "value": 27 }, … }
-  //   ], "paging": { … } }
-  // Note the absence of any `values` field — the pre-fix parser
-  // returned `undefined` for all four.
-  const { body, usage } = await providerRequest(url.toString());
-  try {
-    parsed = JSON.parse(body) as PageInsightsResponse;
-  } catch {
-    throw new SocialProviderError("invalid_response", false, null);
-  }
-  return {
-    insights: {
-      reach: readMetricValue(parsed.data.find((m) => m.name === "reach")),
-      views: readMetricValue(parsed.data.find((m) => m.name === "profile_views")),
-      engagedAccounts: readMetricValue(parsed.data.find((m) => m.name === "accounts_engaged")),
-      interactions: readMetricValue(parsed.data.find((m) => m.name === "total_interactions")),
-    },
-    usage,
+  // `accounts_engaged`, and `total_interactions` (daily total
+  // metrics, not time-series). `reach` accepts either shape, so
+  // setting it globally is safe and matches the API docs. The
+  // helper `fetchMetaInsightsMetric` always sets it.
+  const results = await Promise.all(
+    IG_INSIGHTS_METRICS.map(async (m) => {
+      const r = await fetchMetaInsightsMetric({
+        baseUrl,
+        accessToken: args.accessToken,
+        metricName: m.name,
+      });
+      return { field: m.field, ...r };
+    }),
+  );
+  const insights: MetaDailyInsights = {
+    reach: null,
+    views: null,
+    engagedAccounts: null,
+    interactions: null,
   };
+  const errors: MetaInsightsError[] = [];
+  let latestUsage: MetaRateLimitUsage = { app: null, business: null };
+  for (const r of results) {
+    insights[r.field] = r.value;
+    if (r.errorCode) {
+      errors.push({ metric: r.field, code: r.errorCode, requestId: r.requestId });
+    }
+    if (r.usage.app || r.usage.business) {
+      latestUsage = r.usage;
+    }
+  }
+  return { insights, errors, usage: latestUsage };
 }
 
 // ─── Adapter ──────────────────────────────────────────────────────────────
