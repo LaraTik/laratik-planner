@@ -2,7 +2,7 @@
 
 Date: 2026-09-02  
 Broad browser/evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4`  
-Current audited HEAD: `fdc304e9fdbeb7582f85d046f2dd531d7ddd7cac` (`main`, clean)
+Current audited source commit: `fdc304e9fdbeb7582f85d046f2dd531d7ddd7cac` (`main`, clean)
 Audit report update: committed after this evidence capture
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
