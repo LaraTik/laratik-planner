@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,8 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
     { revealed, onToggleRevealed, toggleTestId, className, disabled, ...rest },
     ref,
   ) {
+    const t = useLocaleT();
+
     return (
       <div className="relative">
         <Input
@@ -52,7 +55,7 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
           type="button"
           onClick={onToggleRevealed}
           disabled={disabled}
-          aria-label={revealed ? "Hide password" : "Show password"}
+          aria-label={revealed ? t("auth.signin.hidePassword") : t("auth.signin.showPassword")}
           aria-pressed={revealed}
           // 44x44 minimum target on touch devices (the icon is 16px
           // but the button is padded via p-2 around it).
