@@ -1,6 +1,6 @@
 # Performance Evidence Report
 
-Status: static-build inventory captured; browser and database measurements pending
+Status: local public-route baseline captured; release browser and database measurements pending
 
 This document is the repeatable performance-evidence contract for the LaraTik
 Planner release candidate. It complements `docs/testing/strategy.md` and does
@@ -46,6 +46,10 @@ font loading if the catalog is included in initial critical CSS.
 
 This inventory is supporting evidence only. It does not establish browser
 LCP/INP/CLS or prove that every emitted font is downloaded on first view.
+
+A local three-run public-route browser baseline is recorded in
+`docs/production-readiness/PERFORMANCE_LOCAL_2026-09-02.md`. It is explicitly
+unthrottled and public-route-only; it does not close the release browser gate.
 
 ### Browser experience
 
@@ -98,8 +102,8 @@ production.
 ## Current repository status
 
 The repository currently has the prerequisites for this protocol—production
-build, disposable database, isolated browser runner, Stitch route manifest, and
-the static-build inventory above—but no completed Lighthouse/WebPageTest report,
-route-level bundle budget, or `EXPLAIN ANALYZE` evidence. These remain
-release-candidate tasks and should not be marked `Verified` from build output
-alone.
+build, disposable database, isolated browser runner, Stitch route manifest, the
+static-build inventory above, and a local public-route baseline—but no completed
+Lighthouse/WebPageTest report, approved route-level bundle budget, authenticated
+INP capture, or `EXPLAIN ANALYZE` evidence. These remain release-candidate tasks
+and should not be marked `Verified` from build output alone.
