@@ -122,8 +122,18 @@ export default defineConfig({
     : {
         webServer: {
           command: "rm -rf .next && pnpm exec next dev --webpack",
-          url: BASE_URL,
-          reuseExistingServer: !process.env.CI,
+          // The root page can return before Next has finished writing the
+          // App Router manifests used by API routes. Waiting on readiness
+          // makes the test server contract match production: the process is
+          // not considered usable until the database/schema/storage checks
+          // have passed. This prevents an early /api/dev/sign-in request
+          // from racing an empty manifest on cold starts.
+          url: `${BASE_URL}/api/health/ready`,
+          // Isolated runs must own their server and environment. Reusing an
+          // orphaned dev server is especially dangerous because it may point
+          // at another database or retain stale .next output. Opt in only
+          // for an intentionally shared local server.
+          reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === "1" && !process.env.CI,
           timeout: 120_000,
           stdout: "ignore" as const,
           stderr: "pipe" as const,
