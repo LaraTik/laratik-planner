@@ -1,0 +1,14 @@
+{
+  "title": "AI configuration",
+  "eyebrow": "Agency Settings",
+  "description": "Control {vendor} access, capability toggles, and usage visibility for every workspace in this agency.",
+  "forbiddenBody": "Only agency admins can change AI settings.",
+  "backToAgencySettings": "Back to Agency Settings",
+  "secretBlurb": "The full API key is never displayed after the initial paste. The UI only stores a 4-character masked suffix. Rotation is done by replacing the managed secret below.",
+  "baseBlurb": "The current {vendor} base is {base} ({compat}). Change it via the deployment environment ({env}).",
+  "workspaceManagerBlurb": "Workspace managers see a read-only status card at /w/<slug>/ai-settings — they can't change anything here, only see what the agency has configured.",
+  "providerEnvTitle": "Provider environment",
+  "featureSettingsTitle": "Feature settings",
+  "testConnectionTitle": "Test connection",
+  "noUsageYet": "No usage yet"
+}

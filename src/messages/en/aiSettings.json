@@ -1,0 +1,6 @@
+{
+  "title": "AI assistance",
+  "description": "Environment-managed assistance with human-controlled insert and replace.",
+  "emptyNoKeyTitle": "AI not configured",
+  "emptyNoKeyDescription": "Connect a key in agency settings, or ask an agency admin to enable AI assistance for this workspace."
+}

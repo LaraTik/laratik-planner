@@ -1,0 +1,8 @@
+{
+  "title": "Analytics",
+  "description": "Daily follower totals, growth windows, and connection health for the channels in this workspace.",
+  "emptyNoChannelsTitle": "No connected channels yet",
+  "emptyNoChannelsDescription": "Connect a Meta account on the Social Channels page to start collecting daily metrics.",
+  "emptyNoKeyTitle": "No data in this window",
+  "emptyNoKeyDescription": "Daily metrics accumulate from the day a channel is connected. Pick a wider window, or wait for new data to roll in."
+}

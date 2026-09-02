@@ -1,0 +1,122 @@
+{
+  "kind": {
+    "assignment": {
+      "title": "You were assigned a task",
+      "body": "You were assigned a content item. Open it to start work."
+    },
+    "review_request": {
+      "title": "Your review is requested",
+      "body": "An approval request is waiting on you."
+    },
+    "approval": {
+      "title": "Content approved",
+      "body": "An approval was recorded on a content item you follow."
+    },
+    "changes_requested": {
+      "title": "Changes requested",
+      "body": "Reviewer requested changes. Open the item to see the notes."
+    },
+    "reply": {
+      "title": "New reply on a comment",
+      "body": "Someone replied to a comment you're part of."
+    },
+    "unresolved_question": {
+      "title": "Unresolved question needs attention",
+      "body": "A comment is still marked as an unresolved question."
+    },
+    "deadline": {
+      "title": "A deadline is approaching",
+      "body": "A planned publish date is approaching. Confirm the package is on track."
+    },
+    "delivery": {
+      "title": "A delivery was submitted",
+      "body": "A new delivery version was submitted for review."
+    },
+    "ready_to_publish": {
+      "title": "A piece is ready to publish",
+      "body": "A content item moved into the ready-to-publish lane."
+    },
+    "mention": {
+      "title": "You were mentioned in a comment",
+      "body": "Someone @mentioned you in a comment on a content item."
+    },
+    "system": {
+      "title": "System update",
+      "body": "The workspace has a new system update."
+    }
+  },
+  "publication": {
+    "published": {
+      "title": "Item published",
+      "body": "A channel went live. Open the planning item to see the live URL."
+    },
+    "failed": {
+      "title": "Publish failure",
+      "body": "A channel failed to publish: {reason}."
+    },
+    "failedNoReason": {
+      "title": "Publish failure",
+      "body": "A channel failed to publish: no reason given."
+    }
+  },
+  "commentMentionTitle": "You were mentioned in a comment",
+  "commentMentionBody": "Someone @mentioned you in a comment on a content item.",
+  "events": {
+    "review_request": {
+      "title": "Review requested: \"{title}\"",
+      "body": "A planner submitted this item for content review."
+    },
+    "approval": {
+      "title": "Content approved: \"{title}\"",
+      "body": "The brief was approved. The item is ready for the next step."
+    },
+    "changes_requested": {
+      "title": "Changes requested: \"{title}\"",
+      "body": "Open the item to see the reviewer's notes."
+    },
+    "changes_requested_with_reason": {
+      "title": "Changes requested: \"{title}\"",
+      "body": "Reviewer feedback: {reason}"
+    },
+    "ready_to_publish": {
+      "title": "Ready to publish: \"{title}\"",
+      "body": "All approvals are in. The item is ready to publish."
+    },
+    "designer_claimed": {
+      "title": "Designer claimed \"{title}\"",
+      "body": "A designer picked up the work for this item."
+    },
+    "assignment": {
+      "title": "You were assigned \"{title}\"",
+      "body": "Open the item to start work."
+    },
+    "designer_reassigned": {
+      "title": "Design task reassigned: \"{title}\"",
+      "body": "A new designer was assigned to this item."
+    },
+    "designer_released": {
+      "title": "Design task released: \"{title}\"",
+      "body": "The designer released this item back to the queue."
+    },
+    "deadline_warning": {
+      "title": "Deadline approaching: \"{title}\"",
+      "body": "The planned publish date is approaching. Confirm the package is on track."
+    },
+    "material_edit": {
+      "title": "Material edit on content item",
+      "body": "Resource '{resource}' changed. Approvals were reset; please re-review (revision {revision})."
+    },
+    "delivery_submitted": {
+      "title": "Delivery submitted: \"{title}\"",
+      "body": "Delivery V{version} is waiting on creative review."
+    },
+    "delivery_approved": {
+      "title": "Creative approved: \"{title}\"",
+      "body": "The delivery is approved. The item is ready to publish."
+    },
+    "delivery_changes_requested": {
+      "title": "Changes requested on delivery: \"{title}\"",
+      "body": "The reviewer requested changes on the delivery. Open the item to see the notes."
+    }
+  }
+}

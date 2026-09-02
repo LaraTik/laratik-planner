@@ -1,0 +1,29 @@
+{
+  "invitation": {
+    "subject": "You're invited to laratik-planner",
+    "body": "You've been invited to join the agency on laratik-planner.\n\nAccept the invitation: {acceptUrl}\n\nThis link expires on {expiresAt}."
+  },
+  "invitationReminder": {
+    "subject": "Reminder: you're invited to laratik-planner",
+    "body": "Reminder: you've been invited to join the agency on laratik-planner.\n\nAccept the invitation: {acceptUrl}\n\nThis link expires on {expiresAt}."
+  },
+  "passwordReset": {
+    "subject": "Reset your laratik-planner password",
+    "body": "We received a request to reset the password for this laratik-planner account.\n\nReset your password: {resetUrl}\n\nThis link expires on {expiresAt}. If you did not request a reset, you can ignore this email."
+  },
+  "platformFirstAdminInvite": {
+    "subject": "You're invited to manage {agencyName}",
+    "body": "You are the first administrator for {agencyName}. Accept the invitation: {acceptUrl}"
+  },
+  "platformExistingAdminNotify": {
+    "subject": "You're now an administrator for {agencyName}",
+    "body": "You are now an administrator for {agencyName}. Sign in at {signInUrl}"
+  },
+  "magicLink": {
+    "subject": "Sign in to {host}",
+    "text": "Sign in to {host}\n{url}\n\n",
+    "htmlHeading": "Sign in to <strong>{host}</strong>",
+    "htmlButton": "Sign in",
+    "htmlFooter": "If you did not request this email you can safely ignore it."
+  }
+}

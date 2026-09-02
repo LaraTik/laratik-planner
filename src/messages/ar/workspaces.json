@@ -1,0 +1,22 @@
+{
+  "title": "مساحات العمل",
+  "adminDescription": "مساحة عمل واحدة لكل علامة تجارية تُبقي القنوات والوصول للفريق والتخطيط منفصلة. أنشئ واحدة جديدة لاستقبال علامة عميل.",
+  "memberDescription": "مساحات العمل التي أنت عضو فيها. كل واحدة بيئة علامة تجارية منفصلة.",
+  "newWorkspace": "مساحة عمل جديدة",
+  "kpiActiveBrands": "العلامات النشطة",
+  "kpiTotalIdeas": "إجمالي الأفكار",
+  "kpiNeedReview": "تحتاج مراجعة",
+  "kpiReadyToPublish": "جاهز للنشر",
+  "emptyTitle": "لا توجد مساحات عمل بعد",
+  "adminEmpty": "أنشئ أول مساحة عمل لبدء تخطيط المحتوى لعلامة العميل.",
+  "memberEmpty": "اطلب من المسؤول إضافتك إلى مساحة عمل.",
+  "colBrand": "العلامة",
+  "colChannels": "القنوات",
+  "colMembers": "الأعضاء",
+  "colLastActivity": "آخر نشاط",
+  "noChannels": "لا توجد قنوات",
+  "channelCount": "{count} قناة",
+  "channelCountMany": "{count} قنوات",
+  "memberCount": "{count} عضو",
+  "memberCountMany": "{count} أعضاء"
+}

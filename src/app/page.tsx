@@ -22,7 +22,7 @@ export async function generateMetadata() {
  * is shown only while no agency exists and routes through identity verification.
  *
  * All user-visible copy is sourced from the message catalog
- * (`src/messages/{en,ar}/common.json` → `auth.landing`) so the
+ * (`src/messages/{en,ar}/auth.json` → `auth.landing`) so the
  * same JSX renders in English or Arabic. The active locale is
  * resolved once via `tForActive()` — see ADR 0009 for the
  * precedence chain.

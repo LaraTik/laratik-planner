@@ -1,0 +1,27 @@
+{
+  "title": "نظرة عامة",
+  "description": "متابعة التخطيط وصحة سير العمل وجاهزية النشر لشهر {month}.",
+  "previousMonth": "الشهر السابق، {month}",
+  "nextMonth": "الشهر التالي، {month}",
+  "selectedMonth": "الشهر المُختار",
+  "today": "اليوم",
+  "batchAdd": "إضافة أفكار دفعة",
+  "attention": {
+    "criticalTitle": "تنبيه حرج",
+    "warningTitle": "يحتاج انتباهًا",
+    "infoTitle": "للتنبيه",
+    "criticalBody": "عناصر محظورة عالقة عند شخص ما. افتح القائمة لحلّها.",
+    "warningBody": "هذه تتأخر عن تاريخ النشر المُخطط لها.",
+    "infoBody": "مواعيد نهائية قادمة خلال الأيام السبعة المقبلة.",
+    "reviewCta": "مراجعة عناصر الانتباه",
+    "approvalsCta": "الاعتمادات",
+    "blocked": "{count} محظور",
+    "atRiskOne": "{count} عنصر في خطر",
+    "atRiskMany": "{count} عناصر في خطر",
+    "approachingOne": "{count} موعد نهائي يقترب",
+    "approachingMany": "{count} مواعيد نهائية تقترب",
+    "approvalsWaitingOne": "{count} اعتماد بانتظارك",
+    "approvalsWaitingMany": "{count} اعتمادات بانتظارك"
+  },
+  "createContent": "إنشاء محتوى"
+}

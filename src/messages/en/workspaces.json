@@ -1,0 +1,22 @@
+{
+  "title": "Workspaces",
+  "adminDescription": "One workspace per brand keeps channels, team access, and planning separate. Create a new one to onboard a client brand.",
+  "memberDescription": "Workspaces you're a member of. Each one is a separate brand environment.",
+  "newWorkspace": "New workspace",
+  "kpiActiveBrands": "Active brands",
+  "kpiTotalIdeas": "Total ideas",
+  "kpiNeedReview": "Need review",
+  "kpiReadyToPublish": "Ready to publish",
+  "emptyTitle": "No workspaces yet",
+  "adminEmpty": "Create the first workspace to start planning content for a client brand.",
+  "memberEmpty": "Ask an admin to add you to a workspace.",
+  "colBrand": "Brand",
+  "colChannels": "Channels",
+  "colMembers": "Members",
+  "colLastActivity": "Last activity",
+  "noChannels": "No channels",
+  "channelCount": "{count} channel",
+  "channelCountMany": "{count} channels",
+  "memberCount": "{count} member",
+  "memberCountMany": "{count} members"
+}

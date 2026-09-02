@@ -1,0 +1,29 @@
+{
+  "invitation": {
+    "subject": "دعوتك إلى laratik-planner",
+    "body": "تمت دعوتك للانضمام إلى الوكالة على laratik-planner.\n\nاقبل الدعوة: {acceptUrl}\n\nتنتهي صلاحية هذا الرابط في {expiresAt}."
+  },
+  "invitationReminder": {
+    "subject": "تذكير: دعوتك إلى laratik-planner",
+    "body": "تذكير: تمت دعوتك للانضمام إلى الوكالة على laratik-planner.\n\nاقبل الدعوة: {acceptUrl}\n\nتنتهي صلاحية هذا الرابط في {expiresAt}."
+  },
+  "passwordReset": {
+    "subject": "إعادة تعيين كلمة مرور laratik-planner",
+    "body": "تلقّينا طلبًا لإعادة تعيين كلمة المرور لهذا الحساب على laratik-planner.\n\nأعد تعيين كلمة المرور: {resetUrl}\n\nتنتهي صلاحية هذا الرابط في {expiresAt}. إذا لم تطلب إعادة التعيين، يمكنك تجاهل هذه الرسالة."
+  },
+  "platformFirstAdminInvite": {
+    "subject": "دعوتك لإدارة {agencyName}",
+    "body": "أنت المسؤول الأول لـ {agencyName}. اقبل الدعوة: {acceptUrl}"
+  },
+  "platformExistingAdminNotify": {
+    "subject": "أصبحت مسؤولًا لـ {agencyName}",
+    "body": "أصبحت مسؤولًا لـ {agencyName}. سجّل الدخول من {signInUrl}"
+  },
+  "magicLink": {
+    "subject": "تسجيل الدخول إلى {host}",
+    "text": "تسجيل الدخول إلى {host}\n{url}\n\n",
+    "htmlHeading": "تسجيل الدخول إلى <strong>{host}</strong>",
+    "htmlButton": "تسجيل الدخول",
+    "htmlFooter": "إذا لم تطلب هذا البريد، يمكنك تجاهله بأمان."
+  }
+}
