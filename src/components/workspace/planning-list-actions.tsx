@@ -77,7 +77,7 @@ export function PlanningListActions({
           aria-label={tr("common.rowActionsAria", `Actions for ${itemTitle}`, { title: itemTitle })}
           data-testid="row-actions-trigger"
           className={cn(
-            "border-border bg-surface text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2",
+            "border-border bg-surface text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2",
             className,
           )}
         >
@@ -95,7 +95,10 @@ export function PlanningListActions({
         </DropdownMenuItem>
         {canEdit ? (
           <DropdownMenuItem asChild>
-            <Link href={`${detailHref}/edit`} data-testid="row-action-edit">
+            <Link
+              href={`/app/w/${workspaceSlug}/planning/edit/${itemId}`}
+              data-testid="row-action-edit"
+            >
               <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
               {tr("common.rowActionEdit", "Edit")}
             </Link>
