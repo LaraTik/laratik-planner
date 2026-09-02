@@ -4,6 +4,7 @@ import * as React from "react";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * TimezoneCombobox — searchable select for IANA timezones.
@@ -47,7 +48,10 @@ const controlClass =
 // so this runs in the browser, where `Intl.DateTimeFormat` correctly
 // returns the local time-zone offset for the user's clock.
 const ALL_ZONES: TimezoneOption[] = (() => {
-  const zones = Intl.supportedValuesOf("timeZone");
+  // `UTC` is a valid IANA value but is not returned by every runtime's
+  // `supportedValuesOf` implementation (notably Node versus Firefox). Keep
+  // it explicit so the server and browser render the same selected label.
+  const zones = ["UTC", ...Intl.supportedValuesOf("timeZone").filter((zone) => zone !== "UTC")];
   const sample = new Date();
   return zones.map((zone) => {
     let offset = "UTC";
@@ -100,6 +104,7 @@ export function TimezoneCombobox({
   descriptionId,
   helpId,
 }: TimezoneComboboxProps) {
+  const t = useLocaleT();
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -195,7 +200,9 @@ export function TimezoneCombobox({
             )}
             data-testid="timezone-combobox-trigger"
           >
-            <span className="truncate">{selected ? selectedLabel : "Select a timezone"}</span>
+            <span className="truncate">
+              {selected ? selectedLabel : t("common.timezoneSelectPlaceholder")}
+            </span>
             <ChevronDown
               className={cn(
                 "text-fg-muted h-4 w-4 shrink-0 transition-transform",
@@ -221,7 +228,7 @@ export function TimezoneCombobox({
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
               onKeyDown={onSearchKeyDown}
-              placeholder="Search timezone…"
+              placeholder={t("common.timezoneSearchPlaceholder")}
               aria-controls={listboxId}
               aria-activedescendant={filtered.length > 0 ? optionId(activeIndex) : undefined}
               className="text-body text-fg-primary placeholder:text-fg-muted h-10 w-full bg-transparent focus:outline-none"
@@ -234,7 +241,7 @@ export function TimezoneCombobox({
                   setSearch("");
                   searchInputRef.current?.focus();
                 }}
-                aria-label="Clear search"
+                aria-label={t("common.clearSearch")}
                 className="text-fg-muted hover:text-fg-primary focus-visible:ring-focus-ring rounded p-1 focus:outline-none focus-visible:ring-2"
               >
                 <X className="h-3.5 w-3.5" aria-hidden="true" />
@@ -245,13 +252,13 @@ export function TimezoneCombobox({
             ref={listRef}
             id={listboxId}
             role="listbox"
-            aria-label="Timezones"
+            aria-label={t("common.timezones")}
             className="max-h-72 overflow-y-auto py-1"
             data-testid="timezone-combobox-listbox"
           >
             {filtered.length === 0 ? (
               <p className="text-body text-fg-muted px-3 py-6 text-center">
-                No timezones match “{search}”.
+                {t("common.noTimezonesMatch", { search })}
               </p>
             ) : (
               filtered.map((option, index) => {

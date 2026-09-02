@@ -53,13 +53,18 @@ const env: NodeJS.ProcessEnv = {
   UPLOADS_DIR: process.env.UPLOADS_DIR ?? e2eUploadsDir,
 };
 
+let exitCode = 0;
+
 try {
   for (const [command, args] of [
     ["pnpm", ["db:migrate"]],
     ["pnpm", ["exec", "playwright", "test", ...testArgs]],
   ] as const) {
     const result = spawnSync(command, args, { env, stdio: "inherit" });
-    if (result.status !== 0) process.exit(result.status ?? 1);
+    if (result.status !== 0) {
+      exitCode = result.status ?? 1;
+      break;
+    }
   }
 } finally {
   rmSync(e2eUploadsDir, { recursive: true, force: true });
@@ -67,3 +72,5 @@ try {
     writeFileSync(join(process.cwd(), fileName), contents);
   }
 }
+
+if (exitCode !== 0) process.exit(exitCode);
