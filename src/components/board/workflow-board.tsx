@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Palette, User } from "lucide-react";
+import { Palette, User, Users } from "lucide-react";
 import { StatusBadge } from "@/components/content/status-badge";
 import { humanFormat, type ContentStatus } from "@/lib/content/status";
 import { formatDate } from "@/lib/i18n/format-locale";
@@ -85,7 +85,7 @@ function displayNameFor(
  * WorkflowBoard — 7-column kanban-style view of every content item,
  * grouped by production stage. Renders a `<Link>` card per item with
  * the title, format, planned publish date, current status badge, and
- * a compact role-labelled Owner + Designer row.
+ * a clearly grouped, role-labelled Owner + Designer assignment block.
  *
  * Extracted from `board/page.tsx` so the same column grouping + card
  * shape is available to any future surface (client review board, design
@@ -173,33 +173,35 @@ function PersonRow({
   const tone =
     roleAccent === "primary" ? "bg-primary-subtle text-primary" : "bg-warning-subtle text-warning";
   return (
-    <span
-      className="text-label text-fg-secondary inline-flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
+    <div
+      className="flex min-h-10 min-w-0 items-center justify-between gap-2"
       data-testid={testId}
       data-role={roleLabel.toLowerCase()}
       data-empty={name ? null : "true"}
     >
-      <span
-        aria-hidden="true"
-        className={cn(
-          "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full",
-          name ? tone : "bg-surface-subtle text-fg-muted",
-        )}
-      >
-        {name ? <Icon className="h-2.5 w-2.5" aria-hidden={true} /> : null}
+      <span className="text-label text-fg-secondary inline-flex min-w-0 shrink-0 items-center gap-1.5">
+        <span
+          aria-hidden="true"
+          className={cn(
+            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+            name ? tone : "bg-surface-subtle text-fg-muted",
+          )}
+        >
+          {name ? <Icon className="h-3 w-3" aria-hidden={true} /> : null}
+        </span>
+        <span className="text-fg-muted font-semibold">{roleLabel}</span>
       </span>
-      <span className="text-fg-muted shrink-0 font-semibold tracking-wide uppercase">
-        {roleLabel}
-      </span>
       <span
         className={cn(
-          "min-w-0 truncate font-medium",
+          "text-label max-w-[65%] min-w-0 text-end leading-snug font-medium",
           name ? "text-fg-primary" : "text-fg-muted italic",
         )}
       >
-        <bdi dir="auto">{name ?? (t ? t("common.ownerUnassigned") : "Unassigned")}</bdi>
+        <bdi dir="auto" title={name ?? undefined}>
+          {name ?? (t ? t("common.ownerUnassigned") : "Unassigned")}
+        </bdi>
       </span>
-    </span>
+    </div>
   );
 }
 
@@ -235,15 +237,14 @@ function BoardCard({
         {t ? t(`planningFilters.formatLabels.${item.format}`) : humanFormat(item.format)} ·{" "}
         <bdi dir="auto">{formatDate(publishDate, locale, { timeZone: workspaceTimezone })}</bdi>
       </p>
-      <div className="space-y-0.5" data-testid="board-card-people">
-        <PersonRow
-          Icon={User}
-          roleLabel={t ? t("common.peopleRoleOwner") : "Owner"}
-          name={ownerName}
-          roleAccent="primary"
-          testId="board-card-owner"
-          {...(t ? { t } : {})}
-        />
+      <div
+        className="border-border bg-surface-subtle mt-3 rounded-[var(--radius-control)] border px-2 py-1"
+        data-testid="board-card-people"
+      >
+        <div className="text-label text-fg-muted flex min-h-8 items-center gap-1.5 font-semibold">
+          <Users className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>{t ? t("common.assignments") : "Assignments"}</span>
+        </div>
         <PersonRow
           Icon={Palette}
           roleLabel={t ? t("common.peopleRoleDesigner") : "Designer"}
@@ -252,6 +253,22 @@ function BoardCard({
           testId="board-card-designer"
           {...(t ? { t } : {})}
         />
+        <PersonRow
+          Icon={User}
+          roleLabel={t ? t("common.peopleRoleOwner") : "Owner"}
+          name={ownerName}
+          roleAccent="primary"
+          testId="board-card-owner"
+          {...(t ? { t } : {})}
+        />
+        {!designerName ? (
+          <span
+            className="text-label text-primary inline-flex min-h-8 items-center font-semibold"
+            data-testid="board-card-designer-action"
+          >
+            {t ? t("common.openItemToAssignDesigner") : "Open item to assign a designer"}
+          </span>
+        ) : null}
       </div>
       <div className="mt-2">
         <StatusBadge status={item.status} {...(t ? { t } : {})} />

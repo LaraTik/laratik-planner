@@ -245,6 +245,20 @@ export default async function ContentDetailPage({
       }
     : null;
 
+  const [designerRow] = item.designerId
+    ? await db
+        .select({ id: users.id, displayName: users.displayName, name: users.name })
+        .from(users)
+        .where(eq(users.id, item.designerId))
+        .limit(1)
+    : [];
+  const designer = designerRow
+    ? {
+        id: designerRow.id,
+        displayName: designerRow.displayName ?? designerRow.name ?? designerRow.id.slice(0, 8),
+      }
+    : null;
+
   const canEdit =
     (actorRoles.isManager || actorRoles.isPlanner) &&
     UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number]);
@@ -566,6 +580,9 @@ export default async function ContentDetailPage({
                   deliveryVersionId: a.deliveryVersionId,
                 }))}
                 designers={designers}
+                {...(designer
+                  ? { designer: { id: designer.id, label: designer.displayName } }
+                  : {})}
               />
             </div>
             {/* Compact header — answers the four questions at a
@@ -611,6 +628,7 @@ export default async function ContentDetailPage({
             deliveryVersionId: a.deliveryVersionId,
           })),
           designers,
+          ...(designer ? { designer: { id: designer.id, label: designer.displayName } } : {}),
         }}
         workspace={{
           workspaceSlug: slug,

@@ -136,6 +136,54 @@ describe("WorkflowBoard", () => {
     expect(screen.getByText(/Short Form Video/)).toBeInTheDocument();
   });
 
+  it("groups designer and owner into a readable assignment block", () => {
+    render(
+      <WorkflowBoard
+        items={[
+          makeItem({
+            id: "assigned",
+            status: "in_design",
+            contentOwnerId: "owner-1",
+            designerId: "designer-1",
+          }),
+        ]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+        memberDirectory={{
+          "owner-1": { id: "owner-1", name: "Owner Name", displayName: null },
+          "designer-1": { id: "designer-1", name: "Designer Name", displayName: null },
+        }}
+      />,
+    );
+
+    const assignments = screen.getByTestId("board-card-people");
+    expect(within(assignments).getByText("Assignments")).toBeInTheDocument();
+    expect(within(assignments).getByTestId("board-card-designer")).toHaveTextContent(
+      "Designer Name",
+    );
+    expect(within(assignments).getByTestId("board-card-owner")).toHaveTextContent("Owner Name");
+    expect(assignments.textContent?.indexOf("Designer Name")).toBeLessThan(
+      assignments.textContent?.indexOf("Owner Name") ?? 0,
+    );
+  });
+
+  it("makes an unassigned designer state actionable without nesting controls", () => {
+    render(
+      <WorkflowBoard
+        items={[makeItem({ id: "needs-designer", status: "in_design", designerId: null })]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+      />,
+    );
+
+    const card = screen.getByTestId("board-card-needs-designer");
+    expect(screen.getByTestId("board-card-designer-action")).toHaveTextContent(
+      "Open item to assign a designer",
+    );
+    expect(card.tagName).toBe("A");
+    expect(card.querySelectorAll("a")).toHaveLength(0);
+  });
+
   it("localizes board copy and isolates bilingual card content", () => {
     render(
       <WorkflowBoard

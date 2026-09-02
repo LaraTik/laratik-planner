@@ -14,6 +14,8 @@
   "loading": "Loading…",
   "empty": "Nothing here yet.",
   "ownerUnassigned": "Unassigned",
+  "assignments": "Assignments",
+  "openItemToAssignDesigner": "Open item to assign a designer",
   "peopleRoleOwner": "Owner",
   "peopleRoleDesigner": "Designer",
   "healthReady": "Ready",

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useId, useState, useTransition } from "react";
-import { Check, CheckCircle, Circle, XCircle, Ban, Play, Info } from "lucide-react";
+import { Check, CheckCircle, Circle, XCircle, Ban, Play, Info, Palette } from "lucide-react";
 import {
   DirAwareArrowRight,
   DirAwareChevronLeft,
@@ -41,6 +41,8 @@ type Role =
   | "isInternalReviewer"
   | "isClientReviewer"
   | "isPublisher";
+
+type AssignedDesigner = { id: string; label: string };
 
 /**
  * localStorage key for the desktop rail's collapsed/expanded
@@ -347,6 +349,7 @@ export interface WorkflowRailBodyProps {
     deliveryVersionId: string | null;
   }[];
   designers: { id: string; label: string }[];
+  designer?: AssignedDesigner | null;
   /**
    * Optional translator. When provided, the workflow dialog titles
    * + descriptions render from `contentDetail.workflow.*`; when
@@ -363,6 +366,7 @@ function WorkflowRailBody({
   roles,
   approvals,
   designers,
+  designer,
 }: {
   workspaceSlug: string;
   contentItemId: string;
@@ -378,6 +382,7 @@ function WorkflowRailBody({
     deliveryVersionId: string | null;
   }[];
   designers: { id: string; label: string }[];
+  designer?: AssignedDesigner | null;
 }) {
   const t = useLocaleT();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
@@ -427,9 +432,9 @@ function WorkflowRailBody({
       case "content_review":
         return ["isInternalReviewer", "isManager"];
       case "approved_for_design":
-        return ["isManager", "isDesigner"];
+        return ["isManager", "isPlanner", "isDesigner"];
       case "in_design":
-        return ["isManager", "isDesigner"];
+        return ["isManager", "isPlanner", "isDesigner"];
       case "creative_review":
         return ["isInternalReviewer", "isClientReviewer", "isManager"];
       case "ready_to_publish":
@@ -454,7 +459,8 @@ function WorkflowRailBody({
     (status === "draft" && can(["isManager", "isPlanner"])) ||
     (status === "content_review" && can(["isInternalReviewer", "isManager"])) ||
     (status === "changes_requested" && can(["isManager", "isPlanner"])) ||
-    (status === "approved_for_design" && (roles.isDesigner || roles.isManager)) ||
+    (status === "approved_for_design" &&
+      (roles.isDesigner || roles.isManager || roles.isPlanner)) ||
     (status === "blocked" && roles.isManager) ||
     ([
       "draft",
@@ -533,6 +539,28 @@ function WorkflowRailBody({
                           <span className="text-fg-muted">—</span>
                         )}
                       </div>
+                      {status === "approved_for_design" || status === "in_design" ? (
+                        <div
+                          className="border-border bg-surface flex flex-col gap-1 rounded-[var(--radius-control)] border p-2"
+                          data-testid="workflow-designer-assignment"
+                        >
+                          <div className="text-label text-fg-muted flex items-center gap-1.5 font-semibold">
+                            <Palette className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                            <span>{tr("contentDetail.workflow.designer", "Designer")}</span>
+                          </div>
+                          <span
+                            className={cn(
+                              "text-body font-semibold",
+                              designer ? "text-fg-primary" : "text-fg-muted italic",
+                            )}
+                            data-testid="workflow-current-designer"
+                          >
+                            <bdi dir="auto">
+                              {designer?.label ?? tr("common.ownerUnassigned", "Unassigned")}
+                            </bdi>
+                          </span>
+                        </div>
+                      ) : null}
                       {currentStep.next ? (
                         <p className="text-label text-fg-muted inline-flex items-start gap-1.5">
                           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -577,6 +605,7 @@ function WorkflowRailBody({
                         isClientReviewer={roles.isClientReviewer}
                         isPublisher={roles.isPublisher}
                         designers={designers}
+                        {...(designer ? { designer } : {})}
                         pending={pending}
                         onTransition={run}
                         onExecuteTransition={executeTransition}
@@ -947,6 +976,7 @@ function ActionButtons({
   onClaim,
   onAssignDesigner,
   designers,
+  designer,
   t,
 }: {
   status: string;
@@ -957,6 +987,7 @@ function ActionButtons({
   isClientReviewer: boolean;
   isPublisher: boolean;
   designers: { id: string; label: string }[];
+  designer?: AssignedDesigner | null;
   pending: boolean;
   onTransition: (action: Parameters<typeof transitionAction>[0]["action"], reason?: string) => void;
   onExecuteTransition: (
@@ -1036,11 +1067,18 @@ function ActionButtons({
           {tr("contentDetail.workflow.claimAsDesigner", "Claim as designer")}
         </Button>
       ) : null}
-      {status === "approved_for_design" && isManager ? (
+      {(status === "approved_for_design" || status === "in_design") &&
+      can(["isManager", "isPlanner"]) ? (
         <AssignDesignerDialog
           designers={designers}
+          {...(designer?.id ? { currentDesignerId: designer.id } : {})}
           disabled={pending}
           onConfirm={onAssignDesigner}
+          buttonLabel={
+            designer
+              ? tr("contentDetail.workflow.changeDesigner", "Change designer")
+              : tr("contentDetail.workflow.assignDesigner", "Assign designer")
+          }
         />
       ) : null}
       {status === "blocked" && isManager ? (
@@ -1139,12 +1177,16 @@ function roleNameForFlag(
  *  previous `workflow-bar.tsx` and re-used by the rail. */
 function AssignDesignerDialog({
   designers,
+  currentDesignerId,
   disabled,
   onConfirm,
+  buttonLabel,
 }: {
   designers: { id: string; label: string }[];
+  currentDesignerId?: string;
   disabled: boolean;
   onConfirm: (designerId: string) => Promise<void> | void;
+  buttonLabel: string;
 }) {
   const t = useLocaleT();
   const tr = (key: string, fallback: string) => {
@@ -1152,7 +1194,11 @@ function AssignDesignerDialog({
     return value === key ? fallback : value;
   };
   const [open, setOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string>(designers[0]?.id ?? "");
+  const initialDesignerId =
+    currentDesignerId && designers.some((designer) => designer.id === currentDesignerId)
+      ? currentDesignerId
+      : (designers[0]?.id ?? "");
+  const [selectedId, setSelectedId] = useState<string>(initialDesignerId);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectId = useId();
@@ -1189,12 +1235,8 @@ function AssignDesignerDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button
-          size="sm"
-          disabled={disabled || !hasDesigners}
-          data-testid="assign-designer-trigger"
-        >
-          {tr("contentDetail.workflow.assignDesigner", "Assign designer")}
+        <Button size="sm" disabled={disabled} data-testid="assign-designer-trigger">
+          {buttonLabel}
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -1205,7 +1247,7 @@ function AssignDesignerDialog({
           <DialogDescription>
             {tr(
               "contentDetail.workflow.assignDialogDescription",
-              'Pick the designer who will own this design task. They’ll be notified and the item will move into the "in design" state.',
+              "Pick the designer who will own this design task. They’ll be notified when the assignment changes.",
             )}
           </DialogDescription>
         </DialogHeader>
@@ -1257,9 +1299,7 @@ function AssignDesignerDialog({
                 disabled={submitting || !selectedId}
                 data-testid="assign-designer-confirm"
               >
-                {submitting
-                  ? tr("contentDetail.workflow.assigning", "Assigning…")
-                  : tr("contentDetail.workflow.assignDesigner", "Assign designer")}
+                {submitting ? tr("contentDetail.workflow.assigning", "Assigning…") : buttonLabel}
               </Button>
             </DialogFooter>
           </form>

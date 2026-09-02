@@ -345,22 +345,35 @@ export async function assignDesignerAction(input: {
     return fieldErrorsFromZod<AssignDesignerFields>(parsed.error);
   }
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  const [item] = await db
+    .select({ status: contentItems.status })
+    .from(contentItems)
+    .where(eq(contentItems.id, parsed.data.contentItemId))
+    .limit(1);
+  if (!item || !["approved_for_design", "in_design"].includes(item.status)) {
+    return actionFailure<AssignDesignerFields>(
+      new Error("The item is no longer ready for designer assignment."),
+      "The assign action failed.",
+    );
+  }
   try {
     await assignDesigner(actor, parsed.data);
   } catch (error) {
     return actionFailure<AssignDesignerFields>(error, "The assign action failed.");
   }
-  // Now move the item to `in_design`. The workflow transition does
-  // its own role gate; the design row was set in the previous call
-  // so the "Assign a designer before moving…" guard inside
-  // `transitionContent` is satisfied.
-  try {
-    await transitionContent(actor, {
-      contentItemId: parsed.data.contentItemId,
-      action: "assign_designer",
-    });
-  } catch (error) {
-    return actionFailure<AssignDesignerFields>(error, "The assign action failed.");
+  // A manager can assign before design starts or reassign while the
+  // item is already in design. Only the former needs the workflow
+  // transition; attempting it for an in-design item would reject a
+  // valid reassignment because the state machine has already moved.
+  if (item.status === "approved_for_design") {
+    try {
+      await transitionContent(actor, {
+        contentItemId: parsed.data.contentItemId,
+        action: "assign_designer",
+      });
+    } catch (error) {
+      return actionFailure<AssignDesignerFields>(error, "The assign action failed.");
+    }
   }
   revalidatePath(`/app/w/${input.workspaceSlug}/planning/${input.contentItemId}`);
   return { ok: true };

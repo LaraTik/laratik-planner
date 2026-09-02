@@ -7,6 +7,7 @@ vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
   transitionAction: vi.fn(),
   decideApprovalAction: vi.fn(),
   claimAction: vi.fn(),
+  assignDesignerAction: vi.fn(),
 }));
 
 /**
@@ -68,5 +69,24 @@ describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
       ).toBeGreaterThanOrEqual(1);
       unmount();
     }
+  });
+
+  it("keeps designer assignment visible while an item is already in design", () => {
+    const { getByTestId } = render(
+      <WorkflowRail
+        workspaceSlug="acme"
+        contentItemId="ci-1"
+        status="in_design"
+        blockedReason={null}
+        cancellationReason={null}
+        roles={{ ...baseRoles, isManager: true }}
+        approvals={[]}
+        designers={[{ id: "designer-1", label: "Designer Name" }]}
+        designer={{ id: "designer-1", label: "Designer Name" }}
+      />,
+    );
+
+    expect(getByTestId("workflow-designer-assignment")).toHaveTextContent("Designer Name");
+    expect(getByTestId("assign-designer-trigger")).toHaveTextContent("Change designer");
   });
 });

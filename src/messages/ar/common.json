@@ -14,6 +14,8 @@
   "loading": "جارٍ التحميل…",
   "empty": "لا يوجد شيء هنا بعد.",
   "ownerUnassigned": "غير مُسنَّد",
+  "assignments": "التعيينات",
+  "openItemToAssignDesigner": "افتح العنصر لتعيين مصمم",
   "peopleRoleOwner": "مالك",
   "peopleRoleDesigner": "مصمم",
   "healthReady": "جاهز",
