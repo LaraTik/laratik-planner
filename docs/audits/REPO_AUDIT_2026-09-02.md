@@ -1,9 +1,7 @@
 # LaraTik Planner — Repository Audit
 
 Date: 2026-09-02  
-Audit-fix baseline: `a41582f` (`main`, clean at commit time; the current
-checkout also contains separate uncommitted designer-assignment work owned by
-the user)
+Audit-fix baseline: `5d8b63c` (`main`, clean at audit close)
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
 responsive, performance, typography, motion, and data-display guidance.
@@ -12,9 +10,12 @@ responsive, performance, typography, motion, and data-display guidance.
 
 The repository has a strong production foundation and a broad quality harness.
 The current clean baseline passes formatting, ESLint, strict TypeScript, the
-full unit suite, and the production build. It is not yet final-production-ready
-because independent visual/accessibility review, exact-HEAD evidence, several
-localization/metadata checks, and architecture decisions remain open.
+full unit suite, and the production build. Focused browser contracts for
+health/auth, role authorization, Add Directly, a11y routes, and Brand Kit pass.
+It is not yet final-production-ready because the full cross-role content
+workflow still times out in the isolated Chromium run, the complete browser /
+visual matrix is pending, and independent visual/accessibility review remains
+open.
 
 The canonical product visual source is `designs/stitch/` and the tokens in
 `src/app/globals.css`. UI/UX Pro Max is used here as a review framework; its
@@ -22,18 +23,19 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 
 ## Baseline evidence
 
-| Gate              | Result    | Evidence                                                |
-| ----------------- | --------- | ------------------------------------------------------- |
-| Prettier          | Pass      | `pnpm format:check`                                     |
-| ESLint            | Pass      | `pnpm lint`                                             |
-| TypeScript        | Pass      | `pnpm exec tsc --noEmit --incremental false`            |
-| Unit tests        | Pass      | 302 files; 3,039 passed; 4 todo                         |
-| Production build  | Pass      | `pnpm build`                                            |
-| Migration drill   | Pass      | 5/5 drills on disposable `planner_test`                 |
-| Integration tests | Pass      | 22 files; 187 tests on disposable `planner_test`        |
-| Focused E2E/a11y  | Pass      | Publishing + Settings axe; 6 Brand Kit admin journeys   |
-| Full E2E/visual   | Pending   | Must run on exact clean release-candidate HEAD          |
-| Working tree      | Not clean | Separate user-owned designer-assignment changes present |
+| Gate                   | Result                | Evidence                                                                       |
+| ---------------------- | --------------------- | ------------------------------------------------------------------------------ |
+| Prettier               | Pass                  | `pnpm format:check`                                                            |
+| ESLint                 | Pass                  | `pnpm lint`                                                                    |
+| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                   |
+| Unit tests             | Pass                  | 302 files; 3,039 passed; 4 todo                                                |
+| Production build       | Pass                  | `pnpm build`                                                                   |
+| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                        |
+| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                               |
+| Focused E2E/a11y       | Pass                  | 24/24 a11y routes; 6/6 Brand Kit journeys; focused Publishing + Settings axe   |
+| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe |
+| Full E2E/visual        | Pending / investigate | §23 content workflow timed out; full browser + visual matrix pending           |
+| Working tree           | Clean                 | Exact audit-close SHA: `5d8b63c`                                               |
 
 ## Repository inventory
 
@@ -82,6 +84,16 @@ handled before unrelated cleanup.
    its non-production CSP now permits the same `unsafe-eval` required by that
    client runtime, while production continues to prohibit it. The focused
    Publishing deep-link and Brand Kit mutation journeys now pass.
+7. **First-login and test-fixture contracts are hardened.** The disposable E2E
+   runner now provisions and cleans a writable upload volume; the dev JWT
+   preserves `mustChangePassword`; the set-password action rechecks the database
+   flag; and sign-out escape controls use the existing CSRF-protected server
+   action. Generated passwords now guarantee every class required by the strong
+   password meter.
+8. **The full cross-role content journey remains unresolved.** The dedicated
+   Chromium run still exceeds its 90-second test budget after the planner,
+   reviewer, designer, and publisher setup sequence. This is a release-gate
+   investigation item, not a suppressed or weakened assertion.
 
 ### P2 — maintainability and quality
 
@@ -100,6 +112,8 @@ handled before unrelated cleanup.
 7. Add repeatable LCP, INP, CLS, bundle, image, font, and slow-query evidence.
 8. Ensure isolated E2E server processes are reliably cleaned up before a build;
    this audit observed an orphan Next dev server competing with `next build`.
+   The runner now cleans its disposable upload directory, but interrupted runs
+   can still leave a development server behind and need a process-lifecycle fix.
 
 ### P3 — polish
 
@@ -204,8 +218,9 @@ as the sole release protection; browser and visual evidence remain in Step 6.
 Run the disposable database migration drill, integration suite, critical E2E,
 full browser matrix, visual snapshots, axe checks, manual accessibility review,
 and performance measurements at the exact clean commit. The migration drill,
-integration suite, focused axe checks, and Brand Kit E2E journeys are evidenced;
-the full browser/visual matrix remains open.
+integration suite, focused axe checks, and focused functional E2E journeys are
+evidenced; the §23 content-flow timeout and full browser/visual matrix remain
+open.
 
 ### Step 7 — Reconcile operations and documentation
 
