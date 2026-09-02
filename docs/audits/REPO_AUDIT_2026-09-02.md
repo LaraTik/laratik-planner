@@ -26,22 +26,22 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 
 ## Baseline evidence
 
-| Gate                   | Result                | Evidence                                                                             |
-| ---------------------- | --------------------- | ------------------------------------------------------------------------------------ |
-| Prettier               | Pass                  | `pnpm format:check`                                                                  |
-| ESLint                 | Pass                  | `pnpm lint`                                                                          |
-| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                         |
-| Unit tests             | Pass                  | 308 files; 3,068 passed; 4 todo at current HEAD                                      |
-| Production build       | Pass                  | `pnpm verify` at `bf151a0`                                                           |
-| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                              |
-| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                     |
-| Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow             |
-| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe       |
-| Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                         |
-| Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths        |
-| Visual regression      | Partial / investigate | Exact current full matrix 73/112; 39 failed; no snapshot updates                     |
-| Performance evidence   | Protocol only         | `docs/testing/performance-report.md`; LCP/INP/CLS, asset, and query evidence pending |
-| Working tree           | Clean                 | Clean after the audit-only documentation update; source evidence is `bf151a0`        |
+| Gate                   | Result                | Evidence                                                                                                              |
+| ---------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Prettier               | Pass                  | `pnpm format:check`                                                                                                   |
+| ESLint                 | Pass                  | `pnpm lint`                                                                                                           |
+| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                                                          |
+| Unit tests             | Pass                  | 308 files; 3,068 passed; 4 todo at current HEAD                                                                       |
+| Production build       | Pass                  | `pnpm verify` at `bf151a0`                                                                                            |
+| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                                                               |
+| Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                                                      |
+| Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow                                              |
+| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; isolated upload probe                                        |
+| Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                                                          |
+| Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths                                         |
+| Visual regression      | Partial / investigate | Latest full matrix at `6bd0d98`: 73/112; 39 failed; no snapshot updates; rerun after the styling fix remains required |
+| Performance evidence   | Partial / baseline    | Static inventory plus local public-route baseline; throttled/authenticated/INP/query evidence pending                 |
+| Working tree           | Clean                 | Clean after the audit-only documentation update; source evidence is `bf151a0`                                         |
 
 ## Repository inventory
 
@@ -126,6 +126,9 @@ handled before unrelated cleanup.
 6. Replace the four pending TODO tests with explicit tracked coverage or an
    approved reason for keeping them pending.
 7. Add repeatable LCP, INP, CLS, bundle, image, font, and slow-query evidence.
+   The static build inventory and unthrottled public-route baseline are now
+   recorded in `docs/production-readiness/PERFORMANCE_LOCAL_2026-09-02.md`;
+   authenticated, throttled, interaction, and query evidence remain open.
 8. **The isolated browser runner now resets only the disposable test database.**
    Commit `f5cb2d8` adds a URL- and environment-guarded reset that preserves the
    Drizzle migration ledger before every isolated browser run. This removes
@@ -134,8 +137,11 @@ handled before unrelated cleanup.
    server or `.next` lock behind and need a process-lifecycle fix.
 9. Reconcile the visual suite with the current canonical Stitch implementation.
    The broad pre-reset run produced 52 passes and 60 failures. The exact current
-   full matrix at `6bd0d98` produced 73 passes and 39 failures. The former
-   6,305px planning height was reduced to a deterministic single-seed fixture;
+   full matrix at `6bd0d98` produced 73 passes and 39 failures. The source-only
+   styling correction in `bf151a0` does not change the covered error-free visual
+   states, but the matrix should be rerun at the final release candidate. The
+   former 6,305px planning height was reduced to a deterministic single-seed
+   fixture;
    remaining differences include stale planning references containing an
    `A11y detail <timestamp>` row, the settings redesign (3,494px actual versus
    a 900px reference), users/workspace overview responsive deltas, and a
