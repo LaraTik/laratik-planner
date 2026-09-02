@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -24,6 +24,14 @@ const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
 const testOnlyAuthSecret = "laratik-e2e-auth-secret-not-for-production-2026";
 const testOnlyAgencyCookieSecret = "laratik-e2e-agency-cookie-secret-not-for-production-2026";
 const e2eUploadsDir = mkdtempSync(join(tmpdir(), "laratik-planner-e2e-uploads-"));
+// Next's dev server may rewrite these tracked bootstrap files when it starts.
+// Snapshot them so an isolated browser run never leaves generated framework
+// edits mixed into the user's worktree, including when the caller already had
+// intentional local changes.
+const generatedFileSnapshots = ["tsconfig.json", "next-env.d.ts"].map((fileName) => ({
+  fileName,
+  contents: readFileSync(join(process.cwd(), fileName), "utf8"),
+}));
 const env: NodeJS.ProcessEnv = {
   ...process.env,
   DATABASE_URL: databaseUrl,
@@ -55,4 +63,7 @@ try {
   }
 } finally {
   rmSync(e2eUploadsDir, { recursive: true, force: true });
+  for (const { fileName, contents } of generatedFileSnapshots) {
+    writeFileSync(join(process.cwd(), fileName), contents);
+  }
 }
