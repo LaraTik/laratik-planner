@@ -2,7 +2,7 @@
 
 Date: 2026-09-02  
 Broad browser/evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4`  
-Current audited commit: `6bd0d98` (`main`, clean)
+Current audited code commit: `bf151a0` (`main`, clean before this audit-only update)
 Audit report update: committed after this evidence capture
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
@@ -32,7 +32,7 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | ESLint                 | Pass                  | `pnpm lint`                                                                          |
 | TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                         |
 | Unit tests             | Pass                  | 308 files; 3,068 passed; 4 todo at current HEAD                                      |
-| Production build       | Pass                  | `pnpm verify` at `6bd0d98`                                                           |
+| Production build       | Pass                  | `pnpm verify` at `bf151a0`                                                           |
 | Migration drill        | Pass                  | 5/5 drills on disposable `planner_test`                                              |
 | Integration tests      | Pass                  | 22 files; 187 tests on disposable `planner_test`                                     |
 | Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow             |
@@ -41,7 +41,7 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths        |
 | Visual regression      | Partial / investigate | Exact current full matrix 73/112; 39 failed; no snapshot updates                     |
 | Performance evidence   | Protocol only         | `docs/testing/performance-report.md`; LCP/INP/CLS, asset, and query evidence pending |
-| Working tree           | Clean                 | Current audited HEAD: `6bd0d98`                                                      |
+| Working tree           | Clean                 | Clean after the audit-only documentation update; source evidence is `bf151a0`        |
 
 ## Repository inventory
 
@@ -117,7 +117,9 @@ handled before unrelated cleanup.
    aliases that exist in this repository; add a hooks alias only when a real
    `src/hooks` boundary is introduced.
 3. Add enforceable import boundaries between UI, routes, domain services, and
-   persistence.
+   persistence. A known invalid token, `text-danger-fg` in the design-queue
+   bulk toolbar, was fixed in `bf151a0`; add a broader custom-token check so
+   undefined design tokens cannot silently disappear from compiled CSS.
 4. Add SQL/migration linting and shell/config coverage to the staged quality
    path.
 5. Remove React `act` warnings and JSDOM navigation warnings from unit output.
@@ -132,7 +134,7 @@ handled before unrelated cleanup.
    server or `.next` lock behind and need a process-lifecycle fix.
 9. Reconcile the visual suite with the current canonical Stitch implementation.
    The broad pre-reset run produced 52 passes and 60 failures. The exact current
-   full matrix at `700b812` produced 73 passes and 39 failures. The former
+   full matrix at `6bd0d98` produced 73 passes and 39 failures. The former
    6,305px planning height was reduced to a deterministic single-seed fixture;
    remaining differences include stale planning references containing an
    `A11y detail <timestamp>` row, the settings redesign (3,494px actual versus
