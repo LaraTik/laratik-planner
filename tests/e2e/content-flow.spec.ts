@@ -441,4 +441,32 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     await expect(publishingCards.getByText(/Acme LinkedIn/i)).toBeVisible();
     await expect(publishingCards.getByText(/Acme TikTok/i)).toBeVisible();
   });
+
+  test("planning URL filters narrow the list and survive view changes", async ({ page }) => {
+    const seeded = await bootstrapTestSession(page);
+
+    // The fixture is a draft. A different workflow stage must therefore
+    // produce the filtered empty state; this catches a page that renders
+    // the controls but silently ignores the stage query parameter.
+    await page.goto("/app/w/acme/planning?stage=creative_review");
+    await expect(page.getByTestId("planning-empty-clear-filters")).toBeVisible();
+    await expect(page.getByTestId("planning-list-item")).toHaveCount(0);
+
+    const filteredUrl = `/app/w/acme/planning?stage=draft&channel=${seeded.channelIds[0]}&owner=${seeded.userId}`;
+    await page.goto(filteredUrl);
+    await expect(page.getByText("Autumn Blend Reveal", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("planning-status-filter")).toHaveValue("");
+    await expect(page.getByTestId("planning-stage-filter")).toHaveValue("draft");
+    await expect(page.getByTestId("planning-channel-filter")).toHaveValue(seeded.channelIds[0]!);
+    await expect(page.getByTestId("planning-owner-filter")).toHaveValue(seeded.userId);
+
+    const boardLink = page.getByTestId("planning-switch-to-board");
+    const boardHref = await boardLink.getAttribute("href");
+    expect(boardHref).toBeTruthy();
+    const boardUrl = new URL(boardHref!, "http://planner.test");
+    expect(boardUrl.pathname).toBe("/app/w/acme/board");
+    expect(boardUrl.searchParams.get("stage")).toBe("draft");
+    expect(boardUrl.searchParams.get("channel")).toBe(seeded.channelIds[0]);
+    expect(boardUrl.searchParams.get("owner")).toBe(seeded.userId);
+  });
 });
