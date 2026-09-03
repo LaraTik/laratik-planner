@@ -213,6 +213,19 @@ describe("SubmitDeliverySchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  // P0a (2026-09-03, /ui-ux-pro-max): description is optional.
+  // A designer submitting "the link *is* the deliverable" used to
+  // have to invent a description to pass the schema.
+  it("accepts a submission without a description", () => {
+    const { description: _omit, ...withoutDescription } = baseInput;
+    expect(SubmitDeliverySchema.safeParse(withoutDescription).success).toBe(true);
+  });
+
+  it("accepts an empty description string", () => {
+    const result = SubmitDeliverySchema.safeParse({ ...baseInput, description: "" });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("submitDelivery", () => {

@@ -172,4 +172,9 @@ export const activityKindEnum = pgEnum("activity_kind", [
   "ai_assistance",
   "delete",
   "bulk_delete",
+  // P1 (2026-09-03, /ui-ux-pro-max): non-material caption /
+  // hashtag / firstComment patch. Lives in the activity log
+  // for audit but does NOT trigger the material-edit reset
+  // (no revision bump, no approval invalidation).
+  "content_copy_patched",
 ]);

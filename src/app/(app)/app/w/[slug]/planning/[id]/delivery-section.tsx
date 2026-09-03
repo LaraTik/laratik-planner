@@ -122,9 +122,10 @@ export function DeliverySection({
                 const form = event.currentTarget;
                 const data = new FormData(form);
                 const nextErrors: Record<string, string> = {};
-                if (!String(data.get("description") ?? "").trim()) {
-                  nextErrors.description = t("contentDetail.deliveries.descriptionRequired");
-                }
+                // P0a (2026-09-03, /ui-ux-pro-max): description is
+                // optional. Designers often submit "the link *is* the
+                // deliverable" and a forced description reads as busy-
+                // work. Only the delivery links remain required.
                 const labels = data.getAll("linkLabel").map(String);
                 const urls = data.getAll("linkUrl").map(String);
                 const hasCompleteLink = labels.some((label, i) => label.trim() && urls[i]?.trim());
@@ -168,15 +169,13 @@ export function DeliverySection({
               <FormField
                 id="description"
                 label={t("contentDetail.deliveries.description")}
-                required
+                hint={t("contentDetail.deliveries.optionalHint")}
                 {...(fieldErrors.description ? { error: fieldErrors.description } : {})}
               >
                 <Input
                   id="description"
                   type="text"
                   name="description"
-                  required
-                  minLength={1}
                   maxLength={500}
                   placeholder={t("contentDetail.deliveries.descriptionPlaceholder")}
                 />

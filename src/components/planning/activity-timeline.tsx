@@ -183,6 +183,8 @@ function humanizeKind(
       return t("contentDetail.activity.kindDateUpdated");
     case "content_updated":
       return t("contentDetail.activity.kindContentUpdated");
+    case "content_copy_patched":
+      return t("contentDetail.activity.kindContentCopyPatched");
     case "delivery_submitted":
       return t("contentDetail.activity.kindDeliverySubmitted");
     case "comment_added":
