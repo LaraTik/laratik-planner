@@ -88,13 +88,24 @@ export function WorkspaceRoleMatrix({
 
   // Serialise to the multi-role shape. The action accepts both the
   // old single-role and the new multi-role shape for backward
-  // compatibility.
+  // compatibility, but the multi-role shape is the canonical
+  // form.
+  //
+  // Bug history (2026-09-03, /ui-ux-pro-max): this serialiser
+  // used to emit ONE entry per role
+  // (`roles.map((role) => ({ workspaceId, roles: [role] }))`).
+  // The action groups roles per workspace with
+  // `Map.set(workspaceId, roles)`, so when the user picked
+  // `designer` + `publisher` for the same workspace the two
+  // entries collided on the same key and only the LAST role
+  // survived — the symptom the user reported. The fix is to
+  // emit one entry per workspace with the full roles[] in it.
   const serialised = React.useMemo(
     () =>
       JSON.stringify(
-        Object.entries(selectedRoles).flatMap(([workspaceId, roles]) =>
-          roles.length === 0 ? [] : roles.map((role) => ({ workspaceId, roles: [role] })),
-        ),
+        Object.entries(selectedRoles)
+          .filter(([, roles]) => roles.length > 0)
+          .map(([workspaceId, roles]) => ({ workspaceId, roles: Array.from(new Set(roles)) })),
       ),
     [selectedRoles],
   );

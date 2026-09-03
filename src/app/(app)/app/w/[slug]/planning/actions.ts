@@ -19,6 +19,7 @@ import {
   claimAsDesigner,
   updateContentItem,
   updateFormatPayload,
+  patchAudienceCopy,
   type WorkflowAction,
   type UpdateContentInput,
   batchCreateContentItems,
@@ -612,6 +613,75 @@ export async function updateFormatPayloadAction(
     });
   } catch (e) {
     return actionFailure<UpdateFormatPayloadFields>(e, "The format payload could not be saved.");
+  }
+  revalidatePath(`/app/w/${workspaceSlug}/planning/${parsed.data.contentItemId}`);
+  return { ok: true };
+}
+
+// ─── Patch audience copy (non-material) ────────────────────────────────
+/**
+ * P1 (2026-09-03, /ui-ux-pro-max) — narrow "non-material
+ * caption edit" path. The previous flow forced planners to
+ * either rewrite the entire formatPayload (and trigger the
+ * material-edit reset) or live with the typo. This action
+ * accepts a partial patch of `caption` / `hashtags` /
+ * `firstComment` and writes only those three keys, leaving
+ * the strategy / creative / structure fields untouched.
+ *
+ * Role-gated to planner / manager / publisher via the
+ * service. Designer and client reviewer fall back to the
+ * read-only surface.
+ *
+ * Form shape (FormData):
+ *   - contentItemId (uuid)
+ *   - caption (optional, string)
+ *   - firstComment (optional, string)
+ *   - hashtags (optional, repeated — one per tag)
+ */
+const PatchAudienceCopyFormSchema = z.object({
+  contentItemId: z.string().uuid(),
+  caption: z.string().max(2200).optional(),
+  firstComment: z.string().max(2200).optional(),
+});
+
+type PatchAudienceCopyFields = "contentItemId" | "caption" | "hashtags" | "firstComment";
+
+export async function patchAudienceCopyAction(
+  workspaceSlug: string,
+  _prev: unknown,
+  formData: FormData,
+): Promise<ActionState<PatchAudienceCopyFields>> {
+  const { actor } = await requireWorkspaceContext(workspaceSlug);
+  const parsed = PatchAudienceCopyFormSchema.safeParse({
+    contentItemId: formData.get("contentItemId"),
+    caption: formData.get("caption") ?? undefined,
+    firstComment: formData.get("firstComment") ?? undefined,
+  });
+  if (!parsed.success) {
+    return fieldErrorsFromZod<PatchAudienceCopyFields>(parsed.error);
+  }
+  const hashtagsRaw = formData.getAll("hashtags").map((v) => String(v));
+  // Normalise: drop empties, trim whitespace.
+  const hashtags =
+    hashtagsRaw.length > 0
+      ? hashtagsRaw.map((h) => h.trim()).filter((h) => h.length > 0)
+      : undefined;
+  const patch: {
+    contentItemId: string;
+    caption?: string;
+    hashtags?: string[];
+    firstComment?: string;
+  } = { contentItemId: parsed.data.contentItemId };
+  if (parsed.data.caption !== undefined) patch.caption = parsed.data.caption;
+  if (hashtags !== undefined) patch.hashtags = hashtags;
+  if (parsed.data.firstComment !== undefined) patch.firstComment = parsed.data.firstComment;
+  try {
+    await patchAudienceCopy(actor, patch);
+  } catch (e) {
+    return actionFailure<PatchAudienceCopyFields>(
+      e,
+      "The copy could not be saved.",
+    );
   }
   revalidatePath(`/app/w/${workspaceSlug}/planning/${parsed.data.contentItemId}`);
   return { ok: true };

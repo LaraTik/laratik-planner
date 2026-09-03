@@ -377,6 +377,143 @@ export async function updateFormatPayload(actor: Actor, input: UpdateFormatPaylo
 }
 
 /**
+ * P1 (2026-09-03, /ui-ux-pro-max) — `patchAudienceCopy` is the
+ * narrow "non-material copy edit" path that lets a planner fix
+ * a typo or improve the caption / hashtags / firstComment
+ * without invalidating the approval chain.
+ *
+ * Compared to `updateFormatPayload`:
+ *  - Bypasses `UPDATEABLE_STATUSES`. Available in
+ *    `in_design` / `creative_review` / `approved_for_design` /
+ *    `ready_to_publish` (in addition to `draft` /
+ *    `changes_requested`).
+ *  - Role-gated to planner / manager / publisher. Designer and
+ *    client reviewer are NOT allowed to patch copy post-design
+ *    — that's the designer's own gate and the reviewer's
+ *    rejection surface, respectively.
+ *  - Writes only the three audience-facing fields; does NOT
+ *    touch strategy / creative fields. Strategy and creative
+ *    remain locked to `UPDATEABLE_STATUSES` via
+ *    `updateFormatPayload`.
+ *  - Skips the material-edit reset: no revision bump, no
+ *    approval invalidation, no final-approved-delivery clear.
+ *  - Logs a `content_copy_patched` activity event so the audit
+ *    trail is preserved. The event records the before/after
+ *    field set so audit can answer "which fields did the
+ *    planner touch" without re-parsing the row.
+ *
+ * Patches are partial: callers send any subset of
+ * `caption` / `hashtags` / `firstComment`. Empty / undefined
+ * values clear the field (the existing
+ * `parseFormatPayload` already drops empty optionals on read,
+ * so the row shape stays clean).
+ */
+export const PatchAudienceCopySchema = z.object({
+  contentItemId: z.string().uuid(),
+  // Each field is optional; at least one must be present.
+  caption: z.string().max(2200).optional(),
+  hashtags: z.array(z.string().min(1).max(80)).max(30).optional(),
+  firstComment: z.string().max(2200).optional(),
+});
+export type PatchAudienceCopyInput = z.infer<typeof PatchAudienceCopySchema>;
+
+export async function patchAudienceCopy(actor: Actor, input: PatchAudienceCopyInput) {
+  const parsed = PatchAudienceCopySchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+  }
+  if (
+    parsed.data.caption === undefined &&
+    parsed.data.hashtags === undefined &&
+    parsed.data.firstComment === undefined
+  ) {
+    throw new Error("At least one of caption, hashtags, or firstComment must be provided.");
+  }
+
+  const [item] = await db
+    .select({
+      id: contentItems.id,
+      workspaceId: contentItems.workspaceId,
+      status: contentItems.status,
+      formatPayload: contentItems.formatPayload,
+    })
+    .from(contentItems)
+    .where(eq(contentItems.id, parsed.data.contentItemId))
+    .limit(1);
+  if (!item) throw new Error("Content item not found");
+
+  await requirePolicy(
+    hasWorkspaceRole(actor, item.workspaceId, [
+      "workspace_manager",
+      "content_planner",
+      "publisher",
+    ]),
+    "patch_audience_copy",
+  );
+
+  // Cancelled items are read-only across the board.
+  if (item.status === "cancelled") {
+    throw new Error("This idea is cancelled and can no longer be edited.");
+  }
+
+  // Merge the patch into the existing formatPayload. We preserve
+  // every other key (objective, audience, scenes, etc.) so the
+  // editor's structured creative work is untouched.
+  const previous =
+    (item.formatPayload && typeof item.formatPayload === "object"
+      ? (item.formatPayload as Record<string, unknown>)
+      : {}) ?? {};
+  const next: Record<string, unknown> = { ...previous };
+  const changedKeys: string[] = [];
+  if (parsed.data.caption !== undefined) {
+    next.caption = parsed.data.caption;
+    changedKeys.push("caption");
+  }
+  if (parsed.data.hashtags !== undefined) {
+    next.hashtags = parsed.data.hashtags;
+    changedKeys.push("hashtags");
+  }
+  if (parsed.data.firstComment !== undefined) {
+    next.firstComment = parsed.data.firstComment;
+    changedKeys.push("firstComment");
+  }
+  // `schemaVersion` is required by parseFormatPayload; preserve
+  // an existing value or fall back to 1.
+  if (next.schemaVersion === undefined) next.schemaVersion = 1;
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(contentItems)
+      .set({ formatPayload: next, updatedAt: new Date() })
+      .where(eq(contentItems.id, parsed.data.contentItemId));
+
+    await tx.insert(activityEvents).values({
+      workspaceId: item.workspaceId,
+      contentItemId: item.id,
+      actorId: actor.id,
+      kind: "content_copy_patched",
+      summary: `Patched audience copy: ${changedKeys.join(", ")}`,
+      beforeData: {
+        caption: previous.caption,
+        hashtags: previous.hashtags,
+        firstComment: previous.firstComment,
+      },
+      afterData: {
+        caption: next.caption,
+        hashtags: next.hashtags,
+        firstComment: next.firstComment,
+      },
+    });
+  });
+
+  // Re-render the planning detail page so the Messages tab and
+  // the in-form preview both see the new copy. Layout
+  // revalidation keeps the calendar / list views in sync.
+  revalidatePath(`/app/w/`);
+  revalidatePath(`/app/w/`, "layout");
+}
+
+/**
  * Re-export of the per-format schema map for the action layer.
  * The service does not own the shape; the schemas module does;
  * this re-export keeps the action's import surface narrow.

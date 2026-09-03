@@ -35,7 +35,11 @@ import {
 
 export const SubmitDeliverySchema = z.object({
   contentItemId: z.string().uuid(),
-  description: z.string().min(1).max(500),
+  // P0a (2026-09-03, /ui-ux-pro-max): description is optional. A
+  // designer submitting a Figma/Canva link with no narrative
+  // description used to have to invent one to pass the gate. The
+  // DB column is already nullable; we just relax the Zod check.
+  description: z.string().max(500).optional(),
   designerNote: z.string().max(2000).optional(),
   links: z
     .array(
@@ -118,7 +122,11 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
       .values({
         contentItemId: input.contentItemId,
         versionNumber: nextVersion,
-        description: input.description,
+        // P0a: Zod now allows `undefined`; the DB column is NOT NULL
+        // so coerce to "" when the designer left it blank. Empty
+        // string is the same on-page state as a description that the
+        // planner never filled in.
+        description: input.description ?? "",
         ...(input.designerNote ? { designerNote: input.designerNote } : {}),
         submittedBy: actor.id,
       })

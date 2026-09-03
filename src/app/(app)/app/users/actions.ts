@@ -347,24 +347,47 @@ export async function updateMemberRolesAction(
   // Validate every role against the enum (empty string = "no access")
   // and de-duplicate the (workspaceId, role) pair so a user can't end
   // up with two rows of the same role in the same workspace.
+  //
+  // Bug history (2026-09-03, /ui-ux-pro-max): the previous loop used
+  // `grantByWorkspace.set(workspaceId, validated)` on every entry.
+  // The matrix used to emit one entry PER ROLE (e.g. for a user with
+  // `designer` + `publisher` in the same workspace), so two entries
+  // collided on the same workspaceId key and the second `.set` call
+  // overwrote the first — only the last role survived. The matrix
+  // has been fixed too; this loop now ACCUMULATES roles per
+  // workspace, so a future client that still emits the per-role
+  // shape (or the legacy single-role shape) is also handled
+  // correctly.
   const grantByWorkspace = new Map<string, string[]>();
-  let totalRoles = 0;
   for (const g of grants) {
-    const seen = new Set<string>();
-    const validated: string[] = [];
+    const seen = grantByWorkspace.get(g.workspaceId) ?? [];
+    const seenRoles = new Set(seen);
+    let accumulated = seen;
+    let mutated = false;
     for (const role of g.roles) {
       if (role === "") continue; // empty == "no access" — the workspace is omitted
       if (!workspaceRoleSchema.safeParse(role).success) {
         return { error: "Invalid workspace access selection." };
       }
-      if (seen.has(role)) continue;
-      seen.add(role);
-      validated.push(role);
+      if (seenRoles.has(role)) continue;
+      if (!mutated) {
+        accumulated = [...seen];
+        mutated = true;
+      }
+      seenRoles.add(role);
+      accumulated.push(role);
     }
-    if (validated.length === 0) continue;
-    grantByWorkspace.set(g.workspaceId, validated);
-    totalRoles += validated.length;
+    if (accumulated.length > 0) {
+      grantByWorkspace.set(g.workspaceId, accumulated);
+    }
   }
+  // Audit metadata: count the post-save role rows, not the
+  // submitted delta. The previous `+= validated.length` shape
+  // double-counted the per-role-shape entries.
+  const totalRoles = Array.from(grantByWorkspace.values()).reduce(
+    (acc, roles) => acc + roles.length,
+    0,
+  );
 
   // Confirm the target is an active member of this agency
   const [target] = await db
