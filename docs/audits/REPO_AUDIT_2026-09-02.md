@@ -2,8 +2,8 @@
 
 Date: 2026-09-02  
 Broad browser/evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4`  
-Last exact-clean verification HEAD: `d6b3149` (`main`, clean at verification)
-Audit report update: 2026-09-03, after the planning responsive-header follow-up
+Last exact-clean verification HEAD: `22aec64` (`main`, clean at verification)
+Audit report update: 2026-09-03, after the cross-engine accessibility follow-up
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
 responsive, performance, typography, motion, and data-display guidance.
@@ -13,7 +13,8 @@ responsive, performance, typography, motion, and data-display guidance.
 The repository has a strong production foundation and a broad quality harness.
 The current checkpoint passes formatting, ESLint, strict TypeScript, the full
 unit suite, and a clean production build. Exact-HEAD accessibility coverage is
-29/29: 28 public/authenticated axe route checks plus the Arabic/RTL shell
+145/145 across Chromium, Firefox, WebKit, mobile Chrome, and mobile Safari,
+including the public/authenticated axe route checks and Arabic/RTL shell
 contract. The earlier browser baseline also passed 192/192 isolated Chromium
 tests and the complete mobile workflow. It is not yet final-production-ready
 because the Stitch visual suite still has substantial reference deltas,
@@ -31,18 +32,18 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | Prettier               | Pass                  | `pnpm format:check`                                                                                                                                            |
 | ESLint                 | Pass                  | `pnpm lint`                                                                                                                                                    |
 | TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                                                                                                   |
-| Unit tests             | Pass                  | 318 files; 3,108 passed; 4 todo at exact clean verification HEAD `d6b3149`                                                                                     |
-| Production build       | Pass                  | `pnpm verify` at exact clean verification HEAD `d6b3149`                                                                                                       |
+| Unit tests             | Pass                  | 319 files; 3,109 passed; 4 todo at exact clean verification HEAD `22aec64`                                                                                     |
+| Production build       | Pass                  | `pnpm verify` at exact clean verification HEAD `22aec64`                                                                                                       |
 | Migration drill        | Pass                  | 5/5 drills on disposable `planner_test` at clean evidence HEAD `5625acd`                                                                                       |
 | Integration tests      | Pass                  | 23 files; 189 tests on disposable `planner_test` at clean evidence HEAD `5625acd`                                                                              |
 | Dependency audit       | Pass                  | Four transitive `fast-uri` highs were found and resolved by the `>=3.1.6` pnpm override in `bfb350d`; `pnpm audit --prod` now reports no known vulnerabilities |
-| Focused E2E/a11y       | Pass                  | Exact HEAD: 28/28 axe routes; Arabic/RTL 1/1 with no horizontal overflow                                                                                       |
+| Full E2E/a11y          | Pass                  | Exact HEAD: 145/145 checks across five Playwright projects; zero critical/serious axe failures and Arabic/RTL checks pass                                      |
 | Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; planning filter URL contract 5/5 browser contexts; isolated upload probe                              |
 | Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                                                                                                   |
 | Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths                                                                                  |
-| Visual regression      | Partial / investigate | Full matrix at exact clean audit state `d6b3149`: 73/112; 39 failed; no snapshot updates; route fixes and deliberate snapshot decisions remain required        |
+| Visual regression      | Partial / investigate | Full matrix at exact clean HEAD `22aec64`: 73/112; 39 failed; no snapshot updates; route fixes and deliberate snapshot decisions remain required               |
 | Performance evidence   | Partial / baseline    | Static inventory, local public-route baseline, and tiny-fixture query plans; throttled/authenticated/INP/scale evidence pending                                |
-| Working tree           | Audit changes clean   | Exact code verification was clean at `d6b3149`; this documentation reconciliation is the only follow-up change                                                 |
+| Working tree           | Audit changes clean   | Exact code verification was clean at `22aec64`; this documentation reconciliation is the only follow-up change                                                 |
 
 ## Repository inventory
 
@@ -102,8 +103,9 @@ handled before unrelated cleanup.
    active catalog for its trigger and six menu labels, with Arabic menu-role
    coverage in `d6b3149`. The scan must be repeated after each localization
    batch because dynamic catalog keys are not fully discoverable.
-4. **Exact-HEAD visual review is incomplete.** Exact-HEAD axe and RTL checks
-   pass, but the visual suite still has reference deltas and the required
+4. **Exact-HEAD visual review is incomplete.** The full exact-HEAD axe and RTL
+   matrix now passes, and the cross-engine settings hydration mismatch is fixed
+   in `22aec64` with a regression test. The visual suite still has reference deltas and the required
    keyboard, screen-reader, zoom, and reduced-motion review is not independently
    signed off. A targeted 360px overview run after `85d026b` confirms the
    attention banner no longer collapses its message into one-word lines and its
@@ -188,7 +190,7 @@ handled before unrelated cleanup.
    server or `.next` lock behind and need a process-lifecycle fix.
 9. Reconcile the visual suite with the current canonical Stitch implementation.
    The broad pre-reset run produced 52 passes and 60 failures; the exact clean
-   matrix at `d6b3149` produces 73 passes and 39 failures. The deterministic
+   matrix at `22aec64` produces 73 passes and 39 failures. The deterministic
    runner reset and cold-compile timeout fix are now evidenced, and no snapshots
    were updated automatically. The planning header follow-up in `d6b3149`
    fixes the real tablet squeeze by keeping dense actions below the title until
@@ -292,7 +294,8 @@ Run catalog parity, scan static translation keys, review route metadata, move
 known hard-coded copy into `src/messages/{en,ar}`, and verify Server/Client
 translation boundaries. This pass completed the planning preview, workflow
 explanations, AI assistance, delivery cards, and planning forms with Arabic
-rendering tests and catalog parity. Exact-HEAD RTL navigation passes 1/1; the
+rendering tests and catalog parity. Exact-HEAD RTL navigation passes in all five
+browser projects; the
 remaining hotspots above still need the same treatment.
 
 ### Step 4 — Strengthen component and styling boundaries
@@ -313,7 +316,7 @@ as the sole release protection; browser and visual evidence remain in Step 6.
 Run the disposable database migration drill, integration suite, critical E2E,
 full browser matrix, visual snapshots, axe checks, manual accessibility review,
 and performance measurements at the exact clean commit. Migration, integration,
-exact-HEAD axe/RTL, full isolated Chromium, mobile Chrome/Safari §23,
+exact-HEAD axe/RTL across all five browser projects, full isolated Chromium, mobile Chrome/Safari §23,
 targeted cross-engine, and unit/build gates are evidenced across the recorded
 baselines. The performance protocol is now documented in
 `docs/testing/performance-report.md`; public-route LCP/FCP/CLS and minimal-fixture
