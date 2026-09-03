@@ -89,23 +89,30 @@ export function AiSettingsForm({
             <CardTitle>{tr("agencyAi.providerEnvTitle", "Provider environment")}</CardTitle>
           </div>
           <Badge variant={envEnabled && envHasKey ? "success" : "outline"}>
-            {envEnabled && envHasKey ? "Configured" : "Not configured"}
+            {envEnabled && envHasKey
+              ? t("agencyAi.form.configured")
+              : t("agencyAi.form.notConfigured")}
           </Badge>
         </div>
         <CardDescription className="mt-2">
-          {AI_PROVIDER.vendor} provides the {AI_PROVIDER.compat} API at{" "}
-          <code className="bg-surface rounded px-1.5 py-0.5">{AI_PROVIDER.baseUrlEnv}</code>. The
-          provider key is read from the deployment environment; we never display or store the full
-          key in the database. If you later switch to a managed secret, the UI will show a masked
-          suffix only.
+          {t("agencyAi.form.providerDescription", {
+            vendor: AI_PROVIDER.vendor,
+            compat: AI_PROVIDER.compat,
+          })}{" "}
+          <code className="bg-surface rounded px-1.5 py-0.5">{AI_PROVIDER.baseUrlEnv}</code>.{" "}
+          {t("agencyAi.form.providerDescriptionSuffix")}
         </CardDescription>
         <dl className="mt-5 space-y-3">
-          <Row label="Provider" value={AI_PROVIDER.vendor} />
-          <Row label="API compat" value={AI_PROVIDER.compat} />
-          <Row label="Default model" value={envModel} />
+          <Row label={t("agencyAi.form.provider")} value={AI_PROVIDER.vendor} />
+          <Row label={t("agencyAi.form.apiCompat")} value={AI_PROVIDER.compat} />
+          <Row label={t("agencyAi.form.defaultModel")} value={envModel} />
           <Row
-            label="Key source"
-            value={envHasKey ? "Configured by environment" : "Missing in environment"}
+            label={t("agencyAi.form.keySource")}
+            value={
+              envHasKey
+                ? t("agencyAi.form.configuredByEnvironment")
+                : t("agencyAi.form.missingInEnvironment")
+            }
           />
         </dl>
       </Card>
@@ -115,19 +122,15 @@ export function AiSettingsForm({
           <CardTitle className="mb-1">
             {tr("agencyAi.featureSettingsTitle", "Feature settings")}
           </CardTitle>
-          <CardDescription>
-            The toggle below is the master switch. When disabled, every AI capability stops working
-            across the agency — even if a capability is individually toggled on.
-          </CardDescription>
+          <CardDescription>{t("agencyAi.form.featureSettingsDescription")}</CardDescription>
 
           <div className="mt-5 space-y-5">
             <div className="bg-surface-subtle flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] p-3">
               <div>
-                <p className="text-body text-fg-primary font-semibold">Enable AI assistance</p>
-                <p className="text-label text-fg-muted">
-                  Master switch for the entire agency. Requires a configured provider key (env or
-                  managed secret).
+                <p className="text-body text-fg-primary font-semibold">
+                  {t("agencyAi.form.enableAi")}
                 </p>
+                <p className="text-label text-fg-muted">{t("agencyAi.form.enableAiDescription")}</p>
               </div>
               <div className="inline-flex items-center gap-2">
                 <Checkbox
@@ -142,14 +145,18 @@ export function AiSettingsForm({
                   htmlFor="ai-enabled-toggle"
                   className="text-label text-fg-primary cursor-pointer font-semibold"
                 >
-                  {initialEnabled && featureIsEnabled ? "On" : "Off"}
+                  {initialEnabled && featureIsEnabled
+                    ? t("agencyAi.form.on")
+                    : t("agencyAi.form.off")}
                 </label>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ai-model">Model</Label>
-              <p className="text-label text-fg-muted -mt-0.5">Limited to the server allowlist.</p>
+              <Label htmlFor="ai-model">{t("agencyAi.form.model")}</Label>
+              <p className="text-label text-fg-muted -mt-0.5">
+                {t("agencyAi.form.modelDescription")}
+              </p>
               <select
                 id="ai-model"
                 name="model"
@@ -167,11 +174,10 @@ export function AiSettingsForm({
 
             <fieldset className="space-y-2">
               <legend className="text-title-card text-fg-primary font-semibold">
-                Capabilities
+                {t("agencyAi.form.capabilities")}
               </legend>
               <p className="text-label text-fg-muted">
-                Each capability surfaces a button in the planning flow. Off capabilities stay hidden
-                in the UI.
+                {t("agencyAi.form.capabilitiesDescription")}
               </p>
               <ul className="mt-3 space-y-2" data-testid="ai-capability-toggle-list">
                 {ADMIN_FACING_CAPABILITIES.map((cap) => (
@@ -185,9 +191,11 @@ export function AiSettingsForm({
                         className="text-body text-fg-primary font-semibold"
                         data-testid={`ai-capability-label-${cap.id}`}
                       >
-                        {cap.adminLabel}
+                        {t(`agencyAi.capabilities.${cap.id}.adminLabel`)}
                       </p>
-                      <p className="text-label text-fg-muted mt-0.5">{cap.description}</p>
+                      <p className="text-label text-fg-muted mt-0.5">
+                        {t(`agencyAi.capabilities.${cap.id}.description`)}
+                      </p>
                     </div>
                     <div className="text-label text-fg-primary inline-flex items-center gap-2 font-semibold">
                       <Checkbox
@@ -198,7 +206,9 @@ export function AiSettingsForm({
                         data-testid={`ai-capability-checkbox-${cap.id}`}
                       />
                       <label htmlFor={`ai-capability-${cap.id}`} className="cursor-pointer">
-                        {initialCapabilities.includes(cap.id) ? "On" : "Off"}
+                        {initialCapabilities.includes(cap.id)
+                          ? t("agencyAi.form.on")
+                          : t("agencyAi.form.off")}
                       </label>
                     </div>
                   </li>
@@ -227,7 +237,10 @@ export function AiSettingsForm({
           ) : null}
 
           <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
-            <FormSubmitButton label="Save AI settings" pendingLabel="Saving…" />
+            <FormSubmitButton
+              label={t("agencyAi.form.save")}
+              pendingLabel={t("agencyAi.form.saving")}
+            />
           </div>
         </Card>
       </form>
@@ -247,22 +260,22 @@ export function AiSettingsForm({
               className={`h-3.5 w-3.5 ${testing ? "animate-spin" : ""}`}
               aria-hidden="true"
             />
-            {testing ? "Testing…" : "Run test"}
+            {testing ? t("agencyAi.form.testing") : t("agencyAi.form.runTest")}
           </Button>
         </div>
         <CardDescription className="mt-2">
-          Sends a 1-token ping to the provider. The result is stored as the last test status.
+          {t("agencyAi.form.testConnectionDescription")}
         </CardDescription>
         <dl className="mt-4 space-y-2">
-          <Row label="Last test" value={lastTestAt ?? "Never"} />
+          <Row label={t("agencyAi.form.lastTest")} value={lastTestAt ?? t("agencyAi.form.never")} />
           <Row
-            label="Last test result"
+            label={t("agencyAi.form.lastTestResult")}
             value={
               lastTestOk === null
-                ? "Not yet tested"
+                ? t("agencyAi.form.notYetTested")
                 : lastTestOk
-                  ? "OK"
-                  : "Failed — check API key and base URL"
+                  ? t("agencyAi.form.ok")
+                  : t("agencyAi.form.testFailed")
             }
             tone={lastTestOk === null ? "muted" : lastTestOk ? "success" : "danger"}
           />
@@ -282,17 +295,18 @@ export function AiSettingsForm({
       <Card data-testid="ai-usage-card">
         <div className="flex items-center gap-2">
           <Sparkles className="text-primary h-5 w-5" aria-hidden="true" />
-          <CardTitle>30-day usage</CardTitle>
+          <CardTitle>{t("agencyAi.form.usageTitle")}</CardTitle>
         </div>
-        <CardDescription className="mt-2">
-          Counts of AI requests by capability, agency-wide. Per-workspace breakdowns live on each
-          workspace&apos;s AI status card.
-        </CardDescription>
+        <CardDescription className="mt-2">{t("agencyAi.form.usageDescription")}</CardDescription>
         <dl className="mt-5 space-y-3">
-          <Row label="Total requests" value={String(usage.total)} />
-          <Row label="Succeeded" value={String(usage.succeeded)} tone="success" />
+          <Row label={t("agencyAi.form.totalRequests")} value={String(usage.total)} />
           <Row
-            label="Failed"
+            label={t("agencyAi.form.succeeded")}
+            value={String(usage.succeeded)}
+            tone="success"
+          />
+          <Row
+            label={t("agencyAi.form.failed")}
             value={String(usage.failed)}
             tone={usage.failed > 0 ? "danger" : "muted"}
           />
@@ -307,7 +321,9 @@ export function AiSettingsForm({
                 key={row.capability}
                 className="text-body text-fg-primary flex flex-wrap items-center justify-between gap-2"
               >
-                <span>{row.capability}</span>
+                <span>
+                  {t(`agencyAi.capabilities.${row.capability}.adminLabel`) || row.capability}
+                </span>
                 <span className="text-label text-fg-muted font-semibold">{row.count}</span>
               </li>
             ))}
@@ -322,7 +338,7 @@ export function AiSettingsForm({
               {tr("agencyAi.noUsageYet", "No usage yet")}
             </p>
             <p className="text-label text-fg-muted max-w-sm">
-              Run your first AI request from a content brief to see this card fill in.
+              {t("agencyAi.form.noUsageDescription")}
             </p>
           </div>
         )}

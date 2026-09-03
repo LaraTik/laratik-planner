@@ -15,6 +15,7 @@ import {
   type ManagedSecretActionState,
 } from "./actions";
 import type { KekStatus } from "@/lib/security/secrets";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 const initial: ManagedSecretActionState = {};
 
@@ -56,6 +57,7 @@ export function ManagedSecretForm({
   envEnabled: boolean;
   kekStatus: KekStatus;
 }) {
+  const t = useLocaleT();
   const [mode, setMode] = React.useState<"idle" | "set" | "replace" | "remove">("idle");
   const [state, action, pending] = useActionState(setManagedAiSecretAction, initial);
   const [clearState, clearAction, clearPending] = useActionState(
@@ -71,10 +73,10 @@ export function ManagedSecretForm({
 
   const isManaged = keySource === "managed_secret";
   const badge = isManaged
-    ? `Managed secret · ends in …${lastFour ?? "????"}`
+    ? t("agencyAi.managedSecret.badge", { suffix: lastFour ?? "????" })
     : envHasKey
-      ? "Configured by environment"
-      : "Not configured";
+      ? t("agencyAi.form.configuredByEnvironment")
+      : t("agencyAi.form.notConfigured");
   const badgeVariant = isManaged ? "success" : envHasKey ? "info" : "outline";
 
   return (
@@ -83,15 +85,16 @@ export function ManagedSecretForm({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Server className="text-primary h-5 w-5" aria-hidden="true" />
-            <CardTitle>Provider key</CardTitle>
+            <CardTitle>{t("agencyAi.managedSecret.providerKey")}</CardTitle>
           </div>
           <Badge variant={badgeVariant} data-testid="ai-provider-status-badge">
             {badge}
           </Badge>
         </div>
         <CardDescription className="mt-2">
-          The active key for this agency. A managed secret in the database takes priority; the
-          environment key is the fallback. Master switch status: {enabled ? "On" : "Off"}.
+          {t("agencyAi.managedSecret.description", {
+            status: enabled ? t("agencyAi.form.on") : t("agencyAi.form.off"),
+          })}
         </CardDescription>
 
         {kekStatus.source === "auto-file" ? (
@@ -104,28 +107,29 @@ export function ManagedSecretForm({
             <div className="min-w-0 flex-1">
               <p className="font-semibold">
                 {kekStatus.warning?.includes("Will be") || kekStatus.warning?.includes("unreadable")
-                  ? "Encryption key: auto-managed file"
-                  : "Back up the AI encryption key"}
+                  ? t("agencyAi.managedSecret.autoManagedTitle")
+                  : t("agencyAi.managedSecret.backupTitle")}
               </p>
               <p className="text-fg-secondary mt-1">
-                No <code>AI_SECRET_ENCRYPTION_KEY</code> is set in the environment, so the system
-                auto-generated a 32-byte encryption key and stored it at{" "}
+                {t("agencyAi.managedSecret.autoManagedDescription")}{" "}
+                <code>AI_SECRET_ENCRYPTION_KEY</code>{" "}
+                {t("agencyAi.managedSecret.autoManagedDescriptionMiddle")}{" "}
                 <code className="bg-surface rounded px-1.5 py-0.5 break-all">{kekStatus.path}</code>
-                . This file is the master key for every AI provider key stored in the database.
+                {t("agencyAi.managedSecret.autoManagedDescriptionSuffix")}
               </p>
               <p className="text-fg-secondary mt-1">
-                {kekStatus.warning ?? "Back it up — losing it locks out all stored AI keys."}
+                {kekStatus.warning ?? t("agencyAi.managedSecret.warningFallback")}
                 {kekStatus.createdAt ? (
                   <>
                     {" "}
-                    Created at <code>{kekStatus.createdAt}</code>.
+                    {t("agencyAi.managedSecret.createdAt")} <code>{kekStatus.createdAt}</code>.
                   </>
                 ) : null}
               </p>
               <p className="text-fg-muted mt-1">
-                To take explicit control, set <code>AI_SECRET_ENCRYPTION_KEY</code> in the
-                deployment environment and restart the app. The env var takes priority over the
-                file.
+                {t("agencyAi.managedSecret.takeControlPrefix")}{" "}
+                <code>AI_SECRET_ENCRYPTION_KEY</code>{" "}
+                {t("agencyAi.managedSecret.takeControlSuffix")}
               </p>
             </div>
           </div>
@@ -139,11 +143,11 @@ export function ManagedSecretForm({
           >
             <AlertTriangle className="text-warning mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <div>
-              <p className="font-semibold">Encryption key: derived dev fallback</p>
+              <p className="font-semibold">{t("agencyAi.managedSecret.devFallbackTitle")}</p>
               <p className="text-fg-secondary mt-1">
-                The encryption key is being derived from a constant in the source tree. This is fine
-                for local dev, but the key is recoverable from the repo. Do not deploy this
-                configuration — set <code>AI_SECRET_ENCRYPTION_KEY</code> in production.
+                {t("agencyAi.managedSecret.devFallbackDescription")}{" "}
+                <code>AI_SECRET_ENCRYPTION_KEY</code>{" "}
+                {t("agencyAi.managedSecret.devFallbackDescriptionSuffix")}
               </p>
             </div>
           </div>
@@ -157,12 +161,14 @@ export function ManagedSecretForm({
               onClick={() => setMode("set")}
               data-testid="ai-managed-secret-set-trigger"
             >
-              {envHasKey ? "Replace with managed secret" : "Set managed secret"}
+              {envHasKey
+                ? t("agencyAi.managedSecret.replaceWithManaged")
+                : t("agencyAi.managedSecret.setManaged")}
             </Button>
             {!envHasKey && !envEnabled ? (
               <span className="text-label text-warning inline-flex items-center gap-1">
                 <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                AI features are disabled until a key is provided.
+                {t("agencyAi.managedSecret.disabledUntilKey")}
               </span>
             ) : null}
           </div>
@@ -176,7 +182,7 @@ export function ManagedSecretForm({
               onClick={() => setMode("replace")}
               data-testid="ai-managed-secret-replace-trigger"
             >
-              Replace key
+              {t("agencyAi.managedSecret.replaceKey")}
             </Button>
             <Button
               type="button"
@@ -184,7 +190,7 @@ export function ManagedSecretForm({
               onClick={() => setMode("remove")}
               data-testid="ai-managed-secret-remove-trigger"
             >
-              Remove managed secret
+              {t("agencyAi.managedSecret.removeManagedSecret")}
             </Button>
           </div>
         ) : null}
@@ -192,10 +198,9 @@ export function ManagedSecretForm({
         {mode === "set" || mode === "replace" ? (
           <form action={action} className="mt-4 space-y-3" data-testid="ai-managed-secret-form">
             <div className="space-y-1.5">
-              <Label htmlFor="ai-managed-secret-key">API key</Label>
+              <Label htmlFor="ai-managed-secret-key">{t("agencyAi.managedSecret.apiKey")}</Label>
               <p className="text-label text-fg-muted -mt-0.5">
-                The key is encrypted at rest (AES-256-GCM). Only the last 4 characters are shown
-                after save.
+                {t("agencyAi.managedSecret.apiKeyDescription")}
               </p>
               <Input
                 id="ai-managed-secret-key"
@@ -226,15 +231,19 @@ export function ManagedSecretForm({
                 className="text-body text-success font-semibold"
               >
                 {state.lastFour
-                  ? `Managed secret saved · ends in …${state.lastFour}. The page will refresh with the new status.`
-                  : "Managed secret saved."}
+                  ? t("agencyAi.managedSecret.savedWithSuffix", { suffix: state.lastFour })
+                  : t("agencyAi.managedSecret.saved")}
               </p>
             ) : null}
             <div className="flex flex-wrap items-center gap-2">
               {!state.ok ? (
                 <FormSubmitButton
-                  label={mode === "replace" ? "Replace key" : "Set managed secret"}
-                  pendingLabel={pending ? "Saving…" : "Save"}
+                  label={
+                    mode === "replace"
+                      ? t("agencyAi.managedSecret.replaceKey")
+                      : t("agencyAi.managedSecret.setManaged")
+                  }
+                  pendingLabel={pending ? t("agencyAi.form.saving") : t("agencyAi.form.save")}
                   data-testid="ai-managed-secret-submit"
                 />
               ) : null}
@@ -244,7 +253,7 @@ export function ManagedSecretForm({
                 onClick={() => setMode("idle")}
                 disabled={pending}
               >
-                {state.ok ? "Close" : "Cancel"}
+                {state.ok ? t("agencyAi.managedSecret.close") : t("agencyAi.form.cancel")}
               </Button>
             </div>
           </form>
@@ -257,10 +266,11 @@ export function ManagedSecretForm({
             data-testid="ai-managed-secret-clear-form"
           >
             <div className="space-y-1.5">
-              <Label htmlFor="ai-managed-secret-clear-reason">Reason</Label>
+              <Label htmlFor="ai-managed-secret-clear-reason">
+                {t("agencyAi.managedSecret.reason")}
+              </Label>
               <p className="text-label text-fg-muted -mt-0.5">
-                Removes the managed secret. The agency falls back to the environment key on the next
-                request.
+                {t("agencyAi.managedSecret.removeDescription")}
               </p>
               <Input
                 id="ai-managed-secret-clear-reason"
@@ -270,7 +280,7 @@ export function ManagedSecretForm({
                 aria-required="true"
                 minLength={3}
                 maxLength={500}
-                placeholder="Off-rotation / switching to env-managed"
+                placeholder={t("agencyAi.managedSecret.reasonPlaceholder")}
                 data-testid="ai-managed-secret-clear-reason"
               />
             </div>
@@ -289,14 +299,18 @@ export function ManagedSecretForm({
                 data-testid="ai-managed-secret-clear-success"
                 className="text-body text-success font-semibold"
               >
-                Managed secret removed. The agency is back on the environment key.
+                {t("agencyAi.managedSecret.removedSuccess")}
               </p>
             ) : null}
             <div className="flex flex-wrap items-center gap-2">
               {!clearState.ok ? (
                 <FormSubmitButton
-                  label="Remove managed secret"
-                  pendingLabel={clearPending ? "Removing…" : "Remove"}
+                  label={t("agencyAi.managedSecret.removeManagedSecret")}
+                  pendingLabel={
+                    clearPending
+                      ? t("agencyAi.managedSecret.removing")
+                      : t("agencyAi.managedSecret.remove")
+                  }
                   variant="destructive"
                   data-testid="ai-managed-secret-clear-submit"
                 />
@@ -307,7 +321,7 @@ export function ManagedSecretForm({
                 onClick={() => setMode("idle")}
                 disabled={clearPending}
               >
-                {clearState.ok ? "Close" : "Cancel"}
+                {clearState.ok ? t("agencyAi.managedSecret.close") : t("agencyAi.form.cancel")}
               </Button>
             </div>
           </form>
@@ -318,8 +332,8 @@ export function ManagedSecretForm({
         <KeyRound className="text-fg-muted mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <p>
           {isManaged
-            ? "Stored as an encrypted managed secret. The full key is never displayed after the initial paste."
-            : "The key lives in the deployment environment (MINIMAX_API_KEY). The UI cannot edit it."}
+            ? t("agencyAi.managedSecret.managedNote")
+            : t("agencyAi.managedSecret.environmentNote")}
         </p>
       </div>
     </div>
