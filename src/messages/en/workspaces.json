@@ -18,5 +18,14 @@
   "channelCount": "{count} channel",
   "channelCountMany": "{count} channels",
   "memberCount": "{count} member",
-  "memberCountMany": "{count} members"
+  "memberCountMany": "{count} members",
+  "actions": {
+    "ariaLabel": "Actions for {name}",
+    "open": "Open workspace",
+    "settings": "Workspace settings",
+    "manageTeam": "Manage team",
+    "channels": "Social channels",
+    "duplicate": "Duplicate workspace",
+    "archive": "Archive"
+  }
 }

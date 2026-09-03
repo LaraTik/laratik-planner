@@ -18,5 +18,14 @@
   "channelCount": "{count} قناة",
   "channelCountMany": "{count} قنوات",
   "memberCount": "{count} عضو",
-  "memberCountMany": "{count} أعضاء"
+  "memberCountMany": "{count} أعضاء",
+  "actions": {
+    "ariaLabel": "إجراءات {name}",
+    "open": "فتح مساحة العمل",
+    "settings": "إعدادات مساحة العمل",
+    "manageTeam": "إدارة الفريق",
+    "channels": "القنوات الاجتماعية",
+    "duplicate": "تكرار مساحة العمل",
+    "archive": "أرشفة"
+  }
 }

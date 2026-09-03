@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { MoreHorizontal, Settings, Users, Share2, Copy, Archive } from "lucide-react";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -45,13 +46,15 @@ export function WorkspaceRowActions({
   canManageTeam?: boolean;
   canEditSettings?: boolean;
 }) {
+  const t = useLocaleT();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           size="icon"
           variant="ghost"
-          aria-label={`Actions for ${name}`}
+          aria-label={t("workspaces.actions.ariaLabel", { name })}
           data-testid={`workspaces-row-actions-${slug}`}
           onClick={(e) => e.stopPropagation()}
         >
@@ -64,14 +67,14 @@ export function WorkspaceRowActions({
         <DropdownMenuItem asChild>
           <Link href={`/app/w/${slug}`} data-testid={`workspaces-row-open-${slug}`}>
             <span className="me-2 inline-flex w-4 justify-center">↗</span>
-            Open workspace
+            {t("workspaces.actions.open")}
           </Link>
         </DropdownMenuItem>
         {canEditSettings ? (
           <DropdownMenuItem asChild>
             <Link href={`/app/w/${slug}/settings`} data-testid={`workspaces-row-settings-${slug}`}>
               <Settings className="me-2 h-4 w-4" aria-hidden="true" />
-              Workspace settings
+              {t("workspaces.actions.settings")}
             </Link>
           </DropdownMenuItem>
         ) : null}
@@ -79,20 +82,20 @@ export function WorkspaceRowActions({
           <DropdownMenuItem asChild>
             <Link href={`/app/w/${slug}/team`} data-testid={`workspaces-row-team-${slug}`}>
               <Users className="me-2 h-4 w-4" aria-hidden="true" />
-              Manage team
+              {t("workspaces.actions.manageTeam")}
             </Link>
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem asChild>
           <Link href={`/app/w/${slug}/channels`} data-testid={`workspaces-row-channels-${slug}`}>
             <Share2 className="me-2 h-4 w-4" aria-hidden="true" />
-            Social channels
+            {t("workspaces.actions.channels")}
           </Link>
         </DropdownMenuItem>
         {canDuplicate ? (
           <DropdownMenuItem disabled aria-disabled>
             <Copy className="me-2 h-4 w-4" aria-hidden="true" />
-            Duplicate workspace
+            {t("workspaces.actions.duplicate")}
           </DropdownMenuItem>
         ) : null}
         {canArchive ? (
@@ -105,7 +108,7 @@ export function WorkspaceRowActions({
               data-testid={`workspaces-row-archive-${slug}`}
             >
               <Archive className="me-2 h-4 w-4" aria-hidden="true" />
-              Archive
+              {t("workspaces.actions.archive")}
             </DropdownMenuItem>
           </>
         ) : null}
