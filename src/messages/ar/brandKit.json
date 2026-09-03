@@ -66,6 +66,30 @@
     "recentTitle": "لا توجد تحديثات حديثة بعد",
     "recentDescription": "مع إضافة الفريق للشعارات والألوان والخطوط وقواعد الصوت وإرشادات النشر، ستظهر آخر التغييرات هنا."
   },
+  "publishingRuleTypes": {
+    "altText": "النص البديل",
+    "hashtags": "الهاشتاجات",
+    "compliance": "الامتثال",
+    "channelSpecific": "خاصة بالقناة",
+    "general": "عامة"
+  },
+  "archive": {
+    "labels": {
+      "color": "اللون",
+      "font": "الخط",
+      "logo": "الشعار",
+      "pillar": "المحور",
+      "publishingRule": "قاعدة النشر",
+      "voiceRule": "قاعدة الصوت"
+    },
+    "archived": "تمت أرشفة {label}: {name}",
+    "description": "تم إخفاؤه من القسم. اضغط على «تراجع» لإعادته.",
+    "undo": "تراجع",
+    "restored": "تمت استعادة {label}: {name}",
+    "couldNotRestore": "تعذرت استعادة {label}",
+    "couldNotArchive": "تعذرت أرشفة {label}",
+    "archiveAria": "أرشفة {label} {name}"
+  },
   "overview": {
     "downloadZip": "تنزيل ZIP",
     "downloadZipEmpty": "أضف شعارًا أو لونًا أو خطًا واحدًا على الأقل قبل التنزيل.",

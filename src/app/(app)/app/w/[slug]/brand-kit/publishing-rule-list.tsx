@@ -44,6 +44,14 @@ const RULE_TYPE_LABEL: Record<string, string> = {
   general: "General",
 };
 
+const RULE_TYPE_LABEL_KEY: Record<string, string> = {
+  alt_text: "brandKit.publishingRuleTypes.altText",
+  hashtag: "brandKit.publishingRuleTypes.hashtags",
+  compliance: "brandKit.publishingRuleTypes.compliance",
+  channel: "brandKit.publishingRuleTypes.channelSpecific",
+  general: "brandKit.publishingRuleTypes.general",
+};
+
 export function PublishingRuleList({ slug, canManage, rules, t }: PublishingRuleListProps) {
   const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   if (rules.length === 0) {
@@ -63,7 +71,9 @@ export function PublishingRuleList({ slug, canManage, rules, t }: PublishingRule
     <ul className="space-y-2" data-testid="brand-kit-publishing-rules">
       {rules.map((rule) => {
         const variant = RULE_TYPE_VARIANT[rule.ruleType] ?? "default";
-        const label = RULE_TYPE_LABEL[rule.ruleType] ?? "General";
+        const fallbackLabel = RULE_TYPE_LABEL[rule.ruleType] ?? "General";
+        const labelKey = RULE_TYPE_LABEL_KEY[rule.ruleType];
+        const label = labelKey ? tr(labelKey, fallbackLabel) : fallbackLabel;
         return (
           <li
             key={rule.id}

@@ -5,6 +5,7 @@ import { useTransition } from "react";
 import { Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 import { getErrorMessage } from "@/lib/utils/error";
 
 /**
@@ -57,6 +58,15 @@ export interface ArchiveWithUndoProps {
   "data-testid"?: string;
 }
 
+const LABEL_KEY: Record<string, string> = {
+  color: "brandKit.archive.labels.color",
+  font: "brandKit.archive.labels.font",
+  logo: "brandKit.archive.labels.logo",
+  pillar: "brandKit.archive.labels.pillar",
+  "publishing rule": "brandKit.archive.labels.publishingRule",
+  "voice rule": "brandKit.archive.labels.voiceRule",
+};
+
 export function ArchiveWithUndo({
   slug,
   id,
@@ -67,29 +77,32 @@ export function ArchiveWithUndo({
   "data-testid": dataTestId,
 }: ArchiveWithUndoProps) {
   const [isPending, startTransition] = useTransition();
+  const t = useLocaleT();
+  const normalizedLabel = label.toLowerCase();
+  const localizedLabel = LABEL_KEY[normalizedLabel] ? t(LABEL_KEY[normalizedLabel]) : label;
 
   function handleClick() {
     startTransition(async () => {
       try {
         await archiveAction(slug, id);
-        toast.success(`Archived ${label.toLowerCase()}: ${name}`, {
+        toast.success(t("brandKit.archive.archived", { label: localizedLabel, name }), {
           // Round 5 (rebuild) — the previous "removed permanently after
           // 30 days" copy was dishonest: there is no purge job, and
           // the row stays in the database until manually removed. The
           // honest copy mirrors the actual soft-delete semantics.
-          description: "Hidden from the section. Click Undo to bring it back.",
+          description: t("brandKit.archive.description"),
           duration: 5000,
           action: {
-            label: "Undo",
+            label: t("brandKit.archive.undo"),
             onClick: () => {
               startTransition(async () => {
                 try {
                   await restoreAction(slug, id);
-                  toast.success(`Restored ${label.toLowerCase()}: ${name}`, {
+                  toast.success(t("brandKit.archive.restored", { label: localizedLabel, name }), {
                     id: `${id}-restored`,
                   });
                 } catch (err) {
-                  toast.error(`Couldn't restore ${label.toLowerCase()}`, {
+                  toast.error(t("brandKit.archive.couldNotRestore", { label: localizedLabel }), {
                     description: getErrorMessage(err),
                   });
                 }
@@ -104,7 +117,7 @@ export function ArchiveWithUndo({
         // instead, so the production code no longer needs the
         // test-only side effect.
       } catch (err) {
-        toast.error(`Couldn't archive ${label.toLowerCase()}`, {
+        toast.error(t("brandKit.archive.couldNotArchive", { label: localizedLabel }), {
           description: getErrorMessage(err),
         });
       }
@@ -117,7 +130,7 @@ export function ArchiveWithUndo({
       size="icon"
       variant="ghost"
       disabled={isPending}
-      aria-label={`Archive ${label.toLowerCase()} ${name}`}
+      aria-label={t("brandKit.archive.archiveAria", { label: localizedLabel, name })}
       onClick={handleClick}
       data-testid={dataTestId}
     >

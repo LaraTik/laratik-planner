@@ -66,6 +66,30 @@
     "recentTitle": "No recent updates yet",
     "recentDescription": "As the team adds logos, colors, fonts, voice rules, and publishing guidelines, the latest changes will appear here."
   },
+  "publishingRuleTypes": {
+    "altText": "Alt text",
+    "hashtags": "Hashtags",
+    "compliance": "Compliance",
+    "channelSpecific": "Channel-specific",
+    "general": "General"
+  },
+  "archive": {
+    "labels": {
+      "color": "color",
+      "font": "font",
+      "logo": "logo",
+      "pillar": "pillar",
+      "publishingRule": "publishing rule",
+      "voiceRule": "voice rule"
+    },
+    "archived": "Archived {label}: {name}",
+    "description": "Hidden from the section. Click Undo to bring it back.",
+    "undo": "Undo",
+    "restored": "Restored {label}: {name}",
+    "couldNotRestore": "Couldn't restore {label}",
+    "couldNotArchive": "Couldn't archive {label}",
+    "archiveAria": "Archive {label} {name}"
+  },
   "overview": {
     "downloadZip": "Download ZIP",
     "downloadZipEmpty": "Add at least one logo, color, or font before downloading.",
