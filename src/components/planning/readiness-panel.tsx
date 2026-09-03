@@ -5,7 +5,7 @@ import { AlertTriangle, X, CheckCircle2 } from "lucide-react";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { humanFormat, type ContentStatus } from "@/lib/content/status";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * ReadinessPanel — visible / actionable blocker list.
@@ -60,24 +60,29 @@ export interface ReadinessPanelProps {
    *  is also rendered so the browser's native in-page
    *  navigation works without JS. */
   onFix?: (href: string) => void;
+  /** Optional scoped translator for callers that already own one. */
+  t?: Translator;
 }
 
-function translate(code: string, fallback: string): string {
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+function translateIssue(t: Translator, code: string, fallback: string): string {
   // The readiness service emits codes like `delivery_missing`,
   // `disclosure_missing`, `hashtag_required`, etc. The
   // translation is intentionally a simple lookup — the
   // service's own message is the source of truth, this
   // just adds a small human label next to the code when
   // the user wants to know *which* check failed.
-  const map: Record<string, string> = {
-    delivery_missing: "Upload a delivery version",
-    disclosure_missing: "Add the required disclosure",
-    accessibility_alt_text_missing: "Add alt text for accessibility",
-    first_comment_required: "Write the first comment",
-    caption_required: "Add a caption",
-    hashtag_required: "Add the required hashtag",
-  };
-  return map[code] ?? fallback;
+  const localized = t(`contentDetail.readinessPanel.issue.${code}`);
+  return localized.startsWith(`[contentDetail.readinessPanel.issue.${code}]`)
+    ? fallback
+    : localized;
+}
+
+function translateIssueDetail(t: Translator, code: string, fallback: string): string {
+  const key = `contentDetail.readinessPanel.issueDetails.${code}`;
+  const localized = t(key);
+  return localized.startsWith(`[${key}]`) ? fallback : localized;
 }
 
 export function ReadinessPanel({
@@ -86,7 +91,10 @@ export function ReadinessPanel({
   recommendations,
   issues,
   onFix,
+  t: tProp,
 }: ReadinessPanelProps) {
+  const localeT = useLocaleT();
+  const t = tProp ?? localeT;
   // Empty success state: only when no blockers AND no
   // recommendations. The "ready" prop is a hint from the
   // service; the actual count is the source of truth.
@@ -97,11 +105,9 @@ export function ReadinessPanel({
           <CheckCircle2 className="text-success h-5 w-5" aria-hidden="true" />
           <div>
             <CardTitle className="text-body text-fg-primary font-semibold">
-              Ready for publishing
+              {t("contentDetail.readinessPanel.readyTitle")}
             </CardTitle>
-            <CardDescription>
-              No blockers, no recommendations. This item can go live.
-            </CardDescription>
+            <CardDescription>{t("contentDetail.readinessPanel.readyDescription")}</CardDescription>
           </div>
         </div>
       </Card>
@@ -127,28 +133,46 @@ export function ReadinessPanel({
           <div>
             <CardTitle className="text-body text-fg-primary font-semibold">
               {blockers > 0
-                ? `${blockers} blocker${blockers === 1 ? "" : "s"} before publishing`
-                : "A few small things to polish"}
+                ? t(
+                    blockers === 1
+                      ? "contentDetail.readinessPanel.blockersBeforePublishingOne"
+                      : "contentDetail.readinessPanel.blockersBeforePublishingMany",
+                    { count: blockers },
+                  )
+                : t("contentDetail.readinessPanel.polishTitle")}
             </CardTitle>
             <CardDescription>
               {blockers > 0
-                ? "Resolve these before this item can be published."
-                : "Optional improvements — the item can still go live without them."}
+                ? t("contentDetail.readinessPanel.resolveBeforePublishing")
+                : t("contentDetail.readinessPanel.optionalImprovements")}
               {recommendations > 0
-                ? ` ${recommendations} recommendation${
-                    recommendations === 1 ? "" : "s"
-                  } also below.`
+                ? ` ${t(
+                    recommendations === 1
+                      ? "contentDetail.readinessPanel.recommendationsAlsoOne"
+                      : "contentDetail.readinessPanel.recommendationsAlsoMany",
+                    { count: recommendations },
+                  )}`
                 : null}
             </CardDescription>
           </div>
         </div>
         {blockers > 0 ? (
           <Badge variant="danger">
-            {blockers} blocker{blockers === 1 ? "" : "s"}
+            {t(
+              blockers === 1
+                ? "contentDetail.readinessPanel.blockerOne"
+                : "contentDetail.readinessPanel.blockerMany",
+              { count: blockers },
+            )}
           </Badge>
         ) : (
           <Badge variant="warning">
-            {recommendations} tip{recommendations === 1 ? "" : "s"}
+            {t(
+              recommendations === 1
+                ? "contentDetail.readinessPanel.tipOne"
+                : "contentDetail.readinessPanel.tipMany",
+              { count: recommendations },
+            )}
           </Badge>
         )}
       </div>
@@ -163,6 +187,7 @@ export function ReadinessPanel({
               key={`blocker-${i.code}-${idx}`}
               issue={i}
               variant="blocker"
+              t={t}
               {...(onFix ? { onFix } : {})}
             />
           ))}
@@ -179,6 +204,7 @@ export function ReadinessPanel({
               key={`reco-${i.code}-${idx}`}
               issue={i}
               variant="recommendation"
+              t={t}
               {...(onFix ? { onFix } : {})}
             />
           ))}
@@ -192,12 +218,15 @@ function ReadinessRow({
   issue,
   variant,
   onFix,
+  t,
 }: {
   issue: ReadinessIssueView;
   variant: "blocker" | "recommendation";
   onFix?: (href: string) => void;
+  t: Translator;
 }) {
-  const friendly = translate(issue.code, issue.message);
+  const friendly = translateIssue(t, issue.code, issue.message);
+  const detail = translateIssueDetail(t, issue.code, issue.message);
   const anchorHref = issue.href;
   return (
     <li
@@ -216,7 +245,7 @@ function ReadinessRow({
       </span>
       <span className="min-w-0 flex-1">
         <span className="text-body text-fg-primary block font-semibold">{friendly}</span>
-        <span className="text-label text-fg-muted block break-words">{issue.message}</span>
+        <span className="text-label text-fg-muted block break-words">{detail}</span>
       </span>
       {anchorHref ? (
         onFix ? (
@@ -226,7 +255,7 @@ function ReadinessRow({
             className="text-label text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
             data-testid={`readiness-fix-${issue.code}`}
           >
-            Fix
+            {t("contentDetail.readinessPanel.fix")}
           </button>
         ) : (
           <Link
@@ -234,7 +263,7 @@ function ReadinessRow({
             className="text-label text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
             data-testid={`readiness-fix-${issue.code}`}
           >
-            Fix
+            {t("contentDetail.readinessPanel.fix")}
           </Link>
         )
       ) : null}
@@ -245,10 +274,3 @@ function ReadinessRow({
 function cn(...parts: (string | false | null | undefined)[]) {
   return parts.filter(Boolean).join(" ");
 }
-
-// A human label for a content status. Re-exported from
-// `lib/content/status` for convenience — the panel uses it
-// when a `path` includes a status segment (e.g. the readiness
-// service sometimes references the status in the path).
-void humanFormat;
-void (null as unknown as ContentStatus);

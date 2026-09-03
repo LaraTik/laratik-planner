@@ -109,6 +109,38 @@
     "noApprovedDelivery": "No approved version yet — block from readiness.",
     "noChannelsBody": "No channels selected. Add a channel first, then configure the publishing setup."
   },
+  "readinessPanel": {
+    "readyTitle": "Ready for publishing",
+    "readyDescription": "No blockers, no recommendations. This item can go live.",
+    "blockersBeforePublishingOne": "{count} blocker before publishing",
+    "blockersBeforePublishingMany": "{count} blockers before publishing",
+    "polishTitle": "A few small things to polish",
+    "resolveBeforePublishing": "Resolve these before this item can be published.",
+    "optionalImprovements": "Optional improvements — the item can still go live without them.",
+    "recommendationsAlsoOne": "{count} recommendation also below.",
+    "recommendationsAlsoMany": "{count} recommendations also below.",
+    "blockerOne": "{count} blocker",
+    "blockerMany": "{count} blockers",
+    "tipOne": "{count} tip",
+    "tipMany": "{count} tips",
+    "fix": "Fix",
+    "issue": {
+      "delivery_missing": "Upload a delivery version",
+      "disclosure_missing": "Add the required disclosure",
+      "accessibility_alt_text_missing": "Add alt text for accessibility",
+      "first_comment_required": "Write the first comment",
+      "caption_required": "Add a caption",
+      "hashtag_required": "Add the required hashtag"
+    },
+    "issueDetails": {
+      "delivery_missing": "A delivery version is required before publishing.",
+      "disclosure_missing": "The required disclosure must be added before publishing.",
+      "accessibility_alt_text_missing": "Accessibility alt text is required before publishing.",
+      "first_comment_required": "A first comment is required before publishing.",
+      "caption_required": "A caption is required before publishing.",
+      "hashtag_required": "The required hashtag must be added before publishing."
+    }
+  },
   "publishingCard": {
     "status": {
       "pending": "Pending",

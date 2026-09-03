@@ -109,6 +109,38 @@
     "noApprovedDelivery": "لا توجد نسخة معتمدة بعد — يمنع الجاهزية.",
     "noChannelsBody": "لم يتم اختيار قنوات. أضف قناة أولاً، ثم اضبط إعدادات النشر."
   },
+  "readinessPanel": {
+    "readyTitle": "جاهز للنشر",
+    "readyDescription": "لا توجد عوائق أو توصيات. يمكن نشر هذا العنصر.",
+    "blockersBeforePublishingOne": "{count} عائق قبل النشر",
+    "blockersBeforePublishingMany": "{count} عوائق قبل النشر",
+    "polishTitle": "بعض اللمسات الصغيرة للتحسين",
+    "resolveBeforePublishing": "عالج هذه العناصر قبل نشر المحتوى.",
+    "optionalImprovements": "تحسينات اختيارية — يمكن نشر العنصر من دونها.",
+    "recommendationsAlsoOne": "{count} توصية أدناه.",
+    "recommendationsAlsoMany": "{count} توصيات أدناه.",
+    "blockerOne": "{count} عائق",
+    "blockerMany": "{count} عوائق",
+    "tipOne": "{count} نصيحة",
+    "tipMany": "{count} نصائح",
+    "fix": "إصلاح",
+    "issue": {
+      "delivery_missing": "أضف إصدار تسليم",
+      "disclosure_missing": "أضف الإفصاح المطلوب",
+      "accessibility_alt_text_missing": "أضف نصًا بديلًا لإتاحة الوصول",
+      "first_comment_required": "اكتب التعليق الأول",
+      "caption_required": "أضف تعليقًا",
+      "hashtag_required": "أضف الوسم المطلوب"
+    },
+    "issueDetails": {
+      "delivery_missing": "يلزم إضافة إصدار تسليم قبل النشر.",
+      "disclosure_missing": "تجب إضافة الإفصاح المطلوب قبل النشر.",
+      "accessibility_alt_text_missing": "يلزم إضافة نص بديل لإتاحة الوصول قبل النشر.",
+      "first_comment_required": "يلزم إضافة تعليق أول قبل النشر.",
+      "caption_required": "يلزم إضافة تعليق قبل النشر.",
+      "hashtag_required": "تجب إضافة الوسم المطلوب قبل النشر."
+    }
+  },
   "publishingCard": {
     "status": {
       "pending": "قيد الانتظار",

@@ -70,4 +70,33 @@ describe("ReadinessPanel", () => {
     await userEvent.click(fix);
     expect(onFix).toHaveBeenCalledWith("#publishing");
   });
+
+  it("uses the active translator for the panel chrome and issue labels", () => {
+    const translations: Record<string, string> = {
+      "contentDetail.readinessPanel.readyTitle": "جاهز للنشر",
+      "contentDetail.readinessPanel.readyDescription": "لا توجد عوائق أو توصيات.",
+      "contentDetail.readinessPanel.blockersBeforePublishingOne": "عائق واحد قبل النشر",
+      "contentDetail.readinessPanel.blockerOne": "عائق واحد",
+      "contentDetail.readinessPanel.resolveBeforePublishing": "عالج هذه العناصر قبل نشر المحتوى.",
+      "contentDetail.readinessPanel.issue.caption_required": "أضف تعليقًا",
+      "contentDetail.readinessPanel.issueDetails.caption_required": "أضف تعليقًا قبل النشر.",
+      "contentDetail.readinessPanel.fix": "إصلاح",
+    };
+    const t = (key: string) => translations[key] ?? `[${key}]`;
+
+    render(
+      <ReadinessPanel
+        ready={false}
+        blockers={1}
+        recommendations={0}
+        issues={[BLOCKERS[0]!]}
+        t={t}
+      />,
+    );
+
+    expect(screen.getByText("عائق واحد قبل النشر")).toBeInTheDocument();
+    expect(screen.getByText("أضف تعليقًا")).toBeInTheDocument();
+    expect(screen.getByText("أضف تعليقًا قبل النشر.")).toBeInTheDocument();
+    expect(screen.getByText("إصلاح")).toBeInTheDocument();
+  });
 });
