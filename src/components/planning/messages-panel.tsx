@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { Save, Loader2, CheckCircle2 } from "lucide-react";
+import { Save, Loader2, CheckCircle2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { CaptionField } from "@/components/forms/caption-field";
@@ -11,7 +11,7 @@ import { FormSummary } from "@/components/forms/form-summary";
 import { focusFirstInvalid } from "@/lib/forms/focus-first-invalid";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
 import { useNavigationDirtyGuard } from "@/lib/forms/use-navigation-dirty-guard";
-import { updateFormatPayloadAction } from "@/app/(app)/app/w/[slug]/planning/actions";
+import { patchAudienceCopyAction } from "@/app/(app)/app/w/[slug]/planning/actions";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { formatNumber } from "@/lib/i18n/format-locale";
 import { mapFormatPayloadToPlatform } from "@/lib/format-payload/mapper";
@@ -29,10 +29,18 @@ import { type ActionState } from "@/lib/validation/action-state";
  * shows what the formatPayload maps to for each
  * content_item_channel.
  *
- * The save is a single `updateFormatPayloadAction` call —
- * the editor's existing service. The form serialises the
- * in-memory payload (caption + hashtags + firstComment) into
- * the existing `formatPayload` JSON shape and posts it.
+ * P1 (2026-09-03, /ui-ux-pro-max) — the form now posts
+ * through the narrow `patchAudienceCopyAction` (a partial
+ * patch of caption / hashtags / firstComment) instead of
+ * the full `updateFormatPayloadAction`. The narrow action
+ * bypasses `UPDATEABLE_STATUSES` so a planner can fix a
+ * typo even after the item is in design / creative review /
+ * approved for publish. Approvals are NOT invalidated
+ * because the patch is non-material.
+ *
+ * `canPatchCopy` is the new editability gate. When true the
+ * form is enabled regardless of `canEdit`. When false the
+ * form is read-only.
  *
  * Why this is a separate tab and not a sub-section of the
  * Content tab: the Content tab is the per-format structured
@@ -49,7 +57,9 @@ const FIRST_COMMENT_ID = "messages-first-comment";
 const FIRST_COMMENT_MAX = 2_200;
 
 const FIELD_LABELS: Record<string, string> = {
-  formatPayload: "Message",
+  caption: "Caption",
+  hashtags: "Hashtags",
+  firstComment: "First comment",
 };
 
 export interface MessagesPanelProps {
@@ -67,9 +77,18 @@ export interface MessagesPanelProps {
   }>;
   /** Whether the current user can edit. */
   canEdit: boolean;
+  /**
+   * P1: the narrow "non-material copy fix" gate. When true
+   * the Messages tab is editable even when `canEdit` is
+   * false (i.e. the item is past `changes_requested`).
+   * Role-gated to planner / manager / publisher in the
+   * service; the parent only needs to forward the workspace
+   * role and non-cancelled status check.
+   */
+  canPatchCopy: boolean;
 }
 
-const initial: ActionState<"formatPayload"> = {};
+const initial: ActionState<"caption" | "hashtags" | "firstComment"> = {};
 
 export function MessagesPanel({
   workspaceSlug,
@@ -80,6 +99,7 @@ export function MessagesPanel({
   initialFirstComment,
   channels,
   canEdit,
+  canPatchCopy,
 }: MessagesPanelProps) {
   const locale = useLocaleCode();
   const t = useLocaleT();
@@ -88,23 +108,22 @@ export function MessagesPanel({
   const [hashtags, setHashtags] = React.useState<string[]>(initialHashtags);
   const [firstComment, setFirstComment] = React.useState(initialFirstComment);
 
-  const boundAction = updateFormatPayloadAction.bind(null, workspaceSlug);
+  // P1: gate the form on the OR of canEdit and canPatchCopy.
+  // canEdit (full editor) is true only in draft /
+  // changes_requested; canPatchCopy (narrow action) is true
+  // for planner / manager / publisher on any non-cancelled
+  // status. Either one enables editing here.
+  const editable = canEdit || canPatchCopy;
+
+  const boundAction = patchAudienceCopyAction.bind(null, workspaceSlug);
   const [state, formAction, pending] = useActionState(boundAction, initial);
   const formRef = React.useRef<HTMLFormElement | null>(null);
 
-  // The form posts a single `formatPayload` JSON field that
-  // merges caption + hashtags + firstComment into the
-  // existing schemaVersion=1 contract.
-  const payloadJson = React.useMemo(
-    () =>
-      JSON.stringify({
-        schemaVersion: 1,
-        caption: caption.trim() || undefined,
-        hashtags: hashtags.length > 0 ? hashtags : undefined,
-        firstComment: firstComment.trim() || undefined,
-      }),
-    [caption, hashtags, firstComment],
-  );
+  // P1 hint: when the user is patching copy in a non-editable
+  // status (e.g. ready_to_publish), surface a small note that
+  // explains the action is non-material so they don't worry
+  // about invalidating the approval chain.
+  const showNonMaterialHint = canPatchCopy && !canEdit;
 
   // Focus the first invalid field on submit failure.
   React.useEffect(() => {
@@ -157,14 +176,28 @@ export function MessagesPanel({
     <div className="space-y-4" data-testid="messages-panel">
       <form ref={formRef} action={formAction} className="space-y-4" data-testid="messages-form">
         <input type="hidden" name="contentItemId" value={contentItemId} />
-        <input type="hidden" name="format" value={format} />
-        <input type="hidden" name="formatPayload" value={payloadJson} />
 
         <FormSummary
           {...(state?.error ? { error: state.error } : {})}
           {...(state?.fieldErrors ? { fieldErrors: state.fieldErrors } : {})}
           fieldLabels={FIELD_LABELS}
         />
+
+        {showNonMaterialHint ? (
+          <div
+            className="border-info bg-info-subtle text-fg-primary rounded-[var(--radius-control)] flex items-start gap-2 border p-3"
+            data-testid="messages-non-material-hint"
+            role="note"
+          >
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <p className="text-label">
+              {tr(
+                "contentDetail.copy.nonMaterialHint",
+                "This is a non-material copy fix — existing approvals are preserved.",
+              )}
+            </p>
+          </div>
+        ) : null}
 
         <CaptionField
           id={CAPTION_ID}
@@ -176,7 +209,7 @@ export function MessagesPanel({
           )}
           value={caption}
           onChange={setCaption}
-          disabled={!canEdit || pending}
+          disabled={!editable || pending}
           testId="messages-caption-field"
         />
 
@@ -186,7 +219,7 @@ export function MessagesPanel({
           label={tr("contentDetail.messages.hashtagsLabel", "Hashtags")}
           value={hashtags}
           onChange={setHashtags}
-          disabled={!canEdit || pending}
+          disabled={!editable || pending}
           hint={tr(
             "contentDetail.messages.hashtagsHint",
             "Press Enter, comma, or space to add. Up to 30 tags.",
@@ -205,7 +238,7 @@ export function MessagesPanel({
             onChange={(e) => setFirstComment(e.target.value)}
             rows={4}
             maxLength={FIRST_COMMENT_MAX}
-            disabled={!canEdit || pending}
+            disabled={!editable || pending}
             placeholder={tr(
               "contentDetail.messages.firstCommentPlaceholder",
               "Optional — published as the first comment on the post.",
@@ -226,7 +259,7 @@ export function MessagesPanel({
           <Button
             type="submit"
             size="lg"
-            disabled={!canEdit || pending}
+            disabled={!editable || pending}
             data-testid="messages-save"
           >
             {pending ? (

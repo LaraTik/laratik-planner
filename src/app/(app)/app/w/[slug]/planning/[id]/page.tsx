@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Clock, Eye, Sparkles } from "lucide-react";
+import { Clock, Eye, Pencil, Sparkles } from "lucide-react";
 import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { formatDate } from "@/lib/i18n/format-locale";
@@ -262,6 +262,17 @@ export default async function ContentDetailPage({
   const canEdit =
     (actorRoles.isManager || actorRoles.isPlanner) &&
     UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number]);
+  // P1 (2026-09-03, /ui-ux-pro-max): narrow "non-material copy
+  // fix" gate. True when the actor is planner / manager /
+  // publisher and the item is not cancelled. Lets the user
+  // patch caption / hashtags / firstComment even after the
+  // item is in design / creative review / approved for
+  // publish. The narrow action does NOT trigger the
+  // material-edit reset (no revision bump, no approval
+  // invalidation).
+  const canPatchCopy =
+    (actorRoles.isManager || actorRoles.isPlanner || actorRoles.isPublisher) &&
+    item.status !== "cancelled";
   const canPostInternal =
     actorRoles.isManager ||
     actorRoles.isPlanner ||
@@ -507,11 +518,25 @@ export default async function ContentDetailPage({
         channelIds: item.channels.map((c) => c.socialChannelId),
       }}
     />
+  ) : canPatchCopy ? (
+    // P4 (2026-09-03, /ui-ux-pro-max): when the full editor
+    // is locked but the user can still patch copy, the
+    // primary action jumps to the Publishing tab where the
+    // per-channel caption lives. The Messages tab is the
+    // preferred surface (the publish form requires opening
+    // a channel first); we deep-link to the messages
+    // anchor instead.
+    <Button variant="default" size="sm" asChild data-testid="planning-fix-copy">
+      <Link href={`/app/w/${slug}/planning/${item.id}#messages`}>
+        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+        {t("contentDetail.copy.fixCopy")}
+      </Link>
+    </Button>
   ) : (
     <Button variant="ghost" asChild>
       <Link href={`/app/w/${slug}/planning`} data-testid="planning-back-link">
         <DirAwareArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-        Back to planning
+        {t("contentDetail.copy.backToPlanning")}
       </Link>
     </Button>
   );
@@ -917,6 +942,7 @@ export default async function ContentDetailPage({
                     accountName: ch.accountName,
                   }))}
                   canEdit={canEdit}
+                  canPatchCopy={canPatchCopy}
                 />
               </section>
             ),
@@ -970,35 +996,44 @@ export default async function ContentDetailPage({
                       ) : null}
                     </header>
                     {item.channels[0] ? (
-                      <PlatformPreview
-                        platform={item.channels[0].platform}
-                        accountName={item.channels[0].accountName}
-                        caption={
-                          (
-                            parseFormatPayload(
-                              item.format,
-                              (item as { formatPayload?: unknown }).formatPayload,
-                            ) as { caption?: string }
-                          ).caption ??
-                          item.brief ??
-                          ""
-                        }
-                        {...((
+                      (() => {
+                        // P3 (2026-09-03, /ui-ux-pro-max): prefer the
+                        // per-channel `platformPayload.caption` /
+                        // `hashtags` when present (these reflect the
+                        // publisher's per-channel override from the
+                        // Publishing tab), then fall back to
+                        // `formatPayload.caption` (the planner's
+                        // single source of truth), then to the brief.
+                        // The Preview tab used to read only
+                        // `formatPayload` so per-channel edits
+                        // silently did not show up here.
+                        const plannerCaption = (
+                          parseFormatPayload(
+                            item.format,
+                            (item as { formatPayload?: unknown }).formatPayload,
+                          ) as { caption?: string }
+                        ).caption;
+                        const plannerHashtags = (
                           parseFormatPayload(
                             item.format,
                             (item as { formatPayload?: unknown }).formatPayload,
                           ) as { hashtags?: string[] }
-                        ).hashtags
-                          ? {
-                              hashtags: (
-                                parseFormatPayload(
-                                  item.format,
-                                  (item as { formatPayload?: unknown }).formatPayload,
-                                ) as { hashtags?: string[] }
-                              ).hashtags,
-                            }
-                          : {})}
-                      />
+                        ).hashtags;
+                        const channelPayload = (channelPayloads as Record<string, unknown>)[
+                          item.channels[0].socialChannelId
+                        ] as { caption?: string; hashtags?: string[] } | undefined;
+                        const caption =
+                          channelPayload?.caption ?? plannerCaption ?? item.brief ?? "";
+                        const hashtags = channelPayload?.hashtags ?? plannerHashtags;
+                        return (
+                          <PlatformPreview
+                            platform={item.channels[0].platform}
+                            accountName={item.channels[0].accountName}
+                            caption={caption}
+                            {...(hashtags ? { hashtags } : {})}
+                          />
+                        );
+                      })()
                     ) : null}
                   </div>
                 )}
