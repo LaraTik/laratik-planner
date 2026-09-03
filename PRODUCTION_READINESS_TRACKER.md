@@ -63,6 +63,14 @@ migration-drill` passes 5/5; `TEST_DATABASE_URL=… pnpm test:integration`
 > manual accessibility/UAT, visual reference review, and independent sign-off
 > remain open.
 
+> **2026-09-03 exact-clean a11y follow-up** — Clean HEAD `a386ef3` passes
+> `pnpm test:a11y`: 145/145 checks across Chromium, Firefox, WebKit, mobile
+> Chrome, and mobile Safari, with zero critical/serious axe violations and a
+> passing Arabic/RTL shell check. The Brand Kit localization changes are
+> included in this exact run. Manual keyboard, screen-reader, 200% zoom,
+> reduced-motion/UAT, visual reference review, performance evidence, and
+> independent sign-off remain open.
+
 > **2026-09-03 exact-clean verification** — At clean HEAD `d6b3149`,
 > `pnpm verify` passes: Prettier, ESLint, strict TypeScript, 318 unit files
 > with 3,108 passing tests and 4 TODOs, and the production build. The exact-

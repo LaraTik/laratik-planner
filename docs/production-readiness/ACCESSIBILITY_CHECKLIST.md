@@ -171,7 +171,7 @@ to `Verified`; this checklist never self-assigns `Verified`.
 | 26  | `/app/w/acme/planning/{contentItemId}` (final) — `f7159c3e`             | FAIL                       | PASS                       | PARTIAL                       |                          |                               |                                                   | MANUAL                                 |                         |                             |          |            |      |        |            |
 | 27  | `/app/w/acme/board` (final) — `f9e58e53`                                | OUT OF SCOPE               | PASS                       | PARTIAL                       |                          |                               |                                                   | MANUAL                                 |                         |                             |          |            |      |        |            |
 
-### Auto-check coverage (2026-08-22 pre-fill on `96e7048`)
+### Auto-check coverage
 
 > **2026-08-24 automated refresh:** the axe paragraph below is retained as
 > historical evidence for the 2026-08-22 pre-fill and is superseded by the
@@ -184,21 +184,16 @@ to `Verified`; this checklist never self-assigns `Verified`.
 > client-reviewer shell. Manual keyboard, screen-reader and 200% zoom columns
 > remain intentionally unsigned for the independent reviewer.
 
-- **axe (chromium)** — 6 of 27 rows have a real automated result
-  because the route is covered by `tests/e2e/a11y-routes.spec.ts`
-  (2 PASS, 4 FAIL, 21 OUT OF SCOPE). The PASS rows are
-  `/app/workspaces` (row 1) and `/signin` (row 5). The FAIL rows
-  are `/app/w/acme/planning` (row 17), `/app/w/acme` (row 24),
-  `/app` (row 25) and `/app/w/acme/planning/{contentItemId}` (row
-  26); rows 25-26 share the same root cause as row 17 via the
-  `(app)/app/layout.tsx` chain. All four share the root cause
-  documented in `TEST_EVIDENCE.md` § "Automated accessibility sweep"
-  — `auth()` returning `null` on the page render forces
-  `redirect("/signin")`, which Next.js encodes as
-  `<meta http-equiv="refresh">` (WCAG 2.2.2 violation). The 21
-  OUT OF SCOPE rows need a one-off axe scan or a follow-up
-  `a11y-routes.spec.ts` PR before they can flip to PASS; the
-  reviewer must still run the manual columns regardless.
+- **Current automated result (2026-09-03, exact clean HEAD `a386ef3`)** —
+  `pnpm test:a11y` passes 145/145 checks across Chromium, Firefox, WebKit,
+  mobile Chrome, and mobile Safari. The suite covers public routes,
+  authenticated canonical routes, redirect/focus behavior, and the Arabic/RTL
+  shell contract. No critical or serious axe violations were reported.
+- The 27-row matrix below remains the manual review inventory. Its historical
+  axe/touch-target cells document the original pre-fill evidence and are not a
+  substitute for the current automated result above. The reviewer must still
+  complete keyboard-only, screen-reader name/role/value, 200% zoom,
+  reduced-motion, and 360px reflow columns for every applicable row.
 - **reduced-motion** — every page in the matrix is `PASS` because
   the global `@media (prefers-reduced-motion: reduce)` rule in
   `globals.css:130` zeroes every animation/transition regardless

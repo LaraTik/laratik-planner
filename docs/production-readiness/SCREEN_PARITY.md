@@ -150,7 +150,7 @@ as current.
 
 - **Behavioral evidence** (axe-core per route, role-by-route matrix, E2E happy paths) — captured in `tests/e2e/`. Re-runs on `main` are green per `docs/production-readiness/TEST_EVIDENCE.md`.
 - **Visual baselines (QA-004)** — **candidate baselines present; final human review pending**. The exact-clean rerun at `22aec64` contains 39 route-backed exact-reference + 73 scoped responsive assertions: 73/112 passed and 39 remained red in the disposable Postgres/Auth.js setup, with no snapshots changed. The planning header and cross-engine settings hydration defects identified during triage are fixed; remaining deltas require route-level Stitch comparison and deliberate fixture/reference decisions. Review every candidate against the 51-case `STITCH_CASES` manifest. Deploy still gates on the critical visual tests via `.github/workflows/ci.yml` + `.github/workflows/deploy.yml`.
-- **Manual a11y checklist (QA-005)** — the full automated matrix is green (145/145 at exact clean HEAD `22aec64`); manual screen-reader / zoom / reduced-motion sign-off remains pending in `ACCESSIBILITY_CHECKLIST.md`.
+- **Manual a11y checklist (QA-005)** — the full automated matrix is green (145/145 at exact clean HEAD `a386ef3`); manual screen-reader / zoom / reduced-motion sign-off remains pending in `ACCESSIBILITY_CHECKLIST.md`.
 
 The matrix ladder is therefore: every row `Implemented` (today) → `Tested` after the visual baselines are captured on CI AND QA-005 is signed off → `Verified` after independent review of the captured baselines.
 
