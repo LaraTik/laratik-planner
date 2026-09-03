@@ -2,8 +2,8 @@
 
 Date: 2026-09-02  
 Broad browser/evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4`  
-Last exact-clean verification HEAD: `4fb9be8` (`main`, clean at verification)
-Audit report update: 2026-09-03, after the password-toggle localization follow-up
+Last exact-clean verification HEAD: `cd266db` (`main`, clean at verification)
+Audit report update: 2026-09-03, after the workspace-actions localization follow-up
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
 responsive, performance, typography, motion, and data-display guidance.
@@ -31,8 +31,8 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | Prettier               | Pass                  | `pnpm format:check`                                                                                                                                            |
 | ESLint                 | Pass                  | `pnpm lint`                                                                                                                                                    |
 | TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                                                                                                   |
-| Unit tests             | Pass                  | 316 files; 3,106 passed; 4 todo at exact clean verification HEAD `4fb9be8`                                                                                     |
-| Production build       | Pass                  | `pnpm verify` at exact clean verification HEAD `4fb9be8`                                                                                                       |
+| Unit tests             | Pass                  | 317 files; 3,107 passed; 4 todo at exact clean verification HEAD `cd266db`                                                                                     |
+| Production build       | Pass                  | `pnpm verify` at exact clean verification HEAD `cd266db`                                                                                                       |
 | Migration drill        | Pass                  | 5/5 drills on disposable `planner_test` at clean evidence HEAD `5625acd`                                                                                       |
 | Integration tests      | Pass                  | 23 files; 189 tests on disposable `planner_test` at clean evidence HEAD `5625acd`                                                                              |
 | Dependency audit       | Pass                  | Four transitive `fast-uri` highs were found and resolved by the `>=3.1.6` pnpm override in `bfb350d`; `pnpm audit --prod` now reports no known vulnerabilities |
@@ -42,7 +42,7 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths                                                                                  |
 | Visual regression      | Partial / investigate | Full matrix at exact clean audit state `c0a8a9f`: 73/112; 39 failed; no snapshot updates; route fixes and deliberate snapshot decisions remain required        |
 | Performance evidence   | Partial / baseline    | Static inventory, local public-route baseline, and tiny-fixture query plans; throttled/authenticated/INP/scale evidence pending                                |
-| Working tree           | Audit changes clean   | Exact current verification was clean at `4fb9be8`; the audit follow-ups and user-authored planning changes are committed and preserved                         |
+| Working tree           | Audit changes clean   | Exact current verification was clean at `cd266db`; the audit follow-ups and user-authored planning changes are committed and preserved                         |
 
 ## Repository inventory
 
@@ -98,7 +98,9 @@ handled before unrelated cleanup.
    information card is now catalog-backed as well, with Arabic coverage in
    `462db37`, and the shared password visibility control now resolves its
    accessible Show/Hide labels from the active catalog with Arabic toggle
-   coverage in `4fb9be8`. The scan must be repeated after each localization
+   coverage in `4fb9be8`. The workspace list action menu now also uses the
+   active catalog for its trigger and six menu labels, with Arabic menu-role
+   coverage in `cd266db`. The scan must be repeated after each localization
    batch because dynamic catalog keys are not fully discoverable.
 4. **Exact-HEAD visual review is incomplete.** Exact-HEAD axe and RTL checks
    pass, but the visual suite still has reference deltas and the required

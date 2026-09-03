@@ -38,10 +38,10 @@ migration-drill` passes 5/5; `TEST_DATABASE_URL=… pnpm test:integration`
 > 73/112 with 39 deliberate deltas at `c0a8a9f`; no snapshots were updated.
 > The verdict stays `READY FOR INDEPENDENT REVIEW`.
 
-> **2026-09-03 exact-clean verification** — At clean HEAD `4fb9be8`,
-> `pnpm verify` passes: Prettier, ESLint, strict TypeScript, 316 unit files
-> with 3,106 passing tests and 4 TODOs, and the production build. This updates
-> the earlier `318bd56` verification boundary; visual, performance, manual
+> **2026-09-03 exact-clean verification** — At clean HEAD `cd266db`,
+> `pnpm verify` passes: Prettier, ESLint, strict TypeScript, 317 unit files
+> with 3,107 passing tests and 4 TODOs, and the production build. This updates
+> the earlier `4fb9be8` verification boundary; visual, performance, manual
 > accessibility/UAT, and independent-review gates remain open.
 
 > **2026-09-03 exact-clean database evidence** — At clean HEAD `5625acd`, the
