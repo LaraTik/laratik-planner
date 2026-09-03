@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Palette, User, Users } from "lucide-react";
+import { Palette, User } from "lucide-react";
 import { StatusBadge } from "@/components/content/status-badge";
 import { humanFormat, type ContentStatus } from "@/lib/content/status";
 import { formatDate } from "@/lib/i18n/format-locale";
@@ -172,36 +172,48 @@ function PersonRow({
 }) {
   const tone =
     roleAccent === "primary" ? "bg-primary-subtle text-primary" : "bg-warning-subtle text-warning";
+  // Pattern mirrors the planning list's PeopleCell (see
+  // src/components/workspace/people-cell.tsx): single-line
+  // row, role icon as a 5×5 chip, role label as a small
+  // uppercase prefix hidden on narrow viewports to save
+  // horizontal space, and the name wrapped in
+  // `<bdi dir="auto">` so an Arabic / Hebrew / mixed-script
+  // display name truncates from the inline-end of its own
+  // text rather than the inline-end of the surrounding
+  // LTR/RTL container. The previous `flex justify-between`
+  // layout forced long names to break word-by-word on a
+  // 7-column board (each card is ~180 px wide); the
+  // truncate with ellipsis path is the proven pattern
+  // across the app.
   return (
-    <div
-      className="flex min-h-10 min-w-0 items-center justify-between gap-2"
+    <span
+      className="text-label inline-flex max-w-full min-w-0 items-center gap-1.5 overflow-hidden"
       data-testid={testId}
       data-role={roleLabel.toLowerCase()}
       data-empty={name ? null : "true"}
     >
-      <span className="text-label text-fg-secondary inline-flex min-w-0 shrink-0 items-center gap-1.5">
-        <span
-          aria-hidden="true"
-          className={cn(
-            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
-            name ? tone : "bg-surface-subtle text-fg-muted",
-          )}
-        >
-          {name ? <Icon className="h-3 w-3" aria-hidden={true} /> : null}
-        </span>
-        <span className="text-fg-muted font-semibold">{roleLabel}</span>
-      </span>
       <span
+        aria-hidden="true"
         className={cn(
-          "text-label max-w-[65%] min-w-0 text-end leading-snug font-medium",
-          name ? "text-fg-primary" : "text-fg-muted italic",
+          "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+          name ? tone : "bg-surface-subtle text-fg-muted",
         )}
       >
-        <bdi dir="auto" title={name ?? undefined}>
-          {name ?? (t ? t("common.ownerUnassigned") : "Unassigned")}
-        </bdi>
+        {name ? <Icon className="h-3 w-3" aria-hidden={true} /> : null}
       </span>
-    </div>
+      <span className="text-fg-muted hidden font-semibold tracking-wide uppercase lg:inline">
+        {roleLabel}
+      </span>
+      {name ? (
+        <bdi dir="auto" className="text-fg-primary min-w-0 truncate font-medium" title={name}>
+          {name}
+        </bdi>
+      ) : (
+        <span className="text-fg-muted min-w-0 truncate font-medium italic">
+          {t ? t("common.ownerUnassigned") : "Unassigned"}
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -238,13 +250,9 @@ function BoardCard({
         <bdi dir="auto">{formatDate(publishDate, locale, { timeZone: workspaceTimezone })}</bdi>
       </p>
       <div
-        className="border-border bg-surface-subtle mt-3 rounded-[var(--radius-control)] border px-2 py-1"
+        className="mt-2 flex flex-col gap-1"
         data-testid="board-card-people"
       >
-        <div className="text-label text-fg-muted flex min-h-8 items-center gap-1.5 font-semibold">
-          <Users className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span>{t ? t("common.assignments") : "Assignments"}</span>
-        </div>
         <PersonRow
           Icon={Palette}
           roleLabel={t ? t("common.peopleRoleDesigner") : "Designer"}
@@ -261,15 +269,15 @@ function BoardCard({
           testId="board-card-owner"
           {...(t ? { t } : {})}
         />
-        {!designerName ? (
-          <span
-            className="text-label text-primary inline-flex min-h-8 items-center font-semibold"
-            data-testid="board-card-designer-action"
-          >
-            {t ? t("common.openItemToAssignDesigner") : "Open item to assign a designer"}
-          </span>
-        ) : null}
       </div>
+      {!designerName ? (
+        <p
+          className="text-label text-primary mt-1 font-semibold"
+          data-testid="board-card-designer-action"
+        >
+          {t ? t("common.openItemToAssignDesigner") : "Open item to assign a designer"}
+        </p>
+      ) : null}
       <div className="mt-2">
         <StatusBadge status={item.status} {...(t ? { t } : {})} />
       </div>

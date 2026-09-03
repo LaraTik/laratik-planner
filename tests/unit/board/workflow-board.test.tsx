@@ -157,7 +157,13 @@ describe("WorkflowBoard", () => {
     );
 
     const assignments = screen.getByTestId("board-card-people");
-    expect(within(assignments).getByText("Assignments")).toBeInTheDocument();
+    // Board refactor (2026-09-03, /ui-ux-pro-max): the
+    // "Assignments" header was removed; the role icons in
+    // each row are self-explanatory and the header ate
+    // 24 px of vertical space in a 7-column board where
+    // each card is ~180 px wide. The two role rows are
+    // enough.
+    expect(within(assignments).queryByText("Assignments")).not.toBeInTheDocument();
     expect(within(assignments).getByTestId("board-card-designer")).toHaveTextContent(
       "Designer Name",
     );
