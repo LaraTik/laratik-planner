@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 import { resetIdeaAction, type ResetIdeaActionState } from "@/lib/content/reset-idea-action";
 import { RESET_IDEA_BUCKETS, type ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
 
@@ -53,6 +54,7 @@ export function DestructiveConfirmDialog({
   ideaTitle: string;
   counts: ResetIdeaCounts;
 }) {
+  const t = useLocaleT();
   const action = resetIdeaAction.bind(null, workspaceSlug);
   const [state, formAction, pending] = useActionState<ResetIdeaActionState, FormData>(action, {
     ok: false,
@@ -100,12 +102,9 @@ export function DestructiveConfirmDialog({
         <DialogHeader>
           <div className="text-danger flex items-center gap-2">
             <AlertOctagon className="h-5 w-5" aria-hidden="true" />
-            <DialogTitle>Reset this idea</DialogTitle>
+            <DialogTitle>{t("contentDetail.resetIdea.title")}</DialogTitle>
           </div>
-          <DialogDescription>
-            This permanently deletes the idea and every child row that references it. Workspace
-            settings, channels, the brand kit, and other ideas in the agency are not affected.
-          </DialogDescription>
+          <DialogDescription>{t("contentDetail.resetIdea.description")}</DialogDescription>
         </DialogHeader>
 
         <form action={formAction} className="space-y-4" data-testid="destructive-confirm-form">
@@ -119,7 +118,7 @@ export function DestructiveConfirmDialog({
               id="destructive-counts-heading"
               className="text-body text-fg-primary mb-2 font-semibold"
             >
-              What will be deleted
+              {t("contentDetail.resetIdea.countsHeading")}
             </h3>
             <dl className="space-y-1">
               {RESET_IDEA_BUCKETS.map((bucket) => {
@@ -130,7 +129,9 @@ export function DestructiveConfirmDialog({
                     className="flex flex-wrap items-center justify-between gap-2 text-sm"
                     data-testid={`destructive-bucket-${bucket.key}`}
                   >
-                    <dt className="text-fg-secondary">{bucket.label}</dt>
+                    <dt className="text-fg-secondary">
+                      {t(`contentDetail.resetIdea.bucketLabels.${bucket.key}`)}
+                    </dt>
                     <dd
                       className={
                         value === 0
@@ -147,9 +148,11 @@ export function DestructiveConfirmDialog({
           </section>
 
           <div className="space-y-1.5">
-            <Label htmlFor="destructive-typed-phrase">Type the idea&apos;s title to confirm</Label>
+            <Label htmlFor="destructive-typed-phrase">
+              {t("contentDetail.resetIdea.typedPhraseLabel")}
+            </Label>
             <p id="destructive-typed-phrase-help" className="text-label text-fg-muted -mt-0.5">
-              Type <span className="text-fg-primary font-mono">{ideaTitle}</span> exactly.
+              {t("contentDetail.resetIdea.typedPhraseHelp", { title: ideaTitle })}
             </p>
             <Input
               id="destructive-typed-phrase"
@@ -175,10 +178,9 @@ export function DestructiveConfirmDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="destructive-reason">Reason</Label>
+            <Label htmlFor="destructive-reason">{t("contentDetail.resetIdea.reasonLabel")}</Label>
             <p id="destructive-reason-help" className="text-label text-fg-muted -mt-0.5">
-              At least 8 characters. Saved to the platform audit log alongside your account, the
-              timestamp, and the bucket counts.
+              {t("contentDetail.resetIdea.reasonHelp")}
             </p>
             <Textarea
               id="destructive-reason"
@@ -219,7 +221,7 @@ export function DestructiveConfirmDialog({
               disabled={pending}
               data-testid="destructive-cancel"
             >
-              Cancel
+              {t("contentDetail.resetIdea.cancel")}
             </Button>
             <Button
               type="submit"
@@ -229,11 +231,11 @@ export function DestructiveConfirmDialog({
               data-testid="destructive-submit"
             >
               {pending ? (
-                "Resetting…"
+                t("contentDetail.resetIdea.resetting")
               ) : (
                 <>
                   <Check className="h-4 w-4" aria-hidden="true" />
-                  Reset idea
+                  {t("contentDetail.resetIdea.submit")}
                 </>
               )}
             </Button>

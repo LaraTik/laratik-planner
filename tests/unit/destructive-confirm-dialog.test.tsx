@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 
 /**
  * UI contract for the destructive "Reset idea" confirm dialog.
@@ -120,5 +121,27 @@ describe("DestructiveConfirmDialog", () => {
     const phraseHelp = document.getElementById("destructive-typed-phrase-help");
     expect(phraseHelp).not.toBeNull();
     expect(phraseHelp?.textContent).toContain(SAMPLE_IDEA_TITLE);
+  });
+
+  it("renders the destructive safety copy from the Arabic catalog", () => {
+    render(
+      <LocaleProvider locale="ar">
+        <DestructiveConfirmDialog
+          open
+          onOpenChange={vi.fn()}
+          workspaceSlug="acme"
+          contentItemId="00000000-0000-0000-0000-000000000010"
+          ideaTitle={SAMPLE_IDEA_TITLE}
+          counts={countsWith({ contentItem: 1 })}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("إعادة تعيين هذه الفكرة");
+    expect(screen.getByText("ما سيتم حذفه")).toBeInTheDocument();
+    expect(screen.getByLabelText("اكتب عنوان الفكرة للتأكيد")).toBeInTheDocument();
+    expect(screen.getByLabelText("السبب")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "إلغاء" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "إعادة تعيين الفكرة" })).toBeInTheDocument();
   });
 });

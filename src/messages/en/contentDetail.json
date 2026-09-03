@@ -93,6 +93,32 @@
     }
   },
   "aiSettings": "AI settings",
+  "resetIdea": {
+    "title": "Reset this idea",
+    "description": "This permanently deletes the idea and every child row that references it. Workspace settings, channels, the brand kit, and other ideas in the agency are not affected.",
+    "countsHeading": "What will be deleted",
+    "bucketLabels": {
+      "contentItem": "Idea (the row itself)",
+      "contentItemChannels": "Channel schedule rows",
+      "contentAssignments": "Assignment history rows",
+      "comments": "Comments",
+      "deliveryVersions": "Delivery versions",
+      "deliveryLinks": "Delivery links",
+      "approvalRequests": "Approval requests",
+      "approvalDecisions": "Approval decisions",
+      "publicationRecords": "Publication records",
+      "attachments": "Attachments (orphaned, link cleared)",
+      "aiUsageEvents": "AI usage events (orphaned, link cleared)",
+      "activityEvents": "Activity events (orphaned, link cleared)"
+    },
+    "typedPhraseLabel": "Type the idea's title to confirm",
+    "typedPhraseHelp": "Type {title} exactly.",
+    "reasonLabel": "Reason",
+    "reasonHelp": "At least 8 characters. Saved to the platform audit log alongside your account, the timestamp, and the bucket counts.",
+    "cancel": "Cancel",
+    "resetting": "Resetting…",
+    "submit": "Reset idea"
+  },
   "publish": {
     "redirectFallbackMessage": "The publishing setup is now part of the planning detail page. This workspace can't be resolved; ask your manager for a fresh link.",
     "redirectFallbackBack": "Back to content",
