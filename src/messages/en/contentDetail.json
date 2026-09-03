@@ -256,6 +256,7 @@
     "kindTitleUpdated": "updated the title",
     "kindDateUpdated": "updated the planned publish date",
     "kindContentUpdated": "updated content details",
+    "kindContentCopyPatched": "patched the audience copy (non-material)",
     "kindDeliverySubmitted": "submitted a delivery version",
     "kindCommentAdded": "commented on the item",
     "kindMention": "mentioned someone in a comment",
@@ -344,6 +345,12 @@
     "editDrawerTitle": "Edit details",
     "editDrawerDescription": "Change the title, format, planned publish date, channels, or brief.",
     "openFullEditor": "Open the full editor"
+  },
+  "copy": {
+    "fixCopy": "Edit copy",
+    "fixCopyHint": "Tweak caption, hashtags, or first comment — approvals are preserved.",
+    "nonMaterialHint": "This is a non-material copy fix — existing approvals are preserved.",
+    "backToPlanning": "Back to planning"
   },
   "sectionCreativeTitle": "Creative brief",
   "sectionCreativeDescription": "The per-format fields (caption, hook, scenes, …). AI suggestions are inline per field.",
@@ -538,7 +545,6 @@
     "submitTitle": "Submit a delivery",
     "submitDelivery": "Submit delivery",
     "description": "Description",
-    "descriptionRequired": "Add a description before submitting.",
     "descriptionPlaceholder": "Final creatives, 3 variants for testing",
     "designerNote": "Designer note",
     "designerNotePlaceholder": "Anything the reviewer should know.",

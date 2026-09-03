@@ -255,6 +255,7 @@
     "kindBriefUpdated": "حدّث الموجز",
     "kindTitleUpdated": "حدّث العنوان",
     "kindDateUpdated": "حدّث تاريخ النشر المخطط",
+    "kindContentCopyPatched": "عدّل نسخة الجمهور (تعديل غير جوهري)",
     "kindContentUpdated": "حدّث تفاصيل المحتوى",
     "kindDeliverySubmitted": "قدّم نسخة تسليم",
     "kindCommentAdded": "علّق على العنصر",
@@ -344,6 +345,12 @@
     "editDrawerTitle": "تعديل التفاصيل",
     "editDrawerDescription": "غيّر العنوان أو التنسيق أو تاريخ النشر المخطط أو القنوات أو الملخص.",
     "openFullEditor": "فتح المحرر الكامل"
+  },
+  "copy": {
+    "fixCopy": "تعديل النسخة",
+    "fixCopyHint": "عدّل النص أو الهاشتاغات أو أول تعليق — الموافقات محفوظة.",
+    "nonMaterialHint": "هذا تعديل غير جوهري على النسخة — الموافقات الحالية محفوظة.",
+    "backToPlanning": "العودة إلى التخطيط"
   },
   "sectionCreativeTitle": "الموجز الإبداعي",
   "sectionCreativeDescription": "حقول لكل تنسيق (التعليق، الخطاف، المشاهد، ...). اقتراحات الذكاء الاصطناعي مدمجة داخل كل حقل.",
@@ -538,7 +545,6 @@
     "submitTitle": "إرسال تسليم",
     "submitDelivery": "إرسال تسليم",
     "description": "الوصف",
-    "descriptionRequired": "أضف وصفًا قبل الإرسال.",
     "descriptionPlaceholder": "التصاميم النهائية، 3 نسخ للاختبار",
     "designerNote": "ملاحظة المصمم",
     "designerNotePlaceholder": "أي معلومات ينبغي أن يعرفها المراجع.",
