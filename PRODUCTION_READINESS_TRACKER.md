@@ -52,6 +52,17 @@ migration-drill` passes 5/5; `TEST_DATABASE_URL=… pnpm test:integration`
 > no snapshots were changed. Manual accessibility/UAT, performance evidence,
 > route-level visual review, and independent sign-off remain open.
 
+> **2026-09-03 localization follow-up** — Clean HEAD `68222ec` passes
+> `pnpm verify`: Prettier, ESLint, strict TypeScript, 320 unit files with
+> 3,111 passing tests and 4 TODOs, and the production build. The readiness
+> panel (`3b9cb24`) and the shared Brand Kit archive/undo control plus
+> publishing-rule labels now resolve their user-facing copy through the active
+> English/Arabic catalogs; focused Arabic regressions and catalog parity pass.
+> The latest full cross-engine a11y evidence remains 145/145 at `22aec64` and
+> must be rerun for this exact code SHA before final verification. Performance,
+> manual accessibility/UAT, visual reference review, and independent sign-off
+> remain open.
+
 > **2026-09-03 exact-clean verification** — At clean HEAD `d6b3149`,
 > `pnpm verify` passes: Prettier, ESLint, strict TypeScript, 318 unit files
 > with 3,108 passing tests and 4 TODOs, and the production build. The exact-

@@ -2,8 +2,8 @@
 
 Date: 2026-09-02  
 Broad browser/evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4`  
-Last exact-clean verification HEAD: `22aec64` (`main`, clean at verification)
-Audit report update: 2026-09-03, after the cross-engine accessibility follow-up
+Last exact-clean verification HEAD: `68222ec` (`main`, clean at verification)
+Audit report update: 2026-09-03, after the Brand Kit localization follow-up
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
 responsive, performance, typography, motion, and data-display guidance.
@@ -11,8 +11,9 @@ responsive, performance, typography, motion, and data-display guidance.
 ## Executive verdict
 
 The repository has a strong production foundation and a broad quality harness.
-The current checkpoint passes formatting, ESLint, strict TypeScript, the full
-unit suite, and a clean production build. Exact-HEAD accessibility coverage is
+The current checkpoint at `68222ec` passes formatting, ESLint, strict TypeScript,
+the full unit suite, and a clean production build. The latest exact-HEAD
+accessibility coverage is
 145/145 across Chromium, Firefox, WebKit, mobile Chrome, and mobile Safari,
 including the public/authenticated axe route checks and Arabic/RTL shell
 contract. The earlier browser baseline also passed 192/192 isolated Chromium
@@ -32,8 +33,8 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | Prettier               | Pass                  | `pnpm format:check`                                                                                                                                            |
 | ESLint                 | Pass                  | `pnpm lint`                                                                                                                                                    |
 | TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                                                                                                   |
-| Unit tests             | Pass                  | 319 files; 3,109 passed; 4 todo at exact clean verification HEAD `22aec64`                                                                                     |
-| Production build       | Pass                  | `pnpm verify` at exact clean verification HEAD `22aec64`                                                                                                       |
+| Unit tests             | Pass                  | 320 files; 3,111 passed; 4 todo at exact clean verification HEAD `68222ec`                                                                                     |
+| Production build       | Pass                  | `pnpm verify` at exact clean verification HEAD `68222ec`                                                                                                       |
 | Migration drill        | Pass                  | 5/5 drills on disposable `planner_test` at clean evidence HEAD `5625acd`                                                                                       |
 | Integration tests      | Pass                  | 23 files; 189 tests on disposable `planner_test` at clean evidence HEAD `5625acd`                                                                              |
 | Dependency audit       | Pass                  | Four transitive `fast-uri` highs were found and resolved by the `>=3.1.6` pnpm override in `bfb350d`; `pnpm audit --prod` now reports no known vulnerabilities |
@@ -43,7 +44,7 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 | Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths                                                                                  |
 | Visual regression      | Partial / investigate | Full matrix at exact clean HEAD `22aec64`: 73/112; 39 failed; no snapshot updates; route fixes and deliberate snapshot decisions remain required               |
 | Performance evidence   | Partial / baseline    | Static inventory, local public-route baseline, and tiny-fixture query plans; throttled/authenticated/INP/scale evidence pending                                |
-| Working tree           | Audit changes clean   | Exact code verification was clean at `22aec64`; this documentation reconciliation is the only follow-up change                                                 |
+| Working tree           | Audit changes clean   | Exact code verification was clean at `68222ec`; this documentation reconciliation is the only follow-up change                                                 |
 
 ## Repository inventory
 
@@ -83,7 +84,7 @@ handled before unrelated cleanup.
    delivery-version card, AI assistance surface and platform selector, and the
    quick-create/edit/batch forms in commits `18b0da1`, `55a8c3c`, `fdc304e`,
    `df2d994`, `b610e52`, `d3f5b28`, `64cf4c9`, and `75081f0`. Remaining hotspots
-   include publish forms and AI diagnostic UI. The planning library forms are
+   include publish forms and static copy outside audited surfaces. The planning library forms are
    now catalog-backed in both locales and use direction-aware fields, with
    focused Arabic/RTL coverage in `50bf278`. The social analytics aggregate
    summary and growth chart now use the active catalog, server-resolved locale,
@@ -101,11 +102,15 @@ handled before unrelated cleanup.
    accessible Show/Hide labels from the active catalog with Arabic toggle
    coverage in `4fb9be8`. The workspace list action menu now also uses the
    active catalog for its trigger and six menu labels, with Arabic menu-role
-   coverage in `d6b3149`. The scan must be repeated after each localization
+   coverage in `d6b3149`. The readiness panel is catalog-backed, including
+   issue details, in `3b9cb24`; the shared Brand Kit archive/undo action and
+   publishing-rule labels now use both locale catalogs with a focused Arabic
+   regression in `68222ec`. The scan must be repeated after each localization
    batch because dynamic catalog keys are not fully discoverable.
 4. **Exact-HEAD visual review is incomplete.** The full exact-HEAD axe and RTL
    matrix now passes, and the cross-engine settings hydration mismatch is fixed
-   in `22aec64` with a regression test. The visual suite still has reference deltas and the required
+   in `22aec64` with a regression test. The visual suite still has reference
+   deltas and the required
    keyboard, screen-reader, zoom, and reduced-motion review is not independently
    signed off. A targeted 360px overview run after `85d026b` confirms the
    attention banner no longer collapses its message into one-word lines and its
