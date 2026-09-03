@@ -48,7 +48,14 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed start-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4",
+        // P0b (2026-09-03, /ui-ux-pro-max): physical centering.
+        // Previously used `start-1/2` (logical) + `-translate-x-1/2`
+        // (physical). In RTL, `start-1/2` resolves to `right: 50%`
+        // while the transform stays leftward, so the dialog ended
+        // up biased to the left and clipped on small viewports.
+        // The fix is to use physical `left-1/2 top-1/2` so the
+        // math is direction-agnostic.
+        "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4",
         "border-border bg-surface rounded-[var(--radius-card)] border p-6 shadow-lg",
         "focus:outline-none",
         className,
