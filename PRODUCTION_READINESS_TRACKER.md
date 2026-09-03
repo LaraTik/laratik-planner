@@ -32,15 +32,16 @@ migration-drill` passes 5/5; `TEST_DATABASE_URL=… pnpm test:integration`
 > commit `bfb350d` resolves `fast-uri@4.1.4`, and frozen install plus
 > `pnpm audit --prod` are clean. The exact-clean full `pnpm verify` evidence is
 > recorded at `1b15de9`; the final production build also passes after the
-> dependency override. The visual matrix remains 73/112 with 39 deliberate
-> deltas at `c0a8a9f`; no snapshots were updated. Current uncommitted
-> format-payload edits are user work and remain preserved. The verdict stays
-> `READY FOR INDEPENDENT REVIEW`.
+> dependency override. The shared password visibility control now uses the
+> active English/Arabic catalog for its accessible Show/Hide labels, with a
+> focused Arabic toggle regression in `4fb9be8`. The visual matrix remains
+> 73/112 with 39 deliberate deltas at `c0a8a9f`; no snapshots were updated.
+> The verdict stays `READY FOR INDEPENDENT REVIEW`.
 
-> **2026-09-03 exact-clean verification** — At clean HEAD `318bd56`,
-> `pnpm verify` passes: Prettier, ESLint, strict TypeScript, 314 unit files
-> with 3,102 passing tests and 4 TODOs, and the production build. This updates
-> the earlier `1b15de9` verification boundary; visual, performance, manual
+> **2026-09-03 exact-clean verification** — At clean HEAD `4fb9be8`,
+> `pnpm verify` passes: Prettier, ESLint, strict TypeScript, 316 unit files
+> with 3,106 passing tests and 4 TODOs, and the production build. This updates
+> the earlier `318bd56` verification boundary; visual, performance, manual
 > accessibility/UAT, and independent-review gates remain open.
 
 > **2026-09-03 exact-clean database evidence** — At clean HEAD `5625acd`, the
