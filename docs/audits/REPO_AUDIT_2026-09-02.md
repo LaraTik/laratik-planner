@@ -177,7 +177,9 @@ handled before unrelated cleanup.
    fixture query plans are now recorded in
    `docs/production-readiness/PERFORMANCE_LOCAL_2026-09-02.md`; authenticated,
    throttled, interaction, representative-volume, and approved-budget evidence
-   remain open.
+   remain open. There is currently no committed Lighthouse/WebPageTest runner,
+   bundle-budget check, image/font budget check, or performance CI gate; the
+   protocol is documented but its repeatable automation is not yet implemented.
 8. **The isolated browser runner now resets only the disposable test database.**
    Commit `f5cb2d8` adds a URL- and environment-guarded reset that preserves the
    Drizzle migration ledger before every isolated browser run. This removes

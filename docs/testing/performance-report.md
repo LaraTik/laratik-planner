@@ -2,6 +2,11 @@
 
 Status: local public-route baseline captured; release browser and database measurements pending
 
+Audit note (2026-09-03): the repository has the measurement contract and a
+supporting local baseline, but no committed Lighthouse/WebPageTest runner,
+bundle-budget check, image/font budget check, or performance CI gate. Those are
+implementation gaps, not implied by the successful build.
+
 This document is the repeatable performance-evidence contract for the LaraTik
 Planner release candidate. It complements `docs/testing/strategy.md` and does
 not treat a successful TypeScript check or production build as performance
