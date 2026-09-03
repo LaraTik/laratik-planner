@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 import { createAgencyAction, type PlatformActionState } from "./actions";
 
 type PlanOption = { id: string; name: string; description: string | null };
@@ -34,6 +35,7 @@ const platforms = [
 const initialState: PlatformActionState = {};
 
 export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
+  const t = useLocaleT();
   const [open, setOpen] = React.useState(false);
   const [step, setStep] = React.useState(1);
   const [state, action, pending] = useActionState(createAgencyAction, initialState);
@@ -62,30 +64,28 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button type="button" onClick={() => setOpen(true)} data-testid="platform-agencies-add">
-          <Plus className="h-4 w-4" aria-hidden="true" /> Add agency
+          <Plus className="h-4 w-4" aria-hidden="true" /> {t("platform.addAgency.trigger")}
         </Button>
       </DialogTrigger>
       <DialogContent className="start-auto end-0 top-0 flex h-dvh w-full max-w-2xl translate-x-0 translate-y-0 flex-col rounded-none p-0 sm:w-[640px]">
         <DialogHeader className="border-border border-b px-6 py-5 pe-14">
-          <DialogTitle>Add agency</DialogTitle>
-          <DialogDescription>
-            Step {step} of 4 · Organization, administrator, plan, review
-          </DialogDescription>
+          <DialogTitle>{t("platform.addAgency.title")}</DialogTitle>
+          <DialogDescription>{t("platform.addAgency.stepDescription", { step })}</DialogDescription>
         </DialogHeader>
         {/* Stepper — visual progress indicator. Each step is a
             button so the user can jump back without losing the
             fields they already filled. The current step is
             aria-current and visually distinct. */}
         <nav
-          aria-label="Add agency steps"
+          aria-label={t("platform.addAgency.stepsAria")}
           className="border-border bg-surface-subtle flex items-center gap-1 border-b px-6 py-3"
           data-testid="add-agency-stepper"
         >
           {[
-            { num: 1, label: "Organization" },
-            { num: 2, label: "Administrator" },
-            { num: 3, label: "Plan" },
-            { num: 4, label: "Review" },
+            { num: 1, label: t("platform.addAgency.steps.organization") },
+            { num: 2, label: t("platform.addAgency.steps.administrator") },
+            { num: 3, label: t("platform.addAgency.steps.plan") },
+            { num: 4, label: t("platform.addAgency.steps.review") },
           ].map((s) => {
             const isCurrent = step === s.num;
             const isComplete = step > s.num;
@@ -100,7 +100,7 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
                   if (s.num < step) setStep(s.num);
                 }}
                 aria-current={isCurrent ? "step" : undefined}
-                aria-label={`Go to step ${s.num}: ${s.label}`}
+                aria-label={t("platform.addAgency.goToStep", { step: s.num, label: s.label })}
                 className={`text-label rounded-[var(--radius-control)] px-2.5 py-1 font-semibold transition-colors ${
                   isCurrent
                     ? "bg-primary text-primary-foreground"
@@ -132,22 +132,25 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
               key={key}
               type="hidden"
               name={key}
-              value={values[key] ?? (key === "reason" ? "Initial agency provisioning" : "")}
+              value={values[key] ?? (key === "reason" ? t("platform.addAgency.defaultReason") : "")}
             />
           ))}
           <input type="hidden" name="overrides" value={JSON.stringify(overrides)} />
           <div className="flex-1 overflow-y-auto px-6 py-5">
             {step === 1 ? (
-              <section className="grid gap-4" aria-label="Organization details">
+              <section
+                className="grid gap-4"
+                aria-label={t("platform.addAgency.sections.organizationDetails")}
+              >
                 <Field
-                  label="Agency name"
+                  label={t("platform.addAgency.fields.agencyName")}
                   name="name"
                   value={values.name ?? ""}
                   onChange={set("name")}
                   required
                 />
                 <Field
-                  label="Slug"
+                  label={t("platform.addAgency.fields.slug")}
                   name="slug"
                   value={values.slug ?? ""}
                   onChange={set("slug")}
@@ -155,14 +158,14 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
                 />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field
-                    label="Locale"
+                    label={t("platform.addAgency.fields.locale")}
                     name="locale"
                     value={values.locale ?? "en"}
                     onChange={set("locale")}
                     required
                   />
                   <Field
-                    label="Timezone"
+                    label={t("platform.addAgency.fields.timezone")}
                     name="timezone"
                     value={values.timezone ?? "UTC"}
                     onChange={set("timezone")}
@@ -172,16 +175,19 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
               </section>
             ) : null}
             {step === 2 ? (
-              <section className="grid gap-4" aria-label="First administrator">
+              <section
+                className="grid gap-4"
+                aria-label={t("platform.addAgency.sections.firstAdministrator")}
+              >
                 <Field
-                  label="Administrator name"
+                  label={t("platform.addAgency.fields.administratorName")}
                   name="adminName"
                   value={values.adminName ?? ""}
                   onChange={set("adminName")}
                   required
                 />
                 <Field
-                  label="Administrator email"
+                  label={t("platform.addAgency.fields.administratorEmail")}
                   name="adminEmail"
                   type="email"
                   value={values.adminEmail ?? ""}
@@ -189,14 +195,17 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
                   required
                 />
                 <p className="text-body text-fg-secondary">
-                  An invitation is sent only after the agency transaction commits successfully.
+                  {t("platform.addAgency.invitationNote")}
                 </p>
               </section>
             ) : null}
             {step === 3 ? (
-              <section className="grid gap-5" aria-label="Plan and limits">
+              <section
+                className="grid gap-5"
+                aria-label={t("platform.addAgency.sections.planAndLimits")}
+              >
                 <div className="grid gap-2">
-                  <Label htmlFor="planTemplateId">Plan</Label>
+                  <Label htmlFor="planTemplateId">{t("platform.addAgency.fields.plan")}</Label>
                   <select
                     id="planTemplateId"
                     name="planTemplateId"
@@ -213,21 +222,21 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <Field
-                    label="Workspaces override"
+                    label={t("platform.addAgency.fields.workspacesOverride")}
                     name="workspaces"
                     type="number"
                     value={values.workspaces ?? ""}
                     onChange={set("workspaces")}
                   />
                   <Field
-                    label="Users override"
+                    label={t("platform.addAgency.fields.usersOverride")}
                     name="users"
                     type="number"
                     value={values.users ?? ""}
                     onChange={set("users")}
                   />
                   <Field
-                    label="Total profiles"
+                    label={t("platform.addAgency.fields.totalProfiles")}
                     name="total_social_profiles"
                     type="number"
                     value={values.total_social_profiles ?? ""}
@@ -236,7 +245,7 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
                 </div>
                 <fieldset className="border-border grid gap-3 rounded-[var(--radius-card)] border p-4 sm:grid-cols-2">
                   <legend className="text-label text-fg-secondary px-1 font-semibold">
-                    Profiles per platform
+                    {t("platform.addAgency.fields.profilesPerPlatform")}
                   </legend>
                   {platforms.map((platform) => (
                     <Field
@@ -252,23 +261,26 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
               </section>
             ) : null}
             {step === 4 ? (
-              <section className="space-y-4" aria-label="Review agency">
+              <section
+                className="space-y-4"
+                aria-label={t("platform.addAgency.sections.reviewAgency")}
+              >
                 <Review
-                  label="Organization"
+                  label={t("platform.addAgency.steps.organization")}
                   value={`${values.name ?? "—"} (${values.slug ?? "—"})`}
                 />
                 <Review
-                  label="Administrator"
+                  label={t("platform.addAgency.steps.administrator")}
                   value={`${values.adminName ?? "—"} · ${values.adminEmail ?? "—"}`}
                 />
                 <Review
-                  label="Plan"
+                  label={t("platform.addAgency.fields.plan")}
                   value={plans.find((plan) => plan.id === values.planTemplateId)?.name ?? "—"}
                 />
                 <Field
-                  label="Audit reason"
+                  label={t("platform.addAgency.fields.auditReason")}
                   name="reason"
-                  value={values.reason ?? "Initial agency provisioning"}
+                  value={values.reason ?? t("platform.addAgency.defaultReason")}
                   onChange={set("reason")}
                   required
                 />
@@ -284,7 +296,7 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
                 ) : null}
                 {state.success ? (
                   <p role="status" className="text-success text-body">
-                    Agency created successfully. Close this drawer to see it in the table.
+                    {t("platform.addAgency.success")}
                   </p>
                 ) : null}
               </section>
@@ -297,7 +309,7 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
               disabled={step === 1 || pending}
               onClick={() => setStep((value) => Math.max(1, value - 1))}
             >
-              Back
+              {t("platform.addAgency.back")}
             </Button>
             {step < 4 ? (
               <Button
@@ -310,11 +322,11 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
                 }
                 data-testid="add-agency-continue"
               >
-                Continue
+                {t("platform.addAgency.continue")}
               </Button>
             ) : (
               <Button type="submit" disabled={pending}>
-                {pending ? "Creating…" : "Create agency"}
+                {pending ? t("platform.addAgency.creating") : t("platform.addAgency.create")}
               </Button>
             )}
           </DialogFooter>

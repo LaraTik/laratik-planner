@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AddAgencyDrawer } from "@/app/(app)/app/platform/agencies/add-agency-drawer";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 
 vi.mock("@/app/(app)/app/platform/agencies/actions", () => ({
   createAgencyAction: vi.fn(async () => ({ success: true })),
@@ -67,5 +68,20 @@ describe("AddAgencyDrawer", () => {
     expect(overrideInput).toHaveValue(
       JSON.stringify({ social_profiles_by_platform: { instagram: 3 } }),
     );
+  });
+
+  it("renders the provisioning flow from the Arabic catalog", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider locale="ar">
+        <AddAgencyDrawer plans={plans} />
+      </LocaleProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "إضافة وكالة" }));
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("إضافة وكالة");
+    expect(screen.getByRole("region", { name: "تفاصيل المؤسسة" })).toBeInTheDocument();
+    expect(screen.getByLabelText("اسم الوكالة")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "متابعة" })).toBeInTheDocument();
   });
 });

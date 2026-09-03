@@ -82,6 +82,46 @@
   "memberMany": "أعضاء",
   "workspaceOne": "مساحة عمل",
   "workspaceMany": "مساحات عمل",
+  "addAgency": {
+    "trigger": "إضافة وكالة",
+    "title": "إضافة وكالة",
+    "stepDescription": "الخطوة {step} من 4 · المؤسسة، المسؤول، الخطة، المراجعة",
+    "stepsAria": "خطوات إضافة الوكالة",
+    "goToStep": "الانتقال إلى الخطوة {step}: {label}",
+    "steps": {
+      "organization": "المؤسسة",
+      "administrator": "المسؤول",
+      "plan": "الخطة",
+      "review": "المراجعة"
+    },
+    "sections": {
+      "organizationDetails": "تفاصيل المؤسسة",
+      "firstAdministrator": "المسؤول الأول",
+      "planAndLimits": "الخطة والحدود",
+      "reviewAgency": "مراجعة الوكالة"
+    },
+    "fields": {
+      "agencyName": "اسم الوكالة",
+      "slug": "المعرّف",
+      "locale": "اللغة المحلية",
+      "timezone": "المنطقة الزمنية",
+      "administratorName": "اسم المسؤول",
+      "administratorEmail": "البريد الإلكتروني للمسؤول",
+      "plan": "الخطة",
+      "workspacesOverride": "تجاوز عدد مساحات العمل",
+      "usersOverride": "تجاوز عدد المستخدمين",
+      "totalProfiles": "إجمالي الملفات الاجتماعية",
+      "profilesPerPlatform": "الملفات لكل منصة",
+      "auditReason": "سبب التدقيق"
+    },
+    "invitationNote": "تُرسل الدعوة فقط بعد نجاح معاملة إنشاء الوكالة وتثبيتها.",
+    "defaultReason": "التهيئة الأولية للوكالة",
+    "success": "تم إنشاء الوكالة بنجاح. أغلق هذه اللوحة لرؤيتها في الجدول.",
+    "back": "رجوع",
+    "continue": "متابعة",
+    "creating": "جارٍ الإنشاء…",
+    "create": "إنشاء الوكالة"
+  },
   "lifecycle": {
     "active": "نشطة",
     "suspended": "موقوفة",

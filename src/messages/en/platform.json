@@ -82,6 +82,46 @@
   "memberMany": "members",
   "workspaceOne": "workspace",
   "workspaceMany": "workspaces",
+  "addAgency": {
+    "trigger": "Add agency",
+    "title": "Add agency",
+    "stepDescription": "Step {step} of 4 · Organization, administrator, plan, review",
+    "stepsAria": "Add agency steps",
+    "goToStep": "Go to step {step}: {label}",
+    "steps": {
+      "organization": "Organization",
+      "administrator": "Administrator",
+      "plan": "Plan",
+      "review": "Review"
+    },
+    "sections": {
+      "organizationDetails": "Organization details",
+      "firstAdministrator": "First administrator",
+      "planAndLimits": "Plan and limits",
+      "reviewAgency": "Review agency"
+    },
+    "fields": {
+      "agencyName": "Agency name",
+      "slug": "Slug",
+      "locale": "Locale",
+      "timezone": "Timezone",
+      "administratorName": "Administrator name",
+      "administratorEmail": "Administrator email",
+      "plan": "Plan",
+      "workspacesOverride": "Workspaces override",
+      "usersOverride": "Users override",
+      "totalProfiles": "Total profiles",
+      "profilesPerPlatform": "Profiles per platform",
+      "auditReason": "Audit reason"
+    },
+    "invitationNote": "An invitation is sent only after the agency transaction commits successfully.",
+    "defaultReason": "Initial agency provisioning",
+    "success": "Agency created successfully. Close this drawer to see it in the table.",
+    "back": "Back",
+    "continue": "Continue",
+    "creating": "Creating…",
+    "create": "Create agency"
+  },
   "lifecycle": {
     "active": "active",
     "suspended": "suspended",
