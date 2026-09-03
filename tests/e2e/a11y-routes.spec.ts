@@ -162,6 +162,12 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await expectClean("/app/agency-settings", page);
   });
 
+  test("@a11y /app/agency-settings/ai has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/agency-settings/ai");
+    await expectClean("/app/agency-settings/ai", page);
+  });
+
   test("@a11y /app/users has no critical violations", async ({ page }) => {
     await bootstrapTestSession(page);
     await page.goto("/app/users");
