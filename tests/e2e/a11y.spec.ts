@@ -22,7 +22,7 @@ const PUBLIC_ROUTES = ["/", "/signin", "/signin/verify"] as const;
 test.describe("a11y: public routes (WCAG 2.2 AA)", () => {
   for (const route of PUBLIC_ROUTES) {
     test(`@a11y ${route} has no critical violations`, async ({ page }) => {
-      await page.goto(route);
+      await page.goto(route, { waitUntil: "networkidle" });
       const results = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
         .analyze();

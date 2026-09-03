@@ -83,17 +83,38 @@ function addBusinessDays(start: Date, days: number): Date {
 
 function formatDate(date: Date, timezone: string): string {
   try {
-    return new Intl.DateTimeFormat("en-GB", {
-      weekday: "short",
+    const parts = new Intl.DateTimeFormat("en-GB", {
       day: "numeric",
-      month: "short",
+      month: "numeric",
+      year: "numeric",
       timeZone: timezone,
-    }).format(date);
+    })
+      .formatToParts(date)
+      .reduce<Record<string, string>>((result, part) => {
+        result[part.type] = part.value;
+        return result;
+      }, {});
+    const month = Number(parts.month);
+    const day = Number(parts.day);
+    const weekday = new Date(Date.UTC(Number(parts.year), month - 1, day)).getUTCDay();
+    return `${WEEKDAYS[weekday]} ${day} ${MONTHS[month - 1]}`;
   } catch {
-    return new Intl.DateTimeFormat("en-GB", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-    }).format(date);
+    return `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
   }
 }
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
