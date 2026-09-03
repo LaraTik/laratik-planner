@@ -21,6 +21,8 @@ export interface PageHeaderProps {
   description?: React.ReactNode;
   /** Action area (Button group) — wraps below the title on mobile. */
   action?: React.ReactNode;
+  /** Minimum breakpoint where a dense action area may share the title row. */
+  actionBreakpoint?: "sm" | "md" | "lg";
   /** Optional id for the title (useful for aria-labelledby on a parent section). */
   titleId?: string;
   className?: string;
@@ -33,14 +35,25 @@ export function PageHeader({
   action,
   titleId,
   className,
+  actionBreakpoint = "sm",
 }: PageHeaderProps) {
+  const layoutClasses = {
+    sm: {
+      header: "sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4",
+      action: "sm:w-auto sm:flex-shrink-0 sm:justify-end",
+    },
+    md: {
+      header: "md:flex-row md:flex-wrap md:items-end md:justify-between md:gap-4",
+      action: "md:w-auto md:flex-shrink-0 md:justify-end",
+    },
+    lg: {
+      header: "lg:flex-row lg:flex-wrap lg:items-end lg:justify-between lg:gap-4",
+      action: "lg:w-auto lg:flex-shrink-0 lg:justify-end",
+    },
+  }[actionBreakpoint];
+
   return (
-    <header
-      className={cn(
-        "flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4",
-        className,
-      )}
-    >
+    <header className={cn("flex flex-col gap-3", layoutClasses.header, className)}>
       <div className="min-w-0 flex-1">
         {eyebrow ? <p className="text-label text-fg-muted">{eyebrow}</p> : null}
         <h1
@@ -54,7 +67,7 @@ export function PageHeader({
         ) : null}
       </div>
       {action ? (
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-shrink-0 sm:justify-end">
+        <div className={cn("flex w-full flex-wrap items-center gap-2", layoutClasses.action)}>
           {action}
         </div>
       ) : null}

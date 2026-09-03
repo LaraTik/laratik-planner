@@ -357,6 +357,7 @@ export default async function PlanningPage({
             </Button>
           </div>
         }
+        actionBreakpoint="lg"
       />
 
       <PlanningKpiBar
