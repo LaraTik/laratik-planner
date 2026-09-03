@@ -181,6 +181,135 @@ describe("workspace_membership.updated_at + touch_updated_at trigger", () => {
     expect(after[0]!.updatedAt).toBeInstanceOf(Date);
   });
 
+  it("updateMemberRolesAction: persists ALL roles in a multi-role grant (P0 /ui-ux-pro-max, 2026-09-03)", async () => {
+    // P0 regression: the user reported that picking multiple
+    // roles for one workspace only saved the LAST one. Root
+    // cause was the matrix serialising one entry per role; the
+    // fix is in two places — the matrix now emits one entry
+    // per workspace with a roles[] array, and the action
+    // accumulates roles per workspace (was overwriting with
+    // Map.set, so even a future client that submitted the
+    // broken per-role shape would now be handled correctly).
+    const { updateMemberRolesAction } = await import("@/app/(app)/app/users/actions");
+    const { db } = await import("@/lib/db");
+    const { agencyMemberships, users, workspaceMembershipRoles, workspaceMemberships, workspaces } =
+      await import("@/lib/db/schema");
+
+    const [ws] = await db
+      .insert(workspaces)
+      .values({
+        agencyId: "11111111-aaaa-bbbb-cccc-000000000001",
+        name: "Multi-Role WS",
+        slug: "multi-role-ws",
+        createdBy: "00000000-0000-0000-0000-0000000000aa",
+      })
+      .returning();
+    if (!ws) throw new Error("Failed to seed workspace");
+
+    const [target] = await db
+      .insert(users)
+      .values({
+        email: "multi-role-target@member-roles.test.local",
+        displayName: "Multi-Role Target",
+        emailVerified: new Date(),
+      })
+      .returning();
+    if (!target) throw new Error("Failed to seed target user");
+
+    await db.insert(agencyMemberships).values({
+      agencyId: "11111111-aaaa-bbbb-cccc-000000000001",
+      userId: target.id,
+      status: "active",
+      isAgencyAdmin: false,
+    });
+
+    // The multi-role shape: one entry, many roles.
+    const formData = new FormData();
+    formData.set(
+      "workspaceRoles",
+      JSON.stringify([{ workspaceId: ws.id, roles: ["designer", "publisher", "internal_reviewer"] }]),
+    );
+
+    const result = await updateMemberRolesAction(target.id, {}, formData);
+    expect(result).toEqual({ saved: true });
+    expect("error" in result).toBe(false);
+
+    // All three roles must be in the DB.
+    const persisted = await db
+      .select({ role: workspaceMembershipRoles.role })
+      .from(workspaceMembershipRoles)
+      .innerJoin(
+        workspaceMemberships,
+        eq(workspaceMembershipRoles.workspaceMembershipId, workspaceMemberships.id),
+      )
+      .where(eq(workspaceMemberships.userId, target.id));
+    const roleSet = new Set(persisted.map((r) => r.role));
+    expect(roleSet).toEqual(new Set(["designer", "publisher", "internal_reviewer"]));
+  });
+
+  it("updateMemberRolesAction: legacy per-role shape is also accumulated (defence in depth)", async () => {
+    // The action was hardened to accumulate roles per workspace
+    // even when the client submits the legacy single-role shape
+    // with two entries sharing the same workspaceId. This guards
+    // against a future client re-introducing the broken shape.
+    const { updateMemberRolesAction } = await import("@/app/(app)/app/users/actions");
+    const { db } = await import("@/lib/db");
+    const { agencyMemberships, users, workspaceMembershipRoles, workspaceMemberships, workspaces } =
+      await import("@/lib/db/schema");
+
+    const [ws] = await db
+      .insert(workspaces)
+      .values({
+        agencyId: "11111111-aaaa-bbbb-cccc-000000000001",
+        name: "Legacy Shape WS",
+        slug: "legacy-shape-ws",
+        createdBy: "00000000-0000-0000-0000-0000000000aa",
+      })
+      .returning();
+    if (!ws) throw new Error("Failed to seed workspace");
+
+    const [target] = await db
+      .insert(users)
+      .values({
+        email: "legacy-target@member-roles.test.local",
+        displayName: "Legacy Target",
+        emailVerified: new Date(),
+      })
+      .returning();
+    if (!target) throw new Error("Failed to seed target user");
+
+    await db.insert(agencyMemberships).values({
+      agencyId: "11111111-aaaa-bbbb-cccc-000000000001",
+      userId: target.id,
+      status: "active",
+      isAgencyAdmin: false,
+    });
+
+    // The LEGACY shape (one entry per role) — the action should
+    // still accumulate these into a single multi-role grant.
+    const formData = new FormData();
+    formData.set(
+      "workspaceRoles",
+      JSON.stringify([
+        { workspaceId: ws.id, role: "designer" },
+        { workspaceId: ws.id, role: "publisher" },
+      ]),
+    );
+
+    const result = await updateMemberRolesAction(target.id, {}, formData);
+    expect(result).toEqual({ saved: true });
+
+    const persisted = await db
+      .select({ role: workspaceMembershipRoles.role })
+      .from(workspaceMembershipRoles)
+      .innerJoin(
+        workspaceMemberships,
+        eq(workspaceMembershipRoles.workspaceMembershipId, workspaceMemberships.id),
+      )
+      .where(eq(workspaceMemberships.userId, target.id));
+    expect(new Set(persisted.map((r) => r.role))).toEqual(new Set(["designer", "publisher"]));
+  });
+
   it("updateMemberRolesAction: assigns a workspace role end-to-end (no #441, no trigger error)", async () => {
     const { updateMemberRolesAction } = await import("@/app/(app)/app/users/actions");
     const { db } = await import("@/lib/db");
