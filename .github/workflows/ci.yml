@@ -70,7 +70,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
         env:
           POSTGRES_USER: planner
           POSTGRES_PASSWORD: planner_ci
@@ -93,7 +93,7 @@ jobs:
         # Pinned to v1.27.4 (latest stable). zizmor rejects `latest` and
         # floating minor tags (e.g. v1.27) per its unpinned-images
         # audit. Keep the comment in `docker-compose.dev.yml` in sync.
-        image: axllent/mailpit:v1.27.4
+        image: axllent/mailpit:v1.27.4@sha256:df6c2541907e1be6fac21f509927cf6ed771617a1f4b361ef66d97bd05593d2d
         ports:
           - 1025:1025
           - 8025:8025
@@ -229,7 +229,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
         env:
           POSTGRES_USER: planner
           POSTGRES_PASSWORD: planner_ci
@@ -301,9 +301,9 @@ jobs:
         # this job is the single source of truth.
         run: |
           docker buildx build \
-            --build-arg APP_VERSION=${{ github.sha }} \
-            --tag laratik-planner:ci-${{ github.sha }} \
-            --tag ghcr.io/laratik/laratik-planner:${{ github.sha }} \
+            --build-arg APP_VERSION="$GITHUB_SHA" \
+            --tag "laratik-planner:ci-${GITHUB_SHA}" \
+            --tag "ghcr.io/laratik/laratik-planner:${GITHUB_SHA}" \
             --tag ghcr.io/laratik/laratik-planner:latest \
             --cache-from type=gha \
             --load \
@@ -319,9 +319,9 @@ jobs:
         # also moved here from deploy.yml's build job.
         run: |
           docker buildx build \
-            --build-arg APP_VERSION=${{ github.sha }} \
-            --tag laratik-planner-migrator:ci-${{ github.sha }} \
-            --tag ghcr.io/laratik/laratik-planner-migrator:${{ github.sha }} \
+            --build-arg APP_VERSION="$GITHUB_SHA" \
+            --tag "laratik-planner-migrator:ci-${GITHUB_SHA}" \
+            --tag "ghcr.io/laratik/laratik-planner-migrator:${GITHUB_SHA}" \
             --tag ghcr.io/laratik/laratik-planner-migrator:latest \
             --target migrator \
             --cache-from type=gha \
@@ -350,15 +350,15 @@ jobs:
             --network host \
             --name laratik-planner-smoke \
             -e NODE_ENV=production \
-            -e AUTH_SECRET=$AUTH_SECRET \
-            -e AGENCY_COOKIE_SECRET=$AGENCY_COOKIE_SECRET \
-            -e DATABASE_URL=$DATABASE_URL \
+            -e "AUTH_SECRET=$AUTH_SECRET" \
+            -e "AGENCY_COOKIE_SECRET=$AGENCY_COOKIE_SECRET" \
+            -e "DATABASE_URL=$DATABASE_URL" \
             -e AUTH_URL=http://127.0.0.1:3000 \
             -e SMTP_HOST=localhost \
             -e SMTP_USER=ci \
             -e SMTP_PASSWORD=ci-only \
             -e SMTP_FROM='ci <ci@planner.test>' \
-            laratik-planner:ci-${{ github.sha }}
+            "laratik-planner:ci-${GITHUB_SHA}"
           # Wait up to 60s for the liveness endpoint (Next.js standalone
           # boot + first request on a cold GHA runner is ~20-30s in our
           # observed range; 60s leaves comfortable headroom).
@@ -397,7 +397,7 @@ jobs:
         # does not push a half-broken image to the registry. If the
         # smoke step exits non-zero, this step is skipped via `if:` and
         # the job fails before the push.
-        if: success()
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -411,11 +411,11 @@ jobs:
         # previous push (in deploy.yml's build job) is gone as of the
         # 2026-08-28 single-build change; this is the only place the
         # production image is published.
-        if: success()
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          docker push ghcr.io/laratik/laratik-planner:${{ github.sha }}
+          docker push "ghcr.io/laratik/laratik-planner:${GITHUB_SHA}"
           docker push ghcr.io/laratik/laratik-planner:latest
-          docker push ghcr.io/laratik/laratik-planner-migrator:${{ github.sha }}
+          docker push "ghcr.io/laratik/laratik-planner-migrator:${GITHUB_SHA}"
           docker push ghcr.io/laratik/laratik-planner-migrator:latest
         timeout-minutes: 5
 
@@ -481,9 +481,9 @@ jobs:
         # summary so on-call can read it without re-running locally.
         if: always()
         run: |
-          echo "## SMTP cert status" >> $GITHUB_STEP_SUMMARY
-          cat /tmp/cert.json 2>/dev/null >> $GITHUB_STEP_SUMMARY \
-            || echo '{"note":"cert.json not produced (probe step skipped)"}' >> $GITHUB_STEP_SUMMARY
+          echo "## SMTP cert status" >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/cert.json 2>/dev/null >> "$GITHUB_STEP_SUMMARY" \
+            || echo '{"note":"cert.json not produced (probe step skipped)"}' >> "$GITHUB_STEP_SUMMARY"
         timeout-minutes: 1
 
   lint-meta:

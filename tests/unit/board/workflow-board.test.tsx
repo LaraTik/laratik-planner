@@ -128,6 +128,30 @@ describe("WorkflowBoard", () => {
     const items = [makeItem({ id: "a", status: "ready_to_publish" })];
     render(<WorkflowBoard items={items} columns={COLUMNS} workspaceSlug="acme" />);
     expect(screen.getByText(/Ready To Publish/i)).toBeInTheDocument();
+    expect(screen.getByTestId("board-card-status")).toBeInTheDocument();
+  });
+
+  it("keeps format, planned date, assignments, and status in separate card regions", () => {
+    render(
+      <WorkflowBoard
+        items={[
+          makeItem({
+            id: "regions",
+            status: "in_design",
+            format: "static_post",
+            plannedPublishAt: "2026-08-21T00:00:00.000Z",
+          }),
+        ]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+      />,
+    );
+
+    const card = screen.getByTestId("board-card-regions");
+    expect(within(card).getByText("Static Post")).toBeInTheDocument();
+    expect(within(card).getByRole("time")).toBeInTheDocument();
+    expect(within(card).getByTestId("board-card-people")).toBeInTheDocument();
+    expect(within(card).getByTestId("board-card-status")).toBeInTheDocument();
   });
 
   it("renders the human format label", () => {

@@ -30,10 +30,8 @@ name: Release
 #     a maintainer can audit "what was on production at any past
 #     time" from the GitHub UI alone.
 #
-# Permissions: contents: write to create the tag and release.
-# The GITHUB_TOKEN default has contents: read; this workflow needs
-# write for the tag push. The token is scoped per-run and revoked
-# when the run ends.
+# Permissions: the release job alone gets contents: write to create the
+# tag and release. The default workflow token remains read-only elsewhere.
 
 on:
   workflow_run:
@@ -51,15 +49,14 @@ concurrency:
   group: release
   cancel-in-progress: false
 
-permissions:
-  contents: write
-
 jobs:
   release:
     name: Tag + GitHub release
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: write
     steps:
       - name: Resolve the head SHA + deploy run
         id: resolve
@@ -133,7 +130,7 @@ jobs:
           # Create or update the release. The deploy URL is in the
           # body for direct audit; the run page is the canonical
           # source of truth.
-          DEPLOY_RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${RUN_ID}"
+          DEPLOY_RUN_URL="https://github.com/${REPOSITORY}/actions/runs/${RUN_ID}"
           if gh release view "$TAG" --repo "$REPOSITORY" >/dev/null 2>&1; then
             echo "Release ${TAG} already exists; leaving it unchanged."
           else

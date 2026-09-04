@@ -49,7 +49,7 @@ describe("CI production-image smoke environment", () => {
     expect(buildSmoke).toContain(
       "AGENCY_COOKIE_SECRET: ci_agency_cookie_secret_not_for_production_xxxxxxxxx",
     );
-    expect(buildSmoke).toContain("-e AGENCY_COOKIE_SECRET=$AGENCY_COOKIE_SECRET");
+    expect(buildSmoke).toContain('-e "AGENCY_COOKIE_SECRET=$AGENCY_COOKIE_SECRET"');
   });
 
   it("bakes the immutable Git SHA and does not replace it with the mutable image tag", () => {
@@ -62,22 +62,13 @@ describe("CI production-image smoke environment", () => {
     const compose = readFileSync(resolve(process.cwd(), "docker-compose.yml"), "utf8");
     const healthCheck = readFileSync(resolve(process.cwd(), "scripts/vps/health-check.sh"), "utf8");
 
-    // 2026-08-28 (single-build change): ci.yml moved from
-    // `docker build --build-arg APP_VERSION=${GITHUB_SHA}` to
-    // `docker buildx build --build-arg APP_VERSION=${{ github.sha }}`.
     // The contract is "APP_VERSION must be set to the immutable SHA,
-    // never to the mutable image tag". Both forms satisfy it; the
-    // mutable-tag form would be `--build-arg APP_VERSION=$IMAGE_TAG`
-    // or `--build-arg APP_VERSION=latest`, neither of which the
-    // workflow can contain.
-    expect(ciWorkflow).toMatch(/--build-arg APP_VERSION=(?:\$GITHUB_SHA|\$\{\{ github\.sha \}\})/);
-    // The deploy.yml build job (now dispatch-only) must also use the
-    // SHA, not the tag. ${{ github.sha }} on a dispatch is the
-    // workflow file's SHA (not the dispatched ref) — the
-    // `workflow_run.head_sha ||` fallback is the dispatch path.
-    expect(deployWorkflow).toContain(
-      "APP_VERSION=${{ github.event.workflow_run.head_sha || github.sha }}",
-    );
+    // never to the mutable image tag". CI uses the shell's GITHUB_SHA;
+    // deploy resolves the requested ref to a commit before building.
+    // Shell quoting is intentional because actionlint/shellcheck must
+    // also accept the workflow's run blocks.
+    expect(ciWorkflow).toMatch(/--build-arg APP_VERSION="?\$GITHUB_SHA"?/);
+    expect(deployWorkflow).toContain("APP_VERSION=${{ needs.resolve.outputs.sha }}");
     expect(dockerfile).toContain("ENV APP_VERSION=$APP_VERSION");
     expect(compose).not.toContain("APP_VERSION: ${IMAGE_TAG:-latest}");
     expect(healthCheck).toContain('EXPECTED_APP_VERSION="${EXPECTED_APP_VERSION:-}"');

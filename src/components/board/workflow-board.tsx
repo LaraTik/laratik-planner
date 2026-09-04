@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Palette, User } from "lucide-react";
+import { CalendarDays, Palette, User } from "lucide-react";
 import { StatusBadge } from "@/components/content/status-badge";
-import { humanFormat, type ContentStatus } from "@/lib/content/status";
+import { humanFormat, statusBadgeVariant, type ContentStatus } from "@/lib/content/status";
 import { formatDate } from "@/lib/i18n/format-locale";
 import type { LocaleCode } from "@/lib/i18n/locales";
 import { cn } from "@/lib/utils";
@@ -172,22 +172,12 @@ function PersonRow({
 }) {
   const tone =
     roleAccent === "primary" ? "bg-primary-subtle text-primary" : "bg-warning-subtle text-warning";
-  // Pattern mirrors the planning list's PeopleCell (see
-  // src/components/workspace/people-cell.tsx): single-line
-  // row, role icon as a 5×5 chip, role label as a small
-  // uppercase prefix hidden on narrow viewports to save
-  // horizontal space, and the name wrapped in
-  // `<bdi dir="auto">` so an Arabic / Hebrew / mixed-script
-  // display name truncates from the inline-end of its own
-  // text rather than the inline-end of the surrounding
-  // LTR/RTL container. The previous `flex justify-between`
-  // layout forced long names to break word-by-word on a
-  // 7-column board (each card is ~180 px wide); the
-  // truncate with ellipsis path is the proven pattern
-  // across the app.
+  // Keep the role label and name in a vertical content stack. The board
+  // can be seven columns wide at desktop, so a horizontal label/name split
+  // leaves too little room for Arabic and long display names.
   return (
     <span
-      className="text-label inline-flex max-w-full min-w-0 items-center gap-1.5 overflow-hidden"
+      className="border-border/80 bg-surface-subtle/60 text-label inline-flex max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-[var(--radius-control)] border px-2 py-1.5"
       data-testid={testId}
       data-role={roleLabel.toLowerCase()}
       data-empty={name ? null : "true"}
@@ -201,21 +191,37 @@ function PersonRow({
       >
         {name ? <Icon className="h-3 w-3" aria-hidden={true} /> : null}
       </span>
-      <span className="text-fg-muted hidden font-semibold tracking-wide uppercase lg:inline">
-        {roleLabel}
-      </span>
-      {name ? (
-        <bdi dir="auto" className="text-fg-primary min-w-0 truncate font-medium" title={name}>
-          {name}
-        </bdi>
-      ) : (
-        <span className="text-fg-muted min-w-0 truncate font-medium italic">
-          {t ? t("common.ownerUnassigned") : "Unassigned"}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-fg-muted truncate text-[10px] leading-3 font-semibold tracking-wide uppercase">
+          {roleLabel}
         </span>
-      )}
+        {name ? (
+          <bdi
+            dir="auto"
+            className="text-fg-primary block min-w-0 truncate font-medium"
+            title={name}
+          >
+            {name}
+          </bdi>
+        ) : (
+          <span className="text-fg-muted block min-w-0 truncate font-medium italic">
+            {t ? t("common.ownerUnassigned") : "Unassigned"}
+          </span>
+        )}
+      </span>
     </span>
   );
 }
+
+const STATUS_BORDER_CLASSES: Record<string, string> = {
+  default: "border-s-border",
+  primary: "border-s-primary",
+  success: "border-s-success",
+  warning: "border-s-warning",
+  danger: "border-s-danger",
+  info: "border-s-info",
+  outline: "border-s-border",
+};
 
 function BoardCard({
   item,
@@ -236,20 +242,37 @@ function BoardCard({
     item.plannedPublishAt instanceof Date ? item.plannedPublishAt : new Date(item.plannedPublishAt);
   const ownerName = displayNameFor(memberDirectory, item.contentOwnerId);
   const designerName = displayNameFor(memberDirectory, item.designerId);
+  const statusBorder =
+    STATUS_BORDER_CLASSES[statusBadgeVariant(item.status)] ?? STATUS_BORDER_CLASSES.default;
   return (
     <Link
       href={`/app/w/${workspaceSlug}/planning/${item.id}`}
       data-testid={`board-card-${item.id}`}
-      className="border-border bg-surface hover:border-primary focus-visible:ring-focus-ring block min-w-0 overflow-hidden rounded-[var(--radius-control)] border p-3 transition-colors focus:outline-none focus-visible:ring-2"
+      className={cn(
+        "group border-border bg-surface hover:border-primary/60 hover:bg-primary-subtle/20 focus-visible:ring-focus-ring block min-w-0 overflow-hidden rounded-[var(--radius-control)] border border-s-4 p-3 transition-[border-color,background-color,box-shadow] duration-200 hover:shadow-sm focus:outline-none focus-visible:ring-2",
+        statusBorder,
+      )}
     >
-      <p className="text-body text-fg-primary line-clamp-2 min-w-0 font-semibold">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className="bg-surface-subtle text-fg-secondary border-border/80 min-w-0 truncate rounded-full border px-2 py-0.5 text-[10px] leading-4 font-semibold">
+          <bdi dir="auto">
+            {t ? t(`planningFilters.formatLabels.${item.format}`) : humanFormat(item.format)}
+          </bdi>
+        </span>
+      </div>
+      <p className="text-title-card text-fg-primary mt-2 line-clamp-2 min-w-0 font-semibold">
         <bdi dir="auto">{item.title}</bdi>
       </p>
-      <p className="text-label text-fg-muted my-2 min-w-0 truncate" dir="auto">
-        {t ? t(`planningFilters.formatLabels.${item.format}`) : humanFormat(item.format)} ·{" "}
-        <bdi dir="auto">{formatDate(publishDate, locale, { timeZone: workspaceTimezone })}</bdi>
-      </p>
-      <div className="mt-2 flex flex-col gap-1" data-testid="board-card-people">
+      <div className="text-label text-fg-muted mt-2 flex min-w-0 items-center gap-1.5" dir="auto">
+        <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        <time dateTime={publishDate.toISOString()} className="truncate">
+          {formatDate(publishDate, locale, { timeZone: workspaceTimezone })}
+        </time>
+      </div>
+      <div
+        className="border-border mt-3 flex min-w-0 flex-col gap-1.5 border-t pt-2.5"
+        data-testid="board-card-people"
+      >
         <PersonRow
           Icon={Palette}
           roleLabel={t ? t("common.peopleRoleDesigner") : "Designer"}
@@ -269,13 +292,17 @@ function BoardCard({
       </div>
       {!designerName ? (
         <p
-          className="text-label text-primary mt-1 font-semibold"
+          className="border-primary/20 bg-primary-subtle/60 text-label text-primary mt-2 flex items-start gap-1.5 rounded-[var(--radius-control)] border px-2 py-1.5 font-semibold"
           data-testid="board-card-designer-action"
         >
+          <Palette className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           {t ? t("common.openItemToAssignDesigner") : "Open item to assign a designer"}
         </p>
       ) : null}
-      <div className="mt-2">
+      <div
+        className="border-border mt-3 flex min-w-0 items-center border-t pt-2.5"
+        data-testid="board-card-status"
+      >
         <StatusBadge status={item.status} {...(t ? { t } : {})} />
       </div>
     </Link>
