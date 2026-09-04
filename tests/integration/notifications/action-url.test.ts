@@ -12,8 +12,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
  * meaningful coverage is the DB round trip + the URL shape on the
  * row. Putting the file here keeps it next to the other service-
  * level integration tests (`discussions`, `deliveries`, etc.) and
- * inherits the integration suite's `setup.ts` (mocked `next/cache`
- * + post-file truncate).
+ * inherits the integration suite's `setup.ts` (mocked `next/cache`).
  *
  * The fix introduced `buildActionUrlForContentItem` in
  * `src/lib/notifications/service.ts` so the bell click lands the
@@ -58,6 +57,15 @@ async function seedWorkspaceAndContentItem() {
     })
     .returning();
   if (!manager) throw new Error("user seed failed");
+  const [reviewer] = await db
+    .insert(schema.users)
+    .values({
+      email: `reviewer-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@example.com`,
+      displayName: "Reviewer",
+      name: "Reviewer",
+    })
+    .returning();
+  if (!reviewer) throw new Error("reviewer seed failed");
   const [agency] = await db
     .insert(schema.agencies)
     .values({
@@ -90,7 +98,7 @@ async function seedWorkspaceAndContentItem() {
       format: "static_post",
       status: "draft",
       createdBy: manager.id,
-      contentOwnerId: manager.id,
+      contentOwnerId: reviewer.id,
       plannedPublishAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     })
     .returning();

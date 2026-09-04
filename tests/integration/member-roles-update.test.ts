@@ -58,10 +58,8 @@ vi.mock("@/lib/auth/policy", () => ({
 
 describe("workspace_membership.updated_at + touch_updated_at trigger", () => {
   // Wipe everything tied to the test agency or the seeded users
-  // in FK-safe order. The shared afterAll truncate in setup.ts
-  // only runs once at the end of the file, so without this each
-  // test pollutes the next one and trips the email / slug unique
-  // constraints or the workspace FKs.
+  // in FK-safe order. Each test owns its reset so the suite remains
+  // isolated when it is run directly or through the file-by-file runner.
   const TEST_AGENCY_ID = "11111111-aaaa-bbbb-cccc-000000000001";
   const TEST_USER_ID = "00000000-0000-0000-0000-0000000000aa";
 

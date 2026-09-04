@@ -11,7 +11,15 @@ export default defineConfig({
     testTimeout: 30_000,
     hookTimeout: 30_000,
     pool: "forks",
-    poolOptions: { forks: { singleFork: true } },
+    // Integration files share one disposable database. The integration
+    // runner launches one Vitest process per file; this keeps the config
+    // safe for direct single-file runs while the runner owns file ordering.
+    fileParallelism: false,
+    // Keep hooks and tests in strict order as well. Several integration
+    // suites reset the same database in beforeEach; parallel hooks can
+    // deadlock TRUNCATE against fixture inserts even with one worker.
+    maxConcurrency: 1,
+    sequence: { concurrent: false, hooks: "list" },
   },
   resolve: {
     alias: {

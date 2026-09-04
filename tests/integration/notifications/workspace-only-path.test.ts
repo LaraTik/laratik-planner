@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
 
 /**
  * FEAT-AUDIT-R7 — workspace-only notification path. The refactor
@@ -24,6 +25,8 @@ if (!process.env.TEST_DATABASE_URL) {
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
 
 describe("R7 — workspace-only notification path through maybeNotify", () => {
+  let workspaceId: string;
+
   beforeAll(async () => {
     const { db } = await import("@/lib/db");
     const {
@@ -73,6 +76,7 @@ describe("R7 — workspace-only notification path through maybeNotify", () => {
       })
       .returning();
     if (!ws) throw new Error("workspace seed failed");
+    workspaceId = ws.id;
     const [m] = await db
       .insert(workspaceMemberships)
       .values({ workspaceId: ws.id, userId: actor.id, status: "active" })
@@ -108,6 +112,7 @@ describe("R7 — workspace-only notification path through maybeNotify", () => {
       aggregateId: user.id,
       payload: {
         userId: user.id,
+        workspaceId,
         title: "Workspace-scoped test",
         body: "no contentItemId",
         // Intentionally no `contentItemId` here.
@@ -154,6 +159,7 @@ describe("R7 — workspace-only notification path through maybeNotify", () => {
       aggregateId: user.id,
       payload: {
         userId: user.id,
+        workspaceId,
         title: "should be suppressed",
         body: "no row should land",
         messageKey: "notifications.kind.mention",
@@ -168,5 +174,34 @@ describe("R7 — workspace-only notification path through maybeNotify", () => {
     const { eq } = await import("drizzle-orm");
     const rows = await db.select().from(notifications).where(eq(notifications.userId, user.id));
     expect(rows.length).toBe(0);
+  });
+
+  it("preserves the event kind for workspace-only non-comment events", async () => {
+    const { db } = await import("@/lib/db");
+    const { outboxEvents, users, notifications } = await import("@/lib/db/schema");
+
+    const [user] = await db.select({ id: users.id }).from(users).limit(1);
+    if (!user) throw new Error("user seed failed");
+
+    await db.insert(outboxEvents).values({
+      eventType: "assignment",
+      aggregateType: "workspace",
+      aggregateId: workspaceId,
+      payload: {
+        userId: user.id,
+        workspaceId,
+        title: "Workspace assignment",
+        body: "A workspace-level assignment is waiting.",
+      },
+    });
+
+    const { dispatchOutboxOnce } = await import("@/lib/notifications/service");
+    await dispatchOutboxOnce();
+
+    const rows = await db.select().from(notifications).where(eq(notifications.userId, user.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.kind).toBe("assignment");
+    expect(rows[0]?.contentItemId).toBeNull();
+    expect(rows[0]?.workspaceId).toBe(workspaceId);
   });
 });

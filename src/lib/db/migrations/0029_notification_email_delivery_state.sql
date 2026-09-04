@@ -16,9 +16,35 @@ CREATE TABLE IF NOT EXISTS "notification_email_delivery" (
 	CONSTRAINT "notification_email_delivery_outbox_event_id_user_id_pk" PRIMARY KEY("outbox_event_id","user_id")
 );
 --> statement-breakpoint
-ALTER TABLE "notification_email_delivery" ADD CONSTRAINT "notification_email_delivery_outbox_event_id_outbox_event_id_fk" FOREIGN KEY ("outbox_event_id") REFERENCES "public"."outbox_event"("id") ON DELETE cascade ON UPDATE no action;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'notification_email_delivery_outbox_event_id_outbox_event_id_fk'
+      AND conrelid = 'notification_email_delivery'::regclass
+  ) THEN
+    ALTER TABLE "notification_email_delivery"
+      ADD CONSTRAINT "notification_email_delivery_outbox_event_id_outbox_event_id_fk"
+      FOREIGN KEY ("outbox_event_id") REFERENCES "public"."outbox_event"("id")
+      ON DELETE cascade ON UPDATE no action;
+  END IF;
+END $$;
 --> statement-breakpoint
-ALTER TABLE "notification_email_delivery" ADD CONSTRAINT "notification_email_delivery_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'notification_email_delivery_user_id_user_id_fk'
+      AND conrelid = 'notification_email_delivery'::regclass
+  ) THEN
+    ALTER TABLE "notification_email_delivery"
+      ADD CONSTRAINT "notification_email_delivery_user_id_user_id_fk"
+      FOREIGN KEY ("user_id") REFERENCES "public"."user"("id")
+      ON DELETE cascade ON UPDATE no action;
+  END IF;
+END $$;
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "notification_email_delivery_pending_idx" ON "notification_email_delivery" USING btree ("outbox_event_id","processed_at");
 --> statement-breakpoint

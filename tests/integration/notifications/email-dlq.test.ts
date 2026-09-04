@@ -109,21 +109,21 @@ describe("R6 — dispatchEmailOnce DLQ guard", () => {
 
     await db.insert(notificationPreferences).values({
       userId: user.id,
-      kind: "mention",
+      kind: "assignment",
       emailEnabled: true,
     });
 
     const [outbox] = await db
       .insert(outboxEvents)
       .values({
-        eventType: "comment_created",
-        aggregateType: "comment",
+        eventType: "assignment",
+        aggregateType: "content_item",
         aggregateId: user.id,
         payload: {
           userId: user.id,
           title: "DLQ test",
           body: "poison the row",
-          messageKey: "notifications.kind.mention",
+          messageKey: "notifications.kind.assignment",
         },
       })
       .returning();

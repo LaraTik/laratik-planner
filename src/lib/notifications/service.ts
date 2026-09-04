@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { updateTag } from "next/cache";
 import { db } from "@/lib/db";
 import {
@@ -468,9 +468,12 @@ export async function dispatchEmailOnce(
 }
 
 async function emailRecipientIds(eventType: string, payload: Record<string, unknown>) {
+  const mentionRecipients = Array.isArray(payload["mentionedUserIds"])
+    ? payload["mentionedUserIds"]
+    : [];
   const payloadRecipients =
-    eventType === "comment_created"
-      ? ((payload["mentionedUserIds"] as unknown[] | undefined) ?? [])
+    eventType === "comment_created" && mentionRecipients.length > 0
+      ? mentionRecipients
       : [payload["userId"]];
   if (eventType !== "publication_recorded") {
     return [...new Set(payloadRecipients.filter((id): id is string => typeof id === "string"))];
@@ -565,6 +568,25 @@ async function fanOutCommentCreated(
   // through to `maybeNotify` so the row's actionUrl is
   // exactly that — no fallback needed.
   const actionUrl = payload["actionUrl"] as string | undefined;
+  if (!contentItemId && workspaceId) {
+    const workspaceOnlyUserId = payload["userId"] as string | undefined;
+    if (!workspaceOnlyUserId) return [];
+    await maybeNotify(
+      {
+        userId: workspaceOnlyUserId,
+        kind: "mention",
+        title: (payload["title"] as string | undefined) ?? defaultTitleFor("mention"),
+        body: (payload["body"] as string | undefined) ?? defaultBodyFor("mention"),
+        ...(payload["messageKey"] ? { messageKey: payload["messageKey"] as string } : {}),
+        ...(payload["messageParams"]
+          ? { messageParams: payload["messageParams"] as Record<string, string | number> }
+          : {}),
+      },
+      tx,
+      { workspaceId, ...(actionUrl ? { actionUrl } : {}) },
+    );
+    return [workspaceOnlyUserId];
+  }
   if (!commentId || !contentItemId || !authorId) return [];
 
   // Mentions: notify each mentioned user
@@ -610,14 +632,11 @@ async function fanOutCommentCreated(
  * `maybeNotify` consults `notification_preferences` before writing.
  *
  * FEAT-AUDIT-R7 — single dispatch path. The previous implementation
- * had two branches: a `contentItemId`-present path through
- * `maybeNotify` (preference-checked) and a `contentItemId`-absent
- * path that re-implemented the preference check inline. The two
- * branches could drift (e.g. an `actionUrl` passed on the
- * contentItemId-less branch was silently dropped because the
- * manual insert didn't honour the `opts.actionUrl` argument).
- * Routing both through `maybeNotify` keeps the preference check
- * and the actionUrl fallback in one place.
+ * had a separate `contentItemId`-absent branch that re-implemented
+ * preference handling and hard-coded the notification kind to
+ * `mention`. Routing workspace-only events through the same
+ * `maybeNotify` call preserves the actual event kind, preference,
+ * copy, and actionUrl semantics in one place.
  */
 async function fanOutSingleRecipient(
   payload: Record<string, unknown>,
@@ -650,7 +669,10 @@ async function fanOutSingleRecipient(
       ...(actionUrl ? { actionUrl } : {}),
     },
     tx,
-    { ...(workspaceId ? { workspaceId } : {}) },
+    {
+      ...(workspaceId ? { workspaceId } : {}),
+      ...(actionUrl ? { actionUrl } : {}),
+    },
   );
   return [userId];
 }
@@ -817,18 +839,28 @@ export async function buildActionUrlForContentItem(
     return "/app";
   }
   const runner = tx ?? db;
-  // Accept either the UUID or the slug. The Drizzle `or(...)`
-  // expression resolves in a single round trip.
+  // A UUID column cannot safely be compared with an arbitrary slug in the
+  // same SQL predicate: PostgreSQL attempts to cast the slug to uuid before
+  // evaluating the OR. Branch first so both accepted identifiers remain safe.
+  const workspaceWhere = isUuid(workspaceIdentifier)
+    ? eq(workspaces.id, workspaceIdentifier)
+    : eq(workspaces.slug, workspaceIdentifier);
   const [row] = await runner
     .select({ id: workspaces.id, slug: workspaces.slug })
     .from(workspaces)
-    .where(or(eq(workspaces.id, workspaceIdentifier), eq(workspaces.slug, workspaceIdentifier)))
+    .where(workspaceWhere)
     .limit(1);
   if (!row) {
     return "/app";
   }
   const fragment = hash ? `#${hash}` : "";
   return `/app/w/${row.slug}/planning/${contentItemId}${fragment}`;
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: string): boolean {
+  return UUID_PATTERN.test(value);
 }
 
 async function maybeNotify(

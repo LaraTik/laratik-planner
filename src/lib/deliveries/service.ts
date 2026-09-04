@@ -192,8 +192,8 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
     if (itemMeta) {
       // Resolve the slug once per delivery submission so every
       // recipient gets a valid `/app/w/<slug>/planning/<id>` link
-      // (the previous "no actionUrl" path fell through to a broken
-      // `/app/planning/<id>` literal that 404'd in the App Router).
+      // (the previous fallback pointed at an invalid planning route and
+      // 404'd in the App Router).
       const actionUrl = await buildActionUrlForContentItem(
         item.workspaceId,
         input.contentItemId,

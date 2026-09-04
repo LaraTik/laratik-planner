@@ -101,10 +101,15 @@ export function NotificationPreferencesForm({
           <table className="w-full text-start">
             <thead className="bg-surface-subtle text-label text-fg-muted">
               <tr>
-                <th scope="col" className="px-3 py-2 text-start font-semibold">
+                <th
+                  id="notification-preferences-kind-column"
+                  scope="col"
+                  className="px-3 py-2 text-start font-semibold"
+                >
                   {t("account.kindColumn")}
                 </th>
                 <th
+                  id="notification-preferences-bell-column"
                   scope="col"
                   className="px-3 py-2 text-center font-semibold"
                   aria-describedby="notification-preferences-bell-hint"
@@ -112,6 +117,7 @@ export function NotificationPreferencesForm({
                   {t("account.bellColumn")}
                 </th>
                 <th
+                  id="notification-preferences-email-column"
                   scope="col"
                   className="px-3 py-2 text-center font-semibold"
                   aria-describedby="notification-preferences-email-hint"
@@ -128,6 +134,7 @@ export function NotificationPreferencesForm({
                   data-testid={`notification-preferences-row-${kind}`}
                 >
                   <th
+                    id={`notification-preferences-kind-${kind}`}
                     scope="row"
                     className="text-body text-fg-primary px-3 py-2 text-start font-normal"
                   >
@@ -139,7 +146,8 @@ export function NotificationPreferencesForm({
                       name={`inApp_${kind}`}
                       value="on"
                       defaultChecked={initialPrefs[kind]?.inAppEnabled ?? true}
-                      aria-describedby={`notification-preferences-bell-hint`}
+                      aria-labelledby={`notification-preferences-kind-${kind} notification-preferences-bell-column`}
+                      aria-describedby="notification-preferences-bell-hint"
                       data-testid={`notification-preferences-bell-${kind}`}
                     />
                   </td>
@@ -149,7 +157,8 @@ export function NotificationPreferencesForm({
                       name={`email_${kind}`}
                       value="on"
                       defaultChecked={initialPrefs[kind]?.emailEnabled ?? false}
-                      aria-describedby={`notification-preferences-email-hint`}
+                      aria-labelledby={`notification-preferences-kind-${kind} notification-preferences-email-column`}
+                      aria-describedby="notification-preferences-email-hint"
                       data-testid={`notification-preferences-email-${kind}`}
                     />
                   </td>
@@ -162,11 +171,15 @@ export function NotificationPreferencesForm({
                 data-testid="notification-preferences-row-system"
               >
                 <th
+                  id="notification-preferences-kind-system"
                   scope="row"
                   className="text-body text-fg-secondary px-3 py-2 text-start font-normal"
                 >
                   {t("account.kindLabel.system")}
-                  <span className="text-label text-fg-muted ms-2 block sm:inline">
+                  <span
+                    id="notification-preferences-locked-hint"
+                    className="text-label text-fg-muted ms-2 block sm:inline"
+                  >
                     {t("account.inAppLockedHint")}
                   </span>
                 </th>
@@ -175,6 +188,7 @@ export function NotificationPreferencesForm({
                     id="notification-preferences-inApp-system"
                     checked
                     disabled
+                    aria-labelledby="notification-preferences-kind-system notification-preferences-bell-column"
                     aria-describedby="notification-preferences-locked-hint"
                     data-testid="notification-preferences-bell-system"
                   />
