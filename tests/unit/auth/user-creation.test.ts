@@ -318,6 +318,39 @@ describe("createUserDirectly — happy path", () => {
       }),
     ).rejects.toThrow("Invalid workspace access selection");
   });
+
+  it("persists every selected role once and returns each workspace once", async () => {
+    dbState.selectResults = [[], [], [{ id: "w-1" }]];
+
+    const result = await createUserDirectly({
+      agencyId: "a-1",
+      email: "multi-role@example.com",
+      password: "TempPass123",
+      grantsAgencyAdmin: true,
+      workspaceRoles: [
+        {
+          workspaceId: "00000000-0000-0000-0000-000000000001",
+          roles: ["designer", "publisher", "designer"],
+        },
+      ],
+      createdBy: "u-admin",
+    });
+
+    const roleInserts = dbState.insertCalls.filter((call) => {
+      const values = call.values as Record<string, unknown>;
+      return "workspaceMembershipId" in values;
+    });
+    expect(roleInserts.map((call) => (call.values as { role: string }).role)).toEqual([
+      "designer",
+      "publisher",
+    ]);
+    expect(result.acceptedWorkspaceIds).toEqual(["00000000-0000-0000-0000-000000000001"]);
+    expect(
+      dbState.insertCalls.find(
+        (call) => (call.values as Record<string, unknown>).isAgencyAdmin === true,
+      ),
+    ).toBeDefined();
+  });
 });
 
 describe("createUserDirectly — branch coverage for the optional inputs", () => {

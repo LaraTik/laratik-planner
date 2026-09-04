@@ -22,7 +22,7 @@ import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { IconTile } from "@/components/workspace/icon-button";
 import { PageHeader } from "@/components/workspace/page-header";
-import { isAgencyAdmin } from "@/lib/auth/policy";
+import { hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 
@@ -44,6 +44,8 @@ type MemberRow = {
 function teamColumns(args: {
   actorId: string;
   actorIsAgencyAdmin: boolean;
+  canManageRoles: boolean;
+  roleScopeWorkspaceId?: string;
   memberRolesByWorkspace: Record<string, Record<string, string[]>>;
   allWorkspaces: { id: string; name: string }[];
   t: (key: string) => string;
@@ -110,23 +112,27 @@ function teamColumns(args: {
     {
       key: "actions",
       header: <span className="sr-only">{args.t("team.actionsAria")}</span>,
-      cell: (member) => (
-        <MemberEditTrigger
-          member={{
-            id: member.id,
-            name: member.name,
-            email: member.email,
-            isAgencyAdmin: member.isAgencyAdmin,
-          }}
-          actorId={args.actorId}
-          actorIsAgencyAdmin={args.actorIsAgencyAdmin}
-          workspaces={args.allWorkspaces.map((w) => ({
-            id: w.id,
-            name: w.name,
-            currentRoles: args.memberRolesByWorkspace[member.id]?.[w.id] ?? [],
-          }))}
-        />
-      ),
+      cell: (member) =>
+        args.canManageRoles ? (
+          <MemberEditTrigger
+            member={{
+              id: member.id,
+              name: member.name,
+              email: member.email,
+              isAgencyAdmin: member.isAgencyAdmin,
+            }}
+            actorId={args.actorId}
+            actorIsAgencyAdmin={args.actorIsAgencyAdmin}
+            {...(args.roleScopeWorkspaceId
+              ? { roleScopeWorkspaceId: args.roleScopeWorkspaceId }
+              : {})}
+            workspaces={args.allWorkspaces.map((w) => ({
+              id: w.id,
+              name: w.name,
+              currentRoles: args.memberRolesByWorkspace[member.id]?.[w.id] ?? [],
+            }))}
+          />
+        ) : null,
     },
   ];
 }
@@ -160,7 +166,11 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
   const { t, code } = await tForActive();
-  const canInvite = await isAgencyAdmin({ id: session.user.id }, workspace.agencyId);
+  const actor = { id: session.user.id };
+  const actorIsAgencyAdmin = await isAgencyAdmin(actor, workspace.agencyId);
+  const canManageRoles =
+    actorIsAgencyAdmin || (await hasWorkspaceRole(actor, workspace.id, ["workspace_manager"]));
+  const canInvite = actorIsAgencyAdmin;
 
   // Active members (join users + roles)
   const memberRows = await db
@@ -222,14 +232,18 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
     )
     .orderBy(desc(invitations.createdAt));
 
-  // All agency workspaces + per-member role map for the Edit drawer.
-  // The drawer pre-fills every workspace select, not just the current
-  // workspace's role, so managers can adjust access in any workspace
-  // from a single team-page row.
+  // Agency admins can edit the whole agency from this surface. Workspace
+  // managers receive only the current workspace in the drawer, and the
+  // server action enforces the same scope independently. Keep the query
+  // scoped too so manager pages do not load unrelated workspace roles.
   const allWorkspaces = await db
     .select({ id: workspaces.id, name: workspaces.name })
     .from(workspaces)
-    .where(eq(workspaces.agencyId, workspace.agencyId));
+    .where(
+      actorIsAgencyAdmin
+        ? eq(workspaces.agencyId, workspace.agencyId)
+        : and(eq(workspaces.agencyId, workspace.agencyId), eq(workspaces.id, workspace.id)),
+    );
   const roleRows = await db
     .select({
       userId: workspaceMemberships.userId,
@@ -340,9 +354,13 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
                 rows={[...members.entries()].map(([id, member]) => ({ id, ...member }))}
                 columns={teamColumns({
                   actorId: session.user.id,
-                  actorIsAgencyAdmin: canInvite,
+                  actorIsAgencyAdmin,
+                  canManageRoles,
+                  ...(actorIsAgencyAdmin ? {} : { roleScopeWorkspaceId: workspace.id }),
                   memberRolesByWorkspace,
-                  allWorkspaces,
+                  allWorkspaces: actorIsAgencyAdmin
+                    ? allWorkspaces
+                    : allWorkspaces.filter((w) => w.id === workspace.id),
                   t,
                 })}
               />

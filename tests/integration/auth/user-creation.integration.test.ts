@@ -173,6 +173,109 @@ describe("createUserDirectly — admin-initiated user creation", () => {
     expect(metadata?.workspaceGrantCount).toBe(1);
   });
 
+  it("creates an agency admin with every selected role across multiple workspaces", async () => {
+    const { db } = await import("@/lib/db");
+    const {
+      agencies,
+      agencyMemberships,
+      users,
+      workspaceMembershipRoles,
+      workspaceMemberships,
+      workspaces,
+    } = await import("@/lib/db/schema");
+    const { and, eq, inArray } = await import("drizzle-orm");
+
+    const [admin] = await db
+      .insert(users)
+      .values({
+        email: "admin@multi-create.test",
+        displayName: "Admin",
+        emailVerified: new Date(),
+        role: "agency_admin",
+      })
+      .returning();
+    if (!admin) throw new Error("Failed to seed admin");
+    const [agency] = await db
+      .insert(agencies)
+      .values({ name: "Multi Create Agency", slug: "multi-create-agency" })
+      .returning();
+    if (!agency) throw new Error("Failed to seed agency");
+    await db.insert(agencyMemberships).values({
+      agencyId: agency.id,
+      userId: admin.id,
+      status: "active",
+      isAgencyAdmin: true,
+    });
+    const [workspaceA, workspaceB] = await db
+      .insert(workspaces)
+      .values([
+        {
+          agencyId: agency.id,
+          name: "Multi Workspace A",
+          slug: "multi-workspace-a",
+          createdBy: admin.id,
+        },
+        {
+          agencyId: agency.id,
+          name: "Multi Workspace B",
+          slug: "multi-workspace-b",
+          createdBy: admin.id,
+        },
+      ])
+      .returning();
+    if (!workspaceA || !workspaceB) throw new Error("Failed to seed workspaces");
+
+    const result = await createUserDirectly({
+      agencyId: agency.id,
+      email: "multi-role-admin@create.test",
+      password: "TempPass123",
+      grantsAgencyAdmin: true,
+      workspaceRoles: [
+        {
+          workspaceId: workspaceA.id,
+          roles: ["designer", "publisher", "internal_reviewer", "designer"],
+        },
+        { workspaceId: workspaceB.id, role: "viewer" },
+      ],
+      createdBy: admin.id,
+    });
+
+    expect(result.acceptedWorkspaceIds).toEqual([workspaceA.id, workspaceB.id]);
+    const [agencyMembership] = await db
+      .select({ isAgencyAdmin: agencyMemberships.isAgencyAdmin })
+      .from(agencyMemberships)
+      .where(
+        and(eq(agencyMemberships.agencyId, agency.id), eq(agencyMemberships.userId, result.userId)),
+      );
+    expect(agencyMembership?.isAgencyAdmin).toBe(true);
+
+    const roleRows = await db
+      .select({
+        workspaceId: workspaceMemberships.workspaceId,
+        role: workspaceMembershipRoles.role,
+      })
+      .from(workspaceMemberships)
+      .innerJoin(
+        workspaceMembershipRoles,
+        eq(workspaceMembershipRoles.workspaceMembershipId, workspaceMemberships.id),
+      )
+      .where(
+        and(
+          eq(workspaceMemberships.userId, result.userId),
+          inArray(workspaceMemberships.workspaceId, [workspaceA.id, workspaceB.id]),
+        ),
+      );
+    expect(roleRows).toEqual(
+      expect.arrayContaining([
+        { workspaceId: workspaceA.id, role: "designer" },
+        { workspaceId: workspaceA.id, role: "publisher" },
+        { workspaceId: workspaceA.id, role: "internal_reviewer" },
+        { workspaceId: workspaceB.id, role: "viewer" },
+      ]),
+    );
+    expect(roleRows).toHaveLength(4);
+  });
+
   it("rejects an email that already has a user row (UserAlreadyExistsError) and rolls back the transaction", async () => {
     const { db } = await import("@/lib/db");
     const { agencies, agencyMemberships, users, workspaces } = await import("@/lib/db/schema");

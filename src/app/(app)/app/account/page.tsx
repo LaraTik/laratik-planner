@@ -51,7 +51,6 @@ export default async function AccountPage() {
         displayName: users.displayName,
         image: users.image,
         locale: users.locale,
-        role: users.role,
       })
       .from(users)
       .where(eq(users.id, userId))
@@ -107,8 +106,8 @@ export default async function AccountPage() {
           </span>
           <span className="flex items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-            <Badge variant={profile.role === "agency_admin" ? "primary" : "default"}>
-              {profile.role === "agency_admin" ? t("account.agencyAdmin") : t("account.member")}
+            <Badge variant={agency?.isAgencyAdmin ? "primary" : "default"}>
+              {agency?.isAgencyAdmin ? t("account.agencyAdmin") : t("account.member")}
             </Badge>
           </span>
         </div>

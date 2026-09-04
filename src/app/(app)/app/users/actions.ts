@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
-import { isAgencyAdmin, PermissionDeniedError } from "@/lib/auth/policy";
+import { hasWorkspaceRole, isAgencyAdmin, PermissionDeniedError } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { assertCanDemoteAgencyAdmin } from "@/lib/auth/member-safety";
@@ -309,7 +309,10 @@ function parseWorkspaceRolesJson(raw: FormDataEntryValue | null): ParsedWorkspac
  *    "no access" (the membership row stays, all role rows are removed).
  *
  * Safety:
- *  - Actor must be an active agency admin.
+ *  - An agency admin can replace roles across the agency.
+ *  - A workspace manager can replace roles only in the workspace named by
+ *    `roleScopeWorkspaceId` in the form. The target must already be an
+ *    active member of that workspace.
  *  - Actor cannot edit themselves (lockout: a non-admin can't reach this
  *    surface; a self-edit that demotes would lock the agency out).
  *  - The agency-membership row must be active (deactivated users are
@@ -333,11 +336,21 @@ export async function updateMemberRolesAction(
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) return { error: "Agency not configured" };
-  if (!(await isAgencyAdmin(actor, agencyId))) {
-    throw new PermissionDeniedError("update_member_roles");
-  }
   if (userId === session.user.id) {
     return { error: "You cannot edit your own role assignments." };
+  }
+
+  const actorIsAgencyAdmin = await isAgencyAdmin(actor, agencyId);
+  const rawScopeWorkspaceId = formData.get("roleScopeWorkspaceId");
+  const roleScopeWorkspaceId =
+    typeof rawScopeWorkspaceId === "string" && rawScopeWorkspaceId ? rawScopeWorkspaceId : null;
+  if (!actorIsAgencyAdmin) {
+    if (
+      !roleScopeWorkspaceId ||
+      !(await hasWorkspaceRole(actor, roleScopeWorkspaceId, ["workspace_manager"]))
+    ) {
+      throw new PermissionDeniedError("update_member_roles");
+    }
   }
 
   const grants = parseWorkspaceRolesJson(formData.get("workspaceRoles"));
@@ -389,18 +402,42 @@ export async function updateMemberRolesAction(
     0,
   );
 
-  // Confirm the target is an active member of this agency
-  const [target] = await db
-    .select({ userId: agencyMemberships.userId })
-    .from(agencyMemberships)
-    .where(
-      and(
-        eq(agencyMemberships.agencyId, agencyId),
-        eq(agencyMemberships.userId, userId),
-        eq(agencyMemberships.status, "active"),
-      ),
-    )
-    .limit(1);
+  // Confirm the target is an active member of the relevant scope. A
+  // workspace manager must not be able to use this action to edit a member
+  // from another workspace by simply changing the posted user id.
+  const [target] = actorIsAgencyAdmin
+    ? await db
+        .select({ userId: agencyMemberships.userId })
+        .from(agencyMemberships)
+        .where(
+          and(
+            eq(agencyMemberships.agencyId, agencyId),
+            eq(agencyMemberships.userId, userId),
+            eq(agencyMemberships.status, "active"),
+          ),
+        )
+        .limit(1)
+    : await db
+        .select({ userId: workspaceMemberships.userId })
+        .from(workspaceMemberships)
+        .innerJoin(workspaces, eq(workspaces.id, workspaceMemberships.workspaceId))
+        .innerJoin(
+          agencyMemberships,
+          and(
+            eq(agencyMemberships.userId, workspaceMemberships.userId),
+            eq(agencyMemberships.agencyId, agencyId),
+          ),
+        )
+        .where(
+          and(
+            eq(workspaceMemberships.workspaceId, roleScopeWorkspaceId as string),
+            eq(workspaceMemberships.userId, userId),
+            eq(workspaceMemberships.status, "active"),
+            eq(workspaces.agencyId, agencyId),
+            eq(agencyMemberships.status, "active"),
+          ),
+        )
+        .limit(1);
   if (!target) return { error: "Member not found." };
 
   // Load the agency's workspaces; scope the change to that set so a
@@ -414,15 +451,22 @@ export async function updateMemberRolesAction(
     .from(workspaces)
     .where(eq(workspaces.agencyId, agencyId));
   const validWorkspaceIds = new Set(agencyWorkspaces.map((w) => w.id));
+  if (roleScopeWorkspaceId && !validWorkspaceIds.has(roleScopeWorkspaceId)) {
+    return { error: "Invalid workspace access selection." };
+  }
   for (const id of grantByWorkspace.keys()) {
-    if (!validWorkspaceIds.has(id)) {
+    if (!validWorkspaceIds.has(id) || (roleScopeWorkspaceId && id !== roleScopeWorkspaceId)) {
       return { error: "Invalid workspace access selection." };
     }
   }
 
+  const workspaceIdsToUpdate = roleScopeWorkspaceId
+    ? new Set([roleScopeWorkspaceId])
+    : validWorkspaceIds;
+
   try {
     await db.transaction(async (tx) => {
-      for (const workspaceId of validWorkspaceIds) {
+      for (const workspaceId of workspaceIdsToUpdate) {
         const newRoles = grantByWorkspace.get(workspaceId) ?? [];
 
         // Upsert the membership row so the user can hold a role here.
@@ -540,55 +584,75 @@ export async function toggleAgencyAdminAction(
     .limit(1);
   if (!target) return { error: "Member not found." };
 
-  // No-op when the form's desired state matches the DB — still revalidate
-  // so any stale UI refreshes, and skip the safety check (no change).
-  if (target.isAgencyAdmin === desired) {
-    revalidatePath("/app/users");
-    revalidatePath(`/app/w/[slug]/team`, "page");
-    return { saved: true };
-  }
-
-  const [adminCount] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(agencyMemberships)
-    .where(
-      and(
-        eq(agencyMemberships.agencyId, agencyId),
-        eq(agencyMemberships.status, "active"),
-        eq(agencyMemberships.isAgencyAdmin, true),
-      ),
-    );
-  const currentCount = adminCount?.count ?? 0;
-  const afterCount = desired ? currentCount + 1 : currentCount - 1;
-
   try {
-    assertCanDemoteAgencyAdmin({
-      actorUserId: session.user.id,
-      targetUserId: userId,
-      // Only the demote path (target currently admin, desired false) needs
-      // the lockout check; the promote path is always safe.
-      targetIsAgencyAdmin: target.isAgencyAdmin && !desired,
-      activeAgencyAdminCountAfterChange: afterCount,
+    await db.transaction(async (tx) => {
+      // Serialize admin changes per agency. Without a transaction-scoped
+      // lock, two concurrent demotions can both observe two admins and
+      // leave the agency with none.
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${agencyId}))`);
+
+      const [lockedTarget] = await tx
+        .select({ isAgencyAdmin: agencyMemberships.isAgencyAdmin })
+        .from(agencyMemberships)
+        .where(
+          and(
+            eq(agencyMemberships.agencyId, agencyId),
+            eq(agencyMemberships.userId, userId),
+            eq(agencyMemberships.status, "active"),
+          ),
+        )
+        .limit(1);
+      if (!lockedTarget) throw new Error("Member not found.");
+      if (lockedTarget.isAgencyAdmin === desired) return;
+
+      const [adminCount] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(agencyMemberships)
+        .where(
+          and(
+            eq(agencyMemberships.agencyId, agencyId),
+            eq(agencyMemberships.status, "active"),
+            eq(agencyMemberships.isAgencyAdmin, true),
+          ),
+        );
+      const currentCount = adminCount?.count ?? 0;
+      const afterCount = desired ? currentCount + 1 : currentCount - 1;
+
+      assertCanDemoteAgencyAdmin({
+        actorUserId: session.user.id,
+        targetUserId: userId,
+        // Only the demote path (target currently admin, desired false) needs
+        // the lockout check; the promote path is always safe.
+        targetIsAgencyAdmin: lockedTarget.isAgencyAdmin && !desired,
+        activeAgencyAdminCountAfterChange: afterCount,
+      });
+
+      await tx
+        .update(agencyMemberships)
+        .set({ isAgencyAdmin: desired, updatedAt: new Date() })
+        .where(and(eq(agencyMemberships.agencyId, agencyId), eq(agencyMemberships.userId, userId)));
+      await tx.insert(securityAuditEvents).values({
+        actorId: session.user.id,
+        action: desired ? "member_promote_admin" : "member_demote_admin",
+        targetType: "user",
+        targetId: userId,
+        outcome: "success",
+      });
     });
   } catch (error) {
-    const message =
-      error instanceof Error && error.message ? error.message : "The change could not be applied.";
-    return { error: message };
+    const message = error instanceof Error ? error.message : "The change could not be applied.";
+    if (
+      message === "You cannot change your own agency-admin status" ||
+      message === "The final active agency administrator cannot be demoted" ||
+      message === "Member not found."
+    ) {
+      return { error: message };
+    }
+    captureError("users.toggleAgencyAdmin", error);
+    return {
+      error: "We couldn't apply the agency-admin change. Please try again.",
+    };
   }
-
-  await db.transaction(async (tx) => {
-    await tx
-      .update(agencyMemberships)
-      .set({ isAgencyAdmin: desired, updatedAt: new Date() })
-      .where(and(eq(agencyMemberships.agencyId, agencyId), eq(agencyMemberships.userId, userId)));
-    await tx.insert(securityAuditEvents).values({
-      actorId: session.user.id,
-      action: desired ? "member_promote_admin" : "member_demote_admin",
-      targetType: "user",
-      targetId: userId,
-      outcome: "success",
-    });
-  });
 
   revalidatePath("/app/users");
   revalidatePath(`/app/w/[slug]/team`, "page");

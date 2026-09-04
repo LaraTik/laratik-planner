@@ -69,6 +69,8 @@ export type MemberEditDrawerProps = {
   subject: MemberEditSubject | null;
   /** When false, the agency-admin toggle is hidden (and the action rejects). */
   actorIsAgencyAdmin: boolean;
+  /** Restricts a workspace manager's role save to this workspace. */
+  roleScopeWorkspaceId?: string;
   /** The signed-in user's id; used to hide the self-admin lockout UI. */
   actorUserId: string;
   workspaces: MemberEditWorkspace[];
@@ -116,6 +118,7 @@ const ROLE_LABEL_KEY: Record<string, string> = {
 export function MemberEditDrawer({
   subject,
   actorIsAgencyAdmin,
+  roleScopeWorkspaceId,
   actorUserId,
   workspaces,
   onOpenChange,
@@ -140,6 +143,7 @@ export function MemberEditDrawer({
             actorIsAgencyAdmin={actorIsAgencyAdmin}
             actorUserId={actorUserId}
             workspaces={workspaces}
+            {...(roleScopeWorkspaceId ? { roleScopeWorkspaceId } : {})}
             onClose={() => onOpenChange(false)}
             {...(t !== undefined ? { t } : {})}
           />
@@ -154,6 +158,7 @@ type FormProps = {
   actorIsAgencyAdmin: boolean;
   actorUserId: string;
   workspaces: MemberEditWorkspace[];
+  roleScopeWorkspaceId?: string;
   onClose: () => void;
   t?: (key: string, params?: Record<string, string | number>) => string;
 };
@@ -165,6 +170,7 @@ function MemberEditForm({
   actorIsAgencyAdmin,
   actorUserId,
   workspaces,
+  roleScopeWorkspaceId,
   onClose,
   t,
 }: FormProps) {
@@ -226,13 +232,20 @@ function MemberEditForm({
         </DialogTitle>
         <DialogDescription>
           {tr(
-            "users.memberEdit.description",
-            "Adjust agency-wide access and per-workspace roles. Each workspace can hold any number of roles — pick the ones that match what this person actually does.",
+            roleScopeWorkspaceId
+              ? "users.memberEdit.scopedDescription"
+              : "users.memberEdit.description",
+            roleScopeWorkspaceId
+              ? "Adjust this workspace's roles. Agency-wide access can only be changed by an agency administrator."
+              : "Adjust agency-wide access and per-workspace roles. Each workspace can hold any number of roles — pick the ones that match what this person actually does.",
           )}
         </DialogDescription>
       </DialogHeader>
 
       <form action={rolesFormAction} className="flex flex-1 flex-col">
+        {roleScopeWorkspaceId ? (
+          <input type="hidden" name="roleScopeWorkspaceId" value={roleScopeWorkspaceId} />
+        ) : null}
         <div className="flex-1 space-y-6 px-6 py-5">
           <ReadOnlyField label={tr("users.memberEdit.emailLabel", "Email")} value={subject.email} />
           <ReadOnlyField
@@ -258,8 +271,12 @@ function MemberEditForm({
               const withAccess = workspaces.filter((w) => w.currentRoles.length > 0).length;
               if (effectiveRoles.length === 0) {
                 return tr(
-                  "users.memberEdit.currentEffectiveRolesNone",
-                  "No access in any workspace",
+                  roleScopeWorkspaceId
+                    ? "users.memberEdit.currentEffectiveRolesNoneScoped"
+                    : "users.memberEdit.currentEffectiveRolesNone",
+                  roleScopeWorkspaceId
+                    ? "No access in this workspace"
+                    : "No access in any workspace",
                 );
               }
               if (withAccess === 1) {

@@ -15,21 +15,22 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  * own drawer instance (Radix Dialogs only mount their content when
  * open, so the cost is one portal + one hidden form per row).
  *
- * The drawer payload mirrors the Users-page payload exactly: all
- * agency workspaces + the target's current role in each, so the user
- * can adjust access in *any* workspace from here (not only the
- * workspace the team page is currently scoped to).
+ * Agency admins receive the full agency workspace payload. Workspace
+ * managers receive only the current workspace; the server action enforces
+ * that same scope independently.
  */
 export function MemberEditTrigger({
   member,
   actorId,
   actorIsAgencyAdmin,
+  roleScopeWorkspaceId,
   workspaces,
   t,
 }: {
   member: { id: string; name: string; email: string; isAgencyAdmin: boolean };
   actorId: string;
   actorIsAgencyAdmin: boolean;
+  roleScopeWorkspaceId?: string;
   workspaces: MemberEditWorkspace[];
   /**
    * Optional translator. When provided, the button's aria-label
@@ -70,6 +71,7 @@ export function MemberEditTrigger({
         actorIsAgencyAdmin={actorIsAgencyAdmin}
         actorUserId={actorId}
         workspaces={workspaces}
+        {...(roleScopeWorkspaceId ? { roleScopeWorkspaceId } : {})}
         onOpenChange={setOpen}
         {...(t ? { t } : {})}
       />

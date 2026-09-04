@@ -12,7 +12,11 @@ import {
 } from "@/lib/db/schema";
 import { generateStrongPassword, hashPassword, isPasswordStrong } from "@/lib/auth/password";
 import { normalizeEmailAddress } from "@/lib/auth/invitation-identity";
-import { workspaceRoleSchema, type WorkspaceRole } from "@/lib/auth/invitation-command";
+import {
+  flattenWorkspaceRoleGrants,
+  workspaceRoleSchema,
+  type WorkspaceRole,
+} from "@/lib/auth/invitation-command";
 import { reserveCapacity } from "@/lib/entitlements";
 
 /**
@@ -171,16 +175,9 @@ export async function createUserDirectly(
     //    free of business validation). The command shape can carry
     //    multiple roles per workspace; flatten before validating
     //    each row.
-    const flatGrants: { workspaceId: string; role: WorkspaceRole }[] = [];
-    for (const g of input.workspaceRoles) {
-      if ("role" in g) {
-        flatGrants.push({ workspaceId: g.workspaceId, role: g.role });
-      } else {
-        for (const role of g.roles) {
-          flatGrants.push({ workspaceId: g.workspaceId, role });
-        }
-      }
-    }
+    const flatGrants: { workspaceId: string; role: WorkspaceRole }[] = flattenWorkspaceRoleGrants(
+      input.workspaceRoles,
+    );
     const requestedWorkspaceIds = Array.from(new Set(flatGrants.map((r) => r.workspaceId)));
     if (requestedWorkspaceIds.length > 0) {
       const owned = await tx
@@ -235,7 +232,7 @@ export async function createUserDirectly(
     //    upserted on `(workspaceId, userId)` so re-inserting is a
     //    no-op for the first role and a status-only update for any
     //    subsequent role in the same workspace.
-    const acceptedWorkspaceIds: string[] = [];
+    const acceptedWorkspaceIds = new Set<string>();
     for (const { workspaceId, role } of flatGrants) {
       const [m] = await tx
         .insert(workspaceMemberships)
@@ -257,7 +254,7 @@ export async function createUserDirectly(
           role: role as never,
         })
         .onConflictDoNothing();
-      acceptedWorkspaceIds.push(workspaceId);
+      acceptedWorkspaceIds.add(workspaceId);
     }
 
     // 9. Audit event. `source: "admin_direct"` distinguishes this
@@ -283,7 +280,7 @@ export async function createUserDirectly(
     return {
       userId: userRow.id,
       email: normalizedEmail,
-      acceptedWorkspaceIds,
+      acceptedWorkspaceIds: [...acceptedWorkspaceIds],
     };
   });
 

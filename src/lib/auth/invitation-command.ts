@@ -49,7 +49,10 @@ export type InvitationCommand = z.infer<typeof invitationCommandSchema>;
  * layer should consume.
  */
 export function flattenWorkspaceRoleGrants(
-  grants: readonly InvitationCommand["workspaceRoles"][number][],
+  grants: readonly (
+    | { workspaceId: string; role: WorkspaceRole }
+    | { workspaceId: string; roles: readonly WorkspaceRole[] }
+  )[],
 ): { workspaceId: string; role: WorkspaceRole }[] {
   const out: { workspaceId: string; role: WorkspaceRole }[] = [];
   for (const g of grants) {
