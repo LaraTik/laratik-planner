@@ -149,6 +149,7 @@ const {
   UpdateContentSchema,
   quickCreateContentItem,
   updateContentItem,
+  updateFormatPayload,
   batchCreateContentItems,
   getContentItem,
   listWorkspaceContent,
@@ -342,6 +343,37 @@ describe("updateContentItem", () => {
     );
     expect(update).toBeDefined();
     expect(dbMock.state.deleteCalls).toHaveLength(1); // contentItemChannels replace
+  });
+});
+
+describe("updateFormatPayload", () => {
+  it("normalizes the stored format payload and records the touched key set", async () => {
+    dbMock.state.selectResults.push([
+      { id: contentItemId, workspaceId, status: "draft", format: "static_post" },
+    ]);
+
+    await updateFormatPayload(actor, {
+      contentItemId,
+      // The stored item format is authoritative even when the form agrees.
+      format: "static_post",
+      formatPayload: { caption: "Launch day", unknownField: "discarded" },
+    });
+
+    const update = dbMock.state.updateCalls.find((call) => {
+      const set = call.set as Record<string, unknown>;
+      const payload = set.formatPayload as Record<string, unknown> | undefined;
+      return payload?.caption === "Launch day";
+    });
+    expect(update).toBeDefined();
+    expect((update?.set as Record<string, unknown>).formatPayload).not.toHaveProperty(
+      "unknownField",
+    );
+    expect(
+      dbMock.state.insertCalls.some((call) => {
+        const values = call.values as Record<string, unknown>;
+        return values.kind === "content_updated";
+      }),
+    ).toBe(true);
   });
 });
 

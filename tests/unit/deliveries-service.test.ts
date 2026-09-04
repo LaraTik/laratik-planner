@@ -282,6 +282,38 @@ describe("submitDelivery", () => {
     expect(approvalInsert).toBeDefined();
   });
 
+  it("notifies the content owner and reviewer with the planning URL", async () => {
+    dbMock.state.selectResults.push([
+      { workspaceId: "ws-1", status: "in_design", changeRequestGate: null },
+    ]); // item
+    dbMock.state.selectResults.push([{ max: 0 }]); // next version
+    dbMock.state.selectResults.push([
+      {
+        title: "Launch",
+        contentOwnerId: "owner-1",
+        internalCreativeReviewerId: "reviewer-1",
+      },
+    ]); // notification metadata
+    dbMock.state.selectResults.push([{ id: "workspace-1", slug: "acme" }]); // action URL
+    dbMock.state.insertReturningIds.push({ id: "v-1" }, { id: "outbox-1" }, { id: "outbox-2" });
+
+    const result = await submitDelivery(actor, input);
+
+    expect(result).toEqual({ deliveryVersionId: "v-1", versionNumber: 1 });
+    const deliveryNotifications = dbMock.state.insertCalls.filter((call) => {
+      const values = call.values as { eventType?: string; payload?: { eventType?: string } };
+      return values.eventType === "delivery" || values.payload?.eventType === "delivery";
+    });
+    expect(deliveryNotifications).toHaveLength(2);
+    expect(
+      deliveryNotifications.every(
+        (call) =>
+          (call.values as { payload?: { actionUrl?: string } }).payload?.actionUrl ===
+          `/app/w/acme/planning/${contentItemId}`,
+      ),
+    ).toBe(true);
+  });
+
   it("accepts a creative revision when the content is in changes_requested with a creative gate", async () => {
     dbMock.state.selectResults.push([
       { workspaceId: "ws-1", status: "changes_requested", changeRequestGate: "creative_internal" },
