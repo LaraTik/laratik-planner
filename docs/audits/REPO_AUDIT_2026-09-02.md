@@ -2,7 +2,8 @@
 
 Date: 2026-09-02  
 Broad browser/evidence baseline: `2727275c3dc93dcaaa9de64acc3acb11863e21a4`  
-Last exact-clean verification HEAD: `a386ef3` (`main`, clean at verification)
+Last exact-clean source verification HEAD: `f232e32` (`main`, clean at verification)
+Latest accessibility coverage HEAD: `a78ada0` (AI settings route coverage)
 Audit report update: 2026-09-03, after the exact-commit accessibility follow-up
 Audit framework: repository instructions, `STUDIOFLOW_MASTER_PROMPT.md`,
 `PRODUCTION_READINESS_TRACKER.md`, and UI/UX Pro Max accessibility, interaction,
@@ -11,12 +12,13 @@ responsive, performance, typography, motion, and data-display guidance.
 ## Executive verdict
 
 The repository has a strong production foundation and a broad quality harness.
-The current checkpoint at `a386ef3` passes formatting, ESLint, strict
+The current checkpoint at `f232e32` passes formatting, ESLint, strict
 TypeScript, the full unit suite, and a clean production build. Exact-HEAD
 accessibility coverage is
 145/145 across Chromium, Firefox, WebKit, mobile Chrome, and mobile Safari,
 including the public/authenticated axe route checks and Arabic/RTL shell
-contract. The earlier browser baseline also passed 192/192 isolated Chromium
+contract. The newly covered agency AI settings route passes 5/5 across the
+same five projects at `a78ada0`. The earlier browser baseline also passed 192/192 isolated Chromium
 tests and the complete mobile workflow. It is not yet final-production-ready
 because the Stitch visual suite still has substantial reference deltas,
 repeatable performance measurements are incomplete, and independent visual
@@ -28,23 +30,23 @@ generic generated palette must not replace the StudioFlow/Stitch visual system.
 
 ## Baseline evidence
 
-| Gate                   | Result                | Evidence                                                                                                                                                       |
-| ---------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Prettier               | Pass                  | `pnpm format:check`                                                                                                                                            |
-| ESLint                 | Pass                  | `pnpm lint`                                                                                                                                                    |
-| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                                                                                                   |
-| Unit tests             | Pass                  | 320 files; 3,111 passed; 4 todo at exact clean verification HEAD `a386ef3`                                                                                     |
-| Production build       | Pass                  | `pnpm verify` at exact clean verification HEAD `a386ef3`                                                                                                       |
-| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test` at clean evidence HEAD `5625acd`                                                                                       |
-| Integration tests      | Pass                  | 23 files; 189 tests on disposable `planner_test` at clean evidence HEAD `5625acd`                                                                              |
-| Dependency audit       | Pass                  | Four transitive `fast-uri` highs were found and resolved by the `>=3.1.6` pnpm override in `bfb350d`; `pnpm audit --prod` now reports no known vulnerabilities |
-| Full E2E/a11y          | Pass                  | Exact HEAD `a386ef3`: 145/145 checks across five Playwright projects; zero critical/serious axe failures and Arabic/RTL checks pass                            |
-| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; planning filter URL contract 5/5 browser contexts; isolated upload probe                              |
-| Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                                                                                                   |
-| Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths                                                                                  |
-| Visual regression      | Partial / investigate | Full matrix at exact clean HEAD `22aec64`: 73/112; 39 failed; no snapshot updates; route fixes and deliberate snapshot decisions remain required               |
-| Performance evidence   | Partial / baseline    | Static inventory, local public-route baseline, and tiny-fixture query plans; throttled/authenticated/INP/scale evidence pending                                |
-| Working tree           | Audit changes clean   | Exact code and evidence verification is clean at `a386ef3`                                                                                                     |
+| Gate                   | Result                | Evidence                                                                                                                                                                                    |
+| ---------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prettier               | Pass                  | `pnpm format:check`                                                                                                                                                                         |
+| ESLint                 | Pass                  | `pnpm lint`                                                                                                                                                                                 |
+| TypeScript             | Pass                  | `pnpm exec tsc --noEmit --incremental false`                                                                                                                                                |
+| Unit tests             | Pass                  | 320 files; 3,113 passed; 4 todo at exact clean source verification HEAD `f232e32`                                                                                                           |
+| Production build       | Pass                  | `pnpm verify` at exact clean source verification HEAD `f232e32`                                                                                                                             |
+| Migration drill        | Pass                  | 5/5 drills on disposable `planner_test` at clean evidence HEAD `5625acd`                                                                                                                    |
+| Integration tests      | Pass                  | 23 files; 189 tests on disposable `planner_test` at clean evidence HEAD `5625acd`                                                                                                           |
+| Dependency audit       | Pass                  | Four transitive `fast-uri` highs were found and resolved by the `>=3.1.6` pnpm override in `bfb350d`; `pnpm audit --prod` now reports no known vulnerabilities                              |
+| Full E2E/a11y          | Pass                  | Full matrix completed 145/145 at `2c31570` after an isolated Firefox seed-race rerun; the added `/app/agency-settings/ai` route passes 5/5 at `a78ada0`; zero critical/serious axe failures |
+| Focused functional E2E | Pass                  | 8/8 health + error; 19/19 role matrix; 6/6 Add Directly; planning filter URL contract 5/5 browser contexts; isolated upload probe                                                           |
+| Full Chromium E2E      | Pass                  | 192/192 isolated Chromium tests, including full §23 workflow                                                                                                                                |
+| Cross-engine targeted  | Pass                  | Settings 4/4; WebKit list + §23; mobile Chrome + mobile Safari full §23 paths                                                                                                               |
+| Visual regression      | Partial / investigate | Full matrix at exact clean HEAD `22aec64`: 73/112; 39 failed; no snapshot updates; route fixes and deliberate snapshot decisions remain required                                            |
+| Performance evidence   | Partial / baseline    | Static inventory, local public-route baseline, and tiny-fixture query plans; throttled/authenticated/INP/scale evidence pending                                                             |
+| Working tree           | Audit changes clean   | Source verification was clean at `f232e32`; route-coverage verification was clean at `a78ada0`                                                                                              |
 
 ## Repository inventory
 
@@ -110,7 +112,9 @@ handled before unrelated cleanup.
 4. **Exact-HEAD visual review is incomplete.** The full exact-HEAD axe and RTL
    matrix now passes, and the cross-engine settings hydration mismatch is fixed
    in `22aec64` with a regression test. The exact current a11y run at
-   `a386ef3` is 145/145 across five browser projects. The visual suite still
+   `2c31570` is 145/145 across five browser projects, with the transient
+   Firefox seed reset confirmed by an isolated rerun. The added AI settings
+   route passes 5/5 at `a78ada0`. The visual suite still
    has reference deltas and the required
    keyboard, screen-reader, zoom, and reduced-motion review is not independently
    signed off. A targeted 360px overview run after `85d026b` confirms the

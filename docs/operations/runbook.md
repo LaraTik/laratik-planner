@@ -285,6 +285,11 @@ pnpm test:e2e:workspace
 pnpm test:e2e:content
 pnpm test:a11y           # WCAG 2.2 AA
 pnpm test:e2e:isolated   # the exact CI command
+
+# 5. During development, run only the affected contracts
+pnpm test:affected
+pnpm test:area content
+pnpm test:affected -- --since origin/main --layer browser
 ```
 
 ```bash
@@ -381,10 +386,19 @@ and injects deterministic test-only `AUTH_SECRET`, `AGENCY_COOKIE_SECRET`,
 `AUTH_URL`, and `NEXTAUTH_URL` values. This is why a missing
 `TEST_DATABASE_URL` is a configuration error rather than a test skip.
 
-If a dev's pre-push `pnpm test:e2e:critical` is taking too long on
-trivial pushes, set `SKIP_E2E=1` in the env (or `git push --no-verify`
-to skip both the unit suite and E2E). Both are escape hatches, not
-the default.
+The affected runner is the normal development loop. It uses the Git working
+tree plus upstream changes, selects unit tests through Vitest's import graph,
+and selects integration/browser contracts through the ownership manifest.
+Use `pnpm test:area <domain>` when you want to check one domain deliberately.
+Its browser path runs Chromium and only adds affected accessibility or visual
+selectors. Shared or unknown changes escalate to full relevant coverage.
+
+Pre-push remains a full local gate for code pushes. It reads the pushed commit
+range rather than the staging index, so a normal push after committing cannot
+silently skip the gate. `TEST_DATABASE_URL` must be configured for integration;
+otherwise the hook fails with the disposable-database setup instructions.
+`SKIP_E2E=1`, `SKIP_INTEGRATION=1`, and `git push --no-verify` remain explicit
+escape hatches, and CI remains authoritative.
 
 #### Local integration setup
 
@@ -440,11 +454,10 @@ Do not cancel the drill while it is executing its drop/recreate step unless
 the target is definitely `planner_test`; a cancelled production migration
 must be handled through the backup/rollback runbook instead.
 
-If `TEST_DATABASE_URL` is not set, `.husky/pre-push` skips
-integration with a hint to set it up — it does not fail. This
-keeps the hook friendly to dev machines that haven't been
-provisioned yet. `SKIP_INTEGRATION=1` is the explicit escape
-hatch when you have a reason to skip.
+If `TEST_DATABASE_URL` is not set, `.husky/pre-push` fails
+integration with a direct setup hint. This keeps the gate honest
+after a normal commit and push. `SKIP_INTEGRATION=1` is the explicit
+escape hatch when you have a reason to skip.
 
 #### Checkbox controls and mobile touch targets
 
@@ -490,7 +503,7 @@ touchable.
 ```bash
 # Local pre-push (automatic via .husky/pre-push)
 pnpm test:unit
-pnpm test:integration   # only if TEST_DATABASE_URL is set
+pnpm test:integration   # requires TEST_DATABASE_URL=...planner_test
 pnpm test:e2e:critical
 
 # Local pre-merge (manual checklist on the release-candidate branch)

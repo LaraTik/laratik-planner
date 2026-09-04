@@ -2,9 +2,8 @@
 # Pre-push hook — full local unit + integration + critical E2E gate
 # before a push reaches CI.
 #
-# Scope: catches regressions that the pre-commit `vitest related
-# --run` (which only walks the import graph from staged .ts/.tsx
-# files) and the lint-staged format/lint pass cannot catch:
+# Scope: catches regressions that the pre-commit affected unit run and
+# the lint-staged format/lint pass cannot catch:
 #   1. full unit suite  (catches cross-module regressions)
 #   2. integration      (catches DB / migration / authorization
 #                        regressions that need a real Postgres)
@@ -32,15 +31,14 @@
 # What runs:
 #   1. pnpm test:unit         — the full vitest suite, no coverage.
 #   2. pnpm test:integration  — runs migrations + the disposable
-#                               postgres integration suite. Skipped
-#                               automatically if TEST_DATABASE_URL is
-#                               not set (with a hint to set it up).
-#                               Requires a local dev env (see
+#                               postgres integration suite. Missing
+#                               TEST_DATABASE_URL fails with a setup
+#                               message. Requires a local dev env (see
 #                               docs/operations/runbook.md
 #                               § "Local E2E recipes").
 #   3. pnpm test:e2e:critical — chromium + visual-chromium subset
-#                               (skipped if no .ts/.tsx staged, see
-#                               below). Requires a local dev env.
+#                               (skipped only for docs-only pushes).
+#                               Requires a local dev env.
 #
 # What does NOT run (intentionally — kept for CI or out of the
 # deploy-gate contract):
@@ -61,17 +59,40 @@ if [ -n "$SKIP_PREPUSH" ] || [ -n "$SKIP_PRECOMMIT" ] || [ -n "$CI" ]; then
   exit 0
 fi
 
-STAGED_TS_FILES=$(git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx' 2>/dev/null || true)
+# Git supplies one line per ref being pushed on stdin:
+#   <local-ref> <local-sha> <remote-ref> <remote-sha>
+# Inspect those commit ranges. The index is normally clean after a commit,
+# so using git diff --cached here would incorrectly skip every normal push.
+PUSH_HAS_TESTABLE_CHANGE=0
+while read -r LOCAL_REF LOCAL_SHA _REMOTE_REF REMOTE_SHA; do
+  [ -n "$LOCAL_REF" ] || continue
+  case "$LOCAL_SHA" in
+    0000000000000000000000000000000000000000) continue;;
+  esac
+  if [ "$REMOTE_SHA" = "0000000000000000000000000000000000000000" ]; then
+    PUSH_HAS_TESTABLE_CHANGE=1
+    continue
+  fi
+  PUSHED_FILES=$(git diff --name-only "$REMOTE_SHA...$LOCAL_SHA" 2>/dev/null || true)
+  while IFS= read -r PUSHED_FILE; do
+    [ -n "$PUSHED_FILE" ] || continue
+    case "$PUSHED_FILE" in
+      docs/*|*.md|*.mdx) ;;
+      *) PUSH_HAS_TESTABLE_CHANGE=1; break;;
+    esac
+  done <<EOF
+$PUSHED_FILES
+EOF
+done
 
 # 1) Full unit suite. This is the exact command CI used to run; it
 #    now runs here so a failure is caught before a CI minute is
-#    spent. Skipped if no TS surface is staged (e.g. a docs-only
-#    or config-only commit).
-if [ -n "$STAGED_TS_FILES" ]; then
+#    spent. Skipped only for docs-only or ref-deletion pushes.
+if [ "$PUSH_HAS_TESTABLE_CHANGE" -eq 1 ]; then
   printf '\n▶ pnpm test:unit — full suite before push:\n\n'
   pnpm test:unit -- --reporter=verbose
 else
-  echo "⏭  pnpm test:unit skipped (no .ts/.tsx staged)"
+  echo "⏭  pnpm test:unit skipped (docs-only or ref deletion push)"
 fi
 
 # 2) Integration suite (DB + migration + authorization).
@@ -83,15 +104,13 @@ fi
 #    again, which was the whole point of the 2026-08-26
 #    CI-minimization plan.
 #
-#    Same staging gate as unit: skip on a docs-only / config-only
+#    Same pushed-change gate as unit: skip on a docs-only / ref-deletion
 #    commit. SKIP_INTEGRATION=1 escapes the gate for trivial pushes
 #    where the dev has already validated the change locally.
 #
-#    If TEST_DATABASE_URL is not set, skip with a hint instead of
-#    failing — the dev's local Postgres may not have a `planner_test`
-#    database yet. The recipe is in docs/operations/runbook.md
-#    § "Local integration setup". This default-off behaviour keeps
-#    the hook friendly to dev machines that haven't been set up.
+#    If TEST_DATABASE_URL is not set, fail with a direct setup hint. The
+#    recipe is in docs/operations/runbook.md § "Local integration setup".
+#    Use SKIP_INTEGRATION=1 only as an explicit, visible escape hatch.
 #
 #    Local pre-reqs (one-time):
 #      docker compose -f docker-compose.dev.yml up -d postgres
@@ -100,20 +119,18 @@ fi
 #    Add the export to your shell rc / direnv so it persists.
 if [ -n "$SKIP_INTEGRATION" ]; then
   echo "⏭  pnpm test:integration skipped (SKIP_INTEGRATION=1)"
-elif [ -n "$STAGED_TS_FILES" ]; then
+elif [ "$PUSH_HAS_TESTABLE_CHANGE" -eq 1 ]; then
   if [ -z "$TEST_DATABASE_URL" ]; then
-    printf '\n⏭  pnpm test:integration skipped (TEST_DATABASE_URL not set)\n'
-    printf '  Set up a disposable test database to catch DB / migration / authz\n'
-    printf '  regressions before they hit CI. See docs/operations/runbook.md\n'
-    printf '  § "Local integration setup" for the one-time setup.\n'
-    printf '  Or skip: SKIP_INTEGRATION=1 git push (CI still runs it as the audit gate)\n'
-  else
-    printf '\n▶ pnpm test:integration — disposable Postgres + migration + authz:\n'
-    printf '  (SKIP_INTEGRATION=1 to skip; setup in docs/operations/runbook.md)\n\n'
-    pnpm test:integration
+    printf '\n✗ pnpm test:integration cannot run: TEST_DATABASE_URL is not set.\n'
+    printf '  Configure the disposable planner_test database as documented in docs/operations/runbook.md.\n'
+    printf '  To use the explicit escape hatch: SKIP_INTEGRATION=1 git push (CI still runs the audit gate).\n'
+    exit 1
   fi
+  printf '\n▶ pnpm test:integration — disposable Postgres + migration + authz:\n'
+  printf '  (SKIP_INTEGRATION=1 to skip; setup in docs/operations/runbook.md)\n\n'
+  pnpm test:integration
 else
-  echo "⏭  pnpm test:integration skipped (no .ts/.tsx staged)"
+  echo "⏭  pnpm test:integration skipped (docs-only or ref deletion push)"
 fi
 
 # 3) Critical E2E (chromium functional + visual-chromium). Per the
@@ -122,7 +139,7 @@ fi
 #    CI). Moving it local saves the free-tier minutes and gives
 #    the dev a faster signal than waiting on CI.
 #
-#    Same staging gate as unit: skip on a docs-only / config-only
+#    Same pushed-change gate as unit: skip on a docs-only / ref-deletion
 #    commit. SKIP_E2E=1 escapes the gate for trivial pushes where
 #    the dev has already validated the change via `pnpm test:e2e`
 #    (or has a follow-up plan).
@@ -134,10 +151,10 @@ fi
 #    full setup.
 if [ -n "$SKIP_E2E" ]; then
   echo "⏭  pnpm test:e2e:critical skipped (SKIP_E2E=1)"
-elif [ -n "$STAGED_TS_FILES" ]; then
+elif [ "$PUSH_HAS_TESTABLE_CHANGE" -eq 1 ]; then
   printf '\n▶ pnpm test:e2e:critical — chromium + visual-chromium before push:\n'
   printf '  (SKIP_E2E=1 to skip; full local pre-reqs in docs/operations/runbook.md)\n\n'
   pnpm test:e2e:critical
 else
-  echo "⏭  pnpm test:e2e:critical skipped (no .ts/.tsx staged)"
+  echo "⏭  pnpm test:e2e:critical skipped (docs-only or ref deletion push)"
 fi

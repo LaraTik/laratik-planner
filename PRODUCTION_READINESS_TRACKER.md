@@ -71,6 +71,18 @@ migration-drill` passes 5/5; `TEST_DATABASE_URL=… pnpm test:integration`
 > reduced-motion/UAT, visual reference review, performance evidence, and
 > independent sign-off remain open.
 
+> **2026-09-03 AI settings localization and coverage follow-up** — Source
+> checkpoint `f232e32` passes `pnpm verify`: Prettier, ESLint, strict
+> TypeScript, 320 unit files with 3,113 passing tests and 4 TODOs, and the
+> production build. Agency AI settings and managed-secret controls now use
+> the active English/Arabic catalogs, including capability metadata, provider
+> status, test states, warnings, and usage labels. The added
+> `/app/agency-settings/ai` accessibility route passes 5/5 Playwright projects
+> at `a78ada0`. The full existing matrix remains 145/145 after the transient
+> Firefox seed reset was confirmed by an isolated rerun. Manual accessibility/
+> UAT, visual reference review, performance evidence, and independent sign-off
+> remain open.
+
 > **2026-09-03 exact-clean verification** — At clean HEAD `d6b3149`,
 > `pnpm verify` passes: Prettier, ESLint, strict TypeScript, 318 unit files
 > with 3,108 passing tests and 4 TODOs, and the production build. The exact-

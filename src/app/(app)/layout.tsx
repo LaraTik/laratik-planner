@@ -8,11 +8,8 @@ import {
 import { listActorAgencies, resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { AppShell } from "@/components/app-shell/app-shell";
-import {
-  countUnreadNotifications,
-  listNotificationsForUser,
-  renderNotificationCopy,
-} from "@/lib/notifications/service";
+import { renderNotificationCopy } from "@/lib/notifications/service";
+import { getCachedNotificationsForUser, getCachedUnreadCount } from "@/lib/notifications/cache";
 import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
 import { getPlatformPrincipal } from "@/lib/auth/platform-access";
 import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
@@ -95,9 +92,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const isAdmin = agencyId ? await isAgencyAdmin(actor, agencyId) : false;
+  // R9 — the bell's two reads are wrapped in `unstable_cache` so
+  // a single `revalidateTag("notifications:user:<id>")` call from
+  // the mark-read action or the outbox dispatcher invalidates
+  // exactly this user's bell — not the entire `/app` tree the
+  // previous `revalidatePath` invalidated. The list + count share
+  // the same tag so a single bust clears both.
   const [notifications, unreadCount, switcher, agencyOptions] = await Promise.all([
-    listNotificationsForUser(actor, { limit: 10 }),
-    countUnreadNotifications(actor),
+    getCachedNotificationsForUser(actor, 10),
+    getCachedUnreadCount(actor),
     listSwitcherWorkspaces(actor),
     listActorAgencies(actor),
   ]);

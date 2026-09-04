@@ -17,15 +17,15 @@
 #   2. pnpm typecheck (gated by a 5-min sentinel) → tsc --noEmit on
 #      the full project. Skipped on a fresh tsbuildinfo OR if
 #      tsbuildinfo is < 5 min old AND no .ts/.tsx is staged.
-#   3. vitest related --run → unit tests that touch staged .ts/.tsx files
+#   3. pnpm test:affected -- --staged --layer unit → unit tests selected
+#      from the shared ownership/import-graph runner
 #
 # What does NOT run (intentionally — kept for CI):
 #   • pnpm build         (production build, slow on commit)
 #   • pnpm test:integration (needs PostgreSQL)
 #   • pnpm test:visual   (Playwright + 3-viewport matrix)
-#   • the full unit suite (vitest related limits to affected files;
-#     the full suite moved to .husky/pre-push per the 2026-08-26
-#     CI-minimization plan)
+#   • the full unit suite (the affected runner limits normal changes;
+#     the full suite runs in .husky/pre-push and CI)
 
 set -e
 
@@ -47,6 +47,7 @@ npx --no-install lint-staged
 #   - Always run if any staged file is .ts/.tsx.
 #   - Run if tsbuildinfo is older than 5 min (catches upstream dep drift).
 #   - Otherwise skip (warm cache, no TS surface changed).
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null || true)
 STAGED_TS_FILES=$(git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx' 2>/dev/null || true)
 TSBUILDINFO="./tsconfig.tsbuildinfo"
 TYPECHECK_NEEDED=0
@@ -68,16 +69,11 @@ else
   echo "⏭  typecheck skipped (warm cache, no TS changes, tsbuildinfo < 5 min)"
 fi
 
-# 3) Unit tests for staged source files. `vitest related` walks the
-# import graph from the listed source files to the affected test files,
-# so a 1-line change in `src/lib/auth/policy.ts` runs only the auth
-# tests, not the whole suite. Deleted files are excluded with
-# --diff-filter=ACMR so we don't pass paths that no longer exist on
-# disk.
-if [ -n "$STAGED_TS_FILES" ]; then
-  printf '\n▶ vitest related — %d staged source file(s):\n' "$(printf '%s\n' "$STAGED_TS_FILES" | wc -l | tr -d ' ')"
-  printf '  %s\n' $STAGED_TS_FILES
-  printf '\n'
-  # shellcheck disable=SC2086  # word splitting on $STAGED_TS_FILES is intentional
-  pnpm exec vitest related --run $STAGED_TS_FILES
+# 3) Unit tests for staged changes. The shared runner uses Vitest's import
+# graph for source files and the ownership manifest for direct test changes.
+# It also makes docs-only and global/escalated decisions explicit, so this
+# hook cannot drift from the developer-facing affected command.
+if [ -n "$STAGED_FILES" ]; then
+  printf '\n▶ affected unit tests for staged changes:\n\n'
+  pnpm test:affected -- --staged --layer unit
 fi

@@ -14,6 +14,40 @@
 
 A new test belongs in **one** class only. A unit test that talks to the database is a misclassification. An integration test that uses Playwright is a misclassification. The `strategy.md` "Test layers" table is the source of truth for which class a piece of work lands in.
 
+## 1.1 Affected development loop
+
+Use the affected runner for normal development:
+
+```bash
+pnpm test:affected
+pnpm test:affected -- --since origin/main
+pnpm test:area auth
+pnpm test:affected -- --layer unit --coverage
+```
+
+`test:affected` includes staged, unstaged, untracked, and committed changes
+since the configured upstream branch. `--since <ref>` overrides that baseline;
+`--area <name>` is exposed by `pnpm test:area <name>` for an intentional manual
+run. The command is a hard gate: selected failures, unsafe database setup, and
+manifest errors exit non-zero.
+
+Unit selection uses Vitest's import graph for changed source and owned files
+for direct test changes; that policy is encoded in the typed ownership
+manifest. Integration and browser selection uses the manifest in
+`scripts/test-ownership.ts`. Browser
+feedback defaults to Chromium; a11y and visual cases are selected by route or
+surface where the manifest provides a grep selector. Shared shell, auth,
+database, migration, i18n, dependency, config, fixture, and unknown changes
+escalate to the broadest relevant suites.
+
+The affected command does not run coverage unless `--coverage` is supplied.
+The full coverage run remains the threshold-enforced release gate. A
+documentation-only change prints an explicit no-tests-needed result.
+
+The standard location for new tests is `tests/<layer>/<domain>/`. Existing
+root-level tests may be moved when their domain is touched; a repository-wide
+test relocation is not required.
+
 ## 2. The `bootstrapRoleSession` recipe
 
 The `bootstrapRoleSession(page, role, workspaceSlug?)` helper in `tests/e2e/_helpers.ts` is the canonical entry point for any browser test that needs a signed-in user with a specific role. The recipe:

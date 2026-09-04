@@ -16,6 +16,8 @@
     "test": "vitest",
     "test:unit": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:affected": "tsx scripts/test-affected.ts",
+    "test:area": "tsx scripts/test-affected.ts --area",
     "test:e2e": "playwright test",
     "test:e2e:isolated": "tsx scripts/run-e2e-tests.ts",
     "test:e2e:run": "playwright test --project=chromium",

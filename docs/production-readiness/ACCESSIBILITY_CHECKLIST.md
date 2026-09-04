@@ -184,11 +184,14 @@ to `Verified`; this checklist never self-assigns `Verified`.
 > client-reviewer shell. Manual keyboard, screen-reader and 200% zoom columns
 > remain intentionally unsigned for the independent reviewer.
 
-- **Current automated result (2026-09-03, exact clean HEAD `a386ef3`)** —
-  `pnpm test:a11y` passes 145/145 checks across Chromium, Firefox, WebKit,
-  mobile Chrome, and mobile Safari. The suite covers public routes,
-  authenticated canonical routes, redirect/focus behavior, and the Arabic/RTL
-  shell contract. No critical or serious axe violations were reported.
+- **Current automated result (2026-09-03)** — the full matrix completed 145/145
+  checks across Chromium, Firefox, WebKit, mobile Chrome, and mobile Safari at
+  source checkpoint `2c31570`; the only initial failure was a transient Firefox
+  disposable-session seed reset and its isolated rerun passed. The newly added
+  `/app/agency-settings/ai` route passes 5/5 across the same projects at
+  `a78ada0`. The suite covers public routes, authenticated canonical routes,
+  redirect/focus behavior, and the Arabic/RTL shell contract. No critical or
+  serious axe violations were reported.
 - The 27-row matrix below remains the manual review inventory. Its historical
   axe/touch-target cells document the original pre-fill evidence and are not a
   substitute for the current automated result above. The reviewer must still

@@ -203,6 +203,7 @@ export async function bootstrapTestSession(
     workspaceName?: string;
     workspaceSlug?: string;
     locale?: "en" | "ar";
+    platformRole?: PlatformRole;
   } = {},
 ): Promise<SeedResult> {
   const result = await devSeed(page.request, options);

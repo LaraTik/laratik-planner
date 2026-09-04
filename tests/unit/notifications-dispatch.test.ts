@@ -122,6 +122,30 @@ vi.mock("@/lib/db", () => ({ db: dbMock }));
 
 vi.mock("server-only", () => ({}));
 
+// R9 — `dispatchOutboxOnce` calls `updateTag` after a successful
+// tick to invalidate the bell cache for every recipient. The
+// mark-read action and the layout read path use the same tag
+// (see `src/lib/notifications/cache.ts`). The cache module is
+// a thin pass-through; the actual cache API lives in
+// `next/cache`, which is server-only and unavailable in the
+// test environment. We mock the two functions we use.
+const cacheMock = vi.hoisted(() => ({
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
+  revalidatePath: vi.fn(),
+  unstable_cache: <T extends (...args: never[]) => unknown>(fn: T) => fn,
+}));
+vi.mock("next/cache", () => cacheMock);
+vi.mock("@/lib/notifications/cache", () => ({
+  notificationsUserTag: (userId: string) => `notifications:user:${userId}`,
+  getCachedNotificationsForUser: (actor: { id: string }, _limit: number) =>
+    import("@/lib/notifications/service").then((m) =>
+      m.listNotificationsForUser(actor, { limit: _limit }),
+    ),
+  getCachedUnreadCount: (actor: { id: string }) =>
+    import("@/lib/notifications/service").then((m) => m.countUnreadNotifications(actor)),
+}));
+
 const policyMock = vi.hoisted(() => ({
   hasWorkspaceRole: vi.fn(async () => true as boolean),
   requirePolicy: vi.fn(),

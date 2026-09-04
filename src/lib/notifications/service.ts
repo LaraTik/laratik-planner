@@ -193,12 +193,20 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
     .orderBy(outboxEvents.availableAt)
     .limit(maxEvents);
 
+  // R9 — collect every userId the dispatcher fans out to during
+  // this tick. We batch the tag revalidations and call them once
+  // after the per-event transaction commits, so a tick that writes
+  // 20 notifications to 20 recipients still results in 20 cheap
+  // tag busts (one per user) — not a 20-event-cascade.
+  const recipientIds = new Set<string>();
   const processed: string[] = [];
   for (const evt of events) {
     try {
       await db.transaction(async (tx) => {
         const payload = evt.payload as Record<string, unknown> | null;
         if (payload) {
+          const userId = payload["userId"] as string | undefined;
+          if (userId) recipientIds.add(userId);
           switch (evt.eventType as OutboxEventType) {
             case "comment_created":
               await fanOutCommentCreated(payload, tx);
@@ -266,6 +274,38 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
           lastError: err instanceof Error ? err.message : String(err),
         })
         .where(eq(outboxEvents.id, evt.id));
+    }
+  }
+  // R9 — invalidate every recipient's bell cache. We do this
+  // once at the end of the tick (rather than per event) so a
+  // 50-event tick that fans out to N users is still O(N) tag
+  // busts, not O(50 * N). `updateTag` is the server-action /
+  // cron-worker equivalent of `revalidateTag` — Next.js 15
+  // introduced it for read-your-own-writes semantics outside
+  // server actions, and it works the same here.
+  //
+  // Fault-isolation: one user's cache bust throwing must not
+  // skip the other recipients' busts. We wrap each call in
+  // its own try/catch and surface the failure to Sentry; the
+  // dispatcher keeps going. The 30s R3 poll + the cron
+  // cadence are the safety net for a user whose bust did fail
+  // — they will see the new notification at most 30s late,
+  // not forever-stale.
+  if (recipientIds.size > 0) {
+    const { updateTag } = await import("next/cache");
+    const { notificationsUserTag } = await import("@/lib/notifications/cache");
+    const Sentry = await import("@sentry/nextjs");
+    for (const userId of recipientIds) {
+      try {
+        updateTag(notificationsUserTag(userId));
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: {
+            scope: "notifications.updateTag",
+            userId,
+          },
+        });
+      }
     }
   }
   return { processed: processed.length };
