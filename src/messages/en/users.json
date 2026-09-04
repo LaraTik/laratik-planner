@@ -219,6 +219,7 @@
       "invalid_response": "Meta returned an unrecognized response. The endpoint may be temporarily unavailable; try again in a few minutes.",
       "platform_kek_missing": "Platform credential envelope is not configured. Contact your agency admin.",
       "social_not_enabled": "Social sync is not enabled for this agency. Contact your agency admin.",
+      "provider_not_configured": "This agency has no provider configuration for analytics. Ask an agency admin to configure it.",
       "not_configured": "This channel's analytics are not configured. Ask your agency admin to check the app credentials in Agency Settings, or ask Meta to enable the missing insights metric for the app.",
       "no_connection": "This channel is not currently linked to a provider grant.",
       "not_connected": "This channel is not in a connected state. Reconnect to resume.",

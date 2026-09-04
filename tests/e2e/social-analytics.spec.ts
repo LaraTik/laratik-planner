@@ -16,7 +16,7 @@ import { bootstrapRoleSession } from "./_helpers";
  */
 
 test.describe("M4 — social analytics dashboard", () => {
-  test("renders platform-aware metrics and readable partial-data contracts", async ({ page }) => {
+  test("renders the shared comparison dashboard and platform-specific detail", async ({ page }) => {
     await bootstrapRoleSession(page, "workspace_manager", "analytics-platform-aware", {
       socialAnalyticsFixture: true,
     });
@@ -24,6 +24,10 @@ test.describe("M4 — social analytics dashboard", () => {
 
     await expect(page.getByTestId("social-analytics-page")).toBeVisible();
     await expect(page.getByTestId("metric-engagedAccounts")).toHaveCount(0);
+    await expect(page.getByTestId("social-comparison-panel")).toBeVisible();
+    await expect(page.getByTestId("social-comparison-legend").locator(":scope > span")).toHaveCount(
+      3,
+    );
 
     const facebookCard = page.locator('[data-testid^="social-card-"]').filter({
       hasText: "Acme Facebook",
@@ -37,8 +41,31 @@ test.describe("M4 — social analytics dashboard", () => {
     });
     await expect(instagramCard).toBeVisible();
     await expect(instagramCard.getByRole("columnheader", { name: /engaged/i })).toBeVisible();
-    await expect(instagramCard.getByTestId("social-engagement-rate")).toContainText("rate");
     await expect(page.getByTestId("social-data-quality")).toHaveCount(0);
+  });
+
+  test("filters accounts without a document reload and recalculates common metrics", async ({
+    page,
+  }) => {
+    await bootstrapRoleSession(page, "workspace_manager", "analytics-filtering", {
+      socialAnalyticsFixture: true,
+    });
+    await page.goto("/app/w/analytics-filtering/analytics/social");
+    let loadEvents = 0;
+    page.on("load", () => {
+      loadEvents += 1;
+    });
+    await page.getByTestId("analytics-platform-facebook").click();
+    await expect(page).toHaveURL(/platforms=facebook/);
+    await expect(page.locator('[data-testid^="social-card-"]')).toHaveCount(1);
+    expect(loadEvents).toBe(0);
+
+    await page.getByTestId("analytics-platform-instagram").click();
+    await expect(page).toHaveURL(/platforms=facebook%2Cinstagram/);
+    await expect(page.getByTestId("metric-interactions")).toBeVisible();
+    await page.getByTestId("analytics-platform-tiktok").click();
+    await expect(page.getByTestId("metric-interactions")).toHaveCount(0);
+    await expect(page.getByTestId("metric-followerCount")).toBeVisible();
   });
 
   test("keeps the analytics surface usable in Arabic RTL on a narrow viewport", async ({
@@ -68,16 +95,20 @@ test.describe("M4 — social analytics dashboard", () => {
   test("window selector offers 7/30/90 with the current window as aria-current", async ({
     page,
   }) => {
-    await bootstrapRoleSession(page, "workspace_manager");
-    await page.goto("/app/w/acme/analytics/social");
+    await bootstrapRoleSession(page, "workspace_manager", "analytics-window", {
+      socialAnalyticsFixture: true,
+    });
+    await page.goto("/app/w/analytics-window/analytics/social");
     await expect(page.getByTestId("window-7")).toHaveAttribute("aria-current", "page");
     await expect(page.getByTestId("window-30")).not.toHaveAttribute("aria-current", "page");
     await expect(page.getByTestId("window-90")).not.toHaveAttribute("aria-current", "page");
   });
 
   test("navigating to ?window=30 makes the 30 link current", async ({ page }) => {
-    await bootstrapRoleSession(page, "workspace_manager");
-    await page.goto("/app/w/acme/analytics/social?window=30");
+    await bootstrapRoleSession(page, "workspace_manager", "analytics-window-query", {
+      socialAnalyticsFixture: true,
+    });
+    await page.goto("/app/w/analytics-window-query/analytics/social?window=30");
     await expect(page.getByTestId("window-30")).toHaveAttribute("aria-current", "page");
   });
 

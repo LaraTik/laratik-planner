@@ -88,5 +88,63 @@
     "downloadsOff": "downloads off",
     "auditNotice": "Every view is recorded in the platform audit log.",
     "manage": "Manage session"
+  },
+  "metaPublishing": {
+    "title": "Meta publishing readiness",
+    "description": "Facebook Pages and Instagram professional accounts can be prepared for future publishing without changing your current analytics connection.",
+    "analyticsLabel": "Analytics access",
+    "analyticsConnected": "Connected through the existing Meta connection.",
+    "analyticsUnavailable": "Connect a Meta account to discover managed Pages and linked Instagram accounts.",
+    "publishingLabel": "Publishing access",
+    "picker": {
+      "title": "Connect Meta destinations",
+      "description": "We found {count} managed destination{suffix}. Select the Facebook Pages and linked Instagram professional accounts this workspace should use.",
+      "bulkSelection": "Bulk selection",
+      "selectAll": "Select all",
+      "unselectAll": "Unselect all",
+      "selectAccount": "Select",
+      "alreadyConnected": "Already connected",
+      "linkedTo": "Linked to {name}",
+      "willLink": "Will link to {name}",
+      "willCreate": "Will create a new channel",
+      "selected": "{count} selected",
+      "linking": "Linking…",
+      "linkSelected": "Link selected profiles",
+      "pickOne": "Pick at least one profile to continue",
+      "facebook": "Facebook Page",
+      "instagram": "Instagram professional account",
+      "tiktok": "TikTok account"
+    },
+    "status": {
+      "not_configured": "Meta provider setup required",
+      "analytics_only": "Analytics connected; publishing not enabled",
+      "not_enabled": "Publishing is disabled",
+      "app_review_pending": "Meta App Review is required",
+      "business_verification_pending": "Business verification is required",
+      "needs_reauth": "Meta connection needs reauthorization",
+      "ready": "Ready for future publishing",
+      "no_destinations": "Connect a Page or Instagram account"
+    },
+    "descriptionByStatus": {
+      "not_configured": "An agency administrator must configure the Meta app before accounts can be connected.",
+      "analytics_only": "The connection can read analytics, but no publishing capability has been granted.",
+      "not_enabled": "Publishing remains safely off until the platform, agency, and workspace switches are enabled.",
+      "app_review_pending": "The Meta app must pass review for the publishing capabilities requested.",
+      "business_verification_pending": "Complete the required Meta business verification before publishing can be enabled.",
+      "needs_reauth": "Reconnect Meta to refresh the permission grant for this destination.",
+      "ready": "The connection and capability checks pass. Content still needs its own editorial and media readiness checks.",
+      "no_destinations": "The provider is configured, but this workspace has no connected Meta destination yet."
+    },
+    "nextStepLabel": "Next step",
+    "nextStepByStatus": {
+      "not_configured": "Open agency Meta settings",
+      "analytics_only": "Request publishing access after App Review is complete",
+      "not_enabled": "Keep publishing disabled until the rollout gate is approved",
+      "app_review_pending": "Complete Meta App Review",
+      "business_verification_pending": "Complete business verification",
+      "needs_reauth": "Reauthorize the Meta connection",
+      "ready": "Validate each content item before queueing",
+      "no_destinations": "Connect and select a managed destination"
+    }
   }
 }

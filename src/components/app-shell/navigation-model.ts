@@ -420,6 +420,14 @@ export function buildWorkspaceNavigation(input: {
             },
             {
               kind: "link",
+              key: "settings-meta-publishing",
+              href: `${wsBase}/settings#meta-publishing`,
+              label: "Meta publishing",
+              labelKey: "sidebar.settingsMetaPublishing",
+              icon: ShieldCheck,
+            },
+            {
+              kind: "link",
               key: "settings-ai",
               href: `${wsBase}/ai-settings`,
               label: "AI assistance",

@@ -13,6 +13,7 @@ import {
   socialOauthStates,
   socialProfileDailyMetrics,
 } from "@/lib/db/schema";
+import { querySocialAnalytics } from "@/lib/social/analytics-query";
 
 /**
  * M4 — social profile analytics integration contract.
@@ -111,6 +112,9 @@ describe("M4 — social profile analytics schema", () => {
     });
     it("creates social_profile_daily_metric", async () => {
       expect(await tableExists("social_profile_daily_metric")).toBe(true);
+    });
+    it("creates agency_social_metric_probe", async () => {
+      expect(await tableExists("agency_social_metric_probe")).toBe(true);
     });
   });
 
@@ -312,6 +316,83 @@ describe("M4 — social profile analytics schema", () => {
         }),
         "social_profile_metric_counts_non_negative",
       );
+    });
+
+    it("queries only connected, non-archived channels within the workspace-local 90-day cutoff", async () => {
+      const [included] = await db
+        .insert(socialChannels)
+        .values({
+          workspaceId,
+          platform: "instagram",
+          accountName: "Included",
+          connectionStatus: "connected",
+        })
+        .returning();
+      const [archived] = await db
+        .insert(socialChannels)
+        .values({
+          workspaceId,
+          platform: "instagram",
+          accountName: "Archived",
+          connectionStatus: "connected",
+          archivedAt: new Date("2026-08-01T00:00:00Z"),
+        })
+        .returning();
+      const [disconnected] = await db
+        .insert(socialChannels)
+        .values({
+          workspaceId,
+          platform: "instagram",
+          accountName: "Disconnected",
+          connectionStatus: "disconnected",
+        })
+        .returning();
+      await db.insert(socialProfileDailyMetrics).values([
+        {
+          socialChannelId: included!.id,
+          metricDate: "2026-06-07",
+          observedAt: new Date("2026-06-07T08:00:00Z"),
+          followerCount: 10,
+          providerApiVersion: "test",
+          responseHash: "included-in-window",
+        },
+        {
+          socialChannelId: included!.id,
+          metricDate: "2026-06-01",
+          observedAt: new Date("2026-06-01T08:00:00Z"),
+          followerCount: 1,
+          providerApiVersion: "test",
+          responseHash: "included-outside-window",
+        },
+        {
+          socialChannelId: archived!.id,
+          metricDate: "2026-08-01",
+          observedAt: new Date("2026-08-01T08:00:00Z"),
+          followerCount: 20,
+          providerApiVersion: "test",
+          responseHash: "archived",
+        },
+        {
+          socialChannelId: disconnected!.id,
+          metricDate: "2026-08-01",
+          observedAt: new Date("2026-08-01T08:00:00Z"),
+          followerCount: 30,
+          providerApiVersion: "test",
+          responseHash: "disconnected",
+        },
+      ]);
+
+      const result = await querySocialAnalytics(
+        db,
+        workspaceId,
+        "America/Los_Angeles",
+        new Date("2026-09-04T00:30:00Z"),
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0]!.channel.accountName).toBe("Included");
+      expect(result[0]!.metrics.map((metric) => metric.responseHash)).toEqual([
+        "included-in-window",
+      ]);
     });
   });
 

@@ -8,6 +8,7 @@ import {
   fetchMetaInstagramSnapshot,
   META_SCOPES,
   metaAdapter,
+  probeMetaPermissions,
   type MetaTokenResponse,
 } from "@/lib/social/providers/meta";
 import { SocialProviderError, formatProviderError, isSocialProviderError } from "@/lib/social/http";
@@ -97,6 +98,42 @@ describe("META_SCOPES", () => {
     ]) {
       expect(META_SCOPES).not.toContain(forbidden);
     }
+  });
+});
+
+describe("probeMetaPermissions", () => {
+  it("propagates the pinned Graph version and returns only sanitized permission fields", async () => {
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      expect(url).toContain("https://graph.facebook.com/v26.0/me/permissions");
+      expect(url).toContain("access_token=user-secret-token");
+      return jsonResponse(
+        200,
+        {
+          data: [
+            { permission: "pages_read_engagement", status: "granted", access_token: "secret" },
+            { permission: "instagram_manage_insights", status: "declined" },
+            { malformed: true },
+          ],
+          paging: { next: "https://provider.example/raw-payload" },
+        },
+        { "x-request-id": "probe-request-1" },
+      );
+    }) as typeof fetch;
+
+    const result = await probeMetaPermissions({
+      accessToken: "user-secret-token",
+      apiVersion: "v26.0",
+    });
+    expect(result).toEqual({
+      permissions: [
+        { permission: "pages_read_engagement", status: "granted" },
+        { permission: "instagram_manage_insights", status: "declined" },
+      ],
+      requestId: "probe-request-1",
+    });
+    expect(JSON.stringify(result)).not.toContain("user-secret-token");
+    expect(JSON.stringify(result)).not.toContain("raw-payload");
   });
 });
 
@@ -225,6 +262,41 @@ describe("discoverMetaPages", () => {
   const baseGraph = "https://graph.facebook.com/v25.0";
   const appId = "app-1";
   const appSecret = "secret";
+
+  it("propagates an agency Graph API version through discovery and Facebook metadata", async () => {
+    const version = "v26.0";
+    const seen: string[] = [];
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      seen.push(url);
+      if (url.startsWith(`https://graph.facebook.com/${version}/me/accounts`)) {
+        return jsonResponse(200, {
+          data: [
+            {
+              id: "page-versioned",
+              name: "Versioned Page",
+              access_token: "page-token",
+              tasks: ["PROFILE_PLUS_ANALYZE"],
+            },
+          ],
+          paging: {},
+        });
+      }
+      if (url.startsWith(`https://graph.facebook.com/${version}/page-versioned`)) {
+        return jsonResponse(200, { id: "page-versioned", fan_count: 10 });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const result = await discoverMetaPages({
+      appId,
+      appSecret,
+      accessToken: "user-token",
+      graphApiVersion: version,
+    });
+    expect(result.profiles[0]?.providerAccountId).toBe("page-versioned");
+    expect(seen.every((url) => url.includes(`/graph.facebook.com/${version}/`))).toBe(true);
+  });
 
   it("returns Pages with PROFILE_PLUS_ANALYZE and a linked Instagram account", async () => {
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -802,7 +874,7 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     });
   });
 
-  it("silently writes partial row when insights returns 400 'metric not available' (not_configured, the App Review / dev-mode case)", async () => {
+  it("silently writes partial row when insights returns 400 'metric not available'", async () => {
     // 2026-08-28 round 3: when the Meta app doesn't have a specific
     // insight metric in its allowlist (App Review pending, or
     // Development mode without a role for the user), Meta returns
@@ -860,7 +932,7 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     };
     expect(meta.partial).toBe(true);
     expect(meta.reason).toBe("page_insights_unavailable");
-    expect(meta.providerErrorCode).toBe("not_configured");
+    expect(meta.providerErrorCode).toBe("metric_unavailable");
   });
 
   it("marks only the failed Page metric as an error while preserving successful metric statuses", async () => {
@@ -907,7 +979,7 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     expect(snapshot.sourceMetadata.metricStatuses).toEqual({
       followerCount: { status: "available" },
       reach: { status: "available" },
-      views: { status: "error", providerErrorCode: "not_configured" },
+      views: { status: "error", providerErrorCode: "metric_unavailable" },
       interactions: { status: "available" },
       engagedAccounts: { status: "unsupported" },
     });

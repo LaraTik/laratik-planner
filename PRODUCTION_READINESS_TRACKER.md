@@ -1,5 +1,13 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-09-04 analytics reliability amendment** — The approved analytics
+> refactor adds migration `0031_social_metric_workspace_dates` to backfill
+> daily social metric dates from `observed_at` in each workspace timezone;
+> latest `observed_at` wins collisions. It also separates provider setup and
+> metric availability errors while preserving legacy `not_configured` reads.
+> Exact-clean migration, integration, bilingual browser, accessibility, and
+> visual evidence remains required before this work can move beyond `Tested`.
+
 > **Release verdict: `READY FOR INDEPENDENT REVIEW`** (2026-08-24 — shared across this file and `docs/production-readiness/UAT_RELEASE.md`).
 >
 > This is the authoritative implementation and verification tracker. `STUDIOFLOW_MASTER_PROMPT.md` remains the product source of truth. MiniMax may move an item through `Tested`; only an independent reviewer may set `Verified` and flip the shared verdict to `READY`.

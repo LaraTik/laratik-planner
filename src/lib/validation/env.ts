@@ -186,6 +186,13 @@ const serverSchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true" || v === "1"),
+  // Future Meta direct publishing kill switch. It is intentionally
+  // false by default and cannot enable publishing by itself: the
+  // agency/workspace/provider capability gates must also pass.
+  META_PUBLISHING_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === "true" || v === "1"),
 
   // Agency context cookie (Milestone 1.2) — server-only HMAC secret.
   // 32+ bytes (≥ 32 ASCII chars). The agency-context helper fails closed

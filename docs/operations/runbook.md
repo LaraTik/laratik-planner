@@ -696,6 +696,23 @@ The provider HTTP client retries `429` and `5xx` up to twice with full-jitter de
 
 If Meta or TikTok revokes the application entirely (the `META_APP_ID` or `TIKTOK_CLIENT_KEY` is disabled), every call returns `4xx auth_expired`. The repository marks every attached connection `revoked` and every channel `disconnected`. Historical metrics are preserved. Recovery is a full re-authorization through the OAuth flow after the provider-side reactivation.
 
+### Meta publishing readiness and emergency stop
+
+Meta publishing readiness is a separate, disabled-by-default capability. The
+platform switch is `META_PUBLISHING_ENABLED`; the agency and workspace switches
+are stored in their respective settings. Until the App Review, Business
+Verification, media-delivery, sandbox, and canary gates are approved, keep the
+platform switch `false`. In this readiness release there is no live Meta
+publishing adapter or queue, so enabling a workspace switch only records intent
+and exposes the checks; it cannot send a post.
+
+To stop future queue creation during a later rollout, set
+`META_PUBLISHING_ENABLED=false` and restart the app. Do not delete connection,
+capability, job, or attempt history. Existing manual publishing remains
+available. Reauthorization is required when a capability row is `needs_reauth`,
+`revoked`, or has a provider token failure; never copy tokens or signed media
+URLs into tickets or logs.
+
 ### Platform KEK rotation (M4.5)
 
 `SOCIAL_TOKEN_ENCRYPTION_KEY` is the platform **Key Encryption Key (KEK)** that wraps each agency's **Data Encryption Key (DEK)** in `agency_social_dek`. Per-agency tokens are sealed with the agency DEK, NOT the platform KEK — so rotating the KEK only re-wraps the DEK envelopes, not the per-connection envelopes. The application boots fine without the KEK; it is only required when an agency enables social or when the cron worker runs. To rotate:

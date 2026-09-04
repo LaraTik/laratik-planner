@@ -92,6 +92,7 @@ describe("channel test error taxonomy", () => {
     "invalid_response",
     "platform_kek_missing",
     "social_not_enabled",
+    "provider_not_configured",
     "not_configured",
     "no_connection",
     "not_connected",

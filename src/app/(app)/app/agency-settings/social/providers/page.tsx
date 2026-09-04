@@ -12,6 +12,8 @@ import { db } from "@/lib/db";
 import { agencies, agencySocialProviderConfig } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { ProviderConfigCard } from "./provider-config-card";
+import { AnalyticsProbeCard } from "./analytics-probe-card";
+import { listAnalyticsProbeProfiles } from "@/lib/social/analytics-probe";
 
 export async function generateMetadata() {
   const { t } = await tForActive();
@@ -71,7 +73,7 @@ export default async function AgencySocialProvidersPage() {
   // The agency slug is loaded alongside because each provider card
   // surfaces the per-agency OAuth callback URL (the value the admin
   // pastes into their Meta / TikTok developer console).
-  const [metaRow, tiktokRow, agency] = await Promise.all([
+  const [metaRow, tiktokRow, agency, probeProfiles] = await Promise.all([
     db
       .select()
       .from(agencySocialProviderConfig)
@@ -100,6 +102,7 @@ export default async function AgencySocialProvidersPage() {
       .where(eq(agencies.id, agencyId))
       .limit(1)
       .then((r) => r[0] ?? null),
+    listAnalyticsProbeProfiles(agencyId),
   ]);
 
   return (
@@ -142,6 +145,7 @@ export default async function AgencySocialProvidersPage() {
           />
         </div>
       </section>
+      <AnalyticsProbeCard profiles={probeProfiles} />
     </div>
   );
 }
@@ -151,6 +155,9 @@ type ExistingSummary = {
   loginConfigId: string | null;
   graphApiVersion: string | null;
   enabled: boolean;
+  publishingEnabled: boolean;
+  appReviewStatus: "not_requested" | "pending" | "approved" | "rejected";
+  businessVerificationStatus: "not_required" | "not_started" | "pending" | "verified" | "rejected";
   lastTestedAt: Date | null;
   lastTestedOk: boolean | null;
   lastTestErrorCode: string | null;
@@ -164,6 +171,10 @@ function toExistingSummary(row: typeof agencySocialProviderConfig.$inferSelect):
     loginConfigId: row.loginConfigId,
     graphApiVersion: row.graphApiVersion,
     enabled: row.enabled,
+    publishingEnabled: row.publishingEnabled,
+    appReviewStatus: row.appReviewStatus as ExistingSummary["appReviewStatus"],
+    businessVerificationStatus:
+      row.businessVerificationStatus as ExistingSummary["businessVerificationStatus"],
     lastTestedAt: row.lastTestedAt,
     lastTestedOk: row.lastTestedOk,
     lastTestErrorCode: row.lastTestErrorCode,

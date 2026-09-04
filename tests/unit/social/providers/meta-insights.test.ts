@@ -169,28 +169,41 @@ describe("fetchMetaPageDailyInsights — per-metric isolation (Rice n Spices fix
       page_views: { body: transientError() },
       page_post_engagements: { body: JSON.stringify(successResponse(7)) },
     });
-    await expect(
-      fetchMetaPageDailyInsights({
-        accessToken: "token",
-        pageId: "123",
-        apiVersion: "v25.0",
-      }),
-    ).rejects.toMatchObject({ code: "provider_unavailable" });
+    const result = await fetchMetaPageDailyInsights({
+      accessToken: "token",
+      pageId: "123",
+      apiVersion: "v25.0",
+    });
+    expect(result.insights).toEqual({
+      reach: 100,
+      views: null,
+      engagedAccounts: null,
+      interactions: 7,
+    });
+    expect(result.errors).toEqual([
+      {
+        metric: "views",
+        code: "provider_unavailable",
+        requestId: "req-test-789",
+      },
+    ]);
   });
 
-  it("rejects a successful response without a data array as invalid_response", async () => {
+  it("isolates an invalid metric response without discarding successful siblings", async () => {
     setupMockByMetricName({
       page_impressions_unique: { body: JSON.stringify({}) },
       page_views: { body: JSON.stringify(successResponse(42)) },
       page_post_engagements: { body: JSON.stringify(successResponse(7)) },
     });
-    await expect(
-      fetchMetaPageDailyInsights({
-        accessToken: "token",
-        pageId: "123",
-        apiVersion: "v25.0",
-      }),
-    ).rejects.toMatchObject({ code: "invalid_response" });
+    const result = await fetchMetaPageDailyInsights({
+      accessToken: "token",
+      pageId: "123",
+      apiVersion: "v25.0",
+    });
+    expect(result.insights.views).toBe(42);
+    expect(result.insights.interactions).toBe(7);
+    expect(result.insights.reach).toBeNull();
+    expect(result.errors[0]).toMatchObject({ metric: "reach", code: "invalid_response" });
   });
 });
 

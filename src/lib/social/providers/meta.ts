@@ -147,6 +147,46 @@ export type MetaTokenResponse = {
   expires_in?: number;
 };
 
+export type MetaPermissionProbeResult = {
+  permissions: Array<{ permission: string; status: string }>;
+  requestId: string | null;
+};
+
+/**
+ * Read only the permission names/statuses needed by the admin diagnostics
+ * surface. The access token and provider payload never leave this module.
+ */
+export async function probeMetaPermissions(args: {
+  accessToken: string;
+  apiVersion?: string | null;
+}): Promise<MetaPermissionProbeResult> {
+  const url = new URL(`${graphBaseUrl(args.apiVersion)}/me/permissions`);
+  url.searchParams.set("access_token", args.accessToken);
+  const { body, requestId } = await providerRequest(url.toString());
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    throw new SocialProviderError("invalid_response", false, requestId);
+  }
+  const data =
+    typeof parsed === "object" &&
+    parsed !== null &&
+    Array.isArray((parsed as { data?: unknown }).data)
+      ? (parsed as { data: unknown[] }).data
+      : null;
+  if (!data) throw new SocialProviderError("invalid_response", false, requestId);
+  const permissions = data.flatMap((entry) => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const permission = (entry as { permission?: unknown }).permission;
+    const status = (entry as { status?: unknown }).status;
+    return typeof permission === "string" && typeof status === "string"
+      ? [{ permission, status }]
+      : [];
+  });
+  return { permissions, requestId };
+}
+
 export type ExchangeShortLivedInput = {
   appId: string;
   appSecret: string;
@@ -571,7 +611,7 @@ async function fetchMetaInsightsMetric(args: {
   metricName: string;
 }): Promise<{
   value: number | null;
-  errorCode: "not_configured" | "permission_denied" | null;
+  errorCode: SocialProviderError["code"] | null;
   requestId: string | null;
   usage: MetaRateLimitUsage;
 }> {
@@ -599,16 +639,22 @@ async function fetchMetaInsightsMetric(args: {
     };
   } catch (err) {
     if (isSocialProviderError(err)) {
-      if (err.code === "not_configured" || err.code === "permission_denied") {
-        return {
-          value: null,
-          errorCode: err.code,
-          requestId: err.requestId,
-          usage: { app: null, business: null },
-        };
-      }
+      return {
+        value: null,
+        errorCode: err.code,
+        requestId: err.requestId,
+        usage: { app: null, business: null },
+      };
     }
-    throw err;
+    // providerRequest normally normalizes transport failures, but keep
+    // the per-metric contract total so one unexpected failure cannot
+    // discard successful sibling metrics.
+    return {
+      value: null,
+      errorCode: "provider_unavailable",
+      requestId: null,
+      usage: { app: null, business: null },
+    };
   }
 }
 
@@ -620,7 +666,7 @@ export async function fetchMetaFacebookPageSnapshot(args: {
 }): Promise<MetaPageSnapshot> {
   const { accessToken, pageId, apiVersion, requestIdHint } = args;
   const fields = "id,fan_count,followers_count";
-  const url = new URL(`${graphBaseUrl()}/${pageId}`);
+  const url = new URL(`${graphBaseUrl(apiVersion)}/${pageId}`);
   url.searchParams.set("fields", fields);
   url.searchParams.set("access_token", accessToken);
   const { body, requestId, usage: basicFieldsUsage } = await providerRequest(url.toString());
@@ -813,7 +859,7 @@ export async function fetchMetaFacebookPageSnapshot(args: {
 
 export type MetaInsightsError = {
   metric: "reach" | "views" | "engagedAccounts" | "interactions";
-  code: "not_configured" | "permission_denied";
+  code: SocialProviderError["code"];
   requestId: string | null;
 };
 
@@ -1249,6 +1295,9 @@ export const metaAdapter: SocialProviderAdapter = {
       appId: appCredentials.appId,
       appSecret: appCredentials.appSecret,
       accessToken: credentials.accessToken,
+      ...(appCredentials.graphApiVersion !== undefined
+        ? { graphApiVersion: appCredentials.graphApiVersion }
+        : {}),
     });
   },
 
@@ -1264,6 +1313,9 @@ export const metaAdapter: SocialProviderAdapter = {
       appId: appCredentials.appId,
       appSecret: appCredentials.appSecret,
       shortLivedToken: credentials.accessToken,
+      ...(appCredentials.graphApiVersion !== undefined
+        ? { graphApiVersion: appCredentials.graphApiVersion }
+        : {}),
     });
     return {
       credentials: {

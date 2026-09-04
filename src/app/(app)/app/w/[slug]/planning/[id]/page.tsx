@@ -65,6 +65,8 @@ import { WorkflowStepper } from "@/components/planning/workflow-stepper";
 import { PlatformPreview } from "@/components/planning/platform-preview";
 import { type WorkspaceTab } from "@/components/planning/workspace-tabs";
 import { PublishPackageForm } from "./publish/publish-package-form";
+import { getMetaPublishingReadinessForWorkspace } from "@/lib/social/publishing-readiness-service";
+import { metaPublishingReadinessCopy } from "@/lib/social/publishing-readiness-copy";
 
 export async function generateMetadata({
   params,
@@ -123,6 +125,9 @@ export default async function ContentDetailPage({
 
   const ws = await getAccessibleWorkspace(actor, slug);
   if (!ws) notFound();
+
+  const metaPublishingReadiness = await getMetaPublishingReadinessForWorkspace(ws.agencyId, ws.id);
+  const metaPublishingCopy = metaPublishingReadinessCopy(metaPublishingReadiness, t);
 
   const item = await getContentItem(actor, id);
   if (!item || item.workspaceId !== ws.id) notFound();
@@ -1123,6 +1128,8 @@ export default async function ContentDetailPage({
                       canEdit={canEdit}
                       canApproveFinalCopy={canApproveFinalCopy}
                       canConfirmReadiness={canConfirmReadiness}
+                      metaPublishingReadiness={metaPublishingReadiness}
+                      metaPublishingCopy={metaPublishingCopy}
                     />
                   </div>
                 ) : null}

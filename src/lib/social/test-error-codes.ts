@@ -12,6 +12,7 @@ export type TestErrorCode =
   | "invalid_response"
   | "platform_kek_missing"
   | "social_not_enabled"
+  | "provider_not_configured"
   | "not_configured"
   | "no_connection"
   | "not_connected"
@@ -26,6 +27,7 @@ export const TEST_ERROR_CODES: readonly TestErrorCode[] = [
   "invalid_response",
   "platform_kek_missing",
   "social_not_enabled",
+  "provider_not_configured",
   "not_configured",
   "no_connection",
   "not_connected",
@@ -66,6 +68,11 @@ export const TEST_ERROR_COPY: Record<TestErrorCode, { key: string; fallback: str
   social_not_enabled: {
     key: "users.channelsErrors.retest.social_not_enabled",
     fallback: "Social sync is not enabled for this agency. Contact your agency admin.",
+  },
+  provider_not_configured: {
+    key: "users.channelsErrors.retest.provider_not_configured",
+    fallback:
+      "This agency has no provider configuration for analytics. Ask an agency admin to configure it.",
   },
   not_configured: {
     key: "users.channelsErrors.retest.not_configured",

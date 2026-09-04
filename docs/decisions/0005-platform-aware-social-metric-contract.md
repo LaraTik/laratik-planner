@@ -40,10 +40,27 @@ identifies the denominator so the result is not misread.
 
 ## Consequences
 
-- No destructive migration or historical backfill is required.
+- Migration `0031_social_metric_workspace_dates` backfills existing rows from
+  `observed_at` into each workspace's local calendar date. If two rows collide
+  after conversion, the row with the latest `observed_at` is retained. This is
+  an approved supersession of the original no-backfill consequence because
+  UTC-derived dates were materially misrepresenting daily analytics.
 - Sync remains successful when a provider returns valid partial data; the row
   records the unavailable metric statuses for operators and the UI explains
   the count and missing metrics.
 - New providers must declare their supported metrics and status mapping before
   their metrics are added to the universal UI.
 - CSV and future exports must use the same capability registry as the table.
+
+## 2026-09-04 reliability amendment
+
+The original `not_configured` metric error was ambiguous. New provider writes
+use `provider_not_configured` for missing agency configuration and
+`metric_unavailable` when Meta rejects an individual metric. Existing
+`not_configured` metadata remains readable as a legacy value. Metric requests
+are settled independently, so retryable provider failures preserve successful
+sibling metrics and are retried on the next sync tick. All daily dates are
+derived in the workspace timezone.
+
+Approval: product owner authorized the date backfill and latest-observation
+collision rule during the analytics reliability implementation on 2026-09-04.

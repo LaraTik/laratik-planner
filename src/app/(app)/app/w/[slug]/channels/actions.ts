@@ -218,6 +218,7 @@ export async function finalizeMetaSelectionAction(
   try {
     return await db.transaction(async (tx) => {
       const linked: string[] = [];
+      const linkedByProviderAccount = new Map<string, string>();
       for (const profile of parsed.data.profiles) {
         const existing = candidates.find((c) => c.externalAccountId === profile.providerAccountId);
         const result = await linkProfile(tx, {
@@ -227,6 +228,24 @@ export async function finalizeMetaSelectionAction(
           ...(existing?.id ? { existingChannelId: existing.id } : {}),
         });
         linked.push(result.channel.id);
+        linkedByProviderAccount.set(profile.providerAccountId, result.channel.id);
+      }
+      // Persist the Page → Instagram professional-account relationship
+      // after all selected profiles have been linked. The picker may
+      // return the child before the Page, and the parent may already be
+      // an existing manual channel, so the relationship is resolved by
+      // provider IDs after the loop rather than during insert.
+      for (const profile of parsed.data.profiles) {
+        if (profile.platform !== "instagram" || !profile.parentProviderAccountId) continue;
+        const parentChannelId =
+          linkedByProviderAccount.get(profile.parentProviderAccountId) ??
+          candidates.find((c) => c.externalAccountId === profile.parentProviderAccountId)?.id;
+        const childChannelId = linkedByProviderAccount.get(profile.providerAccountId);
+        if (!parentChannelId || !childChannelId) continue;
+        await tx
+          .update(socialChannels)
+          .set({ parentSocialChannelId: parentChannelId, updatedAt: new Date() })
+          .where(eq(socialChannels.id, childChannelId));
       }
       await setConnectionStatus(tx, parsed.data.connectionId, "active");
       revalidatePath(`/app/w/${slug}/channels`);

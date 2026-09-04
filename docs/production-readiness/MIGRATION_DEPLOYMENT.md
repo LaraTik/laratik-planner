@@ -17,6 +17,22 @@
 | Encrypted offsite backup + rotation | **Blocked on OPS-001** (owner-supplied)      |
 | VPS deploy to `laratik-vps`         | **Blocked on OPS-001** (VPS_SSH_* secrets)   |
 
+## Migration 0031 — workspace-local social metric dates
+
+Migration `0031_social_metric_workspace_dates.sql` corrects the daily metric
+date boundary using each channel's workspace timezone. It is a forward-only
+data correction: before deployment, take the normal verified Postgres backup.
+The migration temporarily removes the daily unique index, materializes the
+converted date and deterministic duplicate rank, deletes lower-ranked
+collisions, updates surviving rows, and recreates the unique index. The latest
+`observed_at` wins; no provider payload or credential is exposed or rewritten.
+
+Older application images remain compatible with the corrected date values and
+the additive migration. If the correction must be reversed, restore the
+verified pre-deploy backup or write a reviewed forward-fix migration; do not
+edit the applied migration. From-zero, supported-upgrade, collision, and
+backup/restore evidence must be captured at the exact clean release SHA.
+
 ## 2026-08-24 incident — skipped migration 0012
 
 Production error reference `1145607673` resolved to
@@ -498,3 +514,39 @@ leaving the additive columns/table in place. Schema rollback is forward-only;
 restore the pre-migration backup only with explicit approval because it removes
 email delivery history. From-zero and upgrade-drill evidence is **pending**
 until a disposable PostgreSQL service is available.
+
+## Migration 0030 — Meta publishing readiness foundation
+
+**Filename:** `src/lib/db/migrations/0030_meta_publishing_readiness.sql`
+
+**Journal tag:** `0030_meta_publishing_readiness` (journal `when`:
+`1789600000000`)
+
+### Forward behavior
+
+Additive only. The migration adds disabled-by-default Meta publishing gates to
+`workspace_settings` and `agency_social_provider_config`, adds the
+`parent_social_channel_id` relationship for Page → linked Instagram account
+destinations, and creates `social_connection_capability` for sanitized
+operation health. It does not create a publish queue, call Meta, store provider
+payloads, or change existing analytics/manual publishing behavior.
+
+All constraints and indexes are guarded for safe repair/replay. Existing rows
+receive conservative defaults: workspace and agency publishing switches are
+`false`, approval is `not_requested`, and business verification is
+`not_required`.
+
+### Compatibility, backup, and rollback
+
+Older application images ignore the additive columns and table. Before
+deployment, take the standard verified `pg_dump`. Normal application rollback
+pins the previous image and leaves the additive schema in place. Destructive
+schema rollback requires restoring the pre-migration backup or an explicitly
+approved forward-only drop; never edit the applied migration file.
+
+### Evidence
+
+From-zero, upgrade, backup/restore, and failed-migration drill evidence is
+**pending** for the exact clean commit. The readiness unit suite covers the
+status state machine; integration migration evidence must be recorded in
+`MIGRATION_DRILL_RESULTS.md` before this migration is marked release-ready.

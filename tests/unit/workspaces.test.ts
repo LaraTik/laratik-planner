@@ -245,6 +245,15 @@ describe("updateWorkspaceSettings", () => {
       approvalMode: "simple",
       monthlyTarget: 4,
     });
+    expect(settingsRow?.values).not.toHaveProperty("metaPublishingEnabled");
+  });
+
+  it("changes Meta publishing only when the optional flag is supplied", async () => {
+    await updateWorkspaceSettings(actor, { ...baseInput, metaPublishingEnabled: true });
+    const settingsRow = dbMock.state.insertCalls.find(
+      (c) => (c.values as Record<string, unknown>)?.["approvalMode"] === "simple",
+    );
+    expect(settingsRow?.values).toMatchObject({ metaPublishingEnabled: true });
   });
 
   it("updates the workspace row with the new timezone", async () => {

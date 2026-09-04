@@ -23,6 +23,10 @@ const ASSIGNMENT_ROLE = {
 
 export async function updateWorkspaceSettings(actor: Actor, raw: WorkspaceSettingsCommand) {
   const input = workspaceSettingsCommandSchema.parse(raw);
+  const metaPublishingChange =
+    input.metaPublishingEnabled === undefined
+      ? {}
+      : { metaPublishingEnabled: input.metaPublishingEnabled };
   await requirePolicy(
     hasWorkspaceRole(actor, input.workspaceId, ["workspace_manager"]),
     "update_workspace_settings",
@@ -75,6 +79,7 @@ export async function updateWorkspaceSettings(actor: Actor, raw: WorkspaceSettin
         defaultContentReviewerId: input.defaultContentReviewerId,
         defaultInternalCreativeReviewerId: input.defaultInternalCreativeReviewerId,
         defaultClientReviewerId: input.defaultClientReviewerId,
+        ...metaPublishingChange,
       })
       .onConflictDoUpdate({
         target: workspaceSettings.workspaceId,
@@ -89,6 +94,7 @@ export async function updateWorkspaceSettings(actor: Actor, raw: WorkspaceSettin
           defaultContentReviewerId: input.defaultContentReviewerId,
           defaultInternalCreativeReviewerId: input.defaultInternalCreativeReviewerId,
           defaultClientReviewerId: input.defaultClientReviewerId,
+          ...metaPublishingChange,
           updatedAt: new Date(),
         },
       });
@@ -98,7 +104,13 @@ export async function updateWorkspaceSettings(actor: Actor, raw: WorkspaceSettin
       targetType: "workspace",
       targetId: input.workspaceId,
       outcome: "success",
-      metadata: { approvalMode: input.approvalMode, timezone: input.timezone },
+      metadata: {
+        approvalMode: input.approvalMode,
+        timezone: input.timezone,
+        ...(input.metaPublishingEnabled === undefined
+          ? {}
+          : { metaPublishingEnabled: input.metaPublishingEnabled }),
+      },
     });
   });
 

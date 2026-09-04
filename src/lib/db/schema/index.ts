@@ -33,6 +33,7 @@ export * from "./social-analytics";
 export * from "./app-errors";
 export * from "./social-dek";
 export * from "./provider-config";
+export * from "./social-publishing";
 // M4.7 / Phase 1 of the social-cron-admin plan: cron_tick_history
 // powers the platform-admin /app/platform/operations/cron page and
 // the "Run now" audit hook. Imported after identity for the optional

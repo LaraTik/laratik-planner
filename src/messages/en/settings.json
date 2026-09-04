@@ -315,6 +315,23 @@
     "lastStep": "Last step",
     "noPrevious": "No previous section"
   },
+  "metaPublishing": {
+    "title": "Meta publishing",
+    "description": "Prepare this workspace for future Facebook Page and Instagram professional account publishing. No live post is sent while the platform and agency gates are disabled.",
+    "fieldLabel": "Enable Meta publishing readiness for this workspace",
+    "fieldHint": "This workspace switch is an additional safety gate. It does not grant Meta access or publish anything by itself.",
+    "disabledHint": "Publishing remains off for this workspace. Manual publishing and analytics are unchanged.",
+    "enabledHint": "The workspace is opted in to readiness checks. Queue creation remains blocked until the platform, agency, connection, capability, and media gates are ready.",
+    "submit": "Save Meta setting",
+    "saved": "Meta publishing setting saved.",
+    "readOnly": "Only workspace managers can change Meta publishing readiness.",
+    "errors": {
+      "unauthorized": "Sign in again to save this setting.",
+      "notFound": "Workspace not found.",
+      "forbidden": "Workspace manager access is required.",
+      "saveFailed": "The Meta publishing setting could not be saved. Try again."
+    }
+  },
   "stepAria": "Step {current} of {total}",
   "lastSaved": {
     "label": "Last saved",

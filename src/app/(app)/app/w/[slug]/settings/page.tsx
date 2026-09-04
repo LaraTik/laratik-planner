@@ -27,6 +27,7 @@ import { LifecycleForm } from "./_components/lifecycle-form";
 import { LeadTimesForm } from "./_components/lead-times-form";
 import { DefaultsForm } from "./_components/defaults-form";
 import { ApprovalsForm } from "./_components/approvals-form";
+import { MetaPublishingForm } from "./_components/meta-publishing-form";
 import { currentActor } from "@/lib/auth/current-actor";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -108,6 +109,7 @@ export default async function WorkspaceSettingsPage({
     defaultContentReviewerId: null,
     defaultInternalCreativeReviewerId: null,
     defaultClientReviewerId: null,
+    metaPublishingEnabled: false,
   };
 
   const leadTotal =
@@ -384,6 +386,36 @@ export default async function WorkspaceSettingsPage({
             />
           ) : (
             <ReadOnlySettings message={t("settings.approvals.readOnly")} />
+          )}
+          <LastSaved at={settings?.updatedAt ?? null} />
+        </SettingsSection>
+
+        <SettingsSection
+          id="meta-publishing"
+          title={t("settings.metaPublishing.title")}
+          description={t("settings.metaPublishing.description")}
+        >
+          {canManage ? (
+            <MetaPublishingForm
+              slug={slug}
+              enabled={values.metaPublishingEnabled}
+              copy={{
+                fieldLabel: t("settings.metaPublishing.fieldLabel"),
+                fieldHint: t("settings.metaPublishing.fieldHint"),
+                disabledHint: t("settings.metaPublishing.disabledHint"),
+                enabledHint: t("settings.metaPublishing.enabledHint"),
+                submit: t("settings.metaPublishing.submit"),
+                saved: t("settings.metaPublishing.saved"),
+                errors: {
+                  unauthorized: t("settings.metaPublishing.errors.unauthorized"),
+                  not_found: t("settings.metaPublishing.errors.notFound"),
+                  forbidden: t("settings.metaPublishing.errors.forbidden"),
+                  save_failed: t("settings.metaPublishing.errors.saveFailed"),
+                },
+              }}
+            />
+          ) : (
+            <ReadOnlySettings message={t("settings.metaPublishing.readOnly")} />
           )}
           <LastSaved at={settings?.updatedAt ?? null} />
         </SettingsSection>

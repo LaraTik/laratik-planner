@@ -19,6 +19,11 @@ import { updateWorkspaceSettings } from "@/lib/workspaces/settings-service";
 
 export type SettingsActionState = { saved?: boolean; error?: string };
 
+export type MetaPublishingActionState = {
+  saved?: boolean;
+  error?: "unauthorized" | "not_found" | "forbidden" | "save_failed";
+};
+
 /**
  * Single combined action — kept for any consumer that still
  * posts the old single-form payload (none in the per-section
@@ -60,6 +65,38 @@ export async function updateWorkspaceSettingsAction(
   }
   revalidatePath(`/app/w/${slug}`);
   revalidatePath(`/app/w/${slug}/settings`);
+  return { saved: true };
+}
+
+export async function updateMetaPublishingSettingsAction(
+  slug: string,
+  _previous: MetaPublishingActionState,
+  formData: FormData,
+): Promise<MetaPublishingActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "unauthorized" };
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return { error: "not_found" };
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"]))) {
+    return { error: "forbidden" };
+  }
+
+  try {
+    const metaPublishingEnabled = formData.get("metaPublishingEnabled") === "on";
+    const updatedAt = new Date();
+    await db
+      .insert(workspaceSettingsTable)
+      .values({ workspaceId: workspace.id, metaPublishingEnabled, updatedAt })
+      .onConflictDoUpdate({
+        target: workspaceSettingsTable.workspaceId,
+        set: { metaPublishingEnabled, updatedAt },
+      });
+  } catch {
+    return { error: "save_failed" };
+  }
+  revalidatePath(`/app/w/${slug}/settings`);
+  revalidatePath(`/app/w/${slug}/channels`);
+  revalidatePath(`/app/w/${slug}/planning`);
   return { saved: true };
 }
 

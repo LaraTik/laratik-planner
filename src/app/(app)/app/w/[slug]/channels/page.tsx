@@ -9,6 +9,7 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { hasAgencyProviderConfig } from "@/lib/social/provider-config";
 import { findPendingConnectionForWorkspace } from "@/lib/social/repository";
+import { getMetaPublishingReadinessForWorkspace } from "@/lib/social/publishing-readiness-service";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,8 @@ import { AddChannelButton } from "./add-channel-button";
 import { ChannelForm } from "./channel-form";
 import { ChannelRowActions } from "./channel-edit-drawer";
 import { MetaAccountPicker } from "./meta-account-picker";
+import { MetaPublishingReadinessCard } from "@/components/workspace/meta-publishing-readiness-card";
+import { metaPublishingReadinessCopy } from "@/lib/social/publishing-readiness-copy";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -253,6 +256,10 @@ export default async function ChannelsPage({
   // it and renders the picker with a candidates list of existing
   // channels whose `external_account_id` matches.
   const pending = canManage ? await findPendingConnectionForWorkspace(db, workspace.id) : null;
+  const metaPublishingReadiness = await getMetaPublishingReadinessForWorkspace(
+    workspace.agencyId,
+    workspace.id,
+  );
   const candidates = pending
     ? rows
         .filter(
@@ -323,6 +330,11 @@ export default async function ChannelsPage({
         </div>
       ) : null}
 
+      <MetaPublishingReadinessCard
+        readiness={metaPublishingReadiness}
+        copy={metaPublishingReadinessCopy(metaPublishingReadiness, t)}
+      />
+
       {pending ? (
         <MetaAccountPicker
           connectionId={pending.connection.id}
@@ -337,6 +349,27 @@ export default async function ChannelsPage({
           }))}
           candidates={candidates}
           slug={slug}
+          copy={{
+            title: t("common.metaPublishing.picker.title"),
+            description: t("common.metaPublishing.picker.description"),
+            bulkSelection: t("common.metaPublishing.picker.bulkSelection"),
+            selectAll: t("common.metaPublishing.picker.selectAll"),
+            unselectAll: t("common.metaPublishing.picker.unselectAll"),
+            selectAccount: t("common.metaPublishing.picker.selectAccount"),
+            alreadyConnected: t("common.metaPublishing.picker.alreadyConnected"),
+            linkedTo: t("common.metaPublishing.picker.linkedTo"),
+            willLink: t("common.metaPublishing.picker.willLink"),
+            willCreate: t("common.metaPublishing.picker.willCreate"),
+            selected: t("common.metaPublishing.picker.selected"),
+            linking: t("common.metaPublishing.picker.linking"),
+            linkSelected: t("common.metaPublishing.picker.linkSelected"),
+            pickOne: t("common.metaPublishing.picker.pickOne"),
+            platformLabels: {
+              facebook: t("common.metaPublishing.picker.facebook"),
+              instagram: t("common.metaPublishing.picker.instagram"),
+              tiktok: t("common.metaPublishing.picker.tiktok"),
+            },
+          }}
         />
       ) : null}
 

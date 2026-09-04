@@ -211,6 +211,27 @@
       "when": 1789500000000,
       "tag": "0029_notification_email_delivery_state",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1789600000000,
+      "tag": "0030_meta_publishing_readiness",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1789700000000,
+      "tag": "0031_social_metric_workspace_dates",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1789800000000,
+      "tag": "0032_agency_social_metric_probe",
+      "breakpoints": true
     }
   ]
 }

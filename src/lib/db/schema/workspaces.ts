@@ -84,6 +84,10 @@ export const workspaceSettings = pgTable("workspace_settings", {
   monthlyTarget: integer("monthly_target"),
   channelTargets: jsonb("channel_targets"),
   formatTargets: jsonb("format_targets"),
+  // Meta direct publishing is opt-in per workspace. The platform and
+  // agency switches must both be enabled before a queue action can
+  // ever be added by the future publishing worker.
+  metaPublishingEnabled: boolean("meta_publishing_enabled").notNull().default(false),
   ...timestamps,
 });
 

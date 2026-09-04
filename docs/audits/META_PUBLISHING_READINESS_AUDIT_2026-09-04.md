@@ -437,3 +437,40 @@ The official Meta collections document different publishing flows and account/pe
 Do not add direct Meta publishing code in the current pass. The repository is well positioned for a later implementation, but it needs a formal Meta capability layer, provider-safe media delivery, an asynchronous job/attempt engine, stronger readiness checks, and a clearer localized UI narrative first.
 
 The best next engineering milestone is Phase 0 plus the non-mutating portions of Phase 1: finalize the target matrix, document the field mapping, decide the media delivery contract, and add the data model/UX specification for publishing readiness. That work will preserve the current analytics architecture and avoid prematurely coupling the existing manual publication record to Meta’s asynchronous provider lifecycle.
+
+## Implementation follow-up — readiness slice
+
+The first readiness slice described above has now been implemented without
+enabling live Meta mutations:
+
+- Added the supported-format and field-mapping matrix at
+  `docs/content/meta-publishing-field-matrix.md`
+- Added the bilingual responsive design brief at
+  `docs/visual-parity/META_PUBLISHING_DESIGN_BRIEF.md`, based on UI/UX Pro Max
+  and frontend-design review reconciled with StudioFlow/Stitch tokens
+- Added the readiness decision record at
+  `docs/decisions/0010-meta-publishing-readiness.md`
+- Added disabled-by-default platform, agency, and workspace safety gates
+- Added normalized per-destination Meta capability records
+- Added the Facebook Page → linked Instagram professional-account relationship
+- Added server-authoritative readiness states for provider, approval,
+  verification, connection, capability, and destination blockers
+- Added localized readiness cards to agency provider settings, workspace
+  channels, and content publishing setup
+- Added a workspace Settings control and a hierarchical bilingual destination
+  picker using logical layout utilities
+- Added readiness state-machine tests, catalog parity coverage, and migration
+  drill coverage for the new additive migration
+
+Verification for this working tree: targeted Meta/i18n/navigation tests pass
+(35 tests), TypeScript passes, lint passes, formatting passes, the production
+build passes, and the five-step disposable migration drill passes (31/31
+ledger entries). The full unit suite passes 3,175 tests; three unrelated
+failures remain in pre-existing CI workflow assertions and should be resolved
+with the dirty `.github/workflows/*` changes before a release-gate claim.
+
+Still intentionally deferred: provider-facing immutable media delivery and
+media metadata persistence, `publish_job` / `publish_attempt`, live provider
+adapters, App Review and Business Verification evidence, canary publishing,
+and isolated browser evidence at every required bilingual viewport. The
+platform flag remains `false`, and this release cannot publish a live post.

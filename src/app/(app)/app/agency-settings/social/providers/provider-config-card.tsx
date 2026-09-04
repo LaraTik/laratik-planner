@@ -27,6 +27,9 @@ type ExistingSummary = {
   loginConfigId: string | null;
   graphApiVersion: string | null;
   enabled: boolean;
+  publishingEnabled: boolean;
+  appReviewStatus: "not_requested" | "pending" | "approved" | "rejected";
+  businessVerificationStatus: "not_required" | "not_started" | "pending" | "verified" | "rejected";
   lastTestedAt: Date | null;
   lastTestedOk: boolean | null;
   lastTestErrorCode: string | null;
@@ -255,6 +258,41 @@ export function ProviderConfigCard({
         )}
       </header>
       <p className="text-label text-fg-muted mb-4">{meta.description}</p>
+
+      {provider === "meta" ? (
+        <section
+          className="border-border bg-surface-subtle mb-4 space-y-2 rounded-[var(--radius-control)] border p-3"
+          data-testid="meta-publishing-readiness"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="text-body text-fg-primary font-semibold">
+              {tr("agencyProviders.publishingReadinessHeading")}
+            </h4>
+            <span className="text-label text-fg-muted inline-flex items-center gap-1">
+              <PlugZap className="h-3.5 w-3.5" aria-hidden={true} />
+              {existing?.publishingEnabled
+                ? tr("agencyProviders.statusEnabled")
+                : tr("agencyProviders.publishingDisabled")}
+            </span>
+          </div>
+          <p className="text-label text-fg-secondary">
+            {tr("agencyProviders.publishingReadinessBody")}
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <p className="text-label text-fg-muted">
+              {tr("agencyProviders.publishingAppReview", {
+                status: appReviewStatusLabel(existing?.appReviewStatus, tr),
+              })}
+            </p>
+            <p className="text-label text-fg-muted">
+              {tr("agencyProviders.publishingBusinessVerification", {
+                status: businessVerificationStatusLabel(existing?.businessVerificationStatus, tr),
+              })}
+            </p>
+          </div>
+          <p className="text-label text-fg-muted">{tr("agencyProviders.publishingStatusHint")}</p>
+        </section>
+      ) : null}
 
       {callbackUrl ? (
         <section
@@ -523,4 +561,38 @@ export function ProviderConfigCard({
       </form>
     </Card>
   );
+}
+
+function appReviewStatusLabel(
+  status: ExistingSummary["appReviewStatus"] | undefined,
+  tr: Translator,
+): string {
+  switch (status) {
+    case "pending":
+      return tr("agencyProviders.publishingPending");
+    case "approved":
+      return tr("agencyProviders.publishingApproved");
+    case "rejected":
+      return tr("agencyProviders.publishingRejected");
+    default:
+      return tr("agencyProviders.publishingNotRequested");
+  }
+}
+
+function businessVerificationStatusLabel(
+  status: ExistingSummary["businessVerificationStatus"] | undefined,
+  tr: Translator,
+): string {
+  switch (status) {
+    case "verified":
+      return tr("agencyProviders.businessVerified");
+    case "not_required":
+      return tr("agencyProviders.businessNotRequired");
+    case "pending":
+      return tr("agencyProviders.businessPending");
+    case "rejected":
+      return tr("agencyProviders.businessRejected");
+    default:
+      return tr("agencyProviders.businessNotRequired");
+  }
 }

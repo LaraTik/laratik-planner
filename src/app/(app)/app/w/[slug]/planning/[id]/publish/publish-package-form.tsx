@@ -20,6 +20,11 @@ import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
 import type { AudienceCopyViewModel, MappedPlatformFields } from "@/lib/format-payload/mapper";
 import type { PublishActionErrorCode } from "@/lib/publishing/action-errors";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import type { MetaPublishingReadiness } from "@/lib/db/schema";
+import {
+  MetaPublishingReadinessCard,
+  type MetaPublishingReadinessCopy,
+} from "@/components/workspace/meta-publishing-readiness-card";
 
 /**
  * M4 — Publish package form (client component).
@@ -202,6 +207,8 @@ export function PublishPackageForm({
   canEdit,
   canApproveFinalCopy,
   canConfirmReadiness,
+  metaPublishingReadiness,
+  metaPublishingCopy,
   t: tProp,
 }: {
   workspaceId: string;
@@ -228,6 +235,8 @@ export function PublishPackageForm({
   canEdit: boolean;
   canApproveFinalCopy: boolean;
   canConfirmReadiness: boolean;
+  metaPublishingReadiness?: MetaPublishingReadiness;
+  metaPublishingCopy?: MetaPublishingReadinessCopy;
   /**
    * Bound translator from the parent. Phase 6e (2026-09-01)
    * migrates the top-level chrome (empty state, status
@@ -500,6 +509,17 @@ export function PublishPackageForm({
           className="grid grid-cols-1 gap-4 lg:grid-cols-3"
           data-testid={`publish-channel-panel-${current.socialChannelId}`}
         >
+          {metaPublishingReadiness &&
+          metaPublishingCopy &&
+          (current.platform === "instagram" || current.platform === "facebook") ? (
+            <div className="lg:col-span-3">
+              <MetaPublishingReadinessCard
+                readiness={metaPublishingReadiness}
+                copy={metaPublishingCopy}
+                testId="publish-meta-readiness-card"
+              />
+            </div>
+          ) : null}
           {currentReadiness && currentReadiness.issues.length > 0 ? (
             <div
               role="alert"

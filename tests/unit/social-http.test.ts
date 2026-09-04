@@ -59,7 +59,7 @@ describe("providerRequest", () => {
     });
   });
 
-  it("surfaces 400 with Meta 'invalid insights metric' (error.code: 100) as not_configured", async () => {
+  it("surfaces 400 with Meta 'invalid insights metric' (error.code: 100) as metric_unavailable", async () => {
     // 2026-08-28: Meta returns HTTP 400 with body
     //   { "error": { "code": 100, "message": "(#100) The value must
     //   be a valid insights metric", ... } }
@@ -83,7 +83,7 @@ describe("providerRequest", () => {
     globalThis.fetch = (() =>
       Promise.resolve(new Response(metaBody, { status: 400 }))) as typeof fetch;
     await expect(providerRequest("https://example.com/x")).rejects.toMatchObject({
-      code: "not_configured",
+      code: "metric_unavailable",
       retryable: false,
     });
   });

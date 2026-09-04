@@ -88,5 +88,63 @@
     "downloadsOff": "التنزيلات متوقفة",
     "auditNotice": "يتم تسجيل كل عرض في سجل تدقيق المنصة.",
     "manage": "إدارة الجلسة"
+  },
+  "metaPublishing": {
+    "title": "جاهزية النشر عبر Meta",
+    "description": "يمكن تجهيز صفحات Facebook وحسابات Instagram الاحترافية للنشر مستقبلًا دون تغيير اتصال التحليلات الحالي.",
+    "analyticsLabel": "الوصول إلى التحليلات",
+    "analyticsConnected": "متصل عبر اتصال Meta الحالي.",
+    "analyticsUnavailable": "صِل حساب Meta لاكتشاف الصفحات التي تديرها وحسابات Instagram المرتبطة.",
+    "publishingLabel": "الوصول إلى النشر",
+    "picker": {
+      "title": "ربط وجهات Meta",
+      "description": "عثرنا على {count} وجهة مُدارة{suffix}. اختر صفحات Facebook وحسابات Instagram الاحترافية المرتبطة التي ستستخدمها مساحة العمل هذه.",
+      "bulkSelection": "تحديد جماعي",
+      "selectAll": "تحديد الكل",
+      "unselectAll": "إلغاء تحديد الكل",
+      "selectAccount": "تحديد",
+      "alreadyConnected": "متصل بالفعل",
+      "linkedTo": "مرتبط بـ {name}",
+      "willLink": "سيتم الربط بـ {name}",
+      "willCreate": "سيتم إنشاء قناة جديدة",
+      "selected": "تم تحديد {count}",
+      "linking": "جارٍ الربط…",
+      "linkSelected": "ربط الملفات الشخصية المحددة",
+      "pickOne": "اختر ملفًا شخصيًا واحدًا على الأقل للمتابعة",
+      "facebook": "صفحة Facebook",
+      "instagram": "حساب Instagram احترافي",
+      "tiktok": "حساب TikTok"
+    },
+    "status": {
+      "not_configured": "يلزم إعداد موفر Meta",
+      "analytics_only": "التحليلات متصلة؛ النشر غير مفعّل",
+      "not_enabled": "النشر معطّل",
+      "app_review_pending": "تلزم مراجعة تطبيق Meta",
+      "business_verification_pending": "يلزم التحقق من النشاط التجاري",
+      "needs_reauth": "يحتاج اتصال Meta إلى إعادة التفويض",
+      "ready": "جاهز للنشر مستقبلًا",
+      "no_destinations": "صِل صفحة أو حساب Instagram"
+    },
+    "descriptionByStatus": {
+      "not_configured": "يجب على مسؤول الوكالة إعداد تطبيق Meta قبل ربط الحسابات.",
+      "analytics_only": "يمكن للاتصال قراءة التحليلات، ولكن لم يتم منح صلاحية النشر.",
+      "not_enabled": "يبقى النشر متوقفًا بأمان حتى يتم تفعيل مفاتيح المنصة والوكالة ومساحة العمل.",
+      "app_review_pending": "يجب أن يجتاز تطبيق Meta المراجعة لصلاحيات النشر المطلوبة.",
+      "business_verification_pending": "أكمل التحقق التجاري المطلوب من Meta قبل تفعيل النشر.",
+      "needs_reauth": "أعد ربط Meta لتحديث منح الصلاحيات لهذا الوجهة.",
+      "ready": "تجتاز صلاحيات الاتصال والقدرة الاختبارات. لا يزال كل عنصر محتوى بحاجة إلى فحوص الجاهزية التحريرية والإعلامية.",
+      "no_destinations": "تم إعداد الموفر، ولكن لا توجد وجهة Meta متصلة في مساحة العمل هذه بعد."
+    },
+    "nextStepLabel": "الخطوة التالية",
+    "nextStepByStatus": {
+      "not_configured": "افتح إعدادات Meta للوكالة",
+      "analytics_only": "اطلب صلاحية النشر بعد اكتمال مراجعة التطبيق",
+      "not_enabled": "أبقِ النشر متوقفًا حتى اعتماد بوابة الإطلاق",
+      "app_review_pending": "أكمل مراجعة تطبيق Meta",
+      "business_verification_pending": "أكمل التحقق التجاري",
+      "needs_reauth": "أعد تفويض اتصال Meta",
+      "ready": "تحقق من كل عنصر محتوى قبل وضعه في قائمة الانتظار",
+      "no_destinations": "صِل وجهة مُدارة واخترها"
+    }
   }
 }

@@ -26,9 +26,19 @@ export const workspaceSettingsCommandSchema = z.object({
   defaultContentReviewerId: nullableUserId,
   defaultInternalCreativeReviewerId: nullableUserId,
   defaultClientReviewerId: nullableUserId,
+  metaPublishingEnabled: z.boolean().optional(),
 });
 
-export type WorkspaceSettingsCommand = z.infer<typeof workspaceSettingsCommandSchema>;
+type ParsedWorkspaceSettingsCommand = z.infer<typeof workspaceSettingsCommandSchema>;
+
+// Keep the command backward-compatible for callers that predate the Meta
+// readiness gate. The parser supplies the conservative false default.
+export type WorkspaceSettingsCommand = Omit<
+  ParsedWorkspaceSettingsCommand,
+  "metaPublishingEnabled"
+> & {
+  metaPublishingEnabled?: boolean | undefined;
+};
 
 export function nullableIdFromForm(value: FormDataEntryValue | null): string | null {
   const normalized = String(value ?? "").trim();

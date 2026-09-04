@@ -17,6 +17,7 @@ type ChannelLike = Pick<
    */
   latestProviderErrorCode: string | null;
 };
+type Translator = (key: string, params?: Record<string, string | number>) => string;
 
 /**
  * M4 — social-analytics "feel" improvement.
@@ -67,21 +68,31 @@ type BannerSignal = {
   detail?: string;
 };
 
-function signalForChannel(channel: ChannelLike, now: Date): BannerSignal | null {
+function signalForChannel(channel: ChannelLike, now: Date, t?: Translator): BannerSignal | null {
   if (channel.connectionStatus === "needs_reauth") {
     return {
       channel,
       kind: "reauth",
-      message: `${channel.accountName} needs to reconnect.`,
-      detail: "The provider rejected the stored token. Reconnect to restore the daily sync.",
+      message:
+        t?.("analytics.healthReauth", { account: channel.accountName }) ??
+        `${channel.accountName} needs to reconnect.`,
+      detail:
+        t?.("analytics.healthReauthDetail") ??
+        "The provider rejected the stored token. Reconnect to restore the daily sync.",
     };
   }
   if (channel.lastSyncErrorCode) {
     return {
       channel,
       kind: "error",
-      message: `${channel.accountName} last sync failed: ${channel.lastSyncErrorCode}.`,
-      detail: "The next sync tick will retry. If this persists, check the connection.",
+      message:
+        t?.("analytics.healthSyncError", {
+          account: channel.accountName,
+          code: channel.lastSyncErrorCode,
+        }) ?? `${channel.accountName} last sync failed: ${channel.lastSyncErrorCode}.`,
+      detail:
+        t?.("analytics.healthSyncErrorDetail") ??
+        "The next sync tick will retry. If this persists, check the connection.",
     };
   }
   // 2026-08-28: surface the silent provider error (the case the
@@ -94,27 +105,38 @@ function signalForChannel(channel: ChannelLike, now: Date): BannerSignal | null 
   // operator knows whether to re-authorize, file an App Review,
   // or wait for Meta to lift a rate limit.
   if (channel.latestProviderErrorCode) {
+    const code = channel.latestProviderErrorCode;
     return {
       channel,
       kind: "error",
-      message: `${channel.accountName} last sync captured a provider error: ${channel.latestProviderErrorCode}.`,
+      message:
+        t?.("analytics.healthProviderError", { account: channel.accountName, code }) ??
+        `${channel.accountName} last sync captured a provider error: ${code}.`,
       detail:
-        "Some daily metrics (Reach / Views / Interactions) are missing because the provider call returned this error. Common causes: app needs advanced-access review for the requested scope, the access token has expired, or Meta is throttling. The next sync tick will retry.",
+        t?.("analytics.providerErrorDetail", { code }) ??
+        "Some daily metrics (Reach / Views / Interactions) are missing because the provider call returned this error. The next sync tick will retry.",
     };
   }
   if (channel.lastSyncedAt) {
     const ageMs = now.getTime() - channel.lastSyncedAt.getTime();
     if (ageMs > STALE_THRESHOLD_MS) {
       const days = Math.floor(ageMs / (24 * 60 * 60 * 1000));
+      const hours = Math.max(1, Math.floor(ageMs / (60 * 60 * 1000)));
       const age =
         days >= 1
-          ? `${days} day${days === 1 ? "" : "s"} ago`
-          : `${Math.max(1, Math.floor(ageMs / (60 * 60 * 1000)))} hours ago`;
+          ? (t?.(days === 1 ? "analytics.healthOneDayAgo" : "analytics.healthManyDaysAgo", {
+              count: days,
+            }) ?? `${days} day${days === 1 ? "" : "s"} ago`)
+          : (t?.("analytics.healthManyHoursAgo", { count: hours }) ?? `${hours} hours ago`);
       return {
         channel,
         kind: "stale",
-        message: `${channel.accountName} hasn't synced in ${age}.`,
-        detail: "The next cron tick will recover. No action required.",
+        message:
+          t?.("analytics.healthStale", { account: channel.accountName, age }) ??
+          `${channel.accountName} hasn't synced in ${age}.`,
+        detail:
+          t?.("analytics.healthStaleDetail") ??
+          "The next cron tick will recover. No action required.",
       };
     }
   }
@@ -147,14 +169,18 @@ export function SocialHealthBanner({
   channels,
   slug,
   now,
+  t,
+  canManageProvider = false,
 }: {
   channels: ChannelLike[];
   slug: string;
   now?: Date;
+  t?: Translator;
+  canManageProvider?: boolean;
 }) {
   const at = now ?? new Date();
   const signals = channels
-    .map((c) => signalForChannel(c, at))
+    .map((c) => signalForChannel(c, at, t))
     .filter((s): s is BannerSignal => s !== null);
   if (signals.length === 0) return null;
 
@@ -181,13 +207,19 @@ export function SocialHealthBanner({
             </p>
             {s.detail ? <p className="text-label text-fg-muted mt-0.5">{s.detail}</p> : null}
           </div>
-          {s.kind === "reauth" ? (
+          {s.kind === "reauth" || (s.kind === "error" && canManageProvider) ? (
             <Link
-              href={`/app/w/${slug}/channels`}
+              href={
+                s.kind === "reauth"
+                  ? `/app/w/${slug}/channels`
+                  : "/app/agency-settings/social/providers"
+              }
               className="text-body rounded-[var(--radius-control)] border border-current px-2.5 py-1 font-semibold hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
               data-testid="social-health-banner-reconnect"
             >
-              Go to channels
+              {s.kind === "reauth"
+                ? (t?.("analytics.goToChannels") ?? "Go to channels")
+                : (t?.("analytics.goToProviderSettings") ?? "Open provider settings")}
             </Link>
           ) : null}
         </div>

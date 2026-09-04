@@ -81,6 +81,18 @@ Out of scope for M4: direct/scheduled publishing, ads/spend, demographics, comme
 
 The architecture decision and provider boundary are recorded in [ADR-0004](docs/decisions/0004-social-profile-analytics.md).
 
+### Analytics reliability amendment (2026-09-04)
+
+The analytics implementation adds a deliberate data correction beyond the
+original M4 contract: migration `0031_social_metric_workspace_dates` converts
+existing metric dates from `observed_at` using each workspace timezone and
+retains the latest observation on collisions. This supersedes ADR-0005's
+initial no-backfill consequence because UTC dates were incorrect at workspace
+day boundaries. The change affects metric labels only; provider credentials,
+raw payloads, channel identifiers, and publication data are untouched.
+Product-owner approval for the backfill and collision policy is recorded in
+[ADR-0005](docs/decisions/0005-platform-aware-social-metric-contract.md).
+
 ## Auth surface deviations (2026-08-24 re-validation)
 
 | Master prompt       | Prompt says                                                                                      | We use                                                                                                                                                                                | Why                                                                                                                                                                                                                                                                                              | ADR                                                 |

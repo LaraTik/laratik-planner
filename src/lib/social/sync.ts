@@ -38,6 +38,7 @@ import {
 } from "./key-management";
 import { getAgencyProviderConfig, type SocialProvider } from "./provider-config";
 import type { TestErrorCode } from "./test-error-codes";
+import { metricDateInTimeZone, nextDailySyncAt } from "./timezone";
 
 export { TEST_ERROR_CODES } from "./test-error-codes";
 export type { TestErrorCode } from "./test-error-codes";
@@ -98,8 +99,6 @@ export type SyncTickResult = {
 
 const BACKOFF_MS: readonly number[] = [15 * 60_000, 60 * 60_000, 6 * 60 * 60_000];
 export { BACKOFF_MS };
-const NEXT_DAY_HOUR = 3; // 03:15 in workspace tz
-const NEXT_DAY_MINUTE = 15;
 const RETENTION_OAUTH_HOURS = 24;
 const RETENTION_METRIC_MONTHS = 25;
 // 2026-08-28: proactive rate-limit backoff. The Meta Graph API
@@ -211,6 +210,7 @@ export type SyncErrorCode =
   | "invalid_response"
   | "platform_kek_missing"
   | "social_not_enabled"
+  | "provider_not_configured"
   | "not_configured"
   | "unknown";
 
@@ -265,6 +265,7 @@ async function runChannelSyncCore(
   appCredentials: { appId: string; appSecret: string; graphApiVersion: string | null },
   channel: SocialChannel,
   connection: SocialConnection,
+  workspaceTimezone: string,
   now: Date,
   dekCache: ReturnType<typeof createDekCache>,
 ): Promise<SyncResult> {
@@ -329,14 +330,14 @@ async function runChannelSyncCore(
           .digest("hex"),
     };
 
-    const metricDate = new Date().toISOString().slice(0, 10);
+    const metricDate = metricDateInTimeZone(snapshot.observedAt, workspaceTimezone);
     await saveSnapshot(db, {
       socialChannelId: channel.id,
       metricDate,
       snapshot,
     });
 
-    const next = nextSyncAt(now);
+    const next = nextSyncAt(now, workspaceTimezone);
     await markSyncSuccess(db, channel.id, next);
     // 2026-08-28: pass the snapshot's rate-limit usage up so the
     // cron loop can drive proactive backoff before the next call.
@@ -453,7 +454,7 @@ async function runOne(
   // a long backoff — operator must set the config before the cron
   // can sync it.
   const [workspaceRow] = await db
-    .select({ agencyId: workspaces.agencyId })
+    .select({ agencyId: workspaces.agencyId, timezone: workspaces.timezone })
     .from(workspaces)
     .where(eq(workspaces.id, profile.channel.workspaceId))
     .limit(1);
@@ -472,10 +473,16 @@ async function runOne(
     // Not configured — back off for a day so the operator has a
     // chance to configure the row. The cron increments the
     // failure count via the standard markSyncFailure path below.
-    await markSyncFailure(db, profile.channel.id, "not_configured", addDays(now, 1), false);
+    await markSyncFailure(
+      db,
+      profile.channel.id,
+      "provider_not_configured",
+      addDays(now, 1),
+      false,
+    );
     return {
       outcome: "failed",
-      errorCode: "not_configured",
+      errorCode: "provider_not_configured",
       needsReauth: false,
       lastSyncedAt: null,
       latestUsage: null,
@@ -488,7 +495,7 @@ async function runOne(
       .where(eq(socialChannels.id, profile.channel.id));
     return {
       outcome: "skipped",
-      errorCode: "not_configured",
+      errorCode: "social_not_enabled",
       needsReauth: false,
       lastSyncedAt: null,
       latestUsage: null,
@@ -503,6 +510,7 @@ async function runOne(
     },
     profile.channel,
     profile.connection,
+    workspaceRow.timezone ?? "UTC",
     now,
     dekCache,
   );
@@ -516,15 +524,8 @@ export function backoffAt(now: Date, failureCount: number): Date {
   return addDays(now, 1);
 }
 
-export function nextSyncAt(now: Date): Date {
-  // The M4 plan: 03:15 in workspace timezone on the next calendar day.
-  // Without the per-workspace tz we use UTC, which is good enough for
-  // the cron lease model — the daily snapshot date is recorded in the
-  // workspace's tz in the analytics layer.
-  const next = new Date(now);
-  next.setUTCDate(next.getUTCDate() + 1);
-  next.setUTCHours(NEXT_DAY_HOUR, NEXT_DAY_MINUTE, 0, 0);
-  return next;
+export function nextSyncAt(now: Date, workspaceTimezone = "UTC"): Date {
+  return nextDailySyncAt(now, workspaceTimezone);
 }
 
 // ─── User-triggered "Re-test" (M4.1 follow-up) ─────────────────────────────
@@ -631,21 +632,21 @@ export async function runChannelTest(channelId: string): Promise<TestChannelResu
   // The app id + sealed app secret are required to call the
   // provider's OAuth endpoints during refresh / snapshot.
   const [ws] = await db
-    .select({ agencyId: workspaces.agencyId })
+    .select({ agencyId: workspaces.agencyId, timezone: workspaces.timezone })
     .from(workspaces)
     .where(eq(workspaces.id, channel.workspaceId))
     .limit(1);
   if (!ws) {
     return {
       ok: false,
-      errorCode: "not_configured",
+      errorCode: "provider_not_configured",
     };
   }
   const config = await getAgencyProviderConfig(db, ws.agencyId, provider);
   if (!("appId" in config)) {
     return {
       ok: false,
-      errorCode: "not_configured",
+      errorCode: "provider_not_configured",
     };
   }
   if (!config.enabled) {
@@ -665,6 +666,7 @@ export async function runChannelTest(channelId: string): Promise<TestChannelResu
     },
     channel,
     connection,
+    ws.timezone ?? "UTC",
     new Date(),
     dekCache,
   );

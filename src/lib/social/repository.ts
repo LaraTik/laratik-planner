@@ -2,6 +2,7 @@ import { and, asc, desc, eq, isNotNull, isNull, lte, or, sql } from "drizzle-orm
 import type { db as appDb } from "@/lib/db";
 import {
   socialChannels,
+  socialConnectionCapabilities,
   socialConnections,
   socialOauthStates,
   socialProfileDailyMetrics,
@@ -437,6 +438,7 @@ export async function linkProfile(tx: DbOrTx, input: LinkProfileInput): Promise<
       .where(eq(socialChannels.id, channel.id))
       .returning();
     if (!updated) throw new Error("Failed to update existing channel");
+    await ensureProfileCapabilities(tx, input.connectionId, updated.id, input.profile.platform);
     return { channel: updated, created: false };
   }
 
@@ -477,7 +479,43 @@ export async function linkProfile(tx: DbOrTx, input: LinkProfileInput): Promise<
     })
     .returning();
   if (!inserted) throw new Error("Failed to insert new social_channel");
+  await ensureProfileCapabilities(tx, input.connectionId, inserted.id, input.profile.platform);
   return { channel: inserted, created: true };
+}
+
+async function ensureProfileCapabilities(
+  tx: DbOrTx,
+  connectionId: string,
+  channelId: string,
+  platform: ConnectedProfile["platform"],
+): Promise<void> {
+  const operations = [
+    {
+      operation: "analytics_read" as const,
+      status: "active" as const,
+    },
+    ...(platform === "facebook"
+      ? [{ operation: "facebook_page_publish" as const, status: "not_requested" as const }]
+      : platform === "instagram"
+        ? [{ operation: "instagram_content_publish" as const, status: "not_requested" as const }]
+        : []),
+  ];
+  await tx
+    .insert(socialConnectionCapabilities)
+    .values(
+      operations.map((capability) => ({
+        socialConnectionId: connectionId,
+        socialChannelId: channelId,
+        operation: capability.operation,
+        status: capability.status,
+      })),
+    )
+    .onConflictDoNothing({
+      target: [
+        socialConnectionCapabilities.socialChannelId,
+        socialConnectionCapabilities.operation,
+      ],
+    });
 }
 
 // ─── Sync worker ──────────────────────────────────────────────────────────

@@ -6,7 +6,7 @@ import { DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
+import { PlatformIcon } from "@/components/workspace/platform-icon";
 import { finalizeMetaSelectionAction, type FinalizeSelectionInput } from "./actions";
 
 /**
@@ -41,19 +41,67 @@ export type PickerCandidate = {
   alreadyConnected: boolean;
 };
 
+export type MetaAccountPickerCopy = {
+  title: string;
+  description: string;
+  bulkSelection: string;
+  selectAll: string;
+  unselectAll: string;
+  selectAccount: string;
+  alreadyConnected: string;
+  linkedTo: string;
+  willLink: string;
+  willCreate: string;
+  selected: string;
+  linking: string;
+  linkSelected: string;
+  pickOne: string;
+  platformLabels: Record<PickerProfile["platform"], string>;
+};
+
+const DEFAULT_COPY: MetaAccountPickerCopy = {
+  title: "Connect Meta destinations",
+  description: "We found {count} managed destination{suffix}.",
+  bulkSelection: "Bulk selection",
+  selectAll: "Select all",
+  unselectAll: "Unselect all",
+  selectAccount: "Select",
+  alreadyConnected: "Already connected",
+  linkedTo: "Linked to {name}",
+  willLink: "Will link to {name}",
+  willCreate: "Will create a new channel",
+  selected: "{count} selected",
+  linking: "Linking…",
+  linkSelected: "Link selected profiles",
+  pickOne: "Pick at least one profile to continue",
+  platformLabels: {
+    facebook: "Facebook Page",
+    instagram: "Instagram professional account",
+    tiktok: "TikTok account",
+  },
+};
+
 export function MetaAccountPicker({
   connectionId,
   profiles,
   candidates,
   slug,
+  copy,
   onSuccess,
 }: {
   connectionId: string;
   profiles: PickerProfile[];
   candidates: PickerCandidate[];
   slug: string;
+  copy?: MetaAccountPickerCopy;
   onSuccess?: () => void;
 }) {
+  const labels = copy ?? DEFAULT_COPY;
+  const interpolate = (value: string, params: Record<string, string | number>) =>
+    Object.entries(params).reduce(
+      (result, [name, replacement]) => result.replaceAll(`{${name}}`, String(replacement)),
+      value,
+    );
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(profiles.map((p) => p.providerAccountId)),
   );
@@ -76,7 +124,7 @@ export function MetaAccountPicker({
       profiles: profiles.filter((p) => selected.has(p.providerAccountId)),
     };
     if (payload.profiles.length === 0) {
-      setError("Pick at least one profile to continue.");
+      setError(labels.pickOne);
       return;
     }
     startTransition(async () => {
@@ -94,12 +142,12 @@ export function MetaAccountPicker({
       <div className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-title-section text-fg-primary font-semibold">
-              Connect Meta accounts
-            </h2>
+            <h2 className="text-title-section text-fg-primary font-semibold">{labels.title}</h2>
             <p className="text-body text-fg-muted mt-1">
-              We found {profiles.length} profile{profiles.length === 1 ? "" : "s"} on the Pages you
-              manage. Pick the ones you want to track.
+              {interpolate(labels.description, {
+                count: profiles.length,
+                suffix: profiles.length === 1 ? "" : "s",
+              })}
             </p>
           </div>
           {/*
@@ -123,7 +171,7 @@ export function MetaAccountPicker({
               className="flex items-center gap-2"
               data-testid="picker-bulk-actions"
               role="group"
-              aria-label="Bulk selection"
+              aria-label={labels.bulkSelection}
             >
               <Button
                 type="button"
@@ -134,7 +182,7 @@ export function MetaAccountPicker({
                 data-testid="picker-select-all"
               >
                 <ListChecks className="h-3.5 w-3.5" aria-hidden={true} />
-                Select all
+                {labels.selectAll}
               </Button>
               <Button
                 type="button"
@@ -145,7 +193,7 @@ export function MetaAccountPicker({
                 data-testid="picker-unselect-all"
               >
                 <X className="h-3.5 w-3.5" aria-hidden={true} />
-                Unselect all
+                {labels.unselectAll}
               </Button>
             </div>
           ) : null}
@@ -155,10 +203,13 @@ export function MetaAccountPicker({
           {profiles.map((p) => {
             const candidate = candidates.find((c) => c.providerAccountId === p.providerAccountId);
             const isSelected = selected.has(p.providerAccountId);
+            const parent = p.parentProviderAccountId
+              ? profiles.find((profile) => profile.providerAccountId === p.parentProviderAccountId)
+              : undefined;
             return (
               <li key={p.providerAccountId}>
                 <label
-                  className="border-border bg-surface hover:bg-surface-subtle focus-within:ring-primary flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition focus-within:ring-2 focus-within:ring-offset-2"
+                  className={`border-border bg-surface hover:bg-surface-subtle focus-within:ring-primary flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition focus-within:ring-2 focus-within:ring-offset-2 ${parent ? "border-s-primary/50 ms-6" : ""}`}
                   data-testid={`picker-row-${p.providerAccountId}`}
                 >
                   <Checkbox
@@ -166,7 +217,7 @@ export function MetaAccountPicker({
                     checked={isSelected}
                     onCheckedChange={() => toggle(p.providerAccountId)}
                     className="mt-1 cursor-pointer"
-                    aria-label={`Select ${p.accountName}`}
+                    aria-label={`${labels.selectAccount} ${p.accountName}`}
                   />
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -179,22 +230,24 @@ export function MetaAccountPicker({
                       ) : null}
                     </div>
                     <div className="text-label text-fg-muted flex items-center gap-2">
-                      {platformLabel(p.platform)}
+                      {labels.platformLabels[p.platform]}
+                      {parent ? (
+                        <span>{interpolate(labels.linkedTo, { name: parent.accountName })}</span>
+                      ) : null}
                       {candidate ? (
                         candidate.alreadyConnected ? (
                           <span className="text-success-fg inline-flex items-center gap-1">
-                            <Check className="h-3 w-3" aria-hidden={true} /> Already connected
+                            <Check className="h-3 w-3" aria-hidden={true} />{" "}
+                            {labels.alreadyConnected}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1">
-                            <DirAwareChevronRight className="h-3 w-3" aria-hidden={true} /> Will
-                            link to {candidate.accountName}
+                            <DirAwareChevronRight className="h-3 w-3" aria-hidden={true} />{" "}
+                            {interpolate(labels.willLink, { name: candidate.accountName })}
                           </span>
                         )
                       ) : (
-                        <span className="inline-flex items-center gap-1">
-                          Will create a new channel
-                        </span>
+                        <span className="inline-flex items-center gap-1">{labels.willCreate}</span>
                       )}
                     </div>
                   </div>
@@ -212,7 +265,7 @@ export function MetaAccountPicker({
 
         <div className="flex items-center justify-end gap-2">
           <span className="text-label text-fg-muted" aria-live="polite" data-testid="picker-count">
-            {selected.size} selected
+            {interpolate(labels.selected, { count: selected.size })}
           </span>
           <Button
             type="button"
@@ -221,7 +274,7 @@ export function MetaAccountPicker({
             data-testid="picker-submit"
             aria-busy={pending}
           >
-            {pending ? "Linking…" : "Link selected profiles"}
+            {pending ? labels.linking : labels.linkSelected}
           </Button>
         </div>
       </div>

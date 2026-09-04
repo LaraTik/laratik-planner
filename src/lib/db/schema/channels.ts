@@ -50,6 +50,10 @@ export const socialChannels = pgTable(
     // `ALTER TABLE ... ADD CONSTRAINT` in the migration.
     socialConnectionId: uuid("social_connection_id"),
     externalAccountId: text("external_account_id"),
+    // Meta relationship: an Instagram professional account can be
+    // linked to its parent Facebook Page. Nullable for manual and
+    // non-Meta channels, and populated without changing channel IDs.
+    parentSocialChannelId: uuid("parent_social_channel_id"),
     avatarUrl: text("avatar_url"),
     connectionStatus: text("connection_status").notNull().default("manual"),
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true, mode: "date" }),

@@ -12,6 +12,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { idColumn, timestamps } from "./_helpers";
 import { agencies, users } from "./identity";
+import { socialChannels } from "./channels";
+import { workspaces } from "./workspaces";
 
 /**
  * M4.6 — per-agency social provider config (hard cutover from env).
@@ -73,6 +75,13 @@ export const agencySocialProviderConfig = pgTable(
     // default.
     graphApiVersion: text("graph_api_version"),
     enabled: boolean("enabled").notNull().default(true),
+    // Publishing is a separate opt-in from analytics. The default is
+    // false even when the provider config itself is enabled.
+    publishingEnabled: boolean("publishing_enabled").notNull().default(false),
+    appReviewStatus: text("app_review_status").notNull().default("not_requested"),
+    businessVerificationStatus: text("business_verification_status")
+      .notNull()
+      .default("not_required"),
     configuredBy: uuid("configured_by")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
@@ -89,6 +98,14 @@ export const agencySocialProviderConfig = pgTable(
     uniqueIndex("agency_social_provider_config_agency_provider_uniq").on(t.agencyId, t.provider),
     check("agency_social_provider_config_provider_valid", sql`${t.provider} IN ('meta', 'tiktok')`),
     check(
+      "agency_social_provider_config_app_review_status_valid",
+      sql`${t.appReviewStatus} IN ('not_requested', 'pending', 'approved', 'rejected')`,
+    ),
+    check(
+      "agency_social_provider_config_business_verification_status_valid",
+      sql`${t.businessVerificationStatus} IN ('not_required', 'not_started', 'pending', 'verified', 'rejected')`,
+    ),
+    check(
       "agency_social_provider_config_key_version_range",
       sql`${t.appSecretKeyVersion} BETWEEN 1 AND 32767`,
     ),
@@ -98,3 +115,44 @@ export const agencySocialProviderConfig = pgTable(
 
 export type AgencySocialProviderConfig = typeof agencySocialProviderConfig.$inferSelect;
 export type NewAgencySocialProviderConfig = typeof agencySocialProviderConfig.$inferInsert;
+
+/** Sanitized per-metric result of an agency-admin analytics probe. */
+export const agencySocialMetricProbes = pgTable(
+  "agency_social_metric_probe",
+  {
+    id: idColumn(),
+    agencyId: uuid("agency_id")
+      .notNull()
+      .references(() => agencies.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    socialChannelId: uuid("social_channel_id")
+      .notNull()
+      .references(() => socialChannels.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    platform: text("platform").notNull(),
+    metric: text("metric").notNull(),
+    status: text("status").notNull(),
+    providerErrorCode: text("provider_error_code"),
+    providerRequestId: text("provider_request_id"),
+    retryable: boolean("retryable").notNull().default(false),
+    testedAt: timestamp("tested_at", { withTimezone: true, mode: "date" }).notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("agency_social_metric_probe_channel_metric_uniq").on(t.socialChannelId, t.metric),
+    index("agency_social_metric_probe_agency_idx").on(t.agencyId, t.testedAt),
+    check("agency_social_metric_probe_provider_valid", sql`${t.provider} IN ('meta', 'tiktok')`),
+    check(
+      "agency_social_metric_probe_platform_valid",
+      sql`${t.platform} IN ('facebook', 'instagram', 'tiktok')`,
+    ),
+    check(
+      "agency_social_metric_probe_status_valid",
+      sql`${t.status} IN ('available', 'unsupported', 'error', 'no_data')`,
+    ),
+  ],
+);
+
+export type AgencySocialMetricProbe = typeof agencySocialMetricProbes.$inferSelect;
