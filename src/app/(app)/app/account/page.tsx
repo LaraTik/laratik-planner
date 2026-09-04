@@ -141,10 +141,7 @@ export default async function AccountPage() {
           {t("account.notifications")}
         </CardTitle>
         <p className="text-body text-fg-muted mb-5">{t("account.notificationsBlurb")}</p>
-        <NotificationPreferencesForm
-          initialEmailOnMention={notificationPrefs.emailOnMention}
-          initialDailyDigest={notificationPrefs.dailyDigest}
-        />
+        <NotificationPreferencesForm initialPrefs={notificationPrefs} />
       </Card>
 
       <Card aria-labelledby="agency-heading" data-testid="agency-card">

@@ -9,7 +9,10 @@ import {
   type ProfileErrorCode,
   type Locale,
 } from "@/lib/auth/profile";
-import { setNotificationPreferencesForUser } from "@/lib/notifications/service";
+import {
+  setNotificationPreferencesForUser,
+  NotificationKindSchemaValues,
+} from "@/lib/notifications/service";
 import { setUser } from "@/lib/observability/sentry";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 import { setPublicLocale } from "@/lib/i18n/cookie";
@@ -144,11 +147,17 @@ export async function signOutAction(): Promise<void> {
 
 // ─── Notification preferences (FEAT-08) ─────────────────────────────────
 /**
- * Save the two notification preferences surfaced on the account page
- * ("Email me when I'm mentioned" + "Send me a daily digest"). The
- * form posts the booleans as strings ("on" or absent); we coerce here
- * so the client stays simple. Missing fields are treated as off — the
- * checkbox is unchecked, so the absence is intentional.
+ * Save the notification preferences matrix surfaced on the
+ * account page. R4 expanded the surface from two booleans to
+ * an 11-kind × 2-channel table (Bell + Email) plus a separate
+ * Daily-digest toggle on the `system` row.
+ *
+ * The form posts each cell as a separate field (e.g.
+ * `inApp_mention=on`, `email_mention=on`, `email_review_request=on`).
+ * Missing fields are treated as off — the checkbox is
+ * unchecked, so the absence is intentional. We read every cell
+ * here so the service can persist the matrix in a single
+ * transaction.
  */
 export async function setNotificationPreferencesAction(
   _previous: NotificationPreferencesActionState,
@@ -157,8 +166,18 @@ export async function setNotificationPreferencesAction(
   const session = await auth();
   if (!session?.user?.id) return { errorCode: "sessionExpired" };
   try {
+    const prefs: Record<
+      (typeof NotificationKindSchemaValues)[number],
+      { inAppEnabled: boolean; emailEnabled: boolean }
+    > = {} as ReturnType<typeof Object>["value"];
+    for (const kind of NotificationKindSchemaValues) {
+      prefs[kind] = {
+        inAppEnabled: formData.get(`inApp_${kind}`) === "on",
+        emailEnabled: formData.get(`email_${kind}`) === "on",
+      };
+    }
     await setNotificationPreferencesForUser(session.user.id, {
-      emailOnMention: formData.get("emailOnMention") === "on",
+      prefs,
       dailyDigest: formData.get("dailyDigest") === "on",
     });
   } catch (e) {

@@ -344,13 +344,27 @@ describe("markNotificationRead (FEAT-07) — singular §14 command", () => {
 });
 
 describe("updateNotificationPreferences (FEAT-07) — §14 contract alias", () => {
-  it("upserts both the mention + system preference rows", async () => {
-    state.insertReturningIds.push({ id: "pref-1" });
-    state.insertReturningIds.push({ id: "pref-2" });
-    await updateNotificationPreferences("user-1", { emailOnMention: true, dailyDigest: true });
-    // 2 inserts (mention + system).
+  it("upserts one preference row per kind in the matrix", async () => {
+    // R4: 11 kinds × 1 insert each (the system row also takes the
+    // daily-digest value). The mock returns the id "pref-N" for
+    // every insert so the loop doesn't short-circuit.
+    for (let i = 0; i < 11; i++) state.insertReturningIds.push({ id: `pref-${i}` });
+    const prefs = {
+      assignment: { inAppEnabled: true, emailEnabled: false },
+      review_request: { inAppEnabled: true, emailEnabled: false },
+      approval: { inAppEnabled: true, emailEnabled: false },
+      changes_requested: { inAppEnabled: true, emailEnabled: false },
+      reply: { inAppEnabled: true, emailEnabled: false },
+      unresolved_question: { inAppEnabled: true, emailEnabled: false },
+      deadline: { inAppEnabled: true, emailEnabled: false },
+      delivery: { inAppEnabled: true, emailEnabled: false },
+      ready_to_publish: { inAppEnabled: true, emailEnabled: false },
+      mention: { inAppEnabled: true, emailEnabled: true },
+      system: { inAppEnabled: true, emailEnabled: false },
+    } as const;
+    await updateNotificationPreferences("user-1", { prefs, dailyDigest: true });
     const inserts = state.insertCalls.filter((c) => c.table === "insert");
-    expect(inserts.length).toBe(2);
+    expect(inserts.length).toBe(11);
   });
 });
 

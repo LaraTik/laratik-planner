@@ -19,6 +19,7 @@ import {
   enqueueApprovalNotification,
   enqueueDeliveryNotification,
   enqueueReadyToPublishNotification,
+  buildActionUrlForContentItem,
 } from "@/lib/notifications/service";
 
 /**
@@ -189,6 +190,16 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
       .limit(1);
     const itemMeta = itemRow[0];
     if (itemMeta) {
+      // Resolve the slug once per delivery submission so every
+      // recipient gets a valid `/app/w/<slug>/planning/<id>` link
+      // (the previous "no actionUrl" path fell through to a broken
+      // `/app/planning/<id>` literal that 404'd in the App Router).
+      const actionUrl = await buildActionUrlForContentItem(
+        item.workspaceId,
+        input.contentItemId,
+        null,
+        tx,
+      );
       for (const recipient of [
         skipSelf(itemMeta.contentOwnerId),
         skipSelf(itemMeta.internalCreativeReviewerId),
@@ -202,6 +213,7 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
             body: `Delivery V${nextVersion} is waiting on creative review.`,
             messageKey: "notifications.events.delivery_submitted",
             messageParams: { title: itemMeta.title, version: nextVersion },
+            actionUrl,
           },
           tx,
         );

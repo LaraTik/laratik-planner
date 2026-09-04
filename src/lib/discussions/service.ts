@@ -11,6 +11,10 @@ import {
   workspaces,
 } from "@/lib/db/schema";
 import { canAccessWorkspace, hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import {
+  enqueueReplyNotification,
+  enqueueUnresolvedQuestionNotification,
+} from "@/lib/notifications/service";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -246,6 +250,55 @@ export async function createComment(
       },
     });
 
+    // FEAT-AUDIT-R2 — wire the two previously-dead enqueue helpers.
+    // The reply path notifies the parent comment's author (skipping
+    // self-notify); the unresolved_question path notifies each
+    // mentioned user when the new comment is a `question` label.
+    // Both go through the outbox + dispatcher so the i18n
+    // rendering, email surface, and per-kind preference lookup
+    // all stay consistent with the existing kinds.
+    const discussionActionUrl = `/app/w/${item.workspaceSlug}/planning/${data.contentItemId}#discussion`;
+
+    if (data.parentCommentId) {
+      const [parent] = await tx
+        .select({ authorId: comments.authorId })
+        .from(comments)
+        .where(eq(comments.id, data.parentCommentId))
+        .limit(1);
+      const parentAuthorId = parent?.authorId;
+      if (parentAuthorId && parentAuthorId !== actor.id) {
+        await enqueueReplyNotification(
+          {
+            userId: parentAuthorId,
+            workspaceId: item.workspaceId,
+            contentItemId: data.contentItemId,
+            title: "New reply on a comment",
+            body: "Someone replied to a comment you're part of.",
+            messageKey: "notifications.kind.reply",
+            actionUrl: discussionActionUrl,
+          },
+          tx,
+        );
+      }
+    }
+
+    if (data.label === "question" && mentionedUserIds.length > 0) {
+      for (const userId of mentionedUserIds) {
+        await enqueueUnresolvedQuestionNotification(
+          {
+            userId,
+            workspaceId: item.workspaceId,
+            contentItemId: data.contentItemId,
+            title: "Unresolved question needs attention",
+            body: "A comment is still marked as an unresolved question.",
+            messageKey: "notifications.kind.unresolved_question",
+            actionUrl: discussionActionUrl,
+          },
+          tx,
+        );
+      }
+    }
+
     return { id: created.id, createdAt: created.createdAt, mentionedUserIds };
   });
 
@@ -284,6 +337,22 @@ export async function resolveComment(actor: Actor, input: ResolveCommentInput) {
     throw new Error("Only the author or a manager can resolve a comment");
   }
 
+  // Re-read the comment inside the same flow so we can re-fire the
+  // unresolved_question notification when a `question`-labelled
+  // comment is re-opened (resolved: false). Resolving a question
+  // is a silent state change (no notification); re-opening
+  // surfaces it again to each mentioned user.
+  const [commentRow] = await db
+    .select({ label: comments.label })
+    .from(comments)
+    .where(eq(comments.id, commentId))
+    .limit(1);
+  const mentionRows = await db
+    .select({ userId: commentMentions.mentionedUserId })
+    .from(commentMentions)
+    .where(eq(commentMentions.commentId, commentId));
+  const mentionedUserIds = mentionRows.map((r) => r.userId);
+
   await db
     .update(comments)
     .set({
@@ -291,6 +360,35 @@ export async function resolveComment(actor: Actor, input: ResolveCommentInput) {
       resolvedBy: resolved ? actor.id : null,
     })
     .where(eq(comments.id, commentId));
+
+  // FEAT-AUDIT-R2 — when a `question`-labelled comment is re-opened,
+  // re-notify each mentioned user. The slug-based actionUrl mirrors
+  // the one in `createComment` so the bell click lands on the same
+  // #discussion anchor.
+  if (!resolved && commentRow?.label === "question" && mentionedUserIds.length > 0) {
+    // The slug was not loaded in the initial select to keep the
+    // join tight; pull the workspace slug now to build the URL.
+    const [ws] = await db
+      .select({ slug: workspaces.slug })
+      .from(workspaces)
+      .where(eq(workspaces.id, row.workspaceId))
+      .limit(1);
+    if (ws) {
+      const actionUrl = `/app/w/${ws.slug}/planning/${row.contentItemId}#discussion`;
+      for (const userId of mentionedUserIds) {
+        if (userId === actor.id) continue;
+        await enqueueUnresolvedQuestionNotification({
+          userId,
+          workspaceId: row.workspaceId,
+          contentItemId: row.contentItemId,
+          title: "Unresolved question needs attention",
+          body: "A comment is still marked as an unresolved question.",
+          messageKey: "notifications.kind.unresolved_question",
+          actionUrl,
+        });
+      }
+    }
+  }
 
   revalidatePath(`/app/w/`);
 }

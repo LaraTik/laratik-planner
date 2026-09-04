@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   notifications,
@@ -7,6 +7,7 @@ import {
   outboxEvents,
   users,
   contentItems,
+  workspaces,
 } from "@/lib/db/schema";
 import { type Actor } from "@/lib/auth/policy";
 import { sendEmail } from "@/lib/email";
@@ -77,6 +78,62 @@ export type NotificationKind = z.infer<typeof NotificationKindSchema>;
 // ─── In-app notification writers (used by other services / outbox worker) ─
 
 /**
+ * The set of fields shared by both the `notifications` row and the
+ * `outbox_events.payload` jsonb blob. Centralised so a new field
+ * (e.g. `actorId`) added to one site is also added to the other
+ * automatically — the previous implementation had three spread
+ * sites that could drift.
+ *
+ * Falsy values are dropped so the resulting object is JSON-safe and
+ * Drizzle doesn't try to insert `null` into a non-null column.
+ */
+type NotificationCore = {
+  userId: string;
+  workspaceId?: string;
+  contentItemId?: string;
+  title?: string;
+  body?: string;
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
+  actionUrl?: string;
+};
+
+/**
+ * The set of fields shared by both the `notifications` row and the
+ * `outbox_events.payload` jsonb blob. Centralised so a new field
+ * (e.g. `actorId`) added to one site is also added to the other
+ * automatically — the previous implementation had three spread
+ * sites that could drift.
+ *
+ * Falsy values are dropped so the resulting object is JSON-safe and
+ * Drizzle doesn't try to insert `null` into a non-null column.
+ * The return type is the union of all present fields; callers can
+ * spread it into a typed insert without losing inference.
+ */
+type NotificationCoreFields = {
+  userId: string;
+  workspaceId?: string;
+  contentItemId?: string;
+  title?: string;
+  body?: string;
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
+  actionUrl?: string;
+};
+
+function notificationCoreFields(input: NotificationCore): NotificationCoreFields {
+  const out: NotificationCoreFields = { userId: input.userId };
+  if (input.workspaceId) out.workspaceId = input.workspaceId;
+  if (input.contentItemId) out.contentItemId = input.contentItemId;
+  if (input.title) out.title = input.title;
+  if (input.body) out.body = input.body;
+  if (input.messageKey) out.messageKey = input.messageKey;
+  if (input.messageParams) out.messageParams = input.messageParams;
+  if (input.actionUrl) out.actionUrl = input.actionUrl;
+  return out;
+}
+
+/**
  * Create an in-app notification. Bypasses preferences — callers are
  * expected to have checked (or not). The outbox worker is the only
  * caller expected to honor notification_preferences.email_enabled.
@@ -103,15 +160,10 @@ export async function createInAppNotification(input: {
   const [created] = await runner
     .insert(notifications)
     .values({
-      userId: input.userId,
-      ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}),
-      ...(input.contentItemId ? { contentItemId: input.contentItemId } : {}),
+      ...notificationCoreFields(input),
       kind: input.kind,
       title: input.title,
       body: input.body,
-      ...(input.messageKey ? { messageKey: input.messageKey } : {}),
-      ...(input.messageParams ? { messageParams: input.messageParams } : {}),
-      ...(input.actionUrl ? { actionUrl: input.actionUrl } : {}),
     })
     .returning({ id: notifications.id });
   return created?.id;
@@ -301,8 +353,13 @@ export async function dispatchEmailOnce(
         .where(eq(outboxEvents.id, evt.id));
       continue;
     }
+    // FEAT-AUDIT-R5 — single round-trip for both `email` and
+    // `locale` columns. The previous implementation issued two
+    // separate `select` statements per outbox event; with 50
+    // events/tick and 1-minute cadence the wasted round-trips
+    // were meaningful.
     const [user] = await db
-      .select({ email: users.email })
+      .select({ email: users.email, locale: users.locale })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
@@ -326,13 +383,7 @@ export async function dispatchEmailOnce(
     const messageKey = payload["messageKey"] as string | undefined;
     const messageParams =
       (payload["messageParams"] as Record<string, string | number> | undefined) ?? undefined;
-    const recipientLocale =
-      (await db
-        .select({ locale: users.locale })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1)
-        .then((rows) => rows[0]?.locale)) ?? "en";
+    const recipientLocale = user.locale ?? "en";
     const { subject, text: emailBody } = renderNotificationEmailCopy(
       {
         title,
@@ -352,13 +403,22 @@ export async function dispatchEmailOnce(
     } catch (err) {
       // Failure path: bump attempt_count + write last_error. The
       // row stays in the queue (processedAt is null) so the next
-      // tick retries. The Mailcow transient-error rate is the
-      // natural backoff (the cron runs every minute).
+      // tick retries — unless the row has already burned through
+      // EMAIL_DLQ_THRESHOLD attempts, in which case we mark it
+      // processed with a `[poisoned]` prefix so the operator
+      // can spot the bad row in a query and the cron stops
+      // spinning on it. Without the threshold, a row whose
+      // recipient address is permanently invalid would loop
+      // forever and fill the outbox table.
+      const message = err instanceof Error ? err.message : String(err);
+      const nextAttempt = (evt.attemptCount ?? 0) + 1;
+      const isPoisoned = nextAttempt >= EMAIL_DLQ_THRESHOLD;
       await db
         .update(outboxEvents)
         .set({
+          ...(isPoisoned ? { processedAt: new Date() } : {}),
           attemptCount: sql`${outboxEvents.attemptCount} + 1`,
-          lastError: err instanceof Error ? err.message : String(err),
+          lastError: isPoisoned ? `[poisoned] ${message}` : message,
         })
         .where(eq(outboxEvents.id, evt.id));
       failed += 1;
@@ -366,6 +426,17 @@ export async function dispatchEmailOnce(
   }
   return { processed: events.length, sent, skipped, failed };
 }
+
+/**
+ * FEAT-AUDIT-R6 — DLQ threshold. After this many failed attempts,
+ * the email row is marked processed with a "poisoned" marker in
+ * `last_error` so it stops re-trying. Five retries at 1-minute
+ * cron cadence = 5 minutes of backoff, which is enough to clear
+ * a transient Mailcow outage but short enough to catch
+ * configuration errors (e.g. a missing SMTP secret) before the
+ * table fills with poison rows.
+ */
+const EMAIL_DLQ_THRESHOLD = 5;
 
 function eventTypeToNotificationKind(eventType: string): NotificationKind | null {
   switch (eventType as OutboxEventType) {
@@ -456,13 +527,23 @@ async function fanOutCommentCreated(
  *   {
  *     userId,         // required — recipient
  *     workspaceId,    // optional
- *     contentItemId,  // optional
+ *     contentItemId,  // optional (workspace-only events omit it)
  *     title, body, actionUrl,
  *   }
  *
  * The kind on the call site is fixed (we don't accept it as a field
  * so a payload can't smuggle an unauthorized kind past the dispatcher).
  * `maybeNotify` consults `notification_preferences` before writing.
+ *
+ * FEAT-AUDIT-R7 — single dispatch path. The previous implementation
+ * had two branches: a `contentItemId`-present path through
+ * `maybeNotify` (preference-checked) and a `contentItemId`-absent
+ * path that re-implemented the preference check inline. The two
+ * branches could drift (e.g. an `actionUrl` passed on the
+ * contentItemId-less branch was silently dropped because the
+ * manual insert didn't honour the `opts.actionUrl` argument).
+ * Routing both through `maybeNotify` keeps the preference check
+ * and the actionUrl fallback in one place.
  */
 async function fanOutSingleRecipient(
   payload: Record<string, unknown>,
@@ -483,46 +564,20 @@ async function fanOutSingleRecipient(
   const messageParams = payload["messageParams"] as Record<string, string | number> | undefined;
   const workspaceId = payload["workspaceId"] as string | undefined;
   const actionUrl = payload["actionUrl"] as string | undefined;
-  if (contentItemId) {
-    await maybeNotify(
-      {
-        userId,
-        contentItemId,
-        kind,
-        title,
-        body,
-        ...(messageKey ? { messageKey } : {}),
-        ...(messageParams ? { messageParams } : {}),
-        ...(actionUrl ? { actionUrl } : {}),
-      },
-      tx,
-      { ...(workspaceId ? { workspaceId } : {}) },
-    );
-  } else {
-    // Fall back to the workspace-scoped notification (no
-    // contentItemId). We bypass `maybeNotify`'s actionUrl default by
-    // writing the row directly.
-    const [pref] = await tx
-      .select({ inAppEnabled: notificationPreferences.inAppEnabled })
-      .from(notificationPreferences)
-      .where(
-        and(eq(notificationPreferences.userId, userId), eq(notificationPreferences.kind, kind)),
-      )
-      .limit(1);
-    const inAppEnabled = pref?.inAppEnabled ?? true;
-    if (!inAppEnabled) return;
-    await createInAppNotification({
+  await maybeNotify(
+    {
       userId,
-      ...(workspaceId ? { workspaceId } : {}),
+      ...(contentItemId ? { contentItemId } : {}),
       kind,
       title,
       body,
       ...(messageKey ? { messageKey } : {}),
       ...(messageParams ? { messageParams } : {}),
       ...(actionUrl ? { actionUrl } : {}),
-      tx,
-    });
-  }
+    },
+    tx,
+    { ...(workspaceId ? { workspaceId } : {}) },
+  );
 }
 
 /**
@@ -575,7 +630,16 @@ async function fanOutPublicationRecorded(
         body,
         ...(messageKey ? { messageKey } : {}),
         ...(messageParams ? { messageParams } : {}),
-        actionUrl: `/app/w/${item.workspaceId}/planning/${contentItemId}#publishing`,
+        // The planning detail route is `/app/w/<slug>/planning/<id>`;
+        // the previous literal used `item.workspaceId` (a UUID) which
+        // never resolved. Resolve the slug via the shared helper so
+        // the bell click lands on the publishing tab directly.
+        actionUrl: await buildActionUrlForContentItem(
+          item.workspaceId,
+          contentItemId,
+          "publishing",
+          tx,
+        ),
         workspaceId: item.workspaceId,
       },
       tx,
@@ -638,10 +702,65 @@ function defaultBodyFor(kind: NotificationKind): string {
   }
 }
 
+/**
+ * Resolve a workspace slug from a workspace identifier and return
+ * a valid App Router deep-link to the planning detail page. The
+ * bell click lands the user on the planning detail page (or the
+ * `#hash` anchor when provided).
+ *
+ *   /app/w/<slug>/planning/<contentItemId>[#hash]
+ *
+ * `workspaceIdentifier` may be either the workspace UUID or the
+ * workspace slug — most call sites pass the UUID they already have
+ * on the workspace row, but a slug is supported so callers that
+ * resolve the slug upstream can skip the lookup.
+ *
+ * When the workspace row cannot be found, the helper returns `/app`
+ * (the My Work landing). The 404 transition is the worse failure
+ * mode — a stale URL landing the user on the agency home is more
+ * recoverable than a missing-route error.
+ *
+ * The lookup runs inside the caller's transaction when `tx` is
+ * provided; otherwise it falls back to the global db instance. The
+ * helper is `async` because the slug is a `workspaces` column and
+ * we want a single round trip from each call site.
+ */
+export async function buildActionUrlForContentItem(
+  workspaceIdentifier: string,
+  contentItemId: string,
+  hash?: "publishing" | "discussion" | null,
+  tx?: Parameters<Parameters<typeof db.transaction>[0]>[0],
+): Promise<string> {
+  if (!workspaceIdentifier) {
+    // No workspace context — the agency landing is the safest target.
+    return "/app";
+  }
+  const runner = tx ?? db;
+  // Accept either the UUID or the slug. The Drizzle `or(...)`
+  // expression resolves in a single round trip.
+  const [row] = await runner
+    .select({ id: workspaces.id, slug: workspaces.slug })
+    .from(workspaces)
+    .where(or(eq(workspaces.id, workspaceIdentifier), eq(workspaces.slug, workspaceIdentifier)))
+    .limit(1);
+  if (!row) {
+    return "/app";
+  }
+  const fragment = hash ? `#${hash}` : "";
+  return `/app/w/${row.slug}/planning/${contentItemId}${fragment}`;
+}
+
 async function maybeNotify(
   input: {
     userId: string;
-    contentItemId: string;
+    /**
+     * The content item this notification is about. Optional so
+     * workspace-scoped events (e.g. a future "your trial ends
+     * tomorrow" notice) can also flow through this helper.
+     * At least one of `contentItemId` or `opts.workspaceId`
+     * must be present — the call site decides which.
+     */
+    contentItemId?: string;
     kind: NotificationKind;
     title: string;
     body: string;
@@ -668,26 +787,34 @@ async function maybeNotify(
     .limit(1);
   const inAppEnabled = pref?.inAppEnabled ?? true; // default ON
   if (!inAppEnabled) return;
-  // Default click-through: the planning list for the
-  // workspace the item lives in. The planning detail route
-  // needs a workspace slug, so we fall back to the list —
-  // the user can pick the item from there. Per-event callers
-  // should pass `opts.actionUrl` (built from the workspace
-  // slug) so the click lands directly on the relevant
-  // section. The publication handler in
-  // `lib/publishing/service.ts` and the discussion handler
-  // in `lib/discussions/service.ts` both pre-compute the
-  // slug-based URL.
+  // Default click-through: the planning detail page for the
+  // workspace the item lives in. The route segment requires the
+  // workspace slug (not the UUID) and the planning item id, so
+  // the helper resolves the slug and assembles the URL.
+  // Per-event callers (deliveries, publication, materiality) pass
+  // `opts.actionUrl` already pre-computed from the slug they
+  // resolved upstream; the fallback here covers callers that
+  // don't yet thread the slug through (mention / review_request
+  // / approval / system). When even the workspace id is missing
+  // the helper returns `/app` (My Work) so the bell click never
+  // hits a 404. For workspace-only notifications (no
+  // contentItemId) the same fallback applies — the bell click
+  // lands on the workspace home rather than a 404.
+  const actionUrl =
+    opts.actionUrl ??
+    (input.contentItemId
+      ? await buildActionUrlForContentItem(opts.workspaceId ?? "", input.contentItemId, null, tx)
+      : "/app");
   await createInAppNotification({
     userId: input.userId,
     ...(opts.workspaceId ? { workspaceId: opts.workspaceId } : {}),
-    contentItemId: input.contentItemId,
+    ...(input.contentItemId ? { contentItemId: input.contentItemId } : {}),
     kind: input.kind,
     title: input.title,
     body: input.body,
     ...(input.messageKey ? { messageKey: input.messageKey } : {}),
     ...(input.messageParams ? { messageParams: input.messageParams } : {}),
-    actionUrl: opts.actionUrl ?? `/app/planning/${input.contentItemId}`,
+    actionUrl,
     tx,
   });
 }
@@ -743,66 +870,137 @@ export async function shouldDigestUserFor(userId: string): Promise<boolean> {
 }
 
 /**
- * Snapshot of the user's notification preferences for the account-page
- * UI. Returns safe defaults when no row exists yet.
+ * Per-kind preference shape used by the account-page form. R4
+ * expanded the surface from two booleans to a full 11-kind
+ * matrix. The `system` kind's `inAppEnabled` is intentionally
+ * NOT exposed — the master prompt §8 promises "invitations and
+ * security events cannot be disabled", and the `system` kind
+ * is the closest match. We hardcode `inAppEnabled = true` for
+ * it and force `emailEnabled = false` (those events are
+ * bell-only; the email surface is reserved for user-driven
+ * kinds).
  */
-export async function getNotificationPreferencesForUser(userId: string): Promise<{
-  emailOnMention: boolean;
+export const NotificationKindSchemaValues = NotificationKindSchema.options;
+export type NotificationKindForPrefs = (typeof NotificationKindSchemaValues)[number];
+
+export type NotificationKindPrefs = {
+  inAppEnabled: boolean;
+  emailEnabled: boolean;
+};
+
+export type NotificationPreferencesSnapshot = Record<
+  NotificationKindForPrefs,
+  NotificationKindPrefs
+> & {
   dailyDigest: boolean;
-}> {
-  const [mention, systemRow] = await Promise.all([
-    readPreferenceRow(userId, "mention"),
-    readPreferenceRow(userId, "system"),
-  ]);
-  return {
-    emailOnMention: mention?.emailEnabled ?? false,
-    dailyDigest: systemRow?.digestEnabled ?? false,
-  };
+};
+
+/**
+ * Default snapshot. Matches the schema's column defaults
+ * (`inAppEnabled: true`, `emailEnabled: false`,
+ * `digestEnabled: false`) and the master prompt §8 contract
+ * (in-app bell is on, email is opt-in per kind, daily digest
+ * is opt-in via the system row).
+ */
+export function defaultNotificationPreferences(): NotificationPreferencesSnapshot {
+  const out = {} as NotificationPreferencesSnapshot;
+  for (const k of NotificationKindSchemaValues) {
+    out[k] = { inAppEnabled: true, emailEnabled: false };
+  }
+  out.dailyDigest = false;
+  return out;
+}
+
+/**
+ * Snapshot of the user's notification preferences for the
+ * account-page UI. Returns safe defaults when no row exists yet
+ * — every kind defaults to "in-app on, email off" so a brand-
+ * new user immediately gets the bell experience the master
+ * prompt §8 contract promises.
+ */
+export async function getNotificationPreferencesForUser(
+  userId: string,
+): Promise<NotificationPreferencesSnapshot> {
+  const rows = await db
+    .select()
+    .from(notificationPreferences)
+    .where(eq(notificationPreferences.userId, userId));
+  const snap = defaultNotificationPreferences();
+  for (const row of rows) {
+    if (NotificationKindSchemaValues.includes(row.kind as NotificationKindForPrefs)) {
+      snap[row.kind as NotificationKindForPrefs] = {
+        inAppEnabled: row.inAppEnabled,
+        emailEnabled: row.emailEnabled,
+      };
+    }
+    if (row.kind === "system") {
+      snap.dailyDigest = row.digestEnabled;
+    }
+  }
+  return snap;
 }
 
 export const SetNotificationPreferencesSchema = z.object({
-  emailOnMention: z.boolean(),
+  /**
+   * Per-kind matrix. The form posts each kind × channel
+   * boolean; the action flattens this back into the right
+   * shape. A missing kind is treated as the default (in-app
+   * on, email off) — the form is the source of truth, the
+   * service just persists what the form sent.
+   */
+  prefs: z.record(
+    NotificationKindSchema,
+    z.object({
+      inAppEnabled: z.boolean(),
+      emailEnabled: z.boolean(),
+    }),
+  ),
+  /** Daily-digest toggle. Lives on the `system` kind's
+   * `digestEnabled` column. */
   dailyDigest: z.boolean(),
 });
 export type SetNotificationPreferencesInput = z.infer<typeof SetNotificationPreferencesSchema>;
 
 /**
- * Upsert the user's notification preferences. Idempotent: subsequent
- * saves overwrite the previous flag values for the two kinds we own.
- * We never touch `inAppEnabled` — that flag is owned by the broader
- * notification preferences writer and is always on today.
+ * Upsert the user's notification preferences. Idempotent:
+ * each (user, kind) row is overwritten on save so a user who
+ * flips a toggle and saves sees the new state immediately on
+ * the next request. We always write the `inAppEnabled` flag
+ * the form sent — except for `system`, which is forced to
+ * `true` to honour the master prompt §8 "invitations and
+ * security events cannot be disabled" rule.
  */
 export async function setNotificationPreferencesForUser(
   userId: string,
   input: SetNotificationPreferencesInput,
 ): Promise<void> {
   const parsed = SetNotificationPreferencesSchema.parse(input);
-  await db
-    .insert(notificationPreferences)
-    .values({
-      userId,
-      kind: "mention",
-      inAppEnabled: true,
-      emailEnabled: parsed.emailOnMention,
-      digestEnabled: false,
-    })
-    .onConflictDoUpdate({
-      target: [notificationPreferences.userId, notificationPreferences.kind],
-      set: { emailEnabled: parsed.emailOnMention },
-    });
-  await db
-    .insert(notificationPreferences)
-    .values({
-      userId,
-      kind: "system",
-      inAppEnabled: true,
-      emailEnabled: false,
-      digestEnabled: parsed.dailyDigest,
-    })
-    .onConflictDoUpdate({
-      target: [notificationPreferences.userId, notificationPreferences.kind],
-      set: { digestEnabled: parsed.dailyDigest },
-    });
+  for (const [kindRaw, prefs] of Object.entries(parsed.prefs)) {
+    const kind = kindRaw as NotificationKindForPrefs;
+    // Master prompt §8 — `system` is the kind we use for
+    // invitations + security events. Keep it on in the bell.
+    const inAppEnabled = kind === "system" ? true : prefs.inAppEnabled;
+    await db
+      .insert(notificationPreferences)
+      .values({
+        userId,
+        kind,
+        inAppEnabled,
+        emailEnabled: prefs.emailEnabled,
+        // Only the `system` row carries digestEnabled; the other
+        // kinds share the same column shape but the value is
+        // irrelevant there.
+        digestEnabled: kind === "system" ? parsed.dailyDigest : false,
+      })
+      .onConflictDoUpdate({
+        target: [notificationPreferences.userId, notificationPreferences.kind],
+        set: {
+          inAppEnabled,
+          emailEnabled: prefs.emailEnabled,
+          ...(kind === "system" ? { digestEnabled: parsed.dailyDigest } : {}),
+        },
+      });
+  }
 }
 
 // ─── FEAT-01 — enqueue helpers (GAP-FULL-REVIEW-2026-08-25) ────────────────
@@ -868,15 +1066,15 @@ async function enqueueOutboxEvent(
       eventType,
       aggregateType,
       aggregateId,
+      // FEAT-AUDIT-R8 — single source of truth for the per-event
+      // payload shape. Mirrors `createInAppNotification`'s column
+      // set so a new field added to one site is added to the
+      // other. The `eventType` is duplicated inside the payload
+      // because the dispatcher's `eventTypeToNotificationKind` map
+      // reads it from there (a denormalisation the dispatcher
+      // depends on for retry-without-schema-change).
       payload: {
-        userId: input.userId,
-        ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}),
-        ...(input.contentItemId ? { contentItemId: input.contentItemId } : {}),
-        ...(input.title ? { title: input.title } : {}),
-        ...(input.body ? { body: input.body } : {}),
-        ...(input.messageKey ? { messageKey: input.messageKey } : {}),
-        ...(input.messageParams ? { messageParams: input.messageParams } : {}),
-        ...(input.actionUrl ? { actionUrl: input.actionUrl } : {}),
+        ...notificationCoreFields(input),
         eventType,
       },
     })

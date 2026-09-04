@@ -11,6 +11,7 @@ import {
   notifications,
 } from "@/lib/db/schema";
 import { hasWorkspaceRole, type Actor } from "@/lib/auth/policy";
+import { buildActionUrlForContentItem } from "@/lib/notifications/service";
 import { randomUUID } from "node:crypto";
 
 /**
@@ -229,6 +230,17 @@ export async function recordMaterialityEvent(
     reviewerIds.delete(input.actor.id);
     let notified = 0;
     for (const reviewerId of reviewerIds) {
+      // The deep-link target is the publishing sub-page for the
+      // affected content item. The previous literal used
+      // `item.workspaceId` (UUID) where the route expects a slug;
+      // resolve via the shared helper so the bell click lands on
+      // a real App Router segment.
+      const actionUrl = await buildActionUrlForContentItem(
+        item.workspaceId,
+        input.contentItemId,
+        null,
+        tx,
+      );
       await tx.insert(notifications).values({
         userId: reviewerId,
         workspaceId: item.workspaceId,
@@ -238,7 +250,7 @@ export async function recordMaterialityEvent(
         body: `Resource '${input.resource}' changed. Approvals were reset; please re-review (revision ${newRevision}).`,
         messageKey: "notifications.events.material_edit",
         messageParams: { resource: input.resource, revision: newRevision },
-        actionUrl: `/app/w/${item.workspaceId}/planning/${input.contentItemId}/publish`,
+        actionUrl: `${actionUrl}/publish`,
       });
       notified += 1;
     }

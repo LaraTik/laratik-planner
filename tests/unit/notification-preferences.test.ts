@@ -2,49 +2,67 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { SetNotificationPreferencesSchema } from "@/lib/notifications/service";
+import {
+  SetNotificationPreferencesSchema,
+  defaultNotificationPreferences,
+  NotificationKindSchemaValues,
+} from "@/lib/notifications/service";
 
 /**
- * FEAT-08 (GAP-FULL-REVIEW-2026-08-25) — notification_preferences was a
- * dead schema: the columns existed but the rest of the codebase
- * never read or wrote them. The new account-page form persists via
- * `SetNotificationPreferencesSchema`; this test pins its public
- * contract.
- *
- *  - The schema accepts both booleans (no defaults; the account page
- *    always submits both flags together so the persistence layer
- *    never has to infer a missing value).
- *  - Any non-boolean input is rejected with a structured error.
+ * R4 — `SetNotificationPreferencesSchema` now accepts a per-kind
+ * matrix plus the daily-digest toggle. The matrix is a record
+ * keyed by every value of `NotificationKindSchemaValues`. The
+ * service writes each kind row independently so a partial
+ * matrix (e.g. a form that posts only the kinds the user
+ * touched) is still a valid input.
  */
-describe("SetNotificationPreferencesSchema", () => {
-  it("accepts the full pair of boolean flags", () => {
-    expect(
-      SetNotificationPreferencesSchema.safeParse({
-        emailOnMention: true,
-        dailyDigest: false,
-      }).success,
-    ).toBe(true);
-    expect(
-      SetNotificationPreferencesSchema.safeParse({
-        emailOnMention: false,
-        dailyDigest: true,
-      }).success,
-    ).toBe(true);
+describe("SetNotificationPreferencesSchema (R4)", () => {
+  it("accepts the full per-kind matrix + daily digest", () => {
+    const full = defaultNotificationPreferences();
+    const prefs = Object.fromEntries(
+      Object.entries(full).filter(([k]) => k !== "dailyDigest"),
+    ) as Record<string, { inAppEnabled: boolean; emailEnabled: boolean }>;
+    const out = SetNotificationPreferencesSchema.safeParse({
+      prefs,
+      dailyDigest: true,
+    });
+    expect(out.success).toBe(true);
   });
 
-  it("rejects missing fields so the writer never has to infer defaults", () => {
-    expect(SetNotificationPreferencesSchema.safeParse({ emailOnMention: true }).success).toBe(
-      false,
-    );
-    expect(SetNotificationPreferencesSchema.safeParse({ dailyDigest: true }).success).toBe(false);
+  it("accepts a partial matrix (the form posts only touched kinds)", () => {
+    const out = SetNotificationPreferencesSchema.safeParse({
+      prefs: {
+        mention: { inAppEnabled: true, emailEnabled: true },
+        review_request: { inAppEnabled: true, emailEnabled: false },
+      },
+      dailyDigest: false,
+    });
+    expect(out.success).toBe(true);
   });
 
-  it("rejects non-boolean payloads (e.g. the raw form string)", () => {
-    expect(
-      SetNotificationPreferencesSchema.safeParse({
-        emailOnMention: "on",
-        dailyDigest: "off",
-      }).success,
-    ).toBe(false);
+  it("rejects non-boolean inAppEnabled", () => {
+    const out = SetNotificationPreferencesSchema.safeParse({
+      prefs: { mention: { inAppEnabled: "on", emailEnabled: false } },
+      dailyDigest: false,
+    });
+    expect(out.success).toBe(false);
+  });
+
+  it("rejects non-boolean dailyDigest", () => {
+    const out = SetNotificationPreferencesSchema.safeParse({
+      prefs: { mention: { inAppEnabled: true, emailEnabled: false } },
+      dailyDigest: "on",
+    });
+    expect(out.success).toBe(false);
+  });
+
+  it("defaultNotificationPreferences covers every kind in the schema", () => {
+    const defaults = defaultNotificationPreferences();
+    for (const kind of NotificationKindSchemaValues) {
+      expect(defaults[kind]).toBeDefined();
+      expect(defaults[kind].inAppEnabled).toBe(true);
+      expect(defaults[kind].emailEnabled).toBe(false);
+    }
+    expect(defaults.dailyDigest).toBe(false);
   });
 });
