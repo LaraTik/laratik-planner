@@ -249,10 +249,7 @@ function BoardCard({
         {t ? t(`planningFilters.formatLabels.${item.format}`) : humanFormat(item.format)} ·{" "}
         <bdi dir="auto">{formatDate(publishDate, locale, { timeZone: workspaceTimezone })}</bdi>
       </p>
-      <div
-        className="mt-2 flex flex-col gap-1"
-        data-testid="board-card-people"
-      >
+      <div className="mt-2 flex flex-col gap-1" data-testid="board-card-people">
         <PersonRow
           Icon={Palette}
           roleLabel={t ? t("common.peopleRoleDesigner") : "Designer"}

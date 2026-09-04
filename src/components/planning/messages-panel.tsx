@@ -185,7 +185,7 @@ export function MessagesPanel({
 
         {showNonMaterialHint ? (
           <div
-            className="border-info bg-info-subtle text-fg-primary rounded-[var(--radius-control)] flex items-start gap-2 border p-3"
+            className="border-info bg-info-subtle text-fg-primary flex items-start gap-2 rounded-[var(--radius-control)] border p-3"
             data-testid="messages-non-material-hint"
             role="note"
           >

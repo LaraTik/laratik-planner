@@ -995,46 +995,46 @@ export default async function ContentDetailPage({
                         </p>
                       ) : null}
                     </header>
-                    {item.channels[0] ? (
-                      (() => {
-                        // P3 (2026-09-03, /ui-ux-pro-max): prefer the
-                        // per-channel `platformPayload.caption` /
-                        // `hashtags` when present (these reflect the
-                        // publisher's per-channel override from the
-                        // Publishing tab), then fall back to
-                        // `formatPayload.caption` (the planner's
-                        // single source of truth), then to the brief.
-                        // The Preview tab used to read only
-                        // `formatPayload` so per-channel edits
-                        // silently did not show up here.
-                        const plannerCaption = (
-                          parseFormatPayload(
-                            item.format,
-                            (item as { formatPayload?: unknown }).formatPayload,
-                          ) as { caption?: string }
-                        ).caption;
-                        const plannerHashtags = (
-                          parseFormatPayload(
-                            item.format,
-                            (item as { formatPayload?: unknown }).formatPayload,
-                          ) as { hashtags?: string[] }
-                        ).hashtags;
-                        const channelPayload = (channelPayloads as Record<string, unknown>)[
-                          item.channels[0].socialChannelId
-                        ] as { caption?: string; hashtags?: string[] } | undefined;
-                        const caption =
-                          channelPayload?.caption ?? plannerCaption ?? item.brief ?? "";
-                        const hashtags = channelPayload?.hashtags ?? plannerHashtags;
-                        return (
-                          <PlatformPreview
-                            platform={item.channels[0].platform}
-                            accountName={item.channels[0].accountName}
-                            caption={caption}
-                            {...(hashtags ? { hashtags } : {})}
-                          />
-                        );
-                      })()
-                    ) : null}
+                    {item.channels[0]
+                      ? (() => {
+                          // P3 (2026-09-03, /ui-ux-pro-max): prefer the
+                          // per-channel `platformPayload.caption` /
+                          // `hashtags` when present (these reflect the
+                          // publisher's per-channel override from the
+                          // Publishing tab), then fall back to
+                          // `formatPayload.caption` (the planner's
+                          // single source of truth), then to the brief.
+                          // The Preview tab used to read only
+                          // `formatPayload` so per-channel edits
+                          // silently did not show up here.
+                          const plannerCaption = (
+                            parseFormatPayload(
+                              item.format,
+                              (item as { formatPayload?: unknown }).formatPayload,
+                            ) as { caption?: string }
+                          ).caption;
+                          const plannerHashtags = (
+                            parseFormatPayload(
+                              item.format,
+                              (item as { formatPayload?: unknown }).formatPayload,
+                            ) as { hashtags?: string[] }
+                          ).hashtags;
+                          const channelPayload = (channelPayloads as Record<string, unknown>)[
+                            item.channels[0].socialChannelId
+                          ] as { caption?: string; hashtags?: string[] } | undefined;
+                          const caption =
+                            channelPayload?.caption ?? plannerCaption ?? item.brief ?? "";
+                          const hashtags = channelPayload?.hashtags ?? plannerHashtags;
+                          return (
+                            <PlatformPreview
+                              platform={item.channels[0].platform}
+                              accountName={item.channels[0].accountName}
+                              caption={caption}
+                              {...(hashtags ? { hashtags } : {})}
+                            />
+                          );
+                        })()
+                      : null}
                   </div>
                 )}
               </section>

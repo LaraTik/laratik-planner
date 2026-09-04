@@ -55,7 +55,7 @@ const DialogContent = React.forwardRef<
         // up biased to the left and clipped on small viewports.
         // The fix is to use physical `left-1/2 top-1/2` so the
         // math is direction-agnostic.
-        "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4",
+        "fixed top-1/2 left-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4",
         "border-border bg-surface rounded-[var(--radius-card)] border p-6 shadow-lg",
         "focus:outline-none",
         className,

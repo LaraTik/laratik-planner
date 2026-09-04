@@ -227,7 +227,9 @@ describe("workspace_membership.updated_at + touch_updated_at trigger", () => {
     const formData = new FormData();
     formData.set(
       "workspaceRoles",
-      JSON.stringify([{ workspaceId: ws.id, roles: ["designer", "publisher", "internal_reviewer"] }]),
+      JSON.stringify([
+        { workspaceId: ws.id, roles: ["designer", "publisher", "internal_reviewer"] },
+      ]),
     );
 
     const result = await updateMemberRolesAction(target.id, {}, formData);

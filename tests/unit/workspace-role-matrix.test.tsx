@@ -10,12 +10,10 @@ import { fireEvent, render } from "@testing-library/react";
 // 3-arg signature — the formData is the THIRD argument.
 const captured: { formData: FormData | null } = { formData: null };
 vi.mock("@/app/(app)/app/users/actions", () => ({
-  updateMemberRolesAction: vi.fn(
-    async (_userId: string, _prev: unknown, fd: FormData) => {
-      captured.formData = fd;
-      return { saved: true };
-    },
-  ),
+  updateMemberRolesAction: vi.fn(async (_userId: string, _prev: unknown, fd: FormData) => {
+    captured.formData = fd;
+    return { saved: true };
+  }),
   toggleAgencyAdminAction: vi.fn(async () => ({ saved: true })),
 }));
 

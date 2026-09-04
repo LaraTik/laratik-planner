@@ -678,10 +678,7 @@ export async function patchAudienceCopyAction(
   try {
     await patchAudienceCopy(actor, patch);
   } catch (e) {
-    return actionFailure<PatchAudienceCopyFields>(
-      e,
-      "The copy could not be saved.",
-    );
+    return actionFailure<PatchAudienceCopyFields>(e, "The copy could not be saved.");
   }
   revalidatePath(`/app/w/${workspaceSlug}/planning/${parsed.data.contentItemId}`);
   return { ok: true };
