@@ -363,10 +363,11 @@ export type ResolvedAgencyContext = {
  *   2. The signed `laratik_active_agency` cookie. The decoder
  *      already does the membership re-check, so a decoded value
  *      is already authorized. A decoder `null` (tampered,
- *      expired, missing-membership, no secret) is fail-closed:
- *      the resolver returns `null` and does NOT fall through to
- *      the fallback. A stale cookie must lose authority, not be
- *      replaced with an "even older" default.
+ *      expired, missing-membership, no secret) loses authority.
+ *      The resolver may recover only when the actor has exactly one
+ *      active agency, which is independently authorized by the
+ *      fallback query. This handles a browser retaining a cookie from
+ *      another signed-in user without guessing across agencies.
  *   3. Fallback — the actor's **only** active agency. If the
  *      actor has 0 or 2+ active agencies, the resolver returns
  *      `null` (the route layer will prompt the user via the
@@ -420,7 +421,8 @@ export async function resolveActiveAgencyContext(
   // membership re-check at step 4 of its check order; a non-null
   // return is therefore already authorized. A null return covers
   // tampered, expired, no-membership, no-secret, and DB-error
-  // paths — all fail-closed.
+  // paths. It loses authority, but a single active membership is a
+  // safe recovery path for stale cookies retained across sign-ins.
   const cookieStore = await cookies();
   const cookieEntry = cookieStore.get(AGENCY_CONTEXT_COOKIE_NAME);
   if (cookieEntry?.value) {
@@ -432,10 +434,19 @@ export async function resolveActiveAgencyContext(
         source: "cookie",
       };
     }
-    // Fail-closed. Do NOT fall through to the fallback path — a
-    // stale cookie must lose authority, not be replaced with the
-    // user's "older" default. The caller can `clearActiveAgencyCookie()`
-    // and re-prompt the user.
+    // A cookie from another signed-in user, or a cookie for an agency
+    // whose membership was revoked, must never authorize that agency.
+    // Recover only through the fallback's independently authorized
+    // single-membership query. For 0 or 2+ memberships it returns null,
+    // leaving the caller to present an appropriate access/switching UI.
+    const fallback = await findSingleActiveAgency(actor);
+    if (fallback) {
+      return {
+        actor,
+        agencyId: fallback,
+        source: "fallback-single-agency",
+      };
+    }
     return null;
   }
 

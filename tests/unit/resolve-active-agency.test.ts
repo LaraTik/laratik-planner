@@ -27,11 +27,10 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
  *     paths — silently downgrading the explicit request would hide a
  *     permission denial and let a user accidentally land on a
  *     workspace they do not have access to.
- *   - If the cookie is tampered/expired/missing-membership, the
- *     resolver returns `null`. It does NOT fall through to the
- *     fallback — a stale cookie should lose authority, not be
- *     replaced with an "even older" default. The caller can then
- *     `clearActiveAgencyCookie()` and re-prompt the user.
+ *   - If the cookie is tampered/expired/missing-membership, it loses
+ *     authority. The resolver may recover only through the actor's
+ *     exactly-one active agency fallback; it returns `null` for zero or
+ *     multiple active memberships.
  *
  * Test patterns mirror `agency-context-cookie.test.ts`: a chainable
  * drizzle mock for DB returns, a hoisted `next/headers` cookies()
@@ -255,7 +254,7 @@ describe("cookie path (priority 2)", () => {
     });
   });
 
-  it("5) returns null (does NOT fall through to fallback) when the cookie's agency membership has been revoked", async () => {
+  it("5) returns null when the cookie's agency membership is revoked and no fallback agency exists", async () => {
     const cookieValue = ctx.encodeAgencyContext({
       agencyId: AGENCY_ID,
       userId: actor.id,
@@ -266,8 +265,8 @@ describe("cookie path (priority 2)", () => {
     dbMock.state.limitResults = [[]];
     const result = await ctx.resolveActiveAgencyContext({ actor });
     expect(result).toBeNull();
-    // The fallback must NOT have been consulted. A stale cookie must
-    // not silently downgrade to the user's "old" default agency.
+    // No fallback agency is available, so the revoked cookie cannot
+    // authorize access to any tenant.
     expect(dbMock.state.fallbackResults).toHaveLength(0);
   });
 
@@ -282,9 +281,8 @@ describe("cookie path (priority 2)", () => {
     const tampered = `${parts[0]}.${parts[1]}.${tamperedSig}`;
     cookieStoreMock.store.entries = [{ name: ctx.AGENCY_CONTEXT_COOKIE_NAME, value: tampered }];
     // We DO NOT pre-queue a membership row: the decoder short-circuits
-    // on the HMAC failure before the DB lookup. If the resolver
-    // accidentally burned a query here, the queue would have a stale
-    // entry left over (it does not — the test asserts state below).
+    // on the HMAC failure before the DB lookup. The fallback query is
+    // independently empty, so the invalid cookie cannot authorize access.
     const result = await ctx.resolveActiveAgencyContext({ actor });
     expect(result).toBeNull();
     expect(dbMock.state.limitResults).toHaveLength(0);
@@ -303,6 +301,29 @@ describe("cookie path (priority 2)", () => {
     const result = await ctx.resolveActiveAgencyContext({ actor });
     expect(result).toBeNull();
     expect(dbMock.state.fallbackResults).toHaveLength(0);
+  });
+
+  it("13) recovers a single active agency when the cookie belongs to another session", async () => {
+    const cookieValue = ctx.encodeAgencyContext({
+      agencyId: OTHER_AGENCY_ID,
+      userId: actor.id,
+      maxAgeSeconds: 60 * 60 * 8,
+    });
+    cookieStoreMock.store.entries = [{ name: ctx.AGENCY_CONTEXT_COOKIE_NAME, value: cookieValue }];
+
+    // The cookie is structurally valid but no longer authorized for the
+    // actor (for example, the browser retained another user's cookie).
+    // The actor has exactly one active agency, so the resolver can recover
+    // without guessing or granting access to the cookie's agency.
+    dbMock.state.limitResults = [[]];
+    dbMock.state.fallbackResults = [[{ agencyId: AGENCY_ID }]];
+
+    const result = await ctx.resolveActiveAgencyContext({ actor });
+    expect(result).toEqual({
+      actor,
+      agencyId: AGENCY_ID,
+      source: "fallback-single-agency",
+    });
   });
 });
 

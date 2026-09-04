@@ -39,6 +39,55 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
     await expect(trigger).toBeVisible();
   });
 
+  test("single-agency user recovers when the browser retains another user's agency cookie", async ({
+    page,
+  }) => {
+    const suffix = Date.now();
+    const agencySlug = `stale-cookie-${suffix}`;
+    const adminEmail = `stale-cookie-admin-${suffix}@laratik.local`;
+    const memberEmail = `stale-cookie-member-${suffix}@laratik.local`;
+
+    await devSeed(page.request, {
+      email: adminEmail,
+      agencyAdmin: true,
+      agencySlug,
+      workspaceSlug: `${agencySlug}-workspace`,
+    });
+    await devSignIn(page.request, { email: adminEmail, role: "agency_admin" });
+    const retainedCookie = (await page.context().cookies()).find(
+      (cookie) => cookie.name === "laratik_active_agency",
+    );
+    expect(retainedCookie?.value).toBeTruthy();
+
+    await devSeed(page.request, {
+      email: memberEmail,
+      agencyAdmin: false,
+      workspaceRoles: ["viewer"],
+      agencySlug,
+      workspaceSlug: `${agencySlug}-workspace`,
+    });
+    await page.context().clearCookies();
+    await devSignIn(page.request, { email: memberEmail, role: "user" });
+    await page.context().addCookies([
+      {
+        name: retainedCookie!.name,
+        value: retainedCookie!.value,
+        domain: retainedCookie!.domain || "localhost",
+        path: retainedCookie!.path || "/",
+        httpOnly: retainedCookie!.httpOnly,
+        secure: retainedCookie!.secure,
+        sameSite: retainedCookie!.sameSite || "Lax",
+        expires:
+          retainedCookie!.expires && retainedCookie!.expires > 0 ? retainedCookie!.expires : -1,
+      },
+    ]);
+
+    await page.goto("/app", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/app(?:$|\?)/);
+    await expect(page).not.toHaveURL(/\/setup/);
+    await expect(page.getByTestId("sidebar-agency-switcher-trigger")).toBeVisible();
+  });
+
   test("clicking the trigger opens a listbox containing the seeded agency", async ({ page }) => {
     await bootstrapTestSession(page);
     await page.goto("/app");

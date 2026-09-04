@@ -112,15 +112,16 @@ agency-scoped helper.
 ### 3.1 Priority chain (highest wins)
 
 The resolver is a strict three-step chain. Each step's result is
-**fail-closed**: if the step cannot produce a valid, authorized agency, the
-resolver returns `null` and the caller decides what to do. The chain does
-**not** silently fall through on a denied or invalid result.
+**fail-closed**: an invalid or denied value never authorizes that agency. An
+invalid cookie may recover only through the independently authorized fallback
+when the actor has exactly one active agency; explicit requests never fall
+through.
 
-| Priority | Source              | When it is used                                                                                                                  | Behavior on failure                                                                                                                                      |
-| -------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1        | `requestedAgencyId` | The caller supplies an explicit hint: `?agency=<id>`, a path param, or a server-action input.                                    | The actor is checked against `agency_membership` for that exact agency. **Denied → `null` (no fallthrough).**                                            |
-| 2        | Signed cookie       | The actor's `laratik_active_agency` HttpOnly cookie, HMAC-SHA-256 signed with `AGENCY_COOKIE_SECRET`; payload includes `userId`. | The cookie is verified (format, signature, expiry), then the actor is re-checked against `agency_membership`. **Any failure → `null` (no fallthrough).** |
-| 3        | Fallback            | The actor's **only** active agency membership (deterministic, ordered by `agency_membership.created_at ASC`).                    | If the actor has 0 or 2+ active agencies, the resolver returns `null`. The agency switcher is the user-facing path for 2+ memberships.                   |
+| Priority | Source              | When it is used                                                                                                                  | Behavior on failure                                                                                                                                                                                                                |
+| -------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1        | `requestedAgencyId` | The caller supplies an explicit hint: `?agency=<id>`, a path param, or a server-action input.                                    | The actor is checked against `agency_membership` for that exact agency. **Denied → `null` (no fallthrough).**                                                                                                                      |
+| 2        | Signed cookie       | The actor's `laratik_active_agency` HttpOnly cookie, HMAC-SHA-256 signed with `AGENCY_COOKIE_SECRET`; payload includes `userId`. | The cookie is verified (format, signature, expiry), then the actor is re-checked against `agency_membership`. **Failure loses cookie authority; recovery is allowed only through the actor's exactly-one active-agency fallback.** |
+| 3        | Fallback            | The actor's **only** active agency membership (deterministic, ordered by `agency_membership.created_at ASC`).                    | If the actor has 0 or 2+ active agencies, the resolver returns `null`. The agency switcher is the user-facing path for 2+ memberships.                                                                                             |
 
 The chain is encoded in `resolveActiveAgencyContext` and the
 `ResolvedAgencyContext.source` field records which step produced the result:
@@ -147,10 +148,14 @@ Specifically:
   active member of returns `null` and does **not** fall through to the
   cookie or the fallback. Silently downgrading the explicit request would
   let a user land on data they have not been granted access to.
-- A tampered, expired, or no-membership cookie returns `null` and does
-  **not** fall through. A stale cookie must lose authority, not be
-  replaced with the user's "older" default. The route layer can call
-  `clearActiveAgencyCookie()` to drop it and re-prompt the user.
+- A tampered, expired, or no-membership cookie loses authority. When the
+  actor has exactly one active agency, the resolver recovers through that
+  independently authorized membership; with zero or multiple active
+  agencies it returns `null`. This prevents a browser cookie retained
+  across account sign-ins from trapping a single-agency user in the
+  `/setup` ↔ `/app` loop, without guessing for multi-agency users. The
+  route layer can still call `clearActiveAgencyCookie()` to drop the stale
+  value.
 - The fallback returns `null` for 0 or 2+ active memberships; a 2+
   membership actor is sent to the agency switcher (M1.5).
 
