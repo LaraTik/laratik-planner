@@ -140,6 +140,9 @@ export const contentItemChannels = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    // Content revision at which this channel last inherited/saved the
+    // shared audience copy. A lower value marks a custom override stale.
+    copySourceRevision: integer("copy_source_revision"),
     platformPayload: jsonb("platform_payload"),
     ...timestamps,
   },

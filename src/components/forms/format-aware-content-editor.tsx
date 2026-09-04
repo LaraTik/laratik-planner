@@ -18,6 +18,7 @@ import {
 import type { ContentFormat } from "@/lib/format-payload/schemas";
 import { humanFormat } from "@/lib/content/status";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { isAudienceCopyKey } from "@/lib/content/audience-copy";
 
 /**
  * FormatAwareContentEditor — sectioned, format-aware
@@ -34,10 +35,9 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  * field is answering:
  *
  *   1. **Strategy** — why are we publishing this? (objective,
- *      audience, key message, hook, main message, CTA)
- *   2. **Copy** — what gets posted? (caption, hashtags, first
- *      comment, translations)
- *   3. **Creative** — what does the visual look like?
+ *      audience, key message, hook, main message)
+ *   2. **Creative** — what does the visual look like? Audience-facing
+ *      copy is intentionally omitted here and edited in the Copy tab.
  *      Format-specific:
  *        - Static Post → visual direction, visual slides,
  *          references, design notes
@@ -47,8 +47,8 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  *          voice-over notes, audio reference
  *
  * The data model is unchanged. The component still writes
- * the full `formatPayload` via the existing server action;
- * the sectioning is purely presentational.
+ * the creative subset of `formatPayload` via the existing server
+ * action; canonical audience copy is written by the Copy tab.
  *
  * Localization (Phase 5b, 2026-09-01): section titles,
  * section descriptions, and field labels are resolved
@@ -462,6 +462,10 @@ export function FormatAwareContentEditor({
 
       <div className="mt-5 space-y-5" data-testid="format-aware-sections">
         {sections.map((section) => {
+          // Audience-facing fields have one canonical owner: the Copy tab.
+          // Keep strategy fields such as Hook and Main message here, but do
+          // not render a second editable caption/CTA/hashtag surface.
+          if (section.id === "copy") return null;
           const Icon = section.icon;
           // Map the section's declared keys back to the manifest
           // entries. We render in manifest order so the planner
@@ -469,6 +473,7 @@ export function FormatAwareContentEditor({
           const sectionFields = fields.filter(
             (f) =>
               section.keys.includes(f.key) &&
+              !isAudienceCopyKey(f.key) &&
               // objective/audience are rendered as a pair by
               // their own renderer; pick one entry to drive
               // the render and skip the other.

@@ -32,6 +32,7 @@ export {
   setFinalCopyApproval,
   readPlatformPayload,
   readAllChannelPayloads,
+  readAllChannelPayloadStates,
   clearChannelPayload,
   PlatformPayloadError,
   // Materiality service (M4.3)

@@ -50,24 +50,24 @@ const baseProps = {
 };
 
 describe("FormatAwareContentEditor", () => {
-  it("renders Strategy, Copy, and Creative sections for static_post", () => {
+  it("renders Strategy and Creative sections without a duplicate Copy surface for static_post", () => {
     render(<FormatAwareContentEditor {...baseProps} format="static_post" />);
     expect(screen.getByTestId("format-section-strategy")).toBeInTheDocument();
-    expect(screen.getByTestId("format-section-copy")).toBeInTheDocument();
+    expect(screen.queryByTestId("format-section-copy")).not.toBeInTheDocument();
     expect(screen.getByTestId("format-section-creative")).toBeInTheDocument();
   });
 
-  it("renders the same three sections for carousel", () => {
+  it("renders Strategy and Creative sections for carousel", () => {
     render(<FormatAwareContentEditor {...baseProps} format="carousel" />);
     expect(screen.getByTestId("format-section-strategy")).toBeInTheDocument();
-    expect(screen.getByTestId("format-section-copy")).toBeInTheDocument();
+    expect(screen.queryByTestId("format-section-copy")).not.toBeInTheDocument();
     expect(screen.getByTestId("format-section-creative")).toBeInTheDocument();
   });
 
-  it("renders Strategy, Copy, and Creative direction sections for short_form_video (Reel)", () => {
+  it("renders Strategy and Creative direction sections for short_form_video (Reel)", () => {
     render(<FormatAwareContentEditor {...baseProps} format="short_form_video" />);
     expect(screen.getByTestId("format-section-strategy")).toBeInTheDocument();
-    expect(screen.getByTestId("format-section-copy")).toBeInTheDocument();
+    expect(screen.queryByTestId("format-section-copy")).not.toBeInTheDocument();
     expect(screen.getByTestId("format-section-creative")).toBeInTheDocument();
   });
 
@@ -102,7 +102,7 @@ describe("FormatAwareContentEditor", () => {
     expect(screen.getByText(/Short Form Video content/i)).toBeInTheDocument();
   });
 
-  it("renders the caption field with the shared CaptionField (8 rows, 2200 cap) and the format hidden input", () => {
+  it("keeps audience copy out of Content while preserving the format save contract", () => {
     // Phase 1 of the planning-detail refactor (2026-08-30)
     // used a 220-char single-line TextFieldRenderer for
     // `caption` and `firstComment`. The new CaptionFieldRenderer
@@ -116,11 +116,7 @@ describe("FormatAwareContentEditor", () => {
         initial={{ schemaVersion: 1, caption: "Hello world" }}
       />,
     );
-    // The shared CaptionField is mounted for the caption key.
-    // `data-testid="field-caption-caption"` is the
-    // CaptionFieldRenderer's internal testid (we append
-    // `-caption` to disambiguate from the wrapper).
-    expect(screen.getByTestId("field-caption-caption")).toBeInTheDocument();
+    expect(screen.queryByTestId("field-caption-caption")).not.toBeInTheDocument();
     // The `format` hidden input is required by the
     // `updateFormatPayloadFormSchema` Zod schema; before the
     // fix, every save failed with a `format` field error.

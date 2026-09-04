@@ -6,6 +6,7 @@ import { PerFieldAiSuggest, type PerFieldAiField } from "@/components/forms/per-
 import { TranslationFieldButton } from "@/components/forms/translation-field-button";
 import { NavigableArrayField } from "@/components/forms/navigable-array-field";
 import { CaptionField } from "@/components/forms/caption-field";
+import { HashtagEditor } from "@/components/forms/hashtag-editor";
 import { resolveLocale, getByCode, type LocaleCode } from "@/lib/i18n/locales";
 import { FIELD_MAX_LENGTHS, type FieldMaxLengthKey } from "@/lib/format-payload/schemas";
 
@@ -104,11 +105,15 @@ function LabeledField({
   hint?: string | undefined;
 }): React.ReactElement {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-0.5">
       <label htmlFor={fieldKey} className="text-body text-fg-primary block font-semibold">
         {label}
-        {hint ? <span className="text-fg-muted text-label ms-2 font-normal">{hint}</span> : null}
       </label>
+      {hint ? (
+        <p id={`${fieldKey}-hint`} className="text-label text-fg-muted">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -167,6 +172,7 @@ function TextFieldRenderer({
         onChange={(e) => onField(fieldKey, e.target.value || undefined)}
         maxLength={maxLength}
         placeholder={hint}
+        aria-describedby={hint ? `${fieldKey}-hint` : undefined}
       />
       <p
         className="text-label text-fg-muted text-end font-mono tabular-nums"
@@ -252,6 +258,7 @@ function LongTextFieldRenderer({
         maxLength={maxLength}
         rows={Math.min(8, Math.max(3, value.split("\n").length + 1))}
         placeholder={hint}
+        aria-describedby={hint ? `${fieldKey}-hint` : undefined}
       />
       <p
         className="text-label text-fg-muted text-end font-mono tabular-nums"
@@ -302,7 +309,7 @@ function TagFieldRenderer({
   return (
     <div className="space-y-1.5" data-testid={`field-${fieldKey}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <LabeledField fieldKey={fieldKey} label={label} hint={hint} />
+        <span className="sr-only">{label}</span>
         {editable ? (
           <TranslationFieldButton
             locale={locale}
@@ -317,19 +324,17 @@ function TagFieldRenderer({
           />
         ) : null}
       </div>
-      <DirAwareInput
+      <HashtagEditor
         id={fieldKey}
+        name={fieldKey}
+        label={label}
+        value={arr.filter((entry): entry is string => typeof entry === "string")}
+        onChange={(next) => onField(fieldKey, next.length > 0 ? next : undefined)}
         locale={locale}
-        value={value}
-        readOnly={!editable}
-        onChange={(e) => {
-          const next = e.target.value
-            .split(/[\s,]+/)
-            .map((s) => s.trim())
-            .filter((s) => s.length > 0);
-          onField(fieldKey, next.length > 0 ? next : undefined);
-        }}
-        placeholder={t("formatEditor.fields.hashtagsMeta.placeholder")}
+        t={t}
+        disabled={!editable}
+        hint={hint ?? t("formatEditor.fields.hashtagsMeta.placeholder")}
+        testId={`field-${fieldKey}-editor`}
       />
       {editable ? (
         <PerFieldAiSuggest
@@ -388,6 +393,7 @@ function PlainTextFieldRenderer({
         onChange={(e) => onField(fieldKey, e.target.value || undefined)}
         maxLength={maxLength}
         placeholder={hint}
+        aria-describedby={hint ? `${fieldKey}-hint` : undefined}
       />
       <p
         className="text-label text-fg-muted text-end font-mono tabular-nums"
@@ -468,6 +474,7 @@ function NumberFieldRenderer({
             onField(fieldKey, n);
           }
         }}
+        aria-describedby={hint ? `${fieldKey}-hint` : undefined}
       />
     </div>
   );
@@ -943,7 +950,7 @@ function CaptionFieldRenderer({
   return (
     <div className="space-y-2" data-testid={`field-${fieldKey}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <LabeledField fieldKey={fieldKey} label={label} hint={hint} />
+        <LabeledField fieldKey={fieldKey} label={label} />
         {editable ? (
           <TranslationFieldButton
             locale={locale}
@@ -965,6 +972,7 @@ function CaptionFieldRenderer({
         value={value}
         onChange={(next) => onField(fieldKey, next || undefined)}
         disabled={!editable}
+        locale={locale}
         testId={`field-${fieldKey}-caption`}
         {...(hint ? { hint } : {})}
       />

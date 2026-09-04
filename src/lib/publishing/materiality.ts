@@ -50,6 +50,7 @@ import { randomUUID } from "node:crypto";
 
 export const MATERIAL_RESOURCES = [
   "caption",
+  "audience_copy",
   "description",
   "call_to_action",
   "hashtags",
@@ -69,6 +70,7 @@ export const MaterialityReasonCodeSchema = z.enum([
   "platform_payload.save",
   "platform_payload.clear",
   "caption.update",
+  "audience_copy.update",
   "hashtags.update",
   "schedule.update",
   "channel.add",

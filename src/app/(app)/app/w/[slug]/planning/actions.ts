@@ -20,6 +20,8 @@ import {
   updateContentItem,
   updateFormatPayload,
   patchAudienceCopy,
+  updateAudienceCopy,
+  UpdateAudienceCopySchema,
   type WorkflowAction,
   type UpdateContentInput,
   batchCreateContentItems,
@@ -63,6 +65,7 @@ type RecordPublicationFields =
   "contentItemChannelId" | "status" | "publishedUrl" | "note" | "failureReason";
 type CreateCommentFields = "contentItemId" | "body" | "visibility" | "label";
 type UpdateFormatPayloadFields = "contentItemId" | "format" | "formatPayload";
+type UpdateAudienceCopyFields = "contentItemId" | "format" | "formatPayload";
 type ResolveCommentFields = "commentId" | "resolved";
 
 async function requireWorkspaceContext(workspaceSlug: string) {
@@ -618,19 +621,46 @@ export async function updateFormatPayloadAction(
   return { ok: true };
 }
 
-// ─── Patch audience copy (non-material) ────────────────────────────────
+// ─── Canonical audience copy (material) ───────────────────────────────
+export async function updateAudienceCopyAction(
+  workspaceSlug: string,
+  _prev: unknown,
+  formData: FormData,
+): Promise<ActionState<UpdateAudienceCopyFields>> {
+  const { actor } = await requireWorkspaceContext(workspaceSlug);
+  let formatPayload: unknown;
+  try {
+    formatPayload = JSON.parse(String(formData.get("formatPayload") ?? "{}"));
+  } catch {
+    return actionFailure<UpdateAudienceCopyFields>(
+      new Error("Invalid copy payload."),
+      "The copy could not be saved.",
+    );
+  }
+  const parsed = UpdateAudienceCopySchema.safeParse({
+    contentItemId: formData.get("contentItemId"),
+    format: formData.get("format"),
+    formatPayload,
+  });
+  if (!parsed.success) return fieldErrorsFromZod<UpdateAudienceCopyFields>(parsed.error);
+  try {
+    await updateAudienceCopy(actor, parsed.data);
+  } catch (e) {
+    return actionFailure<UpdateAudienceCopyFields>(e, "The copy could not be saved.");
+  }
+  revalidatePath(`/app/w/${workspaceSlug}/planning/${parsed.data.contentItemId}`);
+  return { ok: true };
+}
+
+// ─── Legacy patch alias (material under the hood) ─────────────────────
 /**
- * P1 (2026-09-03, /ui-ux-pro-max) — narrow "non-material
- * caption edit" path. The previous flow forced planners to
- * either rewrite the entire formatPayload (and trigger the
- * material-edit reset) or live with the typo. This action
- * accepts a partial patch of `caption` / `hashtags` /
- * `firstComment` and writes only those three keys, leaving
- * the strategy / creative / structure fields untouched.
+ * Compatibility path for older callers. It accepts a partial patch of
+ * `caption` / `hashtags` / `firstComment`, leaves strategy / creative /
+ * structure fields untouched, and now routes through the same material
+ * audience-copy service as the canonical Copy tab.
  *
- * Role-gated to planner / manager / publisher via the
- * service. Designer and client reviewer fall back to the
- * read-only surface.
+ * Role-gated to planner / manager via the service. Designer,
+ * publisher, and client reviewer fall back to the read-only surface.
  *
  * Form shape (FormData):
  *   - contentItemId (uuid)

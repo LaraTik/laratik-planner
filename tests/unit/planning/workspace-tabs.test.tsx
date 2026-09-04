@@ -7,6 +7,7 @@ import {
   WorkspacePanels,
   WorkspaceTabs,
   initialActiveTabFromHash,
+  normalizeWorkspaceTabId,
   type WorkspaceTab,
   type WorkspaceTabId,
 } from "@/components/planning/workspace-tabs";
@@ -26,7 +27,7 @@ vi.mock("@/components/planning/discussion-drawer", () => ({
 /**
  * WorkspaceTabs — the in-page tab strip for the content detail
  * page. The contract:
- *  - Five tabs in a fixed order: overview / content / preview /
+ *  - Six tabs in a fixed order: overview / content / copy / preview /
  *    publishing / activity. The Preview tab is the dedicated
  *    home for the platform simulator (master prompt §7 +
  *    AGENTS.md §B + §C).
@@ -42,6 +43,7 @@ vi.mock("@/components/planning/discussion-drawer", () => ({
 const tabs: WorkspaceTab[] = [
   { id: "overview", label: "Overview" },
   { id: "content", label: "Content" },
+  { id: "copy", label: "Copy" },
   { id: "preview", label: "Preview" },
   { id: "publishing", label: "Publishing" },
   { id: "activity", label: "Activity" },
@@ -62,6 +64,7 @@ function TabsHost({ initial = "overview" as WorkspaceTabId }) {
         panels={{
           overview: <div data-testid="panel-overview">overview</div>,
           content: <div data-testid="panel-content">content</div>,
+          copy: <div data-testid="panel-copy">copy</div>,
           preview: <div data-testid="panel-preview">preview</div>,
           publishing: <div data-testid="panel-publishing">publishing</div>,
           activity: <div data-testid="panel-activity">activity</div>,
@@ -72,10 +75,11 @@ function TabsHost({ initial = "overview" as WorkspaceTabId }) {
 }
 
 describe("WorkspaceTabs — Preview tab (/ui-ux-pro-max)", () => {
-  it("renders all five tabs in the canonical order", () => {
+  it("renders all six tabs in the canonical order", () => {
     render(<TabsHost />);
     expect(screen.getByTestId("workspace-tab-overview")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-tab-content")).toBeInTheDocument();
+    expect(screen.getByTestId("workspace-tab-copy")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-tab-preview")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-tab-publishing")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-tab-activity")).toBeInTheDocument();
@@ -100,7 +104,7 @@ describe("WorkspaceTabs — Preview tab (/ui-ux-pro-max)", () => {
     render(<TabsHost initial="content" />);
     await user.click(screen.getByTestId("workspace-tab-preview"));
     expect(screen.getByTestId("panel-preview")).toBeInTheDocument();
-    expect(screen.queryByTestId("panel-content")).toBeNull();
+    expect(screen.getByTestId("panel-content")).toBeInTheDocument();
     // Active tab is reflected in aria-current.
     expect(screen.getByTestId("workspace-tab-preview")).toHaveAttribute("aria-current", "true");
   });
@@ -108,6 +112,13 @@ describe("WorkspaceTabs — Preview tab (/ui-ux-pro-max)", () => {
   it("reads the initial active tab from the URL hash on mount", () => {
     window.location.hash = "#preview";
     expect(initialActiveTabFromHash(tabs)).toBe("preview");
+    window.location.hash = "";
+  });
+
+  it("keeps #messages as a backward-compatible alias for Copy", () => {
+    window.location.hash = "#messages";
+    expect(normalizeWorkspaceTabId("messages")).toBe("copy");
+    expect(initialActiveTabFromHash([...tabs, { id: "copy", label: "Copy" }])).toBe("copy");
     window.location.hash = "";
   });
 

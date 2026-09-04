@@ -36,6 +36,12 @@ import {
   type ContentFormat,
 } from "@/lib/format-payload/schemas";
 import {
+  AUDIENCE_COPY_KEYS,
+  audienceCopyFromPayload,
+  mergeAudienceCopy,
+} from "@/lib/content/audience-copy";
+import { recordMaterialityEvent } from "@/lib/publishing/materiality";
+import {
   enqueueApprovalNotification,
   enqueueAssignmentNotification,
   enqueueChangesRequestedNotification,
@@ -376,31 +382,107 @@ export async function updateFormatPayload(actor: Actor, input: UpdateFormatPaylo
   revalidatePath(`/app/w/`, "layout");
 }
 
+/** Canonical audience copy update. Copy is material even when the item is
+ * already in review or ready to publish, so it always uses materiality. */
+export const UpdateAudienceCopySchema = z.object({
+  contentItemId: z.string().uuid(),
+  format: z.enum([
+    "static_post",
+    "carousel",
+    "story",
+    "short_form_video",
+    "long_form_video",
+    "live_content",
+    "article",
+    "other",
+  ]) satisfies z.ZodType<ContentFormat>,
+  formatPayload: z.record(z.string(), z.unknown()),
+});
+export type UpdateAudienceCopyInput = z.infer<typeof UpdateAudienceCopySchema>;
+
+export async function updateAudienceCopy(actor: Actor, input: UpdateAudienceCopyInput) {
+  const parsed = UpdateAudienceCopySchema.parse(input);
+  const [item] = await db
+    .select({
+      id: contentItems.id,
+      workspaceId: contentItems.workspaceId,
+      status: contentItems.status,
+      format: contentItems.format,
+      formatPayload: contentItems.formatPayload,
+      revision: contentItems.revision,
+    })
+    .from(contentItems)
+    .where(eq(contentItems.id, parsed.contentItemId))
+    .limit(1);
+  if (!item) throw new Error("Content item not found");
+  await requirePolicy(
+    hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),
+    "update_audience_copy",
+  );
+  if (item.status === "cancelled")
+    throw new Error("This idea is cancelled and can no longer be edited.");
+
+  const current = parseFormatPayload(item.format, item.formatPayload) as Record<string, unknown>;
+  const submitted = parseFormatPayload(item.format, parsed.formatPayload) as Record<
+    string,
+    unknown
+  >;
+  const currentCreative = { ...current };
+  const submittedCreative = { ...submitted };
+  for (const key of AUDIENCE_COPY_KEYS) {
+    delete currentCreative[key];
+    delete submittedCreative[key];
+  }
+  delete currentCreative.translations;
+  delete submittedCreative.translations;
+  if (JSON.stringify(currentCreative) !== JSON.stringify(submittedCreative)) {
+    throw new Error("Only audience-facing copy can be changed from the Copy tab.");
+  }
+  const next = mergeAudienceCopy(item.format, current, audienceCopyFromPayload(submitted));
+  const changedKeys: string[] = AUDIENCE_COPY_KEYS.filter(
+    (key) => JSON.stringify(current[key] ?? null) !== JSON.stringify(next[key] ?? null),
+  );
+  if (JSON.stringify(current.translations ?? null) !== JSON.stringify(next.translations ?? null)) {
+    changedKeys.push("translations");
+  }
+  if (changedKeys.length === 0) return { revision: item.revision, changedKeys: [] as string[] };
+
+  await db
+    .update(contentItems)
+    .set({ formatPayload: next, updatedAt: new Date() })
+    .where(eq(contentItems.id, item.id));
+  const materiality = await recordMaterialityEvent({
+    actor,
+    contentItemId: item.id,
+    resource: "audience_copy",
+    beforeValue: { changedKeys },
+    afterValue: { changedKeys },
+    reasonCode: "audience_copy.update",
+  });
+  revalidatePath(`/app/w/`);
+  revalidatePath(`/app/w/`, "layout");
+  return { revision: materiality.revision, changedKeys };
+}
+
 /**
- * P1 (2026-09-03, /ui-ux-pro-max) — `patchAudienceCopy` is the
- * narrow "non-material copy edit" path that lets a planner fix
- * a typo or improve the caption / hashtags / firstComment
- * without invalidating the approval chain.
+ * Legacy compatibility wrapper. New Copy saves use
+ * `updateAudienceCopy`, and therefore follow the normal material
+ * edit path (revision, approval reset, activity, notifications).
  *
  * Compared to `updateFormatPayload`:
  *  - Bypasses `UPDATEABLE_STATUSES`. Available in
  *    `in_design` / `creative_review` / `approved_for_design` /
  *    `ready_to_publish` (in addition to `draft` /
  *    `changes_requested`).
- *  - Role-gated to planner / manager / publisher. Designer and
- *    client reviewer are NOT allowed to patch copy post-design
- *    — that's the designer's own gate and the reviewer's
- *    rejection surface, respectively.
+ *  - Role-gated to planner / manager. Designer, publisher, and client
+ *    reviewer are NOT allowed to patch copy post-design — that's the
+ *    designer's own gate and the reviewer's rejection surface.
  *  - Writes only the three audience-facing fields; does NOT
  *    touch strategy / creative fields. Strategy and creative
  *    remain locked to `UPDATEABLE_STATUSES` via
  *    `updateFormatPayload`.
- *  - Skips the material-edit reset: no revision bump, no
- *    approval invalidation, no final-approved-delivery clear.
- *  - Logs a `content_copy_patched` activity event so the audit
- *    trail is preserved. The event records the before/after
- *    field set so audit can answer "which fields did the
- *    planner touch" without re-parsing the row.
+ *  - The historical `content_copy_patched` enum remains valid for
+ *    old rows, but this wrapper never writes that event anymore.
  *
  * Patches are partial: callers send any subset of
  * `caption` / `hashtags` / `firstComment`. Empty / undefined
@@ -435,6 +517,7 @@ export async function patchAudienceCopy(actor: Actor, input: PatchAudienceCopyIn
       id: contentItems.id,
       workspaceId: contentItems.workspaceId,
       status: contentItems.status,
+      format: contentItems.format,
       formatPayload: contentItems.formatPayload,
     })
     .from(contentItems)
@@ -442,75 +525,18 @@ export async function patchAudienceCopy(actor: Actor, input: PatchAudienceCopyIn
     .limit(1);
   if (!item) throw new Error("Content item not found");
 
-  await requirePolicy(
-    hasWorkspaceRole(actor, item.workspaceId, [
-      "workspace_manager",
-      "content_planner",
-      "publisher",
-    ]),
-    "patch_audience_copy",
-  );
-
-  // Cancelled items are read-only across the board.
-  if (item.status === "cancelled") {
-    throw new Error("This idea is cancelled and can no longer be edited.");
-  }
-
-  // Merge the patch into the existing formatPayload. We preserve
-  // every other key (objective, audience, scenes, etc.) so the
-  // editor's structured creative work is untouched.
-  const previous =
-    (item.formatPayload && typeof item.formatPayload === "object"
-      ? (item.formatPayload as Record<string, unknown>)
-      : {}) ?? {};
-  const next: Record<string, unknown> = { ...previous };
-  const changedKeys: string[] = [];
-  if (parsed.data.caption !== undefined) {
-    next.caption = parsed.data.caption;
-    changedKeys.push("caption");
-  }
-  if (parsed.data.hashtags !== undefined) {
-    next.hashtags = parsed.data.hashtags;
-    changedKeys.push("hashtags");
-  }
-  if (parsed.data.firstComment !== undefined) {
-    next.firstComment = parsed.data.firstComment;
-    changedKeys.push("firstComment");
-  }
-  // `schemaVersion` is required by parseFormatPayload; preserve
-  // an existing value or fall back to 1.
-  if (next.schemaVersion === undefined) next.schemaVersion = 1;
-
-  await db.transaction(async (tx) => {
-    await tx
-      .update(contentItems)
-      .set({ formatPayload: next, updatedAt: new Date() })
-      .where(eq(contentItems.id, parsed.data.contentItemId));
-
-    await tx.insert(activityEvents).values({
-      workspaceId: item.workspaceId,
-      contentItemId: item.id,
-      actorId: actor.id,
-      kind: "content_copy_patched",
-      summary: `Patched audience copy: ${changedKeys.join(", ")}`,
-      beforeData: {
-        caption: previous.caption,
-        hashtags: previous.hashtags,
-        firstComment: previous.firstComment,
-      },
-      afterData: {
-        caption: next.caption,
-        hashtags: next.hashtags,
-        firstComment: next.firstComment,
-      },
-    });
+  const format = (item as { format?: ContentFormat }).format;
+  if (!format) throw new Error("Content format is missing");
+  const current = parseFormatPayload(format, item.formatPayload) as Record<string, unknown>;
+  const patch: Record<string, unknown> = {};
+  if (parsed.data.caption !== undefined) patch.caption = parsed.data.caption;
+  if (parsed.data.hashtags !== undefined) patch.hashtags = parsed.data.hashtags;
+  if (parsed.data.firstComment !== undefined) patch.firstComment = parsed.data.firstComment;
+  return updateAudienceCopy(actor, {
+    contentItemId: parsed.data.contentItemId,
+    format,
+    formatPayload: mergeAudienceCopy(format, current, patch),
   });
-
-  // Re-render the planning detail page so the Messages tab and
-  // the in-form preview both see the new copy. Layout
-  // revalidation keeps the calendar / list views in sync.
-  revalidatePath(`/app/w/`);
-  revalidatePath(`/app/w/`, "layout");
 }
 
 /**

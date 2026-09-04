@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { mapFormatPayloadToPlatform } from "@/lib/format-payload/mapper";
+import {
+  buildAudienceCopyViewModel,
+  mapFormatPayloadToPlatform,
+} from "@/lib/format-payload/mapper";
 
 describe("format-payload/mapper", () => {
   it("returns an empty object for a null payload", () => {
@@ -49,6 +52,19 @@ describe("format-payload/mapper", () => {
     expect(out.caption).toBe("مجموعة ربيعية");
     expect(out.hashtags).toEqual(["#ربيع"]);
     expect(out.contentLanguage).toBe("ar");
+  });
+
+  it("builds locale-specific resolved copy for Publishing", () => {
+    const view = buildAudienceCopyViewModel({
+      format: "static_post",
+      formatPayload: {
+        schemaVersion: 1,
+        caption: "Spring drop",
+        translations: { ar: { caption: "مجموعة ربيعية" } },
+      },
+    });
+    expect(view.resolvedByLocale.en?.caption).toBe("Spring drop");
+    expect(view.resolvedByLocale.ar?.caption).toBe("مجموعة ربيعية");
   });
 
   it("falls back to the source values when publishLanguage has no translation", () => {

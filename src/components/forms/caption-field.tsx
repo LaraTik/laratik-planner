@@ -4,6 +4,8 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/i18n/format-locale";
 import { useLocaleCode } from "@/components/i18n/locale-provider";
+import { DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
+import { resolveLocale } from "@/lib/i18n/locales";
 
 /**
  * CaptionField — shared audience-facing caption composer.
@@ -16,7 +18,7 @@ import { useLocaleCode } from "@/components/i18n/locale-provider";
  * `src/lib/format-payload/schemas.ts:84`).
  *
  * Used by three surfaces:
- *   1. The new Messages tab on the planning detail page
+ *   1. The canonical Copy tab on the planning detail page
  *      (`src/components/planning/messages-panel.tsx`) — the
  *      primary editor.
  *   2. The Format-Aware Content Editor
@@ -58,6 +60,8 @@ export interface CaptionFieldProps {
   testId?: string;
   /** Optional a11y label override. */
   ariaLabel?: string;
+  /** Content locale used only as the empty-field direction fallback. */
+  locale?: string;
 }
 
 export function CaptionField({
@@ -73,8 +77,10 @@ export function CaptionField({
   className,
   testId = "caption-field",
   ariaLabel,
+  locale: contentLocale,
 }: CaptionFieldProps) {
-  const locale = useLocaleCode();
+  const interfaceLocale = useLocaleCode();
+  const locale = resolveLocale(contentLocale ?? interfaceLocale).code;
   const len = value.length;
   const overWarn = len >= CAPTION_WARN;
   const atMax = len >= CAPTION_MAX;
@@ -83,10 +89,11 @@ export function CaptionField({
       <label htmlFor={id} className="text-body text-fg-primary font-semibold">
         {label}
       </label>
-      <textarea
+      <DirAwareTextarea
         id={id}
         name={name}
         value={value}
+        locale={locale}
         onChange={(e) => onChange(e.target.value)}
         rows={8}
         maxLength={CAPTION_MAX}

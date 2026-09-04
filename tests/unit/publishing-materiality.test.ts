@@ -196,6 +196,7 @@ describe("MaterialityReasonCodeSchema", () => {
       "platform_payload.save",
       "platform_payload.clear",
       "caption.update",
+      "audience_copy.update",
       "hashtags.update",
       "schedule.update",
       "channel.add",
@@ -381,6 +382,29 @@ describe("recordMaterialityEvent", () => {
     // publish UI's "what changed since last approval" banner can
     // group by revision.
     expect(typeof meta.revision).toBe("number");
+  });
+
+  it("treats canonical audience copy as a material edit", async () => {
+    dbState.selectResults.push([{ id: contentItemId, workspaceId }]);
+    dbState.selectResults.push([{ id: "approval-1" }]);
+    dbState.selectResults.push([{ requestedBy: "user-2" }]);
+
+    const result = await recordMaterialityEvent({
+      actor,
+      contentItemId,
+      resource: "audience_copy",
+      beforeValue: { changedKeys: ["caption"] },
+      afterValue: { changedKeys: ["caption"] },
+      reasonCode: "audience_copy.update",
+    });
+
+    expect(result.revision).toBe(1);
+    expect(result.cancelledApprovalCount).toBe(1);
+    expect(result.notifiedReviewerCount).toBe(1);
+    const activityInsert = dbState.insertCalls.find((c) =>
+      (c.values as Record<string, unknown>).summary?.toString().includes("audience_copy"),
+    );
+    expect(activityInsert).toBeDefined();
   });
 });
 

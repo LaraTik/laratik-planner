@@ -3,12 +3,13 @@
 import * as React from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DirAwareInput } from "@/components/forms/dir-aware-textarea";
 
 /**
  * HashtagEditor — chip-style composer for the post's hashtags.
  *
  * Plan §3: the audience-facing hashtags are editable in three
- * places (Format-Aware Content Editor, Messages tab,
+ * places (Copy tab and Publishing,
  * PublishPackageForm). Lifting them into a single component
  * gives the user a consistent UX and a single place to evolve
  * the chip semantics (e.g. adding an autocomplete from a
@@ -36,6 +37,8 @@ export interface HashtagEditorProps {
   disabled?: boolean;
   className?: string;
   testId?: string;
+  locale?: string;
+  t?: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export function HashtagEditor({
@@ -49,7 +52,15 @@ export function HashtagEditor({
   disabled,
   className,
   testId = "hashtag-editor",
+  locale,
+  t,
 }: HashtagEditorProps) {
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
+    const translated = t?.(key, params);
+    return translated && translated !== key
+      ? translated
+      : fallback.replace(/\{(\w+)\}/g, (_, name) => String(params?.[name] ?? `{${name}}`));
+  };
   const [draft, setDraft] = React.useState("");
   const [warning, setWarning] = React.useState<string | null>(null);
   const atMax = value.length >= HASHTAG_MAX;
@@ -58,11 +69,15 @@ export function HashtagEditor({
     const cleaned = raw.trim().replace(/^#+/, "").slice(0, HASHTAG_TAG_MAX);
     if (!cleaned) return;
     if (atMax) {
-      setWarning(`Up to ${HASHTAG_MAX} hashtags.`);
+      setWarning(
+        tr("contentDetail.messages.hashtagMax", "Up to {count} hashtags.", { count: HASHTAG_MAX }),
+      );
       return;
     }
     if (value.includes(cleaned)) {
-      setWarning("That hashtag is already on the list.");
+      setWarning(
+        tr("contentDetail.messages.hashtagDuplicate", "That hashtag is already on the list."),
+      );
       return;
     }
     onChange([...value, cleaned]);
@@ -110,16 +125,19 @@ export function HashtagEditor({
               type="button"
               onClick={() => remove(tag)}
               disabled={disabled}
-              aria-label={`Remove ${tag}`}
+              aria-label={tr("contentDetail.messages.hashtagRemove", "Remove {tag}", {
+                tag,
+              })}
               className="text-fg-muted hover:text-danger focus-visible:ring-focus-ring rounded-full p-0.5 focus:outline-none focus-visible:ring-2"
             >
               <X className="h-3 w-3" aria-hidden="true" />
             </button>
           </span>
         ))}
-        <input
+        <DirAwareInput
           id={id}
           type="text"
+          locale={locale}
           value={draft}
           onChange={(e) => {
             setDraft(e.target.value);
@@ -132,10 +150,15 @@ export function HashtagEditor({
           disabled={disabled}
           placeholder={
             value.length === 0
-              ? "spring drop, sale, brandvoice (Enter to add)"
+              ? tr(
+                  "contentDetail.messages.hashtagExample",
+                  "spring drop, sale, brandvoice (Enter to add)",
+                )
               : atMax
-                ? `Maximum ${HASHTAG_MAX} hashtags`
-                : "Add another…"
+                ? tr("contentDetail.messages.hashtagMaximum", "Maximum {count} hashtags", {
+                    count: HASHTAG_MAX,
+                  })
+                : tr("contentDetail.messages.hashtagAddAnother", "Add another…")
           }
           aria-label={label}
           aria-invalid={error ? "true" : undefined}
@@ -145,10 +168,9 @@ export function HashtagEditor({
           className="text-body text-fg-primary placeholder:text-fg-muted min-w-[10ch] flex-1 bg-transparent focus:outline-none"
           data-testid={`${testId}-input`}
         />
-        {/* Hidden field so the form's FormData carries the
-            serialised list even when no chip has been added
-            (the parent also has a hidden `formatPayload`
-            field on the Messages tab — both stay in sync). */}
+        {/* Hidden field retained for the publishing form's native
+            submission contract. The Copy tab submits its canonical
+            JSON payload separately. */}
         <input type="hidden" name={name} value={value.join(" ")} />
       </div>
       <div className="flex items-center justify-between gap-2">

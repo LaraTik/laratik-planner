@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { PatchAudienceCopySchema } from "@/lib/content/service";
 
 /**
- * P1 (2026-09-03, /ui-ux-pro-max) — schema tests for the new
- * non-material caption / hashtags / firstComment patch path.
+ * Compatibility schema tests for the legacy partial caption /
+ * hashtags / firstComment patch path. The service now routes
+ * this wrapper through the material audience-copy path.
  *
  * The full service test (with a mocked DB) is intentionally
  * not in this file: `patchAudienceCopy` shares the Drizzle

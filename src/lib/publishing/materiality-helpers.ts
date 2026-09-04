@@ -40,10 +40,12 @@ export {
   setFinalCopyApproval,
   readPlatformPayload,
   readAllChannelPayloads,
+  readAllChannelPayloadStates,
   clearChannelPayload,
   PlatformPayloadError,
   type SavePlatformPayloadInput,
   type FinalCopyApprovalInput,
+  type ChannelPayloadState,
 } from "./platform-payload-service";
 export {
   MATERIAL_RESOURCES,

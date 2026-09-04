@@ -92,4 +92,21 @@ describe("CaptionField", () => {
     expect(textarea.getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByText("Required")).toBeInTheDocument();
   });
+
+  it("detects Arabic content while keeping the field content-driven", () => {
+    render(
+      <CaptionField
+        id="cap"
+        name="caption"
+        label="Caption"
+        value="مرحبا بالعالم"
+        locale="en"
+        hint="Write the post copy"
+        onChange={() => undefined}
+      />,
+    );
+    const textarea = screen.getByRole("textbox", { name: /caption/i });
+    expect(textarea).toHaveAttribute("dir", "rtl");
+    expect(textarea).toHaveAttribute("aria-describedby", "cap-hint cap-counter");
+  });
 });

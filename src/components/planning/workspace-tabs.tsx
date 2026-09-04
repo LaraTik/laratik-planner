@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * WorkspaceTabs — the in-page tab strip for the content detail
@@ -19,7 +20,8 @@ import { cn } from "@/lib/utils";
  * five task-oriented views:
  *
  *   Overview   — at-a-glance: brief, schedule, channels, readiness
- *   Content    — caption, creative brief, format fields, AI
+ *   Content    — strategy, creative brief, format fields, AI
+ *   Copy       — canonical audience-facing copy and channel readiness
  *   Preview    — full-width platform simulator (Feed / Reel / Story /
  *                Carousel). The old "sticky 360px right rail" was
  *                the row's biggest UX smell per AGENTS.md §B;
@@ -44,7 +46,16 @@ import { cn } from "@/lib/utils";
  */
 
 export type WorkspaceTabId =
-  "overview" | "content" | "messages" | "preview" | "publishing" | "activity";
+  "overview" | "content" | "copy" | "preview" | "publishing" | "activity";
+export type WorkspaceTabHash = WorkspaceTabId | "messages";
+
+/** `#messages` was public in shared links; keep it as a read-compatible alias. */
+export function normalizeWorkspaceTabId(value: string): WorkspaceTabId | null {
+  if (value === "messages") return "copy";
+  return ["overview", "content", "copy", "preview", "publishing", "activity"].includes(value)
+    ? (value as WorkspaceTabId)
+    : null;
+}
 
 /**
  * Serialisable tab descriptor passed from a Server Component
@@ -62,7 +73,7 @@ export interface WorkspaceTab {
 export const WORKSPACE_TAB_ICONS: Record<WorkspaceTabId, LucideIcon> = {
   overview: LayoutDashboard,
   content: Pencil,
-  messages: MessageSquare,
+  copy: MessageSquare,
   preview: Eye,
   publishing: Send,
   activity: History,
@@ -143,8 +154,9 @@ export function WorkspaceTabs({
 
 /**
  * WorkspacePanels — state-driven content area for the workspace
- * tabs. Renders ONLY the active panel's children (off-tab
- * content unmounts). The parent (`WorkspaceShell`) owns the
+ * tabs. Content and Copy remain mounted while hidden so an
+ * in-progress draft survives tab changes. Other panels remain
+ * lazy and unmount when inactive. The parent (`WorkspaceShell`) owns the
  * `activeId` state, the hash sync, and the `WorkspaceTabs`
  * strip; this component is the body.
  *
@@ -156,11 +168,9 @@ export function WorkspaceTabs({
  *     never enters the React tree, so child effects (form state,
  *     refs) don't leak across tabs.
  *
- * Render mode: `forceMount` is NOT set — Radix TabsContent
- * unmounts on switch, which matches the spec's "clicking a tab
- * must switch the main content area rather than simply scrolling"
- * (planning-detail refactor §1, 2026-08-30). The previous
- * scroll-spy DOM was deleted as part of the same refactor.
+ * Content and Copy are intentionally persistent mounts; the other
+ * panels remain lazy and unmount when inactive. This keeps an in-progress
+ * draft safe while still avoiding the cost of mounting every panel at once.
  */
 export interface WorkspacePanelsProps {
   /** Map of tab id → panel body. Missing keys render nothing
@@ -171,7 +181,21 @@ export interface WorkspacePanelsProps {
 }
 
 export function WorkspacePanels({ panels, value }: WorkspacePanelsProps) {
-  return <>{panels[value] ?? null}</>;
+  const persistent = new Set<WorkspaceTabId>(["content", "copy"]);
+  return (
+    <>
+      {Object.entries(panels).map(([id, panel]) => {
+        if (!panel) return null;
+        const tabId = id as WorkspaceTabId;
+        if (tabId !== value && !persistent.has(tabId)) return null;
+        return (
+          <div key={tabId} hidden={tabId !== value} aria-hidden={tabId !== value}>
+            {panel}
+          </div>
+        );
+      })}
+    </>
+  );
 }
 
 /**
@@ -184,8 +208,8 @@ export function initialActiveTabFromHash(
   tabs: ReadonlyArray<{ id: WorkspaceTabId }>,
 ): WorkspaceTabId {
   if (typeof window === "undefined") return tabs[0]?.id ?? "overview";
-  const hash = window.location.hash.replace(/^#/, "");
-  if (hash && tabs.some((t) => t.id === hash)) return hash as WorkspaceTabId;
+  const hash = normalizeWorkspaceTabId(window.location.hash.replace(/^#/, ""));
+  if (hash && tabs.some((t) => t.id === hash)) return hash;
   return tabs[0]?.id ?? "overview";
 }
 
@@ -205,15 +229,24 @@ export function DiscussionTrigger({
   mentionCount?: number;
   onClick: () => void;
 }) {
+  const t = useLocaleT();
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
+    const result = t(key, params);
+    return result === key
+      ? fallback.replace(/\{(\w+)\}/g, (_, name) => String(params?.[name] ?? `{${name}}`))
+      : result;
+  };
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "text-body border-border bg-surface text-fg-primary inline-flex min-h-9 items-center gap-1.5 rounded-[var(--radius-control)] border px-2.5 py-1 font-semibold",
+        "text-body border-border bg-surface text-fg-primary inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-control)] border px-2.5 py-1 font-semibold",
         "hover:bg-surface-subtle focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none",
       )}
-      aria-label={`Open discussion (${count} comment${count === 1 ? "" : "s"})`}
+      aria-label={tr("contentDetail.comments.trigger.open", "Open discussion ({count} comments)", {
+        count,
+      })}
       data-testid="discussion-trigger"
     >
       <MessageCircle className="h-4 w-4" aria-hidden="true" />
@@ -223,7 +256,13 @@ export function DiscussionTrigger({
           className="text-label bg-primary-subtle text-primary rounded-full px-1.5 py-0.5 font-semibold"
           data-testid="discussion-trigger-mentions"
         >
-          {mentionCount} for you
+          {tr(
+            mentionCount === 1
+              ? "contentDetail.comments.drawer.mentionForYouOne"
+              : "contentDetail.comments.drawer.mentionForYouMany",
+            mentionCount === 1 ? "1 mention for you" : "{count} mentions for you",
+            { count: mentionCount },
+          )}
         </span>
       ) : null}
     </button>

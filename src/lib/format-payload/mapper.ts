@@ -40,6 +40,8 @@
  */
 import type { ContentFormat, StaticPostPayload } from "./schemas";
 import { parseFormatPayload } from "./schemas";
+import { audienceCopyFromPayload } from "@/lib/content/audience-copy";
+import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 
 /**
  * Subset of the `PlatformPayload` shape (from
@@ -56,6 +58,43 @@ export interface MappedPlatformFields {
   callToAction?: { label: string; url: string };
   location?: { name: string; externalId?: string };
   contentLanguage?: string;
+}
+
+/** Canonical view model shared by Copy, Preview, and Publishing. */
+export interface AudienceCopyViewModel {
+  source: Record<string, unknown>;
+  translations: Record<string, Record<string, unknown>>;
+  resolved: MappedPlatformFields;
+  resolvedByLocale: Record<string, MappedPlatformFields>;
+}
+
+export function buildAudienceCopyViewModel({
+  format,
+  formatPayload,
+  publishLanguage,
+}: MapperContext): AudienceCopyViewModel {
+  let parsed: Record<string, unknown> = {};
+  try {
+    parsed = parseFormatPayload(format, formatPayload) as Record<string, unknown>;
+  } catch {
+    // Keep the preview resilient to legacy malformed rows.
+  }
+  return {
+    source: audienceCopyFromPayload(parsed),
+    translations:
+      (parsed.translations as Record<string, Record<string, unknown>> | undefined) ?? {},
+    resolved: mapFormatPayloadToPlatform({
+      format,
+      formatPayload,
+      ...(publishLanguage ? { publishLanguage } : {}),
+    }),
+    resolvedByLocale: Object.fromEntries(
+      SUPPORTED_LOCALES.map(({ code }) => [
+        code,
+        mapFormatPayloadToPlatform({ format, formatPayload, publishLanguage: code }),
+      ]),
+    ),
+  };
 }
 
 interface MapperContext {

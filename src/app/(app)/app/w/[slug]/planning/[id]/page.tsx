@@ -21,9 +21,10 @@ import {
   listPublicationsForItem,
   evaluateReadiness,
   readAllChannelPayloads,
+  readAllChannelPayloadStates,
 } from "@/lib/publishing";
 import { listActivityEvents } from "@/lib/notifications/activity";
-import { mapFormatPayloadToPlatform } from "@/lib/format-payload/mapper";
+import { buildAudienceCopyViewModel } from "@/lib/format-payload/mapper";
 import { listCommentsForItem } from "@/lib/discussions/service";
 import { getWorkspaceRoles, hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
 // resolveActiveAgencyContext is intentionally NOT imported here. The
@@ -147,6 +148,7 @@ export default async function ContentDetailPage({
     activityEvents,
     readiness,
     channelPayloads,
+    channelPayloadStates,
     activeChannels,
     canConfirmReadiness,
     canApproveFinalCopy,
@@ -173,6 +175,7 @@ export default async function ContentDetailPage({
       channels: [],
     })),
     readAllChannelPayloads({ actor, workspaceId: ws.id, contentItemId: id }).catch(() => ({})),
+    readAllChannelPayloadStates({ actor, workspaceId: ws.id, contentItemId: id }).catch(() => ({})),
     // Phase 5 of the planning-detail refactor (2026-08-30):
     // the EditDetailsDrawer needs the same channel list as
     // the standalone `/edit/[id]` page. We union the active
@@ -262,17 +265,9 @@ export default async function ContentDetailPage({
   const canEdit =
     (actorRoles.isManager || actorRoles.isPlanner) &&
     UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number]);
-  // P1 (2026-09-03, /ui-ux-pro-max): narrow "non-material copy
-  // fix" gate. True when the actor is planner / manager /
-  // publisher and the item is not cancelled. Lets the user
-  // patch caption / hashtags / firstComment even after the
-  // item is in design / creative review / approved for
-  // publish. The narrow action does NOT trigger the
-  // material-edit reset (no revision bump, no approval
-  // invalidation).
-  const canPatchCopy =
-    (actorRoles.isManager || actorRoles.isPlanner || actorRoles.isPublisher) &&
-    item.status !== "cancelled";
+  // Canonical Copy remains editable by managers and planners after
+  // approval, because the materiality path resets affected approvals.
+  const canEditCopy = (actorRoles.isManager || actorRoles.isPlanner) && item.status !== "cancelled";
   const canPostInternal =
     actorRoles.isManager ||
     actorRoles.isPlanner ||
@@ -518,16 +513,9 @@ export default async function ContentDetailPage({
         channelIds: item.channels.map((c) => c.socialChannelId),
       }}
     />
-  ) : canPatchCopy ? (
-    // P4 (2026-09-03, /ui-ux-pro-max): when the full editor
-    // is locked but the user can still patch copy, the
-    // primary action jumps to the Publishing tab where the
-    // per-channel caption lives. The Messages tab is the
-    // preferred surface (the publish form requires opening
-    // a channel first); we deep-link to the messages
-    // anchor instead.
+  ) : canEditCopy ? (
     <Button variant="default" size="sm" asChild data-testid="planning-fix-copy">
-      <Link href={`/app/w/${slug}/planning/${item.id}#messages`}>
+      <Link href={`/app/w/${slug}/planning/${item.id}#copy`}>
         <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
         {t("contentDetail.copy.fixCopy")}
       </Link>
@@ -559,7 +547,7 @@ export default async function ContentDetailPage({
   const tabs: WorkspaceTab[] = [
     { id: "overview", label: t("contentDetail.tabs.overview") },
     { id: "content", label: t("contentDetail.tabs.content") },
-    { id: "messages", label: t("contentDetail.tabs.messages") },
+    { id: "copy", label: t("contentDetail.tabs.copy") },
     { id: "preview", label: t("contentDetail.tabs.preview") },
     {
       id: "publishing",
@@ -760,6 +748,20 @@ export default async function ContentDetailPage({
                         aiEnabled={aiLive && captionDraftsEnabled}
                       />
                       <div
+                        className="border-border bg-surface-subtle text-fg-secondary flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"
+                        data-testid="content-audience-copy-summary"
+                      >
+                        <div>
+                          <p className="text-body text-fg-primary font-semibold">
+                            {t("contentDetail.copy.title")}
+                          </p>
+                          <p className="text-label">{t("contentDetail.copy.fixCopyHint")}</p>
+                        </div>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href="#copy">{t("contentDetail.copy.openCopy")}</Link>
+                        </Button>
+                      </div>
+                      <div
                         className="border-border bg-surface-subtle text-label text-fg-secondary flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border px-3 py-2"
                         data-testid="content-preview-shortcut"
                       >
@@ -809,6 +811,20 @@ export default async function ContentDetailPage({
                       locale={activeLocale}
                       aiEnabled={aiLive && captionDraftsEnabled}
                     />
+                    <div
+                      className="border-border bg-surface-subtle text-fg-secondary flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"
+                      data-testid="content-audience-copy-summary"
+                    >
+                      <div>
+                        <p className="text-body text-fg-primary font-semibold">
+                          {t("contentDetail.copy.title")}
+                        </p>
+                        <p className="text-label">{t("contentDetail.copy.fixCopyHint")}</p>
+                      </div>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="#copy">{t("contentDetail.copy.openCopy")}</Link>
+                      </Button>
+                    </div>
                   </PlanningSection>
                 )}
 
@@ -887,62 +903,44 @@ export default async function ContentDetailPage({
                 </section>
               </section>
             ),
-            messages: (
+            copy: (
               <section
-                id="messages"
+                id="copy"
                 className="mt-6 scroll-mt-24"
-                data-testid="workspace-tab-panel-messages"
+                data-testid="workspace-tab-panel-copy"
               >
                 <MessagesPanel
                   workspaceSlug={slug}
                   contentItemId={item.id}
                   format={item.format as ContentFormat}
-                  initialCaption={((): string => {
-                    const fp = (item as { formatPayload?: unknown }).formatPayload;
-                    if (
-                      fp &&
-                      typeof fp === "object" &&
-                      "caption" in (fp as Record<string, unknown>)
-                    ) {
-                      const c = (fp as { caption?: unknown }).caption;
-                      return typeof c === "string" ? c : "";
+                  initialPayload={(() => {
+                    try {
+                      return parseFormatPayload(
+                        item.format,
+                        (item as { formatPayload?: unknown }).formatPayload,
+                      ) as Record<string, unknown>;
+                    } catch {
+                      return { schemaVersion: 1 };
                     }
-                    return "";
                   })()}
-                  initialHashtags={((): string[] => {
-                    const fp = (item as { formatPayload?: unknown }).formatPayload;
-                    if (
-                      fp &&
-                      typeof fp === "object" &&
-                      "hashtags" in (fp as Record<string, unknown>)
-                    ) {
-                      const h = (fp as { hashtags?: unknown }).hashtags;
-                      return Array.isArray(h)
-                        ? h.filter((t): t is string => typeof t === "string")
-                        : [];
-                    }
-                    return [];
-                  })()}
-                  initialFirstComment={((): string => {
-                    const fp = (item as { formatPayload?: unknown }).formatPayload;
-                    if (
-                      fp &&
-                      typeof fp === "object" &&
-                      "firstComment" in (fp as Record<string, unknown>)
-                    ) {
-                      const c = (fp as { firstComment?: unknown }).firstComment;
-                      return typeof c === "string" ? c : "";
-                    }
-                    return "";
-                  })()}
+                  contentLocale={activeLocale}
                   channels={item.channels.map((ch) => ({
                     id: ch.id,
                     socialChannelId: ch.socialChannelId,
                     platform: ch.platform,
                     accountName: ch.accountName,
+                    payload: ((channelPayloads as Record<string, unknown>)[ch.socialChannelId] ??
+                      null) as Record<string, unknown> | null,
+                    sourceRevision:
+                      (
+                        channelPayloadStates as Record<
+                          string,
+                          { copySourceRevision: number | null }
+                        >
+                      )[ch.socialChannelId]?.copySourceRevision ?? null,
+                    currentRevision: item.revision,
                   }))}
-                  canEdit={canEdit}
-                  canPatchCopy={canPatchCopy}
+                  canEdit={canEditCopy}
                 />
               </section>
             ),
@@ -1007,18 +1005,12 @@ export default async function ContentDetailPage({
                           // The Preview tab used to read only
                           // `formatPayload` so per-channel edits
                           // silently did not show up here.
-                          const plannerCaption = (
-                            parseFormatPayload(
-                              item.format,
-                              (item as { formatPayload?: unknown }).formatPayload,
-                            ) as { caption?: string }
-                          ).caption;
-                          const plannerHashtags = (
-                            parseFormatPayload(
-                              item.format,
-                              (item as { formatPayload?: unknown }).formatPayload,
-                            ) as { hashtags?: string[] }
-                          ).hashtags;
+                          const copyView = buildAudienceCopyViewModel({
+                            format: item.format,
+                            formatPayload: (item as { formatPayload?: unknown }).formatPayload,
+                          });
+                          const plannerCaption = copyView.resolved.caption;
+                          const plannerHashtags = copyView.resolved.hashtags;
                           const channelPayload = (channelPayloads as Record<string, unknown>)[
                             item.channels[0].socialChannelId
                           ] as { caption?: string; hashtags?: string[] } | undefined;
@@ -1095,7 +1087,8 @@ export default async function ContentDetailPage({
                       contentItemId={item.id}
                       itemTitle={item.title}
                       itemFormat={item.format}
-                      formatPayloadPreFill={mapFormatPayloadToPlatform({
+                      contentLocale={activeLocale}
+                      audienceCopy={buildAudienceCopyViewModel({
                         format: item.format,
                         formatPayload: (item as { formatPayload?: unknown }).formatPayload,
                       })}
@@ -1113,6 +1106,13 @@ export default async function ContentDetailPage({
                         // itself handles the validation on save.
                         payload: ((channelPayloads as Record<string, unknown>)[c.socialChannelId] ??
                           null) as never,
+                        copySourceRevision:
+                          (
+                            channelPayloadStates as Record<
+                              string,
+                              { copySourceRevision: number | null }
+                            >
+                          )[c.socialChannelId]?.copySourceRevision ?? null,
                       }))}
                       deliveryVersions={deliveries.map((d) => ({
                         id: d.id,

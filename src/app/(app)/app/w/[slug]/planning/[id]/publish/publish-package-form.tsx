@@ -17,7 +17,7 @@ import {
   setFinalCopyApprovalAction,
 } from "./actions";
 import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
-import type { MappedPlatformFields } from "@/lib/format-payload/mapper";
+import type { AudienceCopyViewModel, MappedPlatformFields } from "@/lib/format-payload/mapper";
 import type { PublishActionErrorCode } from "@/lib/publishing/action-errors";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
@@ -76,6 +76,7 @@ type ChannelSummary = {
   platform: string;
   accountName: string;
   payload: PlatformPayload | null;
+  copySourceRevision?: number | null;
 };
 
 function defaultPayloadFor(platform: string, socialChannelId: string): PlatformPayload {
@@ -192,7 +193,9 @@ export function PublishPackageForm({
   contentItemId,
   itemTitle,
   itemFormat,
+  audienceCopy,
   formatPayloadPreFill,
+  contentLocale,
   channels,
   deliveryVersions,
   readiness,
@@ -206,6 +209,8 @@ export function PublishPackageForm({
   contentItemId: string;
   itemTitle: string;
   itemFormat: string;
+  /** Canonical audience copy plus locale-resolved publishing values. */
+  audienceCopy?: AudienceCopyViewModel;
   /**
    * Pre-fill from the planner's `formatPayload` work (the
    * "More details" editor on the content detail page).
@@ -215,6 +220,8 @@ export function PublishPackageForm({
    * never overwrite an already-published package.
    */
   formatPayloadPreFill?: MappedPlatformFields;
+  /** Agency content locale is the default; the publisher may choose per channel. */
+  contentLocale?: string;
   channels: ChannelSummary[];
   deliveryVersions: DeliveryVersionSummary[];
   readiness: ReadinessReport;
@@ -247,27 +254,19 @@ export function PublishPackageForm({
       // hashtags / location in the publish form on first
       // open, before any manual save.
       const base = ch.payload ?? defaultPayloadFor(ch.platform, ch.socialChannelId);
-      if (ch.payload || !formatPayloadPreFill) {
+      if (ch.payload || (!formatPayloadPreFill && !audienceCopy)) {
         initial[ch.id] = base;
         continue;
       }
+      const sharedCopy =
+        audienceCopy?.resolvedByLocale[contentLocale ?? locale] ??
+        audienceCopy?.resolved ??
+        formatPayloadPreFill ??
+        {};
       initial[ch.id] = {
         ...base,
-        ...(formatPayloadPreFill.caption ? { caption: formatPayloadPreFill.caption } : {}),
-        ...(formatPayloadPreFill.description
-          ? { description: formatPayloadPreFill.description }
-          : {}),
-        ...(formatPayloadPreFill.firstComment
-          ? { firstComment: formatPayloadPreFill.firstComment }
-          : {}),
-        ...(formatPayloadPreFill.hashtags ? { hashtags: formatPayloadPreFill.hashtags } : {}),
-        ...(formatPayloadPreFill.callToAction
-          ? { callToAction: formatPayloadPreFill.callToAction }
-          : {}),
-        ...(formatPayloadPreFill.location ? { location: formatPayloadPreFill.location } : {}),
-        ...(formatPayloadPreFill.contentLanguage
-          ? { contentLanguage: formatPayloadPreFill.contentLanguage }
-          : {}),
+        ...sharedCopy,
+        contentLanguage: contentLocale ?? locale,
       } as PlatformPayload;
     }
     return initial;
@@ -288,9 +287,53 @@ export function PublishPackageForm({
 
   const current = channels.find((c) => c.id === activeChannel);
   const currentDraft = current ? drafts[current.id] : undefined;
+  const selectedLanguage =
+    (currentDraft as { contentLanguage?: string } | undefined)?.contentLanguage ??
+    contentLocale ??
+    locale;
+  const sharedCopy =
+    audienceCopy?.resolvedByLocale[selectedLanguage] ??
+    audienceCopy?.resolved ??
+    formatPayloadPreFill;
   const currentReadiness = current
     ? readiness.channels.find((channel) => channel.socialChannelId === current.socialChannelId)
     : undefined;
+  const sharedCopyDiffers = Boolean(
+    current?.payload != null &&
+    currentDraft &&
+    sharedCopy &&
+    ["caption", "description", "firstComment", "hashtags", "callToAction", "location"].some(
+      (key) =>
+        JSON.stringify((currentDraft as Record<string, unknown>)[key]) !==
+        JSON.stringify(sharedCopy[key as keyof MappedPlatformFields]),
+    ),
+  );
+
+  function applySharedCopy(channelId: string, language: string) {
+    const shared =
+      audienceCopy?.resolvedByLocale[language] ?? audienceCopy?.resolved ?? formatPayloadPreFill;
+    if (!shared) return;
+    const existing = drafts[channelId] as Record<string, unknown> | undefined;
+    updateDraft(channelId, {
+      ...(shared.caption !== undefined ? { caption: shared.caption } : {}),
+      ...(shared.hashtags !== undefined ? { hashtags: shared.hashtags } : {}),
+      ...(shared.firstComment !== undefined ? { firstComment: shared.firstComment } : {}),
+      ...(shared.description !== undefined ? { description: shared.description } : {}),
+      ...(shared.callToAction
+        ? {
+            callToAction: {
+              ...shared.callToAction,
+              url:
+                typeof existing?.callToAction === "object" && existing.callToAction
+                  ? (((existing.callToAction as { url?: unknown }).url as string | undefined) ?? "")
+                  : shared.callToAction.url,
+            },
+          }
+        : {}),
+      ...(shared.location !== undefined ? { location: shared.location } : {}),
+      contentLanguage: language,
+    });
+  }
 
   function readinessIssueText(code: string, fallback: string) {
     const localized = t(`contentDetail.publishReadiness.${code}`);
@@ -498,6 +541,31 @@ export function PublishPackageForm({
               testId="publish-item-format"
             />
             <div>
+              <label
+                htmlFor="publish-content-language"
+                className="text-body text-fg-primary mb-1 block font-semibold"
+              >
+                {t("contentDetail.publishForm.publishLanguage")}
+              </label>
+              <select
+                id="publish-content-language"
+                value={
+                  (currentDraft as { contentLanguage?: string }).contentLanguage ??
+                  contentLocale ??
+                  locale
+                }
+                onChange={(e) => applySharedCopy(current.id, e.target.value)}
+                className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
+                data-testid="publish-content-language"
+              >
+                <option value="en">{t("contentDetail.publishForm.languageEnglish")}</option>
+                <option value="ar">{t("contentDetail.publishForm.languageArabic")}</option>
+              </select>
+              <p className="text-label text-fg-muted mt-1">
+                {t("contentDetail.publishForm.publishLanguageHint")}
+              </p>
+            </div>
+            <div>
               <CaptionField
                 id="publish-caption"
                 name="caption"
@@ -516,13 +584,36 @@ export function PublishPackageForm({
                 value={(currentDraft as { hashtags?: string[] }).hashtags ?? []}
                 onChange={(next) => updateDraft(current.id, { hashtags: next })}
                 hint={t("contentDetail.publishForm.hashtagsHint")}
+                locale={locale}
+                t={t}
                 testId="publish-hashtags"
               />
             </div>
+            {sharedCopy && sharedCopyDiffers ? (
+              <div className="border-info bg-info-subtle flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-2">
+                <p className="text-label text-fg-secondary">
+                  {current.copySourceRevision != null &&
+                  current.copySourceRevision < readiness.revision
+                    ? t("contentDetail.copy.staleOverride")
+                    : t("contentDetail.publishForm.sharedCopyChanged")}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="min-h-11"
+                  onClick={() => applySharedCopy(current.id, selectedLanguage)}
+                  data-testid="publish-use-shared-copy"
+                >
+                  {t("contentDetail.publishForm.useSharedCopy")}
+                </Button>
+              </div>
+            ) : null}
             <Field
               label={t("contentDetail.publishForm.firstComment")}
               value={(currentDraft as { firstComment?: string }).firstComment ?? ""}
               onChange={(v) => updateDraft(current.id, { firstComment: v })}
+              multiline
               testId="publish-first-comment"
             />
             <Field
@@ -782,6 +873,7 @@ function Field({
   readOnly,
   placeholder,
   testId,
+  multiline,
 }: {
   label: string;
   value: string;
@@ -789,6 +881,7 @@ function Field({
   readOnly?: boolean;
   placeholder?: string;
   testId?: string;
+  multiline?: boolean;
 }) {
   const locale = useLocaleCode();
   const id = `field-${testId ?? label.replace(/\s+/g, "-").toLowerCase()}`;
@@ -797,16 +890,30 @@ function Field({
       <label htmlFor={id} className="text-body text-fg-primary mb-1 block font-semibold">
         {label}
       </label>
-      <DirAwareInput
-        id={id}
-        locale={locale}
-        value={value}
-        readOnly={readOnly}
-        onChange={(e) => onChange?.(e.target.value)}
-        placeholder={placeholder}
-        data-testid={testId}
-        className="min-h-11"
-      />
+      {multiline ? (
+        <DirAwareTextarea
+          id={id}
+          locale={locale}
+          value={value}
+          readOnly={readOnly}
+          onChange={(e) => onChange?.(e.target.value)}
+          placeholder={placeholder}
+          rows={4}
+          data-testid={testId}
+          className="min-h-11"
+        />
+      ) : (
+        <DirAwareInput
+          id={id}
+          locale={locale}
+          value={value}
+          readOnly={readOnly}
+          onChange={(e) => onChange?.(e.target.value)}
+          placeholder={placeholder}
+          data-testid={testId}
+          className="min-h-11"
+        />
+      )}
     </div>
   );
 }

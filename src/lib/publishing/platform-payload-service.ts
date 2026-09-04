@@ -150,7 +150,7 @@ export async function savePlatformPayload(
 
   // Materiality — payload is a material edit per the master
   // prompt's "Material edits and approvals" section.
-  await recordMaterialityEvent({
+  const materiality = await recordMaterialityEvent({
     actor,
     contentItemId: input.contentItemId,
     resource: MATERIAL_RESOURCE_PLATFORM_PAYLOAD,
@@ -158,6 +158,16 @@ export async function savePlatformPayload(
     afterValue: payload,
     reasonCode: "platform_payload.save",
   });
+
+  await db
+    .update(contentItemChannels)
+    .set({ copySourceRevision: materiality.revision, updatedAt: new Date() })
+    .where(
+      and(
+        eq(contentItemChannels.contentItemId, input.contentItemId),
+        eq(contentItemChannels.socialChannelId, input.socialChannelId),
+      ),
+    );
 
   return payload;
 }
@@ -376,6 +386,56 @@ export async function readAllChannelPayloads(input: {
   return out;
 }
 
+export type ChannelPayloadState = {
+  payload: PlatformPayload | null;
+  copySourceRevision: number | null;
+};
+
+/** Read payload plus the shared-copy revision it was saved against. */
+export async function readAllChannelPayloadStates(input: {
+  actor: Actor;
+  workspaceId: string;
+  contentItemId: string;
+}): Promise<Record<string, ChannelPayloadState>> {
+  const allowed = await hasWorkspaceRole({ id: input.actor.id }, input.workspaceId, [
+    "workspace_manager",
+    "content_planner",
+    "designer",
+    "internal_reviewer",
+    "client_reviewer",
+    "publisher",
+    "viewer",
+  ]);
+  if (!allowed) {
+    throw new PlatformPayloadError("FORBIDDEN", "Not a member of this workspace.", {
+      workspaceId: input.workspaceId,
+    });
+  }
+  const rows = await db
+    .select({
+      socialChannelId: contentItemChannels.socialChannelId,
+      platformPayload: contentItemChannels.platformPayload,
+      copySourceRevision: contentItemChannels.copySourceRevision,
+    })
+    .from(contentItemChannels)
+    .innerJoin(contentItems, eq(contentItems.id, contentItemChannels.contentItemId))
+    .where(
+      and(
+        eq(contentItemChannels.contentItemId, input.contentItemId),
+        eq(contentItems.workspaceId, input.workspaceId),
+      ),
+    );
+  const out: Record<string, ChannelPayloadState> = {};
+  for (const row of rows) {
+    const raw = row.platformPayload as { platform?: string } | null;
+    out[row.socialChannelId] = {
+      payload: raw?.platform ? PlatformPayloadSchema.parse(raw) : null,
+      copySourceRevision: row.copySourceRevision,
+    };
+  }
+  return out;
+}
+
 /**
  * Reset a single channel's payload back to the empty shape.
  * Used by the materiality service when a content-item-level
@@ -405,7 +465,7 @@ export async function clearChannelPayload(input: {
         eq(contentItemChannels.socialChannelId, input.socialChannelId),
       ),
     );
-  await recordMaterialityEvent({
+  const materiality = await recordMaterialityEvent({
     actor: input.actor,
     contentItemId: input.contentItemId,
     resource: MATERIAL_RESOURCE_PLATFORM_PAYLOAD,
@@ -413,4 +473,13 @@ export async function clearChannelPayload(input: {
     afterValue: null,
     reasonCode: "platform_payload.clear",
   });
+  await db
+    .update(contentItemChannels)
+    .set({ copySourceRevision: materiality.revision, updatedAt: new Date() })
+    .where(
+      and(
+        eq(contentItemChannels.contentItemId, input.contentItemId),
+        eq(contentItemChannels.socialChannelId, input.socialChannelId),
+      ),
+    );
 }

@@ -10,6 +10,7 @@ import {
   WorkspaceTabs,
   type WorkspaceTab,
   type WorkspaceTabId,
+  normalizeWorkspaceTabId,
 } from "@/components/planning/workspace-tabs";
 import type { CommentRecord, CommentRoleFlags } from "@/components/comments/comment-item";
 import type { ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
@@ -118,7 +119,7 @@ export function WorkspaceShell({
     // and URL to oscillate (especially visible in mobile WebKit).
     if (initialHashAdoptedRef.current) return;
     initialHashAdoptedRef.current = true;
-    const hash = window.location.hash.replace(/^#/, "") as WorkspaceTabId;
+    const hash = normalizeWorkspaceTabId(window.location.hash.replace(/^#/, ""));
     if (hash && tabs.some((tab) => tab.id === hash) && hash !== activeId) {
       React.startTransition(() => setActiveId(hash));
     }
@@ -131,7 +132,7 @@ export function WorkspaceShell({
   const initialHashPendingRef = React.useRef(true);
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    const incomingHash = window.location.hash.replace(/^#/, "") as WorkspaceTabId;
+    const incomingHash = normalizeWorkspaceTabId(window.location.hash.replace(/^#/, ""));
     if (initialHashPendingRef.current) {
       if (
         incomingHash &&
@@ -152,7 +153,7 @@ export function WorkspaceShell({
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     function onHashChange() {
-      const next = window.location.hash.replace(/^#/, "") as WorkspaceTabId;
+      const next = normalizeWorkspaceTabId(window.location.hash.replace(/^#/, ""));
       if (next && tabs.some((t) => t.id === next) && next !== activeId) {
         setActiveId(next);
       }
