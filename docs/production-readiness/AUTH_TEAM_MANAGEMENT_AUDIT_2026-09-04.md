@@ -118,22 +118,36 @@ rule, update the membership, and write the audit event in one transaction.
 
 ## Verification record
 
-Passed on the current working tree:
+The auth/team implementation and its focused evidence are green:
 
-- focused auth/team suite: 19 tests passed;
+- focused auth/team unit suite: 19 tests passed;
+- full unit suite: 328 files and 3,172 tests passed (4 todo);
 - TypeScript strict typecheck;
-- formatting check for all touched files;
+- lint and formatting checks;
+- production build;
+- direct-create Postgres integration: 5/5 tests passed, including multiple
+  workspace roles, Agency Admin, rollback, foreign-workspace rejection, and
+  active-member rejection;
+- member-role Postgres integration: 6/6 tests passed, including manager scope,
+  multi-role persistence, legacy payload compatibility, database-error state,
+  and the role-table trigger;
+- isolated Chromium Add directly flow: 7/7 tests passed, including the new
+  multi-role + Agency Admin browser journey and first-login coverage;
 - `git diff --check`.
 
-Not yet evidenced in this environment:
+The following repository-level gates are separate from the auth/team changes:
 
-- real Postgres integration and migration-drill execution;
-- isolated Playwright/authenticated browser flows;
-- full release verification and production deployment.
+- a clean `planner_test` database was migrated successfully from zero;
+- the migration drill was partial: drills 2, 3, and 5 passed, while drill 1
+  failed at extension setup and drill 4 failed during backup restore because
+  the restored fixture referenced a workspace before its agency. No migration
+  was introduced by the auth/team fix; these are recorded as baseline release
+  gate failures rather than silently treated as green;
+- the unscoped full integration command was not used as auth evidence because
+  unrelated suites share one disposable database and can truncate/reseed it
+  concurrently. The two relevant files were run serially and passed;
+- production deployment was not performed.
 
-The local Docker daemon was unavailable, the disposable `planner_test`
-database was not reachable, and the temporary development server returned 500
-on its dev seed/sign-in probes before exiting. These are environment blockers,
-not evidence that the application or database paths are green. The integration
-and browser gates must be rerun against the disposable test database before
-this audit can be marked independently Verified.
+The evidence runs used a disposable `planner_test` database only. The audit is
+ready for independent review of the auth/team behavior; it is not a claim that
+the unrelated migration/release gates are Verified.
