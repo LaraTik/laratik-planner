@@ -60,6 +60,48 @@ test.describe("User Management — Add directly flow", () => {
     await expect(page.getByTestId("users-kpi-row")).toBeVisible();
   });
 
+  test("admin can assign multiple workspace roles and Agency Admin access", async ({ page }) => {
+    await bootstrapTestSession(page);
+
+    await page.goto("/app/users");
+    await page.getByTestId("users-tab-add").click();
+
+    const newEmail = `e2e-multi-admin-${Date.now()}@laratik.local`;
+    const newName = "E2E Multi Role Admin";
+    await page.getByRole("textbox", { name: /^Email/i }).fill(newEmail);
+    await page.getByLabel("Name (optional)").fill(newName);
+    await page.getByTestId("add-directly-generate").click();
+
+    // Disable the first-login gate so this test can immediately verify the
+    // newly assigned Agency Admin membership in a fresh session.
+    await page.getByTestId("add-directly-must-change").click();
+    await page.getByTestId("add-directly-grants-admin").click();
+    // The shared chip deliberately makes the Radix checkbox visually hidden;
+    // click its associated label so Playwright follows the real user target.
+    await page.locator('label[for^="workspace-role-"]').filter({ hasText: "Designer" }).click();
+    await page.locator('label[for^="workspace-role-"]').filter({ hasText: "Publisher" }).click();
+
+    await page.getByRole("button", { name: /Add user/i }).click();
+    await expect(page.getByTestId("add-directly-reveal")).toBeVisible({ timeout: 10_000 });
+
+    // The Team page reads the persisted membership-role rows. Both selected
+    // roles must be visible on the same member row; the old last-role-wins
+    // defect would show only Publisher here.
+    await page.goto("/app/w/acme/team");
+    const memberRow = page.locator("tr").filter({ hasText: newName });
+    await expect(memberRow).toContainText("Designer");
+    await expect(memberRow).toContainText("Publisher");
+    await expect(memberRow).toContainText(/Agency admin/i);
+
+    // A fresh session with a normal global user role must still pass the
+    // tenant-scoped Agency Admin gate because the membership flag is the
+    // authority for agency access.
+    await page.context().clearCookies();
+    await setAuthCookie(page, page.request, { email: newEmail, role: "user" });
+    await page.goto("/app/users");
+    await expect(page.getByRole("heading", { name: "User Management" })).toBeVisible();
+  });
+
   test("submitting without a strong password shows a server-side error", async ({ page }) => {
     await bootstrapTestSession(page);
 
