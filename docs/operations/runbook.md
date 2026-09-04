@@ -752,7 +752,7 @@ The first statement preserves the channel row but drops its metric history; the 
 
 ## Notification outbox
 
-The notification bell is driven by an **outbox + dispatcher** pattern: domain code (`comments.create`, `assignments.assign`, etc.) writes a row to `outbox_events` and returns; a dispatcher worker claims unprocessed rows and fans out the actual in-app notifications (and, in a Goal 13+ follow-up, emails). The dispatcher must run on a cron, otherwise the bell counter is decorative — every comment / assignment / mention is queued but never delivered.
+The notification bell is driven by an **outbox + dispatcher** pattern: domain code (`comments.create`, `assignments.assign`, etc.) writes a row to `outbox_events` and returns; the in-app worker fans out notifications and the email worker independently processes the same event stream. Their completion and retry fields are separate, so an SMTP outage cannot suppress the bell and an in-app tick cannot suppress opted-in email.
 
 ### Route + cron
 
@@ -766,7 +766,7 @@ grep outbox /etc/cron.d/laratik-planner       # confirm the * * * * * entry exis
 sudo /opt/laratik-planner/scripts/vps/outbox-dispatch.sh   # one-off manual run
 ```
 
-The expected response shape is `{ "ok": true, "processed": <int>, "durationMs": <int> }`. A non-JSON response or an HTTP non-2xx indicates the secret rotated, the route is down, or the dispatcher threw. The dispatcher writes per-event failures to `outbox_events.last_error` and bumps `attempt_count` so a stuck event is observable without spamming the cron mail.
+The expected response shape is `{ "ok": true, "processed": <int>, "durationMs": <int> }`. A non-JSON response or an HTTP non-2xx indicates the secret rotated, the route is down, or the dispatcher threw. The in-app dispatcher writes failures to `outbox_events.last_error` / `attempt_count`; the email dispatcher writes `email_last_error` / `email_attempt_count` and per-recipient records in `notification_email_delivery` so a stuck address is observable without resending successful recipients.
 
 ### Why a 1-minute cadence (not 5 or 15)
 

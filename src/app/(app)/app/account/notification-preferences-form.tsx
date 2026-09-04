@@ -11,10 +11,10 @@ import {
 } from "./actions";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import {
-  NotificationKindSchemaValues,
+  NOTIFICATION_KIND_VALUES,
   type NotificationKindForPrefs,
   type NotificationPreferencesSnapshot,
-} from "@/lib/notifications/service";
+} from "@/lib/notifications/types";
 
 const initialState: NotificationPreferencesActionState = {};
 
@@ -60,7 +60,7 @@ export function NotificationPreferencesForm({
 
   // Per-kind rows. The `system` kind is locked-on in the bell per
   // master prompt §8.
-  const matrixKinds: NotificationKindForPrefs[] = NotificationKindSchemaValues.filter(
+  const matrixKinds: NotificationKindForPrefs[] = NOTIFICATION_KIND_VALUES.filter(
     (k) => k !== "system",
   );
 

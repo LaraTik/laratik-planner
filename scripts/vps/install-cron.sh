@@ -25,8 +25,8 @@
 #   5. Every minute — Email outbox dispatcher (see scripts/vps/email-dispatch.sh)
 #      Calls /api/cron/email-dispatch. Returns { ok, processed, sent, skipped,
 #      failed, durationMs }. Drives the FEAT-10 email leg; the same outbox
-#      rows feed both the in-app fan-out and the email leg, so the two
-#      workers tick at the same cadence and stay in lockstep.
+#      rows feed both legs, but each worker has independent completion
+#      and retry state so one leg cannot suppress the other.
 #   6. Daily 04:00 UTC — Audit / rate-limit retention prune
 #      (see scripts/vps/audit-retention.sh). Bounded retention
 #      keeps security_audit_event (365d default) and rate_limit_event

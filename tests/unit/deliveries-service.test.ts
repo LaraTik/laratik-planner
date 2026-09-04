@@ -219,6 +219,7 @@ describe("SubmitDeliverySchema", () => {
   // have to invent a description to pass the schema.
   it("accepts a submission without a description", () => {
     const { description: _omit, ...withoutDescription } = baseInput;
+    expect(_omit).toBe("First delivery");
     expect(SubmitDeliverySchema.safeParse(withoutDescription).success).toBe(true);
   });
 

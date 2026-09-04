@@ -16,9 +16,8 @@ import { serverEnv } from "@/lib/validation/env";
  *   2. Calls `dispatchEmailOnce({ maxEvents: 50 })` which claims
  *      due outbox_events rows, fans out via `sendEmail` (Mailcow)
  *      honouring `notification_preferences.email_enabled`, and
- *      writes `processed_at` on success. Failures bump
- *      `attempt_count` and write `last_error` so the row can be
- *      retried on the next tick.
+ *      writes the email-specific completion/retry fields. In-app
+ *      delivery state is independent and is never consumed here.
  *   3. Returns a JSON shape that is safe to log:
  *        { "ok": true, "processed": int, "sent": int, "skipped": int, "failed": int, "durationMs": int }
  *

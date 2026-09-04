@@ -6,8 +6,8 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
  * the cron doesn't spin forever on a permanently broken
  * recipient. This test mocks `@/lib/email` to force `sendEmail`
  * to always throw, runs `dispatchEmailOnce` five times, and
- * asserts the row is marked processed with a `[poisoned]`
- * prefix in `last_error`.
+ * asserts the email delivery is marked processed with a
+ * `[poisoned]` prefix without touching in-app delivery state.
  */
 
 if (!process.env.TEST_DATABASE_URL) {
@@ -129,32 +129,39 @@ describe("R6 — dispatchEmailOnce DLQ guard", () => {
       .returning();
     if (!outbox) throw new Error("outbox seed failed");
 
-    // First four ticks: row stays unprocessed, attemptCount climbs,
-    // lastError records the simulated failure.
+    // First four ticks: the email delivery stays unprocessed,
+    // emailAttemptCount climbs, and in-app state remains independent.
     for (let i = 1; i <= 4; i++) {
       const { dispatchEmailOnce } = await import("@/lib/notifications/service");
       await dispatchEmailOnce();
       const [row] = await db
-        .select({ processedAt: outboxEvents.processedAt, attempt: outboxEvents.attemptCount })
+        .select({
+          processedAt: outboxEvents.processedAt,
+          emailProcessedAt: outboxEvents.emailProcessedAt,
+          attempt: outboxEvents.emailAttemptCount,
+        })
         .from(outboxEvents)
         .where(eq(outboxEvents.id, outbox.id));
       expect(row?.processedAt).toBeNull();
+      expect(row?.emailProcessedAt).toBeNull();
       expect(row?.attempt).toBe(i);
     }
 
-    // Fifth tick: attemptCount reaches 5 (the EMAIL_DLQ_THRESHOLD);
-    // the row is marked processed with [poisoned] in last_error.
+    // Fifth tick: the per-recipient attempt count reaches 5 and the
+    // delivery is marked processed with [poisoned].
     const { dispatchEmailOnce } = await import("@/lib/notifications/service");
     await dispatchEmailOnce();
     const [poisoned] = await db
       .select({
         processedAt: outboxEvents.processedAt,
-        attempt: outboxEvents.attemptCount,
-        lastError: outboxEvents.lastError,
+        emailProcessedAt: outboxEvents.emailProcessedAt,
+        attempt: outboxEvents.emailAttemptCount,
+        lastError: outboxEvents.emailLastError,
       })
       .from(outboxEvents)
       .where(eq(outboxEvents.id, outbox.id));
-    expect(poisoned?.processedAt).not.toBeNull();
+    expect(poisoned?.processedAt).toBeNull();
+    expect(poisoned?.emailProcessedAt).not.toBeNull();
     expect(poisoned?.attempt).toBe(5);
     expect(poisoned?.lastError).toMatch(/^\[poisoned\] simulated SMTP failure$/);
 

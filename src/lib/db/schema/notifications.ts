@@ -93,6 +93,12 @@ export const outboxEvents = pgTable(
     processedAt: timestamp("processed_at", { withTimezone: true, mode: "date" }),
     attemptCount: integer("attempt_count").notNull().default(0),
     lastError: text("last_error"),
+    // Email is a separate delivery channel from the in-app bell. The two
+    // cron workers must not share processed_at or retry bookkeeping: an
+    // in-app tick may legitimately finish before SMTP is available.
+    emailProcessedAt: timestamp("email_processed_at", { withTimezone: true, mode: "date" }),
+    emailAttemptCount: integer("email_attempt_count").notNull().default(0),
+    emailLastError: text("email_last_error"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .notNull()
       .default(sql`now()`),
@@ -102,6 +108,36 @@ export const outboxEvents = pgTable(
     index("outbox_unprocessed_idx")
       .on(t.availableAt)
       .where(sql`processed_at IS NULL`),
+    index("outbox_email_unprocessed_idx")
+      .on(t.availableAt)
+      .where(sql`email_processed_at IS NULL`),
+  ],
+);
+
+// Email delivery is tracked per outbox event and recipient. An event can
+// mention multiple users; storing only one event-level processed flag would
+// either duplicate successful sends after a partial failure or lose the
+// remaining recipients. A completed row means sent, opted out, missing, or
+// permanently poisoned for that specific recipient.
+export const notificationEmailDeliveries = pgTable(
+  "notification_email_delivery",
+  {
+    outboxEventId: uuid("outbox_event_id")
+      .notNull()
+      .references(() => outboxEvents.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    processedAt: timestamp("processed_at", { withTimezone: true, mode: "date" }),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+  },
+  (t) => [
+    primaryKey({ columns: [t.outboxEventId, t.userId] }),
+    index("notification_email_delivery_pending_idx").on(t.outboxEventId, t.processedAt),
   ],
 );
 

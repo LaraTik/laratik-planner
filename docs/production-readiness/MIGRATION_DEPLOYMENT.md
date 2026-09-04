@@ -470,3 +470,31 @@ Because the system is forward-only:
 - `pnpm migration-drill` drill 5 (skipped-0012 repair) — the canonical proof. Deletes the four M3 tables plus the 0012 / 0017 ledger rows while retaining later migrations, reruns the real Drizzle migrator, and proves all four tables plus exactly one 0012 ledger row return. PASS on disposable Postgres 16 (2026-08-24).
 - `tests/unit/migration-journal-order.test.ts` — the regression guard. Allows only the documented 0012 inversion, requires the 0017 repair, and enforces strict monotonicity after it.
 - `tests/integration/support-access.test.ts` — re-verifies the four-table invariants after the repair lands.
+
+## Migration 0029 — Independent email delivery state
+
+**Filename:** `src/lib/db/migrations/0029_notification_email_delivery_state.sql`
+
+### Forward behavior
+
+Additive only. `outbox_event` gains email-specific completion and retry
+columns (`email_processed_at`, `email_attempt_count`, and
+`email_last_error`) plus an index for due email work. The new
+`notification_email_delivery` table tracks `(outbox_event_id, user_id)` so
+multi-recipient events can retry one failed address without resending
+successful deliveries. Existing `processed_at`, `attempt_count`, and
+`last_error` remain the in-app delivery state.
+
+Existing processed outbox rows are backfilled as email-processed during the
+upgrade. This prevents the first email cron run after deployment from sending
+historical notifications that the old shared flag had already completed.
+
+### Compatibility and rollback
+
+The change is additive and older application images continue to use the
+existing in-app columns. Before deployment, take the standard verified
+`pg_dump` backup. Normal application rollback pins the previous image while
+leaving the additive columns/table in place. Schema rollback is forward-only;
+restore the pre-migration backup only with explicit approval because it removes
+email delivery history. From-zero and upgrade-drill evidence is **pending**
+until a disposable PostgreSQL service is available.

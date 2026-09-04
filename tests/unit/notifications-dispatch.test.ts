@@ -176,6 +176,7 @@ const {
 } = await import("@/lib/notifications/service");
 
 beforeEach(() => {
+  cacheMock.updateTag.mockClear();
   state = {
     selectResults: [],
     insertCalls: [],
@@ -339,6 +340,50 @@ describe("dispatchOutboxOnce (FEAT-01) — per-kind fan-out", () => {
     expect(update, "expected processedAt update").toBeDefined();
   });
 
+  it("invalidates every mentioned user's bell cache", async () => {
+    state.selectResults.push([
+      {
+        id: "evt-mentions",
+        eventType: "comment_created",
+        payload: {
+          commentId: "comment-1",
+          contentItemId: "ci-1",
+          authorId: "author-1",
+          workspaceId: "ws-1",
+          mentionedUserIds: ["user-1", "user-2", "user-1"],
+        },
+      },
+    ]);
+    state.selectResults.push([]);
+    state.selectResults.push([]);
+    await dispatchOutboxOnce({ maxEvents: 10 });
+    expect(cacheMock.updateTag).toHaveBeenCalledWith("notifications:user:user-1");
+    expect(cacheMock.updateTag).toHaveBeenCalledWith("notifications:user:user-2");
+    expect(cacheMock.updateTag).toHaveBeenCalledTimes(2);
+  });
+
+  it("notifies the content owner and designer for publication outcomes", async () => {
+    state.selectResults.push([
+      {
+        id: "evt-publication",
+        eventType: "publication_recorded",
+        payload: { contentItemId: "ci-1", channelStatus: "published" },
+      },
+    ]);
+    state.selectResults.push([
+      { workspaceId: "ws-1", contentOwnerId: "owner-1", designerId: "designer-1" },
+    ]);
+    state.selectResults.push([]);
+    state.selectResults.push([{ id: "ws-1", slug: "workspace" }]);
+    state.selectResults.push([]);
+    state.selectResults.push([{ id: "ws-1", slug: "workspace" }]);
+    await dispatchOutboxOnce({ maxEvents: 10 });
+    const recipients = state.insertCalls
+      .map((call) => (call.values as Record<string, unknown>)?.userId)
+      .filter((id): id is string => typeof id === "string");
+    expect(recipients).toEqual(expect.arrayContaining(["owner-1", "designer-1"]));
+  });
+
   it("skips unknown event types without throwing", async () => {
     state.selectResults.push([
       { id: "evt-1", eventType: "future_kind_we_dont_handle_yet", payload: { userId: "u" } },
@@ -415,13 +460,13 @@ describe("dispatchEmailOnce (FEAT-10)", () => {
     expect(result.sent).toBe(0);
   });
 
-  it("marks the row processed on skip + non-existent user", async () => {
+  it("marks email state processed on skip + non-existent user", async () => {
     stageUnprocessedEvent("assignment", { userId: "user-1", title: "T", body: "B" });
     // shouldEmailUserFor: []
     state.selectResults.push([]);
     await dispatchEmailOnce({ maxEvents: 10 });
     const update = state.updateCalls.find(
-      (c) => (c.set as Record<string, unknown>)["processedAt"] instanceof Date,
+      (c) => (c.set as Record<string, unknown>)["emailProcessedAt"] instanceof Date,
     );
     expect(update).toBeDefined();
   });

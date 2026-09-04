@@ -8,13 +8,19 @@ import { fireEvent, render } from "@testing-library/react";
 // The client calls it with the userId already bound by the
 // drawer's useCallback, so the mock must accept the original
 // 3-arg signature — the formData is the THIRD argument.
-const captured: { formData: FormData | null } = { formData: null };
+const captured: { formData: FormData | null; adminFormData: FormData | null } = {
+  formData: null,
+  adminFormData: null,
+};
 vi.mock("@/app/(app)/app/users/actions", () => ({
   updateMemberRolesAction: vi.fn(async (_userId: string, _prev: unknown, fd: FormData) => {
     captured.formData = fd;
     return { saved: true };
   }),
-  toggleAgencyAdminAction: vi.fn(async () => ({ saved: true })),
+  toggleAgencyAdminAction: vi.fn(async (_userId: string, _prev: unknown, fd: FormData) => {
+    captured.adminFormData = fd;
+    return { saved: true };
+  }),
 }));
 
 vi.mock("react-dom", async (importOriginal) => {
@@ -142,5 +148,34 @@ describe("WorkspaceRoleMatrix: multi-role serialisation", () => {
     const parsed = JSON.parse(String(raw));
     expect(parsed).toHaveLength(1);
     expect(new Set(parsed[0].roles)).toEqual(new Set(["designer", "publisher"]));
+  });
+
+  it("submits the checked agency-admin flag through the alternate form action", () => {
+    captured.adminFormData = null;
+    const subject = {
+      id: "user-3",
+      name: "Rami",
+      email: "rami@example.com",
+      status: "active" as const,
+      isAgencyAdmin: false,
+    };
+
+    const { getByTestId, getByRole } = render(
+      <MemberEditDrawer
+        subject={subject}
+        actorIsAgencyAdmin
+        actorUserId="actor-other"
+        workspaces={[]}
+        onOpenChange={() => {}}
+      />,
+    );
+
+    const checkbox = getByTestId("member-edit-is-agency-admin");
+    fireEvent.click(checkbox);
+    fireEvent.click(getByRole("button", { name: "Apply admin change" }));
+
+    const adminFormData = captured.adminFormData as FormData | null;
+    if (adminFormData === null) throw new Error("admin form action was not called");
+    expect(adminFormData.get("isAgencyAdmin")).toBe("on");
   });
 });

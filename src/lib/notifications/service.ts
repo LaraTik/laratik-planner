@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import {
   notifications,
   notificationPreferences,
+  notificationEmailDeliveries,
   outboxEvents,
   users,
   contentItems,
@@ -15,7 +16,20 @@ import { sendEmail } from "@/lib/email";
 import { tFor } from "@/messages";
 import { renderNotificationEmailCopy } from "@/lib/notifications/email-copy";
 import { notificationsUserTag } from "@/lib/notifications/cache";
+import {
+  NOTIFICATION_KIND_VALUES,
+  type NotificationKind,
+  type NotificationKindForPrefs,
+  type NotificationPreferencesSnapshot,
+} from "@/lib/notifications/types";
 import { z } from "zod";
+
+export type {
+  NotificationKind,
+  NotificationKindForPrefs,
+  NotificationKindPrefs,
+  NotificationPreferencesSnapshot,
+} from "@/lib/notifications/types";
 
 /**
  * Outbox event types dispatched by `dispatchOutboxOnce`. The constant
@@ -62,20 +76,7 @@ export type OutboxEventType = (typeof OUTBOX_EVENT_TYPES)[number];
  *    on the notification is the only delivery state we track in v1.
  */
 
-export const NotificationKindSchema = z.enum([
-  "assignment",
-  "review_request",
-  "approval",
-  "changes_requested",
-  "mention",
-  "reply",
-  "unresolved_question",
-  "deadline",
-  "delivery",
-  "ready_to_publish",
-  "system",
-]);
-export type NotificationKind = z.infer<typeof NotificationKindSchema>;
+export const NotificationKindSchema = z.enum(NOTIFICATION_KIND_VALUES);
 
 // ─── In-app notification writers (used by other services / outbox worker) ─
 
@@ -178,10 +179,9 @@ void db; // `db` referenced via the `tx` parameter type only
  * (a separate worker that calls the Mailcow SMTP transport).
  *
  * Each event is processed in its own transaction so partial failures
- * don't poison the queue. The claim (SELECT) does not use SKIP LOCKED
- * today because this is a single-process worker; if/when we run >1
- * concurrent dispatchers, add `.for("update", { skipLocked: true })` to
- * the SELECT and move the `processed_at` write into the same tx.
+ * don't poison the queue. The worker is deployed as a single cron caller;
+ * the per-channel completion flags keep the in-app and email workers
+ * independent even when their ticks overlap.
  */
 export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date } = {}) {
   const now = opts.now ?? new Date();
@@ -207,47 +207,46 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
       await db.transaction(async (tx) => {
         const payload = evt.payload as Record<string, unknown> | null;
         if (payload) {
-          const userId = payload["userId"] as string | undefined;
-          if (userId) recipientIds.add(userId);
+          let recipients: string[] = [];
           switch (evt.eventType as OutboxEventType) {
             case "comment_created":
-              await fanOutCommentCreated(payload, tx);
+              recipients = await fanOutCommentCreated(payload, tx);
               break;
             case "assignment":
-              await fanOutSingleRecipient(payload, tx, "assignment");
+              recipients = await fanOutSingleRecipient(payload, tx, "assignment");
               break;
             case "claim":
-              await fanOutSingleRecipient(payload, tx, "assignment");
+              recipients = await fanOutSingleRecipient(payload, tx, "assignment");
               break;
             case "release":
-              await fanOutSingleRecipient(payload, tx, "assignment");
+              recipients = await fanOutSingleRecipient(payload, tx, "assignment");
               break;
             case "review_request":
-              await fanOutSingleRecipient(payload, tx, "review_request");
+              recipients = await fanOutSingleRecipient(payload, tx, "review_request");
               break;
             case "approval":
-              await fanOutSingleRecipient(payload, tx, "approval");
+              recipients = await fanOutSingleRecipient(payload, tx, "approval");
               break;
             case "changes_requested":
-              await fanOutSingleRecipient(payload, tx, "changes_requested");
+              recipients = await fanOutSingleRecipient(payload, tx, "changes_requested");
               break;
             case "reply":
-              await fanOutSingleRecipient(payload, tx, "reply");
+              recipients = await fanOutSingleRecipient(payload, tx, "reply");
               break;
             case "unresolved_question":
-              await fanOutSingleRecipient(payload, tx, "unresolved_question");
+              recipients = await fanOutSingleRecipient(payload, tx, "unresolved_question");
               break;
             case "deadline":
-              await fanOutSingleRecipient(payload, tx, "deadline");
+              recipients = await fanOutSingleRecipient(payload, tx, "deadline");
               break;
             case "delivery":
-              await fanOutSingleRecipient(payload, tx, "delivery");
+              recipients = await fanOutSingleRecipient(payload, tx, "delivery");
               break;
             case "ready_to_publish":
-              await fanOutSingleRecipient(payload, tx, "ready_to_publish");
+              recipients = await fanOutSingleRecipient(payload, tx, "ready_to_publish");
               break;
             case "publication_recorded":
-              await fanOutPublicationRecorded(payload, tx);
+              recipients = await fanOutPublicationRecorded(payload, tx);
               break;
             default:
               // Unknown event types are still marked processed to keep
@@ -255,6 +254,7 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
               // preserved for forensics.
               break;
           }
+          for (const userId of recipients) recipientIds.add(userId);
         }
         // Mark the event processed (or no-op for unknown types — see
         // above). A failure inside the fan-out throws and rolls this
@@ -317,15 +317,15 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
 // function reads the same outbox_events rows, but fans out via
 // `sendEmail` (Mailcow) instead. It honours
 // `notification_preferences.email_enabled` per (user, kind) and
-// silently skips the row when the user hasn't opted in.
+// silently skips the recipient when the user hasn't opted in.
 //
 // Invariants:
 //   - Re-reads the user + preference for every row (avoids stale
 //     reads when a user toggles their preference between writes).
-//   - Never deletes the outbox row on failure; bumps
-//     `attempt_count` + writes `last_error` so the row can be
-//     retried by the next cron tick. The outbox dispatcher + the
-//     email worker share the same retry surface.
+//   - Email state is independent from in-app state. The two workers
+//     can run in either order without suppressing one another.
+//   - Multi-recipient events have one delivery row per recipient, so
+//     retrying a failed address never resends a successful address.
 //   - The cron route (/api/cron/email-dispatch) only invokes this
 //     helper, so all side effects flow through one place.
 //
@@ -338,8 +338,7 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
 /**
  * One email-dispatch tick. Claims at most `maxEvents` due
  * outbox_events rows, sends the email when the recipient's
- * `email_enabled` flag is set for the matching kind, and updates
- * `processed_at` / `attempt_count` on every row. Returns the
+ * `email_enabled` flag is set for the matching kind. Returns the
  * counts the cron route logs.
  */
 export async function dispatchEmailOnce(
@@ -351,7 +350,7 @@ export async function dispatchEmailOnce(
   const events = await db
     .select()
     .from(outboxEvents)
-    .where(and(isNull(outboxEvents.processedAt), sql`${outboxEvents.availableAt} <= ${now}`))
+    .where(and(isNull(outboxEvents.emailProcessedAt), sql`${outboxEvents.availableAt} <= ${now}`))
     .orderBy(outboxEvents.availableAt)
     .limit(maxEvents);
 
@@ -360,111 +359,152 @@ export async function dispatchEmailOnce(
   let failed = 0;
   for (const evt of events) {
     const payload = (evt.payload as Record<string, unknown> | null) ?? {};
-    const userId = payload["userId"] as string | undefined;
-    if (!userId) {
-      // No recipient — count as skipped and mark processed so the
-      // queue doesn't loop on the row.
-      await db
-        .update(outboxEvents)
-        .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
-        .where(eq(outboxEvents.id, evt.id));
-      skipped += 1;
-      continue;
-    }
-    // Map the outbox eventType → the notification kind we use for
-    // the preference lookup. comment_created / claim / release
-    // collapse to "mention" / "assignment" respectively (the
-    // schema enum has no separate claim/release kinds).
     const kind = eventTypeToNotificationKind(evt.eventType as string);
-    if (!kind) {
-      skipped += 1;
-      await db
-        .update(outboxEvents)
-        .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
-        .where(eq(outboxEvents.id, evt.id));
+    const recipients = await emailRecipientIds(evt.eventType as string, payload);
+    if (!kind || recipients.length === 0) {
+      skipped += recipients.length === 0 ? 1 : recipients.length;
+      await markEmailEventProcessed(evt.id);
       continue;
     }
-    const wantsEmail = await shouldEmailUserFor(userId, kind);
-    if (!wantsEmail) {
-      skipped += 1;
-      await db
-        .update(outboxEvents)
-        .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
-        .where(eq(outboxEvents.id, evt.id));
+
+    await db
+      .insert(notificationEmailDeliveries)
+      .values(recipients.map((userId) => ({ outboxEventId: evt.id, userId })))
+      .onConflictDoNothing();
+    const deliveries = await db
+      .select()
+      .from(notificationEmailDeliveries)
+      .where(
+        and(
+          eq(notificationEmailDeliveries.outboxEventId, evt.id),
+          isNull(notificationEmailDeliveries.processedAt),
+        ),
+      );
+
+    // A delivery row should always exist after the upsert. Treat an empty
+    // result as a completed skip defensively (for example, if a recipient
+    // was deleted between the two statements) so the event cannot spin.
+    if (deliveries.length === 0) {
+      skipped += recipients.length;
+      await markEmailEventProcessed(evt.id);
       continue;
     }
-    // FEAT-AUDIT-R5 — single round-trip for both `email` and
-    // `locale` columns. The previous implementation issued two
-    // separate `select` statements per outbox event; with 50
-    // events/tick and 1-minute cadence the wasted round-trips
-    // were meaningful.
-    const [user] = await db
-      .select({ email: users.email, locale: users.locale })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-    if (!user) {
-      skipped += 1;
-      await db
-        .update(outboxEvents)
-        .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
-        .where(eq(outboxEvents.id, evt.id));
-      continue;
+
+    for (const delivery of deliveries) {
+      const wantsEmail = await shouldEmailUserFor(delivery.userId, kind);
+      if (!wantsEmail) {
+        skipped += 1;
+        await markEmailDeliveryProcessed(evt.id, delivery.userId);
+        continue;
+      }
+      const [user] = await db
+        .select({ email: users.email, locale: users.locale })
+        .from(users)
+        .where(eq(users.id, delivery.userId))
+        .limit(1);
+      if (!user) {
+        skipped += 1;
+        await markEmailDeliveryProcessed(evt.id, delivery.userId);
+        continue;
+      }
+      const title = (payload["title"] as string | undefined) ?? defaultTitleFor(kind);
+      const body = (payload["body"] as string | undefined) ?? defaultBodyFor(kind);
+      const messageKey = payload["messageKey"] as string | undefined;
+      const messageParams =
+        (payload["messageParams"] as Record<string, string | number> | undefined) ?? undefined;
+      const { subject, text: emailBody } = renderNotificationEmailCopy(
+        {
+          title,
+          body,
+          ...(messageKey ? { messageKey } : {}),
+          ...(messageParams ? { messageParams } : {}),
+        },
+        user.locale ?? "en",
+      );
+      try {
+        await sendEmail({ to: user.email, subject, text: emailBody });
+        sent += 1;
+        await markEmailDeliveryProcessed(evt.id, delivery.userId, true);
+      } catch (err) {
+        failed += 1;
+        const message = err instanceof Error ? err.message : String(err);
+        const nextAttempt = (delivery.attemptCount ?? 0) + 1;
+        const isPoisoned = nextAttempt >= EMAIL_DLQ_THRESHOLD;
+        await db
+          .update(notificationEmailDeliveries)
+          .set({
+            ...(isPoisoned ? { processedAt: new Date() } : {}),
+            attemptCount: sql`${notificationEmailDeliveries.attemptCount} + 1`,
+            lastError: isPoisoned ? `[poisoned] ${message}` : message,
+          })
+          .where(
+            and(
+              eq(notificationEmailDeliveries.outboxEventId, evt.id),
+              eq(notificationEmailDeliveries.userId, delivery.userId),
+            ),
+          );
+        await db
+          .update(outboxEvents)
+          .set({
+            emailAttemptCount: sql`${outboxEvents.emailAttemptCount} + 1`,
+            emailLastError: isPoisoned ? `[poisoned] ${message}` : message,
+          })
+          .where(eq(outboxEvents.id, evt.id));
+      }
     }
-    const title = (payload["title"] as string | undefined) ?? defaultTitleFor(kind);
-    const body = (payload["body"] as string | undefined) ?? defaultBodyFor(kind);
-    // STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy. When
-    // the outbox event carries a `messageKey` + `messageParams`,
-    // render the email in the recipient's profile locale at
-    // send time. Per master prompt §8 invitations + security
-    // events bypass user preferences, but they still flow
-    // through the i18n rendering so the email body is
-    // locale-correct.
-    const messageKey = payload["messageKey"] as string | undefined;
-    const messageParams =
-      (payload["messageParams"] as Record<string, string | number> | undefined) ?? undefined;
-    const recipientLocale = user.locale ?? "en";
-    const { subject, text: emailBody } = renderNotificationEmailCopy(
-      {
-        title,
-        body,
-        ...(messageKey ? { messageKey } : {}),
-        ...(messageParams ? { messageParams } : {}),
-      },
-      recipientLocale,
-    );
-    try {
-      await sendEmail({ to: user.email, subject, text: emailBody });
-      await db
-        .update(outboxEvents)
-        .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
-        .where(eq(outboxEvents.id, evt.id));
-      sent += 1;
-    } catch (err) {
-      // Failure path: bump attempt_count + write last_error. The
-      // row stays in the queue (processedAt is null) so the next
-      // tick retries — unless the row has already burned through
-      // EMAIL_DLQ_THRESHOLD attempts, in which case we mark it
-      // processed with a `[poisoned]` prefix so the operator
-      // can spot the bad row in a query and the cron stops
-      // spinning on it. Without the threshold, a row whose
-      // recipient address is permanently invalid would loop
-      // forever and fill the outbox table.
-      const message = err instanceof Error ? err.message : String(err);
-      const nextAttempt = (evt.attemptCount ?? 0) + 1;
-      const isPoisoned = nextAttempt >= EMAIL_DLQ_THRESHOLD;
-      await db
-        .update(outboxEvents)
-        .set({
-          ...(isPoisoned ? { processedAt: new Date() } : {}),
-          attemptCount: sql`${outboxEvents.attemptCount} + 1`,
-          lastError: isPoisoned ? `[poisoned] ${message}` : message,
-        })
-        .where(eq(outboxEvents.id, evt.id));
-      failed += 1;
-    }
+
+    const pending = await db
+      .select({ userId: notificationEmailDeliveries.userId })
+      .from(notificationEmailDeliveries)
+      .where(
+        and(
+          eq(notificationEmailDeliveries.outboxEventId, evt.id),
+          isNull(notificationEmailDeliveries.processedAt),
+        ),
+      );
+    if (pending.length === 0) await markEmailEventProcessed(evt.id);
   }
   return { processed: events.length, sent, skipped, failed };
+}
+
+async function emailRecipientIds(eventType: string, payload: Record<string, unknown>) {
+  const payloadRecipients =
+    eventType === "comment_created"
+      ? ((payload["mentionedUserIds"] as unknown[] | undefined) ?? [])
+      : [payload["userId"]];
+  if (eventType !== "publication_recorded") {
+    return [...new Set(payloadRecipients.filter((id): id is string => typeof id === "string"))];
+  }
+  const contentItemId = payload["contentItemId"] as string | undefined;
+  if (!contentItemId) return [];
+  const [item] = await db
+    .select({ contentOwnerId: contentItems.contentOwnerId, designerId: contentItems.designerId })
+    .from(contentItems)
+    .where(eq(contentItems.id, contentItemId))
+    .limit(1);
+  return [...new Set([item?.contentOwnerId, item?.designerId].filter((id): id is string => !!id))];
+}
+
+async function markEmailDeliveryProcessed(eventId: string, userId: string, sent = false) {
+  await db
+    .update(notificationEmailDeliveries)
+    .set({
+      processedAt: new Date(),
+      ...(sent ? { attemptCount: sql`${notificationEmailDeliveries.attemptCount} + 1` } : {}),
+    })
+    .where(
+      and(
+        eq(notificationEmailDeliveries.outboxEventId, eventId),
+        eq(notificationEmailDeliveries.userId, userId),
+      ),
+    );
+}
+
+async function markEmailEventProcessed(eventId: string) {
+  await db
+    .update(outboxEvents)
+    .set({ emailProcessedAt: new Date() })
+    .where(eq(outboxEvents.id, eventId));
 }
 
 /**
@@ -512,7 +552,7 @@ function eventTypeToNotificationKind(eventType: string): NotificationKind | null
 async function fanOutCommentCreated(
   payload: Record<string, unknown>,
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-) {
+): Promise<string[]> {
   const commentId = payload["commentId"] as string | undefined;
   const contentItemId = payload["contentItemId"] as string | undefined;
   const authorId = payload["authorId"] as string | undefined;
@@ -525,10 +565,11 @@ async function fanOutCommentCreated(
   // through to `maybeNotify` so the row's actionUrl is
   // exactly that — no fallback needed.
   const actionUrl = payload["actionUrl"] as string | undefined;
-  if (!commentId || !contentItemId || !authorId) return;
+  if (!commentId || !contentItemId || !authorId) return [];
 
   // Mentions: notify each mentioned user
-  for (const userId of mentionedUserIds) {
+  const recipients = [...new Set(mentionedUserIds.filter((id): id is string => Boolean(id)))];
+  for (const userId of recipients) {
     await maybeNotify(
       {
         userId,
@@ -544,19 +585,12 @@ async function fanOutCommentCreated(
         ...(actionUrl ? { actionUrl } : {}),
       },
     );
-    // FEAT-08: read the user's email opt-in before queuing any email
-    // for this mention. The SMTP transport doesn't ship in v1, so
-    // today this is a single read + no-op (the "skip" the audit asks
-    // for). The future email worker calls the same helper, so when
-    // Mailcow wiring lands the opt-out is already enforced here.
-    if (!(await shouldEmailUserFor(userId, "mention"))) {
-      continue;
-    }
   }
 
   // (Reply notifications: would notify the parent comment's author.
   //  Out of scope for v1 — the in-app list shows unread comments anyway.)
   void visibility;
+  return recipients;
 }
 
 /**
@@ -589,9 +623,9 @@ async function fanOutSingleRecipient(
   payload: Record<string, unknown>,
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   kind: NotificationKind,
-) {
+): Promise<string[]> {
   const userId = payload["userId"] as string | undefined;
-  if (!userId) return;
+  if (!userId) return [];
   const contentItemId = payload["contentItemId"] as string | undefined;
   const title = (payload["title"] as string | undefined) ?? defaultTitleFor(kind);
   const body = (payload["body"] as string | undefined) ?? defaultBodyFor(kind);
@@ -618,6 +652,7 @@ async function fanOutSingleRecipient(
     tx,
     { ...(workspaceId ? { workspaceId } : {}) },
   );
+  return [userId];
 }
 
 /**
@@ -631,20 +666,23 @@ async function fanOutSingleRecipient(
 async function fanOutPublicationRecorded(
   payload: Record<string, unknown>,
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-) {
+): Promise<string[]> {
   const contentItemId = payload["contentItemId"] as string | undefined;
   const channelStatus = payload["channelStatus"] as string | undefined;
-  if (!contentItemId) return;
-  if (channelStatus !== "published" && channelStatus !== "failed") return;
+  if (!contentItemId) return [];
+  if (channelStatus !== "published" && channelStatus !== "failed") return [];
 
   // Read owner + designer so we can fan out to both.
   const [item] = await tx
-    .select({ workspaceId: contentItems.workspaceId })
+    .select({
+      workspaceId: contentItems.workspaceId,
+      contentOwnerId: contentItems.contentOwnerId,
+      designerId: contentItems.designerId,
+    })
     .from(contentItems)
     .where(eq(contentItems.id, contentItemId))
     .limit(1);
-  if (!item) return;
-  const ownerId = (payload["actorId"] as string | undefined) ?? null;
+  if (!item) return [];
   const failureReason = (payload["failureReason"] as string | undefined) ?? null;
   const title = channelStatus === "failed" ? "Publish failure" : "Item published";
   const body =
@@ -660,11 +698,13 @@ async function fanOutPublicationRecorded(
   const messageParams =
     channelStatus === "failed" && failureReason ? { reason: failureReason } : undefined;
 
-  // Fan out to owner (the actor who recorded the outcome).
-  if (ownerId) {
+  const recipients = [item.contentOwnerId, item.designerId].filter(
+    (id): id is string => typeof id === "string" && id.length > 0,
+  );
+  for (const userId of recipients) {
     await fanOutSingleRecipient(
       {
-        userId: ownerId,
+        userId,
         contentItemId,
         title,
         body,
@@ -686,6 +726,7 @@ async function fanOutPublicationRecorded(
       "system",
     );
   }
+  return recipients;
 }
 
 function defaultTitleFor(kind: NotificationKind): string {
@@ -920,20 +961,7 @@ export async function shouldDigestUserFor(userId: string): Promise<boolean> {
  * bell-only; the email surface is reserved for user-driven
  * kinds).
  */
-export const NotificationKindSchemaValues = NotificationKindSchema.options;
-export type NotificationKindForPrefs = (typeof NotificationKindSchemaValues)[number];
-
-export type NotificationKindPrefs = {
-  inAppEnabled: boolean;
-  emailEnabled: boolean;
-};
-
-export type NotificationPreferencesSnapshot = Record<
-  NotificationKindForPrefs,
-  NotificationKindPrefs
-> & {
-  dailyDigest: boolean;
-};
+export const NotificationKindSchemaValues = NOTIFICATION_KIND_VALUES;
 
 /**
  * Default snapshot. Matches the schema's column defaults

@@ -7,11 +7,11 @@
 # requires the CRON_SECRET in an `Authorization: Bearer <secret>`
 # header.
 #
-# Reads the outbox_events table for rows the in-app dispatcher
-# (outbox-dispatch.sh) already wrote, fans them out as Mailcow
-# emails honouring notification_preferences.email_enabled, and
-# marks the rows processed. Failures bump attempt_count and
-# remain in the queue for the next tick (retry-safe).
+# Reads due outbox_events rows using the email-specific delivery
+# state, fans them out as Mailcow emails honouring
+# notification_preferences.email_enabled, and leaves in-app
+# delivery state untouched. Per-recipient failures remain in the
+# email queue for the next tick (retry-safe).
 #
 # Security + exit codes match outbox-dispatch.sh so the cron
 # behaviour is uniform.
