@@ -99,6 +99,10 @@ rule, update the membership, and write the audit event in one transaction.
 
 ## Confirmed controls
 
+- Invitation create/resend/revoke remains Agency Admin-only in the current
+  product boundary. Workspace Managers can manage existing team assignments
+  within their workspace; this audit does not expand the separate invitation
+  workflow without a product decision.
 - Agency Admin access is checked from the active agency membership, not from a
   client-provided role or stale session badge.
 - Cross-agency workspace IDs are rejected by the server action.
