@@ -1,5 +1,6 @@
 import "server-only";
 import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { updateTag } from "next/cache";
 import { db } from "@/lib/db";
 import {
   notifications,
@@ -13,6 +14,7 @@ import { type Actor } from "@/lib/auth/policy";
 import { sendEmail } from "@/lib/email";
 import { tFor } from "@/messages";
 import { renderNotificationEmailCopy } from "@/lib/notifications/email-copy";
+import { notificationsUserTag } from "@/lib/notifications/cache";
 import { z } from "zod";
 
 /**
@@ -292,8 +294,6 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
   // — they will see the new notification at most 30s late,
   // not forever-stale.
   if (recipientIds.size > 0) {
-    const { updateTag } = await import("next/cache");
-    const { notificationsUserTag } = await import("@/lib/notifications/cache");
     const Sentry = await import("@sentry/nextjs");
     for (const userId of recipientIds) {
       try {
