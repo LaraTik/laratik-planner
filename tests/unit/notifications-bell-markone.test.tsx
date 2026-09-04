@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 /**
@@ -136,5 +136,40 @@ describe("NotificationsBell markOne — optimistic badge decrement", () => {
     });
 
     expect(markReadActionMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("NotificationsBell — F22 keyboard shortcut", () => {
+  it("toggles the popover when Cmd+J is pressed outside a text input", () => {
+    render(<NotificationsBell initial={initialUnread(1)} initialUnread={1} copy={copy} />);
+    // Closed initially.
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    // Cmd+J (or Ctrl+J) opens it.
+    fireEvent.keyDown(window, { key: "j", metaKey: true });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    // Pressing again closes it.
+    fireEvent.keyDown(window, { key: "j", metaKey: true });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("toggles the popover when a bare 'j' is pressed", () => {
+    render(<NotificationsBell initial={initialUnread(1)} initialUnread={1} copy={copy} />);
+    fireEvent.keyDown(window, { key: "j" });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("does not toggle when typing into a text input", () => {
+    render(
+      <div>
+        <input data-testid="textbox" type="text" />
+        <NotificationsBell initial={initialUnread(1)} initialUnread={1} copy={copy} />
+      </div>,
+    );
+    const textbox = screen.getByTestId("textbox");
+    fireEvent.keyDown(textbox, { key: "j" });
+    // Bell should still be closed.
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

@@ -81,6 +81,34 @@ export function NotificationsBell({
     return () => window.clearInterval(id);
   }, [open, router]);
 
+  // F22 — keyboard shortcut. Cmd/Ctrl+J (or plain "j" outside
+  // a text input) toggles the bell popover. The popover already
+  // has Escape handling (line 97) and the open-effect below
+  // moves focus to the dialog, so the toggle is symmetric.
+  // The handler only fires when the user is NOT typing into a
+  // text input or contenteditable region — opening the bell
+  // while writing a comment would be a papercut.
+  React.useEffect(() => {
+    function isTypingTarget(target: EventTarget | null): boolean {
+      if (!(target instanceof HTMLElement)) return false;
+      const tag = target.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (target.isContentEditable) return true;
+      return false;
+    }
+    function onKey(e: KeyboardEvent) {
+      if (isTypingTarget(e.target)) return;
+      const isToggle = (e.key === "j" || e.key === "J") && (e.metaKey || e.ctrlKey);
+      const isPlainJ = e.key === "j" && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey;
+      if (isToggle || isPlainJ) {
+        e.preventDefault();
+        setOpen((o) => !o);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   // Close on outside click + Escape; restore focus to the trigger.
   React.useEffect(() => {
     if (!open) return;
