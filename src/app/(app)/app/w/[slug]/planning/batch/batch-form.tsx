@@ -640,7 +640,7 @@ function FieldErrors({
 }) {
   const values = issues.filter((issue) => issue.field === field);
   return values.length ? (
-    <ul className="text-label text-danger mt-1 space-y-0.5" role="alert">
+    <ul className="text-label text-danger mt-1 space-y-0.5" aria-live="polite">
       {values.map((issue, index) => (
         <li key={`${issue.code}-${index}`}>{issueText(t, issue)}</li>
       ))}
