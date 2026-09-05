@@ -7,6 +7,7 @@ import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { PageHeader } from "@/components/workspace/page-header";
 import { BatchForm } from "./batch-form";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { listActiveChannelsForWorkspace } from "@/lib/channels/service";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -27,6 +28,7 @@ export default async function BatchAddPage({ params }: { params: Promise<{ slug:
   )
     notFound();
   const { t } = await tForActive();
+  const channels = await listActiveChannelsForWorkspace(workspace.id);
   return (
     <div className="mx-auto max-w-3xl space-y-6" data-testid="workspace-planning-batch">
       <PageHeader
@@ -42,7 +44,15 @@ export default async function BatchAddPage({ params }: { params: Promise<{ slug:
           </>
         }
       />
-      <BatchForm slug={slug} />
+      <BatchForm
+        slug={slug}
+        workspaceTimezone={workspace.timezone}
+        channels={channels.map((channel) => ({
+          id: channel.id,
+          platform: channel.platform,
+          accountName: channel.accountName,
+        }))}
+      />
     </div>
   );
 }

@@ -657,6 +657,14 @@ export async function batchCreateContentItems(actor: Actor, input: BatchCreateIn
       .limit(1),
   ]);
   const settings = settingsRows[0];
+  const activeChannelIds = new Set(channels.map((channel) => channel.id));
+  for (const item of parsed.items) {
+    const selectedChannelIds = item.channelIds ?? channels.map((channel) => channel.id);
+    const invalidChannel = selectedChannelIds.find((channelId) => !activeChannelIds.has(channelId));
+    if (invalidChannel) {
+      throw new Error(`Row "${item.title}" has an invalid or inactive channel selection.`);
+    }
+  }
   return db.transaction(async (tx) => {
     const ids: string[] = [];
     for (const item of parsed.items) {
@@ -706,12 +714,14 @@ export async function batchCreateContentItems(actor: Actor, input: BatchCreateIn
         .returning({ id: contentItems.id });
       if (!created) throw new Error("Batch row could not be created");
       ids.push(created.id);
-      if (channels.length)
-        await tx
-          .insert(contentItemChannels)
-          .values(
-            channels.map((channel) => ({ contentItemId: created.id, socialChannelId: channel.id })),
-          );
+      const selectedChannelIds = item.channelIds ?? channels.map((channel) => channel.id);
+      if (selectedChannelIds.length)
+        await tx.insert(contentItemChannels).values(
+          selectedChannelIds.map((socialChannelId) => ({
+            contentItemId: created.id,
+            socialChannelId,
+          })),
+        );
       await tx.insert(contentAssignments).values({
         contentItemId: created.id,
         assignmentType: "owner",

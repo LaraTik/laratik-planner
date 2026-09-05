@@ -475,6 +475,64 @@ describe("batchCreateContentItems", () => {
     expect(designerAssignment).toBeDefined();
     expect((designerAssignment?.values as Record<string, unknown>)["userId"]).toBe("des-1");
   });
+
+  it("uses selected channels per row and preserves an intentional empty selection", async () => {
+    const instagram = "11111111-1111-4111-8111-111111111111";
+    const facebook = "22222222-2222-4222-8222-222222222222";
+    dbMock.state.selectResults.push([]);
+    dbMock.state.selectResults.push([{ id: instagram }, { id: facebook }]);
+    dbMock.state.insertReturningIds.push({ id: "i-selected" });
+    dbMock.state.insertReturningIds.push({ id: "i-empty" });
+
+    await batchCreateContentItems(actor, {
+      workspaceId,
+      items: [
+        {
+          title: "Selected",
+          format: "story",
+          brief: "",
+          plannedPublishAt: new Date(),
+          channelIds: [instagram],
+        },
+        {
+          title: "Unassigned",
+          format: "article",
+          brief: "",
+          plannedPublishAt: new Date(),
+          channelIds: [],
+        },
+      ],
+    });
+    const channelInserts = dbMock.state.insertCalls.filter(
+      (call) =>
+        Array.isArray(call.values) &&
+        (call.values as Array<Record<string, unknown>>)[0]?.socialChannelId,
+    );
+    expect(channelInserts).toHaveLength(1);
+    expect(channelInserts[0]?.values).toEqual([
+      { contentItemId: "i-selected", socialChannelId: instagram },
+    ]);
+  });
+
+  it("rejects a channel that is not active in the workspace before creating rows", async () => {
+    dbMock.state.selectResults.push([]);
+    dbMock.state.selectResults.push([{ id: "ch-active" }]);
+    await expect(
+      batchCreateContentItems(actor, {
+        workspaceId,
+        items: [
+          {
+            title: "Invalid channel",
+            format: "story",
+            brief: "",
+            plannedPublishAt: new Date(),
+            channelIds: ["33333333-3333-4333-8333-333333333333"],
+          },
+        ],
+      }),
+    ).rejects.toThrow(/invalid or inactive channel/i);
+    expect(dbMock.state.insertReturningIds).toHaveLength(0);
+  });
 });
 
 describe("getContentItem", () => {

@@ -7,7 +7,16 @@ import { listWorkspaceContent } from "@/lib/content/service";
 import { listWorkspaceContentEnriched, resolveActorRoles } from "@/lib/content/enriched-list";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
-import { Clock, Files, Plus, FileText, Download, AlertTriangle, LayoutGrid } from "lucide-react";
+import {
+  Clock,
+  Files,
+  Plus,
+  FileText,
+  Download,
+  AlertTriangle,
+  LayoutGrid,
+  CheckCircle2,
+} from "lucide-react";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlanningListActions } from "@/components/workspace/planning-list-actions";
 import { PlanningListGrouped } from "@/components/workspace/planning-list-grouped";
@@ -80,6 +89,7 @@ export default async function PlanningPage({
      * (non-numeric, <1) are clamped to 1.
      */
     page?: string;
+    batchCreated?: string;
   }>;
 }) {
   const { slug } = await params;
@@ -95,6 +105,11 @@ export default async function PlanningPage({
   ]);
 
   const filters = await searchParams;
+  const batchCreatedValue = Number.parseInt(filters.batchCreated ?? "", 10);
+  const batchCreated =
+    Number.isInteger(batchCreatedValue) && batchCreatedValue > 0 && batchCreatedValue <= 50
+      ? batchCreatedValue
+      : null;
   const parsedFilters = parsePlanningFilterParams(filters);
   const match = filters.month?.match(/^(\d{4})-(\d{2})$/);
   const now = match ? new Date(Number(match[1]), Number(match[2]) - 1, 1) : new Date();
@@ -271,6 +286,18 @@ export default async function PlanningPage({
 
   return (
     <div className="mx-auto w-full max-w-[1440px] space-y-6" data-testid="workspace-planning">
+      {batchCreated ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="border-success/30 bg-success-container text-on-success-container flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold"
+        >
+          <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+          {t(batchCreated === 1 ? "batchAdd.form.successOne" : "batchAdd.form.successMany", {
+            count: batchCreated,
+          })}
+        </div>
+      ) : null}
       <PageHeader
         eyebrow={ws.name}
         title={t("planning.title")}

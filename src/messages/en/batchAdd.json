@@ -1,15 +1,108 @@
 {
   "title": "Batch add",
-  "description": "Paste up to 50 ideas. All active channels and workspace defaults are applied automatically. The batch is atomic.",
+  "description": "Plan up to 50 draft ideas in a spreadsheet-style grid. Each row can use its own channels and format.",
   "form": {
-    "rowsLabel": "One idea per line",
-    "placeholder": "Launch teaser | short_form_video | 2026-09-01T09:00:00Z | Reveal the new collection\nBehind the scenes | story | 2026-09-03T12:00:00Z | A walkthrough of the studio\n# advanced — caption, hashtags, location:\nSpring drop | static_post | 2026-09-05T09:00:00Z | The reveal | Pre-order now | #spring #drop | Dubai Mall|fb-123",
-    "rowOne": "{count} row parsed",
-    "rowMany": "{count} rows parsed",
+    "rowsLabel": "Batch rows",
+    "placeholder": "Spring collection | static_post | 2026-09-05 09:00 | Single image announcing the pre-order\nStudio behind the scenes | short_form_video | 2026-09-06 18:00 | 20-second vertical Reel showing the roasting process\nHow to brew the autumn blend | long_form_video | 2026-09-07 10:00 | Eight-minute YouTube tutorial with chapters",
+    "rowOne": "{count} row",
+    "rowMany": "{count} rows",
     "withErrors": "{count} with errors",
     "rowError": "Row {line}",
-    "createDrafts": "Create drafts",
-    "creating": "Creating…",
+    "importTitle": "Start with your batch",
+    "importDescription": "Paste spreadsheet cells to create editable rows, or add ideas one at a time below.",
+    "pasteSpreadsheet": "Paste from spreadsheet",
+    "formatGuideTitle": "Choose the right format",
+    "formatGuideDescription": "Creative details such as scenes, chapters, duration, and visual direction are completed after the draft is created.",
+    "validCount": "{count} valid",
+    "warningCount": "{count} warnings",
+    "errorCount": "{count} errors",
+    "batchTooLarge": "A batch can contain at most {max} rows.",
+    "timezone": "Workspace time: {timezone}",
+    "gridCaption": "Batch ideas grid",
+    "title": "Title",
+    "format": "Format",
+    "dateTime": "Date & time",
+    "brief": "Short brief",
+    "channels": "Channels",
+    "validation": "Validation",
+    "validationHeader": "Validation",
+    "actions": "Actions",
+    "addRow": "Add row",
+    "fixErrors": "Fix all blocking errors before saving.",
+    "closeDialog": "Close paste dialog",
+    "pasteTitle": "Paste from spreadsheet",
+    "pasteDescription": "Copy rows from a spreadsheet with columns for Title, Format, Date & time, Short brief, and Channels.",
+    "rawPasteLabel": "Spreadsheet or raw paste",
+    "pasteHint": "Dates without an offset use the workspace timezone ({timezone}). Raw pipe rows remain supported; channels can be selected in the grid.",
+    "importRows": "Import rows",
+    "successOne": "Created {count} draft successfully.",
+    "successMany": "Created {count} drafts successfully.",
+    "selectFormat": "Select format",
+    "titleForRow": "Title for row {row}",
+    "formatForRow": "Format for row {row}",
+    "dateForRow": "Date and time for row {row}",
+    "briefForRow": "Short brief for row {row}",
+    "channelsForRow": "Channels for row {row}",
+    "removeRow": "Remove row {row}",
+    "rowNumber": "Row {row}",
+    "channelsSelected": "{count} selected",
+    "noChannels": "No channels are available.",
+    "noActiveChannels": "No active channels",
+    "validation": {
+      "valid": "Valid",
+      "attention": "Needs attention",
+      "error": "Error",
+      "title_required": "Add a title.",
+      "title_too_short": "Use at least {min} characters.",
+      "title_too_long": "Keep the title under {max} characters.",
+      "format_required": "Choose a format.",
+      "format_invalid": "Choose a supported format.",
+      "date_required": "Add a date and time.",
+      "date_invalid": "Use a valid date and time in the workspace timezone.",
+      "brief_too_long": "Keep the brief under {max} characters.",
+      "caption_too_long": "Keep the caption under {max} characters.",
+      "hashtags_invalid": "Check the hashtag values.",
+      "location_invalid": "Check the location value.",
+      "brief_empty": "A brief helps the team understand the idea.",
+      "duplicate_date": "Another row uses this date and time.",
+      "channel_unknown": "One or more channels could not be matched."
+    },
+    "formats": {
+      "static_post": {
+        "description": "One image, text, or static feed post. No video duration or scene list is required.",
+        "detail": "Later: add the hook, message, CTA, hashtags, and references."
+      },
+      "carousel": {
+        "description": "A sequence of images or cards for a swipeable post.",
+        "detail": "Later: define each card, message, and visual direction."
+      },
+      "story": {
+        "description": "Short-lived vertical content for stories.",
+        "detail": "Later: add frames, stickers, captions, and timing."
+      },
+      "short_form_video": {
+        "description": "A Reel, TikTok, or Short; normally vertical and fast to watch.",
+        "detail": "Later: add scenes, on-screen text, voice-over, audio, captions, and cover direction."
+      },
+      "long_form_video": {
+        "description": "A YouTube, LinkedIn, or other long-form video.",
+        "detail": "Later: add the description, chapters, captions, and references."
+      },
+      "live_content": {
+        "description": "A live stream or scheduled broadcast.",
+        "detail": "Later: add the run of show, host, and supporting details."
+      },
+      "article": {
+        "description": "A written article, blog post, or newsletter-style entry.",
+        "detail": "Later: add the outline, body, references, and CTA."
+      },
+      "other": {
+        "description": "A custom content item that does not fit another format.",
+        "detail": "Later: describe the deliverable in More details."
+      }
+    },
+    "createDrafts": "Save all as drafts",
+    "creating": "Saving drafts…",
     "cancel": "Cancel"
   }
 }

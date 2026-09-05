@@ -27,7 +27,13 @@ import {
   batchCreateContentItems,
   mergeAiDraftIntoBrief,
 } from "@/lib/content/service";
-import { BatchCreateSchema, parseBatchRows } from "@/lib/content/batch";
+import {
+  BatchClientRowSchema,
+  BatchCreateSchema,
+  parseBatchDateTime,
+  parseBatchRows,
+  validateBatchRow,
+} from "@/lib/content/batch";
 import {
   SubmitDeliverySchema,
   submitDelivery,
@@ -211,59 +217,96 @@ export async function batchCreateAction(
 ): Promise<ActionState<BatchCreateFields>> {
   const { actor, workspace } = await requireWorkspaceContext(workspaceSlug);
   const rawRows = String(formData.get("rows") ?? "");
-  const rows = parseBatchRows(rawRows);
-  // Surface parse-time errors (over-length caption, unknown
-  // format, etc.) before the server tries to write the batch.
-  const bad = rows.filter((r) => "parseError" in r);
-  if (bad.length > 0) {
-    const message = `Row ${bad
-      .map((b) => b.lineNumber)
-      .join(", ")}: ${bad.map((b) => ("parseError" in b ? b.parseError : "")).join("; ")}`;
+  let items: Array<{
+    title: string;
+    format: string;
+    brief: string;
+    plannedPublishAt: Date;
+    channelIds?: string[];
+    extensions?: Record<string, unknown>;
+  }>;
+
+  if (rawRows.trim().startsWith("[")) {
+    let decoded: unknown;
+    try {
+      decoded = JSON.parse(rawRows);
+    } catch {
+      return {
+        error: "The imported rows are not valid JSON.",
+        fieldErrors: { rows: "Invalid rows" },
+      };
+    }
+    const clientRows = z.array(BatchClientRowSchema).safeParse(decoded);
+    if (!clientRows.success) {
+      return {
+        error: "The imported rows are incomplete. Review the highlighted rows and try again.",
+        fieldErrors: { rows: "Invalid rows" },
+      };
+    }
+    const invalidRows: number[] = [];
+    items = clientRows.data.map((row, index) => {
+      const issues = validateBatchRow({
+        title: row.title,
+        format: row.format,
+        plannedPublishAt: row.plannedPublishAt,
+        brief: row.brief,
+        timeZone: workspace.timezone,
+        ...(row.extensions ? { extensions: row.extensions } : {}),
+      });
+      const plannedPublishAt = parseBatchDateTime(row.plannedPublishAt, workspace.timezone);
+      if (issues.some((issue) => issue.severity === "error") || !plannedPublishAt)
+        invalidRows.push(index + 1);
+      return {
+        title: row.title,
+        format: row.format,
+        brief: row.brief,
+        plannedPublishAt: plannedPublishAt ?? new Date(NaN),
+        channelIds: row.channelIds,
+        ...(row.extensions ? { extensions: row.extensions } : {}),
+      };
+    });
+    if (invalidRows.length > 0) {
+      const message = `Rows ${invalidRows.join(", ")}: fix the highlighted errors before saving.`;
+      return { error: message, fieldErrors: { rows: message } };
+    }
+  } else {
+    const rows = parseBatchRows(rawRows);
+    const invalidRows = rows.filter((row) =>
+      validateBatchRow({ ...row, timeZone: workspace.timezone }).some(
+        (issue) => issue.severity === "error",
+      ),
+    );
+    if (invalidRows.length > 0) {
+      const message = `Rows ${invalidRows.map((row) => row.lineNumber).join(", ")}: fix the highlighted errors before saving.`;
+      return { error: message, fieldErrors: { rows: message } };
+    }
+    items = rows.map((row) => ({
+      title: row.title,
+      format: row.format,
+      brief: row.brief,
+      plannedPublishAt:
+        parseBatchDateTime(row.plannedPublishAt, workspace.timezone) ?? new Date(NaN),
+      ...(Object.keys(row.extensions).length > 0 ? { extensions: row.extensions } : {}),
+    }));
+  }
+
+  const parsed = BatchCreateSchema.safeParse({ workspaceId: workspace.id, items });
+  if (!parsed.success) {
     return {
-      error: message,
-      fieldErrors: { rows: message },
+      error: "Review the batch rows and fix the highlighted errors.",
+      fieldErrors: { rows: parsed.error.issues[0]?.message ?? "Invalid rows" },
     };
   }
-  const parsed = BatchCreateSchema.safeParse({
-    workspaceId: workspace.id,
-    items: rows.map((r) => ({
-      title: r.title,
-      format: r.format as
-        | "static_post"
-        | "carousel"
-        | "story"
-        | "short_form_video"
-        | "long_form_video"
-        | "live_content"
-        | "article"
-        | "other",
-      brief: r.brief,
-      plannedPublishAt: r.plannedPublishAt,
-    })),
-  });
-  if (!parsed.success) {
-    return fieldErrorsFromZod<BatchCreateFields>(parsed.error);
-  }
-  // The base `BatchCreateInput` doesn't carry per-row
-  // extensions (caption / hashtags / location). We pass them
-  // to the service as a side-channel; rows without
-  // extensions just contribute `undefined`. The service
-  // builds the `formatPayload` for each row from the
-  // extensions.
-  const itemsWithExtensions = parsed.data.items.map((item, idx) => {
-    const ext = rows[idx]?.extensions ?? {};
-    return { ...item, extensions: ext };
-  });
   try {
     await batchCreateContentItems(actor, {
       ...parsed.data,
-      items: itemsWithExtensions,
+      items: parsed.data.items,
     });
   } catch (error) {
     return actionFailure<BatchCreateFields>(error, "The batch could not be saved.");
   }
   revalidatePath(`/app/w/${workspaceSlug}/planning`);
-  redirect(`/app/w/${workspaceSlug}/planning`);
+  redirect(`/app/w/${workspaceSlug}/planning?batchCreated=${parsed.data.items.length}`);
 }
 
 // ─── Workflow transition ──────────────────────────────────────────────
