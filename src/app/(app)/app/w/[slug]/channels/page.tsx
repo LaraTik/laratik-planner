@@ -256,12 +256,16 @@ export default async function ChannelsPage({
   // it and renders the picker with a candidates list of existing
   // channels whose `external_account_id` matches.
   const pending = canManage ? await findPendingConnectionForWorkspace(db, workspace.id) : null;
-  const reconnectableCount = rows.filter(
-    (row) =>
-      (row.platform === "facebook" || row.platform === "instagram") &&
-      row.connectionStatus === "disconnected" &&
-      row.externalAccountId !== null,
-  ).length;
+  // A detached channel keeps its provider account ID so it can be matched
+  // against the next OAuth discovery result. Use the missing connection
+  // relation as the durable reconnect signal; older rows may have stale or
+  // inconsistent status metadata after a grant was revoked.
+  const isReconnectableMetaChannel = (row: ChannelRow) =>
+    (row.platform === "facebook" || row.platform === "instagram") &&
+    row.externalAccountId !== null &&
+    row.socialConnectionId === null &&
+    row.connectionStatus !== "manual";
+  const reconnectableCount = rows.filter(isReconnectableMetaChannel).length;
   const metaPublishingReadiness = await getMetaPublishingReadinessForWorkspace(
     workspace.agencyId,
     workspace.id,
@@ -276,8 +280,7 @@ export default async function ChannelsPage({
           channelId: r.id,
           accountName: r.accountName,
           alreadyConnected: r.socialConnectionId !== null,
-          previouslyConnected:
-            r.connectionStatus === "disconnected" && r.socialConnectionId === null,
+          previouslyConnected: isReconnectableMetaChannel(r),
         }))
     : [];
   // Surface the OAuth error code set by the callback when the user
