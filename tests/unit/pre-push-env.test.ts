@@ -6,12 +6,16 @@ const HOOK_PATH = resolve(process.cwd(), ".husky/pre-push");
 const DEFAULT_TEST_DATABASE_URL =
   "postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test";
 
+// `git push` sends 40 zeros in the REMOTE_SHA slot when the branch has no
+// upstream yet (a new-branch push). The pre-push hook recognises that
+// sentinel and unconditionally sets PUSH_HAS_TESTABLE_CHANGE=1, so the
+// test does not need a real parent SHA — and stays correct in CI's
+// shallow `actions/checkout@v4` clone (default `fetch-depth: 1`), where
+// `HEAD^` does not exist.
+const NEW_BRANCH_REMOTE_SHA = "0".repeat(40);
+
 function runHook(testDatabaseUrl?: string): string {
   const localSha = execFileSync("git", ["rev-parse", "HEAD"], {
-    cwd: process.cwd(),
-    encoding: "utf8",
-  }).trim();
-  const remoteSha = execFileSync("git", ["rev-parse", "HEAD^"], {
     cwd: process.cwd(),
     encoding: "utf8",
   }).trim();
@@ -29,7 +33,7 @@ function runHook(testDatabaseUrl?: string): string {
     {
       cwd: process.cwd(),
       env: { ...env, HOOK_PATH: HOOK_PATH },
-      input: `refs/heads/main ${localSha} refs/heads/main ${remoteSha}\n`,
+      input: `refs/heads/main ${localSha} refs/heads/main ${NEW_BRANCH_REMOTE_SHA}\n`,
       encoding: "utf8",
     },
   );
