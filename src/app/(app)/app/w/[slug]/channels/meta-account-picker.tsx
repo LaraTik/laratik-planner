@@ -39,11 +39,18 @@ export type PickerCandidate = {
   channelId: string;
   accountName: string;
   alreadyConnected: boolean;
+  /** The channel was connected before the Meta grant was revoked. */
+  previouslyConnected?: boolean;
 };
 
 export type MetaAccountPickerCopy = {
   title: string;
   description: string;
+  reconnectTitle: string;
+  reconnectDescription: string;
+  reconnectButton: string;
+  reviewAccounts: string;
+  reconnecting: string;
   bulkSelection: string;
   selectAll: string;
   unselectAll: string;
@@ -62,6 +69,12 @@ export type MetaAccountPickerCopy = {
 const DEFAULT_COPY: MetaAccountPickerCopy = {
   title: "Connect Meta destinations",
   description: "We found {count} managed destination{suffix}.",
+  reconnectTitle: "Reconnect Meta accounts",
+  reconnectDescription:
+    "We found {count} accounts that were connected to this workspace before. Restore them without selecting every account again.",
+  reconnectButton: "Reconnect previous accounts",
+  reviewAccounts: "Review accounts",
+  reconnecting: "Reconnecting…",
   bulkSelection: "Bulk selection",
   selectAll: "Select all",
   unselectAll: "Unselect all",
@@ -102,8 +115,17 @@ export function MetaAccountPicker({
       (result, [name, replacement]) => result.replaceAll(`{${name}}`, String(replacement)),
       value,
     );
+  const previousProfiles = profiles.filter((profile) =>
+    candidates.some(
+      (candidate) =>
+        candidate.providerAccountId === profile.providerAccountId && candidate.previouslyConnected,
+    ),
+  );
+  const hasPreviousProfiles = previousProfiles.length > 0;
+  const [reviewMode, setReviewMode] = useState(!hasPreviousProfiles);
   const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(profiles.map((p) => p.providerAccountId)),
+    () =>
+      new Set((hasPreviousProfiles ? previousProfiles : profiles).map((p) => p.providerAccountId)),
   );
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -117,11 +139,11 @@ export function MetaAccountPicker({
     });
   }
 
-  function submit() {
+  function submit(profileSelection = selected) {
     setError(null);
     const payload: FinalizeSelectionInput = {
       connectionId,
-      profiles: profiles.filter((p) => selected.has(p.providerAccountId)),
+      profiles: profiles.filter((p) => profileSelection.has(p.providerAccountId)),
     };
     if (payload.profiles.length === 0) {
       setError(labels.pickOne);
@@ -135,6 +157,48 @@ export function MetaAccountPicker({
       }
       onSuccess?.();
     });
+  }
+
+  if (hasPreviousProfiles && !reviewMode) {
+    return (
+      <Card padding="lg" data-testid="meta-account-picker">
+        <div className="space-y-4" data-testid="meta-reconnect-card">
+          <div>
+            <h2 className="text-title-section text-fg-primary font-semibold">
+              {labels.reconnectTitle}
+            </h2>
+            <p className="text-body text-fg-muted mt-1">
+              {interpolate(labels.reconnectDescription, { count: previousProfiles.length })}
+            </p>
+          </div>
+          {error ? (
+            <div role="alert" className="text-body text-danger" data-testid="picker-error">
+              <X className="me-1 inline h-4 w-4" aria-hidden={true} /> {error}
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={() => setReviewMode(true)}
+              data-testid="picker-review-accounts"
+            >
+              {labels.reviewAccounts}
+            </Button>
+            <Button
+              type="button"
+              disabled={pending}
+              onClick={() => submit(new Set(previousProfiles.map((p) => p.providerAccountId)))}
+              data-testid="picker-reconnect-previous"
+              aria-busy={pending}
+            >
+              {pending ? labels.reconnecting : labels.reconnectButton}
+            </Button>
+          </div>
+        </div>
+      </Card>
+    );
   }
 
   return (
@@ -270,7 +334,7 @@ export function MetaAccountPicker({
           <Button
             type="button"
             disabled={pending}
-            onClick={submit}
+            onClick={() => submit()}
             data-testid="picker-submit"
             aria-busy={pending}
           >

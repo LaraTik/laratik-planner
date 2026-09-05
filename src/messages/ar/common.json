@@ -99,6 +99,11 @@
     "picker": {
       "title": "ربط وجهات Meta",
       "description": "عثرنا على {count} وجهة مُدارة{suffix}. اختر صفحات Facebook وحسابات Instagram الاحترافية المرتبطة التي ستستخدمها مساحة العمل هذه.",
+      "reconnectTitle": "إعادة ربط حسابات Meta",
+      "reconnectDescription": "عثرنا على {count} حسابًا كان مرتبطًا بمساحة العمل هذه. استعدها دون تحديد كل حساب مرة أخرى.",
+      "reconnectButton": "إعادة ربط الحسابات السابقة",
+      "reviewAccounts": "مراجعة الحسابات",
+      "reconnecting": "جارٍ إعادة الربط…",
       "bulkSelection": "تحديد جماعي",
       "selectAll": "تحديد الكل",
       "unselectAll": "إلغاء تحديد الكل",

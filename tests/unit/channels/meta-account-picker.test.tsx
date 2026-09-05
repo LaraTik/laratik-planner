@@ -53,6 +53,14 @@ const candidates = [
   },
 ];
 
+const previouslyConnectedCandidate = {
+  providerAccountId: "ig-1",
+  channelId: "ch-1",
+  accountName: "Existing IG",
+  alreadyConnected: true,
+  previouslyConnected: true,
+};
+
 describe("MetaAccountPicker", () => {
   it("renders one fieldset row per profile with a labelled checkbox", () => {
     render(
@@ -92,6 +100,40 @@ describe("MetaAccountPicker", () => {
       />,
     );
     expect(screen.getByText(/Already connected/)).toBeInTheDocument();
+  });
+
+  it("offers one-click reconnect for previously connected profiles", () => {
+    render(
+      <MetaAccountPicker
+        connectionId="conn-1"
+        profiles={profiles}
+        candidates={[previouslyConnectedCandidate]}
+        slug="acme"
+      />,
+    );
+
+    expect(screen.getByTestId("meta-reconnect-card")).toBeInTheDocument();
+    expect(screen.getByTestId("picker-reconnect-previous")).toHaveTextContent(
+      "Reconnect previous accounts",
+    );
+    expect(screen.queryByTestId("picker-row-ig-1")).not.toBeInTheDocument();
+  });
+
+  it("keeps the full picker behind Review accounts for new or unmatched profiles", () => {
+    render(
+      <MetaAccountPicker
+        connectionId="conn-1"
+        profiles={profiles}
+        candidates={[previouslyConnectedCandidate]}
+        slug="acme"
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("picker-review-accounts"));
+
+    expect(screen.getByTestId("picker-row-page-1")).toBeInTheDocument();
+    expect(screen.getByTestId("picker-row-ig-1")).toBeInTheDocument();
+    expect(screen.getByTestId("picker-count")).toHaveTextContent("1 selected");
   });
 
   it("the submit button is initially enabled and reports aria-busy only while pending", () => {

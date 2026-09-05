@@ -99,6 +99,11 @@
     "picker": {
       "title": "Connect Meta destinations",
       "description": "We found {count} managed destination{suffix}. Select the Facebook Pages and linked Instagram professional accounts this workspace should use.",
+      "reconnectTitle": "Reconnect Meta accounts",
+      "reconnectDescription": "We found {count} accounts that were connected to this workspace before. Restore them without selecting every account again.",
+      "reconnectButton": "Reconnect previous accounts",
+      "reviewAccounts": "Review accounts",
+      "reconnecting": "Reconnecting…",
       "bulkSelection": "Bulk selection",
       "selectAll": "Select all",
       "unselectAll": "Unselect all",

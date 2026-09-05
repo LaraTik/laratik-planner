@@ -12,7 +12,6 @@ import { findPendingConnectionForWorkspace } from "@/lib/social/repository";
 import { getMetaPublishingReadinessForWorkspace } from "@/lib/social/publishing-readiness-service";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -25,6 +24,7 @@ import { AddChannelButton } from "./add-channel-button";
 import { ChannelForm } from "./channel-form";
 import { ChannelRowActions } from "./channel-edit-drawer";
 import { MetaAccountPicker } from "./meta-account-picker";
+import { MetaConnectButton } from "./meta-connect-button";
 import { MetaPublishingReadinessCard } from "@/components/workspace/meta-publishing-readiness-card";
 import { metaPublishingReadinessCopy } from "@/lib/social/publishing-readiness-copy";
 
@@ -256,6 +256,12 @@ export default async function ChannelsPage({
   // it and renders the picker with a candidates list of existing
   // channels whose `external_account_id` matches.
   const pending = canManage ? await findPendingConnectionForWorkspace(db, workspace.id) : null;
+  const reconnectableCount = rows.filter(
+    (row) =>
+      (row.platform === "facebook" || row.platform === "instagram") &&
+      row.connectionStatus === "disconnected" &&
+      row.externalAccountId !== null,
+  ).length;
   const metaPublishingReadiness = await getMetaPublishingReadinessForWorkspace(
     workspace.agencyId,
     workspace.id,
@@ -270,6 +276,8 @@ export default async function ChannelsPage({
           channelId: r.id,
           accountName: r.accountName,
           alreadyConnected: r.socialConnectionId !== null,
+          previouslyConnected:
+            r.connectionStatus === "disconnected" && r.socialConnectionId === null,
         }))
     : [];
   // Surface the OAuth error code set by the callback when the user
@@ -352,6 +360,11 @@ export default async function ChannelsPage({
           copy={{
             title: t("common.metaPublishing.picker.title"),
             description: t("common.metaPublishing.picker.description"),
+            reconnectTitle: t("common.metaPublishing.picker.reconnectTitle"),
+            reconnectDescription: t("common.metaPublishing.picker.reconnectDescription"),
+            reconnectButton: t("common.metaPublishing.picker.reconnectButton"),
+            reviewAccounts: t("common.metaPublishing.picker.reviewAccounts"),
+            reconnecting: t("common.metaPublishing.picker.reconnecting"),
             bulkSelection: t("common.metaPublishing.picker.bulkSelection"),
             selectAll: t("common.metaPublishing.picker.selectAll"),
             unselectAll: t("common.metaPublishing.picker.unselectAll"),
@@ -379,19 +392,27 @@ export default async function ChannelsPage({
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="text-body text-fg-primary font-semibold">
-                  {t("users.channels.connectMetaTitle")}
+                  {reconnectableCount > 0
+                    ? t("users.channels.reconnectMetaTitle")
+                    : t("users.channels.connectMetaTitle")}
                 </h3>
                 <p className="text-label text-fg-muted mt-1">
-                  {t("users.channels.connectMetaDescription")}
+                  {reconnectableCount > 0
+                    ? t("users.channels.reconnectMetaDescription", { count: reconnectableCount })
+                    : t("users.channels.connectMetaDescription")}
                 </p>
               </div>
-              <form action="/api/social/meta/connect" method="POST">
-                <input type="hidden" name="slug" value={slug} />
-                <Button type="submit" variant="secondary" data-testid="connect-meta-button">
-                  <PlugZap className="h-4 w-4" aria-hidden={true} />{" "}
-                  {t("users.channels.connectMetaButton")}
-                </Button>
-              </form>
+              <MetaConnectButton
+                slug={slug}
+                label={
+                  reconnectableCount > 0
+                    ? t("users.channels.reconnectMetaButton")
+                    : t("users.channels.connectMetaButton")
+                }
+                pendingLabel={t("users.channels.metaConnectPending")}
+                errorLabel={t("users.channels.metaConnectError")}
+                testId={reconnectableCount > 0 ? "reconnect-meta-button" : "connect-meta-button"}
+              />
             </div>
           </Card>
         ) : (
