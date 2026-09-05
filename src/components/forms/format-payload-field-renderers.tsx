@@ -43,6 +43,9 @@ export interface FieldRendererProps {
   editable: boolean;
   aiEnabled: boolean;
   contentItemId: string;
+  enumValues?: ReadonlyArray<string>;
+  numberMin?: number;
+  numberMax?: number;
   /**
    * Bound translator from the parent editor (`tForActive()`).
    * The simple text/long-text renderers receive the
@@ -1022,12 +1025,7 @@ export const RENDERERS: Record<string, FieldRenderer> = {
   thumbnailDirection: PlainTextFieldRenderer,
   transcriptNotes: LongTextFieldRenderer,
   // Enums — values are passed via `enumValues` on the manifest entry.
-  ratio: (props) => (
-    <EnumFieldRenderer
-      {...props}
-      enumValues={(props as unknown as { enumValues?: readonly string[] }).enumValues ?? []}
-    />
-  ),
+  ratio: (props) => <EnumFieldRenderer {...props} enumValues={props.enumValues ?? []} />,
   // `objective` and `audience` are rendered side-by-side as a
   // single grid (a "common objective + audience" header that
   // every format shares). The editor keys the lookup off
@@ -1048,7 +1046,9 @@ export const RENDERERS: Record<string, FieldRenderer> = {
   qaPrompts: QaPromptsFieldRenderer,
   scheduledStart: ScheduledStartFieldRenderer,
   // Numeric fields.
-  durationSeconds: (props) => <NumberFieldRenderer {...props} min={1} max={3600} />,
+  durationSeconds: (props) => (
+    <NumberFieldRenderer {...props} min={props.numberMin ?? 1} max={props.numberMax ?? 3600} />
+  ),
   expectedDurationMinutes: (props) => <NumberFieldRenderer {...props} min={1} max={600} />,
   frameCount: (props) => <NumberFieldRenderer {...props} min={1} max={5} />,
   slideCount: (props) => <NumberFieldRenderer {...props} min={2} max={10} />,

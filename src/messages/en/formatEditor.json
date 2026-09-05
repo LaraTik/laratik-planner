@@ -156,6 +156,7 @@
     },
     "readOnly": "Read-only — this item is past the editable window.",
     "readOnlyCreative": "Read-only — this item is past changes_requested.",
+    "designerGuidance": "You can edit the assigned production details below. Strategy and audience-copy fields are managed by the planner.",
     "creativeBriefTitle": "{format} content",
     "creativeBriefDescription": "Strategy and creative direction. Audience copy is maintained in the Copy tab.",
     "moreDetails": "More details",

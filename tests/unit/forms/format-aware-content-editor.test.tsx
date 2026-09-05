@@ -96,6 +96,22 @@ describe("FormatAwareContentEditor", () => {
     expect(screen.getByTestId("format-aware-save")).toBeInTheDocument();
   });
 
+  it("lets a designer edit production fields while keeping strategy read-only", () => {
+    render(
+      <FormatAwareContentEditor
+        {...baseProps}
+        format="long_form_video"
+        editableFields={["ratio", "durationSeconds", "chapters"]}
+      />,
+    );
+
+    expect(screen.getByLabelText("Ratio")).not.toBeDisabled();
+    expect(screen.getByRole("option", { name: "16:9" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Hook")).toHaveAttribute("readonly");
+    expect(screen.getByLabelText("Main message")).toHaveAttribute("readonly");
+    expect(screen.getByTestId("chapters-add-empty")).toBeInTheDocument();
+  });
+
   it("uses the humanised format name in the editor title", () => {
     render(<FormatAwareContentEditor {...baseProps} format="short_form_video" />);
     // humanFormat("short_form_video") → "Short Form Video"

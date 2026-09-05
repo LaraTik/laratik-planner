@@ -15,7 +15,12 @@ function humanPlatform(platform: string | undefined): string {
   return platform.charAt(0).toUpperCase() + platform.slice(1);
 }
 import { auth } from "@/lib/auth/config";
-import { getContentItem, listWorkspaceDesigners, UPDATEABLE_STATUSES } from "@/lib/content/service";
+import {
+  DESIGNER_EDITABLE_STATUSES,
+  getContentItem,
+  listWorkspaceDesigners,
+  UPDATEABLE_STATUSES,
+} from "@/lib/content/service";
 import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
 import {
   listPublicationsForItem,
@@ -67,6 +72,7 @@ import { type WorkspaceTab } from "@/components/planning/workspace-tabs";
 import { PublishPackageForm } from "./publish/publish-package-form";
 import { getMetaPublishingReadinessForWorkspace } from "@/lib/social/publishing-readiness-service";
 import { metaPublishingReadinessCopy } from "@/lib/social/publishing-readiness-copy";
+import { designerEditableFieldsFor } from "@/lib/content/production-fields";
 
 export async function generateMetadata({
   params,
@@ -267,9 +273,16 @@ export default async function ContentDetailPage({
       }
     : null;
 
-  const canEdit =
+  const canEditAll =
     (actorRoles.isManager || actorRoles.isPlanner) &&
     UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number]);
+  const canEditProduction =
+    actorRoles.isDesigner &&
+    item.designerId === actor.id &&
+    DESIGNER_EDITABLE_STATUSES.includes(item.status as (typeof DESIGNER_EDITABLE_STATUSES)[number]);
+  const canEdit = canEditAll || canEditProduction;
+  const editableFields =
+    canEditProduction && !canEditAll ? designerEditableFieldsFor(item.format) : undefined;
   // Canonical Copy remains editable by managers and planners after
   // approval, because the materiality path resets affected approvals.
   const canEditCopy = (actorRoles.isManager || actorRoles.isPlanner) && item.status !== "cancelled";
@@ -749,6 +762,7 @@ export default async function ContentDetailPage({
                           }
                         })()}
                         editable={canEdit}
+                        {...(editableFields ? { editableFields } : {})}
                         locale={activeLocale}
                         aiEnabled={aiLive && captionDraftsEnabled}
                       />
@@ -813,6 +827,7 @@ export default async function ContentDetailPage({
                         }
                       })()}
                       editable={canEdit}
+                      {...(editableFields ? { editableFields } : {})}
                       locale={activeLocale}
                       aiEnabled={aiLive && captionDraftsEnabled}
                     />

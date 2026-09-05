@@ -40,6 +40,7 @@ import {
   audienceCopyFromPayload,
   mergeAudienceCopy,
 } from "@/lib/content/audience-copy";
+import { designerEditableFieldsFor } from "@/lib/content/production-fields";
 import { recordMaterialityEvent } from "@/lib/publishing/materiality";
 import {
   enqueueApprovalNotification,
@@ -201,6 +202,7 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
  * message to the form.
  */
 export const UPDATEABLE_STATUSES = ["draft", "changes_requested"] as const;
+export const DESIGNER_EDITABLE_STATUSES = ["in_design", "changes_requested"] as const;
 
 export async function updateContentItem(
   actor: Actor,
@@ -284,9 +286,10 @@ export async function updateContentItem(
  * format / brief / schedule) so the per-format "More details"
  * editor can save structured creative fields without forcing
  * the planner to round-trip the full edit form. The
- * editability guard is the same as `updateContentItem`: only
- * `draft` and `changes_requested` items are editable, per
- * master prompt §10. Beyond that, the function is
+ * editability guard is the same as `updateContentItem` for managers and
+ * planners: only `draft` and `changes_requested` items are editable. An
+ * assigned designer may update only the production-field allowlist while an
+ * item is `in_design` or `changes_requested`, per master prompt §10. Beyond that, the function is
  * schema-driven: the per-format Zod schema is the source of
  * truth, and unknown fields are silently dropped on parse
  * (forward-compat — adding a key to the schema is a no-op
@@ -331,18 +334,34 @@ export async function updateFormatPayload(actor: Actor, input: UpdateFormatPaylo
       workspaceId: contentItems.workspaceId,
       status: contentItems.status,
       format: contentItems.format,
+      designerId: contentItems.designerId,
+      formatPayload: contentItems.formatPayload,
     })
     .from(contentItems)
     .where(eq(contentItems.id, parsed.data.contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
 
-  await requirePolicy(
-    hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),
-    "update_content",
-  );
+  const isManagerOrPlanner = await hasWorkspaceRole(actor, item.workspaceId, [
+    "workspace_manager",
+    "content_planner",
+  ]);
+  const isAssignedDesigner =
+    item.designerId === actor.id && (await hasWorkspaceRole(actor, item.workspaceId, ["designer"]));
+  await requirePolicy(Promise.resolve(isManagerOrPlanner || isAssignedDesigner), "update_content");
 
-  if (!UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number])) {
+  if (
+    isManagerOrPlanner &&
+    !UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number])
+  ) {
+    throw new Error(
+      `This idea is in ${item.status.replaceAll("_", " ")} and can no longer be edited.`,
+    );
+  }
+  if (
+    isAssignedDesigner &&
+    !DESIGNER_EDITABLE_STATUSES.includes(item.status as (typeof DESIGNER_EDITABLE_STATUSES)[number])
+  ) {
     throw new Error(
       `This idea is in ${item.status.replaceAll("_", " ")} and can no longer be edited.`,
     );
@@ -354,12 +373,22 @@ export async function updateFormatPayload(actor: Actor, input: UpdateFormatPaylo
   // before save, but we re-read it from the DB so a stale
   // form post (e.g. user changed format then changed
   // formatPayload) doesn't write the wrong shape.
-  const stored = parseFormatPayload(item.format, parsed.data.formatPayload);
+  const submitted = parseFormatPayload(item.format, parsed.data.formatPayload) as Record<
+    string,
+    unknown
+  >;
+  const current = parseFormatPayload(item.format, item.formatPayload) as Record<string, unknown>;
+  const next = isAssignedDesigner ? { ...current } : submitted;
+  if (isAssignedDesigner) {
+    for (const key of designerEditableFieldsFor(item.format)) {
+      if (Object.prototype.hasOwnProperty.call(submitted, key)) next[key] = submitted[key];
+      else delete next[key];
+    }
+  }
+  const stored = parseFormatPayload(item.format, next);
 
   // Snapshot the previous key set for the activity event.
-  const beforeKeys = Object.keys(
-    (parsed.data.formatPayload as Record<string, unknown> | null) ?? {},
-  ).sort();
+  const beforeKeys = Object.keys(current).sort();
 
   await db.transaction(async (tx) => {
     await tx

@@ -9,7 +9,7 @@ import { updateFormatPayloadAction } from "@/app/(app)/app/w/[slug]/planning/act
 import { NavigableArrayField } from "@/components/forms/navigable-array-field";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
 import { useNavigationDirtyGuard } from "@/lib/forms/use-navigation-dirty-guard";
-import { fieldsFor, type FieldDef } from "./format-payload-field-set";
+import { fieldsFor, ratioOptionsFor, type FieldDef } from "./format-payload-field-set";
 import {
   rendererFor,
   isObjectiveAudienceKey,
@@ -78,6 +78,8 @@ export interface FormatAwareContentEditorProps {
   format: ContentFormat;
   initial: Record<string, unknown>;
   editable: boolean;
+  /** When set, only these production fields are editable (designer mode). */
+  editableFields?: ReadonlyArray<string>;
   locale: string;
   aiEnabled: boolean;
 }
@@ -327,6 +329,7 @@ export function FormatAwareContentEditor({
   format,
   initial: initialPayload,
   editable,
+  editableFields,
   locale,
   aiEnabled,
 }: FormatAwareContentEditorProps) {
@@ -379,6 +382,9 @@ export function FormatAwareContentEditor({
     });
   }
 
+  const isFieldEditable = (fieldKey: string) =>
+    editable && (editableFields === undefined || editableFields.includes(fieldKey));
+
   const translations =
     (payload.translations as Record<string, Record<string, unknown>> | undefined) ?? {};
 
@@ -404,7 +410,11 @@ export function FormatAwareContentEditor({
       payload,
       translations,
       locale,
-      editable,
+      editable: isFieldEditable(field.key),
+      ...(field.key === "ratio" ? { enumValues: ratioOptionsFor(format) } : {}),
+      ...(field.key === "durationSeconds" && format === "long_form_video"
+        ? { numberMin: 30, numberMax: 3600 }
+        : {}),
       aiEnabled,
       contentItemId,
       t,
@@ -435,7 +445,7 @@ export function FormatAwareContentEditor({
         rows={arr}
         columns={columns}
         locale={locale}
-        editable={editable}
+        editable={isFieldEditable(fieldKey)}
         layout="slider"
         entity={entity}
         onField={setField}
@@ -459,6 +469,15 @@ export function FormatAwareContentEditor({
           {humanFormat(format)}
         </span>
       </div>
+
+      {editableFields ? (
+        <p
+          className="border-border bg-surface-subtle text-label text-fg-secondary mt-4 rounded-[var(--radius-control)] border px-3 py-2"
+          data-testid="designer-production-guidance"
+        >
+          {t("formatEditor.editor.designerGuidance")}
+        </p>
+      ) : null}
 
       <div className="mt-5 space-y-5" data-testid="format-aware-sections">
         {sections.map((section) => {
@@ -504,7 +523,7 @@ export function FormatAwareContentEditor({
                         payload,
                         translations,
                         locale,
-                        editable,
+                        editable: isFieldEditable("objective") && isFieldEditable("audience"),
                         aiEnabled,
                         contentItemId,
                         t,

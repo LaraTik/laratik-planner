@@ -375,6 +375,51 @@ describe("updateFormatPayload", () => {
       }),
     ).toBe(true);
   });
+
+  it("lets the assigned designer update production fields during design without overwriting strategy", async () => {
+    policyMock.hasWorkspaceRole.mockImplementation((...args: unknown[]) => {
+      const roles = args[2] as string[] | undefined;
+      return Promise.resolve(Boolean(roles?.includes("designer")));
+    });
+    dbMock.state.selectResults.push([
+      {
+        id: contentItemId,
+        workspaceId,
+        status: "in_design",
+        format: "long_form_video",
+        designerId: actor.id,
+        formatPayload: {
+          schemaVersion: 1,
+          mainMessage: "Planner-owned message",
+          ratio: "16:9",
+          durationSeconds: 180,
+        },
+      },
+    ]);
+
+    await updateFormatPayload(actor, {
+      contentItemId,
+      format: "long_form_video",
+      formatPayload: {
+        schemaVersion: 1,
+        mainMessage: "Designer must not replace this",
+        ratio: "9:16",
+        durationSeconds: 600,
+      },
+    });
+
+    const update = dbMock.state.updateCalls.find((call) => {
+      const payload = (call.set as Record<string, unknown>).formatPayload as
+        Record<string, unknown> | undefined;
+      return payload?.ratio === "9:16";
+    });
+    expect(update).toBeDefined();
+    expect((update?.set as Record<string, unknown>).formatPayload).toMatchObject({
+      mainMessage: "Planner-owned message",
+      ratio: "9:16",
+      durationSeconds: 600,
+    });
+  });
 });
 
 describe("batchCreateContentItems", () => {

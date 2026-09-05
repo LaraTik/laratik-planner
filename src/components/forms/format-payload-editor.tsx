@@ -8,7 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { updateFormatPayloadAction } from "@/app/(app)/app/w/[slug]/planning/actions";
 import type { ContentFormat } from "@/lib/format-payload/schemas";
-import { fieldsFor, splitByGroup, type FieldDef } from "./format-payload-field-set";
+import {
+  fieldsFor,
+  ratioOptionsFor,
+  splitByGroup,
+  type FieldDef,
+} from "./format-payload-field-set";
 import {
   rendererFor,
   isObjectiveAudienceKey,
@@ -170,6 +175,10 @@ export function FormatPayloadEditor({
       translations,
       locale,
       editable,
+      ...(field.key === "ratio" ? { enumValues: ratioOptionsFor(format) } : {}),
+      ...(field.key === "durationSeconds" && format === "long_form_video"
+        ? { numberMin: 30, numberMax: 3600 }
+        : {}),
       aiEnabled,
       contentItemId,
       t,

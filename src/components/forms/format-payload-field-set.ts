@@ -38,6 +38,15 @@ import type { ContentFormat } from "@/lib/format-payload/schemas";
 
 export type FieldGroup = "essential" | "advanced";
 
+export const RATIO_OPTIONS_BY_FORMAT: Partial<Record<ContentFormat, ReadonlyArray<string>>> = {
+  short_form_video: ["9:16", "1:1", "4:5"],
+  long_form_video: ["16:9", "9:16", "1:1"],
+};
+
+export function ratioOptionsFor(format: ContentFormat): ReadonlyArray<string> {
+  return RATIO_OPTIONS_BY_FORMAT[format] ?? [];
+}
+
 export interface FieldDef {
   /** The key in the format payload (e.g. "caption", "scenes"). */
   key: string;
