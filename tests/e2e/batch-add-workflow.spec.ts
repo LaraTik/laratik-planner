@@ -28,6 +28,8 @@ test.describe("Batch Add spreadsheet workflow", () => {
 
     await page.setViewportSize({ width: 375, height: 812 });
     await expect(grid).toBeHidden();
+    await expect(template.locator("table")).toBeHidden();
+    await expect(template.locator("details article")).toHaveCount(8);
     await expect(page.getByText("Row 1", { exact: true })).toBeVisible();
     const mobileOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,

@@ -330,7 +330,7 @@ export function BatchForm({
           </CardTitle>
           <p className="text-label text-fg-secondary">{t("batchAdd.form.templateDescription")}</p>
         </CardHeader>
-        <details open className="border-border border-t">
+        <details className="border-border border-t">
           <summary className="hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-start text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none">
             <span>{t("batchAdd.form.templateExample")}</span>
             <span className="text-label text-fg-muted">
@@ -339,7 +339,7 @@ export function BatchForm({
           </summary>
           <div className="space-y-3 px-4 pb-4">
             <div
-              className="border-border overflow-x-auto rounded-[var(--radius-control)] border"
+              className="border-border hidden overflow-x-auto rounded-[var(--radius-control)] border md:block"
               role="region"
               tabIndex={0}
               aria-label={t("batchAdd.form.templateTitle")}
@@ -390,6 +390,42 @@ export function BatchForm({
                 </tbody>
               </table>
             </div>
+            <div className="space-y-2 md:hidden">
+              {BATCH_TEMPLATE_ROWS.map((row) => {
+                const definition = formatDefinitionFor(row.format);
+                return (
+                  <article
+                    key={row.format}
+                    className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-body font-semibold">{row.title}</p>
+                      <span className="text-label text-primary shrink-0 font-semibold">
+                        {definition ? t(definition.labelKey) : row.format}
+                      </span>
+                    </div>
+                    <dl className="text-label mt-2 grid gap-1 text-start">
+                      <div className="flex gap-2">
+                        <dt className="text-fg-muted shrink-0">{t("batchAdd.form.dateTime")}:</dt>
+                        <dd>{row.plannedPublishAt}</dd>
+                      </div>
+                      <div className="flex gap-2">
+                        <dt className="text-fg-muted shrink-0">{t("batchAdd.form.brief")}:</dt>
+                        <dd className="text-fg-secondary">{row.brief}</dd>
+                      </div>
+                      <div className="flex gap-2">
+                        <dt className="text-fg-muted shrink-0">{t("batchAdd.form.channels")}:</dt>
+                        <dd className="text-fg-secondary">
+                          {templateChannelNames.length
+                            ? templateChannelNames.join(", ")
+                            : t("batchAdd.form.templateAllChannels")}
+                        </dd>
+                      </div>
+                    </dl>
+                  </article>
+                );
+              })}
+            </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-label text-fg-muted max-w-3xl">
                 {t("batchAdd.form.templateDetailsNote")}
@@ -407,35 +443,6 @@ export function BatchForm({
             </div>
           </div>
         </details>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Info className="text-primary h-4 w-4" aria-hidden="true" />
-            {t("batchAdd.form.formatGuideTitle")}
-          </CardTitle>
-          <p className="text-label text-fg-secondary">
-            {t("batchAdd.form.formatGuideDescription")}
-          </p>
-        </CardHeader>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {CONTENT_FORMAT_DEFINITIONS.map((definition) => (
-            <div
-              key={definition.value}
-              className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
-            >
-              <p className="text-body font-semibold">{t(definition.labelKey)}</p>
-              <p className="text-label text-fg-secondary mt-1">{t(definition.descriptionKey)}</p>
-              <p className="text-label text-primary mt-2">
-                {definition.guidance.ratio ?? ""}
-                {definition.guidance.ratio && definition.guidance.duration ? " · " : ""}
-                {definition.guidance.duration ?? ""}
-              </p>
-              <p className="text-label text-fg-muted mt-1">{t(definition.guidance.detailKey)}</p>
-            </div>
-          ))}
-        </div>
       </Card>
 
       <div
@@ -470,6 +477,12 @@ export function BatchForm({
         role="region"
         aria-label={t("batchAdd.form.gridCaption")}
       >
+        <div className="border-border bg-surface-subtle flex min-h-14 flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
+          <div>
+            <p className="text-body font-semibold">{t("batchAdd.form.rowsLabel")}</p>
+            <p className="text-label text-fg-secondary">{t("batchAdd.form.gridHint")}</p>
+          </div>
+        </div>
         <div
           className="custom-scrollbar hidden max-h-[70vh] overflow-auto md:block"
           data-testid="batch-grid-scroll"
@@ -477,8 +490,8 @@ export function BatchForm({
           tabIndex={0}
           aria-label={t("batchAdd.form.gridCaption")}
         >
-          <div className="min-w-[1120px]">
-            <div className="border-border bg-surface-subtle text-label text-fg-secondary sticky top-0 z-10 grid grid-cols-[2.5rem_minmax(12rem,1.2fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_minmax(18rem,1.5fr)_minmax(12rem,1fr)_9rem_2rem] gap-2 border-b p-3 font-semibold">
+          <div className="min-w-[1040px]">
+            <div className="border-border bg-surface-subtle text-label text-fg-secondary sticky top-0 z-10 grid grid-cols-[2rem_minmax(10rem,1.2fr)_minmax(9rem,0.9fr)_minmax(10rem,1fr)_minmax(14rem,1.4fr)_minmax(9.5rem,1fr)_8rem_2rem] gap-2 border-b p-3 font-semibold">
               <span>#</span>
               <span>{t("batchAdd.form.title")}</span>
               <span>{t("batchAdd.form.format")}</span>
@@ -529,6 +542,38 @@ export function BatchForm({
           ))}
         </div>
       </div>
+      <Card>
+        <details>
+          <summary className="hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-[var(--radius-card)] px-5 py-4 text-start focus-visible:ring-2 focus-visible:outline-none">
+            <Info className="text-primary h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>
+              <span className="text-body block font-semibold">
+                {t("batchAdd.form.formatGuideTitle")}
+              </span>
+              <span className="text-label text-fg-secondary mt-0.5 block">
+                {t("batchAdd.form.formatGuideDescription")}
+              </span>
+            </span>
+          </summary>
+          <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2 xl:grid-cols-4">
+            {CONTENT_FORMAT_DEFINITIONS.map((definition) => (
+              <div
+                key={definition.value}
+                className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+              >
+                <p className="text-body font-semibold">{t(definition.labelKey)}</p>
+                <p className="text-label text-fg-secondary mt-1">{t(definition.descriptionKey)}</p>
+                <p className="text-label text-primary mt-2">
+                  {definition.guidance.ratio ?? ""}
+                  {definition.guidance.ratio && definition.guidance.duration ? " · " : ""}
+                  {definition.guidance.duration ?? ""}
+                </p>
+                <p className="text-label text-fg-muted mt-1">{t(definition.guidance.detailKey)}</p>
+              </div>
+            ))}
+          </div>
+        </details>
+      </Card>
       <Button
         type="button"
         variant="secondary"
@@ -791,7 +836,7 @@ function FieldErrors({
 
 function DesktopRow({ row, rowNumber, channels, issues, locale, t, onChange, onRemove }: RowProps) {
   return (
-    <div className="grid min-w-0 grid-cols-[2.5rem_minmax(12rem,1.2fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_minmax(18rem,1.5fr)_minmax(12rem,1fr)_9rem_2rem] items-start gap-2 p-3">
+    <div className="odd:bg-surface-subtle/30 grid min-w-0 grid-cols-[2rem_minmax(10rem,1.2fr)_minmax(9rem,0.9fr)_minmax(10rem,1fr)_minmax(14rem,1.4fr)_minmax(9.5rem,1fr)_8rem_2rem] items-start gap-2 p-3">
       <div className="text-label text-fg-muted pt-3">{rowNumber}</div>
       <div>
         <DirAwareInput
@@ -800,6 +845,7 @@ function DesktopRow({ row, rowNumber, channels, issues, locale, t, onChange, onR
           value={row.title}
           onChange={(event) => onChange({ title: event.target.value })}
           locale={locale}
+          className="hover:border-border hover:bg-surface-subtle focus-visible:border-border focus-visible:bg-surface border-transparent bg-transparent px-2"
           aria-invalid={issues.some(
             (issue) => issue.field === "title" && issue.severity === "error",
           )}
@@ -817,6 +863,7 @@ function DesktopRow({ row, rowNumber, channels, issues, locale, t, onChange, onR
           aria-label={t("batchAdd.form.dateForRow", { row: rowNumber })}
           value={localDate(row.plannedPublishAt)}
           onChange={(event) => onChange({ plannedPublishAt: event.target.value })}
+          className="hover:border-border hover:bg-surface-subtle focus-visible:border-border focus-visible:bg-surface border-transparent bg-transparent px-2"
           aria-invalid={issues.some(
             (issue) => issue.field === "plannedPublishAt" && issue.severity === "error",
           )}
@@ -831,7 +878,7 @@ function DesktopRow({ row, rowNumber, channels, issues, locale, t, onChange, onR
           onChange={(event) => onChange({ brief: event.target.value })}
           locale={locale}
           rows={2}
-          className="min-h-11 resize-y"
+          className="hover:border-border hover:bg-surface-subtle focus-visible:border-border focus-visible:bg-surface min-h-11 resize-y border-transparent bg-transparent px-2"
         />
         <FieldErrors issues={issues} field="brief" t={t} />
       </div>

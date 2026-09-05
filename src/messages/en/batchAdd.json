@@ -28,6 +28,7 @@
     "batchTooLarge": "A batch can contain at most {max} rows.",
     "timezone": "Workspace time: {timezone}",
     "gridCaption": "Batch ideas grid",
+    "gridHint": "Edit ideas in the sheet. On narrower screens, scroll horizontally to reach channels and validation.",
     "title": "Title",
     "format": "Format",
     "dateTime": "Date & time",
