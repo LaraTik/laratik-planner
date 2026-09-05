@@ -45,6 +45,7 @@ export default async function SocialAnalyticsPage({
   searchParams: Promise<{
     window?: string | string[];
     metric?: string | string[];
+    view?: string | string[];
     platforms?: string | string[];
     channels?: string | string[];
   }>;
@@ -56,6 +57,7 @@ export default async function SocialAnalyticsPage({
   const sp = await searchParams;
   const rawWindow = Array.isArray(sp.window) ? sp.window[0] : sp.window;
   const rawMetric = Array.isArray(sp.metric) ? sp.metric[0] : sp.metric;
+  const rawView = Array.isArray(sp.view) ? sp.view[0] : sp.view;
   const rawPlatforms = Array.isArray(sp.platforms) ? sp.platforms[0] : sp.platforms;
   const rawChannels = Array.isArray(sp.channels) ? sp.channels[0] : sp.channels;
   const window: SocialWindow = parseSocialWindow(rawWindow);
@@ -136,15 +138,35 @@ export default async function SocialAnalyticsPage({
     selectedCount: t("analytics.selectedCount"),
     comparisonTitle: t("analytics.comparisonTitle"),
     comparisonDescription: t("analytics.comparisonDescription"),
+    comparisonInsightLabel: t("analytics.comparisonInsightLabel"),
+    comparisonInsight: t("analytics.comparisonInsight"),
+    comparisonInsightNoGrowth: t("analytics.comparisonInsightNoGrowth"),
+    comparisonMode: t("analytics.comparisonMode"),
+    comparisonAbsolute: t("analytics.comparisonAbsolute"),
+    comparisonGrowth: t("analytics.comparisonGrowth"),
+    period: t("analytics.period"),
+    metric: t("analytics.metricSelector"),
     noComparableMetrics: t("analytics.noComparableMetrics"),
     noData: t("analytics.noData"),
     refresh: t("analytics.refresh"),
     export: t("analytics.export"),
     channels: t("analytics.channels"),
     currentFollowers: t("analytics.currentFollowers"),
-    selectedMetric: t("analytics.selectedMetric"),
+    latestMetric: t("analytics.latestMetric"),
+    changeInPeriod: t("analytics.changeInPeriod"),
+    changeUnavailable: t("analytics.changeUnavailable"),
     window: t("analytics.windowSelector"),
     days: t("analytics.days"),
+    ranking: t("analytics.ranking"),
+    channel: t("analytics.channel"),
+    latestValue: t("analytics.latestValue"),
+    change: t("analytics.change"),
+    dataStatus: t("analytics.dataStatus"),
+    healthy: t("analytics.healthy"),
+    partialData: t("analytics.partialData"),
+    providerDataLimited: t("analytics.providerDataLimited"),
+    noMetricData: t("analytics.noMetricData"),
+    dataTable: t("analytics.dataTable"),
     details: t("analytics.details"),
     followerTrend: t("analytics.followerTrend"),
     date: t("analytics.tableDate"),
@@ -165,6 +187,7 @@ export default async function SocialAnalyticsPage({
   const initialQuery = new URLSearchParams({
     window: String(window),
     metric,
+    view: rawView === "growth" ? "growth" : "absolute",
     ...(rawPlatforms ? { platforms: rawPlatforms } : {}),
     ...(rawChannels ? { channels: rawChannels } : {}),
   }).toString();

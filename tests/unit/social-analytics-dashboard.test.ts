@@ -58,6 +58,7 @@ describe("analytics dashboard selection model", () => {
     const query = encodeAnalyticsSelection({
       window: 30,
       metric: "interactions",
+      view: "growth",
       platforms: ["facebook", "instagram"],
       channelIds: ["account/one", "account two"],
     });
@@ -66,6 +67,7 @@ describe("analytics dashboard selection model", () => {
     expect(parseAnalyticsSelection(`?${query}`)).toEqual({
       window: 30,
       metric: "interactions",
+      view: "growth",
       platforms: ["facebook", "instagram"],
       channelIds: ["account/one", "account two"],
     });

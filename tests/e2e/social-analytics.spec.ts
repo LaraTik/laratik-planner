@@ -16,7 +16,7 @@ import { bootstrapRoleSession, devSeed } from "./_helpers";
  */
 
 test.describe("M4 — social analytics dashboard", () => {
-  test("renders the shared comparison dashboard and platform-specific detail", async ({ page }) => {
+  test("renders the shared comparison dashboard and channel ranking", async ({ page }) => {
     await bootstrapRoleSession(page, "workspace_manager", "analytics-platform-aware", {
       socialAnalyticsFixture: true,
     });
@@ -29,20 +29,19 @@ test.describe("M4 — social analytics dashboard", () => {
       3,
     );
 
-    const facebookCard = page.locator('[data-testid^="social-card-"]').filter({
+    const ranking = page.getByTestId("social-channel-ranking");
+    await expect(ranking).toBeVisible();
+    const facebookRow = ranking.locator("tbody tr").filter({
       hasText: "Acme Facebook",
     });
-    await expect(facebookCard).toBeVisible();
-    await expect(facebookCard.locator('[data-testid^="social-growth-chart-"]')).toBeVisible();
-    await expect(facebookCard.getByText(/Followers:/)).toBeVisible();
-    await expect(facebookCard.getByRole("columnheader", { name: /engaged/i })).toHaveCount(0);
-    await expect(facebookCard.getByRole("columnheader", { name: /interactions/i })).toBeVisible();
+    await expect(facebookRow).toBeVisible();
+    await expect(facebookRow.getByText("Facebook · @acme_fb", { exact: true })).toBeVisible();
+    await expect(facebookRow.getByText(/Healthy|Partial data/)).toBeVisible();
 
-    const instagramCard = page.locator('[data-testid^="social-card-"]').filter({
+    const instagramRow = ranking.locator("tbody tr").filter({
       hasText: "Acme Instagram",
     });
-    await expect(instagramCard).toBeVisible();
-    await expect(instagramCard.getByRole("columnheader", { name: /engaged/i })).toBeVisible();
+    await expect(instagramRow).toBeVisible();
     await expect(page.getByTestId("social-data-quality")).toHaveCount(0);
   });
 
@@ -59,7 +58,7 @@ test.describe("M4 — social analytics dashboard", () => {
     });
     await page.getByTestId("analytics-platform-facebook").click();
     await expect(page).toHaveURL(/platforms=facebook/);
-    await expect(page.locator('[data-testid^="social-card-"]')).toHaveCount(1);
+    await expect(page.getByTestId("social-channel-ranking").locator("tbody tr")).toHaveCount(1);
     expect(loadEvents).toBe(0);
 
     await page.getByTestId("analytics-platform-instagram").click();

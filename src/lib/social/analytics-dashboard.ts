@@ -21,9 +21,12 @@ export type AnalyticsDashboardChannel = {
   series: MetricSeriesPoint[];
 };
 
+export type ComparisonView = "absolute" | "growth";
+
 export type AnalyticsSelection = {
   window: SocialWindow;
   metric: SocialMetric;
+  view: ComparisonView;
   platforms: AnalyticsDashboardChannel["platform"][];
   channelIds: string[];
 };
@@ -53,6 +56,7 @@ export function encodeAnalyticsSelection(selection: AnalyticsSelection): string 
   const params = new URLSearchParams();
   params.set("window", String(selection.window));
   params.set("metric", selection.metric);
+  params.set("view", selection.view);
   if (selection.platforms.length > 0) params.set("platforms", selection.platforms.join(","));
   if (selection.channelIds.length > 0) params.set("channels", selection.channelIds.join(","));
   return params.toString();
@@ -60,6 +64,7 @@ export function encodeAnalyticsSelection(selection: AnalyticsSelection): string 
 
 export function parseAnalyticsSelection(value: string): AnalyticsSelection {
   const params = new URLSearchParams(value);
+  const view = params.get("view");
   const platforms =
     params
       .get("platforms")
@@ -71,6 +76,7 @@ export function parseAnalyticsSelection(value: string): AnalyticsSelection {
   return {
     window: parseSocialWindow(params.get("window")),
     metric: parseSocialMetric(params.get("metric")),
+    view: view === "growth" ? "growth" : "absolute",
     platforms,
     channelIds: params.get("channels")?.split(",").filter(Boolean) ?? [],
   };

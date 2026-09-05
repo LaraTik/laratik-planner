@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PlatformIcon } from "@/components/workspace/platform-icon";
-import { SocialGrowthChart } from "./social-growth-chart";
 import {
   buildComparisonSeries,
   commonMetricsForChannels,
   encodeAnalyticsSelection,
   filterAnalyticsChannels,
   parseAnalyticsSelection,
+  type ComparisonView,
   type AnalyticsDashboardChannel,
 } from "@/lib/social/analytics-dashboard";
 import {
@@ -31,15 +31,35 @@ type DashboardLabels = {
   selectedCount: string;
   comparisonTitle: string;
   comparisonDescription: string;
+  comparisonInsightLabel: string;
+  comparisonInsight: string;
+  comparisonInsightNoGrowth: string;
+  comparisonMode: string;
+  comparisonAbsolute: string;
+  comparisonGrowth: string;
+  period: string;
+  metric: string;
   noComparableMetrics: string;
   noData: string;
   refresh: string;
   export: string;
   channels: string;
   currentFollowers: string;
-  selectedMetric: string;
+  latestMetric: string;
+  changeInPeriod: string;
+  changeUnavailable: string;
   window: string;
   days: string;
+  ranking: string;
+  channel: string;
+  latestValue: string;
+  change: string;
+  dataStatus: string;
+  healthy: string;
+  partialData: string;
+  providerDataLimited: string;
+  noMetricData: string;
+  dataTable: string;
   details: string;
   followerTrend: string;
   date: string;
@@ -51,7 +71,25 @@ type DashboardLabels = {
 const PLATFORMS: AnalyticsDashboardChannel["platform"][] = ["facebook", "instagram", "tiktok"];
 
 function formatNumber(value: number | null): string {
-  return value === null ? "—" : value.toLocaleString();
+  return value === null
+    ? "—"
+    : new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value);
+}
+
+function formatSigned(value: number | null): string {
+  if (value === null) return "—";
+  return `${value > 0 ? "+" : ""}${formatNumber(value)}`;
+}
+
+function formatPercent(value: number | null): string {
+  return value === null ? "—" : `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+}
+
+function interpolate(value: string, params: Record<string, string | number>): string {
+  return Object.entries(params).reduce(
+    (result, [name, replacement]) => result.replaceAll(`{${name}}`, String(replacement)),
+    value,
+  );
 }
 
 function selectedMetricOrFallback(
@@ -59,6 +97,78 @@ function selectedMetricOrFallback(
   commonMetrics: SocialMetric[],
 ): SocialMetric {
   return commonMetrics.includes(requested) ? requested : (commonMetrics[0] ?? requested);
+}
+
+type ComparisonRow = {
+  channel: AnalyticsDashboardChannel;
+  initial: number | null;
+  latest: number | null;
+  growth: ReturnType<typeof calculateGrowth>;
+};
+
+function comparisonRows(
+  channels: AnalyticsDashboardChannel[],
+  windowDays: SocialWindow,
+  metric: SocialMetric,
+): ComparisonRow[] {
+  return channels.map((channel) => {
+    const rows = seriesInWindow(channel.series, windowDays);
+    const initial = rows.find((row) => typeof row[metric] === "number")?.[metric];
+    const latest = [...rows].reverse().find((row) => typeof row[metric] === "number")?.[metric];
+    return {
+      channel,
+      initial: typeof initial === "number" ? initial : null,
+      latest: typeof latest === "number" ? latest : null,
+      growth: calculateGrowth(rows, metric),
+    };
+  });
+}
+
+function aggregateGrowth(rows: ComparisonRow[]): ReturnType<typeof calculateGrowth> {
+  const starts = rows.map((row) => row.initial).filter((value): value is number => value !== null);
+  const latestValues = rows
+    .map((row) => row.latest)
+    .filter((value): value is number => value !== null);
+  if (starts.length === 0 || latestValues.length === 0) {
+    return {
+      absolute: null,
+      percent: null,
+      partial: rows.some((row) => row.growth.partial),
+    };
+  }
+  const startTotal = starts.reduce((sum, value) => sum + value, 0);
+  const latestTotal = latestValues.reduce((sum, value) => sum + value, 0);
+  return {
+    absolute: latestTotal - startTotal,
+    percent: startTotal === 0 ? null : ((latestTotal - startTotal) / startTotal) * 100,
+    partial: rows.some((row) => row.growth.partial),
+  };
+}
+
+function comparisonScore(row: ComparisonRow, view: ComparisonView): number {
+  if (view === "growth") return row.growth.percent ?? row.growth.absolute ?? -Infinity;
+  return row.latest ?? -Infinity;
+}
+
+function transformComparisonToGrowth(
+  comparison: ReturnType<typeof buildComparisonSeries>,
+): ReturnType<typeof buildComparisonSeries> {
+  return {
+    dates: comparison.dates,
+    lines: comparison.lines.map((line) => {
+      const baseline = line.values.find((value): value is number => value !== null);
+      return {
+        ...line,
+        values: line.values.map((value) =>
+          value === null || baseline === undefined || baseline === 0
+            ? value === null
+              ? null
+              : 0
+            : ((value - baseline) / baseline) * 100,
+        ),
+      };
+    }),
+  };
 }
 
 export function SocialAnalyticsDashboard({
@@ -84,10 +194,35 @@ export function SocialAnalyticsDashboard({
     [selectedChannels],
   );
   const metric = selectedMetricOrFallback(selection.metric, commonMetrics);
-  const comparison = useMemo(
+  const absoluteComparison = useMemo(
     () => buildComparisonSeries(selectedChannels, selection.window, metric),
     [metric, selectedChannels, selection.window],
   );
+  const comparison = useMemo(
+    () =>
+      selection.view === "growth"
+        ? transformComparisonToGrowth(absoluteComparison)
+        : absoluteComparison,
+    [absoluteComparison, selection.view],
+  );
+  const rows = useMemo(
+    () => comparisonRows(selectedChannels, selection.window, metric),
+    [metric, selectedChannels, selection.window],
+  );
+  const rankedRows = useMemo(
+    () =>
+      [...rows].sort(
+        (a, b) => comparisonScore(b, selection.view) - comparisonScore(a, selection.view),
+      ),
+    [rows, selection.view],
+  );
+  const aggregate = useMemo(() => aggregateGrowth(rows), [rows]);
+  const leader = rankedRows[0];
+  const latestValues = rows
+    .map((row) => row.latest)
+    .filter((value): value is number => value !== null);
+  const totalLatest =
+    latestValues.length > 0 ? latestValues.reduce((sum, value) => sum + value, 0) : null;
 
   function commit(next: typeof selection) {
     const normalized = {
@@ -283,65 +418,95 @@ export function SocialAnalyticsDashboard({
       <div className="grid gap-4 sm:grid-cols-3" data-testid="social-analytics-kpis">
         <Kpi label={labels.channels} value={String(selectedChannels.length)} />
         <Kpi
-          label={labels.currentFollowers}
-          value={formatNumber(
-            selectedChannels.reduce((sum, channel) => {
-              const latest = [...channel.series]
-                .reverse()
-                .find((point) => point.followerCount !== null);
-              return sum + (latest?.followerCount ?? 0);
-            }, 0),
-          )}
+          label={
+            metric === "followerCount"
+              ? labels.currentFollowers
+              : interpolate(labels.latestMetric, { metric: labels.metricLabels[metric] })
+          }
+          value={formatNumber(totalLatest)}
         />
         <Kpi
-          label={`${labels.selectedMetric} · ${labels.days.replace("{count}", String(selection.window))}`}
-          value={formatNumber(
-            selectedChannels.reduce((sum, channel) => {
-              const latest = [...seriesInWindow(channel.series, selection.window)]
-                .reverse()
-                .find((point) => typeof point[metric] === "number");
-              return sum + (typeof latest?.[metric] === "number" ? latest[metric] : 0);
-            }, 0),
-          )}
+          label={interpolate(labels.changeInPeriod, { count: selection.window })}
+          value={formatSigned(aggregate.absolute)}
+          detail={formatPercent(aggregate.percent)}
         />
       </div>
 
       <Card padding="lg" data-testid="social-comparison-panel">
-        <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-title-section text-fg-primary font-semibold">
               {labels.comparisonTitle}
             </h2>
             <p className="text-body text-fg-muted mt-1">{labels.comparisonDescription}</p>
           </div>
-          <div className="flex flex-wrap gap-2" data-testid="social-analytics-controls">
-            {([7, 30, 90] as const).map((days) => (
-              <button
-                key={days}
-                type="button"
-                aria-pressed={selection.window === days}
-                {...(selection.window === days ? { "aria-current": "page" } : {})}
-                onClick={() => commit({ ...selection, window: days })}
-                className={`text-label min-h-11 cursor-pointer rounded-md border px-3 font-semibold transition-colors duration-200 ${selection.window === days ? "border-primary bg-primary/10 text-primary" : "border-border text-fg-secondary hover:bg-surface-subtle"}`}
-                data-testid={`window-${days}`}
+          <div className="flex flex-wrap gap-4" data-testid="social-analytics-controls">
+            <ControlGroup label={labels.period}>
+              {([7, 30, 90] as const).map((days) => (
+                <ControlButton
+                  key={days}
+                  active={selection.window === days}
+                  testId={`window-${days}`}
+                  onClick={() => commit({ ...selection, window: days })}
+                >
+                  {labels.days.replace("{count}", String(days))}
+                </ControlButton>
+              ))}
+            </ControlGroup>
+            <ControlGroup label={labels.metric}>
+              {commonMetrics.map((candidate) => (
+                <ControlButton
+                  key={candidate}
+                  active={metric === candidate}
+                  testId={`metric-${candidate}`}
+                  onClick={() => commit({ ...selection, metric: candidate })}
+                >
+                  {labels.metricLabels[candidate]}
+                </ControlButton>
+              ))}
+            </ControlGroup>
+            <ControlGroup label={labels.comparisonMode}>
+              <ControlButton
+                active={selection.view === "absolute"}
+                testId="comparison-view-absolute"
+                onClick={() => commit({ ...selection, view: "absolute" })}
               >
-                {labels.days.replace("{count}", String(days))}
-              </button>
-            ))}
-            {commonMetrics.map((candidate) => (
-              <button
-                key={candidate}
-                type="button"
-                aria-pressed={metric === candidate}
-                onClick={() => commit({ ...selection, metric: candidate })}
-                className={`text-label min-h-11 cursor-pointer rounded-md border px-3 font-semibold transition-colors duration-200 ${metric === candidate ? "border-primary bg-primary/10 text-primary" : "border-border text-fg-secondary hover:bg-surface-subtle"}`}
-                data-testid={`metric-${candidate}`}
+                {labels.comparisonAbsolute}
+              </ControlButton>
+              <ControlButton
+                active={selection.view === "growth"}
+                testId="comparison-view-growth"
+                onClick={() => commit({ ...selection, view: "growth" })}
               >
-                {labels.metricLabels[candidate]}
-              </button>
-            ))}
+                {labels.comparisonGrowth}
+              </ControlButton>
+            </ControlGroup>
           </div>
         </div>
+        {leader ? (
+          <div
+            className="border-primary/30 bg-primary/5 mt-6 rounded-lg border px-4 py-3"
+            data-testid="comparison-insight"
+          >
+            <p className="text-label text-primary font-semibold">{labels.comparisonInsightLabel}</p>
+            <p className="text-body text-fg-primary mt-1">
+              {leader.growth.percent === null
+                ? interpolate(labels.comparisonInsightNoGrowth, {
+                    leader: leader.channel.accountName,
+                    value: formatNumber(leader.latest),
+                    metric: labels.metricLabels[metric],
+                  })
+                : interpolate(labels.comparisonInsight, {
+                    leader: leader.channel.accountName,
+                    value: formatNumber(leader.latest),
+                    metric: labels.metricLabels[metric],
+                    change: formatSigned(leader.growth.absolute),
+                    percent: formatPercent(leader.growth.percent),
+                    count: selection.window,
+                  })}
+            </p>
+          </div>
+        ) : null}
         {commonMetrics.length === 0 ? (
           <p
             className="text-body text-fg-muted border-border bg-surface-subtle mt-6 rounded-md border p-6"
@@ -357,31 +522,61 @@ export function SocialAnalyticsDashboard({
             {labels.noData}
           </p>
         ) : (
-          <ComparisonChart comparison={comparison} labels={labels} metric={metric} />
+          <ComparisonChart
+            comparison={comparison}
+            labels={labels}
+            metric={metric}
+            view={selection.view}
+          />
         )}
       </Card>
 
-      <div className="space-y-4" data-testid="social-channel-details">
-        <h2 className="text-title-section text-fg-primary font-semibold">{labels.details}</h2>
-        {selectedChannels.map((channel) => (
-          <ChannelDetail
-            key={channel.id}
-            channel={channel}
-            windowDays={selection.window}
-            labels={labels}
-          />
-        ))}
-      </div>
+      <MetricComparisonTable rows={rankedRows} metric={metric} labels={labels} />
     </section>
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
     <Card padding="md">
       <p className="text-label text-fg-muted">{label}</p>
       <p className="text-title-section text-fg-primary mt-1 font-semibold">{value}</p>
+      {detail ? <p className="text-label text-fg-muted mt-1">{detail}</p> : null}
     </Card>
+  );
+}
+
+function ControlGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-label text-fg-muted mb-1.5">{label}</p>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+}
+
+function ControlButton({
+  active,
+  children,
+  onClick,
+  testId,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+  onClick: () => void;
+  testId: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      {...(active ? { "aria-current": "page" } : {})}
+      onClick={onClick}
+      className={`text-label min-h-11 cursor-pointer rounded-md border px-3 font-semibold transition-colors duration-200 ${active ? "border-primary bg-primary/10 text-primary" : "border-border text-fg-secondary hover:bg-surface-subtle"}`}
+      data-testid={testId}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -389,21 +584,23 @@ function ComparisonChart({
   comparison,
   labels,
   metric,
+  view,
 }: {
   comparison: ReturnType<typeof buildComparisonSeries>;
   labels: DashboardLabels;
   metric: SocialMetric;
+  view: ComparisonView;
 }) {
-  const max = Math.max(
-    1,
-    ...comparison.lines.flatMap((line) =>
-      line.values.filter((value): value is number => value !== null),
-    ),
+  const ticks = chartTicks(
+    comparison.lines.flatMap((line) => line.values),
+    view,
   );
+  const min = ticks[0] ?? 0;
+  const max = ticks[ticks.length - 1] ?? 1;
   const colors = ["#3525cd", "#dc5f00", "#16825d", "#a23a8c", "#087ea4", "#7a5c00"];
   const lineStyles = [undefined, "8 4", "2 4", "12 4 2 4", "4 4", "8 2 2 2"];
   const x = (index: number) => 52 + (index * 516) / Math.max(1, comparison.dates.length - 1);
-  const y = (value: number) => 188 - (value / max) * 148;
+  const y = (value: number) => 188 - ((value - min) / Math.max(1, max - min)) * 148;
   return (
     <div className="mt-6" data-testid="social-comparison-chart">
       <svg
@@ -413,54 +610,53 @@ function ComparisonChart({
         aria-label={`${labels.comparisonTitle}: ${labels.metricLabels[metric]}`}
         preserveAspectRatio="none"
       >
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
-          <g key={ratio} aria-hidden="true">
+        {ticks.map((tick) => (
+          <g key={tick} aria-hidden="true">
             <line
               x1="52"
               x2="568"
-              y1={188 - ratio * 148}
-              y2={188 - ratio * 148}
+              y1={y(tick)}
+              y2={y(tick)}
               className="stroke-border"
-              strokeDasharray={ratio === 0 ? undefined : "2 4"}
+              strokeDasharray={tick === 0 ? undefined : "2 4"}
             />
-            <text
-              x="42"
-              y={192 - ratio * 148}
-              textAnchor="end"
-              className="fill-fg-muted"
-              fontSize="10"
-            >
-              {formatNumber(max * ratio)}
+            <text x="42" y={y(tick) + 4} textAnchor="end" className="fill-fg-muted" fontSize="10">
+              {formatChartValue(tick, view)}
             </text>
           </g>
         ))}
         {comparison.lines.map((line, lineIndex) => (
           <g key={line.channelId}>
-            {segments(line.values).map((segment, segmentIndex) =>
-              segment.length === 1 ? (
+            {segments(line.values).map((segment, segmentIndex) => (
+              <path
+                key={`${line.channelId}-${segmentIndex}`}
+                d={segment
+                  .map(
+                    (pointIndex, index) =>
+                      `${index === 0 ? "M" : "L"}${x(pointIndex)},${y(line.values[pointIndex] ?? 0)}`,
+                  )
+                  .join(" ")}
+                fill="none"
+                stroke={colors[lineIndex % colors.length]}
+                strokeDasharray={lineStyles[lineIndex % lineStyles.length]}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ))}
+            {line.values.map((value, pointIndex) =>
+              value === null ? null : (
                 <circle
-                  key={`${line.channelId}-${segmentIndex}`}
-                  cx={x(segment[0] ?? 0)}
-                  cy={y(line.values[segment[0] ?? 0] ?? 0)}
-                  r="3.5"
+                  key={`${line.channelId}-point-${pointIndex}`}
+                  cx={x(pointIndex)}
+                  cy={y(value)}
+                  r="3"
                   fill={colors[lineIndex % colors.length]}
-                />
-              ) : (
-                <path
-                  key={`${line.channelId}-${segmentIndex}`}
-                  d={segment
-                    .map(
-                      (pointIndex, index) =>
-                        `${index === 0 ? "M" : "L"}${x(pointIndex)},${y(line.values[pointIndex] ?? 0)}`,
-                    )
-                    .join(" ")}
-                  fill="none"
-                  stroke={colors[lineIndex % colors.length]}
-                  strokeDasharray={lineStyles[lineIndex % lineStyles.length]}
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+                >
+                  <title>
+                    {`${line.label} · ${comparison.dates[pointIndex] ?? ""}: ${formatChartValue(value, view)}`}
+                  </title>
+                </circle>
               ),
             )}
           </g>
@@ -499,8 +695,66 @@ function ComparisonChart({
           </span>
         ))}
       </div>
+      <details className="border-border mt-4 rounded-md border" data-testid="comparison-data-table">
+        <summary className="text-body text-fg-secondary flex min-h-11 cursor-pointer items-center px-3 font-semibold">
+          {labels.dataTable}
+        </summary>
+        <div className="border-border overflow-x-auto border-t">
+          <table className="text-body w-full min-w-[560px] text-start">
+            <thead className="bg-surface-subtle text-label text-fg-muted">
+              <tr>
+                <th className="px-3 py-2 font-semibold">{labels.date}</th>
+                {comparison.lines.map((line) => (
+                  <th key={line.channelId} className="px-3 py-2 font-semibold">
+                    {line.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {comparison.dates.map((date, dateIndex) => (
+                <tr key={date} className="border-border border-t">
+                  <td className="px-3 py-2">{date}</td>
+                  {comparison.lines.map((line) => (
+                    <td key={line.channelId} className="px-3 py-2">
+                      {formatChartValue(line.values[dateIndex] ?? null, view)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
     </div>
   );
+}
+
+function chartTicks(values: Array<number | null>, view: ComparisonView): number[] {
+  const numeric = values.filter((value): value is number => value !== null);
+  if (numeric.length === 0) return [0, 1, 2, 3, 4];
+  const min = Math.min(0, ...numeric);
+  const max = Math.max(0, ...numeric);
+  if (min === max) {
+    return view === "growth" ? [-2, -1, 0, 1, 2] : [0, 1, 2, 3, 4];
+  }
+  const roughStep = (max - min || 1) / 4;
+  const magnitude = 10 ** Math.floor(Math.log10(roughStep));
+  const normalized = roughStep / magnitude;
+  const step = (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10) * magnitude;
+  const start = Math.floor(min / step) * step;
+  const end = Math.ceil(max / step) * step;
+  const ticks: number[] = [];
+  for (let tick = start; tick <= end + step / 2; tick += step) {
+    ticks.push(Number(tick.toFixed(6)));
+  }
+  if (view === "growth" && !ticks.includes(0)) ticks.push(0);
+  return ticks.sort((a, b) => a - b);
+}
+
+function formatChartValue(value: number | null, view: ComparisonView): string {
+  if (value === null) return "—";
+  return `${formatNumber(value)}${view === "growth" ? "%" : ""}`;
 }
 
 function segments(values: Array<number | null>): number[][] {
@@ -518,94 +772,81 @@ function segments(values: Array<number | null>): number[][] {
   return result;
 }
 
-function ChannelDetail({
-  channel,
-  windowDays,
+function MetricComparisonTable({
+  rows,
+  metric,
   labels,
 }: {
-  channel: AnalyticsDashboardChannel;
-  windowDays: SocialWindow;
+  rows: ComparisonRow[];
+  metric: SocialMetric;
   labels: DashboardLabels;
 }) {
-  const rows = seriesInWindow(channel.series, windowDays);
-  const growth = calculateGrowth(rows, "followerCount");
-  const supported = [
-    "followerCount",
-    "reach",
-    "views",
-    ...(channel.series.some((row) => row.engagedAccounts !== null)
-      ? (["engagedAccounts"] as const)
-      : []),
-    "interactions",
-  ] as const;
   return (
-    <Card padding="lg" data-testid={`social-card-${channel.id}`}>
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <PlatformIcon platform={channel.platform} tile />
-          <div>
-            <h3 className="text-title-card text-fg-primary font-semibold">{channel.accountName}</h3>
-            <p className="text-label text-fg-muted">
-              {labels.platformLabels[channel.platform]}
-              {channel.handle ? ` · @${channel.handle}` : ""}
-            </p>
-          </div>
+    <Card padding="lg" data-testid="social-channel-ranking">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-title-section text-fg-primary font-semibold">{labels.ranking}</h2>
+          <p className="text-body text-fg-muted mt-1">{labels.metricLabels[metric]}</p>
         </div>
-        <p className="text-label text-fg-muted">
-          {growth.absolute === null
-            ? "—"
-            : `${growth.absolute > 0 ? "+" : ""}${growth.absolute.toLocaleString()}`}
-        </p>
-      </header>
-      {channel.latestProviderErrorCode ? (
-        <p className="border-warning/30 bg-warning/5 text-warning text-label mt-4 rounded-md border px-3 py-2">
-          {channel.latestProviderErrorCode}
-        </p>
-      ) : null}
+      </div>
       {rows.length === 0 ? (
-        <p className="text-body text-fg-muted mt-4">{labels.noData}</p>
+        <p className="text-body text-fg-muted border-border bg-surface-subtle mt-4 rounded-md border p-4">
+          {labels.noData}
+        </p>
       ) : (
-        <>
-          <SocialGrowthChart
-            title={labels.followerTrend}
-            platform={labels.platformLabels[channel.platform] ?? channel.platform}
-            profileName={channel.accountName}
-            metricLabel={labels.metricLabels.followerCount}
-            points={rows.map((row) => ({ date: row.metricDate, value: row.followerCount }))}
-            tableId={`social-metrics-note-${channel.id}`}
-            growthPercent={growth.percent}
-            testId={`social-growth-chart-${channel.id}`}
-          />
-          <div className="border-border mt-4 overflow-x-auto rounded-md border">
-            <table
-              className="text-body w-full min-w-[620px] text-start"
-              aria-label={`${labels.metricLabels.followerCount} · ${channel.accountName}`}
-            >
-              <thead className="bg-surface-subtle text-label text-fg-muted">
-                <tr>
-                  <th className="px-3 py-2 font-semibold">{labels.date}</th>
-                  {supported.map((metric) => (
-                    <th key={metric} className="px-3 py-2 font-semibold">
-                      {labels.metricLabels[metric]}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.metricDate} className="border-border border-t">
-                    <td className="px-3 py-2">{row.metricDate}</td>
-                    {supported.map((metric) => (
-                      <td key={metric} className="px-3 py-2">
-                        {formatNumber(row[metric])}
-                      </td>
-                    ))}
+        <div className="border-border mt-4 overflow-x-auto rounded-md border">
+          <table className="text-body w-full min-w-[620px] text-start">
+            <thead className="bg-surface-subtle text-label text-fg-muted">
+              <tr>
+                <th className="px-3 py-3 font-semibold">{labels.channel}</th>
+                <th className="px-3 py-3 text-end font-semibold">{labels.latestValue}</th>
+                <th className="px-3 py-3 text-end font-semibold">{labels.change}</th>
+                <th className="px-3 py-3 font-semibold">{labels.dataStatus}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(({ channel, latest, growth }) => {
+                const status = channel.latestProviderErrorCode
+                  ? labels.providerDataLimited
+                  : latest === null
+                    ? labels.noMetricData
+                    : growth.partial
+                      ? labels.partialData
+                      : labels.healthy;
+                return (
+                  <tr key={channel.id} className="border-border border-t">
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-3">
+                        <PlatformIcon platform={channel.platform} tile />
+                        <div className="min-w-0">
+                          <p className="text-fg-primary truncate font-semibold">
+                            {channel.accountName}
+                          </p>
+                          <p className="text-label text-fg-muted">
+                            {labels.platformLabels[channel.platform]}
+                            {channel.handle ? ` · @${channel.handle}` : ""}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-end font-semibold">{formatNumber(latest)}</td>
+                    <td className="px-3 py-3 text-end">
+                      <span className="font-semibold">{formatSigned(growth.absolute)}</span>
+                      <span className="text-label text-fg-muted ms-1">
+                        {formatPercent(growth.percent)}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="text-label border-border bg-surface-subtle inline-flex rounded-full border px-2 py-1">
+                        {status}
+                      </span>
+                    </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </Card>
   );
