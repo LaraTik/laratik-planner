@@ -422,8 +422,9 @@ docker exec laratik-planner-pg-dev psql -U planner -d postgres -tAc \
   docker exec laratik-planner-pg-dev psql -U planner -d postgres \
   -c "CREATE DATABASE planner_test"
 
-# Then set the test URL in your shell rc (or .env / direnv). The
-# .env.example template includes this line for reference.
+# The pre-push hook automatically uses this local planner_test URL when
+# TEST_DATABASE_URL is unset. Set it explicitly only when using another
+# disposable database (the .env.example template includes the override).
 export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@localhost:5432/planner_test
 
 # Verify locally before relying on the pre-push gate:
@@ -454,10 +455,11 @@ Do not cancel the drill while it is executing its drop/recreate step unless
 the target is definitely `planner_test`; a cancelled production migration
 must be handled through the backup/rollback runbook instead.
 
-If `TEST_DATABASE_URL` is not set, `.husky/pre-push` fails
-integration with a direct setup hint. This keeps the gate honest
-after a normal commit and push. `SKIP_INTEGRATION=1` is the explicit
-escape hatch when you have a reason to skip.
+When `TEST_DATABASE_URL` is unset, `.husky/pre-push` automatically uses the
+local `planner_test` URL above. The integration runner still rejects unsafe
+URLs, and an unavailable Postgres/database fails the gate rather than
+silently skipping it. `SKIP_INTEGRATION=1` is the explicit escape hatch when
+you have a reason to skip.
 
 #### Checkbox controls and mobile touch targets
 

@@ -59,6 +59,16 @@ if [ -n "$SKIP_PREPUSH" ] || [ -n "$SKIP_PRECOMMIT" ] || [ -n "$CI" ]; then
   exit 0
 fi
 
+# The repository's local disposable database has a stable, safe default. Use
+# it when the developer has not supplied an override so a normal push does
+# not depend on an exported shell variable. The integration and E2E runners
+# still enforce their test/CI URL guards, and an explicit TEST_DATABASE_URL
+# always wins.
+if [ -z "${TEST_DATABASE_URL:-}" ]; then
+  export TEST_DATABASE_URL="postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test"
+  echo "ℹ TEST_DATABASE_URL not set; using the local disposable planner_test database."
+fi
+
 # Git supplies one line per ref being pushed on stdin:
 #   <local-ref> <local-sha> <remote-ref> <remote-sha>
 # Inspect those commit ranges. The index is normally clean after a commit,
@@ -108,8 +118,8 @@ fi
 #    commit. SKIP_INTEGRATION=1 escapes the gate for trivial pushes
 #    where the dev has already validated the change locally.
 #
-#    If TEST_DATABASE_URL is not set, fail with a direct setup hint. The
-#    recipe is in docs/operations/runbook.md § "Local integration setup".
+#    The hook supplies the repository's safe local planner_test default above.
+#    Set TEST_DATABASE_URL explicitly when using another disposable database.
 #    Use SKIP_INTEGRATION=1 only as an explicit, visible escape hatch.
 #
 #    Local pre-reqs (one-time):
@@ -120,12 +130,6 @@ fi
 if [ -n "$SKIP_INTEGRATION" ]; then
   echo "⏭  pnpm test:integration skipped (SKIP_INTEGRATION=1)"
 elif [ "$PUSH_HAS_TESTABLE_CHANGE" -eq 1 ]; then
-  if [ -z "$TEST_DATABASE_URL" ]; then
-    printf '\n✗ pnpm test:integration cannot run: TEST_DATABASE_URL is not set.\n'
-    printf '  Configure the disposable planner_test database as documented in docs/operations/runbook.md.\n'
-    printf '  To use the explicit escape hatch: SKIP_INTEGRATION=1 git push (CI still runs the audit gate).\n'
-    exit 1
-  fi
   printf '\n▶ pnpm test:integration — disposable Postgres + migration + authz:\n'
   printf '  (SKIP_INTEGRATION=1 to skip; setup in docs/operations/runbook.md)\n\n'
   pnpm test:integration
