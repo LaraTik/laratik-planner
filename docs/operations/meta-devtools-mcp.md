@@ -232,6 +232,44 @@ the answers are current and the URL is a citation the agent can hand back.
   next step is to wire the Marketing API separately via the
   `MetaAdsProviderAdapter` (future work — not yet in this repo).
 
+## Triage: App mode vs App Review vs per-tenant permissions
+
+When the `analytics-probe-card` reports `error · metric_unavailable` for a
+Page-level metric (`reach` = `page_impressions_unique` or `views` =
+`page_views`) but `interactions` (`page_post_engagements`) is `available`,
+the pipeline is correct — Meta is the gate. Three MCP calls isolate the
+root cause in < 30 s:
+
+```text
+mcp__meta-devtools__get_app              ({ app_id: "1046395264942070" })
+mcp__meta-devtools__get_app_review_status({ app_id: "1046395264942070" })
+mcp__meta-devtools__get_app_rate_limits  ({ app_id: "1046395264942070" })
+```
+
+Then match the evidence to the fix:
+
+| Evidence                                                                                                                           | Root cause                                                                                                        | Fix                                                                                                                                             | Time to enable      |
+| ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| `get_app` says `Live` but `get_app_review_status` reports `page_impressions_unique` / `page_views` as `not_submitted` or `pending` | App Review Standard Access missing for the two metrics                                                            | Submit via App Review → Permissions and Features. Use the boilerplate from `docs/superpowers/plans/2026-08-24-meta-tiktok-social-analytics.md`. | 3–7 days (Meta SLA) |
+| `get_app` says `In Development` and the connecting user is not in App → Roles                                                      | App is gated to role-holders only                                                                                 | Toggle to Live, then re-add the user as `Admin` (not just `Tester` — the dev-mode gate checks tier). Re-probe.                                  | ~2 min              |
+| `get_app_rate_limits` shows `0% remaining` on `/insights`                                                                          | Throttling, not a config issue                                                                                    | Back off the cron worker (see `src/lib/social/sync.ts`); the probe will recover on the next tick.                                               | < 1 h               |
+| All three are `Live` / `approved` / non-zero headroom and the probe still fails                                                    | Per-tenant — the connector's Page access token is missing a task, OR the IG account is unlinked from the Business | Reconnect the channel; if that fails, the channel is permanently degraded.                                                                      | Open a follow-up    |
+
+**The probe will reflect any of these fixes automatically** — there is
+no in-repo change required. The `metric_unavailable` row in
+`agency_social_metric_probes` is the contractually correct degraded
+state and will flip to `available` on the next probe tick after Meta
+serves the metric. Do **not** add code-level fallbacks that mask the
+error or substitute a different metric (e.g. `page_fans` for
+`page_impressions_unique`) — the failure is contractual, the operator
+needs to see it, and the snapshot is already wired to surface it.
+
+If MCP access is unavailable (no OAuth grant yet), the same triage is
+reachable in ~ 5 min via the browser dashboard — see
+`developers.facebook.com/apps/1046395264942070/{dashboard,app-review/permissions,roles}`.
+The MCP path is preferred because it captures the evidence in a
+single grep-able call sequence.
+
 ## Related docs
 
 - `docs/visual-parity/MCP.md` — the Stitch MCP, same pattern, different

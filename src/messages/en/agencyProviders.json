@@ -68,5 +68,14 @@
   "analyticsProbeProfile": "Profile",
   "analyticsProbeRun": "Run probe",
   "analyticsProbePending": "Checking…",
-  "analyticsProbeFailed": "The analytics probe could not be completed."
+  "analyticsProbeFailed": "The analytics probe could not be completed.",
+  "analyticsProbeTooltipAvailable": "Metric is supported and Meta returned a value for the current window.",
+  "analyticsProbeTooltipUnsupportedFacebookEngaged": "Facebook Pages do not expose an accounts_engaged metric in the Graph API. Use the daily engaged users number in Page Insights UI instead. See ADR 0005.",
+  "analyticsProbeTooltipUnsupportedGeneric": "This platform does not expose this metric. The capability registry in src/lib/social/metrics.ts is the source of truth; see ADR 0005.",
+  "analyticsProbeTooltipNoData": "Metric is supported but Meta returned an empty window — usually a new account or a period with no activity. Re-test in 24-48h.",
+  "analyticsProbeTooltipErrorMetricUnavailable": "Meta returned error code 100 for this metric — usually app mode (In Development), missing Standard Access on App Review, or a Page access token missing a task. Triage: docs/operations/meta-devtools-mcp.md.",
+  "analyticsProbeTooltipErrorPermissionDenied": "The connector's access token is missing a required scope. Reconnect the channel from /app/agency-settings/social to refresh the token.",
+  "analyticsProbeTooltipErrorAuthExpired": "The connector's access token has expired or been revoked. Reconnect the channel.",
+  "analyticsProbeTooltipErrorRateLimited": "Meta throttled the request. The probe will retry on the next tick — usually < 1h.",
+  "analyticsProbeTooltipErrorGeneric": "Meta returned an error. See the error code above and the MCP triage doc."
 }

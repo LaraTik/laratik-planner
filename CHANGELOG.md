@@ -12,6 +12,38 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — Analytics probe: clarify `unsupported` vs `error` on the operator card (2026-09-05)
+
+The probe card rendered every non-`available` metric with the same
+warning-coloured `XCircle` icon, so `engagedAccounts: unsupported` on
+the Facebook Page branch looked identical to `reach: error ·
+metric_unavailable`. `unsupported` is a platform contract (Pages have
+no `accounts_engaged` equivalent in v25.0), not a failure — the
+alarming icon was misleading. The card now uses a muted `Info` icon
+for `unsupported` and a more specific icon for `no_data`, and adds a
+tooltip on `unsupported` rows pointing at the by-design reason.
+
+- `src/app/(app)/app/agency-settings/social/providers/analytics-probe-card.tsx` —
+  status → icon mapping now distinguishes `available` / `unsupported`
+  / `no_data` / `error`, with a hover title on `unsupported` cells.
+- No change to the underlying metrics contract (`resolveMetricStatus`
+  in `src/lib/social/metrics.ts` is unchanged) or to the persisted
+  shape in `agency_social_metric_probes`.
+
+### Docs — Meta-devtools MCP triage recipe for `metric_unavailable` (2026-09-05)
+
+The Food Game Facebook Page probe reported
+`reach: error · metric_unavailable` and
+`views: error · metric_unavailable` with `interactions: available`.
+The asymmetry (1 of 3 Page-level insights works) rules out scope,
+token, and Page-task root causes; Meta is the gate.
+`docs/operations/meta-devtools-mcp.md` now has a "Triage: App mode
+vs App Review vs per-tenant permissions" section with the three
+`mcp__meta-devtools__*` calls that isolate the root cause in < 30 s
+and the matching fix path (toggle Live + role, or submit Standard
+Access). The probe flips back to `available` automatically on the
+next tick after Meta serves the metric — no code change required.
+
 ### Tooling — Visual baseline status surfaced (2026-08-31)
 
 `pnpm test:visual` was run in this session to surface the

@@ -68,5 +68,14 @@
   "analyticsProbeProfile": "الملف",
   "analyticsProbeRun": "تشغيل الفحص",
   "analyticsProbePending": "جارٍ التحقق…",
-  "analyticsProbeFailed": "تعذر إكمال فحص التحليلات."
+  "analyticsProbeFailed": "تعذر إكمال فحص التحليلات.",
+  "analyticsProbeTooltipAvailable": "المقياس مدعوم وأعادت Meta قيمة للنافذة الحالية.",
+  "analyticsProbeTooltipUnsupportedFacebookEngaged": "لا تعرض صفحات Facebook مقياس accounts_engaged في واجهة Graph API. استخدم عدد المستخدمين النشطين يوميًا في واجهة Page Insights بدلاً من ذلك. راجع ADR 0005.",
+  "analyticsProbeTooltipUnsupportedGeneric": "لا تعرض هذه المنصة هذا المقياس. سجل الإمكانات في src/lib/social/metrics.ts هو المرجع؛ راجع ADR 0005.",
+  "analyticsProbeTooltipNoData": "المقياس مدعوم لكن Meta أعادت نافذة فارغة — عادةً حساب جديد أو فترة بلا نشاط. أعد الفحص بعد 24-48 ساعة.",
+  "analyticsProbeTooltipErrorMetricUnavailable": "أعادت Meta رمز الخطأ 100 لهذا المقياس — عادةً وضع التطبيق (قيد التطوير)، أو وصول قياسي مفقود في App Review، أو رمز وصول الصفحة يفتقر إلى مهمة. راجع docs/operations/meta-devtools-mcp.md.",
+  "analyticsProbeTooltipErrorPermissionDenied": "رمز الوصول للجهة المتصلة يفتقر إلى نطاق مطلوب. أعد توصيل القناة من /app/agency-settings/social لتحديث الرمز.",
+  "analyticsProbeTooltipErrorAuthExpired": "انتهت صلاحية رمز الوصول للجهة المتصلة أو تم إبطاله. أعد توصيل القناة.",
+  "analyticsProbeTooltipErrorRateLimited": "قامت Meta بتحديد الطلب. سيُعاد الفحص في الدورة التالية — عادةً خلال أقل من ساعة.",
+  "analyticsProbeTooltipErrorGeneric": "أعادت Meta خطأ. راجع رمز الخطأ أعلاه ووصف التشخيص في MCP."
 }
