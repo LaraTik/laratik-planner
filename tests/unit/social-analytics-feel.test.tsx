@@ -533,6 +533,28 @@ describe("SocialGrowthChart (M5)", () => {
     expect(svg.getAttribute("aria-label")).toContain("Views");
   });
 
+  it("makes the selected channel's start, latest, and y-axis values visible", () => {
+    const { container } = render(
+      <SocialGrowthChart
+        title="Follower growth"
+        platform="Instagram"
+        profileName="Food Game"
+        metricLabel="Followers"
+        points={[
+          { date: "2026-08-22", value: 240 },
+          { date: "2026-08-23", value: null },
+          { date: "2026-08-24", value: 248 },
+        ]}
+        tableId="t1"
+        growthPercent={3.3}
+      />,
+    );
+
+    expect(screen.getByText(/Followers: 240 → 248/)).toBeInTheDocument();
+    expect(container.querySelectorAll("svg text").length).toBeGreaterThanOrEqual(6);
+    expect(container.querySelectorAll("path")).toHaveLength(2);
+  });
+
   it("uses the active locale for trend and chart accessibility copy", () => {
     render(
       <LocaleProvider locale="ar">

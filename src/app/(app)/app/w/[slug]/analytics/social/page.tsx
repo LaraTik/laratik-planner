@@ -146,6 +146,7 @@ export default async function SocialAnalyticsPage({
     window: t("analytics.windowSelector"),
     days: t("analytics.days"),
     details: t("analytics.details"),
+    followerTrend: t("analytics.followerTrend"),
     date: t("analytics.tableDate"),
     partial: t("analytics.partial"),
     metricLabels: {

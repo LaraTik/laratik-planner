@@ -634,11 +634,11 @@ describe("Sidebar (workspace switcher — detail-suffix behaviour)", () => {
     expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning/new");
   });
 
-  it("strips the id but keeps the sub-action /app/w/<old>/planning/edit/<id> → /app/w/<new>/planning/edit", async () => {
+  it("strips the id from the edit detail route /app/w/<old>/planning/edit/<id> → /app/w/<new>/planning", async () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning/edit/abc-123-uuid");
     render(<Sidebar {...baseProps} />);
     await chooseOtherWorkspace();
-    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning/edit");
+    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning");
   });
 
   it("strips a detail id from a NEW section (reviews) — section-agnostic generalisation", async () => {

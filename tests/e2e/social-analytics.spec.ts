@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { bootstrapRoleSession } from "./_helpers";
+import { bootstrapRoleSession, devSeed } from "./_helpers";
 
 /**
  * M4 — social analytics dashboard E2E.
@@ -33,6 +33,8 @@ test.describe("M4 — social analytics dashboard", () => {
       hasText: "Acme Facebook",
     });
     await expect(facebookCard).toBeVisible();
+    await expect(facebookCard.locator('[data-testid^="social-growth-chart-"]')).toBeVisible();
+    await expect(facebookCard.getByText(/Followers:/)).toBeVisible();
     await expect(facebookCard.getByRole("columnheader", { name: /engaged/i })).toHaveCount(0);
     await expect(facebookCard.getByRole("columnheader", { name: /interactions/i })).toBeVisible();
 
@@ -66,6 +68,34 @@ test.describe("M4 — social analytics dashboard", () => {
     await page.getByTestId("analytics-platform-tiktok").click();
     await expect(page.getByTestId("metric-interactions")).toHaveCount(0);
     await expect(page.getByTestId("metric-followerCount")).toBeVisible();
+  });
+
+  test("switching workspace from analytics keeps the valid analytics route", async ({ page }) => {
+    const source = await bootstrapRoleSession(
+      page,
+      "workspace_manager",
+      "analytics-switch-source",
+      {
+        socialAnalyticsFixture: true,
+      },
+    );
+    await devSeed(page.request, {
+      email: "e2e-workspace_manager@laratik.local",
+      workspaceName: "Analytics Switch Target",
+      workspaceSlug: "analytics-switch-target",
+      workspaceRoles: ["workspace_manager"],
+    });
+
+    await page.goto(`/app/w/${source.workspaceSlug}/analytics/social`);
+    await page.getByTestId("sidebar-workspace-switcher-trigger").click();
+    await page
+      .getByRole("listbox", { name: "Workspaces" })
+      .getByRole("option", { name: "Analytics Switch Target" })
+      .click();
+
+    await expect(page).toHaveURL(/\/app\/w\/analytics-switch-target\/analytics\/social$/);
+    await expect(page.getByTestId("app-not-found")).toHaveCount(0);
+    await expect(page.getByTestId("social-analytics-page")).toBeVisible();
   });
 
   test("keeps the analytics surface usable in Arabic RTL on a narrow viewport", async ({

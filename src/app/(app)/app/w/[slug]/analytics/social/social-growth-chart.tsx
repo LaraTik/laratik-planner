@@ -1,44 +1,45 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
-/**
- * M4 — accessible SVG growth chart.
- * M5 — multi-metric support.
- *
- * The chart is a hand-rolled dependency-free SVG so the milestone
- * ships without adding a chart library. The visual contract is
- *
- *   - one series at a time (any of the 5 supported metrics)
- *   - responsive viewBox
- *   - visible focusable data points
- *   - platform / name text labels in the legend
- *   - `aria-describedby` linking the chart to the adjacent table
- *   - `prefers-reduced-motion` respected
- *
- * The values are clamped to the chart's drawing area; null / missing
- * data points render as gaps. The chart is intentionally
- * minimal — the visible value table below it is the source of
- * truth.
- *
- * Trend badge:
- *   The chart's endpoint-delta ("latest vs earliest in the visible
- *   window") is a bad signal for the operator — a channel that
- *   dipped 20% then recovered 20% reads "Flat" even though the
- *   underlying 7d growth is 0%. M5 takes the growth percent from
- *   the page (which is computed from the SAME first/last pair, but
- *   also surfaces the `partial` flag) and uses it to drive the
- *   badge. The chart endpoint is still used as a fallback when no
- *   growth percent is provided (e.g. legacy callers).
- */
-
+/** A single dated value in a channel's selected analytics window. */
 export type GrowthPoint = {
   date: string;
   value: number | null;
 };
+
+const CHART_WIDTH = 680;
+const CHART_HEIGHT = 292;
+const PLOT_LEFT = 78;
+const PLOT_RIGHT = 654;
+const PLOT_TOP = 34;
+const PLOT_BOTTOM = 236;
+const TICK_COUNT = 4;
+
+function formatSigned(value: number, formatValue: (value: number) => string): string {
+  return `${value > 0 ? "+" : ""}${formatValue(value)}`;
+}
+
+function lineSegments(
+  points: Array<{ index: number; value: number }>,
+): Array<Array<{ index: number; value: number }>> {
+  const segments: Array<Array<{ index: number; value: number }>> = [];
+  let current: Array<{ index: number; value: number }> = [];
+  let previousIndex = -2;
+  for (const point of points) {
+    if (point.index !== previousIndex + 1 && current.length > 0) {
+      segments.push(current);
+      current = [];
+    }
+    current.push(point);
+    previousIndex = point.index;
+  }
+  if (current.length > 0) segments.push(current);
+  return segments;
+}
 
 export function SocialGrowthChart({
   title,
@@ -48,21 +49,17 @@ export function SocialGrowthChart({
   points,
   tableId,
   growthPercent,
+  testId,
 }: {
   title: string;
   platform: string;
   profileName: string;
-  /** Human-readable label for the plotted metric (e.g. "Followers"). */
   metricLabel: string;
   points: GrowthPoint[];
+  /** ID of the visually-hidden note that connects the chart to its table. */
   tableId: string;
-  /**
-   * Optional growth percent for the same window (e.g. summary
-   * tile's `growth.percent`). When provided, the trend badge
-   * uses this instead of the chart's endpoint delta. `null`
-   * falls back to endpoint delta (the M4 behavior).
-   */
   growthPercent?: number | null;
+  testId?: string;
 }) {
   const t = useLocaleT();
   const locale = useLocaleCode();
@@ -71,16 +68,19 @@ export function SocialGrowthChart({
       value,
     );
   const reactId = useId();
-  const chartId = `${reactId}-chart`;
   const descId = `${reactId}-desc`;
   const [hover, setHover] = useState<number | null>(null);
   const numericPoints = useMemo(
-    () => points.filter((p) => p.value !== null) as Array<{ date: string; value: number }>,
+    () =>
+      points.flatMap((point, index) =>
+        typeof point.value === "number" ? [{ index, date: point.date, value: point.value }] : [],
+      ),
     [points],
   );
-
-  // Trend source: prefer the page-computed growth percent (M5),
-  // fall back to chart endpoint delta (M4 legacy).
+  const first = numericPoints[0] ?? null;
+  const latest = numericPoints[numericPoints.length - 1] ?? null;
+  const absoluteChange =
+    numericPoints.length > 1 && first && latest ? latest.value - first.value : null;
   const trend =
     typeof growthPercent === "number"
       ? growthPercent > 0
@@ -88,14 +88,13 @@ export function SocialGrowthChart({
         : growthPercent < 0
           ? "down"
           : "flat"
-      : (() => {
-          const latest = numericPoints[numericPoints.length - 1]?.value ?? null;
-          const earliest = numericPoints[0]?.value ?? null;
-          if (latest === null || earliest === null) return "flat" as const;
-          if (latest > earliest) return "up" as const;
-          if (latest < earliest) return "down" as const;
-          return "flat" as const;
-        })();
+      : absoluteChange === null
+        ? "flat"
+        : absoluteChange > 0
+          ? "up"
+          : absoluteChange < 0
+            ? "down"
+            : "flat";
   const trendLabel =
     trend === "up"
       ? t("analytics.chartTrendGrowing")
@@ -103,25 +102,57 @@ export function SocialGrowthChart({
         ? t("analytics.chartTrendDeclining")
         : t("analytics.chartTrendFlat");
   const chartDescription = t(
-    points.length === 1 ? "analytics.chartDescriptionOne" : "analytics.chartDescriptionMany",
+    numericPoints.length === 1 ? "analytics.chartDescriptionOne" : "analytics.chartDescriptionMany",
     {
       metric: metricLabel.toLocaleLowerCase(locale),
-      count: points.length,
+      count: numericPoints.length,
       profileName,
     },
   );
+  const changeSummary =
+    first && latest
+      ? t("analytics.chartChangeSummary", {
+          metric: metricLabel,
+          start: formatValue(first.value),
+          latest: formatValue(latest.value),
+          change: formatSigned(absoluteChange ?? 0, formatValue),
+          percent:
+            typeof growthPercent === "number"
+              ? `${growthPercent > 0 ? "+" : ""}${growthPercent.toFixed(1)}%`
+              : "—",
+          count: numericPoints.length,
+        })
+      : t("analytics.chartNotEnoughData");
+
+  const rawMin =
+    numericPoints.length > 0 ? Math.min(...numericPoints.map((point) => point.value)) : 0;
+  const rawMax =
+    numericPoints.length > 0 ? Math.max(...numericPoints.map((point) => point.value)) : 1;
+  const rawRange = rawMax - rawMin;
+  const padding = rawRange > 0 ? rawRange * 0.1 : Math.max(1, rawMax * 0.05);
+  const domainMin = Math.max(0, rawMin - padding);
+  const domainMax = Math.max(domainMin + 1, rawMax + padding);
+  const domainRange = domainMax - domainMin;
+  const x = (index: number) =>
+    PLOT_LEFT + (index * (PLOT_RIGHT - PLOT_LEFT)) / Math.max(1, points.length - 1);
+  const y = (value: number) =>
+    PLOT_BOTTOM - ((value - domainMin) / domainRange) * (PLOT_BOTTOM - PLOT_TOP);
+  const segments = lineSegments(numericPoints);
 
   return (
     <figure
       className="border-border bg-surface rounded-lg border p-4"
-      data-testid="social-growth-chart"
-      aria-describedby={descId}
+      data-testid={testId ?? "social-growth-chart"}
+      aria-describedby={`${descId} ${tableId}`}
     >
-      <figcaption className="flex items-center justify-between gap-2">
-        <div>
+      <figcaption className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h3 className="text-body text-fg-primary font-semibold">{title}</h3>
           <p className="text-label text-fg-muted">
             {platform} · {profileName} · {metricLabel}
+          </p>
+          <p className="text-body text-fg-secondary mt-2 font-medium" id={descId}>
+            {changeSummary}
           </p>
         </div>
         <Badge variant={trend === "up" ? "success" : trend === "down" ? "danger" : "outline"}>
@@ -139,141 +170,154 @@ export function SocialGrowthChart({
       </figcaption>
 
       <svg
-        id={chartId}
-        viewBox="0 0 600 220"
-        className="mt-4 w-full"
+        viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+        className="mt-4 w-full overflow-visible"
         role="img"
-        aria-label={t("analytics.chartAria", {
-          title,
-          profileName,
-          metric: metricLabel,
-        })}
+        aria-label={t("analytics.chartAria", { title, profileName, metric: metricLabel })}
         preserveAspectRatio="none"
-        style={{ transition: "none" }}
       >
         <title>{title}</title>
-        <desc id={descId}>{chartDescription}</desc>
-        {/* Gridlines + y-axis labels */}
-        {[0, 0.25, 0.5, 0.75, 1].map((g) => {
-          const y = 20 + g * 160;
+        <desc>{chartDescription}</desc>
+
+        {[0, 1, 2, 3, 4].map((tick) => {
+          const ratio = tick / TICK_COUNT;
+          const tickValue = domainMax - ratio * domainRange;
+          const tickY = PLOT_TOP + ratio * (PLOT_BOTTOM - PLOT_TOP);
           return (
-            <line
-              key={g}
-              x1={40}
-              x2={580}
-              y1={y}
-              y2={y}
-              className="stroke-border"
-              strokeWidth={1}
-              strokeDasharray={g === 0 || g === 1 ? "0" : "2 4"}
-            />
+            <g key={tick} aria-hidden="true">
+              <line
+                x1={PLOT_LEFT}
+                x2={PLOT_RIGHT}
+                y1={tickY}
+                y2={tickY}
+                className="stroke-border"
+                strokeWidth={tick === TICK_COUNT ? 1.5 : 1}
+                strokeDasharray={tick === TICK_COUNT ? undefined : "3 5"}
+              />
+              <text
+                x={PLOT_LEFT - 10}
+                y={tickY + 4}
+                textAnchor="end"
+                className="fill-fg-muted"
+                fontSize={11}
+              >
+                {formatValue(tickValue)}
+              </text>
+            </g>
           );
         })}
 
-        {/* Polyline (skip null points; draw gaps) */}
         {numericPoints.length > 1 ? (
-          (() => {
-            const min = Math.min(...numericPoints.map((p) => p.value));
-            const max = Math.max(...numericPoints.map((p) => p.value));
-            const range = Math.max(1, max - min);
-            const stepX = (580 - 40) / Math.max(1, points.length - 1);
-            const yOf = (v: number) => 180 - ((v - min) / range) * 160;
-            const d = numericPoints
-              .map((p, i) => {
-                const idx = points.findIndex((q) => q.date === p.date);
-                const x = 40 + (idx >= 0 ? idx : i) * stepX;
-                return `${i === 0 ? "M" : "L"}${x},${yOf(p.value)}`;
-              })
-              .join(" ");
-            return (
-              <>
-                <path d={d} className="stroke-primary fill-none" strokeWidth={2} />
-                {numericPoints.map((p, i) => {
-                  const idx = points.findIndex((q) => q.date === p.date);
-                  const x = 40 + (idx >= 0 ? idx : i) * stepX;
-                  const y = yOf(p.value);
-                  return (
-                    <circle
-                      key={p.date}
-                      cx={x}
-                      cy={y}
-                      r={hover === i ? 6 : 4}
-                      className="fill-primary"
-                      onMouseEnter={() => setHover(i)}
-                      onMouseLeave={() => setHover(null)}
-                      onFocus={() => setHover(i)}
-                      onBlur={() => setHover(null)}
-                      tabIndex={0}
-                      role="button"
-                      aria-label={t("analytics.chartPointAria", {
-                        date: p.date,
-                        value: formatValue(p.value),
-                        metric: metricLabel.toLocaleLowerCase(locale),
-                      })}
-                    />
-                  );
+          <>
+            {segments.map((segment, segmentIndex) => {
+              const path = segment
+                .map(
+                  (point, pointIndex) =>
+                    `${pointIndex === 0 ? "M" : "L"}${x(point.index)},${y(point.value)}`,
+                )
+                .join(" ");
+              return (
+                <path
+                  key={`segment-${segmentIndex}`}
+                  d={path}
+                  className="stroke-primary fill-none"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              );
+            })}
+            {numericPoints.map((point, pointIndex) => (
+              <circle
+                key={point.date}
+                cx={x(point.index)}
+                cy={y(point.value)}
+                r={hover === pointIndex ? 7 : 4.5}
+                className="fill-primary stroke-surface focus-visible:stroke-fg-primary"
+                strokeWidth={hover === pointIndex ? 3 : 2}
+                tabIndex={0}
+                role="button"
+                aria-label={t("analytics.chartPointAria", {
+                  date: point.date,
+                  value: formatValue(point.value),
+                  metric: metricLabel.toLocaleLowerCase(locale),
                 })}
-                {hover !== null
-                  ? (() => {
-                      const p = numericPoints[hover];
-                      if (!p) return null;
-                      const idx = points.findIndex((q) => q.date === p.date);
-                      const x = 40 + idx * stepX;
-                      const y = yOf(p.value);
-                      // Flip the tooltip to the LEFT of the point when
-                      // we're close to the right edge, so the box
-                      // never spills off the chart. M4 had a one-sided
-                      // clamp that let the box overflow.
-                      const TIP_WIDTH = 120;
-                      const flipLeft = x + 8 + TIP_WIDTH > 580;
-                      const tipX = flipLeft ? x - 8 - TIP_WIDTH : Math.min(560, x + 8);
-                      const tipY = Math.max(20, Math.min(180, y - 28));
-                      return (
-                        <g>
-                          <rect
-                            x={tipX}
-                            y={tipY}
-                            width={TIP_WIDTH}
-                            height={20}
-                            className="fill-surface-subtle stroke-border"
-                            strokeWidth={1}
-                            rx={4}
-                          />
-                          <text
-                            x={tipX + TIP_WIDTH / 2}
-                            y={tipY + 14}
-                            textAnchor="middle"
-                            className="fill-fg-primary"
-                            fontSize={11}
-                          >
-                            {p.date}: {formatValue(p.value)}
-                          </text>
-                        </g>
-                      );
-                    })()
-                  : null}
-              </>
-            );
-          })()
+                onMouseEnter={() => setHover(pointIndex)}
+                onMouseLeave={() => setHover(null)}
+                onFocus={() => setHover(pointIndex)}
+                onBlur={() => setHover(null)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") setHover(null);
+                }}
+              />
+            ))}
+            {hover !== null && numericPoints[hover] ? (
+              <g pointerEvents="none" aria-hidden="true">
+                <line
+                  x1={x(numericPoints[hover].index)}
+                  x2={x(numericPoints[hover].index)}
+                  y1={PLOT_TOP}
+                  y2={PLOT_BOTTOM}
+                  className="stroke-primary"
+                  strokeDasharray="3 4"
+                  opacity={0.35}
+                />
+                <rect
+                  x={Math.min(
+                    PLOT_RIGHT - 132,
+                    Math.max(PLOT_LEFT, x(numericPoints[hover].index) - 66),
+                  )}
+                  y={Math.max(PLOT_TOP, y(numericPoints[hover].value) - 34)}
+                  width={132}
+                  height={24}
+                  className="fill-surface stroke-border"
+                  rx={5}
+                />
+                <text
+                  x={
+                    Math.min(
+                      PLOT_RIGHT - 132,
+                      Math.max(PLOT_LEFT, x(numericPoints[hover].index) - 66),
+                    ) + 66
+                  }
+                  y={Math.max(PLOT_TOP, y(numericPoints[hover].value) - 34) + 16}
+                  textAnchor="middle"
+                  className="fill-fg-primary"
+                  fontSize={11}
+                >
+                  {numericPoints[hover].date}: {formatValue(numericPoints[hover].value)}
+                </text>
+              </g>
+            ) : null}
+          </>
         ) : (
-          <text x={300} y={110} textAnchor="middle" className="fill-fg-muted" fontSize={14}>
+          <text
+            x={(PLOT_LEFT + PLOT_RIGHT) / 2}
+            y={140}
+            textAnchor="middle"
+            className="fill-fg-muted"
+            fontSize={14}
+          >
             {t("analytics.chartNotEnoughData")}
           </text>
         )}
 
-        {/* X-axis labels (first, last, and hover) */}
-        {points.length > 0 ? (
-          <>
-            <text x={40} y={200} className="fill-fg-muted" fontSize={10}>
-              {points[0]!.date}
+        <g aria-hidden="true">
+          <text x={PLOT_LEFT} y={PLOT_BOTTOM + 24} className="fill-fg-muted" fontSize={11}>
+            {points[0]?.date ?? ""}
+          </text>
+          {points.length > 1 ? (
+            <text
+              x={PLOT_RIGHT}
+              y={PLOT_BOTTOM + 24}
+              textAnchor="end"
+              className="fill-fg-muted"
+              fontSize={11}
+            >
+              {points[points.length - 1]?.date ?? ""}
             </text>
-            {points.length > 1 ? (
-              <text x={580} y={200} textAnchor="end" className="fill-fg-muted" fontSize={10}>
-                {points[points.length - 1]!.date}
-              </text>
-            ) : null}
-          </>
-        ) : null}
+          ) : null}
+        </g>
       </svg>
 
       <p className="text-label text-fg-muted sr-only" id={tableId}>

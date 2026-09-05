@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Briefcase, Check, ChevronsUpDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { getWorkspaceSwitchPath } from "./workspace-switcher-path";
 
 type Workspace = { id: string; name: string; slug: string };
 
@@ -36,23 +37,6 @@ const DEFAULT_COPY: WorkspaceSwitcherCopy = {
 function withName(template: string, name: string) {
   return template.replace("{name}", name);
 }
-
-/**
- * Workspace-scoped sub-action segments that survive a slug swap.
- * A path of `/app/w/<old>/<section>/<sub-action>` (e.g.
- * `/app/w/old/planning/batch`, `/app/w/old/planning/new`,
- * `/app/w/old/planning/edit`) is a workspace-scoped create/edit
- * surface; the user's intent is "I was working in the
- * `<section>` sub-action" and the new workspace has its own
- * equivalent surface at the same path. Anything *after* a known
- * sub-action segment is treated as a detail id and stripped.
- *
- * Adding a new section with its own detail sub-route requires
- * NOTHING on this list — the detail-id stripping is
- * section-agnostic. The list is only for "keep the sub-action
- * surface across the slug swap".
- */
-const WORKSPACE_KNOWN_SUB_ACTIONS = new Set(["new", "batch", "edit"]);
 
 /**
  * Workspace switcher — opens a popover listing the user's workspaces
@@ -115,70 +99,7 @@ export function WorkspaceSwitcher({
 
   const choose = (w: Workspace) => {
     setOpen(false);
-    // If the user is on a workspace-scoped page, swap the slug; otherwise
-    // go to the workspace overview.
-    //
-    // Sub-resource heuristic: if the current path contains a
-    // detail-id segment (e.g. `/app/w/old/planning/123` or
-    // `/app/w/old/planning/123/edit`), the new workspace almost
-    // certainly does NOT contain the same item id — copying the
-    // suffix across workspaces produces a 404 (correct anti-IDOR,
-    // but a confusing UX). In that case we land the user on the
-    // same section's index (e.g. `/app/w/new/planning`). The
-    // section root keeps the user's intent ("I was in planning")
-    // without leaking a stale item id from the old workspace.
-    //
-    // The general rule: a path segment is a detail id unless it
-    // is a known workspace-scoped sub-action (new / batch / edit).
-    // This means adding a new section with a `[id]` sub-route
-    // requires no change to this switcher — the rule is
-    // section-agnostic. The known-sub-action list is only for
-    // paths like `/app/w/old/planning/edit/123`, where `edit` is
-    // the sub-action we want to keep across the swap and `123` is
-    // the id we want to drop.
-    const isWorkspacePage = /^\/app\/w\/[^/]+/.test(pathname);
-    if (!isWorkspacePage) {
-      router.push(`/app/w/${w.slug}`);
-      return;
-    }
-    // Parse the section + remaining segments.
-    //   /app/w/old/planning               -> [planning]
-    //   /app/w/old/planning/batch         -> [planning, batch]
-    //   /app/w/old/planning/edit/123      -> [planning, edit, 123]
-    //   /app/w/old/planning/123           -> [planning, 123]
-    //   /app/w/old/planning/123/publish   -> [planning, 123, publish]
-    const sectionMatch = pathname.match(/^\/app\/w\/[^/]+\/([^/]+)(?:\/(.*))?$/);
-    const section = sectionMatch?.[1];
-    const rest = (sectionMatch?.[2] ?? "").split("/").filter(Boolean);
-    if (!section) {
-      router.push(`/app/w/${w.slug}`);
-      return;
-    }
-    // At the section index — slug swap is enough.
-    if (rest.length === 0) {
-      router.push(`/app/w/${w.slug}/${section}`);
-      return;
-    }
-    const [first, ...after] = rest;
-    // First rest segment is a known sub-action (e.g. `new`,
-    // `batch`, `edit`). Keep the sub-action, drop any id that
-    // follows it.
-    if (first && WORKSPACE_KNOWN_SUB_ACTIONS.has(first)) {
-      if (after.length === 0) {
-        // /app/w/old/planning/batch -> /app/w/new/planning/batch
-        router.push(`/app/w/${w.slug}/${section}/${first}`);
-      } else {
-        // /app/w/old/planning/edit/123 -> /app/w/new/planning/edit
-        // (the id is workspace-scoped and 404s in the new
-        // workspace; land on the sub-action's create surface).
-        router.push(`/app/w/${w.slug}/${section}/${first}`);
-      }
-      return;
-    }
-    // First rest segment is a detail id (UUID / numeric / slug).
-    // Strip to the section index — the id does not exist in the
-    // new workspace.
-    router.push(`/app/w/${w.slug}/${section}`);
+    router.push(getWorkspaceSwitchPath(pathname, w.slug));
   };
 
   const onListKeyDown = (e: React.KeyboardEvent<HTMLUListElement>) => {

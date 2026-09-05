@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PlatformIcon } from "@/components/workspace/platform-icon";
+import { SocialGrowthChart } from "./social-growth-chart";
 import {
   buildComparisonSeries,
   commonMetricsForChannels,
@@ -40,6 +41,7 @@ type DashboardLabels = {
   window: string;
   days: string;
   details: string;
+  followerTrend: string;
   date: string;
   partial: string;
   metricLabels: Record<SocialMetric, string>;
@@ -406,21 +408,31 @@ function ComparisonChart({
     <div className="mt-6" data-testid="social-comparison-chart">
       <svg
         viewBox="0 0 600 220"
-        className="w-full"
+        className="w-full overflow-visible"
         role="img"
         aria-label={`${labels.comparisonTitle}: ${labels.metricLabels[metric]}`}
         preserveAspectRatio="none"
       >
         {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
-          <line
-            key={ratio}
-            x1="52"
-            x2="568"
-            y1={188 - ratio * 148}
-            y2={188 - ratio * 148}
-            className="stroke-border"
-            strokeDasharray={ratio === 0 ? undefined : "2 4"}
-          />
+          <g key={ratio} aria-hidden="true">
+            <line
+              x1="52"
+              x2="568"
+              y1={188 - ratio * 148}
+              y2={188 - ratio * 148}
+              className="stroke-border"
+              strokeDasharray={ratio === 0 ? undefined : "2 4"}
+            />
+            <text
+              x="42"
+              y={192 - ratio * 148}
+              textAnchor="end"
+              className="fill-fg-muted"
+              fontSize="10"
+            >
+              {formatNumber(max * ratio)}
+            </text>
+          </g>
         ))}
         {comparison.lines.map((line, lineIndex) => (
           <g key={line.channelId}>
@@ -453,6 +465,16 @@ function ComparisonChart({
             )}
           </g>
         ))}
+        <g aria-hidden="true">
+          <text x="52" y="210" className="fill-fg-muted" fontSize="10">
+            {comparison.dates[0] ?? ""}
+          </text>
+          {comparison.dates.length > 1 ? (
+            <text x="568" y="210" textAnchor="end" className="fill-fg-muted" fontSize="10">
+              {comparison.dates[comparison.dates.length - 1] ?? ""}
+            </text>
+          ) : null}
+        </g>
       </svg>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2" data-testid="social-comparison-legend">
         {comparison.lines.map((line, index) => (
@@ -543,32 +565,47 @@ function ChannelDetail({
       {rows.length === 0 ? (
         <p className="text-body text-fg-muted mt-4">{labels.noData}</p>
       ) : (
-        <div className="border-border mt-4 overflow-x-auto rounded-md border">
-          <table className="text-body w-full min-w-[620px] text-start">
-            <thead className="bg-surface-subtle text-label text-fg-muted">
-              <tr>
-                <th className="px-3 py-2 font-semibold">{labels.date}</th>
-                {supported.map((metric) => (
-                  <th key={metric} className="px-3 py-2 font-semibold">
-                    {labels.metricLabels[metric]}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.metricDate} className="border-border border-t">
-                  <td className="px-3 py-2">{row.metricDate}</td>
+        <>
+          <SocialGrowthChart
+            title={labels.followerTrend}
+            platform={labels.platformLabels[channel.platform] ?? channel.platform}
+            profileName={channel.accountName}
+            metricLabel={labels.metricLabels.followerCount}
+            points={rows.map((row) => ({ date: row.metricDate, value: row.followerCount }))}
+            tableId={`social-metrics-note-${channel.id}`}
+            growthPercent={growth.percent}
+            testId={`social-growth-chart-${channel.id}`}
+          />
+          <div className="border-border mt-4 overflow-x-auto rounded-md border">
+            <table
+              className="text-body w-full min-w-[620px] text-start"
+              aria-label={`${labels.metricLabels.followerCount} · ${channel.accountName}`}
+            >
+              <thead className="bg-surface-subtle text-label text-fg-muted">
+                <tr>
+                  <th className="px-3 py-2 font-semibold">{labels.date}</th>
                   {supported.map((metric) => (
-                    <td key={metric} className="px-3 py-2">
-                      {formatNumber(row[metric])}
-                    </td>
+                    <th key={metric} className="px-3 py-2 font-semibold">
+                      {labels.metricLabels[metric]}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.metricDate} className="border-border border-t">
+                    <td className="px-3 py-2">{row.metricDate}</td>
+                    {supported.map((metric) => (
+                      <td key={metric} className="px-3 py-2">
+                        {formatNumber(row[metric])}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </Card>
   );
