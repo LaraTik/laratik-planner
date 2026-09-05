@@ -69,6 +69,30 @@ test.describe("M4 — social analytics dashboard", () => {
     await expect(page.getByTestId("metric-followerCount")).toBeVisible();
   });
 
+  test("supports account multi-select and clear line-to-channel comparison", async ({ page }) => {
+    await bootstrapRoleSession(page, "workspace_manager", "analytics-comparison-controls", {
+      socialAnalyticsFixture: true,
+    });
+    await page.goto("/app/w/analytics-comparison-controls/analytics/social");
+
+    const legend = page.getByTestId("social-comparison-legend");
+    await expect(legend.getByRole("button")).toHaveCount(3);
+    await expect(legend.getByRole("button").first()).toHaveAttribute("aria-pressed", "true");
+    await legend.getByRole("button").first().click();
+    await expect(legend.getByRole("button").first()).toHaveAttribute("aria-pressed", "false");
+    await expect(legend.getByRole("button").first()).toHaveAttribute("aria-label", /Show line/);
+
+    const accountPicker = page.getByTestId("analytics-account-multiselect");
+    await accountPicker.locator("summary").click();
+    const accountOptions = accountPicker.locator('[data-testid^="analytics-account-option-"]');
+    await expect(accountOptions).toHaveCount(3);
+    await accountOptions.first().getByRole("checkbox").click();
+    await expect(page.getByTestId("social-channel-ranking").locator("tbody tr")).toHaveCount(2);
+
+    await accountPicker.getByRole("button", { name: "Select all accounts" }).click();
+    await expect(page.getByTestId("social-channel-ranking").locator("tbody tr")).toHaveCount(3);
+  });
+
   test("switching workspace from analytics keeps the valid analytics route", async ({ page }) => {
     const source = await bootstrapRoleSession(
       page,

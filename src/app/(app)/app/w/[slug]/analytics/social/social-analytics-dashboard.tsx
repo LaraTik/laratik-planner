@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, RefreshCw } from "lucide-react";
+import { ChevronDown, Download, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,9 +25,11 @@ import {
 type DashboardLabels = {
   platformFilter: string;
   accountFilter: string;
+  accountFilterDescription: string;
   allPlatforms: string;
   clear: string;
   selectAll: string;
+  allAccounts: string;
   selectedCount: string;
   comparisonTitle: string;
   comparisonDescription: string;
@@ -37,6 +39,9 @@ type DashboardLabels = {
   comparisonMode: string;
   comparisonAbsolute: string;
   comparisonGrowth: string;
+  comparisonLegend: string;
+  showSeries: string;
+  hideSeries: string;
   period: string;
   metric: string;
   noComparableMetrics: string;
@@ -69,6 +74,8 @@ type DashboardLabels = {
 };
 
 const PLATFORMS: AnalyticsDashboardChannel["platform"][] = ["facebook", "instagram", "tiktok"];
+const COMPARISON_COLORS = ["#3525cd", "#dc5f00", "#16825d", "#a23a8c", "#087ea4", "#7a5c00"];
+const COMPARISON_LINE_STYLES = [undefined, "8 4", "2 4", "12 4 2 4", "4 4", "8 2 2 2"];
 
 function formatNumber(value: number | null): string {
   return value === null
@@ -184,6 +191,7 @@ export function SocialAnalyticsDashboard({
   const initial = useMemo(() => parseAnalyticsSelection(initialQuery), [initialQuery]);
   const [selection, setSelection] = useState(initial);
   const [refreshing, setRefreshing] = useState(false);
+  const [hiddenLineIds, setHiddenLineIds] = useState<string[]>([]);
 
   const selectedChannels = useMemo(
     () => filterAnalyticsChannels(channels, selection.platforms, selection.channelIds),
@@ -204,6 +212,17 @@ export function SocialAnalyticsDashboard({
         ? transformComparisonToGrowth(absoluteComparison)
         : absoluteComparison,
     [absoluteComparison, selection.view],
+  );
+  const comparisonHiddenLineIds = useMemo(
+    () => hiddenLineIds.filter((id) => comparison.lines.some((line) => line.channelId === id)),
+    [comparison.lines, hiddenLineIds],
+  );
+  const visibleComparison = useMemo(
+    () => ({
+      dates: comparison.dates,
+      lines: comparison.lines.filter((line) => !comparisonHiddenLineIds.includes(line.channelId)),
+    }),
+    [comparison.dates, comparison.lines, comparisonHiddenLineIds],
   );
   const rows = useMemo(
     () => comparisonRows(selectedChannels, selection.window, metric),
@@ -250,13 +269,24 @@ export function SocialAnalyticsDashboard({
     const visibleIds = filterAnalyticsChannels(channels, selection.platforms, []).map(
       (channel) => channel.id,
     );
-    const selectedIds = selection.channelIds.length === 0 ? visibleIds : [...selection.channelIds];
+    const selectedIds =
+      selection.channelIds.length === 0
+        ? visibleIds
+        : selection.channelIds.filter((id) => visibleIds.includes(id));
     const nextIds = selectedIds.includes(channelId)
       ? selectedIds.filter((id) => id !== channelId)
       : [...selectedIds, channelId];
     const allVisibleSelected =
       visibleIds.length > 0 && visibleIds.every((id) => nextIds.includes(id));
     commit({ ...selection, channelIds: allVisibleSelected ? [] : nextIds });
+  }
+
+  function toggleLine(channelId: string) {
+    const isHidden = comparisonHiddenLineIds.includes(channelId);
+    if (!isHidden && comparison.lines.length - comparisonHiddenLineIds.length <= 1) return;
+    setHiddenLineIds((current) =>
+      isHidden ? current.filter((id) => id !== channelId) : [...current, channelId],
+    );
   }
 
   function selectAllAccounts() {
@@ -352,40 +382,14 @@ export function SocialAnalyticsDashboard({
                   {labels.selectedCount.replace("{count}", String(selectedChannels.length))}
                 </span>
               </div>
-              <div className="mt-2 flex max-w-4xl flex-wrap gap-x-4 gap-y-2">
-                <label className="text-body text-fg-secondary inline-flex min-h-11 cursor-pointer items-center gap-2">
-                  <Checkbox
-                    checked={selection.channelIds.length === 0}
-                    onCheckedChange={selectAllAccounts}
-                    aria-label={labels.selectAll}
-                  />
-                  {labels.selectAll}
-                </label>
-                {channels
-                  .filter(
-                    (channel) =>
-                      selection.platforms.length === 0 ||
-                      selection.platforms.includes(channel.platform),
-                  )
-                  .map((channel) => {
-                    const checked =
-                      selection.channelIds.length === 0 ||
-                      selection.channelIds.includes(channel.id);
-                    return (
-                      <label
-                        key={channel.id}
-                        className="text-body text-fg-secondary inline-flex min-h-11 cursor-pointer items-center gap-2"
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={() => toggleChannel(channel.id)}
-                          aria-label={channel.accountName}
-                        />
-                        <span className="max-w-48 truncate">{channel.accountName}</span>
-                      </label>
-                    );
-                  })}
-              </div>
+              <ChannelMultiSelect
+                channels={channels}
+                selection={selection}
+                selectedChannels={selectedChannels}
+                labels={labels}
+                onToggleChannel={toggleChannel}
+                onSelectAll={selectAllAccounts}
+              />
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -524,6 +528,9 @@ export function SocialAnalyticsDashboard({
         ) : (
           <ComparisonChart
             comparison={comparison}
+            visibleComparison={visibleComparison}
+            hiddenLineIds={comparisonHiddenLineIds}
+            onToggleLine={toggleLine}
             labels={labels}
             metric={metric}
             view={selection.view}
@@ -533,6 +540,88 @@ export function SocialAnalyticsDashboard({
 
       <MetricComparisonTable rows={rankedRows} metric={metric} labels={labels} />
     </section>
+  );
+}
+
+function ChannelMultiSelect({
+  channels,
+  selection,
+  selectedChannels,
+  labels,
+  onToggleChannel,
+  onSelectAll,
+}: {
+  channels: AnalyticsDashboardChannel[];
+  selection: ReturnType<typeof parseAnalyticsSelection>;
+  selectedChannels: AnalyticsDashboardChannel[];
+  labels: DashboardLabels;
+  onToggleChannel: (channelId: string) => void;
+  onSelectAll: () => void;
+}) {
+  const visibleChannels = channels.filter(
+    (channel) => selection.platforms.length === 0 || selection.platforms.includes(channel.platform),
+  );
+  const allVisibleSelected =
+    visibleChannels.length > 0 &&
+    visibleChannels.every(
+      (channel) => selection.channelIds.length === 0 || selection.channelIds.includes(channel.id),
+    );
+
+  return (
+    <details className="relative mt-2 max-w-4xl" data-testid="analytics-account-multiselect">
+      <summary className="border-border bg-surface text-fg-primary text-body hover:bg-surface-subtle focus-visible:ring-primary inline-flex min-h-11 w-full max-w-md cursor-pointer list-none items-center justify-between gap-3 rounded-md border px-3 font-semibold transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0 truncate">
+          {allVisibleSelected
+            ? labels.allAccounts
+            : labels.selectedCount.replace("{count}", String(selectedChannels.length))}
+        </span>
+        <ChevronDown className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
+      </summary>
+      <div className="border-border bg-surface absolute z-20 mt-2 w-full max-w-md rounded-md border p-2 shadow-lg">
+        <div className="border-border flex items-center justify-between gap-3 border-b px-2 pb-2">
+          <p className="text-label text-fg-muted">{labels.accountFilterDescription}</p>
+          <button
+            type="button"
+            className="text-label text-primary hover:bg-primary/10 focus-visible:ring-primary min-h-11 shrink-0 cursor-pointer rounded-md px-2 font-semibold focus-visible:ring-2"
+            onClick={onSelectAll}
+          >
+            {labels.selectAll}
+          </button>
+        </div>
+        <div
+          className="max-h-72 overflow-y-auto pt-1"
+          role="group"
+          aria-label={labels.accountFilter}
+        >
+          {visibleChannels.length === 0 ? (
+            <p className="text-body text-fg-muted px-2 py-3">{labels.noData}</p>
+          ) : (
+            visibleChannels.map((channel) => {
+              const checked =
+                selection.channelIds.length === 0 || selection.channelIds.includes(channel.id);
+              return (
+                <label
+                  key={channel.id}
+                  data-testid={`analytics-account-option-${channel.id}`}
+                  className="text-body text-fg-secondary hover:bg-surface-subtle flex min-h-11 cursor-pointer items-center gap-2 rounded-md px-2"
+                >
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => onToggleChannel(channel.id)}
+                    aria-label={`${channel.accountName} (${labels.platformLabels[channel.platform]})`}
+                  />
+                  <PlatformIcon platform={channel.platform} className="h-4 w-4 shrink-0" />
+                  <span className="min-w-0 flex-1 truncate">{channel.accountName}</span>
+                  <span className="text-label text-fg-muted max-w-32 truncate">
+                    {labels.platformLabels[channel.platform]}
+                  </span>
+                </label>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </details>
   );
 }
 
@@ -582,23 +671,27 @@ function ControlButton({
 
 function ComparisonChart({
   comparison,
+  visibleComparison,
+  hiddenLineIds,
+  onToggleLine,
   labels,
   metric,
   view,
 }: {
   comparison: ReturnType<typeof buildComparisonSeries>;
+  visibleComparison: ReturnType<typeof buildComparisonSeries>;
+  hiddenLineIds: string[];
+  onToggleLine: (channelId: string) => void;
   labels: DashboardLabels;
   metric: SocialMetric;
   view: ComparisonView;
 }) {
   const ticks = chartTicks(
-    comparison.lines.flatMap((line) => line.values),
+    visibleComparison.lines.flatMap((line) => line.values),
     view,
   );
   const min = ticks[0] ?? 0;
   const max = ticks[ticks.length - 1] ?? 1;
-  const colors = ["#3525cd", "#dc5f00", "#16825d", "#a23a8c", "#087ea4", "#7a5c00"];
-  const lineStyles = [undefined, "8 4", "2 4", "12 4 2 4", "4 4", "8 2 2 2"];
   const x = (index: number) => 52 + (index * 516) / Math.max(1, comparison.dates.length - 1);
   const y = (value: number) => 188 - ((value - min) / Math.max(1, max - min)) * 148;
   return (
@@ -625,42 +718,53 @@ function ComparisonChart({
             </text>
           </g>
         ))}
-        {comparison.lines.map((line, lineIndex) => (
-          <g key={line.channelId}>
-            {segments(line.values).map((segment, segmentIndex) => (
-              <path
-                key={`${line.channelId}-${segmentIndex}`}
-                d={segment
-                  .map(
-                    (pointIndex, index) =>
-                      `${index === 0 ? "M" : "L"}${x(pointIndex)},${y(line.values[pointIndex] ?? 0)}`,
-                  )
-                  .join(" ")}
-                fill="none"
-                stroke={colors[lineIndex % colors.length]}
-                strokeDasharray={lineStyles[lineIndex % lineStyles.length]}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ))}
-            {line.values.map((value, pointIndex) =>
-              value === null ? null : (
-                <circle
-                  key={`${line.channelId}-point-${pointIndex}`}
-                  cx={x(pointIndex)}
-                  cy={y(value)}
-                  r="3"
-                  fill={colors[lineIndex % colors.length]}
-                >
-                  <title>
-                    {`${line.label} · ${comparison.dates[pointIndex] ?? ""}: ${formatChartValue(value, view)}`}
-                  </title>
-                </circle>
-              ),
-            )}
-          </g>
-        ))}
+        {visibleComparison.lines.map((line) => {
+          const lineIndex = comparison.lines.findIndex(
+            (candidate) => candidate.channelId === line.channelId,
+          );
+          return (
+            <g
+              key={line.channelId}
+              role="group"
+              aria-label={`${line.label} (${labels.platformLabels[line.platform]})`}
+            >
+              {segments(line.values).map((segment, segmentIndex) => (
+                <path
+                  key={`${line.channelId}-${segmentIndex}`}
+                  d={segment
+                    .map(
+                      (pointIndex, index) =>
+                        `${index === 0 ? "M" : "L"}${x(pointIndex)},${y(line.values[pointIndex] ?? 0)}`,
+                    )
+                    .join(" ")}
+                  fill="none"
+                  stroke={COMPARISON_COLORS[lineIndex % COMPARISON_COLORS.length]}
+                  strokeDasharray={
+                    COMPARISON_LINE_STYLES[lineIndex % COMPARISON_LINE_STYLES.length]
+                  }
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ))}
+              {line.values.map((value, pointIndex) =>
+                value === null ? null : (
+                  <circle
+                    key={`${line.channelId}-point-${pointIndex}`}
+                    cx={x(pointIndex)}
+                    cy={y(value)}
+                    r="3"
+                    fill={COMPARISON_COLORS[lineIndex % COMPARISON_COLORS.length]}
+                  >
+                    <title>
+                      {`${line.label} · ${comparison.dates[pointIndex] ?? ""}: ${formatChartValue(value, view)}`}
+                    </title>
+                  </circle>
+                ),
+              )}
+            </g>
+          );
+        })}
         <g aria-hidden="true">
           <text x="52" y="210" className="fill-fg-muted" fontSize="10">
             {comparison.dates[0] ?? ""}
@@ -672,26 +776,46 @@ function ComparisonChart({
           ) : null}
         </g>
       </svg>
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2" data-testid="social-comparison-legend">
+      <div
+        className="border-border bg-surface-subtle mt-3 flex flex-wrap gap-2 rounded-md border p-2"
+        data-testid="social-comparison-legend"
+        role="group"
+        aria-label={labels.comparisonLegend}
+      >
         {comparison.lines.map((line, index) => (
-          <span
-            key={line.channelId}
-            className="text-label text-fg-secondary inline-flex items-center gap-1.5"
-          >
-            <svg width="20" height="8" viewBox="0 0 20 8" aria-hidden="true">
-              <line
-                x1="1"
-                x2="19"
-                y1="4"
-                y2="4"
-                stroke={colors[index % colors.length]}
-                strokeDasharray={lineStyles[index % lineStyles.length]}
-                strokeLinecap="round"
-                strokeWidth="2.5"
-              />
-            </svg>
-            <span>{line.label}</span>
-            <span className="text-fg-muted">({labels.platformLabels[line.platform]})</span>
+          <span key={line.channelId} className="inline-flex">
+            <button
+              type="button"
+              aria-pressed={!hiddenLineIds.includes(line.channelId)}
+              aria-label={`${hiddenLineIds.includes(line.channelId) ? labels.showSeries : labels.hideSeries}: ${line.label}`}
+              disabled={
+                !hiddenLineIds.includes(line.channelId) && visibleComparison.lines.length <= 1
+              }
+              onClick={() => onToggleLine(line.channelId)}
+              className={`text-label text-fg-secondary hover:bg-surface focus-visible:ring-primary inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-md px-2 font-semibold transition-colors duration-200 focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${hiddenLineIds.includes(line.channelId) ? "opacity-50" : ""}`}
+              data-testid={`comparison-legend-${line.channelId}`}
+            >
+              {hiddenLineIds.includes(line.channelId) ? (
+                <EyeOff className="text-fg-muted h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <Eye className="text-primary h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              <svg width="20" height="8" viewBox="0 0 20 8" aria-hidden="true">
+                <line
+                  x1="1"
+                  x2="19"
+                  y1="4"
+                  y2="4"
+                  stroke={COMPARISON_COLORS[index % COMPARISON_COLORS.length]}
+                  strokeDasharray={COMPARISON_LINE_STYLES[index % COMPARISON_LINE_STYLES.length]}
+                  strokeLinecap="round"
+                  strokeWidth="2.5"
+                />
+              </svg>
+              <PlatformIcon platform={line.platform} className="h-3.5 w-3.5 shrink-0" />
+              <span className="max-w-40 truncate">{line.label}</span>
+              <span className="text-fg-muted">({labels.platformLabels[line.platform]})</span>
+            </button>
           </span>
         ))}
       </div>
@@ -704,9 +828,12 @@ function ComparisonChart({
             <thead className="bg-surface-subtle text-label text-fg-muted">
               <tr>
                 <th className="px-3 py-2 font-semibold">{labels.date}</th>
-                {comparison.lines.map((line) => (
+                {visibleComparison.lines.map((line) => (
                   <th key={line.channelId} className="px-3 py-2 font-semibold">
-                    {line.label}
+                    <span className="inline-flex items-center gap-1.5">
+                      <PlatformIcon platform={line.platform} className="h-3.5 w-3.5" />
+                      {line.label}
+                    </span>
                   </th>
                 ))}
               </tr>
@@ -715,7 +842,7 @@ function ComparisonChart({
               {comparison.dates.map((date, dateIndex) => (
                 <tr key={date} className="border-border border-t">
                   <td className="px-3 py-2">{date}</td>
-                  {comparison.lines.map((line) => (
+                  {visibleComparison.lines.map((line) => (
                     <td key={line.channelId} className="px-3 py-2">
                       {formatChartValue(line.values[dateIndex] ?? null, view)}
                     </td>
