@@ -52,9 +52,9 @@ export interface BatchChannel {
 
 const EMPTY_STATE: { error?: string; fieldErrors?: Record<string, string> } = {};
 
-function newRow(channelIds: string[]): BatchRowDraft {
+function newRow(id: string, channelIds: string[]): BatchRowDraft {
   return {
-    id: crypto.randomUUID(),
+    id,
     title: "",
     format: "",
     plannedPublishAt: "",
@@ -134,10 +134,14 @@ export function BatchForm({
 }) {
   const t = useLocaleT();
   const locale = useLocaleCode();
+  const formId = React.useId().replace(/:/g, "");
   const formRef = React.useRef<HTMLFormElement>(null);
   const [state, action] = useActionState(batchCreateAction.bind(null, slug), EMPTY_STATE);
   const [rows, setRows] = useState<BatchRowDraft[]>(() => [
-    newRow(channels.map((channel) => channel.id)),
+    newRow(
+      `${formId}-row-1`,
+      channels.map((channel) => channel.id),
+    ),
   ]);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [paste, setPaste] = useState("");
@@ -224,7 +228,16 @@ export function BatchForm({
         ...(item.lineNumber ? { sourceLine: item.lineNumber } : {}),
       } satisfies BatchRowDraft;
     });
-    setRows(imported.length ? imported : [newRow(channels.map((channel) => channel.id))]);
+    setRows(
+      imported.length
+        ? imported
+        : [
+            newRow(
+              `${formId}-row-1`,
+              channels.map((channel) => channel.id),
+            ),
+          ],
+    );
     setPasteOpen(false);
     setPaste("");
   }
@@ -380,7 +393,13 @@ export function BatchForm({
         variant="secondary"
         size="lg"
         onClick={() =>
-          setRows((current) => [...current, newRow(channels.map((channel) => channel.id))])
+          setRows((current) => [
+            ...current,
+            newRow(
+              `${formId}-row-${current.length + 1}`,
+              channels.map((channel) => channel.id),
+            ),
+          ])
         }
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
