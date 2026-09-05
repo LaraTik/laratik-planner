@@ -24,7 +24,9 @@ describe("BatchForm", () => {
       </LocaleProvider>,
     );
     expect(screen.getByRole("button", { name: "لصق من جدول بيانات" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "تنزيل القالب" })).toBeInTheDocument();
     expect(screen.getByText("اختر الصيغة المناسبة")).toBeInTheDocument();
+    expect(screen.getByTestId("batch-template-example")).toHaveTextContent("كاروسيل من خمس شرائح");
     expect(screen.getByRole("button", { name: "حفظ الكل كمسودات" })).toBeDisabled();
 
     const title = screen.getAllByRole("textbox", { name: "عنوان الصف 1" })[0]!;
@@ -39,6 +41,7 @@ describe("BatchForm", () => {
         <BatchForm slug="food-game" channels={[]} />
       </LocaleProvider>,
     );
+    expect(screen.getByTestId("batch-grid-scroll")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Paste from spreadsheet" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Spreadsheet or raw paste" }), {
       target: {

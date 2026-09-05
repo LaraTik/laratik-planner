@@ -30,7 +30,10 @@ export default async function BatchAddPage({ params }: { params: Promise<{ slug:
   const { t } = await tForActive();
   const channels = await listActiveChannelsForWorkspace(workspace.id);
   return (
-    <div className="mx-auto max-w-3xl space-y-6" data-testid="workspace-planning-batch">
+    <div
+      className="mx-auto w-full max-w-[1600px] min-w-0 space-y-6"
+      data-testid="workspace-planning-batch"
+    >
       <PageHeader
         eyebrow={workspace.name}
         title={t("batchAdd.title")}

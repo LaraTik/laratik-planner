@@ -40,12 +40,31 @@ Raw pipe rows use the active channels by default. Select or clear channels after
 
 Copy a header and rows from a spreadsheet. The `Channels` column is optional; channel names are matched to active workspace channels and remain editable.
 
+The Batch Add screen also includes a complete downloadable TSV template and an
+inline preview. It contains one realistic example for every supported format:
+static post, carousel, story, short-form video, long-form video, live,
+article, and other. The template uses the workspace's active channel account
+names when they are available, so it can be pasted back without inventing
+channel identifiers.
+
 ```text
 Title	Format	Date & time	Short brief	Channels
 Spring collection	static_post	2026-09-05 09:00	Single-image pre-order announcement	Instagram, Facebook
 Studio behind the scenes	short_form_video	2026-09-06 18:00	20-second vertical Reel	Instagram, TikTok
 How to brew the autumn blend	long_form_video	2026-09-07 10:00	Eight-minute tutorial	YouTube
 ```
+
+The carousel example is intentionally explicit about its multi-slide plan:
+
+```text
+Five ways to brew a better cup	carousel	2026-09-06 12:00	5-slide carousel: 1 cover and hook; 2 grind size; 3 water temperature; 4 pour pattern; 5 save-and-shop CTA. Add each slide's copy and visual direction in More details.	Instagram, Facebook
+```
+
+This is still a planning row, not a request to encode the whole creative
+payload into spreadsheet columns. After the row is saved as a Draft, More
+details is where the team enters `slideCount` and the ordered `slideOutline`
+with each slide's summary and visual direction. The same rule applies to video
+scenes, story frames, live run-of-show details, article outlines, and chapters.
 
 All rows are validated before saving. Missing title, format, or date, invalid dates, unsupported formats, malformed extensions, unknown channels, and more than 50 rows block the atomic save. An empty brief or duplicate date is a warning and does not block saving.
 

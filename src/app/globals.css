@@ -184,6 +184,23 @@ button:disabled,
   cursor: not-allowed;
 }
 
+/* Batch Add's spreadsheet viewport needs an obvious, compact scrollbar on
+ * desktop without changing the global palette or mobile card layout. */
+.custom-scrollbar {
+  scrollbar-color: var(--border) transparent;
+  scrollbar-width: thin;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
 /* Reduced motion — respect OS preference */
 @media (prefers-reduced-motion: reduce) {
   *,

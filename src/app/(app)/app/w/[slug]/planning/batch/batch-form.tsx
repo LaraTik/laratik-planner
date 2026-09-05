@@ -5,9 +5,13 @@ import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   AlertCircle,
+  Check,
   CheckCircle2,
   ChevronDown,
   ClipboardPaste,
+  Copy,
+  Download,
+  FileSpreadsheet,
   Info,
   Plus,
   Trash2,
@@ -43,6 +47,7 @@ import {
   type BatchRowIssue,
 } from "@/lib/content/batch";
 import { CONTENT_FORMAT_DEFINITIONS, formatDefinitionFor } from "@/lib/content/format-catalog";
+import { BATCH_TEMPLATE_ROWS, buildBatchTemplateTsv } from "@/lib/content/batch-template";
 
 export interface BatchChannel {
   id: string;
@@ -146,6 +151,15 @@ export function BatchForm({
   const [pasteOpen, setPasteOpen] = useState(false);
   const [paste, setPaste] = useState("");
   const [saved, setSaved] = useState(false);
+  const [templateCopied, setTemplateCopied] = useState(false);
+  const templateChannelNames = useMemo(
+    () => channels.map((channel) => channel.accountName || channel.platform),
+    [channels],
+  );
+  const templateTsv = useMemo(
+    () => buildBatchTemplateTsv(templateChannelNames),
+    [templateChannelNames],
+  );
 
   const rowIssues = useMemo(() => {
     const map = new Map<string, BatchRowIssue[]>();
@@ -242,6 +256,28 @@ export function BatchForm({
     setPaste("");
   }
 
+  function downloadTemplate() {
+    const blob = new Blob([templateTsv], { type: "text/tab-separated-values;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "batch-add-template.tsv";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  async function copyTemplate() {
+    try {
+      await navigator.clipboard.writeText(templateTsv);
+      setTemplateCopied(true);
+      window.setTimeout(() => setTemplateCopied(false), 2200);
+    } catch {
+      setTemplateCopied(false);
+    }
+  }
+
   return (
     <form ref={formRef} action={action} className="space-y-5" onSubmit={() => setSaved(false)}>
       <FormSummary
@@ -273,11 +309,104 @@ export function BatchForm({
               {t("batchAdd.form.importDescription")}
             </p>
           </div>
-          <Button type="button" variant="secondary" size="lg" onClick={() => setPasteOpen(true)}>
-            <ClipboardPaste className="h-4 w-4" aria-hidden="true" />
-            {t("batchAdd.form.pasteSpreadsheet")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="secondary" size="lg" onClick={downloadTemplate}>
+              <Download className="h-4 w-4" aria-hidden="true" />
+              {t("batchAdd.form.downloadTemplate")}
+            </Button>
+            <Button type="button" variant="secondary" size="lg" onClick={() => setPasteOpen(true)}>
+              <ClipboardPaste className="h-4 w-4" aria-hidden="true" />
+              {t("batchAdd.form.pasteSpreadsheet")}
+            </Button>
+          </div>
         </CardHeader>
+      </Card>
+
+      <Card data-testid="batch-template-example">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileSpreadsheet className="text-primary h-4 w-4" aria-hidden="true" />
+            {t("batchAdd.form.templateTitle")}
+          </CardTitle>
+          <p className="text-label text-fg-secondary">{t("batchAdd.form.templateDescription")}</p>
+        </CardHeader>
+        <details open className="border-border border-t">
+          <summary className="hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-start text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none">
+            <span>{t("batchAdd.form.templateExample")}</span>
+            <span className="text-label text-fg-muted">
+              {t("batchAdd.form.templateExampleHint")}
+            </span>
+          </summary>
+          <div className="space-y-3 px-4 pb-4">
+            <div
+              className="border-border overflow-x-auto rounded-[var(--radius-control)] border"
+              role="region"
+              tabIndex={0}
+              aria-label={t("batchAdd.form.templateTitle")}
+            >
+              <table className="text-label min-w-[1100px] border-collapse text-start">
+                <caption className="sr-only">{t("batchAdd.form.templateTitle")}</caption>
+                <thead className="bg-surface-subtle text-fg-secondary border-border border-b">
+                  <tr>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      {t("batchAdd.form.title")}
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      {t("batchAdd.form.format")}
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      {t("batchAdd.form.dateTime")}
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      {t("batchAdd.form.brief")}
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      {t("batchAdd.form.channels")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-border divide-y">
+                  {BATCH_TEMPLATE_ROWS.map((row) => {
+                    const definition = formatDefinitionFor(row.format);
+                    return (
+                      <tr
+                        key={row.format}
+                        className="hover:bg-surface-subtle align-top transition-colors"
+                      >
+                        <td className="text-body px-3 py-2 font-medium">{row.title}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {definition ? t(definition.labelKey) : row.format}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">{row.plannedPublishAt}</td>
+                        <td className="text-fg-secondary max-w-[34rem] px-3 py-2">{row.brief}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {templateChannelNames.length
+                            ? templateChannelNames.join(", ")
+                            : t("batchAdd.form.templateAllChannels")}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-label text-fg-muted max-w-3xl">
+                {t("batchAdd.form.templateDetailsNote")}
+              </p>
+              <Button type="button" variant="ghost" size="lg" onClick={copyTemplate}>
+                {templateCopied ? (
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <Copy className="h-4 w-4" aria-hidden="true" />
+                )}
+                {templateCopied
+                  ? t("batchAdd.form.templateCopied")
+                  : t("batchAdd.form.copyTemplate")}
+              </Button>
+            </div>
+          </div>
+        </details>
       </Card>
 
       <Card>
@@ -290,8 +419,8 @@ export function BatchForm({
             {t("batchAdd.form.formatGuideDescription")}
           </p>
         </CardHeader>
-        <div className="grid gap-3 md:grid-cols-3">
-          {CONTENT_FORMAT_DEFINITIONS.slice(0, 3).map((definition) => (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {CONTENT_FORMAT_DEFINITIONS.map((definition) => (
             <div
               key={definition.value}
               className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
@@ -337,36 +466,48 @@ export function BatchForm({
       ) : null}
 
       <div
-        className="border-border bg-surface overflow-hidden rounded-[var(--radius-card)] border"
+        className="border-border bg-surface rounded-[var(--radius-card)] border"
+        role="region"
         aria-label={t("batchAdd.form.gridCaption")}
       >
-        <div className="border-border bg-surface-subtle text-label text-fg-secondary hidden min-w-0 grid-cols-[2.5rem_minmax(9rem,1.2fr)_minmax(9rem,1fr)_minmax(10rem,1fr)_minmax(12rem,1.5fr)_minmax(9rem,1fr)_2rem] gap-2 border-b p-3 font-semibold md:grid">
-          <span>#</span>
-          <span>{t("batchAdd.form.title")}</span>
-          <span>{t("batchAdd.form.format")}</span>
-          <span>{t("batchAdd.form.dateTime")}</span>
-          <span>{t("batchAdd.form.brief")}</span>
-          <span>{t("batchAdd.form.channels")}</span>
-          <span>{t("batchAdd.form.validationHeader")} </span>
-        </div>
-        <div className="divide-border hidden divide-y md:block">
-          {rows.map((row, index) => (
-            <DesktopRow
-              key={row.id}
-              row={row}
-              rowNumber={index + 1}
-              channels={channels}
-              issues={rowIssues.get(row.id) ?? []}
-              locale={locale}
-              t={t}
-              onChange={(patch) => updateRow(row.id, patch)}
-              onRemove={() =>
-                setRows((current) =>
-                  current.length === 1 ? current : current.filter((item) => item.id !== row.id),
-                )
-              }
-            />
-          ))}
+        <div
+          className="custom-scrollbar hidden max-h-[70vh] overflow-auto md:block"
+          data-testid="batch-grid-scroll"
+          role="region"
+          tabIndex={0}
+          aria-label={t("batchAdd.form.gridCaption")}
+        >
+          <div className="min-w-[1120px]">
+            <div className="border-border bg-surface-subtle text-label text-fg-secondary sticky top-0 z-10 grid grid-cols-[2.5rem_minmax(12rem,1.2fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_minmax(18rem,1.5fr)_minmax(12rem,1fr)_9rem_2rem] gap-2 border-b p-3 font-semibold">
+              <span>#</span>
+              <span>{t("batchAdd.form.title")}</span>
+              <span>{t("batchAdd.form.format")}</span>
+              <span>{t("batchAdd.form.dateTime")}</span>
+              <span>{t("batchAdd.form.brief")}</span>
+              <span>{t("batchAdd.form.channels")}</span>
+              <span>{t("batchAdd.form.validationHeader")} </span>
+              <span>{t("batchAdd.form.actions")}</span>
+            </div>
+            <div className="divide-border divide-y">
+              {rows.map((row, index) => (
+                <DesktopRow
+                  key={row.id}
+                  row={row}
+                  rowNumber={index + 1}
+                  channels={channels}
+                  issues={rowIssues.get(row.id) ?? []}
+                  locale={locale}
+                  t={t}
+                  onChange={(patch) => updateRow(row.id, patch)}
+                  onRemove={() =>
+                    setRows((current) =>
+                      current.length === 1 ? current : current.filter((item) => item.id !== row.id),
+                    )
+                  }
+                />
+              ))}
+            </div>
+          </div>
         </div>
         <div className="space-y-3 p-3 md:hidden">
           {rows.map((row, index) => (
@@ -650,7 +791,7 @@ function FieldErrors({
 
 function DesktopRow({ row, rowNumber, channels, issues, locale, t, onChange, onRemove }: RowProps) {
   return (
-    <div className="grid min-w-0 grid-cols-[2.5rem_minmax(9rem,1.2fr)_minmax(9rem,1fr)_minmax(10rem,1fr)_minmax(12rem,1.5fr)_minmax(9rem,1fr)_2rem] items-start gap-2 p-3">
+    <div className="grid min-w-0 grid-cols-[2.5rem_minmax(12rem,1.2fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_minmax(18rem,1.5fr)_minmax(12rem,1fr)_9rem_2rem] items-start gap-2 p-3">
       <div className="text-label text-fg-muted pt-3">{rowNumber}</div>
       <div>
         <DirAwareInput
@@ -703,6 +844,8 @@ function DesktopRow({ row, rowNumber, channels, issues, locale, t, onChange, onR
       />
       <div className="flex min-h-11 items-center justify-center">
         <ValidationStatus issues={issues} t={t} />
+      </div>
+      <div className="flex min-h-11 items-center justify-center">
         <button
           type="button"
           className="focus-visible:ring-focus-ring ms-1 flex min-h-11 min-w-11 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"
