@@ -1,7 +1,11 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { type Actor } from "@/lib/auth/policy";
-import { countUnreadNotifications, listNotificationsForUser } from "@/lib/notifications/service";
+import {
+  countUnreadNotifications,
+  listNotificationsForUser,
+  type NotificationRow,
+} from "@/lib/notifications/service";
 
 /**
  * R9 — cache the bell's two server reads.
@@ -39,6 +43,30 @@ const NOTIFICATIONS_LIST_KEY = (userId: string, limit: number) =>
   `notifications:list:${userId}:${limit}`;
 const NOTIFICATIONS_COUNT_KEY = (userId: string) => `notifications:count:${userId}`;
 
+type CachedNotificationRow = Omit<NotificationRow, "readAt" | "createdAt"> & {
+  readAt: Date | string | null;
+  createdAt: Date | string;
+};
+
+export type SerializedNotificationRow = Omit<CachedNotificationRow, "readAt" | "createdAt"> & {
+  readAt: string | null;
+  createdAt: string;
+};
+
+function serializeNotificationRows(
+  rows: readonly CachedNotificationRow[],
+): SerializedNotificationRow[] {
+  return rows.map((row) => ({
+    ...row,
+    readAt: row.readAt === null ? null : toIsoString(row.readAt),
+    createdAt: toIsoString(row.createdAt),
+  }));
+}
+
+function toIsoString(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
 function tagForUser(userId: string): string {
   return `${NOTIFICATIONS_TAG_PREFIX}${userId}`;
 }
@@ -54,7 +82,7 @@ export const notificationsUserTag = tagForUser;
  */
 export const getCachedNotificationsForUser = (actor: Actor, limit: number = 10) =>
   unstable_cache(
-    async () => listNotificationsForUser(actor, { limit }),
+    async () => serializeNotificationRows(await listNotificationsForUser(actor, { limit })),
     [NOTIFICATIONS_LIST_KEY(actor.id, limit)],
     { tags: [tagForUser(actor.id)] },
   )();

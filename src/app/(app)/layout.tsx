@@ -366,8 +366,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           title: copy.title,
           body: copy.body,
           actionUrl: n.actionUrl,
-          readAt: n.readAt ? n.readAt.toISOString() : null,
-          createdAt: n.createdAt.toISOString(),
+          readAt: n.readAt,
+          createdAt: n.createdAt,
         };
       })}
       unreadCount={unreadCount}

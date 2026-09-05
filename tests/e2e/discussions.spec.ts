@@ -205,7 +205,10 @@ test.describe("Notifications bell (Goal 8)", () => {
   }) => {
     const email = `notifs-open-${Date.now()}@laratik.local`;
     await bootstrapTestSession(page, { email });
-    await request.post("/api/dev/notifications", { data: { email, count: 2, readCount: 0 } });
+    // Include a read row: cached notification timestamps are serialized
+    // as strings, and this is the shape that previously crashed the
+    // authenticated layout before the bell could open.
+    await request.post("/api/dev/notifications", { data: { email, count: 2, readCount: 1 } });
     await page.goto("/app");
 
     const bell = page.getByRole("button", { name: /^Notifications/i });

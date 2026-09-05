@@ -47,8 +47,8 @@ vi.mock("@/lib/notifications/service", () => ({
       title: "t",
       body: "b",
       actionUrl: null,
-      readAt: null,
-      createdAt: "2026-01-01T00:00:00Z",
+      readAt: new Date("2026-01-01T01:00:00Z"),
+      createdAt: new Date("2026-01-01T00:00:00Z"),
     },
   ]),
   countUnreadNotifications: vi.fn(async () => 3),
@@ -82,6 +82,8 @@ describe("R9 — cached bell reads", () => {
     const out = await getCachedNotificationsForUser({ id: "user-a" }, 10);
     expect(out.length).toBe(1);
     expect(out[0]?.id).toBe("user-a-10-1");
+    expect(out[0]?.readAt).toBe("2026-01-01T01:00:00.000Z");
+    expect(out[0]?.createdAt).toBe("2026-01-01T00:00:00.000Z");
   });
 
   it("getCachedNotificationsForUser with a different limit produces a different result", async () => {
