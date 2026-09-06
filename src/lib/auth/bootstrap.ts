@@ -3,9 +3,11 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   agencies,
+  agencyEntitlements,
   agencyMemberships,
   agencyStorageConfigs,
   bootstrapLocks,
+  platformPlanTemplates,
   users,
 } from "@/lib/db/schema";
 import { firstAgencyForBootstrap } from "@/lib/auth/policy";
@@ -80,6 +82,22 @@ export async function bootstrapFirstAdmin(input: {
     await tx
       .insert(agencyStorageConfigs)
       .values({ agencyId, keyPrefix: `agencies/${agencyId}` })
+      .onConflictDoNothing();
+
+    // Every agency needs an entitlement before any quota, AI, or platform
+    // detail surface can resolve its effective plan. Bootstrap is an agency
+    // creation path, so it must establish the same invariant as the
+    // platform create-agency command. The migration-seeded Starter plan is
+    // the safe default for the first administrator.
+    const [starterPlan] = await tx
+      .select({ id: platformPlanTemplates.id })
+      .from(platformPlanTemplates)
+      .where(eq(platformPlanTemplates.slug, "starter"))
+      .limit(1);
+    if (!starterPlan) throw new Error("Default Starter plan template is missing");
+    await tx
+      .insert(agencyEntitlements)
+      .values({ agencyId, planTemplateId: starterPlan.id })
       .onConflictDoNothing();
 
     // Mark the user as the admin

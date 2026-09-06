@@ -39,10 +39,42 @@ describe("bootstrap concurrency", () => {
 
   beforeEach(async () => {
     await db.execute(sql`TRUNCATE agency, "user" CASCADE`);
+
+    // Bootstrap provisions a new agency on the platform Starter plan. The
+    // migration seeds this reference row only once, while other integration
+    // suites intentionally truncate it, so this suite owns a minimal
+    // idempotent fixture for its isolated bootstrap race.
+    const { platformPlanTemplates } = await import("@/lib/db/schema");
+    const [starter] = await db
+      .select({ id: platformPlanTemplates.id })
+      .from(platformPlanTemplates)
+      .where(eq(platformPlanTemplates.slug, "starter"))
+      .limit(1);
+    if (!starter) {
+      await db.insert(platformPlanTemplates).values({
+        slug: "starter",
+        name: "Starter",
+        description: "Bootstrap integration plan",
+        defaultLimits: {
+          workspaces: 1,
+          users: 3,
+          total_social_profiles: 5,
+          social_profiles_per_platform: 1,
+          storage_bytes: 5_368_709_120,
+          monthly_ai_requests: 100,
+          monthly_ai_input_tokens: 100_000,
+          monthly_ai_output_tokens: 50_000,
+          daily_ai_requests_per_user: 20,
+          max_output_tokens_per_request: 2_000,
+          enabled_capabilities: [],
+        },
+      });
+    }
   });
 
   it("exactly one of N concurrent bootstrap calls creates the admin; the rest see already_configured", async () => {
-    const { users, agencyMemberships, bootstrapLocks } = await import("@/lib/db/schema");
+    const { users, agencyMemberships, agencyEntitlements, bootstrapLocks } =
+      await import("@/lib/db/schema");
 
     // Pre-create the user rows that will be promoted to agency_admin.
     // The bootstrap service expects a `userId` that already exists in
@@ -103,6 +135,12 @@ describe("bootstrap concurrency", () => {
     expect(memberships).toHaveLength(1);
     expect(memberships[0]!.userId).toBe(winner.userId);
 
+    const entitlements = await db
+      .select()
+      .from(agencyEntitlements)
+      .where(eq(agencyEntitlements.agencyId, winner.agencyId));
+    expect(entitlements).toHaveLength(1);
+
     const locks = await db.select().from(bootstrapLocks);
     expect(locks).toHaveLength(1);
     expect(locks[0]!.completedBy).toBe(winner.userId);
@@ -112,7 +150,7 @@ describe("bootstrap concurrency", () => {
     // This is the single-thread version of the same contract — a
     // first call bootstraps; a follow-up call by a different user
     // cannot create a second admin.
-    const { users } = await import("@/lib/db/schema");
+    const { users, agencyEntitlements } = await import("@/lib/db/schema");
     const [first] = await db
       .insert(users)
       .values({
@@ -137,6 +175,7 @@ describe("bootstrap concurrency", () => {
       token: "integration-test-bootstrap-token",
     });
     expect(firstResult.status).toBe("bootstrapped");
+    if (firstResult.status !== "bootstrapped") throw new Error("bootstrap fixture did not win");
 
     const secondResult = await bootstrapFirstAdmin({
       userId: second!.id,
@@ -150,6 +189,11 @@ describe("bootstrap concurrency", () => {
         firstResult.status === "bootstrapped" ? firstResult.agencyId : undefined,
       );
     }
+    const entitlements = await db
+      .select()
+      .from(agencyEntitlements)
+      .where(eq(agencyEntitlements.agencyId, firstResult.agencyId));
+    expect(entitlements).toHaveLength(1);
   });
 
   it("an invalid token never wins — every call returns invalid_token and the database is untouched", async () => {

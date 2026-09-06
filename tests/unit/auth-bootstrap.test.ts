@@ -176,9 +176,12 @@ describe("bootstrapFirstAdmin", () => {
     dbMock.state.selectResults.push([]);
     //   3. agencies insert: returns new agency id
     dbMock.state.insertReturningIds.push({ id: "agency-new" });
-    //   4. agencyMemberships insert (onConflictDoUpdate)
-    //   5. users update
-    //   6. bootstrapLocks insert (onConflictDoNothing)
+    //   3b. starter plan select
+    //   4. agencyEntitlements insert (onConflictDoNothing)
+    //   5. agencyMemberships insert (onConflictDoUpdate)
+    //   6. users update
+    //   7. bootstrapLocks insert (onConflictDoNothing)
+    dbMock.state.selectResults.push([{ id: "starter-plan" }]);
 
     const result = await bootstrapFirstAdmin({
       userId,
@@ -208,6 +211,8 @@ describe("bootstrapFirstAdmin", () => {
     dbMock.state.selectResults.push([]);
     // 2. Agency singleton exists
     dbMock.state.selectResults.push([{ id: "agency-existing" }]);
+    // 3. Starter plan
+    dbMock.state.selectResults.push([{ id: "starter-plan" }]);
 
     const result = await bootstrapFirstAdmin({
       userId,

@@ -1,5 +1,7 @@
 "use server";
 
+import { redirect } from "next/navigation";
+
 /**
  * Server actions for the agency switcher (M1.5).
  *
@@ -27,11 +29,9 @@
  */
 
 import { auth } from "@/lib/auth/config";
-import { isActiveMember, setActiveAgencyCookie } from "@/lib/auth/agency-context";
-import { db } from "@/lib/db";
-import { workspaces, workspaceMemberships } from "@/lib/db/schema";
-import { and, asc, eq } from "drizzle-orm";
-import { isAgencyAdmin, type Actor } from "@/lib/auth/policy";
+import { setActiveAgencyCookie } from "@/lib/auth/agency-context";
+import { switchAgencyContext } from "@/lib/auth/agency-switch";
+import type { Actor } from "@/lib/auth/policy";
 
 /**
  * Set the active agency for the currently signed-in user.
@@ -57,24 +57,19 @@ export async function switchActiveAgency(agencyId: string): Promise<boolean> {
 }
 
 /**
- * Result of a switch-and-redirect. The agency switcher uses this to
- * navigate the user to a sensible URL inside the newly-active agency
- * rather than dumping them on the global `/app` landing — which leaves
- * the previous (now invalid) workspace URL in the address bar until
- * the next click. Returning both the new agency and a default
- * workspace slug lets the client pick the right destination in one
- * router transition.
+ * Result returned only for a refused switch. A successful switch ends
+ * with a server-side redirect after the signed cookie is written, so
+ * the browser cannot race the cookie mutation with a client transition.
  */
 export type SwitchActiveAgencyResult =
   | { ok: true; agencyId: string; firstWorkspaceSlug: string | null }
   | { ok: false; reason: "unauthenticated" | "not-a-member" | "no-secret" };
 
 /**
- * Switch the active agency AND return the slug of the first workspace
- * the user can land on in the new agency. The client navigates to
- * `/app/w/<firstWorkspaceSlug>` (or `/app` if the agency has no
- * accessible workspaces) so the URL atomically reflects the new
- * context.
+ * Switch the active agency and redirect to the first accessible
+ * workspace in the new agency. The redirect is issued by the server
+ * action after the cookie is written, which makes the agency cookie and
+ * destination request one browser navigation.
  *
  * Anti-IDOR: the membership check uses the same signed-cookie +
  * server-side `isActiveMember` re-check the resolver uses, so a
@@ -86,9 +81,7 @@ export type SwitchActiveAgencyResult =
  * The `no-secret` reason is reserved for the production
  * misconfiguration case (missing `AGENCY_COOKIE_SECRET`) — the
  * encoder refuses to issue a cookie so the switch is impossible.
- * The caller's `redirect()` fallback is `/app`, which the resolver
- * will then resolve to null (no cookie) and the layout will prompt
- * the user to set up.
+ * If the agency has no active workspace, the destination is `/app`.
  */
 export async function switchActiveAgencyAndRedirect(
   agencyId: string,
@@ -97,49 +90,7 @@ export async function switchActiveAgencyAndRedirect(
   if (!session?.user?.id) return { ok: false, reason: "unauthenticated" };
   const actor: Actor = { id: session.user.id };
 
-  // Membership is the authorization gate. The cookie issuer (below)
-  // re-checks membership; we check here too so the "not-a-member"
-  // reason is distinguishable from a production misconfiguration.
-  const isMember = await isActiveMember(actor, agencyId);
-  if (!isMember) return { ok: false, reason: "not-a-member" };
-
-  const cookieWritten = await setActiveAgencyCookie(actor, agencyId);
-  if (!cookieWritten) return { ok: false, reason: "no-secret" };
-
-  // First accessible workspace in the new agency, ordered by name.
-  // Agency admins are allowed to enter every active workspace even when
-  // they do not have an explicit workspace_membership row. Regular
-  // members remain restricted to their own active memberships.
-  // Workspace status = active only (soft-deleted / archived are excluded
-  // at the SQL layer).
-  const admin = await isAgencyAdmin(actor, agencyId);
-  const memberRows = admin
-    ? await db
-        .select({ slug: workspaces.slug })
-        .from(workspaces)
-        .where(and(eq(workspaces.agencyId, agencyId), eq(workspaces.status, "active")))
-        .orderBy(asc(workspaces.name))
-        .limit(1)
-    : await db
-        .select({ slug: workspaces.slug })
-        .from(workspaceMemberships)
-        .innerJoin(workspaces, eq(workspaces.id, workspaceMemberships.workspaceId))
-        .where(
-          and(
-            eq(workspaceMemberships.userId, actor.id),
-            eq(workspaceMemberships.status, "active"),
-            eq(workspaces.agencyId, agencyId),
-            eq(workspaces.status, "active"),
-          ),
-        )
-        .orderBy(asc(workspaces.name))
-        .limit(1);
-  if (memberRows.length > 0) {
-    return { ok: true, agencyId, firstWorkspaceSlug: memberRows[0]!.slug };
-  }
-
-  // A member can legitimately belong to an agency without having an
-  // active workspace assignment. Keep the context switch successful,
-  // but let the global app surface explain that no workspace is available.
-  return { ok: true, agencyId, firstWorkspaceSlug: null };
+  const result = await switchAgencyContext(actor, agencyId);
+  if (!result.ok) return result;
+  redirect(result.destination);
 }

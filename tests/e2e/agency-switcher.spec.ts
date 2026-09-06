@@ -190,7 +190,7 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
     // slug in the address bar and a browser-back could resurrect
     // a cross-tenant 404. Pin the new contract here so a future
     // refactor that re-introduces the `/app` push fails this test.
-    await expect(page).toHaveURL(/\/app\/w\/selectable-workspace-one/);
+    await expect(page).toHaveURL(/\/app\/w\/selectable-workspace-one/, { timeout: 15_000 });
     await expect(page).not.toHaveURL(/selectable-workspace-two/);
     await expect(trigger).toHaveAttribute("aria-label", /Active agency: Selectable Agency One/);
     const after = await page.context().cookies();

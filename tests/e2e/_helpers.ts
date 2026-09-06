@@ -207,7 +207,7 @@ export async function bootstrapTestSession(
   } = {},
 ): Promise<SeedResult> {
   const result = await devSeed(page.request, options);
-  await devSignIn(page.request, options.email ? { email: options.email } : {});
+  await setAuthCookie(page, page.request, options.email ? { email: options.email } : {});
   return result;
 }
 
@@ -311,6 +311,9 @@ export async function bootstrapRoleSession(
     ...(options.socialAnalyticsFixture ? { socialAnalyticsFixture: true } : {}),
     ...(options.locale ? { locale: options.locale } : {}),
   });
-  await devSignIn(page.request, { email, role: role === "agency_admin" ? "agency_admin" : "user" });
+  await setAuthCookie(page, page.request, {
+    email,
+    role: role === "agency_admin" ? "agency_admin" : "user",
+  });
   return result;
 }

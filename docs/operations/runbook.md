@@ -319,7 +319,7 @@ a dev laptop:
   hadolint + shellcheck).
 
 Format, lint, typecheck, the full unit suite, integration, and the
-critical E2E subset (chromium + visual-chromium) moved out of CI to
+critical Chromium E2E subset moved out of CI to
 `.husky/pre-commit` and `.husky/pre-push` so a regression is caught
 before CI minutes are spent. CI re-runs integration as the deploy-gate
 audit, not as the first signal.
@@ -361,9 +361,9 @@ export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@localhost:5432/pl
 NODE_ENV=test pnpm migration-drill
 pnpm test:integration
 
-# Pre-push: critical subset (chromium + visual-chromium). Runs in
+# Pre-push: critical Chromium functional subset. Runs in
 # .husky/pre-push automatically; the isolated runner applies migrations
-# and supplies test-only AUTH_* values; ~10 min on a Mac.
+# and supplies test-only AUTH_* values.
 pnpm test:e2e:critical
 
 # Pre-merge: full 5-browser matrix. ~45 min on Linux CI, ~30-60 min

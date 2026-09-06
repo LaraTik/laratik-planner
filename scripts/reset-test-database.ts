@@ -26,10 +26,13 @@ async function main() {
       `SELECT tablename
          FROM pg_tables
         WHERE schemaname = 'public'
-          AND tablename <> '__drizzle_migrations'
+          AND tablename NOT IN ('__drizzle_migrations', 'platform_plan_template')
         ORDER BY tablename`,
     );
 
+    // `platform_plan_template` is migration-seeded reference data. Keep it
+    // intact so an isolated reset does not leave newly seeded agencies
+    // without the entitlement plan required by every agency detail route.
     if (rows.length > 0) {
       const tableList = rows
         .map(({ tablename }) => `"${tablename.replaceAll('"', '""')}"`)

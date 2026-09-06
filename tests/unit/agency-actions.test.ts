@@ -24,6 +24,11 @@ function buildDrizzleChain() {
 }
 
 vi.mock("@/lib/auth/config", () => ({ auth: mocks.auth }));
+vi.mock("next/navigation", () => ({
+  redirect: vi.fn((path: string) => {
+    throw new Error(`NEXT_REDIRECT:${path}`);
+  }),
+}));
 vi.mock("@/lib/auth/agency-context", () => ({
   setActiveAgencyCookie: mocks.setActiveAgencyCookie,
   isActiveMember: mocks.isActiveMember,
@@ -113,30 +118,24 @@ describe("switchActiveAgencyAndRedirect", () => {
     });
   });
 
-  it("returns the first accessible workspace in the new agency", async () => {
+  it("redirects to the first accessible workspace in the new agency", async () => {
     mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
     mocks.isActiveMember.mockResolvedValue(true);
     mocks.setActiveAgencyCookie.mockResolvedValue(true);
     mocks.rows = [{ slug: "food-game" }];
 
-    await expect(switchActiveAgencyAndRedirect("agency-1")).resolves.toEqual({
-      ok: true,
-      agencyId: "agency-1",
-      firstWorkspaceSlug: "food-game",
-    });
+    await expect(switchActiveAgencyAndRedirect("agency-1")).rejects.toThrow(
+      "NEXT_REDIRECT:/app/w/food-game",
+    );
   });
 
-  it("returns firstWorkspaceSlug=null when the new agency has no accessible workspace", async () => {
+  it("redirects to the app home when the new agency has no accessible workspace", async () => {
     mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
     mocks.isActiveMember.mockResolvedValue(true);
     mocks.setActiveAgencyCookie.mockResolvedValue(true);
     mocks.rows = [];
 
-    await expect(switchActiveAgencyAndRedirect("agency-2")).resolves.toEqual({
-      ok: true,
-      agencyId: "agency-2",
-      firstWorkspaceSlug: null,
-    });
+    await expect(switchActiveAgencyAndRedirect("agency-2")).rejects.toThrow("NEXT_REDIRECT:/app");
   });
 
   it("lets an agency admin enter an active workspace without a workspace membership row", async () => {
@@ -146,10 +145,8 @@ describe("switchActiveAgencyAndRedirect", () => {
     mocks.setActiveAgencyCookie.mockResolvedValue(true);
     mocks.rows = [{ slug: "admin-only-workspace" }];
 
-    await expect(switchActiveAgencyAndRedirect("agency-1")).resolves.toEqual({
-      ok: true,
-      agencyId: "agency-1",
-      firstWorkspaceSlug: "admin-only-workspace",
-    });
+    await expect(switchActiveAgencyAndRedirect("agency-1")).rejects.toThrow(
+      "NEXT_REDIRECT:/app/w/admin-only-workspace",
+    );
   });
 });

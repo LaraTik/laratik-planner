@@ -78,8 +78,9 @@ test.describe("User Management — Add directly flow", () => {
     await page.getByTestId("add-directly-grants-admin").click();
     // The shared chip deliberately makes the Radix checkbox visually hidden;
     // click its associated label so Playwright follows the real user target.
-    await page.locator('label[for^="workspace-role-"]').filter({ hasText: "Designer" }).click();
-    await page.locator('label[for^="workspace-role-"]').filter({ hasText: "Publisher" }).click();
+    const firstWorkspaceRoles = page.locator('[data-testid^="add-directly-workspace-"]').first();
+    await firstWorkspaceRoles.getByText("Designer", { exact: true }).click();
+    await firstWorkspaceRoles.getByText("Publisher", { exact: true }).click();
 
     await page.getByRole("button", { name: /Add user/i }).click();
     await expect(page.getByTestId("add-directly-reveal")).toBeVisible({ timeout: 10_000 });

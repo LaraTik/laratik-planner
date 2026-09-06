@@ -16,27 +16,27 @@ CI's `build-smoke` job is the single source of the GHCR push —
 `deploy.yml` no longer rebuilds; it just verifies the tag and
 SSHes to the VPS.
 
-| Gate                                                                | Where                                                                                     | Required for deploy     | Release-candidate |
-| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------- | ----------------- |
-| Format (`pnpm format:check`)                                        | `.github/workflows/ci.yml` + `.husky/pre-commit` (lint-staged → prettier --write)         | ✅ (CI + pre-commit)    | ✅                |
-| Lint (`pnpm lint`)                                                  | `.github/workflows/ci.yml` + `.husky/pre-commit` (lint-staged → eslint --fix)             | ✅ (CI + pre-commit)    | ✅                |
-| Typecheck (`pnpm typecheck`)                                        | `.github/workflows/ci.yml` + `.husky/pre-commit` (sentinel-driven)                        | ✅ (CI + pre-commit)    | ✅                |
-| Full unit suite (`pnpm test:unit`)                                  | `.github/workflows/ci.yml` + `.husky/pre-push`                                            | ✅ (CI + pre-push)      | ✅                |
-| Affected unit selection on staged changes                           | `.husky/pre-commit`                                                                       | ✅ (pre-commit)         | ✅                |
-| Integration + migration drill (`pnpm test:integration`)             | `.husky/pre-push` (pre-push) + `ci.yml` `unit-quality` `Integration tests` (audit re-run) | ✅ (CI audit)           | ✅                |
-| Migration drill (`pnpm migration-drill`)                            | `ci.yml` `unit-quality` `Migration drill` + release checklist                             | ✅                      | ✅                |
-| Critical E2E (chromium + visual-chromium, `pnpm test:e2e:critical`) | `.husky/pre-push`                                                                         | ✅ (pre-push)           | ✅                |
-| Full 5-browser matrix (`pnpm test:e2e:isolated`)                    | Local (manual pre-merge step)                                                             | ❌ (manual pre-merge)   | ✅                |
-| Visual matrix (`pnpm test:visual`)                                  | Local (manual pre-merge step)                                                             | ❌ (manual pre-merge)   | ✅                |
-| Target coverage (95/90 critical, 85/80 services)                    | `ci.yml` → `unit-quality` → `Coverage`                                                    | ✅                      | ✅                |
-| Production audit (`pnpm audit --prod`)                              | `ci.yml` → `unit-quality` → `Dependency audit`                                            | ✅ (zero critical/high) | ✅                |
-| Production build (`pnpm build`)                                     | `ci.yml` → `build-smoke` → `Build`                                                        | ✅                      | ✅                |
-| Docker image build + `/api/health` smoke                            | `ci.yml` → `build-smoke` → `Smoke e2e (health)`                                           | ✅                      | ✅                |
-| GHCR push (app + migrator, `<sha>` + `latest`)                      | `ci.yml` → `build-smoke` → `Push to GHCR` (post-smoke, only on green)                     | ✅                      | ✅                |
-| Image tag exists in GHCR (verify)                                   | `deploy.yml` → `deploy` → `Verify image exists`                                           | ✅                      | ✅                |
-| SSH to VPS, pull, migrate, recreate, health check, rollback         | `deploy.yml` → `deploy` → `SSH + deploy`                                                  | ✅                      | ✅                |
-| SMTP cert probe (deploy-blocker)                                    | `ci.yml` → `check-smtp-cert`                                                              | ✅                      | ✅                |
-| Workflow / Dockerfile / shell linters                               | `ci.yml` → `lint-meta`                                                                    | ✅                      | ✅                |
+| Gate                                                         | Where                                                                                     | Required for deploy     | Release-candidate |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ----------------------- | ----------------- |
+| Format (`pnpm format:check`)                                 | `.github/workflows/ci.yml` + `.husky/pre-commit` (lint-staged → prettier --write)         | ✅ (CI + pre-commit)    | ✅                |
+| Lint (`pnpm lint`)                                           | `.github/workflows/ci.yml` + `.husky/pre-commit` (lint-staged → eslint --fix)             | ✅ (CI + pre-commit)    | ✅                |
+| Typecheck (`pnpm typecheck`)                                 | `.github/workflows/ci.yml` + `.husky/pre-commit` (sentinel-driven)                        | ✅ (CI + pre-commit)    | ✅                |
+| Full unit suite (`pnpm test:unit`)                           | `.github/workflows/ci.yml` + `.husky/pre-push`                                            | ✅ (CI + pre-push)      | ✅                |
+| Affected unit selection on staged changes                    | `.husky/pre-commit`                                                                       | ✅ (pre-commit)         | ✅                |
+| Integration + migration drill (`pnpm test:integration`)      | `.husky/pre-push` (pre-push) + `ci.yml` `unit-quality` `Integration tests` (audit re-run) | ✅ (CI audit)           | ✅                |
+| Migration drill (`pnpm migration-drill`)                     | `ci.yml` `unit-quality` `Migration drill` + release checklist                             | ✅                      | ✅                |
+| Critical E2E (Chromium functional, `pnpm test:e2e:critical`) | `.husky/pre-push`                                                                         | ✅ (pre-push)           | ✅                |
+| Full 5-browser matrix (`pnpm test:e2e:isolated`)             | Local (manual pre-merge step)                                                             | ❌ (manual pre-merge)   | ✅                |
+| Visual matrix (`pnpm test:visual`)                           | Local (manual pre-merge step)                                                             | ❌ (manual pre-merge)   | ✅                |
+| Target coverage (95/90 critical, 85/80 services)             | `ci.yml` → `unit-quality` → `Coverage`                                                    | ✅                      | ✅                |
+| Production audit (`pnpm audit --prod`)                       | `ci.yml` → `unit-quality` → `Dependency audit`                                            | ✅ (zero critical/high) | ✅                |
+| Production build (`pnpm build`)                              | `ci.yml` → `build-smoke` → `Build`                                                        | ✅                      | ✅                |
+| Docker image build + `/api/health` smoke                     | `ci.yml` → `build-smoke` → `Smoke e2e (health)`                                           | ✅                      | ✅                |
+| GHCR push (app + migrator, `<sha>` + `latest`)               | `ci.yml` → `build-smoke` → `Push to GHCR` (post-smoke, only on green)                     | ✅                      | ✅                |
+| Image tag exists in GHCR (verify)                            | `deploy.yml` → `deploy` → `Verify image exists`                                           | ✅                      | ✅                |
+| SSH to VPS, pull, migrate, recreate, health check, rollback  | `deploy.yml` → `deploy` → `SSH + deploy`                                                  | ✅                      | ✅                |
+| SMTP cert probe (deploy-blocker)                             | `ci.yml` → `check-smtp-cert`                                                              | ✅                      | ✅                |
+| Workflow / Dockerfile / shell linters                        | `ci.yml` → `lint-meta`                                                                    | ✅                      | ✅                |
 
 `CI` enforces the deploy-critical subset that genuinely cannot be
 reproduced on a dev laptop: integration tests + coverage thresholds
@@ -49,7 +49,7 @@ Dockerfile + shell linters (cheap but the only place that catches
 template-injection / unpinned action refs).
 
 Format, lint, typecheck, the full unit suite, integration, and the
-critical E2E subset run in `.github/workflows/ci.yml` and/or the local
+critical Chromium E2E subset run in `.github/workflows/ci.yml` and/or the local
 `.husky/pre-commit` / `.husky/pre-push` hooks. This gives fast local
 feedback and an authoritative server-side gate. The full
 5-browser E2E matrix and the visual matrix are run locally as a
