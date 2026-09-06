@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AlertTriangle, CheckCircle2, CircleSlash, Cloud, Gauge } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { isAgencyAdmin } from "@/lib/auth/policy";
@@ -41,46 +42,114 @@ export default async function AgencyStoragePage() {
         : summary.warning === "warning"
           ? t("storage.warning")
           : t("storage.warningHealthy");
+  const WarningIcon = summary.warning === "healthy" ? CheckCircle2 : AlertTriangle;
+  const warningTone =
+    summary.warning === "healthy"
+      ? "text-success"
+      : summary.warning === "over_limit"
+        ? "text-danger"
+        : "text-warning";
+  const progressValue = Math.min(100, Math.max(0, summary.percentUsed));
+  const StatusIcon =
+    summary.status === "healthy"
+      ? CheckCircle2
+      : summary.status === "unhealthy"
+        ? AlertTriangle
+        : CircleSlash;
+  const statusLabel =
+    summary.status === "healthy"
+      ? t("storage.statusHealthy")
+      : summary.status === "unhealthy"
+        ? t("storage.statusUnhealthy")
+        : summary.enabled
+          ? t("storage.statusPending")
+          : t("storage.disabled");
+
   return (
-    <div className="space-y-6" data-testid="agency-storage-settings">
+    <div className="max-w-5xl space-y-6" data-testid="agency-storage-settings">
       <PageHeader title={t("storage.agencyTitle")} description={t("storage.agencyDescription")} />
       <Card padding="lg">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <CardTitle>{t("storage.provider")}</CardTitle>
-            <CardDescription className="mt-1">{t("storage.providerR2")}</CardDescription>
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="bg-primary-subtle text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+              <Cloud className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <CardTitle>{t("storage.provider")}</CardTitle>
+              <CardDescription className="mt-1">{t("storage.providerR2")}</CardDescription>
+            </div>
           </div>
           <Badge
             variant={
-              summary.status === "healthy" ? "success" : summary.enabled ? "outline" : "warning"
+              summary.status === "healthy"
+                ? "success"
+                : summary.status === "unhealthy" || !summary.enabled
+                  ? "warning"
+                  : "outline"
             }
           >
-            {summary.status === "healthy"
-              ? t("storage.statusHealthy")
-              : summary.enabled
-                ? t("storage.statusPending")
-                : t("storage.disabled")}
+            <StatusIcon className="h-3.5 w-3.5" aria-hidden="true" />
+            {statusLabel}
           </Badge>
         </div>
-        <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+        <dl className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Metric label={t("storage.usage")} value={formatBytes(summary.usedBytes)} />
           <Metric label={t("storage.reserved")} value={formatBytes(summary.reservedBytes)} />
           <Metric
             label={t("storage.quota")}
-            value={summary.quotaBytes == null ? "∞" : formatBytes(summary.quotaBytes)}
+            value={
+              summary.quotaBytes == null ? t("storage.unlimited") : formatBytes(summary.quotaBytes)
+            }
           />
           <Metric label={t("storage.usedPercent")} value={`${summary.percentUsed.toFixed(1)}%`} />
         </dl>
-        <p className="text-label text-fg-muted mt-5">{warningText}</p>
-        <p className="text-label text-fg-muted mt-2">
-          {t("storage.lastHealthCheck")}:{" "}
-          {summary.lastHealthCheckAt?.toLocaleString() ?? t("storage.never")}
-        </p>
+
+        <div className="mt-6 space-y-2" aria-label={t("storage.usedPercent")}>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-label text-fg-muted">{t("storage.quotaProgress")}</span>
+            <span className="text-label text-fg-primary font-semibold">
+              {summary.quotaBytes == null ? t("storage.unlimited") : `${progressValue.toFixed(1)}%`}
+            </span>
+          </div>
+          <div
+            className="bg-surface-subtle h-2 overflow-hidden rounded-full"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={summary.quotaBytes == null ? undefined : progressValue}
+            aria-valuetext={
+              summary.quotaBytes == null ? t("storage.unlimited") : `${progressValue.toFixed(1)}%`
+            }
+          >
+            <div
+              className={`h-full rounded-full transition-[width] duration-300 ${summary.warning === "healthy" ? "bg-success" : summary.warning === "warning" ? "bg-warning" : "bg-danger"}`}
+              style={{ width: summary.quotaBytes == null ? "0%" : `${progressValue}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="border-border bg-surface-subtle mt-6 flex items-start gap-2 rounded-[var(--radius-control)] border p-3">
+          <WarningIcon className={`mt-0.5 h-4 w-4 shrink-0 ${warningTone}`} aria-hidden="true" />
+          <p className="text-label text-fg-secondary" role="status" aria-live="polite">
+            {warningText}
+          </p>
+        </div>
+
+        <div className="text-label text-fg-muted mt-4 flex items-center gap-2">
+          <Gauge className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>
+            {t("storage.lastHealthCheck")}:{" "}
+            {summary.lastHealthCheckAt?.toLocaleString() ?? t("storage.never")}
+          </span>
+        </div>
+
         {isAdmin ? (
-          <div className="mt-5">
+          <div className="border-border mt-6 border-t pt-4">
             <StorageToggle
               enabled={summary.enabled}
               label={summary.enabled ? t("storage.disable") : t("storage.enable")}
+              pendingLabel={t("storage.updating")}
             />
           </div>
         ) : null}
@@ -91,7 +160,7 @@ export default async function AgencyStoragePage() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div>
+    <div className="bg-surface-subtle rounded-[var(--radius-control)] p-3">
       <dt className="text-label text-fg-muted">{label}</dt>
       <dd className="text-heading-sm text-fg-primary mt-1">{value}</dd>
     </div>

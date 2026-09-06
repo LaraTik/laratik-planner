@@ -6,6 +6,8 @@ import { requirePlatformPermission } from "@/lib/auth/platform-access";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { AlertTriangle, CheckCircle2, CircleSlash, Cloud } from "lucide-react";
 import { StorageConfigForm } from "./storage-config-form";
 
 export const dynamic = "force-dynamic";
@@ -35,14 +37,10 @@ export default async function PlatformStoragePage() {
       accessKeyLastFour: platformStorageProviderConfigs.accessKeyLastFour,
       secretAccessKeyLastFour: platformStorageProviderConfigs.secretAccessKeyLastFour,
       status: platformStorageProviderConfigs.status,
+      enabled: platformStorageProviderConfigs.enabled,
     })
     .from(platformStorageProviderConfigs)
-    .where(
-      and(
-        eq(platformStorageProviderConfigs.provider, "r2"),
-        eq(platformStorageProviderConfigs.enabled, true),
-      ),
-    )
+    .where(and(eq(platformStorageProviderConfigs.provider, "r2")))
     .limit(1);
   const copy = {
     platformTitle: t("storage.platformTitle"),
@@ -59,6 +57,10 @@ export default async function PlatformStoragePage() {
     testing: t("storage.testing"),
     saving: t("storage.saving"),
     secretsNote: t("storage.secretsNote"),
+    endpointHint: t("storage.endpointHint"),
+    credentialHint: t("storage.credentialHint"),
+    rotateHint: t("storage.rotateHint"),
+    testHint: t("storage.testHint"),
     feedback: {
       authRequired: t("storage.authRequired"),
       testFailed: t("storage.testFailed"),
@@ -68,23 +70,41 @@ export default async function PlatformStoragePage() {
       savedVerified: t("storage.savedVerified"),
     },
   };
+  const status = config?.enabled === false ? "disabled" : (config?.status ?? "not_tested");
+  const StatusIcon =
+    status === "healthy" ? CheckCircle2 : status === "unhealthy" ? AlertTriangle : CircleSlash;
+  const statusVariant =
+    status === "healthy" ? "success" : status === "unhealthy" ? "danger" : "outline";
+  const statusLabel =
+    status === "healthy"
+      ? t("storage.statusHealthy")
+      : status === "unhealthy"
+        ? t("storage.statusUnhealthy")
+        : status === "disabled"
+          ? t("storage.statusDisabled")
+          : t("storage.statusPending");
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl space-y-6">
       <PageHeader
         eyebrow={t("platform.eyebrow")}
         title={t("storage.platformTitle")}
         description={t("storage.platformDescription")}
       />
-      <div className="flex items-center gap-2">
-        <span className="text-label text-fg-muted">{t("storage.status")}</span>
-        <Badge variant={config?.status === "healthy" ? "success" : "outline"}>
-          {config?.status === "healthy"
-            ? t("storage.statusHealthy")
-            : config?.status === "unhealthy"
-              ? t("storage.statusUnhealthy")
-              : t("storage.statusPending")}
-        </Badge>
-      </div>
+      <Card variant="subtle" padding="md" className="flex flex-wrap items-start gap-3">
+        <span className="bg-primary-subtle text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+          <Cloud className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-label text-fg-muted">{t("storage.status")}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <Badge variant={statusVariant}>
+              <StatusIcon className="h-3.5 w-3.5" aria-hidden="true" />
+              {statusLabel}
+            </Badge>
+            <span className="text-label text-fg-muted">{t("storage.privateBucket")}</span>
+          </div>
+        </div>
+      </Card>
       <StorageConfigForm initial={config} copy={copy} />
     </div>
   );
