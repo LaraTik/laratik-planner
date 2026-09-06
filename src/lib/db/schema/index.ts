@@ -40,3 +40,4 @@ export * from "./social-publishing";
 // actor FK on triggered_by (kept as a text id, not an FK, so a
 // manual tick survives a deleted actor).
 export * from "./cron";
+export * from "./storage";

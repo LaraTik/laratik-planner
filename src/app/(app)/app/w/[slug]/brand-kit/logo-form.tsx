@@ -18,8 +18,8 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  *  - "Upload" — the user picks a local file, we POST to
  *    `/api/uploads/sign` for a signed URL, then `PUT` the file
  *    bytes to `/api/uploads` with the token. On success, we hand
- *    the returned `storagePath` to the server action which writes
- *    the brand_asset row.
+ *    the returned object id to the server action which writes the
+ *    brand_asset row.
  *  - "External URL" — the user pastes a `https://` URL directly
  *    and the action writes it as `externalUrl`.
  *
@@ -46,10 +46,15 @@ function formatBytes(n: number): string {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
+async function sha256Base64(file: File): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return btoa(String.fromCharCode(...new Uint8Array(digest)));
+}
+
 async function uploadFile(args: {
   workspaceId: string;
   file: File;
-}): Promise<{ storagePath: string; fileId: string; size: number }> {
+}): Promise<{ objectId: string; uploadIntentId: string; size: number }> {
   const ext = extOf(args.file.name);
   if (!ext) {
     throw new Error(`Unsupported file type. Allowed: ${ALLOWED_EXTS.join(", ")}`);
@@ -57,6 +62,7 @@ async function uploadFile(args: {
   if (args.file.size > MAX_LOGO_BYTES) {
     throw new Error(`Logo too large. Max ${formatBytes(MAX_LOGO_BYTES)}.`);
   }
+  const checksumSha256 = await sha256Base64(args.file);
 
   const signRes = await fetch("/api/uploads/sign", {
     method: "POST",
@@ -66,23 +72,42 @@ async function uploadFile(args: {
       kind: "logo",
       ext,
       fileSize: args.file.size,
+      contentType: args.file.type || "application/octet-stream",
+      originalName: args.file.name,
+      checksumSha256,
     }),
   });
   if (!signRes.ok) {
     const body = (await signRes.json().catch(() => ({}))) as { error?: string };
     throw new Error(body.error ?? `Sign failed (${signRes.status})`);
   }
-  const signed = (await signRes.json()) as { uploadUrl: string; fileId: string; expiresAt: number };
+  const signed = (await signRes.json()) as {
+    objectId: string;
+    uploadIntentId: string;
+    uploadUrl: string;
+    expiresAt: number;
+    requiredHeaders?: Record<string, string>;
+  };
 
   const putRes = await fetch(signed.uploadUrl, {
     method: "PUT",
+    ...(signed.requiredHeaders ? { headers: signed.requiredHeaders } : {}),
     body: args.file,
   });
   if (!putRes.ok) {
     const body = (await putRes.json().catch(() => ({}))) as { error?: string };
     throw new Error(body.error ?? `Upload failed (${putRes.status})`);
   }
-  return (await putRes.json()) as { storagePath: string; fileId: string; size: number };
+  const completeRes = await fetch("/api/uploads/complete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intentId: signed.uploadIntentId, workspaceId: args.workspaceId }),
+  });
+  if (!completeRes.ok) {
+    const body = (await completeRes.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `Upload verification failed (${completeRes.status})`);
+  }
+  return (await completeRes.json()) as { objectId: string; uploadIntentId: string; size: number };
 }
 
 export function LogoForm({
@@ -114,7 +139,7 @@ export function LogoForm({
   const [file, setFile] = React.useState<File | null>(null);
   const [uploading, setUploading] = React.useState(false);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
-  const [uploadedPath, setUploadedPath] = React.useState<string | null>(null);
+  const [uploadedObjectId, setUploadedObjectId] = React.useState<string | null>(null);
   const [urlValue, setUrlValue] = React.useState("");
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const formRef = React.useRef<HTMLFormElement>(null);
@@ -127,7 +152,7 @@ export function LogoForm({
     setMode(next);
     setUploadError(null);
     setFile(null);
-    setUploadedPath(null);
+    setUploadedObjectId(null);
   }
 
   // Read selected file as a data URL for the preview thumbnail.
@@ -144,16 +169,16 @@ export function LogoForm({
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const next = e.target.files?.[0] ?? null;
     setFile(next);
-    setUploadedPath(null);
+    setUploadedObjectId(null);
     setUploadError(null);
     if (next) {
       setUploading(true);
       try {
         const result = await uploadFile({ workspaceId, file: next });
-        setUploadedPath(result.storagePath);
+        setUploadedObjectId(result.objectId);
       } catch (err) {
         setUploadError(err instanceof Error ? err.message : "Upload failed");
-        setUploadedPath(null);
+        setUploadedObjectId(null);
       } finally {
         setUploading(false);
       }
@@ -236,12 +261,11 @@ export function LogoForm({
                 {uploadError}
               </p>
             ) : null}
-            {/* Hidden field populated by the upload step. The form
-                submits the storagePath to the server action. */}
+            {/* Hidden field populated by the upload step. */}
             <input
               type="hidden"
-              name="storagePath"
-              value={uploadedPath ?? ""}
+              name="storageObjectId"
+              value={uploadedObjectId ?? ""}
               data-testid="logo-storage-path"
             />
           </div>
@@ -282,7 +306,7 @@ export function LogoForm({
         </FormField>
 
         <div className="flex items-center justify-end">
-          <SubmitButton mode={mode} uploaded={!!uploadedPath} uploading={uploading} t={t} />
+          <SubmitButton mode={mode} uploaded={!!uploadedObjectId} uploading={uploading} t={t} />
         </div>
         {state?.error ? (
           <p role="alert" className="text-label text-danger font-semibold">

@@ -1,7 +1,13 @@
 import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { agencies, agencyMemberships, bootstrapLocks, users } from "@/lib/db/schema";
+import {
+  agencies,
+  agencyMemberships,
+  agencyStorageConfigs,
+  bootstrapLocks,
+  users,
+} from "@/lib/db/schema";
 import { firstAgencyForBootstrap } from "@/lib/auth/policy";
 import { serverEnv } from "@/lib/validation/env";
 
@@ -70,6 +76,11 @@ export async function bootstrapFirstAdmin(input: {
         .returning({ id: agencies.id });
       agencyId = agency!.id;
     }
+
+    await tx
+      .insert(agencyStorageConfigs)
+      .values({ agencyId, keyPrefix: `agencies/${agencyId}` })
+      .onConflictDoNothing();
 
     // Mark the user as the admin
     await tx

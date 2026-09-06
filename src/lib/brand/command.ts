@@ -47,6 +47,7 @@ const logoCommand = z.object({
     .refine((value) => value.startsWith("https://"), "Use HTTPS")
     .optional(),
   storagePath: z.string().trim().min(1).max(255).optional(),
+  storageObjectId: z.string().uuid().optional(),
 });
 
 const colorCommand = z.object({
@@ -81,7 +82,11 @@ export const BrandAssetCommandSchema = z
     // `discriminatedUnion` doesn't allow `.refine()` on its
     // members, but `superRefine` on the union is the documented
     // escape hatch.
-    if (value.kind === "logo" && value.externalUrl && value.storagePath) {
+    if (
+      value.kind === "logo" &&
+      value.externalUrl &&
+      (value.storagePath || value.storageObjectId)
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Pick one: external URL or uploaded file.",

@@ -8,6 +8,7 @@ import {
   agencyEntitlements,
   agencyMemberships,
   agencyUsageCounters,
+  agencyStorageConfigs,
   invitations,
   platformAuditEvents,
   platformPlanTemplates,
@@ -70,6 +71,11 @@ export async function createAgency(actor: Actor, raw: CreateAgencyInput) {
       })
       .returning({ id: agencies.id, name: agencies.name, slug: agencies.slug });
     if (!agency) throw new Error("Agency could not be created");
+
+    await tx.insert(agencyStorageConfigs).values({
+      agencyId: agency.id,
+      keyPrefix: `agencies/${agency.id}`,
+    });
 
     await tx.insert(agencyEntitlements).values({
       agencyId: agency.id,

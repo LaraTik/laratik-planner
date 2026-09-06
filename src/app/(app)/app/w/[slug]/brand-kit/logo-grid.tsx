@@ -44,7 +44,7 @@ export interface LogoGridProps {
 }
 
 function sourceLabel(asset: BrandAssetRow): string {
-  if (asset.storagePath) return "Uploaded";
+  if (asset.storageObjectId || asset.storagePath) return "Uploaded";
   if (asset.externalUrl) return "External";
   return "Reference";
 }
@@ -67,9 +67,11 @@ export function LogoGrid({ slug, canManage, assets, t }: LogoGridProps) {
   return (
     <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="brand-kit-logo-grid">
       {assets.map((asset) => {
-        const previewSrc = asset.storagePath
-          ? getSignedDownloadUrl(asset.storagePath)
-          : asset.externalUrl;
+        const previewSrc = asset.storageObjectId
+          ? `/api/storage/objects/${encodeURIComponent(asset.storageObjectId)}`
+          : asset.storagePath
+            ? getSignedDownloadUrl(asset.storagePath)
+            : asset.externalUrl;
         return (
           <li key={asset.id} data-testid={`brand-asset-${asset.id}`} className="flex">
             <Card padding="sm" className="bg-surface-subtle relative flex w-full flex-col gap-2">

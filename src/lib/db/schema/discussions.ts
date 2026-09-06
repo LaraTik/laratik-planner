@@ -14,6 +14,7 @@ import { commentLabelEnum, commentVisibilityEnum } from "./enums";
 import { users } from "./identity";
 import { contentItems } from "./content";
 import { workspaces } from "./workspaces";
+import { storageObjects } from "./storage";
 
 /**
  * STUDIOFLOW_MASTER_PROMPT.md §8 — Discussion + attachments.
@@ -82,6 +83,9 @@ export const attachments = pgTable(
     deliveryVersionId: uuid("delivery_version_id"), // FK to delivery_versions added in deliveries.ts
     kind: text("kind").notNull(), // 'reference' | 'preview' | 'logo' | 'brief' | 'comment'
     storagePath: text("storage_path").notNull(),
+    storageObjectId: uuid("storage_object_id").references(() => storageObjects.id, {
+      onDelete: "set null",
+    }),
     originalName: text("original_name").notNull(),
     mimeType: text("mime_type").notNull(),
     byteSize: bigint("byte_size", { mode: "number" }).notNull(),

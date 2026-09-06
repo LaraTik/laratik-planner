@@ -29,6 +29,7 @@ import quickCreate from "./quickCreate.json";
 import reviews from "./reviews.json";
 import settings from "./settings.json";
 import sidebar from "./sidebar.json";
+import storage from "./storage.json";
 import team from "./team.json";
 import users from "./users.json";
 import workspaceNew from "./workspaceNew.json";
@@ -68,6 +69,7 @@ export default {
   reviews,
   settings,
   sidebar,
+  storage,
   team,
   users,
   workspaceNew,

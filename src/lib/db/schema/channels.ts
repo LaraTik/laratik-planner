@@ -13,6 +13,7 @@ import { archivedAt, idColumn, jsonb, timestamps } from "./_helpers";
 import { socialPlatformEnum } from "./enums";
 import { users } from "./identity";
 import { workspaces } from "./workspaces";
+import { storageObjects } from "./storage";
 
 /**
  * STUDIOFLOW_MASTER_PROMPT.md §8 — Workspace configuration:
@@ -124,6 +125,9 @@ export const brandAssets = pgTable(
      */
     colorRole: text("color_role"),
     storagePath: text("storage_path"),
+    storageObjectId: uuid("storage_object_id").references(() => storageObjects.id, {
+      onDelete: "set null",
+    }),
     externalUrl: text("external_url"),
     archivedAt: archivedAt(),
     createdBy: uuid("created_by")

@@ -3,6 +3,7 @@
   "overviewTitle": "Overview",
   "overviewDescription": "Aggregate health of every agency on the platform. Drill into a specific agency from the Agencies tab.",
   "viewAgencies": "View agencies",
+  "storageLink": "Managed storage",
   "kpiTotalAgencies": "Total agencies",
   "kpiActiveUsers": "Active users",
   "kpiTotalWorkspaces": "Total workspaces",

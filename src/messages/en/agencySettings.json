@@ -17,6 +17,7 @@
   "serviceMagicLink": "Magic-link email",
   "serviceAi": "AI provider",
   "serviceSocial": "Social analytics",
+  "serviceStorage": "Media storage",
   "serviceSentry": "Sentry",
   "serviceConfigured": "Configured",
   "serviceDisabled": "Disabled",
