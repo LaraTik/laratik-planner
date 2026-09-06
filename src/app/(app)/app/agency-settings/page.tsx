@@ -161,6 +161,13 @@ export default async function AgencySettingsPage() {
               t={t}
             />
             <Service
+              label={t("agencySettings.serviceStorage")}
+              enabled={true}
+              testId="agency-service-storage"
+              href="/app/agency-settings/storage"
+              t={t}
+            />
+            <Service
               label={t("agencySettings.serviceSentry")}
               enabled={!!serverEnv.SENTRY_DSN}
               // Half-configured: SENTRY_DSN is set but SENTRY_AUTH_TOKEN

@@ -210,7 +210,7 @@ function runOfficialMigrations(): void {
     throw new Error(
       `real Drizzle migrator failed (exit ${migration.status}): ${(
         shellStderr(migration) || shellStdout(migration)
-      ).slice(-500)}`,
+      ).slice(0, 2_000)}`,
     );
   }
 }

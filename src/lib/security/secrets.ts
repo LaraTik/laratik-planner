@@ -466,6 +466,14 @@ export function decryptForAgency(
 }
 
 /**
+ * Generic names for database-managed secrets. The original helper names are
+ * retained for existing agency AI/social callers; storage configuration is
+ * platform- or agency-scoped but uses the same persistent KEK and envelope.
+ */
+export const encryptSecret = encryptForAgency;
+export const decryptSecret = decryptForAgency;
+
+/**
  * Lightweight sanity check for input API keys. Mirrors the
  * validation on the agency-settings form so the service can
  * surface the same error if a programmatic caller (e.g. a future

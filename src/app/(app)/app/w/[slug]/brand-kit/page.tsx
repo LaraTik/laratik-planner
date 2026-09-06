@@ -104,9 +104,11 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
 
   const firstLogo = assetsByKind.logo[0];
   const firstLogoRawSrc = firstLogo
-    ? firstLogo.storagePath
-      ? getSignedDownloadUrl(firstLogo.storagePath)
-      : firstLogo.externalUrl
+    ? firstLogo.storageObjectId
+      ? `/api/storage/objects/${encodeURIComponent(firstLogo.storageObjectId)}`
+      : firstLogo.storagePath
+        ? getSignedDownloadUrl(firstLogo.storagePath)
+        : firstLogo.externalUrl
     : null;
   const firstLogoSafe = firstLogoRawSrc ? safeHref(firstLogoRawSrc) : null;
   const firstLogoSrc = firstLogoSafe && firstLogoSafe.href !== "#" ? firstLogoSafe.href : null;

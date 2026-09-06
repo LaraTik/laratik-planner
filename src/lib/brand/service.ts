@@ -87,6 +87,9 @@ export async function createBrandAsset(
     value: "value" in input ? input.value : {},
     externalUrl: "externalUrl" in input ? (input.externalUrl ?? null) : null,
     storagePath: "storagePath" in input ? (input.storagePath ?? null) : null,
+    ...("storageObjectId" in input && input.storageObjectId
+      ? { storageObjectId: input.storageObjectId }
+      : {}),
   });
 }
 
@@ -140,6 +143,7 @@ export type LogoAssetInput = {
   name: string;
   externalUrl?: string | undefined;
   storagePath?: string | undefined;
+  storageObjectId?: string | undefined;
 };
 
 export async function createLogoAsset(
@@ -155,6 +159,7 @@ export async function createLogoAsset(
     name: input.name,
     externalUrl: input.externalUrl ?? null,
     storagePath: input.storagePath ?? null,
+    ...(input.storageObjectId ? { storageObjectId: input.storageObjectId } : {}),
     value: {},
   });
 }

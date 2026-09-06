@@ -232,6 +232,13 @@
       "when": 1789800000000,
       "tag": "0032_agency_social_metric_probe",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1789900000000,
+      "tag": "0033_r2_storage",
+      "breakpoints": true
     }
   ]
 }

@@ -153,3 +153,42 @@ export async function releaseCapacity(
       );
   }
 }
+
+/** Release an exact amount for byte-based resources such as storage_bytes. */
+export async function releaseCapacityAmount(
+  tx: NodePgDatabase,
+  agencyId: string,
+  allocations: readonly CapacityAllocation[],
+): Promise<void> {
+  const coalesced = new Map<string, number>();
+  for (const allocation of allocations) {
+    if (!Number.isSafeInteger(allocation.increase) || allocation.increase < 1) {
+      throw new Error("Capacity releases must be positive safe integers");
+    }
+    coalesced.set(
+      allocation.resource,
+      (coalesced.get(allocation.resource) ?? 0) + allocation.increase,
+    );
+  }
+  for (const [resource, amount] of [...coalesced.entries()].sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${agencyId} || '|' || ${resource}))`,
+    );
+    await tx
+      .update(agencyUsageCounters)
+      .set({
+        currentValue: sql`GREATEST(${agencyUsageCounters.currentValue} - ${amount}, 0)`,
+        lastRecordedAt: new Date(),
+        lastUpdatedAt: new Date(),
+        version: sql`${agencyUsageCounters.version} + 1`,
+      })
+      .where(
+        and(
+          eq(agencyUsageCounters.agencyId, agencyId),
+          eq(agencyUsageCounters.resourceKey, resource),
+        ),
+      );
+  }
+}

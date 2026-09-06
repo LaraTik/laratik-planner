@@ -60,5 +60,10 @@ export type {
   OverrideShape,
   AgencyLifecycle,
 } from "./types";
-export { assertWithinLimit, reserveCapacity, releaseCapacity } from "./quota";
+export {
+  assertWithinLimit,
+  reserveCapacity,
+  releaseCapacity,
+  releaseCapacityAmount,
+} from "./quota";
 export type { CapacityAllocation } from "./quota";

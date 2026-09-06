@@ -11,6 +11,25 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-09-06 — Database-configured, agency-scoped R2 storage
+
+Status: **Implemented; automated verification is green; production rollout and
+independent verification are not claimed.**
+
+Managed R2 configuration now lives in PostgreSQL, with credentials encrypted by
+the existing persistent KEK. Agencies receive generated prefixes, quota-backed
+upload intents, direct signed uploads, private signed previews, tenant checks,
+cleanup, health reporting, and an additive local-volume migration path. The
+platform owner and agency-admin surfaces are bilingual. See
+[`../decisions/0010-r2-agency-storage.md`](../decisions/0010-r2-agency-storage.md)
+and [`../operations/r2-storage.md`](../operations/r2-storage.md).
+
+Evidence on the feature worktree: `pnpm verify` (340 files / 3,222 tests,
+build included) and `pnpm migration-drill` (5/5). Real R2 credential UAT,
+production media migration, restore proof including the encryption key,
+browser E2E/a11y/visual evidence, and the deferred large-media processing
+features remain deployment tasks.
+
 ## 2026-08-26 — Landing entry and sign-in refinement
 
 Status: **Implemented and focused suites Tested; independent verification is

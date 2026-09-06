@@ -130,12 +130,14 @@ export async function createLogoAssetAction(
   const name = readString(formData, "name");
   const externalUrl = readString(formData, "externalUrl") || undefined;
   const storagePath = readString(formData, "storagePath") || undefined;
+  const storageObjectId = readString(formData, "storageObjectId") || undefined;
 
   const parsed = BrandAssetCommandSchema.safeParse({
     kind: "logo",
     name,
     externalUrl,
     storagePath,
+    storageObjectId,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form." };
   if (parsed.data.kind !== "logo") return { error: "Check the form." };
@@ -144,6 +146,7 @@ export async function createLogoAssetAction(
     name: parsed.data.name,
     externalUrl: parsed.data.externalUrl,
     storagePath: parsed.data.storagePath,
+    ...(parsed.data.storageObjectId ? { storageObjectId: parsed.data.storageObjectId } : {}),
   });
   revalidatePath(`/app/w/${slug}/brand-kit`);
   return { success: true };

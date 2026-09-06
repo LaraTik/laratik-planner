@@ -120,14 +120,22 @@ export default async function PlatformOverviewPage() {
         title={t("platform.overviewTitle")}
         description={t("platform.overviewDescription")}
         action={
-          <Link
-            href="/app/platform/agencies"
-            className="border-border bg-surface text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring text-button inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 font-semibold focus:outline-none focus-visible:ring-2"
-            data-testid="platform-overview-view-agencies"
-          >
-            <Building2 className="h-4 w-4" aria-hidden="true" />
-            {t("platform.viewAgencies")}
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/app/platform/agencies"
+              className="border-border bg-surface text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring text-button inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 font-semibold focus:outline-none focus-visible:ring-2"
+              data-testid="platform-overview-view-agencies"
+            >
+              <Building2 className="h-4 w-4" aria-hidden="true" />
+              {t("platform.viewAgencies")}
+            </Link>
+            <Link
+              href="/app/platform/storage"
+              className="border-border bg-surface text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring text-button inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 font-semibold focus:outline-none focus-visible:ring-2"
+            >
+              {t("platform.storageLink")}
+            </Link>
+          </div>
         }
       />
 

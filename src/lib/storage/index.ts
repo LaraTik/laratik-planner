@@ -171,3 +171,17 @@ export type { SignedUploadPayload, SignedDownloadPayload };
 // Re-export the verify functions so route handlers can import them
 // from a single module.
 export { verifyUploadToken, verifyDownloadToken };
+
+// Provider-neutral production surface. The local-volume helpers above remain
+// available only for migration/rollback and legacy records; new uploads use
+// the database-resolved R2 adapter through the intent service.
+export type {
+  ObjectStorageAdapter,
+  ObjectMetadata,
+  UploadIntent,
+  StorageProvider,
+  StorageConfigStatus,
+  StorageObjectStatus,
+} from "./adapter";
+export { R2ObjectStorageAdapter } from "./r2-adapter";
+export { createAgencyObjectKey, isObjectKeyInAgencyPrefix } from "./object-key";

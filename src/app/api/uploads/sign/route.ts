@@ -3,7 +3,12 @@ import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole, requireWriteCapability } from "@/lib/auth/policy";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { getSignedUploadUrl, UPLOAD_SIZE_LIMITS, type UploadKind } from "@/lib/storage";
+import { UPLOAD_SIZE_LIMITS, type UploadKind } from "@/lib/storage";
+import { createStorageUploadIntent, StorageIntentError } from "@/lib/storage/intent-service";
+import { StorageConfigurationError } from "@/lib/storage/r2-adapter";
+import { db } from "@/lib/db";
+import { eq } from "drizzle-orm";
+import { workspaces } from "@/lib/db/schema";
 
 /**
  * POST /api/uploads/sign
@@ -29,6 +34,9 @@ const Body = z.object({
     .int()
     .min(1)
     .max(50 * 1024 * 1024),
+  contentType: z.string().trim().min(1).max(160).default("application/octet-stream"),
+  originalName: z.string().trim().max(255).optional(),
+  checksumSha256: z.string().trim().max(128).optional(),
 });
 
 export const dynamic = "force-dynamic";
@@ -61,7 +69,8 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
-  const { workspaceId, kind, ext, fileSize } = parsed.data;
+  const { workspaceId, kind, ext, fileSize, contentType, originalName, checksumSha256 } =
+    parsed.data;
 
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspaceId, ["workspace_manager"]))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -91,8 +100,44 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const signed = getSignedUploadUrl(workspaceId, kind as UploadKind, ext);
-  return NextResponse.json(signed, {
-    headers: { "Cache-Control": "no-store, max-age=0" },
-  });
+  const [workspace] = await db
+    .select({ agencyId: workspaces.agencyId })
+    .from(workspaces)
+    .where(eq(workspaces.id, workspaceId))
+    .limit(1);
+  if (!workspace) return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+
+  try {
+    const signed = await createStorageUploadIntent({
+      agencyId: workspace.agencyId,
+      workspaceId,
+      userId: session.user.id,
+      kind: kind as UploadKind,
+      extension: ext,
+      contentType,
+      expectedByteSize: fileSize,
+      ...(checksumSha256 ? { checksumSha256 } : {}),
+      ...(originalName ? { originalName } : {}),
+    });
+    return NextResponse.json(signed, {
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    });
+  } catch (error) {
+    if (error instanceof StorageIntentError) {
+      const status =
+        error.code === "storage.quota_exceeded"
+          ? 413
+          : error.code === "storage.workspace_not_found"
+            ? 404
+            : 400;
+      return NextResponse.json({ error: error.message, code: error.code }, { status });
+    }
+    if (error instanceof StorageConfigurationError) {
+      return NextResponse.json(
+        { error: "Storage is not configured", code: "storage.unavailable" },
+        { status: 503 },
+      );
+    }
+    throw error;
+  }
 }

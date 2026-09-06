@@ -78,6 +78,31 @@ async function checkStorage(): Promise<"up" | "down" | "disabled"> {
 }
 
 /**
+ * R2 status is derived from the sanitized database record, not by exposing
+ * credentials or running a provider write on every public probe. The
+ * platform configuration test updates this status; a missing table/row is
+ * treated as disabled during the local-volume migration window.
+ */
+async function checkR2Storage(): Promise<"up" | "down" | "disabled"> {
+  try {
+    const result = await db.execute(sql`
+      SELECT "enabled", "status"
+      FROM "platform_storage_provider_config"
+      WHERE "provider" = 'r2'
+      ORDER BY "updated_at" DESC
+      LIMIT 1
+    `);
+    const row = (result as unknown as { rows?: Array<{ enabled?: boolean; status?: string }> })
+      .rows?.[0];
+    if (!row) return "disabled";
+    if (row.enabled === false || row.status === "disabled") return "disabled";
+    return row.status === "healthy" ? "up" : "down";
+  } catch {
+    return "disabled";
+  }
+}
+
+/**
  * 2026-08-31: module-level slot for the schema-mismatch details so
  * the GET() handler can include them in the response body. The
  * deploy script's health-check.sh captures the body, so the GHA
@@ -214,11 +239,13 @@ export async function GET() {
   const schemaStatus = await checkSchema();
   const storageStatus = await checkStorage();
   const rateLimitStatus = await checkRateLimitStorage();
+  const r2StorageStatus = await checkR2Storage();
   const ok =
     dbStatus === "up" &&
     schemaStatus === "ready" &&
     (storageStatus === "up" || storageStatus === "disabled") &&
-    (rateLimitStatus === "up" || rateLimitStatus === "disabled");
+    (rateLimitStatus === "up" || rateLimitStatus === "disabled") &&
+    (r2StorageStatus === "up" || r2StorageStatus === "disabled");
   const buildInfo = createBuildInfo({
     version: serverEnv.APP_VERSION,
     environment: serverEnv.NODE_ENV,
@@ -242,6 +269,7 @@ export async function GET() {
       db: dbStatus,
       schema: schemaStatus,
       storage: storageStatus,
+      r2Storage: r2StorageStatus,
       rateLimit: rateLimitStatus,
       // Only present when the schema check failed. Undefined on
       // the 200 path so we don't bloat the happy-path body.
