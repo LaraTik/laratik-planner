@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { platformStorageProviderConfigs } from "@/lib/db/schema";
 import { currentActor } from "@/lib/auth/current-actor";
@@ -102,6 +103,19 @@ export default async function PlatformStoragePage() {
               {statusLabel}
             </Badge>
             <span className="text-label text-fg-muted">{t("storage.privateBucket")}</span>
+          </div>
+          <div className="border-border mt-4 border-t pt-3">
+            <p className="text-label text-fg-muted">{t("storage.platformScopeLabel")}</p>
+            <p className="text-body mt-1 font-semibold">{t("storage.platformScopeValue")}</p>
+            <p className="text-label text-fg-muted mt-1 max-w-3xl">
+              {t("storage.platformScopeDescription")}
+            </p>
+            <Link
+              href="/app/agency-settings/storage"
+              className="text-primary focus-visible:ring-focus-ring mt-2 inline-flex min-h-[var(--control-touch)] items-center rounded-[var(--radius-control)] font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+            >
+              {t("storage.openAgencyStorageSettings")}
+            </Link>
           </div>
         </div>
       </Card>
