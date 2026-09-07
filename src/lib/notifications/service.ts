@@ -184,14 +184,23 @@ void db; // `db` referenced via the `tx` parameter type only
  * independent even when their ticks overlap.
  */
 export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date } = {}) {
-  const now = opts.now ?? new Date();
   const maxEvents = opts.maxEvents ?? 50;
+  // Use the database clock for normal worker runs because `available_at`
+  // defaults to PostgreSQL `now()`. This avoids a small host/database clock
+  // skew making a just-created event invisible until the next tick. Tests
+  // and callers that need a deterministic cutoff can still inject `now`.
+  const availabilityCutoff = opts.now ? sql`${opts.now}` : sql`now()`;
 
   // Claim a batch of unprocessed events
   const events = await db
     .select()
     .from(outboxEvents)
-    .where(and(isNull(outboxEvents.processedAt), sql`${outboxEvents.availableAt} <= ${now}`))
+    .where(
+      and(
+        isNull(outboxEvents.processedAt),
+        sql`${outboxEvents.availableAt} <= ${availabilityCutoff}`,
+      ),
+    )
     .orderBy(outboxEvents.availableAt)
     .limit(maxEvents);
 

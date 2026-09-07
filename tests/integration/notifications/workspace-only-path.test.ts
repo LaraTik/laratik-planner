@@ -183,17 +183,21 @@ describe("R7 — workspace-only notification path through maybeNotify", () => {
     const [user] = await db.select({ id: users.id }).from(users).limit(1);
     if (!user) throw new Error("user seed failed");
 
-    await db.insert(outboxEvents).values({
-      eventType: "assignment",
-      aggregateType: "workspace",
-      aggregateId: workspaceId,
-      payload: {
-        userId: user.id,
-        workspaceId,
-        title: "Workspace assignment",
-        body: "A workspace-level assignment is waiting.",
-      },
-    });
+    const [event] = await db
+      .insert(outboxEvents)
+      .values({
+        eventType: "assignment",
+        aggregateType: "workspace",
+        aggregateId: workspaceId,
+        payload: {
+          userId: user.id,
+          workspaceId,
+          title: "Workspace assignment",
+          body: "A workspace-level assignment is waiting.",
+        },
+      })
+      .returning({ availableAt: outboxEvents.availableAt });
+    expect(event?.availableAt).toBeInstanceOf(Date);
 
     const { dispatchOutboxOnce } = await import("@/lib/notifications/service");
     await dispatchOutboxOnce();
