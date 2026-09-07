@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
-import { hasWorkspaceRole, requireWriteCapability } from "@/lib/auth/policy";
+import { requireWriteCapability } from "@/lib/auth/policy";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { UPLOAD_SIZE_LIMITS, type UploadKind } from "@/lib/storage";
 import { createStorageUploadIntent, StorageIntentError } from "@/lib/storage/intent-service";
@@ -27,13 +27,13 @@ import { workspaces } from "@/lib/db/schema";
  */
 const Body = z.object({
   workspaceId: z.string().uuid(),
-  kind: z.enum(["logo", "color", "font", "image", "document", "other"]),
+  kind: z.enum(["logo", "color", "font", "image", "video", "document", "other"]),
   ext: z.string().min(1).max(8),
   fileSize: z
     .number()
     .int()
     .min(1)
-    .max(50 * 1024 * 1024),
+    .max(1024 * 1024 * 1024),
   contentType: z.string().trim().min(1).max(160).default("application/octet-stream"),
   originalName: z.string().trim().max(255).optional(),
   checksumSha256: z.string().trim().max(128).optional(),
@@ -72,17 +72,10 @@ export async function POST(req: NextRequest) {
   const { workspaceId, kind, ext, fileSize, contentType, originalName, checksumSha256 } =
     parsed.data;
 
-  if (!(await hasWorkspaceRole({ id: session.user.id }, workspaceId, ["workspace_manager"]))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  // FEAT-16 (GAP-FULL-REVIEW-2026-08-25) — explicit read-only gate.
-  // A `client_reviewer` or `viewer` who somehow reaches this route
-  // (the workspace_manager check above would have failed first if
-  // they were a non-manager, but defence-in-depth) is rejected with
-  // a clear 403. The `hasWorkspaceRole` admin shortcut still applies,
-  // so an agency admin remains able to upload on behalf of a
-  // workspace.
+  // FEAT-16 (GAP-FULL-REVIEW-2026-08-25) — explicit write gate.
+  // Workspace managers, planners, designers, internal reviewers, and
+  // publishers can upload; viewer/client roles cannot. The policy
+  // helper also preserves the agency-admin shortcut.
   try {
     await requireWriteCapability({ id: session.user.id }, workspaceId, "upload_sign");
   } catch {
@@ -95,7 +88,7 @@ export async function POST(req: NextRequest) {
   const limit = UPLOAD_SIZE_LIMITS[kind as UploadKind];
   if (fileSize > limit) {
     return NextResponse.json(
-      { error: `File too large: ${kind} max is ${limit} bytes` },
+      { error: `File too large: ${kind} max is ${limit} bytes`, code: "media.file_too_large" },
       { status: 413 },
     );
   }

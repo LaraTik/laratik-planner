@@ -5,6 +5,7 @@ type Row = Record<string, unknown>;
 const state = vi.hoisted(() => ({
   selectResults: [] as Row[][],
   returningResults: [] as Row[][],
+  setCalls: [] as Row[],
 }));
 
 function makeChain() {
@@ -15,7 +16,10 @@ function makeChain() {
   chain.limit = vi.fn(() => Promise.resolve(state.selectResults.shift() ?? []));
   chain.values = vi.fn(() => chain);
   chain.returning = vi.fn(() => Promise.resolve(state.returningResults.shift() ?? []));
-  chain.set = vi.fn(() => chain);
+  chain.set = vi.fn((values: Row) => {
+    state.setCalls.push(values);
+    return chain;
+  });
   chain.orderBy = vi.fn(() => chain);
   chain.groupBy = vi.fn(() => chain);
   return chain;
@@ -54,6 +58,7 @@ const adapterMock = vi.hoisted(() => ({
     checksumSha256: "checksum",
   })),
   createReadUrl: vi.fn(async () => "https://signed.example/read"),
+  deleteObject: vi.fn(async () => undefined),
   abortUpload: vi.fn(async () => undefined),
 }));
 
@@ -80,7 +85,9 @@ const {
   completeStorageUpload,
   createStorageUploadIntent,
   expireStorageUploadIntents,
+  purgeSoftDeletedStorageObjects,
 } = await import("@/lib/storage/intent-service");
+const { quarantineMediaObject } = await import("@/lib/media/quarantine");
 const { createStorageObjectReadUrl } = await import("@/lib/storage/read-service");
 
 const AGENCY_ID = "agency-1";
@@ -120,6 +127,7 @@ const validInput = {
 beforeEach(() => {
   state.selectResults.length = 0;
   state.returningResults.length = 0;
+  state.setCalls.length = 0;
   dbMock.select.mockClear();
   dbMock.insert.mockClear();
   dbMock.update.mockClear();
@@ -129,6 +137,7 @@ beforeEach(() => {
   adapterMock.createUploadIntent.mockClear();
   adapterMock.completeUpload.mockClear();
   adapterMock.abortUpload.mockClear();
+  adapterMock.deleteObject.mockClear();
   adapterMock.completeUpload.mockResolvedValue({
     objectKey: validInput.workspaceId,
     contentLength: 12,
@@ -148,7 +157,7 @@ describe("createStorageUploadIntent", () => {
       createStorageUploadIntent({ ...validInput, expectedByteSize: 1.5 }),
     ).rejects.toMatchObject({ code: "storage.object_verification_failed" });
     await expect(
-      createStorageUploadIntent({ ...validInput, expectedByteSize: 11 * 1024 * 1024 }),
+      createStorageUploadIntent({ ...validInput, expectedByteSize: 51 * 1024 * 1024 }),
     ).rejects.toMatchObject({ code: "storage.object_verification_failed" });
     await expect(
       createStorageUploadIntent({ ...validInput, contentType: "application/x-msdownload" }),
@@ -280,6 +289,7 @@ describe("completeStorageUpload", () => {
       size: 12,
     });
     expect(dbMock.transaction).toHaveBeenCalled();
+    expect(state.setCalls).toContainEqual(expect.objectContaining({ checksumSha256: "checksum" }));
 
     state.selectResults.push([intent()]);
     adapterMock.completeUpload.mockResolvedValueOnce({
@@ -352,6 +362,31 @@ describe("expireStorageUploadIntents", () => {
     await expect(expireStorageUploadIntents(2)).resolves.toBe(2);
     expect(capacityMock.releaseCapacityAmount).toHaveBeenCalledTimes(2);
     expect(adapterMock.abortUpload).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("media quarantine and provider cleanup", () => {
+  it("soft-deletes a rejected active object and releases its exact quota", async () => {
+    state.selectResults.push([{ byteSize: 12 }]);
+
+    await expect(
+      quarantineMediaObject({ agencyId: AGENCY_ID, objectId: "object-1" }),
+    ).resolves.toBe(true);
+    expect(dbMock.update).toHaveBeenCalled();
+    expect(capacityMock.releaseCapacityAmount).toHaveBeenCalledWith(dbMock, AGENCY_ID, [
+      { resource: "storage_bytes", increase: 12 },
+    ]);
+  });
+
+  it("deletes expired quarantined provider objects and keeps failures retryable", async () => {
+    state.selectResults.push([{ id: "object-1", agencyId: AGENCY_ID, objectKey: "key" }]);
+    await expect(purgeSoftDeletedStorageObjects(1)).resolves.toBe(1);
+    expect(adapterMock.deleteObject).toHaveBeenCalledWith({ objectKey: "key" });
+    expect(dbMock.update).toHaveBeenCalled();
+
+    state.selectResults.push([{ id: "object-2", agencyId: AGENCY_ID, objectKey: "retry-key" }]);
+    adapterMock.deleteObject.mockRejectedValueOnce(new Error("provider unavailable"));
+    await expect(purgeSoftDeletedStorageObjects(1)).resolves.toBe(0);
   });
 });
 

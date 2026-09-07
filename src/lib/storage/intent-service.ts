@@ -1,11 +1,12 @@
 import "server-only";
-import { and, eq, inArray, lt } from "drizzle-orm";
+import { and, eq, inArray, lt, lte } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { storageObjects, storageUploadIntents, workspaces } from "@/lib/db/schema";
 import { releaseCapacityAmount, reserveCapacity } from "@/lib/entitlements";
 import { getAgencyStorageContext } from "./config";
 import { createAgencyObjectKey, isObjectKeyInAgencyPrefix } from "./object-key";
 import { UPLOAD_SIZE_LIMITS, type UploadKind } from "./index";
+import { extensionForContentType, sanitizeOriginalFilename } from "@/lib/media/contract";
 
 export class StorageIntentError extends Error {
   constructor(
@@ -34,6 +35,7 @@ const CONTENT_TYPE_BY_KIND: Record<UploadKind, readonly string[]> = {
     "application/octet-stream",
   ],
   image: ["image/png", "image/jpeg", "image/gif", "image/webp"],
+  video: ["video/mp4", "video/quicktime", "video/webm"],
   document: [
     "application/pdf",
     "text/plain",
@@ -82,10 +84,14 @@ export async function createStorageUploadIntent(input: {
   assertUploadInput(input);
   const context = await getAgencyStorageContext(input.agencyId);
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+  const safeExtension =
+    input.kind === "image" || input.kind === "video" || input.kind === "document"
+      ? extensionForContentType(input.contentType)
+      : input.extension;
   const objectKey = createAgencyObjectKey({
     agencyId: input.agencyId,
     workspaceId: input.workspaceId,
-    extension: input.extension,
+    extension: safeExtension,
     prefix: context.keyPrefix,
   });
   const signed = await context.adapter.createUploadIntent({
@@ -118,7 +124,7 @@ export async function createStorageUploadIntent(input: {
           objectKey,
           status: "pending",
           kind: input.kind,
-          originalName: input.originalName ?? null,
+          originalName: input.originalName ? sanitizeOriginalFilename(input.originalName) : null,
           mimeType: input.contentType,
           byteSize: input.expectedByteSize,
           checksumSha256: input.checksumSha256 ?? null,
@@ -135,7 +141,7 @@ export async function createStorageUploadIntent(input: {
           bucket: context.bucket,
           objectKey,
           kind: input.kind,
-          extension: input.extension.replace(/^\./, "").toLowerCase(),
+          extension: safeExtension.replace(/^\./, "").toLowerCase(),
           contentType: input.contentType,
           expectedByteSize: input.expectedByteSize,
           reservedByteSize: input.expectedByteSize,
@@ -225,7 +231,12 @@ export async function completeStorageUpload(input: {
         .where(eq(storageUploadIntents.id, intent.id));
       await tx
         .update(storageObjects)
-        .set({ status: "active", byteSize: metadata.contentLength, updatedAt: new Date() })
+        .set({
+          status: "active",
+          byteSize: metadata.contentLength,
+          checksumSha256: metadata.checksumSha256 ?? intent.checksumSha256 ?? null,
+          updatedAt: new Date(),
+        })
         .where(eq(storageObjects.id, intent.objectId!));
     });
     return {
@@ -318,4 +329,35 @@ export async function expireStorageUploadIntents(limit = 100): Promise<number> {
     );
   }
   return rows.length;
+}
+
+/** Remove quarantined provider objects after the retention window. */
+export async function purgeSoftDeletedStorageObjects(limit = 100): Promise<number> {
+  const rows = await db
+    .select({
+      id: storageObjects.id,
+      agencyId: storageObjects.agencyId,
+      objectKey: storageObjects.objectKey,
+    })
+    .from(storageObjects)
+    .where(
+      and(eq(storageObjects.status, "soft_deleted"), lte(storageObjects.deleteAfter, new Date())),
+    )
+    .limit(Math.min(Math.max(limit, 1), 500));
+
+  let purged = 0;
+  for (const row of rows) {
+    try {
+      const context = await getAgencyStorageContext(row.agencyId);
+      await context.adapter.deleteObject({ objectKey: row.objectKey });
+      await db
+        .update(storageObjects)
+        .set({ status: "deleted", deletedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(storageObjects.id, row.id), eq(storageObjects.status, "soft_deleted")));
+      purged += 1;
+    } catch {
+      // Keep the row quarantined so the next scheduled run can retry safely.
+    }
+  }
+  return purged;
 }

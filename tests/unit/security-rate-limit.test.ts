@@ -123,6 +123,10 @@ describe("rateLimitRuleFor", () => {
       windowSeconds: 3600,
     });
     expect(rateLimit.rateLimitRuleFor("ai_generation")).toEqual({ limit: 30, windowSeconds: 60 });
+    expect(rateLimit.rateLimitRuleFor("media_import_inspect")).toEqual({
+      limit: 20,
+      windowSeconds: 3600,
+    });
     expect(rateLimit.rateLimitRuleFor("magic_link_request")).toEqual({
       limit: 5,
       windowSeconds: 3600,

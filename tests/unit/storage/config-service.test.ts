@@ -45,6 +45,7 @@ const dbMock = vi.hoisted(() => {
 
 const permissionsMock = vi.hoisted(() => ({
   requirePlatformPermission: vi.fn(async () => undefined),
+  isAgencyAdmin: vi.fn(async () => true),
 }));
 
 const cryptoMock = vi.hoisted(() => ({
@@ -69,6 +70,7 @@ const adapterMock = vi.hoisted(() => ({
 
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 vi.mock("@/lib/auth/platform-access", () => permissionsMock);
+vi.mock("@/lib/auth/policy", () => ({ isAgencyAdmin: permissionsMock.isAgencyAdmin }));
 vi.mock("@/lib/security/secrets", () => cryptoMock);
 vi.mock("@/lib/usage/get-limit-for-resource", () => limitMock);
 vi.mock("@/lib/storage/r2-adapter", () => ({
@@ -85,7 +87,10 @@ const {
   getAgencyStorageAdapter,
   getAgencyStorageContext,
   getAgencyStorageSummary,
+  saveAgencyOwnedR2Config,
   saveManagedR2Config,
+  switchAgencyToManagedStorage,
+  testAgencyOwnedR2Connection,
   testAgencyStorageConnection,
   testR2Connection,
 } = await import("@/lib/storage/config");
@@ -106,6 +111,7 @@ function agencyConfig(overrides: Row = {}): Row {
     agencyId: "agency-1",
     mode: "managed",
     keyPrefix: "agencies/agency-1",
+    accountId: null,
     endpointOverride: null,
     bucketOverride: null,
     enabled: true,
@@ -191,7 +197,6 @@ describe("getAgencyStorageContext", () => {
     ["disabled", agencyConfig({ enabled: false }), undefined],
     ["provider missing", agencyConfig(), undefined],
     ["provider unhealthy", agencyConfig(), platformConfig({ status: "unhealthy" })],
-    ["agency-owned", agencyConfig({ mode: "agency_owned" }), platformConfig()],
   ])("rejects %s storage state", async (label, agency, provider) => {
     expect(label).toBeTruthy();
     state.selectResults.push(agency ? [agency] : []);
@@ -201,10 +206,9 @@ describe("getAgencyStorageContext", () => {
     );
   });
 
-  it("decrypts the managed credentials and applies agency overrides", async () => {
+  it("decrypts managed credentials and keeps a same-account bucket override", async () => {
     state.selectResults.push([
       agencyConfig({
-        endpointOverride: "https://override.example",
         bucketOverride: "agency-media",
       }),
     ]);
@@ -216,10 +220,72 @@ describe("getAgencyStorageContext", () => {
     expect(context.adapter).toBe(adapterMock);
   });
 
+  it("rejects an unsafe managed endpoint override instead of sending platform credentials there", async () => {
+    state.selectResults.push([
+      agencyConfig({ endpointOverride: "https://another-account.r2.cloudflarestorage.com" }),
+    ]);
+    state.selectResults.push([platformConfig()]);
+    await expect(getAgencyStorageContext("agency-1", dbMock as never)).rejects.toBeInstanceOf(
+      StorageConfigurationError,
+    );
+  });
+
+  it("resolves agency-owned credentials without consulting the platform provider", async () => {
+    state.selectResults.push([
+      agencyConfig({
+        mode: "agency_owned",
+        accountId: "agency-account",
+        endpointOverride: "https://agency-account.r2.cloudflarestorage.com",
+        bucketOverride: "agency-private-media",
+        accessKeyCiphertext: Buffer.from("cipher:agency-access").toString("base64"),
+        accessKeyKeyVersion: 1,
+        secretAccessKeyCiphertext: Buffer.from("cipher:agency-secret").toString("base64"),
+        secretAccessKeyKeyVersion: 1,
+      }),
+    ]);
+    const context = await getAgencyStorageContext("agency-1", dbMock as never);
+    expect(context.mode).toBe("agency_owned");
+    expect(context.bucket).toBe("agency-private-media");
+    expect(context.keyPrefix).toBe("agencies/agency-1");
+    expect(cryptoMock.decryptSecret).toHaveBeenCalledTimes(2);
+    expect(dbMock.select).toHaveBeenCalledTimes(1);
+  });
+
   it("returns the resolved adapter through the convenience method", async () => {
     state.selectResults.push([agencyConfig()]);
     state.selectResults.push([platformConfig()]);
     await expect(getAgencyStorageAdapter("agency-1", dbMock as never)).resolves.toBe(adapterMock);
+  });
+
+  it("reports agency-owned configuration without depending on platform readiness", async () => {
+    state.selectResults.push(
+      [
+        agencyConfig({
+          mode: "agency_owned",
+          accountId: "agency-account",
+          endpointOverride: "https://agency-account.r2.cloudflarestorage.com",
+          bucketOverride: "agency-private-media",
+          accessKeyLastFour: "cess",
+          secretAccessKeyLastFour: "cret",
+          status: "healthy",
+        }),
+      ],
+      [],
+      [{ currentValue: "12" }],
+      [{ value: "3" }],
+      [{ value: "2" }],
+      [{ value: "1" }],
+    );
+    limitMock.getLimitForResource.mockResolvedValueOnce(100);
+    await expect(getAgencyStorageSummary("agency-1", dbMock as never)).resolves.toMatchObject({
+      mode: "agency_owned",
+      providerConfigured: true,
+      providerEnabled: true,
+      providerStatus: "healthy",
+      accountId: "agency-account",
+      bucket: "agency-private-media",
+      endpoint: "https://agency-account.r2.cloudflarestorage.com",
+    });
   });
 
   it("persists a safe health result without exposing provider errors", async () => {
@@ -234,6 +300,52 @@ describe("getAgencyStorageContext", () => {
     await expect(testAgencyStorageConnection("agency-1", dbMock as never)).resolves.toEqual({
       ok: false,
     });
+  });
+});
+
+describe("agency-owned R2 configuration", () => {
+  it("tests an owned credential pair without saving it", async () => {
+    await expect(testAgencyOwnedR2Connection(validConfig)).resolves.toBeUndefined();
+    expect(adapterMock.testConnection).toHaveBeenCalledTimes(1);
+  });
+
+  it("encrypts owned credentials and switches an empty agency to its own bucket", async () => {
+    state.selectResults.push([agencyConfig()], [{ value: "0" }], [{ value: "0" }]);
+    state.returningResults.push([{ agencyId: "agency-1", mode: "agency_owned" }]);
+    await expect(saveAgencyOwnedR2Config(actor, "agency-1", validConfig)).resolves.toMatchObject({
+      mode: "agency_owned",
+    });
+    expect(state.encrypted).toEqual(["access-key", "secret-key"]);
+    expect(permissionsMock.isAgencyAdmin).toHaveBeenCalledWith(actor, "agency-1");
+  });
+
+  it("refuses to switch an agency with stored objects to another backend", async () => {
+    state.selectResults.push([agencyConfig()], [{ value: "1" }], [{ value: "0" }]);
+    await expect(saveAgencyOwnedR2Config(actor, "agency-1", validConfig)).rejects.toThrow(
+      "storage migration",
+    );
+    expect(state.encrypted).toEqual([]);
+  });
+
+  it("switches an empty agency back to managed storage and clears owned credentials", async () => {
+    state.selectResults.push(
+      [
+        agencyConfig({
+          mode: "agency_owned",
+          accountId: "agency-account",
+          endpointOverride: "https://agency-account.r2.cloudflarestorage.com",
+          bucketOverride: "agency-private-media",
+          accessKeyCiphertext: "cipher",
+          secretAccessKeyCiphertext: "cipher",
+        }),
+      ],
+      [{ value: "0" }],
+      [{ value: "0" }],
+    );
+    await expect(switchAgencyToManagedStorage(actor, "agency-1")).resolves.toMatchObject({
+      mode: "managed",
+    });
+    expect(dbMock.update).toHaveBeenCalledTimes(1);
   });
 });
 

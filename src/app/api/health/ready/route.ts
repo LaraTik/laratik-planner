@@ -78,25 +78,48 @@ async function checkStorage(): Promise<"up" | "down" | "disabled"> {
 }
 
 /**
- * R2 status is derived from the sanitized database record, not by exposing
- * credentials or running a provider write on every public probe. The
- * platform configuration test updates this status; a missing table/row is
- * treated as disabled during the local-volume migration window.
+ * R2 status is derived from the sanitized database records, not by exposing
+ * credentials or running a provider write on every public probe. A healthy
+ * platform-managed provider or at least one healthy agency-owned provider is
+ * sufficient; a missing table/row is treated as disabled during the
+ * local-volume migration window.
  */
 async function checkR2Storage(): Promise<"up" | "down" | "disabled"> {
   try {
     const result = await db.execute(sql`
-      SELECT "enabled", "status"
-      FROM "platform_storage_provider_config"
-      WHERE "provider" = 'r2'
-      ORDER BY "updated_at" DESC
-      LIMIT 1
+      SELECT CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM "platform_storage_provider_config"
+          WHERE "provider" = 'r2'
+            AND "enabled" = true
+            AND "status" = 'healthy'
+        ) OR EXISTS (
+          SELECT 1
+          FROM "agency_storage_config"
+          WHERE "provider" = 'r2'
+            AND "mode" = 'agency_owned'
+            AND "enabled" = true
+            AND "status" = 'healthy'
+        ) THEN 'up'
+        WHEN EXISTS (
+          SELECT 1
+          FROM "platform_storage_provider_config"
+          WHERE "provider" = 'r2'
+        ) OR EXISTS (
+          SELECT 1
+          FROM "agency_storage_config"
+          WHERE "provider" = 'r2'
+            AND "mode" = 'agency_owned'
+        ) THEN 'down'
+        ELSE 'disabled'
+      END AS status
     `);
-    const row = (result as unknown as { rows?: Array<{ enabled?: boolean; status?: string }> })
-      .rows?.[0];
-    if (!row) return "disabled";
-    if (row.enabled === false || row.status === "disabled") return "disabled";
-    return row.status === "healthy" ? "up" : "down";
+    const row = (result as unknown as { rows?: Array<{ status?: string }> }).rows?.[0];
+    if (row?.status === "up" || row?.status === "down" || row?.status === "disabled") {
+      return row.status;
+    }
+    return "disabled";
   } catch {
     return "disabled";
   }

@@ -19,6 +19,7 @@ import errors from "./errors.json";
 import formatEditor from "./formatEditor.json";
 import languageSwitcher from "./languageSwitcher.json";
 import myWork from "./myWork.json";
+import media from "./media.json";
 import navigation from "./navigation.json";
 import notifications from "./notifications.json";
 import operational from "./operational.json";
@@ -59,6 +60,7 @@ export default {
   formatEditor,
   languageSwitcher,
   myWork,
+  media,
   navigation,
   notifications,
   operational,

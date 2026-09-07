@@ -15,7 +15,10 @@ The first upload implementation wrote media to the VPS `app-uploads` volume. Tha
 - `storage_upload_intent` reserves the existing `storage_bytes` entitlement before signing a short-lived PUT URL. Completion performs a private `HeadObject` verification before making the object active.
 - R2 buckets remain private. Preview URLs are short-lived and only issued after workspace authorization.
 - The local volume is not the production source of truth after migration, but remains readable during the documented rollback window.
-- Standard storage is the only accepted class for this milestone. Agency-owned credentials are schema-compatible but deliberately disabled until a later milestone.
+- Standard storage is the only accepted class. Agencies may optionally bring
+  their own Cloudflare R2 account through ADR-0012; switching a populated
+  agency between managed and agency-owned backends requires a reviewed
+  migration.
 
 ## Security and operations
 

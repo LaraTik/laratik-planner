@@ -25,6 +25,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StorageToggle } from "./storage-toggle";
 import { StorageHealthCheck } from "./storage-health-check";
+import { AgencyOwnedStorageForm } from "./agency-owned-storage-form";
 
 export const dynamic = "force-dynamic";
 
@@ -70,11 +71,17 @@ export default async function AgencyStoragePage() {
   const providerReady =
     summary.providerConfigured && summary.providerEnabled && summary.providerStatus === "healthy";
   const storageReady = providerReady && summary.enabled && summary.status === "healthy";
+  const agencyOwnsStorage = summary.mode === "agency_owned";
+  const backendChangeLocked = summary.objectCount > 0 || summary.activeUploadCount > 0;
   const progressValue = Math.min(100, Math.max(0, summary.projectedPercentUsed));
   const warningText = !summary.providerConfigured
-    ? t("storage.notConfigured")
+    ? agencyOwnsStorage
+      ? t("storage.ownedNotConfigured")
+      : t("storage.notConfigured")
     : !providerReady
-      ? t("storage.providerUnavailable")
+      ? agencyOwnsStorage
+        ? t("storage.ownedProviderUnavailable")
+        : t("storage.providerUnavailable")
       : !summary.enabled
         ? t("storage.disabled")
         : summary.warning === "over_limit"
@@ -117,7 +124,9 @@ export default async function AgencyStoragePage() {
     <div className="max-w-5xl space-y-6" data-testid="agency-storage-settings">
       <PageHeader
         title={t("storage.agencyTitle")}
-        description={t("storage.agencyDescription")}
+        description={
+          agencyOwnsStorage ? t("storage.agencyOwnedDescription") : t("storage.agencyDescription")
+        }
         action={
           <Link
             href="/app/agency-settings"
@@ -137,7 +146,11 @@ export default async function AgencyStoragePage() {
             </span>
             <div className="min-w-0">
               <CardTitle>{t("storage.setupTitle")}</CardTitle>
-              <CardDescription>{t("storage.setupDescription")}</CardDescription>
+              <CardDescription>
+                {agencyOwnsStorage
+                  ? t("storage.ownedSetupDescription")
+                  : t("storage.setupDescription")}
+              </CardDescription>
             </div>
           </div>
           <Badge variant={statusVariant}>
@@ -150,18 +163,33 @@ export default async function AgencyStoragePage() {
           <SetupStep
             number="1"
             icon={<LockKeyhole className="h-4 w-4" aria-hidden="true" />}
-            title={t("storage.setupPlatformTitle")}
-            description={t("storage.setupPlatformDescription")}
+            title={
+              agencyOwnsStorage ? t("storage.setupOwnedTitle") : t("storage.setupPlatformTitle")
+            }
+            description={
+              agencyOwnsStorage
+                ? t("storage.setupOwnedDescription")
+                : t("storage.setupPlatformDescription")
+            }
             status={
               summary.providerConfigured && providerReady
                 ? t("storage.providerReady")
                 : summary.providerConfigured
                   ? t("storage.providerUnavailableShort")
-                  : t("storage.providerWaiting")
+                  : agencyOwnsStorage
+                    ? t("storage.ownedProviderWaiting")
+                    : t("storage.providerWaiting")
             }
             statusTone={providerReady ? "success" : "warning"}
             action={
-              canManagePlatformStorage ? (
+              agencyOwnsStorage ? (
+                <a
+                  href="#agency-owned-storage-card"
+                  className="text-primary focus-visible:ring-focus-ring inline-flex min-h-[var(--control-touch)] items-center rounded-[var(--radius-control)] font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+                >
+                  {t("storage.openOwnedSetup")}
+                </a>
+              ) : canManagePlatformStorage ? (
                 <Link
                   href="/app/platform/storage"
                   className="text-primary focus-visible:ring-focus-ring inline-flex min-h-[var(--control-touch)] items-center gap-1 rounded-[var(--radius-control)] font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
@@ -217,7 +245,11 @@ export default async function AgencyStoragePage() {
                 <StorageHealthCheck
                   label={t("storage.checkConnection")}
                   pendingLabel={t("storage.checkingConnection")}
-                  successMessage={t("storage.healthCheckSuccess")}
+                  successMessage={
+                    agencyOwnsStorage
+                      ? t("storage.ownedHealthCheckSuccess")
+                      : t("storage.healthCheckSuccess")
+                  }
                   errorMessage={t("storage.healthCheckFailed")}
                 />
               ) : null
@@ -225,6 +257,53 @@ export default async function AgencyStoragePage() {
           />
         </ol>
       </Card>
+
+      <AgencyOwnedStorageForm
+        initial={{
+          mode: summary.mode,
+          accountId: summary.accountId,
+          endpoint: summary.endpoint,
+          bucket: summary.bucket,
+          accessKeyLastFour: summary.accessKeyLastFour,
+          secretAccessKeyLastFour: summary.secretAccessKeyLastFour,
+        }}
+        backendChangeLocked={backendChangeLocked}
+        copy={{
+          accountId: t("storage.accountId"),
+          endpoint: t("storage.endpoint"),
+          bucket: t("storage.bucket"),
+          accessKeyId: t("storage.accessKeyId"),
+          secretAccessKey: t("storage.secretAccessKey"),
+          ownedTitle: t("storage.ownedTitle"),
+          ownedDescription: t("storage.ownedDescription"),
+          ownedInstructions: t("storage.ownedInstructions"),
+          ownedEndpointHint: t("storage.ownedEndpointHint"),
+          ownedCredentialHint: t("storage.ownedCredentialHint"),
+          ownedTestHint: t("storage.ownedTestHint"),
+          ownedSave: t("storage.ownedSave"),
+          ownedTest: t("storage.ownedTest"),
+          ownedTesting: t("storage.ownedTesting"),
+          ownedSaving: t("storage.ownedSaving"),
+          ownedMode: t("storage.ownedMode"),
+          managedMode: t("storage.managedMode"),
+          currentMode: t("storage.currentMode"),
+          configured: t("storage.configured"),
+          switchToManaged: t("storage.switchToManaged"),
+          switching: t("storage.switching"),
+          backendChangeLocked: t("storage.backendChangeLocked"),
+          feedback: {
+            invalidConfiguration: t("storage.invalidConfiguration"),
+            testFailed: t("storage.testFailed"),
+            saveFailed: t("storage.saveFailed"),
+            ownedTestSuccess: t("storage.ownedTestSuccess"),
+            ownedSavedVerified: t("storage.ownedSavedVerified"),
+            managedSwitched: t("storage.managedSwitched"),
+            backendMigrationRequired: t("storage.backendMigrationRequired"),
+            authRequired: t("storage.authRequired"),
+            permissionDenied: t("storage.permissionDenied"),
+          },
+        }}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)]">
         <Card padding="lg" data-testid="agency-storage-quota">
@@ -309,7 +388,10 @@ export default async function AgencyStoragePage() {
           </div>
           <dl className="mt-6 space-y-4">
             <Detail label={t("storage.provider")} value={t("storage.providerR2")} />
-            <Detail label={t("storage.storageMode")} value={t("storage.managedMode")} />
+            <Detail
+              label={t("storage.storageMode")}
+              value={agencyOwnsStorage ? t("storage.ownedMode") : t("storage.managedMode")}
+            />
             <Detail
               label={t("storage.scopePrefix")}
               value={summary.keyPrefix}

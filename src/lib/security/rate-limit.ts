@@ -14,6 +14,9 @@ export type RateLimitScope =
   | "magic_link_request"
   | "password_reset_request"
   | "upload_sign"
+  | "media_import"
+  | "media_import_inspect"
+  | "media_duplicate_lookup"
   | "support_access_request"
   | "support_access_decision";
 
@@ -47,6 +50,17 @@ const RULES: Record<RateLimitScope, { limit: number; windowSeconds: number }> = 
   // leaked session token farm-running the route to exhaust the storage
   // quota or harvest signed PUT URLs.
   upload_sign: { limit: 60, windowSeconds: 10 * 60 },
+  // Server-mediated imports can consume network and storage bandwidth
+  // before the provider quota is reached, so keep this tighter than
+  // signed browser uploads.
+  media_import: { limit: 10, windowSeconds: 60 * 60 },
+  // Inspection performs a bounded external fetch but does not reserve
+  // storage. Allow more checks than imports while limiting network use.
+  media_import_inspect: { limit: 20, windowSeconds: 60 * 60 },
+  // Duplicate checks are cheap database reads, but the endpoint is still
+  // bounded so a leaked authenticated session cannot turn it into an
+  // unbounded checksum oracle.
+  media_duplicate_lookup: { limit: 120, windowSeconds: 60 * 60 },
   // M3 — platform admins can file a support access request up to
   // 10 times per hour; the agency admin can decide up to 30 times
   // per hour. Both are tunable in production if abuse appears.

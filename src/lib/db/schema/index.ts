@@ -41,3 +41,4 @@ export * from "./social-publishing";
 // manual tick survives a deleted actor).
 export * from "./cron";
 export * from "./storage";
+export * from "./media";

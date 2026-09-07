@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { timingSafeEqual } from "node:crypto";
-import { expireStorageUploadIntents } from "@/lib/storage/intent-service";
+import { processPendingMediaAssets } from "@/lib/media/service";
+import {
+  expireStorageUploadIntents,
+  purgeSoftDeletedStorageObjects,
+} from "@/lib/storage/intent-service";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { serverEnv } from "@/lib/validation/env";
 
@@ -20,8 +24,10 @@ async function handle(req: NextRequest) {
     return new NextResponse("Unauthorized", { status: 401, headers: mutatingApiHeaders() });
   const startedAt = Date.now();
   const expired = await expireStorageUploadIntents(100);
+  const media = await processPendingMediaAssets(50);
+  const purged = await purgeSoftDeletedStorageObjects(100);
   return NextResponse.json(
-    { ok: true, expired, durationMs: Date.now() - startedAt },
+    { ok: true, expired, media, purged, durationMs: Date.now() - startedAt },
     { headers: mutatingApiHeaders() },
   );
 }

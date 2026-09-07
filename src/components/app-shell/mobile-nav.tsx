@@ -16,6 +16,7 @@ import {
   Kanban,
   LayoutDashboard,
   Library,
+  Image as ImageIcon,
   Lock,
   Menu,
   MessageSquare,
@@ -80,6 +81,7 @@ export function MobileNav({
     : null;
   const wsBase = currentWorkspace ? `/app/w/${currentWorkspace.slug}` : "";
   const clientOnly = currentWorkspace ? workspaceAccess[currentWorkspace.id] === "client" : false;
+  const canAccessMedia = user.isAdmin || Object.values(workspaceAccess).includes("internal");
 
   const primaryLinks: Array<{
     href: string;
@@ -237,6 +239,12 @@ export function MobileNav({
                   label={labelFor("library", "Library")}
                 />
                 <MobileMenuLink
+                  href={`${wsBase}/media`}
+                  icon={<ImageIcon />}
+                  label={labelFor("media", "Media")}
+                  active={isActivePath(`${wsBase}/media`, pathname)}
+                />
+                <MobileMenuLink
                   href={`${wsBase}/channels`}
                   icon={<Share2 />}
                   label={labelFor("channels", "Social channels")}
@@ -307,6 +315,17 @@ export function MobileNav({
                   icon={<Cloud />}
                   label={labelFor("agency-settings-storage", "Media storage")}
                   active={isActivePath("/app/agency-settings/storage", pathname)}
+                />
+              </MenuSection>
+            ) : null}
+
+            {!currentWorkspace && canAccessMedia ? (
+              <MenuSection label={labelFor("agencyGroup", "Agency")}>
+                <MobileMenuLink
+                  href="/app/media"
+                  icon={<ImageIcon />}
+                  label={labelFor("media", "Media")}
+                  active={isActivePath("/app/media", pathname)}
                 />
               </MenuSection>
             ) : null}

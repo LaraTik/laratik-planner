@@ -233,6 +233,25 @@ describe("GET /api/health/ready", () => {
     expect(body.schema).toBe("ready");
     expect(body.rateLimit).toBe("down");
   });
+
+  it("accepts a healthy agency-owned R2 configuration when platform R2 is absent", async () => {
+    mockExecute
+      .mockResolvedValueOnce({ rows: [{ "?column?": 1 }] })
+      .mockResolvedValueOnce({
+        rows: [{ migration_table: "drizzle.__drizzle_migrations", required_schema_present: true }],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ count: 1 }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ status: "up" }] });
+
+    const { GET } = await import("@/app/api/health/ready/route");
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.r2Storage).toBe("up");
+  });
 });
 
 describe("GET /api/health (backwards-compat alias)", () => {

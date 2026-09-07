@@ -28,7 +28,7 @@ import {
  *   - `getSignedUploadUrl` returns a `/api/uploads?token=…` URL;
  *   - `getSignedDownloadUrl` returns a `/api/uploads/{file}?token=…`
  *     URL and the token verifies;
- *   - size-limit table matches the spec (10MB images, 25MB docs,
+ *   - size-limit table matches the media contract (50MB images, 25MB docs,
  *     5MB other).
  */
 
@@ -136,7 +136,7 @@ describe("UPLOAD_SIZE_LIMITS", () => {
     expect(UPLOAD_SIZE_LIMITS.logo).toBe(10 * 1024 * 1024);
     expect(UPLOAD_SIZE_LIMITS.color).toBe(10 * 1024 * 1024);
     expect(UPLOAD_SIZE_LIMITS.font).toBe(10 * 1024 * 1024);
-    expect(UPLOAD_SIZE_LIMITS.image).toBe(10 * 1024 * 1024);
+    expect(UPLOAD_SIZE_LIMITS.image).toBe(50 * 1024 * 1024);
     expect(UPLOAD_SIZE_LIMITS.document).toBe(25 * 1024 * 1024);
     expect(UPLOAD_SIZE_LIMITS.other).toBe(5 * 1024 * 1024);
   });

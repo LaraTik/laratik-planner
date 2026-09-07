@@ -84,13 +84,14 @@ export class StorageNotFoundError extends Error {
   }
 }
 
-export type UploadKind = "logo" | "color" | "font" | "image" | "document" | "other";
+export type UploadKind = "logo" | "color" | "font" | "image" | "video" | "document" | "other";
 
 export const UPLOAD_SIZE_LIMITS: Record<UploadKind, number> = {
   logo: 10 * 1024 * 1024,
   color: 10 * 1024 * 1024,
   font: 10 * 1024 * 1024,
-  image: 10 * 1024 * 1024,
+  image: 50 * 1024 * 1024,
+  video: 1024 * 1024 * 1024,
   document: 25 * 1024 * 1024,
   other: 5 * 1024 * 1024,
 };

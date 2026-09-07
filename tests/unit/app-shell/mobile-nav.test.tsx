@@ -143,6 +143,7 @@ describe("MobileNav", () => {
       "Calendar",
       "Design queue",
       "Library",
+      "Media",
       "Social channels",
       "Brand kit",
       "Team",

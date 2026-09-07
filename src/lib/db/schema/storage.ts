@@ -69,6 +69,7 @@ export const agencyStorageConfigs = pgTable(
     mode: text("mode").notNull().default("managed"),
     provider: text("provider").notNull().default("r2"),
     keyPrefix: text("key_prefix").notNull(),
+    accountId: text("account_id"),
     bucketOverride: text("bucket_override"),
     endpointOverride: text("endpoint_override"),
     accessKeyCiphertext: text("access_key_ciphertext"),
@@ -96,7 +97,12 @@ export const agencyStorageConfigs = pgTable(
       "agency_storage_config_key_versions_valid",
       sql`(${t.accessKeyKeyVersion} IS NULL OR ${t.accessKeyKeyVersion} BETWEEN 1 AND 32767) AND (${t.secretAccessKeyKeyVersion} IS NULL OR ${t.secretAccessKeyKeyVersion} BETWEEN 1 AND 32767)`,
     ),
+    check(
+      "agency_storage_config_owned_fields_valid",
+      sql`${t.mode} <> 'agency_owned' OR (${t.accountId} IS NOT NULL AND length(trim(${t.accountId})) BETWEEN 1 AND 128 AND ${t.bucketOverride} IS NOT NULL AND ${t.endpointOverride} IS NOT NULL AND ${t.accessKeyCiphertext} IS NOT NULL AND ${t.accessKeyLastFour} IS NOT NULL AND ${t.accessKeyKeyVersion} IS NOT NULL AND ${t.secretAccessKeyCiphertext} IS NOT NULL AND ${t.secretAccessKeyLastFour} IS NOT NULL AND ${t.secretAccessKeyKeyVersion} IS NOT NULL)`,
+    ),
     index("agency_storage_config_status_idx").on(t.status),
+    index("agency_storage_config_mode_idx").on(t.mode),
   ],
 );
 

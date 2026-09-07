@@ -106,13 +106,14 @@ describe("buildWorkspaceNavigation", () => {
     expect(allHrefs).toContain(`${wsBase}/reviews`); // approvals (URL alias)
     expect(allHrefs).toContain(`${wsBase}/design-queue`);
     expect(allHrefs).toContain(`${wsBase}/library`);
+    expect(allHrefs).toContain(`${wsBase}/media`);
     expect(allHrefs).toContain(`${wsBase}/channels`);
     expect(allHrefs).toContain(`${wsBase}/analytics/social`);
   });
 });
 
 describe("buildAgencyNavigation", () => {
-  it("returns My work + Workspaces for a non-admin, non-platform user", () => {
+  it("returns My work + Workspaces + Media for a non-admin, non-platform user", () => {
     const nav = buildAgencyNavigation({
       isAdmin: false,
       platformAccess: {
@@ -124,6 +125,7 @@ describe("buildAgencyNavigation", () => {
     });
     expect(nav.top[0]?.key).toBe("my-work");
     expect(nav.groups.map((g) => g.key)).toEqual(["agency"]);
+    expect(nav.groups[0]?.items.map((item) => item.key)).toEqual(["workspaces", "media"]);
   });
 
   it("adds the Admin group for agency admins", () => {

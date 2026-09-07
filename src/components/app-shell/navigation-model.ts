@@ -216,6 +216,14 @@ export function buildWorkspaceNavigation(input: {
           labelKey: "sidebar.library",
           icon: Library,
         },
+        {
+          kind: "link",
+          key: "media",
+          href: `${wsBase}/media`,
+          label: "Media",
+          labelKey: "sidebar.media",
+          icon: ImageIcon,
+        },
       ],
     },
     {
@@ -470,13 +478,14 @@ export type AgencyNavigationInput = {
   isAdmin: boolean;
   platformAccess: PlatformNavigationAccess;
   unreadAppErrors?: number;
+  canAccessMedia?: boolean;
 };
 
 export function buildAgencyNavigation(input: AgencyNavigationInput): {
   top: SidebarLinkSpec[];
   groups: SidebarGroupSpec[];
 } {
-  const { isAdmin, platformAccess, unreadAppErrors } = input;
+  const { isAdmin, platformAccess, unreadAppErrors, canAccessMedia = true } = input;
 
   const top: SidebarLinkSpec[] = [
     {
@@ -489,6 +498,26 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
     },
   ];
 
+  const agencyItems: SidebarLinkSpec[] = [
+    {
+      kind: "link",
+      key: "workspaces",
+      href: "/app/workspaces",
+      label: "Workspaces",
+      labelKey: "sidebar.agencyWorkspaces",
+      icon: Briefcase,
+    },
+  ];
+  if (canAccessMedia) {
+    agencyItems.push({
+      kind: "link",
+      key: "media",
+      href: "/app/media",
+      label: "Media",
+      labelKey: "sidebar.media",
+      icon: ImageIcon,
+    });
+  }
   const groups: SidebarGroupSpec[] = [
     {
       kind: "group",
@@ -496,16 +525,7 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
       label: "Agency",
       labelKey: "sidebar.agencyGroup",
       heading: true,
-      items: [
-        {
-          kind: "link",
-          key: "workspaces",
-          href: "/app/workspaces",
-          label: "Workspaces",
-          labelKey: "sidebar.agencyWorkspaces",
-          icon: Briefcase,
-        },
-      ],
+      items: agencyItems,
     },
   ];
 

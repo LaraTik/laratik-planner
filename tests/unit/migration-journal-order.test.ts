@@ -69,4 +69,16 @@ describe("Drizzle migration journal ordering", () => {
       expect(entries[index]!.when).toBeGreaterThan(entries[index - 1]!.when);
     }
   });
+
+  it("registers the additive agency-owned R2 contract", () => {
+    const entry = migrationJournal.entries.find((item) => item.tag === "0035_agency_owned_r2");
+    expect(entry).toBeDefined();
+    if (!entry) return;
+    const migrationPath = join(process.cwd(), "src", "lib", "db", "migrations", `${entry.tag}.sql`);
+    expect(existsSync(migrationPath)).toBe(true);
+    const migration = readFileSync(migrationPath, "utf8");
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS "account_id" text');
+    expect(migration).toContain("agency_storage_config_owned_fields_valid");
+    expect(migration).not.toContain("DROP TABLE");
+  });
 });

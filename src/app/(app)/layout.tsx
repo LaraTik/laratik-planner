@@ -284,6 +284,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       approvals: t("sidebar.approvals"),
       "design-queue": t("sidebar.designQueue"),
       library: t("sidebar.library"),
+      media: t("sidebar.media"),
       performance: t("sidebar.performance"),
       channels: t("sidebar.channels"),
       analytics: t("sidebar.analytics"),

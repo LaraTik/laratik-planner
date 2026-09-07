@@ -44,7 +44,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message, code: error.code }, { status });
     }
     if (error instanceof StorageConfigurationError) {
-      return NextResponse.json({ error: "Storage is not configured" }, { status: 503 });
+      return NextResponse.json(
+        { error: "Storage is not configured", code: "storage.unavailable" },
+        { status: 503 },
+      );
     }
     throw error;
   }

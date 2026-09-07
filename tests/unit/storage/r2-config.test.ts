@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { R2ConfigSchema, sanitizeStorageError } from "@/lib/storage/r2-config";
+import {
+  AgencyOwnedR2ConfigSchema,
+  R2ConfigSchema,
+  sanitizeStorageError,
+} from "@/lib/storage/r2-config";
 
 describe("R2 configuration", () => {
   it("accepts a Cloudflare S3 endpoint and normalizes the trailing slash", () => {
@@ -25,6 +29,37 @@ describe("R2 configuration", () => {
         secretAccessKey: "secret-key",
         storageClass: "infrequent_access",
       }),
+    ).toThrow();
+  });
+
+  it("restricts agency-owned connections to the supplied Cloudflare account", () => {
+    expect(() =>
+      AgencyOwnedR2ConfigSchema.parse({
+        ...validConfig(),
+        endpoint: "https://another-account.r2.cloudflarestorage.com",
+      }),
+    ).toThrow();
+    expect(() =>
+      AgencyOwnedR2ConfigSchema.parse({
+        ...validConfig(),
+        endpoint: "https://account-1.r2.cloudflarestorage.com:8443",
+      }),
+    ).toThrow();
+    expect(() =>
+      AgencyOwnedR2ConfigSchema.parse({
+        ...validConfig(),
+        endpoint: "https://account-1.r2.cloudflarestorage.com/private?token=secret",
+      }),
+    ).toThrow();
+    expect(() =>
+      AgencyOwnedR2ConfigSchema.parse({
+        ...validConfig(),
+        accountId: "account.evil",
+        endpoint: "https://account.evil.r2.cloudflarestorage.com",
+      }),
+    ).toThrow();
+    expect(() =>
+      AgencyOwnedR2ConfigSchema.parse({ ...validConfig(), bucket: "Agency_Media" }),
     ).toThrow();
   });
 
@@ -105,3 +140,14 @@ describe("R2 configuration", () => {
     });
   });
 });
+
+function validConfig() {
+  return {
+    accountId: "account-1",
+    endpoint: "https://account-1.r2.cloudflarestorage.com",
+    bucket: "planner-media",
+    accessKeyId: "access-key",
+    secretAccessKey: "secret-key",
+    storageClass: "standard" as const,
+  };
+}

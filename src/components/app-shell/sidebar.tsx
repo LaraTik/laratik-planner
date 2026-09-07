@@ -124,7 +124,12 @@ export function Sidebar({
   // Build the navigation tree from the model. Each branch keeps the
   // build pure (no JSX) so the renderer is just dispatch.
   const agencyNav = !inWorkspace
-    ? buildAgencyNavigation({ isAdmin: user.isAdmin, platformAccess, unreadAppErrors })
+    ? buildAgencyNavigation({
+        isAdmin: user.isAdmin,
+        platformAccess,
+        unreadAppErrors,
+        canAccessMedia: user.isAdmin || Object.values(workspaceAccess).includes("internal"),
+      })
     : null;
   const clientNav =
     inWorkspace && currentWorkspace && clientOnly

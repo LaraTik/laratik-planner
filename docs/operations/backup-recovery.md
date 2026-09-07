@@ -14,13 +14,13 @@
 
 ## 1. Backup cadence and retention
 
-| Surface              | Cadence  | Window (UTC) | Local retention | Offsite retention | Source                                                             |
-| -------------------- | -------- | ------------ | --------------- | ----------------- | ------------------------------------------------------------------ |
-| Postgres (full dump) | Daily    | 03:30        | 14 days         | **NOT YET WIRED** | `scripts/vps/backup.sh` (local pg_dump + sha256 + 14-day prune)    |
-| Private storage      | Daily    | 03:30        | 14 days         | **NOT YET WIRED** | Same cron, bundled with the pg_dump job                            |
-| App image (Docker)   | Per push | n/a          | Until pruned    | GHCR (immutable)  | CI pushes per `head_sha`; old tags pruned via `docker image prune` |
-| Source code (Git)    | Per push | n/a          | Forever         | `origin/main`     | GitHub `LaraTik/laratik-planner`                                   |
-| Migration ledger     | n/a      | n/a          | n/a             | With DB           | `drizzle.__drizzle_migrations` lives inside the Postgres backup    |
+| Surface              | Cadence  | Window (UTC) | Local retention | Offsite retention              | Source                                                                                                                                            |
+| -------------------- | -------- | ------------ | --------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Postgres (full dump) | Daily    | 03:30        | 14 days         | **NOT YET WIRED**              | `scripts/vps/backup.sh` (local pg_dump + sha256 + 14-day prune)                                                                                   |
+| Private storage      | Daily    | 03:30        | 14 days         | **R2 + local rollback window** | R2 objects are not copied into pg_dump; preserve the R2 bucket, storage-object rows, and the persistent KEK. See `docs/operations/r2-storage.md`. |
+| App image (Docker)   | Per push | n/a          | Until pruned    | GHCR (immutable)               | CI pushes per `head_sha`; old tags pruned via `docker image prune`                                                                                |
+| Source code (Git)    | Per push | n/a          | Forever         | `origin/main`                  | GitHub `LaraTik/laratik-planner`                                                                                                                  |
+| Migration ledger     | n/a      | n/a          | n/a             | With DB                        | `drizzle.__drizzle_migrations` lives inside the Postgres backup                                                                                   |
 
 Offsite wiring plan: enable the restic block in
 `scripts/vps/backup.sh` (lines 30-37) and provision

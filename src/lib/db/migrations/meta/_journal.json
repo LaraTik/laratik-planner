@@ -239,6 +239,20 @@
       "when": 1789900000000,
       "tag": "0033_r2_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1789990000000,
+      "tag": "0034_media_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1790000000000,
+      "tag": "0035_agency_owned_r2",
+      "breakpoints": true
     }
   ]
 }
