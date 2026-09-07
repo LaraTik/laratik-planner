@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, sum } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sum } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@/lib/db";
 import {
@@ -7,6 +7,7 @@ import {
   agencyUsageCounters,
   platformAuditEvents,
   platformStorageProviderConfigs,
+  storageObjects,
   storageUploadIntents,
 } from "@/lib/db/schema";
 import { requirePlatformPermission } from "@/lib/auth/platform-access";
@@ -173,58 +174,137 @@ export async function getAgencyStorageAdapter(agencyId: string, database: NodePg
   return (await getAgencyStorageContext(agencyId, database)).adapter;
 }
 
-export async function getAgencyStorageSummary(agencyId: string, database: NodePgDatabase = db) {
-  const [[config], [counter], [reserved]] = await Promise.all([
-    database
-      .select({
-        enabled: agencyStorageConfigs.enabled,
-        status: agencyStorageConfigs.status,
-        lastHealthCheckAt: agencyStorageConfigs.lastHealthCheckAt,
-        lastHealthCheckOk: agencyStorageConfigs.lastHealthCheckOk,
+/**
+ * Run a health probe using the already-configured, database-resolved
+ * provider and persist only the result code. The caller is responsible for
+ * authorization; this helper never accepts credentials from the browser.
+ */
+export async function testAgencyStorageConnection(
+  agencyId: string,
+  database: NodePgDatabase = db,
+): Promise<{ ok: true } | { ok: false }> {
+  const checkedAt = new Date();
+  try {
+    const { adapter } = await getAgencyStorageContext(agencyId, database);
+    await adapter.testConnection();
+    await database
+      .update(agencyStorageConfigs)
+      .set({
+        status: "healthy",
+        lastHealthCheckAt: checkedAt,
+        lastHealthCheckOk: true,
+        lastErrorCode: null,
+        updatedAt: checkedAt,
       })
-      .from(agencyStorageConfigs)
-      .where(eq(agencyStorageConfigs.agencyId, agencyId))
-      .limit(1),
-    database
-      .select({ currentValue: agencyUsageCounters.currentValue })
-      .from(agencyUsageCounters)
-      .where(
-        and(
-          eq(agencyUsageCounters.agencyId, agencyId),
-          eq(agencyUsageCounters.resourceKey, "storage_bytes"),
+      .where(eq(agencyStorageConfigs.agencyId, agencyId));
+    return { ok: true };
+  } catch {
+    // Deliberately persist a stable code, never a provider error or secret.
+    await database
+      .update(agencyStorageConfigs)
+      .set({
+        status: "unhealthy",
+        lastHealthCheckAt: checkedAt,
+        lastHealthCheckOk: false,
+        lastErrorCode: "connection_test_failed",
+        updatedAt: checkedAt,
+      })
+      .where(eq(agencyStorageConfigs.agencyId, agencyId));
+    return { ok: false };
+  }
+}
+
+export async function getAgencyStorageSummary(agencyId: string, database: NodePgDatabase = db) {
+  const [[config], [provider], [counter], [reserved], [objects], [activeIntents]] =
+    await Promise.all([
+      database
+        .select({
+          enabled: agencyStorageConfigs.enabled,
+          status: agencyStorageConfigs.status,
+          mode: agencyStorageConfigs.mode,
+          keyPrefix: agencyStorageConfigs.keyPrefix,
+          lastHealthCheckAt: agencyStorageConfigs.lastHealthCheckAt,
+          lastHealthCheckOk: agencyStorageConfigs.lastHealthCheckOk,
+        })
+        .from(agencyStorageConfigs)
+        .where(eq(agencyStorageConfigs.agencyId, agencyId))
+        .limit(1),
+      database
+        .select({
+          enabled: platformStorageProviderConfigs.enabled,
+          status: platformStorageProviderConfigs.status,
+        })
+        .from(platformStorageProviderConfigs)
+        .where(eq(platformStorageProviderConfigs.provider, "r2"))
+        .orderBy(desc(platformStorageProviderConfigs.updatedAt))
+        .limit(1),
+      database
+        .select({ currentValue: agencyUsageCounters.currentValue })
+        .from(agencyUsageCounters)
+        .where(
+          and(
+            eq(agencyUsageCounters.agencyId, agencyId),
+            eq(agencyUsageCounters.resourceKey, "storage_bytes"),
+          ),
+        )
+        .limit(1),
+      database
+        .select({ value: sum(storageUploadIntents.reservedByteSize) })
+        .from(storageUploadIntents)
+        .where(
+          and(
+            eq(storageUploadIntents.agencyId, agencyId),
+            inArray(storageUploadIntents.status, ["reserved", "uploaded"]),
+          ),
         ),
-      )
-      .limit(1),
-    database
-      .select({ value: sum(storageUploadIntents.reservedByteSize) })
-      .from(storageUploadIntents)
-      .where(
-        and(
-          eq(storageUploadIntents.agencyId, agencyId),
-          inArray(storageUploadIntents.status, ["reserved", "uploaded"]),
+      database
+        .select({ value: count() })
+        .from(storageObjects)
+        .where(and(eq(storageObjects.agencyId, agencyId), eq(storageObjects.status, "active"))),
+      database
+        .select({ value: count() })
+        .from(storageUploadIntents)
+        .where(
+          and(
+            eq(storageUploadIntents.agencyId, agencyId),
+            inArray(storageUploadIntents.status, ["reserved", "uploaded"]),
+          ),
         ),
-      ),
-  ]);
+    ]);
   const usedBytes = Number(counter?.currentValue ?? 0);
+  const reservedBytes = Number(reserved?.value ?? 0);
   const quotaBytes = await getLimitForResource(database, agencyId, "storage_bytes");
+  const projectedBytes = usedBytes + reservedBytes;
   const percentUsed = quotaBytes && quotaBytes > 0 ? (usedBytes / quotaBytes) * 100 : 0;
+  const projectedPercentUsed =
+    quotaBytes && quotaBytes > 0 ? (projectedBytes / quotaBytes) * 100 : 0;
   const warning =
-    percentUsed >= 100
+    projectedPercentUsed >= 100
       ? "over_limit"
-      : percentUsed >= 90
+      : projectedPercentUsed >= 90
         ? "urgent"
-        : percentUsed >= 80
+        : projectedPercentUsed >= 80
           ? "warning"
           : "healthy";
   return {
     enabled: config?.enabled ?? false,
     status: config?.status ?? "pending",
+    mode: config?.mode ?? "managed",
+    keyPrefix: config?.keyPrefix ?? `agencies/${agencyId}`,
     lastHealthCheckAt: config?.lastHealthCheckAt ?? null,
     lastHealthCheckOk: config?.lastHealthCheckOk ?? null,
+    providerConfigured: !!provider,
+    providerEnabled: provider?.enabled ?? false,
+    providerStatus: provider?.status ?? "not_tested",
     usedBytes,
-    reservedBytes: Number(reserved?.value ?? 0),
+    reservedBytes,
+    projectedBytes,
+    availableBytes: quotaBytes == null ? null : Math.max(0, quotaBytes - projectedBytes),
     quotaBytes,
     percentUsed,
+    projectedPercentUsed,
+    objectCount: Number(objects?.value ?? 0),
+    activeUploadCount: Number(activeIntents?.value ?? 0),
     warning,
   } as const;
 }

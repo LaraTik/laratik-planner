@@ -27,6 +27,9 @@ const dbMock = vi.hoisted(() => {
   );
   const auditMutationChain: Record<string, unknown> = {};
   auditMutationChain.values = vi.fn(() => Promise.resolve());
+  const updateChain: Record<string, unknown> = {};
+  updateChain.set = vi.fn(() => updateChain);
+  updateChain.where = vi.fn(() => Promise.resolve());
 
   const db = {
     select: vi.fn(() => selectChain),
@@ -34,6 +37,7 @@ const dbMock = vi.hoisted(() => {
       state.insertCount += 1;
       return state.insertCount === 1 ? providerMutationChain : auditMutationChain;
     }),
+    update: vi.fn(() => updateChain),
     transaction: vi.fn(async (callback: (tx: typeof db) => unknown) => callback(db)),
   };
   return db;
@@ -82,6 +86,7 @@ const {
   getAgencyStorageContext,
   getAgencyStorageSummary,
   saveManagedR2Config,
+  testAgencyStorageConnection,
   testR2Connection,
 } = await import("@/lib/storage/config");
 const { StorageConfigurationError } = await import("@/lib/storage/r2-adapter");
@@ -134,6 +139,7 @@ beforeEach(() => {
   state.encrypted.length = 0;
   dbMock.select.mockClear();
   dbMock.insert.mockClear();
+  dbMock.update.mockClear();
   dbMock.transaction.mockClear();
   permissionsMock.requirePlatformPermission.mockClear();
   permissionsMock.requirePlatformPermission.mockResolvedValue(undefined);
@@ -215,6 +221,20 @@ describe("getAgencyStorageContext", () => {
     state.selectResults.push([platformConfig()]);
     await expect(getAgencyStorageAdapter("agency-1", dbMock as never)).resolves.toBe(adapterMock);
   });
+
+  it("persists a safe health result without exposing provider errors", async () => {
+    state.selectResults.push([agencyConfig()], [platformConfig()]);
+    await expect(testAgencyStorageConnection("agency-1", dbMock as never)).resolves.toEqual({
+      ok: true,
+    });
+    expect(dbMock.update).toHaveBeenCalledTimes(1);
+
+    state.selectResults.push([agencyConfig()], [platformConfig()]);
+    adapterMock.testConnection.mockRejectedValueOnce(new Error("secret should not persist"));
+    await expect(testAgencyStorageConnection("agency-1", dbMock as never)).resolves.toEqual({
+      ok: false,
+    });
+  });
 });
 
 describe("getAgencyStorageSummary", () => {
@@ -226,8 +246,11 @@ describe("getAgencyStorageSummary", () => {
   ])("classifies %s%% storage usage as %s", async (used, warning) => {
     state.selectResults.push(
       [agencyConfig({ status: "healthy" })],
+      [platformConfig()],
       [{ currentValue: String(used) }],
       [{ value: "7" }],
+      [{ value: "3" }],
+      [{ value: "1" }],
     );
     limitMock.getLimitForResource.mockResolvedValueOnce(100);
     await expect(getAgencyStorageSummary("agency-1", dbMock as never)).resolves.toMatchObject({
@@ -240,7 +263,7 @@ describe("getAgencyStorageSummary", () => {
   });
 
   it("returns safe defaults for an unconfigured agency and an unlimited quota", async () => {
-    state.selectResults.push([], [], [{ value: null }]);
+    state.selectResults.push([], [], [], [{ value: null }], [{ value: "0" }], [{ value: "0" }]);
     limitMock.getLimitForResource.mockResolvedValueOnce(null);
     await expect(getAgencyStorageSummary("agency-1", dbMock as never)).resolves.toMatchObject({
       enabled: false,
@@ -249,6 +272,11 @@ describe("getAgencyStorageSummary", () => {
       reservedBytes: 0,
       quotaBytes: null,
       percentUsed: 0,
+      projectedBytes: 0,
+      availableBytes: null,
+      providerConfigured: false,
+      objectCount: 0,
+      activeUploadCount: 0,
       warning: "healthy",
     });
   });
