@@ -87,6 +87,39 @@ describe("MobileNav", () => {
     expect(screen.getByTestId("mobile-primary-create")).toHaveAccessibleName("Create workspace");
   });
 
+  it("keeps every agency settings section reachable from More", async () => {
+    usePathnameMock.mockReturnValue("/app/agency-settings/storage");
+    const user = userEvent.setup();
+    render(<MobileNav {...baseProps} />);
+
+    await user.click(screen.getByTestId("mobile-navigation-more"));
+
+    expect(screen.getByRole("link", { name: "Agency settings" })).toHaveAttribute(
+      "href",
+      "/app/agency-settings",
+    );
+    expect(screen.getByRole("link", { name: "Plan and usage" })).toHaveAttribute(
+      "href",
+      "/app/agency-settings/plan",
+    );
+    expect(screen.getByRole("link", { name: "AI configuration" })).toHaveAttribute(
+      "href",
+      "/app/agency-settings/ai",
+    );
+    expect(screen.getByRole("link", { name: "Social analytics" })).toHaveAttribute(
+      "href",
+      "/app/agency-settings/social",
+    );
+    expect(screen.getByRole("link", { name: "Social provider setup" })).toHaveAttribute(
+      "href",
+      "/app/agency-settings/social/providers",
+    );
+    expect(screen.getByRole("link", { name: "Media storage" })).toHaveAttribute(
+      "href",
+      "/app/agency-settings/storage",
+    );
+  });
+
   it("uses content creation inside a workspace and exposes every secondary route in More", async () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
     const user = userEvent.setup();

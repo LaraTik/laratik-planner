@@ -1,4 +1,5 @@
 import {
+  Activity,
   AlertOctagon,
   BarChart3,
   BookOpen,
@@ -6,6 +7,7 @@ import {
   Briefcase,
   CalendarDays,
   ClipboardList,
+  Cloud,
   Clock,
   History,
   Home,
@@ -19,6 +21,7 @@ import {
   MessageSquare,
   Package,
   Palette,
+  PlugZap,
   Settings,
   Share2,
   Shield,
@@ -68,6 +71,8 @@ export type SidebarLinkSpec = {
   icon: IconComponent;
   /** Optional badge count (actionable only). */
   badge?: number | undefined;
+  /** Use an exact pathname match when a sibling route shares a prefix. */
+  exact?: boolean | undefined;
   /** Test id — auto-derived from key when omitted. */
   testId?: string | undefined;
 };
@@ -553,6 +558,33 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
               label: "AI configuration",
               labelKey: "sidebar.settingsAiConfiguration",
               icon: Bot,
+            },
+            {
+              kind: "link",
+              key: "agency-settings-social",
+              href: "/app/agency-settings/social",
+              label: "Social analytics",
+              labelKey: "sidebar.settingsSocialAnalytics",
+              icon: Activity,
+              exact: true,
+            },
+            {
+              kind: "link",
+              key: "agency-settings-social-providers",
+              href: "/app/agency-settings/social/providers",
+              label: "Social provider setup",
+              labelKey: "sidebar.settingsSocialProviders",
+              icon: PlugZap,
+              exact: true,
+            },
+            {
+              kind: "link",
+              key: "agency-settings-storage",
+              href: "/app/agency-settings/storage",
+              label: "Media storage",
+              labelKey: "sidebar.settingsStorage",
+              icon: Cloud,
+              exact: true,
             },
           ],
         },

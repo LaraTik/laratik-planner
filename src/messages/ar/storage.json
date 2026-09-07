@@ -27,6 +27,8 @@
   "privateBucket": "حاوية خاصة · لا تُكشف بيانات الاعتماد",
   "agencyTitle": "التخزين والحصة",
   "agencyDescription": "تخزين R2 المُدار خاص ومحصور بهذه الوكالة.",
+  "forbiddenBody": "يمكن لمسؤولي الوكالة فقط عرض تفاصيل التخزين والحصة.",
+  "backToAgencySettings": "العودة إلى إعدادات الوكالة",
   "provider": "المزوّد",
   "providerR2": "Cloudflare R2",
   "usage": "الاستخدام الحالي",

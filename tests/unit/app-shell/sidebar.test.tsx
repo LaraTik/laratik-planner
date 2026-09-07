@@ -125,6 +125,21 @@ describe("Sidebar (workspace-aware)", () => {
     usePathnameMock.mockReturnValue("/app/agency-settings/plan");
     const { rerender } = render(<Sidebar {...baseProps} user={{ name: "Lara", isAdmin: true }} />);
     expect(screen.getByRole("link", { name: /Plan and usage/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Social analytics/i })).toHaveAttribute(
+      "href",
+      "/app/agency-settings/social",
+    );
+    expect(screen.getByRole("link", { name: /Social provider setup/i })).toHaveAttribute(
+      "href",
+      "/app/agency-settings/social/providers",
+    );
+    expect(screen.getByRole("link", { name: /Social provider setup/i })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(screen.getByRole("link", { name: /Media storage/i })).toHaveAttribute(
+      "href",
+      "/app/agency-settings/storage",
+    );
     expect(screen.queryByRole("link", { name: /Platform overview/i })).toBeNull();
 
     usePathnameMock.mockReturnValue("/app");
@@ -137,6 +152,18 @@ describe("Sidebar (workspace-aware)", () => {
     );
     expect(screen.getByRole("link", { name: /Platform overview/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^Agencies$/i })).toBeInTheDocument();
+  });
+
+  it("highlights only provider setup on its overlapping route", () => {
+    usePathnameMock.mockReturnValue("/app/agency-settings/social/providers");
+    render(<Sidebar {...baseProps} user={{ name: "Lara", isAdmin: true }} />);
+    expect(screen.getByRole("link", { name: /Social provider setup/i })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: /Social analytics/i })).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 
   it.each([

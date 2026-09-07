@@ -4,10 +4,12 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Activity,
   Bot,
   Briefcase,
   CalendarDays,
   ClipboardList,
+  Cloud,
   Gauge,
   HelpCircle,
   Home,
@@ -19,6 +21,7 @@ import {
   MessageSquare,
   Package,
   Palette,
+  PlugZap,
   Plus,
   Settings,
   Share2,
@@ -262,26 +265,48 @@ export function MobileNav({
             ) : null}
 
             {user.isAdmin && !currentWorkspace ? (
-              <MenuSection label={labelFor("agency", "Agency")}>
+              <MenuSection label={labelFor("admin", "Admin")}>
                 <MobileMenuLink
                   href="/app/users"
                   icon={<Users />}
                   label={labelFor("users", "User management")}
+                  active={isActivePath("/app/users", pathname)}
                 />
                 <MobileMenuLink
                   href="/app/agency-settings"
                   icon={<Shield />}
                   label={labelFor("agency-settings", "Agency settings")}
+                  active={isActivePath("/app/agency-settings", pathname, { exact: true })}
                 />
                 <MobileMenuLink
                   href="/app/agency-settings/plan"
                   icon={<Gauge />}
                   label={labelFor("agency-settings-plan", "Plan and usage")}
+                  active={isActivePath("/app/agency-settings/plan", pathname)}
                 />
                 <MobileMenuLink
                   href="/app/agency-settings/ai"
                   icon={<Bot />}
                   label={labelFor("agency-settings-ai", "AI configuration")}
+                  active={isActivePath("/app/agency-settings/ai", pathname)}
+                />
+                <MobileMenuLink
+                  href="/app/agency-settings/social"
+                  icon={<Activity />}
+                  label={labelFor("agency-settings-social", "Social analytics")}
+                  active={isActivePath("/app/agency-settings/social", pathname, { exact: true })}
+                />
+                <MobileMenuLink
+                  href="/app/agency-settings/social/providers"
+                  icon={<PlugZap />}
+                  label={labelFor("agency-settings-social-providers", "Social provider setup")}
+                  active={isActivePath("/app/agency-settings/social/providers", pathname)}
+                />
+                <MobileMenuLink
+                  href="/app/agency-settings/storage"
+                  icon={<Cloud />}
+                  label={labelFor("agency-settings-storage", "Media storage")}
+                  active={isActivePath("/app/agency-settings/storage", pathname)}
                 />
               </MenuSection>
             ) : null}
@@ -391,12 +416,26 @@ function MenuSection({ label, children }: { label: string; children: ReactNode }
   );
 }
 
-function MobileMenuLink({ href, icon, label }: { href: string; icon: ReactNode; label: string }) {
+function MobileMenuLink({
+  href,
+  icon,
+  label,
+  active = false,
+}: {
+  href: string;
+  icon: ReactNode;
+  label: string;
+  active?: boolean;
+}) {
   return (
     <DialogClose asChild>
       <Link
         href={href}
-        className="border-border bg-surface text-body text-fg-primary hover:border-primary hover:bg-primary-subtle focus-visible:ring-focus-ring flex min-h-14 items-center gap-3 rounded-[var(--radius-control)] border px-3 font-semibold transition-colors focus:outline-none focus-visible:ring-2"
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "border-border bg-surface text-body text-fg-primary hover:border-primary hover:bg-primary-subtle focus-visible:ring-focus-ring flex min-h-14 items-center gap-3 rounded-[var(--radius-control)] border px-3 font-semibold transition-colors focus:outline-none focus-visible:ring-2",
+          active && "border-primary bg-primary-subtle text-primary",
+        )}
       >
         <span
           className="bg-surface-subtle text-fg-secondary flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] [&>svg]:h-4 [&>svg]:w-4"

@@ -2,6 +2,8 @@
   "title": "الخطة والاستخدام",
   "eyebrow": "إعدادات الوكالة",
   "description": "حدود للقراءة فقط لخطة {plan}. يبقى العمل الحالي متاحًا إذا خُفّض أحد الحدود.",
+  "forbiddenBody": "يمكن لمسؤولي الوكالة فقط عرض تفاصيل الخطة والاستخدام.",
+  "backToAgencySettings": "العودة إلى إعدادات الوكالة",
   "planNotConfigured": "الخطة غير مُهيّأة",
   "planNotConfiguredBody": "اطلب من مسؤول المنصة تعيين خطة.",
   "effectiveSince": "سارية منذ {date}. تتوقف التخصيصات الجديدة عند 100٪؛ لا يُحذف أي شيء تلقائيًا.",
@@ -30,5 +32,30 @@
   "supportViewHistory": "عرض السجل",
   "supportEmptyTitle": "لا توجد طلبات وصول دعم",
   "supportEmptyBody": "لم يقدم أي مدير منصة طلب وصول دعم لهذه الوكالة.",
-  "supportRecentHeading": "القرارات الأخيرة"
+  "supportRecentHeading": "القرارات الأخيرة",
+  "levels": {
+    "healthy": "سليم",
+    "warning": "تحذير",
+    "urgent": "عاجل",
+    "over_limit": "تجاوز الحد"
+  },
+  "resources": {
+    "workspaces": "مساحات العمل",
+    "users": "المستخدمون",
+    "social_profiles": "الملفات الاجتماعية",
+    "social_profiles:instagram": "ملفات Instagram",
+    "social_profiles:facebook": "ملفات Facebook",
+    "social_profiles:tiktok": "ملفات TikTok",
+    "social_profiles:linkedin": "ملفات LinkedIn",
+    "social_profiles:youtube": "ملفات YouTube",
+    "social_profiles:pinterest": "ملفات Pinterest",
+    "social_profiles:x": "ملفات X",
+    "social_profiles:threads": "ملفات Threads",
+    "social_profiles:snapchat": "ملفات Snapchat",
+    "social_profiles:other": "ملفات اجتماعية أخرى",
+    "storage_bytes": "تخزين الوسائط",
+    "ai_requests_month": "طلبات الذكاء الاصطناعي هذا الشهر",
+    "ai_input_tokens_month": "رموز إدخال الذكاء الاصطناعي هذا الشهر",
+    "ai_output_tokens_month": "رموز إخراج الذكاء الاصطناعي هذا الشهر"
+  }
 }

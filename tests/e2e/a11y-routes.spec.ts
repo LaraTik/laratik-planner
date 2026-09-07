@@ -168,6 +168,30 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await expectClean("/app/agency-settings/ai", page);
   });
 
+  test("@a11y agency plan settings has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/agency-settings/plan");
+    await expectClean("/app/agency-settings/plan", page);
+  });
+
+  test("@a11y agency social settings has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/agency-settings/social");
+    await expectClean("/app/agency-settings/social", page);
+  });
+
+  test("@a11y agency social provider settings has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/agency-settings/social/providers");
+    await expectClean("/app/agency-settings/social/providers", page);
+  });
+
+  test("@a11y agency storage settings has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/agency-settings/storage");
+    await expectClean("/app/agency-settings/storage", page);
+  });
+
   test("@a11y /app/users has no critical violations", async ({ page }) => {
     await bootstrapTestSession(page);
     await page.goto("/app/users");

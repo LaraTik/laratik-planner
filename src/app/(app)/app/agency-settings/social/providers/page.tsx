@@ -118,6 +118,15 @@ export default async function AgencySocialProvidersPage() {
             </span>
           </>
         }
+        action={
+          <Link
+            href="/app/agency-settings/social"
+            className="text-primary focus-visible:ring-focus-ring text-body inline-flex min-h-[var(--control-touch)] items-center gap-1 rounded-[var(--radius-control)] px-2 py-2 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+          >
+            <DirAwareArrowLeft className="h-4 w-4" aria-hidden="true" />
+            {t("agencyProviders.backToSocial")}
+          </Link>
+        }
       />
 
       <section className="space-y-3">

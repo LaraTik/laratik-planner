@@ -506,7 +506,11 @@ function renderItem(
         <SidebarLinkRow
           key={item.key}
           spec={item}
-          active={isActivePath(item.href, pathname)}
+          active={isActivePath(
+            item.href,
+            pathname,
+            item.exact === undefined ? {} : { exact: item.exact },
+          )}
           collapsed={collapsed}
           labels={labels}
         />

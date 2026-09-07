@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Activity } from "lucide-react";
+import { Activity, PlugZap } from "lucide-react";
 import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 import { auth } from "@/lib/auth/config";
 import { isAgencyAdmin } from "@/lib/auth/policy";
@@ -83,13 +83,22 @@ export default async function AgencySocialSettingsPage() {
         title={t("agencySocial.title")}
         description={t("agencySocial.description")}
         action={
-          <Link
-            href="/app/agency-settings"
-            className="text-primary focus-visible:ring-focus-ring text-body inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
-          >
-            <DirAwareArrowLeft className="h-4 w-4" aria-hidden="true" />
-            {t("agencySocial.backToAgencySettings")}
-          </Link>
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+            <Link
+              href="/app/agency-settings/social/providers"
+              className="text-primary focus-visible:ring-focus-ring text-body inline-flex min-h-[var(--control-touch)] items-center gap-1 rounded-[var(--radius-control)] px-2 py-2 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+            >
+              <PlugZap className="h-4 w-4" aria-hidden="true" />
+              {t("agencySocial.manageProviders")}
+            </Link>
+            <Link
+              href="/app/agency-settings"
+              className="text-primary focus-visible:ring-focus-ring text-body inline-flex min-h-[var(--control-touch)] items-center gap-1 rounded-[var(--radius-control)] px-2 py-2 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+            >
+              <DirAwareArrowLeft className="h-4 w-4" aria-hidden="true" />
+              {t("agencySocial.backToAgencySettings")}
+            </Link>
+          </div>
         }
       />
 

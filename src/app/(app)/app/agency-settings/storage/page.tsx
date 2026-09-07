@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { AlertTriangle, CheckCircle2, CircleSlash, Cloud, Gauge } from "lucide-react";
+import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { isAgencyAdmin } from "@/lib/auth/policy";
@@ -26,13 +28,27 @@ export async function generateMetadata() {
 }
 
 export default async function AgencyStoragePage() {
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const session = await auth();
   const actor = await currentActor();
   if (!session?.user?.id || !actor) redirect("/signin");
   const context = await resolveActiveAgencyContext({ actor });
   if (!context?.agencyId) redirect("/setup");
   const isAdmin = await isAgencyAdmin(actor, context.agencyId);
+  if (!isAdmin) {
+    return (
+      <div className="space-y-4" data-testid="agency-storage-forbidden">
+        <PageHeader title={t("storage.agencyTitle")} description={t("storage.forbiddenBody")} />
+        <Link
+          href="/app/agency-settings"
+          className="text-primary focus-visible:ring-focus-ring inline-flex min-h-[var(--control-touch)] items-center gap-1 rounded-[var(--radius-control)] px-2 py-2 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+        >
+          <DirAwareArrowLeft className="h-4 w-4" aria-hidden="true" />
+          {t("storage.backToAgencySettings")}
+        </Link>
+      </div>
+    );
+  }
   const summary = await getAgencyStorageSummary(context.agencyId);
   const warningText =
     summary.warning === "over_limit"
@@ -67,7 +83,19 @@ export default async function AgencyStoragePage() {
 
   return (
     <div className="max-w-5xl space-y-6" data-testid="agency-storage-settings">
-      <PageHeader title={t("storage.agencyTitle")} description={t("storage.agencyDescription")} />
+      <PageHeader
+        title={t("storage.agencyTitle")}
+        description={t("storage.agencyDescription")}
+        action={
+          <Link
+            href="/app/agency-settings"
+            className="text-primary focus-visible:ring-focus-ring text-body inline-flex min-h-[var(--control-touch)] items-center gap-1 rounded-[var(--radius-control)] px-2 py-2 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+          >
+            <DirAwareArrowLeft className="h-4 w-4" aria-hidden="true" />
+            {t("storage.backToAgencySettings")}
+          </Link>
+        }
+      />
       <Card padding="lg">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-3">
@@ -140,7 +168,13 @@ export default async function AgencyStoragePage() {
           <Gauge className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span>
             {t("storage.lastHealthCheck")}:{" "}
-            {summary.lastHealthCheckAt?.toLocaleString() ?? t("storage.never")}
+            {summary.lastHealthCheckAt
+              ? new Intl.DateTimeFormat(code, {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                  numberingSystem: "latn",
+                }).format(summary.lastHealthCheckAt)
+              : t("storage.never")}
           </span>
         </div>
 

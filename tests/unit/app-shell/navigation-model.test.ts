@@ -137,6 +137,19 @@ describe("buildAgencyNavigation", () => {
       },
     });
     expect(nav.groups.map((g) => g.key)).toContain("admin");
+    const admin = nav.groups.find((g) => g.key === "admin");
+    const settings = admin?.items.find((item) => item.key === "agency-settings");
+    expect(settings?.kind).toBe("expandable");
+    if (settings?.kind === "expandable") {
+      expect(settings.children.map((item) => item.key)).toEqual([
+        "agency-settings-general",
+        "agency-settings-plan",
+        "agency-settings-ai",
+        "agency-settings-social",
+        "agency-settings-social-providers",
+        "agency-settings-storage",
+      ]);
+    }
   });
 
   it("adds the Platform group for platform admins and respects per-page gates", () => {

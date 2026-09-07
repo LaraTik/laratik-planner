@@ -4,6 +4,7 @@
   "description": "Connect Meta (Facebook / Instagram) and TikTok to track follower counts, reach, and engagement for every channel in this agency. Tokens are encrypted at rest with a per-agency key.",
   "forbiddenBody": "Only agency admins can change social analytics settings.",
   "backToAgencySettings": "Back to Agency Settings",
+  "manageProviders": "Manage provider setup",
   "dekBlurb": "The agency DEK is wrapped by the platform KEK ({kek}) and stored in agency_social_dek. The plaintext DEK is shown to the agency admin exactly once at enable / rotate time and is never persisted or logged.",
   "rotateBlurb": "If the platform operator rotates the KEK, run pnpm tsx scripts/rotate-social-kek.ts --new-kek \"$(openssl rand -base64 32)\" to re-wrap every agency DEK.",
   "enabledBadge": "Enabled",

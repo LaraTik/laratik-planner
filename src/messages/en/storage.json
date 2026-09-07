@@ -27,6 +27,8 @@
   "privateBucket": "Private bucket · credentials never exposed",
   "agencyTitle": "Storage and quota",
   "agencyDescription": "Managed R2 storage is private and scoped to this agency.",
+  "forbiddenBody": "Only agency admins can view storage and quota details.",
+  "backToAgencySettings": "Back to Agency Settings",
   "provider": "Provider",
   "providerR2": "Cloudflare R2",
   "usage": "Current usage",

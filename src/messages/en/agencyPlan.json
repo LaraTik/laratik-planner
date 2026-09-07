@@ -2,6 +2,8 @@
   "title": "Plan and usage",
   "eyebrow": "Agency Settings",
   "description": "Read-only limits for the {plan} plan. Existing work remains available if a limit is reduced.",
+  "forbiddenBody": "Only agency admins can view plan and usage details.",
+  "backToAgencySettings": "Back to Agency Settings",
   "planNotConfigured": "Plan not configured",
   "planNotConfiguredBody": "Ask the platform administrator to assign a plan.",
   "effectiveSince": "Effective since {date}. New allocations stop at 100%; nothing is deleted automatically.",
@@ -30,5 +32,30 @@
   "supportViewHistory": "View history",
   "supportEmptyTitle": "No support access requests",
   "supportEmptyBody": "No platform administrator has filed a support access request for your agency.",
-  "supportRecentHeading": "Recent decisions"
+  "supportRecentHeading": "Recent decisions",
+  "levels": {
+    "healthy": "Healthy",
+    "warning": "Warning",
+    "urgent": "Urgent",
+    "over_limit": "Over limit"
+  },
+  "resources": {
+    "workspaces": "Workspaces",
+    "users": "Users",
+    "social_profiles": "Social profiles",
+    "social_profiles:instagram": "Instagram profiles",
+    "social_profiles:facebook": "Facebook profiles",
+    "social_profiles:tiktok": "TikTok profiles",
+    "social_profiles:linkedin": "LinkedIn profiles",
+    "social_profiles:youtube": "YouTube profiles",
+    "social_profiles:pinterest": "Pinterest profiles",
+    "social_profiles:x": "X profiles",
+    "social_profiles:threads": "Threads profiles",
+    "social_profiles:snapchat": "Snapchat profiles",
+    "social_profiles:other": "Other social profiles",
+    "storage_bytes": "Media storage",
+    "ai_requests_month": "AI requests this month",
+    "ai_input_tokens_month": "AI input tokens this month",
+    "ai_output_tokens_month": "AI output tokens this month"
+  }
 }

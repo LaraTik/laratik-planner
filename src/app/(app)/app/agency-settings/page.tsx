@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { EditAgencyForm } from "@/components/forms/edit-agency-form";
+import { getAgencyStorageSummary } from "@/lib/storage/config";
+import { getSocialStatus } from "@/lib/social/service";
 
 /**
  * Agency-level identity and operational configuration (M3.4 — agency CRUD).
@@ -80,8 +82,16 @@ export default async function AgencySettingsPage() {
   ]);
   if (!agency) redirect("/setup");
 
-  // Pre-compute the managed-services status (read-only display).
+  // Pre-compute the managed-services status (read-only display). These
+  // two services are database-backed, so the overview must reflect the
+  // agency's actual runtime state rather than a deployment-env guess.
   const envEnabled = serverEnv.AI_FEATURE_ENABLED && !!serverEnv.MINIMAX_API_KEY;
+  const [storageSummary, socialStatus] = await Promise.all([
+    getAgencyStorageSummary(agencyId),
+    getSocialStatus(actor, agencyId),
+  ]);
+  const storageReady = storageSummary.enabled && storageSummary.status === "healthy";
+  const storageNeedsAttention = storageSummary.enabled && !storageReady;
 
   return (
     <div className="space-y-6" data-testid="agency-settings">
@@ -155,14 +165,15 @@ export default async function AgencySettingsPage() {
             />
             <Service
               label={t("agencySettings.serviceSocial")}
-              enabled={!!serverEnv.SOCIAL_TOKEN_ENCRYPTION_KEY}
+              enabled={socialStatus.enabled}
               testId="agency-service-social"
               href="/app/agency-settings/social"
               t={t}
             />
             <Service
               label={t("agencySettings.serviceStorage")}
-              enabled={true}
+              enabled={storageReady}
+              variant={storageNeedsAttention ? "warning" : undefined}
               testId="agency-service-storage"
               href="/app/agency-settings/storage"
               t={t}
