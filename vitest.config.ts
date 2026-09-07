@@ -26,6 +26,10 @@ export default defineConfig({
         // useful reason. The actual type contract is
         // enforced by tsc + the per-test file imports.
         "src/lib/auth/platform-navigation-access.ts",
+        // This module is a type-only public contract for storage providers;
+        // it has no runtime statements to exercise. The concrete adapters
+        // and their service orchestration are covered below.
+        "src/lib/storage/adapter.ts",
       ],
       // Per-glob thresholds per PRODUCTION_READINESS_TRACKER.md QA-003.
       // The unit suite alone does not exercise the DB-touching service

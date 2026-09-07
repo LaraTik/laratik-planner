@@ -142,7 +142,10 @@ describe("R2 — reply + unresolved_question enqueue wiring", () => {
   });
 
   async function flushOutbox() {
-    await dispatchOutboxOnce({ now: new Date() });
+    // PostgreSQL stores `available_at` with microsecond precision while
+    // JavaScript Date values have millisecond precision. Give rows created
+    // immediately before this call a deterministic due-time margin.
+    await dispatchOutboxOnce({ now: new Date(Date.now() + 1000) });
   }
 
   it("reply comment writes a `reply` outbox event + a notification row for the parent author", async () => {
