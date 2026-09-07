@@ -4,13 +4,22 @@ import type { Dirent } from "node:fs";
 import { readdir, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { and, eq, sql, sum } from "drizzle-orm";
+import { and, eq, isNull, sql, sum } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { agencyUsageCounters, mediaAssets, storageObjects, workspaces } from "@/lib/db/schema";
+import {
+  agencyUsageCounters,
+  attachments,
+  brandAssets,
+  mediaAssetLinks,
+  mediaAssets,
+  storageObjects,
+  workspaces,
+} from "@/lib/db/schema";
 import { createAgencyObjectKey } from "@/lib/storage/object-key";
 import { getAgencyStorageContext } from "@/lib/storage/config";
 import {
   extensionForContentType,
+  sanitizeOriginalFilename,
   titleFromFilename,
   validateMediaSignature,
   validateMediaUpload,
@@ -61,6 +70,7 @@ function mediaKind(ext: string): "image" | "video" | "document" | "other" {
 }
 
 type MigratedMediaKind = "image" | "video" | "document";
+type LegacyReferenceType = "brand_asset" | "attachment";
 type MigrationFileResult = {
   skipped: boolean;
   reason?: string;
@@ -68,6 +78,9 @@ type MigrationFileResult = {
   checksum?: string;
   kind?: MigratedMediaKind;
   localCleanup?: "deleted" | "skipped_changed" | "missing";
+  linkedReferences?: number;
+  linkedByType?: Partial<Record<LegacyReferenceType, number>>;
+  referenceConflicts?: number;
 };
 
 export type MigrationReportInput = {
@@ -80,18 +93,23 @@ export type MigrationReportInput = {
   localCleanupSkipped: number;
   migratedByKind: Partial<Record<MigratedMediaKind, number>>;
   skippedByReason: Record<string, number>;
+  linkedReferences: number;
+  linkedByType: Partial<Record<LegacyReferenceType, number>>;
+  referenceConflicts: number;
   reason?: string;
 };
 
 /**
  * Build the versioned reconciliation report emitted by the migration CLI.
  * Keeping this pure makes the compatibility contract executable in unit tests
- * even when a deployment has no legacy volume mounted yet.
+ * even when a deployment has no legacy volume mounted yet. Report version 2
+ * adds the reference-linkage counters needed to prove that old Brand Kit and
+ * discussion rows no longer depend on a local path after migration.
  */
 export function buildMigrationReport(input: MigrationReportInput) {
   return {
     ok: true as const,
-    reportVersion: 1 as const,
+    reportVersion: 2 as const,
     dryRun: input.dryRun,
     deleteLocal: input.deleteLocal,
     sourcePresent: input.sourcePresent,
@@ -101,6 +119,9 @@ export function buildMigrationReport(input: MigrationReportInput) {
     localCleanupSkipped: input.localCleanupSkipped,
     migratedByKind: input.migratedByKind,
     skippedByReason: input.skippedByReason,
+    linkedReferences: input.linkedReferences,
+    linkedByType: input.linkedByType,
+    referenceConflicts: input.referenceConflicts,
     ...(input.reason ? { reason: input.reason } : {}),
   };
 }
@@ -115,6 +136,9 @@ export function buildEmptyMigrationReport(input: { dryRun: boolean; deleteLocal:
     localCleanupSkipped: 0,
     migratedByKind: {},
     skippedByReason: {},
+    linkedReferences: 0,
+    linkedByType: {},
+    referenceConflicts: 0,
     reason: "legacy_root_missing",
   });
 }
@@ -175,14 +199,23 @@ async function ensureLegacyMediaAsset(input: {
   storageObjectId: string;
   fileName: string;
   createdBy: string;
-}): Promise<void> {
+  sourceModifiedAt?: Date;
+}): Promise<string> {
   const [existing] = await db
-    .select({ id: mediaAssets.id })
+    .select({ id: mediaAssets.id, sourceModifiedAt: mediaAssets.sourceModifiedAt })
     .from(mediaAssets)
     .where(eq(mediaAssets.storageObjectId, input.storageObjectId))
     .limit(1);
-  if (existing) return;
-  await db
+  if (existing) {
+    if (!existing.sourceModifiedAt && input.sourceModifiedAt) {
+      await db
+        .update(mediaAssets)
+        .set({ sourceModifiedAt: input.sourceModifiedAt, updatedAt: new Date() })
+        .where(eq(mediaAssets.id, existing.id));
+    }
+    return existing.id;
+  }
+  const [inserted] = await db
     .insert(mediaAssets)
     .values({
       agencyId: input.agencyId,
@@ -194,10 +227,144 @@ async function ensureLegacyMediaAsset(input: {
       sourceType: "legacy",
       sourceProvider: "local_volume",
       sourceReference: `${input.workspaceId}/${input.fileName}`,
+      ...(input.sourceModifiedAt ? { sourceModifiedAt: input.sourceModifiedAt } : {}),
       createdBy: input.createdBy,
       updatedBy: input.createdBy,
     })
-    .onConflictDoNothing({ target: mediaAssets.storageObjectId });
+    .onConflictDoNothing({ target: mediaAssets.storageObjectId })
+    .returning({ id: mediaAssets.id });
+  if (inserted) return inserted.id;
+
+  // Another migration worker may have won the race after the first SELECT.
+  const [raced] = await db
+    .select({ id: mediaAssets.id })
+    .from(mediaAssets)
+    .where(eq(mediaAssets.storageObjectId, input.storageObjectId))
+    .limit(1);
+  if (!raced) throw new Error(`Media catalog row was not created for ${input.fileName}`);
+  return raced.id;
+}
+
+type LegacyReferenceLinkResult = {
+  linked: number;
+  linkedByType: Partial<Record<LegacyReferenceType, number>>;
+  conflicts: number;
+};
+
+/**
+ * Reconnect rows that still point at the old local-volume path. The old path
+ * is deliberately retained for rollback and audit, while storage_object_id
+ * becomes the preferred read path. A conflicting existing object reference is
+ * never overwritten; it is reported for operator review instead.
+ */
+async function linkLegacyReferences(input: {
+  agencyId: string;
+  workspaceId: string;
+  fileName: string;
+  storageObjectId: string;
+  mediaAssetId: string;
+}): Promise<LegacyReferenceLinkResult> {
+  const legacyPath = `${input.workspaceId}/${input.fileName}`;
+  const result: LegacyReferenceLinkResult = { linked: 0, linkedByType: {}, conflicts: 0 };
+
+  const brandRows = await db
+    .select({
+      id: brandAssets.id,
+      createdBy: brandAssets.createdBy,
+      storageObjectId: brandAssets.storageObjectId,
+    })
+    .from(brandAssets)
+    .where(
+      and(eq(brandAssets.workspaceId, input.workspaceId), eq(brandAssets.storagePath, legacyPath)),
+    );
+  for (const row of brandRows) {
+    if (row.storageObjectId && row.storageObjectId !== input.storageObjectId) {
+      result.conflicts += 1;
+      continue;
+    }
+    let updated = false;
+    if (!row.storageObjectId) {
+      const [updatedRow] = await db
+        .update(brandAssets)
+        .set({ storageObjectId: input.storageObjectId, updatedAt: new Date() })
+        .where(and(eq(brandAssets.id, row.id), isNull(brandAssets.storageObjectId)))
+        .returning({ id: brandAssets.id });
+      updated = Boolean(updatedRow);
+    }
+    const [link] = await db
+      .insert(mediaAssetLinks)
+      .values({
+        agencyId: input.agencyId,
+        workspaceId: input.workspaceId,
+        mediaAssetId: input.mediaAssetId,
+        targetType: "brand_asset",
+        targetId: row.id,
+        createdBy: row.createdBy,
+      })
+      .onConflictDoNothing()
+      .returning({ id: mediaAssetLinks.id });
+    if (updated || link) {
+      result.linked += 1;
+      result.linkedByType.brand_asset = (result.linkedByType.brand_asset ?? 0) + 1;
+    }
+  }
+
+  const attachmentRows = await db
+    .select({
+      id: attachments.id,
+      uploadedBy: attachments.uploadedBy,
+      storageObjectId: attachments.storageObjectId,
+      contentItemId: attachments.contentItemId,
+      commentId: attachments.commentId,
+      deliveryVersionId: attachments.deliveryVersionId,
+    })
+    .from(attachments)
+    .where(
+      and(eq(attachments.workspaceId, input.workspaceId), eq(attachments.storagePath, legacyPath)),
+    );
+  for (const row of attachmentRows) {
+    if (row.storageObjectId && row.storageObjectId !== input.storageObjectId) {
+      result.conflicts += 1;
+      continue;
+    }
+    let updated = false;
+    if (!row.storageObjectId) {
+      const [updatedRow] = await db
+        .update(attachments)
+        .set({ storageObjectId: input.storageObjectId })
+        .where(and(eq(attachments.id, row.id), isNull(attachments.storageObjectId)))
+        .returning({ id: attachments.id });
+      updated = Boolean(updatedRow);
+    }
+    let linkCreated = false;
+    const targets = [
+      { targetType: "content_item", targetId: row.contentItemId },
+      { targetType: "comment", targetId: row.commentId },
+      { targetType: "delivery", targetId: row.deliveryVersionId },
+    ] as const;
+    for (const target of targets) {
+      if (!target.targetId) continue;
+      const [link] = await db
+        .insert(mediaAssetLinks)
+        .values({
+          agencyId: input.agencyId,
+          workspaceId: input.workspaceId,
+          mediaAssetId: input.mediaAssetId,
+          targetType: target.targetType,
+          targetId: target.targetId,
+          createdBy: row.uploadedBy,
+        })
+        .onConflictDoNothing()
+        .returning({ id: mediaAssetLinks.id });
+      linkCreated ||= !!link;
+    }
+    if (updated || linkCreated) {
+      result.linked += 1;
+      result.linkedByType.attachment = (result.linkedByType.attachment ?? 0) + 1;
+    }
+  }
+
+  return result;
 }
 
 async function migrateFile(
@@ -278,14 +445,34 @@ async function migrateFile(
     }
   }
   if (existing[0]) {
-    await ensureLegacyMediaAsset({
+    let sourceModifiedAt: Date | undefined;
+    try {
+      sourceModifiedAt = (await stat(localPath)).mtime;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    const mediaAssetId = await ensureLegacyMediaAsset({
       agencyId: workspace.agencyId,
       workspaceId,
       storageObjectId: existing[0].id,
       fileName,
       createdBy: workspace.createdBy,
+      ...(sourceModifiedAt ? { sourceModifiedAt } : {}),
     });
-    return { skipped: true, reason: "already_migrated" };
+    const references = await linkLegacyReferences({
+      agencyId: workspace.agencyId,
+      workspaceId,
+      fileName,
+      storageObjectId: existing[0].id,
+      mediaAssetId,
+    });
+    return {
+      skipped: true,
+      reason: "already_migrated",
+      linkedReferences: references.linked,
+      linkedByType: references.linkedByType,
+      referenceConflicts: references.conflicts,
+    };
   }
   if (kind === "other") return { skipped: true, reason: "unsupported_type" };
 
@@ -320,6 +507,8 @@ async function migrateFile(
     contentLength: inspected.byteSize,
     checksumSha256: inspected.checksumSha256,
   });
+  let references: LegacyReferenceLinkResult = { linked: 0, linkedByType: {}, conflicts: 0 };
+  let mediaAssetId: string | undefined;
   try {
     const put = await fetch(signed.uploadUrl, {
       method: "PUT",
@@ -347,7 +536,7 @@ async function migrateFile(
         objectKey,
         status: "active",
         kind,
-        originalName: fileName,
+        originalName: sanitizeOriginalFilename(fileName),
         mimeType: contentType,
         byteSize: inspected.byteSize,
         checksumSha256: inspected.checksumSha256,
@@ -356,18 +545,30 @@ async function migrateFile(
       .returning({ id: storageObjects.id });
     if (!storageObject)
       throw new Error(`Storage object row was not created for ${workspaceId}/${fileName}`);
-    await ensureLegacyMediaAsset({
+    mediaAssetId = await ensureLegacyMediaAsset({
       agencyId: workspace.agencyId,
       workspaceId,
       storageObjectId: storageObject.id,
       fileName,
       createdBy: workspace.createdBy,
+      sourceModifiedAt: fileStat.mtime,
+    });
+    references = await linkLegacyReferences({
+      agencyId: workspace.agencyId,
+      workspaceId,
+      fileName,
+      storageObjectId: storageObject.id,
+      mediaAssetId,
     });
   } catch (error) {
     try {
       await context.adapter.abortUpload({ objectKey });
     } catch {
       // Preserve the original migration error; orphan reconciliation retries cleanup.
+    }
+    if (mediaAssetId) {
+      await db.delete(mediaAssetLinks).where(eq(mediaAssetLinks.mediaAssetId, mediaAssetId));
+      await db.delete(mediaAssets).where(eq(mediaAssets.id, mediaAssetId));
     }
     await db
       .update(storageObjects)
@@ -397,9 +598,20 @@ async function migrateFile(
       checksum: inspected.checksumSha256,
       kind,
       localCleanup: cleanup,
+      linkedReferences: references.linked,
+      linkedByType: references.linkedByType,
+      referenceConflicts: references.conflicts,
     };
   }
-  return { skipped: false, bytes: inspected.byteSize, checksum: inspected.checksumSha256, kind };
+  return {
+    skipped: false,
+    bytes: inspected.byteSize,
+    checksum: inspected.checksumSha256,
+    kind,
+    linkedReferences: references.linked,
+    linkedByType: references.linkedByType,
+    referenceConflicts: references.conflicts,
+  };
 }
 
 async function main() {
@@ -427,6 +639,12 @@ async function main() {
   let skipped = 0;
   let bytes = 0;
   let localCleanupSkipped = 0;
+  let linkedReferences = 0;
+  let referenceConflicts = 0;
+  const linkedByType: Record<LegacyReferenceType, number> = {
+    brand_asset: 0,
+    attachment: 0,
+  };
   const migratedByKind: Record<MigratedMediaKind, number> = {
     image: 0,
     video: 0,
@@ -451,6 +669,13 @@ async function main() {
           localCleanupSkipped += 1;
         }
       }
+      linkedReferences += result.linkedReferences ?? 0;
+      for (const [type, count] of Object.entries(result.linkedByType ?? {})) {
+        if (type === "brand_asset" || type === "attachment") {
+          linkedByType[type] += count ?? 0;
+        }
+      }
+      referenceConflicts += result.referenceConflicts ?? 0;
     }
   }
   if (!dryRun) {
@@ -493,6 +718,9 @@ async function main() {
         localCleanupSkipped,
         migratedByKind,
         skippedByReason,
+        linkedReferences,
+        linkedByType,
+        referenceConflicts,
       }),
     ),
   );

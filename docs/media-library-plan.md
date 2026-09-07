@@ -174,8 +174,12 @@ Current repository state has no legacy media data to backfill. When legacy data 
 5. Validate checksums, MIME, ownership, and object reachability.
 6. Reconcile orphaned storage objects and duplicate names.
 7. If cleanup is explicitly approved, re-hash each local source before deletion and retain files changed during the copy.
-8. Keep compatibility reads until the backfill is independently verified.
-9. Only then consider removing old local-volume reads in a separately approved change.
+8. Reconnect matching legacy Brand Kit and discussion attachment rows by setting
+   their `storage_object_id` and creating explicit `media_asset_link` rows. The
+   old `storagePath` remains in place for rollback and audit.
+9. Review reported linkage counts and conflicts, then keep compatibility reads
+   until the backfill is independently verified.
+10. Only then consider removing old local-volume reads in a separately approved change.
 
 If the legacy volume is absent, the migration exits successfully with an
 explicit empty-inventory result; it does not create placeholder records or
@@ -183,7 +187,11 @@ treat the absence as an operational failure. Every run also emits a
 versioned JSON reconciliation report with migrated counts by media kind and
 skipped counts by reason, so a later recovery run remains auditable.
 
-Existing discussion attachments and Brand Kit assets must continue to read through their current compatibility paths until their dedicated link/backfill work is complete.
+The migration now performs the dedicated link/backfill for matching legacy
+discussion attachments and Brand Kit assets. It never overwrites a conflicting
+existing `storage_object_id`; those rows are counted in `referenceConflicts` for
+operator review. Compatibility reads remain during the rollback window because
+the old `storagePath` is intentionally preserved.
 
 ## 7. UX refinement requirements
 

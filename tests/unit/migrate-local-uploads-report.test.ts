@@ -8,7 +8,7 @@ describe("legacy upload migration reports", () => {
   it("reports an absent legacy root as a successful empty inventory", () => {
     expect(buildEmptyMigrationReport({ dryRun: true, deleteLocal: false })).toEqual({
       ok: true,
-      reportVersion: 1,
+      reportVersion: 2,
       dryRun: true,
       deleteLocal: false,
       sourcePresent: false,
@@ -18,6 +18,9 @@ describe("legacy upload migration reports", () => {
       localCleanupSkipped: 0,
       migratedByKind: {},
       skippedByReason: {},
+      linkedReferences: 0,
+      linkedByType: {},
+      referenceConflicts: 0,
       reason: "legacy_root_missing",
     });
   });
@@ -34,10 +37,13 @@ describe("legacy upload migration reports", () => {
         localCleanupSkipped: 1,
         migratedByKind: { image: 2, video: 1, document: 0 },
         skippedByReason: { already_migrated: 1, unsupported_type: 1 },
+        linkedReferences: 3,
+        linkedByType: { brand_asset: 1, attachment: 2 },
+        referenceConflicts: 1,
       }),
     ).toEqual({
       ok: true,
-      reportVersion: 1,
+      reportVersion: 2,
       dryRun: false,
       deleteLocal: true,
       sourcePresent: true,
@@ -47,6 +53,9 @@ describe("legacy upload migration reports", () => {
       localCleanupSkipped: 1,
       migratedByKind: { image: 2, video: 1, document: 0 },
       skippedByReason: { already_migrated: 1, unsupported_type: 1 },
+      linkedReferences: 3,
+      linkedByType: { brand_asset: 1, attachment: 2 },
+      referenceConflicts: 1,
     });
   });
 });

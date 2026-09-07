@@ -63,7 +63,7 @@ agencies/{agencyId}/workspaces/{workspaceId}/assets/{randomAssetId}.{safeExtensi
 - Duplicate content is advised by SHA-256 where the client can compute it. `POST /api/media/duplicates` returns only visible ready-asset metadata for the selected workspace/agency scope; the notice is non-blocking, and reuse or intentional copy must remain an explicit future action that never overwrites an existing object.
 - Storage completion persists the provider checksum when available, so server-mediated imports participate in the same future duplicate/reconciliation contract as browser uploads.
 - The legacy migration is safe to run on a fresh installation: a missing legacy volume produces an explicit empty inventory and no placeholder catalog rows.
-- Every migration run emits a versioned JSON reconciliation report with counts by media kind and skip reason; this becomes the operator's baseline when legacy files are introduced later.
+- Every migration run emits a version-2 JSON reconciliation report with counts by media kind, skip reason, relinked Brand Kit/attachment references, and non-destructive conflicts; this becomes the operator's baseline when legacy files are introduced later.
 
 ## Supported first-release media
 
@@ -89,4 +89,4 @@ The current vertical slice provides catalog records, private reads, direct brows
 - rename/share/trash/restore UI and audit events;
 - content/comment/delivery/Brand Kit link-management flows;
 - Google/OneDrive OAuth file-picker adapters with token encryption and revocation;
-- legacy attachment backfill, compatibility reads, orphan reconciliation, migration drill, R2 UAT, bilingual browser/a11y/visual evidence, and restore/rollback evidence.
+- compatibility reads, orphan reconciliation, migration drill, R2 UAT, bilingual browser/a11y/visual evidence, and restore/rollback evidence. The migration reconnects matching legacy attachment and Brand Kit rows, but conflict review and removal of compatibility reads remain separately gated.
