@@ -30,8 +30,8 @@ import {
  * Delivery service (Goal 9 — master prompt §8 + §10).
  *
  * Workflow:
- *  1. Designer submits a delivery version (with a verified media asset or
- *     at least one external link)
+ *  1. Designer submits a delivery version with one or more verified media
+ *     assets already copied into the agency's private storage
  *  2. Content moves to creative_review (via transitionContent "submit_delivery")
  *  3. Internal reviewer approves → ready_to_publish (or "request_creative_changes")
  *  4. If workspace has client_reviewer + internal_then_client mode, an
@@ -39,41 +39,25 @@ import {
  *  5. When all gates approve, item moves to ready_to_publish
  */
 
-const DeliveryLinkSchema = z.object({
-  provider: z.enum(["google_drive", "dropbox", "onedrive", "frame_io", "figma", "canva", "other"]),
-  label: z.string().min(1).max(120),
-  url: z
-    .string()
-    .url()
-    .refine((u) => u.startsWith("https://"), "URL must be https"),
-  isPreview: z.boolean().default(false),
-});
-
 export const SubmitDeliverySchema = z
   .object({
     contentItemId: z.string().uuid(),
-    // P0a (2026-09-03, /ui-ux-pro-max): description is optional. A
-    // designer submitting a Figma/Canva link with no narrative
-    // description used to have to invent one to pass the gate. The
-    // DB column is already nullable; we just relax the Zod check.
+    // The description is optional because the stored files are the
+    // deliverable. A designer should not have to duplicate their filenames
+    // in a narrative field just to advance the workflow.
     description: z.string().max(500).optional(),
     designerNote: z.string().max(2000).optional(),
-    links: z.array(DeliveryLinkSchema).max(20).optional(),
-    mediaAssetIds: z.array(z.string().uuid()).max(20).optional(),
+    mediaAssetIds: z.array(z.string().uuid()).min(1).max(20),
   })
-  .superRefine((value, ctx) => {
-    if (!(value.links?.length || value.mediaAssetIds?.length)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["links"],
-        message: "At least one delivery link or media asset is required",
-      });
-    }
-  });
+  .strict();
 
 export type SubmitDeliveryInput = z.infer<typeof SubmitDeliverySchema>;
 
 export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
+  const mediaAssetIds = [...new Set(input.mediaAssetIds ?? [])];
+  if (mediaAssetIds.length === 0) {
+    throw new Error("At least one stored media asset is required");
+  }
   const [item] = await db
     .select({
       agencyId: workspaces.agencyId,
@@ -99,21 +83,18 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
     throw new Error(`Cannot submit a delivery while content is ${item.status}`);
   }
 
-  const mediaAssetIds = [...new Set(input.mediaAssetIds ?? [])];
-  const mediaRows = mediaAssetIds.length
-    ? await db
-        .select({
-          id: mediaAssets.id,
-          agencyId: mediaAssets.agencyId,
-          ownerWorkspaceId: mediaAssets.ownerWorkspaceId,
-          visibility: mediaAssets.visibility,
-          status: mediaAssets.status,
-          objectStatus: storageObjects.status,
-        })
-        .from(mediaAssets)
-        .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
-        .where(inArray(mediaAssets.id, mediaAssetIds))
-    : [];
+  const mediaRows = await db
+    .select({
+      id: mediaAssets.id,
+      agencyId: mediaAssets.agencyId,
+      ownerWorkspaceId: mediaAssets.ownerWorkspaceId,
+      visibility: mediaAssets.visibility,
+      status: mediaAssets.status,
+      objectStatus: storageObjects.status,
+    })
+    .from(mediaAssets)
+    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
+    .where(inArray(mediaAssets.id, mediaAssetIds));
   if (
     mediaRows.length !== mediaAssetIds.length ||
     mediaRows.some(
@@ -169,29 +150,17 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
       })
       .returning({ id: deliveryVersions.id });
 
-    await tx.insert(deliveryLinks).values(
-      (input.links ?? []).map((l) => ({
-        deliveryVersionId: created!.id,
-        provider: l.provider,
-        label: l.label,
-        url: l.url,
-        isPreview: l.isPreview,
+    await tx.insert(mediaAssetLinks).values(
+      mediaAssetIds.map((mediaAssetId) => ({
+        agencyId: mediaRows[0]!.agencyId,
+        workspaceId: item.workspaceId,
+        mediaAssetId,
+        targetType: "delivery",
+        targetId: created!.id,
+        clientVisible: true,
+        createdBy: actor.id,
       })),
     );
-
-    if (mediaAssetIds.length > 0) {
-      await tx.insert(mediaAssetLinks).values(
-        mediaAssetIds.map((mediaAssetId) => ({
-          agencyId: mediaRows[0]!.agencyId,
-          workspaceId: item.workspaceId,
-          mediaAssetId,
-          targetType: "delivery",
-          targetId: created!.id,
-          clientVisible: true,
-          createdBy: actor.id,
-        })),
-      );
-    }
 
     // Open an internal creative-review request
     await tx.insert(approvalRequests).values({
@@ -601,6 +570,9 @@ export async function listDeliveriesForItem(
   if (versionRows.length === 0) return [];
 
   const versionIds = versionRows.map((v) => v.id);
+  // Legacy delivery links are read-only compatibility data for versions
+  // created before stored-media deliveries. New submissions never write
+  // this table; current versions are represented by media_asset_link.
   const linkRows = await db
     .select({
       id: deliveryLinks.id,

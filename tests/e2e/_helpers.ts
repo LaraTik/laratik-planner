@@ -126,6 +126,8 @@ export type SeedResult = {
    * `/app/w/${seeded.workspaceSlug}/planning/${seeded.contentItemId}`.
    */
   contentItemId: string;
+  /** Ready private media fixture used by the stored-delivery E2E journey. */
+  deliveryMediaAssetId?: string;
 };
 
 /**
@@ -156,6 +158,7 @@ export async function devSeed(
     /** Explicit platform role. Takes precedence over the legacy platformAdmin alias. */
     platformRole?: PlatformRole;
     socialAnalyticsFixture?: boolean;
+    includeDeliveryMediaFixture?: boolean;
   } = {},
 ): Promise<SeedResult> {
   return withRetry(async () => {
@@ -174,6 +177,9 @@ export async function devSeed(
         ...(options.platformRole ? { platformRole: options.platformRole } : {}),
         ...(options.socialAnalyticsFixture
           ? { socialAnalyticsFixture: options.socialAnalyticsFixture }
+          : {}),
+        ...(options.includeDeliveryMediaFixture
+          ? { includeDeliveryMediaFixture: options.includeDeliveryMediaFixture }
           : {}),
       },
       // Lower the request timeout in capture mode so a hung seed
@@ -300,7 +306,11 @@ export async function bootstrapRoleSession(
   page: Page,
   role: FixtureRole,
   workspaceSlug = "acme",
-  options: { socialAnalyticsFixture?: boolean; locale?: "en" | "ar" } = {},
+  options: {
+    socialAnalyticsFixture?: boolean;
+    includeDeliveryMediaFixture?: boolean;
+    locale?: "en" | "ar";
+  } = {},
 ): Promise<SeedResult> {
   const email = `e2e-${role}@laratik.local`;
   const result = await devSeed(page.request, {
@@ -309,6 +319,7 @@ export async function bootstrapRoleSession(
     agencyAdmin: role === "agency_admin",
     workspaceRoles: role === "agency_admin" ? [] : [role],
     ...(options.socialAnalyticsFixture ? { socialAnalyticsFixture: true } : {}),
+    ...(options.includeDeliveryMediaFixture ? { includeDeliveryMediaFixture: true } : {}),
     ...(options.locale ? { locale: options.locale } : {}),
   });
   await setAuthCookie(page, page.request, {

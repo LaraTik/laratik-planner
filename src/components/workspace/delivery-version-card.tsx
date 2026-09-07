@@ -25,7 +25,7 @@ import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
  *
  *   - a prominent V{n} title + status badge
  *     (Final approved / Awaiting review / Changes requested);
- *   - a thumbnail strip of the delivery's links (one tile
+ *   - a thumbnail strip of the delivery's stored assets (one tile
  *     per asset, with a provider icon when no image is
  *     available);
  *   - a designer note block (hidden for client viewers);
@@ -195,7 +195,8 @@ export function DeliveryVersionCard({
         </span>
       </header>
 
-      {/* Thumbnail strip — one tile per link. When the link is
+      {/* Thumbnail strip — one tile per stored asset. Legacy links remain
+          readable for historical versions. When the asset is
           a previewable image we render an <img> so the planner
           can see the asset at a glance; otherwise we fall back
           to a provider-icon tile. */}
@@ -309,11 +310,11 @@ export function DeliveryVersionCard({
           )}
           {expanded
             ? t("contentDetail.deliveries.hideDetails")
-            : t("contentDetail.deliveries.viewAllLinks")}
+            : t("contentDetail.deliveries.viewAllAssets")}
         </button>
       </div>
 
-      {/* Details disclosure — full link list. */}
+      {/* Details disclosure — full stored-asset list. */}
       {expanded ? (
         <div
           id={`delivery-version-details-${version.versionNumber}`}
@@ -353,7 +354,7 @@ export function DeliveryVersionCard({
             </ul>
           ) : (
             <p className="text-body text-fg-muted italic">
-              {t("contentDetail.deliveries.noLinks")}
+              {t("contentDetail.deliveries.noAssets")}
             </p>
           )}
         </div>

@@ -13,8 +13,9 @@ The storage model is hybrid and tenant-safe:
 - `agency_owned` mode uses that agency's own Cloudflare R2 account, bucket, encrypted credentials, and the same agency prefix contract.
 - New browser uploads go directly to the resolved private provider through a short-lived presigned URL. The application stores metadata and verifies the object after upload.
 - Public HTTPS, Google Drive, and OneDrive links are fetched server-side only when they are publicly downloadable and pass URL, size, MIME, and signature checks. Private provider links receive guidance to connect the provider or make the file downloadable; a pasted URL is never treated as authorization.
+- Delivery submission is stored-media-only: every new delivery selects a ready asset that already exists in the agency's private storage. A source link is an import input, never a delivery access link.
 
-The audit found no evidence of cross-agency object access in the reviewed paths. Four actionable findings were fixed during this pass, and the media UI now makes the resolved destination and filename behavior visible instead of requiring operators to infer it from the platform page.
+The audit found no evidence of cross-agency object access in the reviewed paths. Seven actionable findings were fixed during this pass, and the media UI now makes the resolved destination and filename behavior visible instead of requiring operators to infer it from the platform page.
 
 ## Architecture and data-flow audit
 
@@ -27,20 +28,22 @@ The audit found no evidence of cross-agency object access in the reviewed paths.
 | Browser upload      | Sign → direct PUT → metadata completion → bounded private signature validation → catalog readiness. Credentials never reach the browser.                                                                          | Pass                         |
 | Link import         | Inspect and import use bounded HTTPS fetches, redirect revalidation, DNS/private-host checks, content-length limits, signature validation, and the same storage sink.                                             | Pass with release gaps below |
 | Naming              | Physical keys are server-generated UUID-based keys. Original names are normalized metadata; downloads use the editable title plus verified extension.                                                             | Pass                         |
+| Delivery writes     | New delivery submissions accept only ready media asset IDs and create client-visible `media_asset_link` rows. Legacy `delivery_links` rows remain read-only for historical versions.                              | Pass                         |
 | Legacy records      | Migration preserves compatibility paths, relinks matching Brand Kit/attachment references, and reports conflicts without deleting source files by default.                                                        | Pass                         |
 
 ## Findings and disposition
 
 ### Fixed findings
 
-| ID    | Severity | Finding                                                                                                                                                                                                              | Evidence                                                                                                                                   | Fix                                                                                                                                                                                             |
-| ----- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ST-01 | High     | The platform page did not clearly distinguish platform-wide provider configuration from agency storage mode.                                                                                                         | `/app/platform/storage` previously presented a bucket status without a visible ownership boundary.                                         | Added an explicit “Platform-wide managed provider” scope panel, explained agency prefix isolation, and linked to agency storage settings. Added English and Arabic copy.                        |
-| ST-02 | Medium   | `saveManagedR2Config()` applied the tenant-owned Cloudflare hostname validator to the platform operator path. This unnecessarily prevented a platform operator from using a configured HTTPS S3-compatible endpoint. | `src/lib/storage/config.ts` used `AgencyOwnedR2ConfigSchema` for platform save, while the platform path is trusted operator configuration. | Platform save now uses `R2ConfigSchema`; agency-owned save retains the stricter account-matching Cloudflare endpoint validator. Added regression coverage.                                      |
-| ST-03 | High     | Agency overview health could remain “healthy” when an agency was in managed mode but the platform provider had become unavailable.                                                                                   | `src/app/(app)/app/agency-settings/page.tsx` checked only the agency row’s status/enabled fields.                                          | Overview readiness now includes provider configured/enabled/healthy state, matching the storage settings page and runtime resolver.                                                             |
-| ST-04 | Medium   | A mismatched workspace was checked after provider resolution and presigned URL creation.                                                                                                                             | `createStorageUploadIntent()` resolved storage and created a signed URL before checking workspace ownership.                               | Workspace-to-agency tenancy is now checked first, before provider access or any signed URL side effect. Added/retained regression coverage for cross-agency rejection.                          |
-| ST-05 | Medium   | The media library did not explain the resolved storage destination or filename behavior.                                                                                                                             | `/app/media` and workspace media showed “Private storage” but not mode, bucket, prefix, or naming rules.                                   | Added a responsive “Where this media is stored” panel showing mode, bucket, agency prefix, direct-to-private-storage behavior, and the generated-key/download-name rules in English and Arabic. |
-| ST-06 | Low      | An unused `platformDescription` value was passed into the platform form, creating misleading component contract surface.                                                                                             | `StorageConfigForm` already receives the page description separately and did not consume this value.                                       | Removed the unused prop value.                                                                                                                                                                  |
+| ID    | Severity | Finding                                                                                                                                                                                                              | Evidence                                                                                                                                   | Fix                                                                                                                                                                                                                           |
+| ----- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ST-01 | High     | The platform page did not clearly distinguish platform-wide provider configuration from agency storage mode.                                                                                                         | `/app/platform/storage` previously presented a bucket status without a visible ownership boundary.                                         | Added an explicit “Platform-wide managed provider” scope panel, explained agency prefix isolation, and linked to agency storage settings. Added English and Arabic copy.                                                      |
+| ST-02 | Medium   | `saveManagedR2Config()` applied the tenant-owned Cloudflare hostname validator to the platform operator path. This unnecessarily prevented a platform operator from using a configured HTTPS S3-compatible endpoint. | `src/lib/storage/config.ts` used `AgencyOwnedR2ConfigSchema` for platform save, while the platform path is trusted operator configuration. | Platform save now uses `R2ConfigSchema`; agency-owned save retains the stricter account-matching Cloudflare endpoint validator. Added regression coverage.                                                                    |
+| ST-03 | High     | Agency overview health could remain “healthy” when an agency was in managed mode but the platform provider had become unavailable.                                                                                   | `src/app/(app)/app/agency-settings/page.tsx` checked only the agency row’s status/enabled fields.                                          | Overview readiness now includes provider configured/enabled/healthy state, matching the storage settings page and runtime resolver.                                                                                           |
+| ST-04 | Medium   | A mismatched workspace was checked after provider resolution and presigned URL creation.                                                                                                                             | `createStorageUploadIntent()` resolved storage and created a signed URL before checking workspace ownership.                               | Workspace-to-agency tenancy is now checked first, before provider access or any signed URL side effect. Added/retained regression coverage for cross-agency rejection.                                                        |
+| ST-05 | Medium   | The media library did not explain the resolved storage destination or filename behavior.                                                                                                                             | `/app/media` and workspace media showed “Private storage” but not mode, bucket, prefix, or naming rules.                                   | Added a responsive “Where this media is stored” panel showing mode, bucket, agency prefix, direct-to-private-storage behavior, and the generated-key/download-name rules in English and Arabic.                               |
+| ST-06 | Low      | An unused `platformDescription` value was passed into the platform form, creating misleading component contract surface.                                                                                             | `StorageConfigForm` already receives the page description separately and did not consume this value.                                       | Removed the unused prop value.                                                                                                                                                                                                |
+| ST-07 | High     | New delivery submissions could persist external access URLs, making the source of truth ambiguous and leaving review dependent on another provider.                                                                  | Delivery action and schema accepted `links` alongside media IDs.                                                                           | Delivery schema/action/UI now require one or more ready stored media assets, remove the external-link write path, preserve historical links as read-only compatibility data, and provide a direct Media Library import route. |
 
 ### Controls confirmed
 
@@ -90,8 +93,8 @@ The source adapter is separate from the storage sink, so adding OAuth-backed Goo
 
 The delivery workflow now consumes the provider-neutral media catalog. A
 designer or manager can select ready workspace-owned or agency-shared assets
-from the content detail page and submit them with optional external HTTPS
-links. The submission transaction verifies agency ownership, workspace scope,
+from the content detail page and submit them as the only delivery source. The
+submission transaction verifies agency ownership, workspace scope,
 asset readiness, and active physical storage before creating
 `media_asset_link` rows. Internal reviewers and client reviewers receive
 private delivery-asset redirects only after role and client-visible checks;
@@ -99,8 +102,10 @@ provider credentials and object keys are never exposed. The standalone media
 library remains the place to upload a new device file or import a public
 Google Drive, OneDrive, or HTTPS source before returning to the submission.
 
-Focused regression coverage verifies media-only submissions, mixed-source
-schema behavior, unavailable-asset rejection, and transaction-safe linking.
+Focused regression coverage verifies media-only submissions, rejection of
+legacy external-link payloads, unavailable-asset rejection, transaction-safe
+linking, and the complete service-level acceptance journey. The browser
+content-flow matrix also exercises selecting a ready stored asset.
 
 These are not hidden defects in the reviewed implementation; they are explicitly documented capability/evidence gates that still need external integration or operational UAT:
 
@@ -117,7 +122,10 @@ These are not hidden defects in the reviewed implementation; they are explicitly
 Completed in this audit pass:
 
 - UI/UX Pro Max design-system and UX-guideline review applied to scope clarity, form feedback, responsive behavior, focus states, touch targets, bilingual copy, and identifier direction.
-- Focused storage/media tests: **53 passed**.
+- Focused delivery/schema/catalog checks: **3,294 unit tests passed**; the
+  service-level acceptance journey passed all **30** steps; the content-flow
+  browser matrix passed all **30** cases across Chromium, Firefox, WebKit, and
+  both mobile profiles after one transient Chromium navigation retry.
 - `pnpm typecheck`: passed.
 - `pnpm lint`: passed.
 - Prettier formatting applied to touched source files; final format check is part of the release verification.
@@ -133,6 +141,7 @@ The repository’s existing full unit, migration-drill, integration, build, and 
 - [x] File naming and download naming are deterministic, safe, and documented.
 - [x] Cross-agency and cross-workspace checks occur before provider side effects and during read/completion.
 - [x] English/Arabic strings are present for the touched UI copy.
+- [x] New deliveries cannot write external access-link rows; old rows remain read-only compatibility data.
 - [ ] Complete live R2 UAT and restore/rollback evidence.
 - [ ] Complete malware-scan, resumable upload, and private-provider OAuth gates.
 - [ ] Complete full browser/a11y/visual evidence at the exact clean release commit.

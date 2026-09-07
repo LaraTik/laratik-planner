@@ -6,7 +6,7 @@ The media library is a reusable production-file catalog. It is separate from the
 
 - `/app/media` is the agency-wide view for internal agency members with at least one internal workspace role.
 - `/app/w/[slug]/media` is the workspace view. It shows assets owned by that workspace plus any `visibility = agency` assets the eligible internal agency member may reuse; the owner workspace remains visible in provenance metadata.
-- Client reviewers and viewers do not receive general media-library access. Client-visible files must be linked explicitly to a delivery, comment, or content item by a later link-management surface.
+- Client reviewers and viewers do not receive general media-library access. Client-visible files are linked explicitly to a delivery, comment, or content item; delivery review reads the private storage route, not a provider access URL.
 - A file belongs to one owner workspace. `visibility = workspace` is the default; `visibility = agency` allows reuse by eligible internal agency members without copying the object.
 
 ## Upload source contract
@@ -33,6 +33,8 @@ The source boundary also supports server-mediated imports:
 - Image dimensions are extracted from a bounded private-storage prefix when the format header contains them and stored on `storage_object`; missing optional metadata does not block readiness.
 - Provider access tokens, when added, remain server-only and are never stored in media metadata or sent to the browser.
 - Stored provenance URLs are redacted for signed-download credentials and are informational only; the private imported object is the durable source of truth.
+- Delivery submission is stored-media-only: a device file or reachable external/Drive/OneDrive URL must first complete the Media Library import and become a ready private asset. The delivery workflow never creates new external access-link rows.
+- `delivery_links` remains a read-only compatibility projection for historical versions created before the stored-media transition. It must not be used as the write path for new deliveries and can only be removed after migration, reconciliation, and restore evidence.
 - A valid source `Last-Modified` header is retained as informational metadata so future provider connectors can detect remote changes without changing the catalog shape.
 - The library displays source provenance as a localized label (device upload, direct link, Google Drive, OneDrive, or legacy storage) while preserving stable technical source fields for audit and future connector actions.
 - Image cards use responsive `next/image` previews with reserved space to prevent layout shift; private media remains on the protected same-origin endpoint until authenticated derivative variants are available.

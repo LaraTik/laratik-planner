@@ -12,6 +12,8 @@ import {
   platformPlanTemplates,
   socialChannels,
   socialProfileDailyMetrics,
+  mediaAssets,
+  storageObjects,
   users,
   workspaceMembershipRoles,
   workspaceMemberships,
@@ -96,6 +98,8 @@ type SeedBody = {
   platformRole?: PlatformRole;
   /** Seed connected Facebook/Instagram/TikTok channels with metric rows for E2E UI coverage. */
   socialAnalyticsFixture?: boolean;
+  /** Add the ready private asset used by the stored-delivery E2E journey. */
+  includeDeliveryMediaFixture?: boolean;
 };
 
 const PlatformRoleSchema = z.enum(PLATFORM_ROLE_VALUES);
@@ -158,6 +162,7 @@ export async function POST(req: NextRequest) {
     platformRole:
       explicitPlatformRole?.data ?? (body.platformAdmin ? ("platform_owner" as const) : null),
     socialAnalyticsFixture: body.socialAnalyticsFixture ?? false,
+    includeDeliveryMediaFixture: body.includeDeliveryMediaFixture ?? false,
   };
 
   try {
@@ -193,6 +198,7 @@ async function seedInternal(f: {
   platformAdmin: boolean;
   platformRole: PlatformRole | null;
   socialAnalyticsFixture: boolean;
+  includeDeliveryMediaFixture: boolean;
 }) {
   // ─── User ────────────────────────────────────────────────────────────────
   let userId: string;
@@ -582,6 +588,68 @@ async function seedInternal(f: {
     }
   }
 
+  let deliveryMediaAssetId: string | undefined;
+  if (f.includeDeliveryMediaFixture) {
+    // ─── Deterministic stored delivery asset (E2E only) ──────────────────
+    // The browser content-flow fixture must exercise the same stored-media
+    // contract as production without requiring a real R2 object. A document
+    // fixture avoids a false image preview while still going through the
+    // ready/active tenancy checks in submitDelivery.
+    const fixtureObjectKey = `e2e/${workspaceId}/creative-delivery.pdf`;
+    const [existingFixtureObject] = await db
+      .select({ id: storageObjects.id })
+      .from(storageObjects)
+      .where(
+        and(eq(storageObjects.agencyId, agencyId), eq(storageObjects.objectKey, fixtureObjectKey)),
+      )
+      .limit(1);
+    const fixtureObject =
+      existingFixtureObject ??
+      (
+        await db
+          .insert(storageObjects)
+          .values({
+            agencyId,
+            workspaceId,
+            bucket: "e2e-fixture",
+            objectKey: fixtureObjectKey,
+            status: "active",
+            kind: "document",
+            originalName: "creative-delivery.pdf",
+            mimeType: "application/pdf",
+            byteSize: 1,
+            createdBy: userId,
+          })
+          .returning({ id: storageObjects.id })
+      )[0];
+    if (!fixtureObject) throw new Error("Seed delivery object could not be created");
+    const [existingFixtureAsset] = await db
+      .select({ id: mediaAssets.id })
+      .from(mediaAssets)
+      .where(eq(mediaAssets.storageObjectId, fixtureObject.id))
+      .limit(1);
+    if (existingFixtureAsset) {
+      deliveryMediaAssetId = existingFixtureAsset.id;
+    } else {
+      const [createdFixtureAsset] = await db
+        .insert(mediaAssets)
+        .values({
+          agencyId,
+          ownerWorkspaceId: workspaceId,
+          storageObjectId: fixtureObject.id,
+          title: "Seeded creative delivery",
+          visibility: "workspace",
+          status: "ready",
+          sourceType: "browser_file",
+          createdBy: userId,
+          updatedBy: userId,
+        })
+        .returning({ id: mediaAssets.id });
+      if (!createdFixtureAsset) throw new Error("Seed delivery asset could not be created");
+      deliveryMediaAssetId = createdFixtureAsset.id;
+    }
+  }
+
   const response = NextResponse.json(
     {
       ok: true,
@@ -591,6 +659,7 @@ async function seedInternal(f: {
       workspaceSlug: f.workspaceSlug,
       channelIds,
       contentItemId,
+      ...(deliveryMediaAssetId ? { deliveryMediaAssetId } : {}),
       platformAdmin: f.platformRole !== null,
       platformRole: f.platformRole,
       fixtures: f,

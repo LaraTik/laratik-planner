@@ -65,8 +65,7 @@ type BatchCreateFields = "rows";
 type TransitionFields = "action" | "reason";
 type AssignDesignerFields = "designerId";
 type ApplyAiDraftFields = "draftText" | "mode";
-type SubmitDeliveryFields =
-  "description" | "designerNote" | "linkLabel" | "linkUrl" | "mediaAssetId";
+type SubmitDeliveryFields = "description" | "designerNote" | "mediaAssetId";
 type DecideApprovalFields = "decision" | "feedback";
 type RecordPublicationFields =
   "contentItemChannelId" | "status" | "publishedUrl" | "note" | "failureReason";
@@ -435,39 +434,13 @@ export async function submitDeliveryAction(
   formData: FormData,
 ): Promise<ActionState<SubmitDeliveryFields>> {
   const { actor } = await requireWorkspaceContext(workspaceSlug);
-  // Parse links: each pair of label + url fields
-  const labels = formData.getAll("linkLabel").map((v) => String(v));
-  const urls = formData.getAll("linkUrl").map((v) => String(v));
-  const providers = formData.getAll("linkProvider").map((v) => String(v));
-  const previews = formData.getAll("linkPreview").map((v) => String(v));
   const mediaAssetIds = formData.getAll("mediaAssetId").map((v) => String(v));
-  const hasIncompleteLink = labels.some((label, i) => {
-    const hasLabel = Boolean(label.trim());
-    const hasUrl = Boolean(urls[i]?.trim());
-    return (hasLabel || hasUrl) && !(hasLabel && hasUrl);
-  });
-  if (hasIncompleteLink) {
-    return {
-      error: "delivery.link_incomplete",
-      fieldErrors: { linkLabel: "delivery.link_incomplete" },
-    };
-  }
-  const links = labels
-    .map((label, i: number) => ({
-      provider: (providers[i] ?? "other") as
-        "google_drive" | "dropbox" | "onedrive" | "frame_io" | "figma" | "canva" | "other",
-      label,
-      url: urls[i] ?? "",
-      isPreview: previews[i] === "on",
-    }))
-    .filter((l) => l.label && l.url);
 
   const parsed = SubmitDeliverySchema.safeParse({
     contentItemId,
     description: formData.get("description"),
     designerNote: formData.get("designerNote") ?? undefined,
-    links,
-    ...(mediaAssetIds.length ? { mediaAssetIds } : {}),
+    mediaAssetIds,
   });
   if (!parsed.success) {
     return fieldErrorsFromZod<SubmitDeliveryFields>(parsed.error);

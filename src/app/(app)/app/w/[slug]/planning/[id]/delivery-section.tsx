@@ -16,16 +16,6 @@ import {
   type DeliveryVersion,
 } from "@/components/workspace/delivery-version-card";
 
-const PROVIDERS = [
-  "google_drive",
-  "dropbox",
-  "onedrive",
-  "frame_io",
-  "figma",
-  "canva",
-  "other",
-] as const;
-
 /**
  * STUDIOFLOW_MASTER_PROMPT.md §10 — Delivery history + submit form.
  *
@@ -132,32 +122,8 @@ export function DeliverySection({
                 const form = event.currentTarget;
                 const data = new FormData(form);
                 const nextErrors: Record<string, string> = {};
-                // P0a (2026-09-03, /ui-ux-pro-max): description is
-                // optional. Designers often submit "the link *is* the
-                // deliverable" and a forced description reads as busy-
-                // work. A verified media asset or a complete external link
-                // is enough to create the delivery version.
-                const labels = data.getAll("linkLabel").map(String);
-                const urls = data.getAll("linkUrl").map(String);
                 const selectedMedia = data.getAll("mediaAssetId");
-                const hasCompleteLink = labels.some((label, i) => label.trim() && urls[i]?.trim());
-                const hasIncompleteLink = labels.some((label, i) => {
-                  const hasLabel = Boolean(label.trim());
-                  const hasUrl = Boolean(urls[i]?.trim());
-                  return (hasLabel || hasUrl) && !(hasLabel && hasUrl);
-                });
-                if (hasIncompleteLink) {
-                  const row = labels.findIndex((label, i) => label.trim() || urls[i]?.trim());
-                  const index = row >= 0 ? row : 0;
-                  if (!labels[index]?.trim()) {
-                    nextErrors[`link-label-${index}`] = t(
-                      "contentDetail.deliveries.linkLabelRequired",
-                    );
-                  }
-                  if (!urls[index]?.trim()) {
-                    nextErrors[`link-url-${index}`] = t("contentDetail.deliveries.linkUrlRequired");
-                  }
-                } else if (!hasCompleteLink && selectedMedia.length === 0) {
+                if (selectedMedia.length === 0) {
                   nextErrors.deliverySources = t("contentDetail.deliveries.sourceRequired");
                 }
                 setFieldErrors(nextErrors);
@@ -174,11 +140,7 @@ export function DeliverySection({
                   try {
                     const res = await submitDeliveryAction(workspaceSlug, contentItemId, null, fd);
                     if (res && "error" in res && res.error) {
-                      setFormError(
-                        res.error === "delivery.link_incomplete"
-                          ? t("contentDetail.deliveries.incompleteLink")
-                          : res.error,
-                      );
+                      setFormError(res.error);
                     } else {
                       setOpen(false);
                     }
@@ -257,6 +219,14 @@ export function DeliverySection({
                         </label>
                       );
                     })}
+                    <Link
+                      href={`/app/w/${workspaceSlug}/media#media-upload`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="border-border bg-surface-subtle text-body text-primary focus-visible:ring-focus-ring col-span-full inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border px-3 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
+                    >
+                      {t("contentDetail.deliveries.addStoredMedia")}
+                    </Link>
                   </div>
                 ) : (
                   <div className="border-border bg-surface-subtle flex flex-wrap items-center gap-3 rounded-[var(--radius-control)] border border-dashed p-3">
@@ -265,7 +235,7 @@ export function DeliverySection({
                       {t("contentDetail.deliveries.noMediaAvailable")}
                     </p>
                     <Link
-                      href={`/app/w/${workspaceSlug}/media`}
+                      href={`/app/w/${workspaceSlug}/media?source=link#media-upload`}
                       target="_blank"
                       rel="noreferrer"
                       className="text-label text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
@@ -276,112 +246,11 @@ export function DeliverySection({
                 )}
               </fieldset>
 
-              <fieldset
-                className="space-y-2"
-                aria-describedby="delivery-links-help delivery-sources-error"
-              >
-                <legend className="text-body text-fg-primary font-semibold">
-                  {t("contentDetail.deliveries.externalLinksTitle")}
-                </legend>
-                <p id="delivery-links-help" className="text-label text-fg-muted">
-                  {t("contentDetail.deliveries.externalLinksHelp")}
-                </p>
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="border-border bg-surface-subtle grid grid-cols-12 gap-2 rounded-[var(--radius-control)] border p-2"
-                  >
-                    <div className="col-span-12 sm:col-span-3">
-                      <label
-                        htmlFor={`link-provider-${i}`}
-                        className="text-label mb-1 block font-medium"
-                      >
-                        {t("contentDetail.deliveries.provider", { count: i + 1 })}
-                      </label>
-                      <select
-                        id={`link-provider-${i}`}
-                        name="linkProvider"
-                        className="border-border bg-surface text-body min-h-11 w-full rounded-[var(--radius-control)] border px-2 py-1"
-                        defaultValue="google_drive"
-                      >
-                        {PROVIDERS.map((p) => (
-                          <option key={p} value={p}>
-                            {t(`contentDetail.deliveries.providers.${p}`)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="col-span-12 sm:col-span-3">
-                      <label
-                        htmlFor={`link-label-${i}`}
-                        className="text-label mb-1 block font-medium"
-                      >
-                        {t("contentDetail.deliveries.linkLabel")}
-                      </label>
-                      <Input
-                        id={`link-label-${i}`}
-                        type="text"
-                        name="linkLabel"
-                        maxLength={120}
-                        aria-invalid={Boolean(fieldErrors[`link-label-${i}`])}
-                        aria-describedby={
-                          fieldErrors[`link-label-${i}`] ? `link-label-${i}-error` : undefined
-                        }
-                      />
-                      {fieldErrors[`link-label-${i}`] ? (
-                        <p
-                          id={`link-label-${i}-error`}
-                          role="alert"
-                          className="text-label text-danger mt-1 font-semibold"
-                        >
-                          {fieldErrors[`link-label-${i}`]}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="col-span-12 sm:col-span-5">
-                      <label
-                        htmlFor={`link-url-${i}`}
-                        className="text-label mb-1 block font-medium"
-                      >
-                        {t("contentDetail.deliveries.linkUrl")}
-                      </label>
-                      <Input
-                        id={`link-url-${i}`}
-                        type="url"
-                        name="linkUrl"
-                        placeholder="https://"
-                        aria-invalid={Boolean(fieldErrors[`link-url-${i}`])}
-                        aria-describedby={
-                          fieldErrors[`link-url-${i}`] ? `link-url-${i}-error` : undefined
-                        }
-                      />
-                      {fieldErrors[`link-url-${i}`] ? (
-                        <p
-                          id={`link-url-${i}-error`}
-                          role="alert"
-                          className="text-label text-danger mt-1 font-semibold"
-                        >
-                          {fieldErrors[`link-url-${i}`]}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="text-label text-fg-primary col-span-12 flex min-h-11 items-center gap-2 sm:col-span-1 sm:mt-5">
-                      <Checkbox id={`link-preview-${i}`} name="linkPreview" value="on" />
-                      <label htmlFor={`link-preview-${i}`} className="cursor-pointer">
-                        {t("contentDetail.deliveries.preview")}
-                      </label>
-                    </div>
-                  </div>
-                ))}
-                {Object.keys(fieldErrors).some((key) => key.startsWith("link-")) ? (
-                  <p
-                    id="delivery-links-error"
-                    role="alert"
-                    className="text-label text-danger font-semibold"
-                  >
-                    {t("contentDetail.deliveries.linkSummaryError")}
-                  </p>
-                ) : null}
+              <p className="border-border bg-surface-subtle text-label text-fg-secondary rounded-[var(--radius-control)] border p-3">
+                {t("contentDetail.deliveries.storedOnlyNotice")}
+              </p>
+
+              <div>
                 {fieldErrors.deliverySources ? (
                   <p
                     id="delivery-sources-error"
@@ -391,7 +260,7 @@ export function DeliverySection({
                     {fieldErrors.deliverySources}
                   </p>
                 ) : null}
-              </fieldset>
+              </div>
 
               {formError ? (
                 <p role="alert" className="text-body text-danger">

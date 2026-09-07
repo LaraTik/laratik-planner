@@ -249,10 +249,13 @@ Required states and behavior:
 
 ### Phase C — product integration
 
-- Delivery submission now accepts ready Media Library assets alongside external
-  HTTPS links. Selected assets create explicit `media_asset_link` rows with
-  client-visible delivery access and are served through the private signed
-  delivery-asset route.
+- Delivery submission is stored-media-only. Device files and reachable
+  external/Google Drive/OneDrive URLs must first be imported into the Media
+  Library and reach `ready`; selected assets create explicit
+  `media_asset_link` rows with client-visible delivery access and are served
+  through the private signed delivery-asset route. Historical
+  `delivery_links` rows remain read-only compatibility data and are never
+  written by the new workflow.
 - Standalone link-management UI for content items, comments, and Brand Kit
   assets remains future work; the existing Brand Kit and discussion attachment
   flows continue to use their current contracts.

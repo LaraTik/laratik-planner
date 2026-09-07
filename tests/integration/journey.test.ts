@@ -47,6 +47,7 @@ describe("primary acceptance journey (§23, service-level)", () => {
   let daniel: { id: string; email: string };
 
   let channelIds: string[];
+  let deliveryMediaAssetId: string;
 
   beforeAll(async () => {
     content = await import("@/lib/content/service");
@@ -62,8 +63,16 @@ describe("primary acceptance journey (§23, service-level)", () => {
     const { sql } = await import("drizzle-orm");
     await db.execute(sql`TRUNCATE agency, "user" CASCADE`);
 
-    const { agencies, agencyMemberships, users, workspaces, socialChannels, workspaceSettings } =
-      await import("@/lib/db/schema");
+    const {
+      agencies,
+      agencyMemberships,
+      users,
+      workspaces,
+      socialChannels,
+      workspaceSettings,
+      mediaAssets,
+      storageObjects,
+    } = await import("@/lib/db/schema");
 
     const all = await db
       .insert(users)
@@ -132,6 +141,37 @@ describe("primary acceptance journey (§23, service-level)", () => {
       })
       .returning();
     workspaceId = workspace!.id;
+
+    const [deliveryObject] = await db
+      .insert(storageObjects)
+      .values({
+        agencyId,
+        workspaceId,
+        bucket: "journey-fixture",
+        objectKey: `journey/${workspaceId}/creative-delivery.pdf`,
+        status: "active",
+        kind: "document",
+        originalName: "creative-delivery.pdf",
+        mimeType: "application/pdf",
+        byteSize: 1,
+        createdBy: elena.id,
+      })
+      .returning({ id: storageObjects.id });
+    const [deliveryAsset] = await db
+      .insert(mediaAssets)
+      .values({
+        agencyId,
+        ownerWorkspaceId: workspaceId,
+        storageObjectId: deliveryObject!.id,
+        title: "Journey creative delivery",
+        visibility: "workspace",
+        status: "ready",
+        sourceType: "browser_file",
+        createdBy: elena.id,
+        updatedBy: elena.id,
+      })
+      .returning({ id: mediaAssets.id });
+    deliveryMediaAssetId = deliveryAsset!.id;
 
     await db.insert(workspaceSettings).values({
       workspaceId,
@@ -652,8 +692,8 @@ describe("primary acceptance journey (§23, service-level)", () => {
     expect(events.length).toBeGreaterThan(0);
   });
 
-  // ── §23 step 18: Elena submits Delivery V1 (Frame.io + Google Drive) ─
-  it("§23 step 18: submitDelivery creates V1 with a preview Frame.io link + a production Google Drive link", async () => {
+  // ── §23 step 18: Elena submits Delivery V1 from stored media ──────────
+  it("§23 step 18: submitDelivery creates V1 from stored agency media", async () => {
     const itemId = await seedItemInCreativeReview(omar, "Delivery V1 test");
     const v1 = await deliveries.submitDelivery(
       { id: elena.id },
@@ -661,28 +701,16 @@ describe("primary acceptance journey (§23, service-level)", () => {
         contentItemId: itemId,
         description: "V1 — first cut of the 30s spot",
         designerNote: "Frame.io is the timecoded review link; GDrive is the master file.",
-        links: [
-          {
-            provider: "frame_io",
-            label: "V1 review (Frame.io)",
-            url: "https://f.io/v/abc123",
-            isPreview: true,
-          },
-          {
-            provider: "google_drive",
-            label: "V1 master (Drive)",
-            url: "https://drive.google.com/file/d/xyz",
-            isPreview: false,
-          },
-        ],
+        mediaAssetIds: [deliveryMediaAssetId],
       },
     );
     expect(v1.versionNumber).toBe(1);
     const versions = await deliveries.listDeliveriesForItem({ id: maya.id }, itemId);
     expect(versions).toHaveLength(1);
     const links = versions[0]!.links;
-    expect(links.find((l) => l.provider === "frame_io")?.isPreview).toBe(true);
-    expect(links.find((l) => l.provider === "google_drive")).toBeTruthy();
+    expect(links).toHaveLength(1);
+    expect(links[0]?.mediaAssetId).toBe(deliveryMediaAssetId);
+    expect(links[0]?.url).toContain("/api/deliveries/assets/");
   });
 
   // ── §23 step 19: Jon requests creative changes + Elena submits V2 ───
@@ -693,7 +721,7 @@ describe("primary acceptance journey (§23, service-level)", () => {
       {
         contentItemId: itemId,
         description: "V1",
-        links: [{ provider: "frame_io", label: "V1", url: "https://f.io/v/v1", isPreview: true }],
+        mediaAssetIds: [deliveryMediaAssetId],
       },
     );
     const { approvalRequests } = await import("@/lib/db/schema");
@@ -730,7 +758,7 @@ describe("primary acceptance journey (§23, service-level)", () => {
         contentItemId: itemId,
         description: "V2",
         designerNote: "Opening beat recut per Jon's feedback.",
-        links: [{ provider: "frame_io", label: "V2", url: "https://f.io/v/v2", isPreview: true }],
+        mediaAssetIds: [deliveryMediaAssetId],
       },
     );
     expect(v2.versionNumber).toBe(2);
@@ -751,7 +779,7 @@ describe("primary acceptance journey (§23, service-level)", () => {
       {
         contentItemId: itemId,
         description: "V2",
-        links: [{ provider: "frame_io", label: "V2", url: "https://f.io/v/v2", isPreview: true }],
+        mediaAssetIds: [deliveryMediaAssetId],
       },
     );
     const { approvalRequests } = await import("@/lib/db/schema");
@@ -824,7 +852,7 @@ describe("primary acceptance journey (§23, service-level)", () => {
       {
         contentItemId: itemId,
         description: "V1",
-        links: [{ provider: "frame_io", label: "V1", url: "https://f.io/v/v1", isPreview: true }],
+        mediaAssetIds: [deliveryMediaAssetId],
       },
     );
     const { approvalRequests } = await import("@/lib/db/schema");
@@ -847,7 +875,7 @@ describe("primary acceptance journey (§23, service-level)", () => {
       {
         contentItemId: itemId,
         description: "V2",
-        links: [{ provider: "frame_io", label: "V2", url: "https://f.io/v/v2", isPreview: true }],
+        mediaAssetIds: [deliveryMediaAssetId],
       },
     );
     const v2InternalReqs = await db
@@ -1164,7 +1192,7 @@ describe("primary acceptance journey (§23, service-level)", () => {
       {
         contentItemId: itemId,
         description: "V1",
-        links: [{ provider: "frame_io", label: "V1", url: "https://f.io/v/v1", isPreview: true }],
+        mediaAssetIds: [deliveryMediaAssetId],
       },
     );
     const { approvalRequests } = await import("@/lib/db/schema");

@@ -179,44 +179,13 @@ describe("SubmitDeliverySchema", () => {
   const baseInput = {
     contentItemId,
     description: "First delivery",
-    links: [
-      {
-        provider: "google_drive" as const,
-        label: "Drive folder",
-        url: "https://drive.google.com/folder",
-        isPreview: false,
-      },
-    ],
+    mediaAssetIds: ["1e4c2d66-0e8e-4d2a-9f5b-5c4f7c2d1a90"],
   };
 
   it("accepts a valid submission", () => {
     expect(SubmitDeliverySchema.safeParse(baseInput).success).toBe(true);
   });
 
-  it("rejects non-https URLs", () => {
-    const result = SubmitDeliverySchema.safeParse({
-      ...baseInput,
-      links: [{ ...baseInput.links[0], url: "http://example.com" }],
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("requires at least one link", () => {
-    const result = SubmitDeliverySchema.safeParse({ ...baseInput, links: [] });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects unknown providers", () => {
-    const result = SubmitDeliverySchema.safeParse({
-      ...baseInput,
-      links: [{ ...baseInput.links[0], provider: "ftp" }],
-    });
-    expect(result.success).toBe(false);
-  });
-
-  // P0a (2026-09-03, /ui-ux-pro-max): description is optional.
-  // A designer submitting "the link *is* the deliverable" used to
-  // have to invent a description to pass the schema.
   it("accepts a submission without a description", () => {
     const { description: _omit, ...withoutDescription } = baseInput;
     expect(_omit).toBe("First delivery");
@@ -228,16 +197,16 @@ describe("SubmitDeliverySchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts a submission containing only verified media assets", () => {
-    const result = SubmitDeliverySchema.safeParse({
-      contentItemId,
-      mediaAssetIds: ["1e4c2d66-0e8e-4d2a-9f5b-5c4f7c2d1a90"],
-    });
-    expect(result.success).toBe(true);
+  it("requires at least one stored media asset", () => {
+    const result = SubmitDeliverySchema.safeParse({ contentItemId });
+    expect(result.success).toBe(false);
   });
 
-  it("requires an external link or a media asset", () => {
-    const result = SubmitDeliverySchema.safeParse({ contentItemId });
+  it("rejects legacy external links instead of writing them as delivery data", () => {
+    const result = SubmitDeliverySchema.safeParse({
+      contentItemId,
+      links: [{ provider: "other", label: "legacy", url: "https://example.com/file" }],
+    });
     expect(result.success).toBe(false);
   });
 });
@@ -246,14 +215,7 @@ describe("submitDelivery", () => {
   const input = {
     contentItemId,
     description: "First delivery",
-    links: [
-      {
-        provider: "google_drive" as const,
-        label: "Drive folder",
-        url: "https://drive.google.com/folder",
-        isPreview: false,
-      },
-    ],
+    mediaAssetIds: ["1e4c2d66-0e8e-4d2a-9f5b-5c4f7c2d1a90"],
   };
 
   it("throws when the content item is missing", async () => {
@@ -278,8 +240,23 @@ describe("submitDelivery", () => {
 
   it("submits a delivery version, cancels prior approval requests, and opens a new internal review", async () => {
     dbMock.state.selectResults.push([
-      { workspaceId: "ws-1", status: "in_design", changeRequestGate: null },
+      {
+        agencyId: "agency-1",
+        workspaceId: "ws-1",
+        status: "in_design",
+        changeRequestGate: null,
+      },
     ]); // item
+    dbMock.state.selectResults.push([
+      {
+        id: input.mediaAssetIds[0],
+        agencyId: "agency-1",
+        ownerWorkspaceId: "ws-1",
+        visibility: "workspace",
+        status: "ready",
+        objectStatus: "active",
+      },
+    ]); // stored media
     // inside tx: max version query
     dbMock.state.selectResults.push([{ max: 2 }]);
     // insert returning
@@ -297,8 +274,23 @@ describe("submitDelivery", () => {
 
   it("notifies the content owner and reviewer with the planning URL", async () => {
     dbMock.state.selectResults.push([
-      { workspaceId: "ws-1", status: "in_design", changeRequestGate: null },
+      {
+        agencyId: "agency-1",
+        workspaceId: "ws-1",
+        status: "in_design",
+        changeRequestGate: null,
+      },
     ]); // item
+    dbMock.state.selectResults.push([
+      {
+        id: input.mediaAssetIds[0],
+        agencyId: "agency-1",
+        ownerWorkspaceId: "ws-1",
+        visibility: "workspace",
+        status: "ready",
+        objectStatus: "active",
+      },
+    ]); // stored media
     dbMock.state.selectResults.push([{ max: 0 }]); // next version
     dbMock.state.selectResults.push([
       {
@@ -329,7 +321,22 @@ describe("submitDelivery", () => {
 
   it("accepts a creative revision when the content is in changes_requested with a creative gate", async () => {
     dbMock.state.selectResults.push([
-      { workspaceId: "ws-1", status: "changes_requested", changeRequestGate: "creative_internal" },
+      {
+        agencyId: "agency-1",
+        workspaceId: "ws-1",
+        status: "changes_requested",
+        changeRequestGate: "creative_internal",
+      },
+    ]);
+    dbMock.state.selectResults.push([
+      {
+        id: input.mediaAssetIds[0],
+        agencyId: "agency-1",
+        ownerWorkspaceId: "ws-1",
+        visibility: "workspace",
+        status: "ready",
+        objectStatus: "active",
+      },
     ]);
     dbMock.state.selectResults.push([{ max: 1 }]);
     dbMock.state.insertReturningIds.push({ id: "v-2" });
@@ -340,7 +347,22 @@ describe("submitDelivery", () => {
 
   it("accepts a creative revision when the change request gate is creative_client", async () => {
     dbMock.state.selectResults.push([
-      { workspaceId: "ws-1", status: "changes_requested", changeRequestGate: "creative_client" },
+      {
+        agencyId: "agency-1",
+        workspaceId: "ws-1",
+        status: "changes_requested",
+        changeRequestGate: "creative_client",
+      },
+    ]);
+    dbMock.state.selectResults.push([
+      {
+        id: input.mediaAssetIds[0],
+        agencyId: "agency-1",
+        ownerWorkspaceId: "ws-1",
+        visibility: "workspace",
+        status: "ready",
+        objectStatus: "active",
+      },
     ]);
     dbMock.state.selectResults.push([{ max: 0 }]);
     dbMock.state.insertReturningIds.push({ id: "v-1" });

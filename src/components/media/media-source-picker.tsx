@@ -12,8 +12,10 @@ import { MediaUploadForm } from "./media-upload-form";
  */
 export function MediaSourcePicker({
   workspaceOptions,
+  initialSource = "device",
 }: {
   workspaceOptions: { id: string; name: string }[];
+  initialSource?: "device" | "link";
 }) {
   const t = useLocaleT();
   return (
@@ -26,7 +28,7 @@ export function MediaSourcePicker({
           {t("media.addMediaDescription")}
         </p>
       </div>
-      <Tabs defaultValue="device">
+      <Tabs defaultValue={initialSource}>
         <TabsList
           aria-label={t("media.addMediaTitle")}
           className="h-auto w-full flex-wrap sm:w-auto"

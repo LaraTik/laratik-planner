@@ -21,7 +21,13 @@ export default async function WorkspaceMediaPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ q?: string; kind?: string; trash?: string; view?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    kind?: string;
+    trash?: string;
+    view?: string;
+    source?: string;
+  }>;
 }) {
   const { t } = await tForActive();
   const session = await auth();
@@ -54,6 +60,7 @@ export default async function WorkspaceMediaPage({
       view={filters.view === "list" ? "list" : "grid"}
       search={filters.q ?? ""}
       kind={filters.kind ?? ""}
+      initialSource={filters.source === "link" ? "link" : "device"}
       t={t}
       storageSummary={{
         mode: storageSummary.mode,

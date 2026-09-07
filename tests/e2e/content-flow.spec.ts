@@ -249,7 +249,9 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       const designerSeedContext = await context.browser()!.newContext();
       const designerSeedPage = await designerSeedContext.newPage();
       try {
-        designerSeeded = await bootstrapRoleSession(designerSeedPage, "designer");
+        designerSeeded = await bootstrapRoleSession(designerSeedPage, "designer", "acme", {
+          includeDeliveryMediaFixture: true,
+        });
       } finally {
         await designerSeedContext.close();
       }
@@ -316,9 +318,10 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       }
       await expect(deliveryForm).toBeVisible({ timeout: 10_000 });
       await deliveryForm.locator('input[name="description"]').fill("V1 creatives");
-      // At least one HTTPS link is required.
-      await deliveryForm.locator('input[name="linkLabel"]').first().fill("V1 creative files");
-      await deliveryForm.locator('input[name="linkUrl"]').first().fill("https://example.com/v1");
+      // New deliveries select only media that is already stored in the
+      // agency's private storage. The fixture is seeded as a ready asset.
+      expect(designerSeeded.deliveryMediaAssetId).toBeTruthy();
+      await deliveryForm.getByRole("checkbox").first().check();
       await deliveryForm.getByRole("button", { name: /Submit for creative review/i }).click();
       // The status should advance to creative_review.
       await expect(

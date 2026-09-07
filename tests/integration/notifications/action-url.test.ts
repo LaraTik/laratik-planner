@@ -103,7 +103,38 @@ async function seedWorkspaceAndContentItem() {
     })
     .returning();
   if (!contentItem) throw new Error("content_item seed failed");
-  return { workspace, contentItem, manager };
+  const [storageObject] = await db
+    .insert(schema.storageObjects)
+    .values({
+      agencyId: agency.id,
+      workspaceId: workspace.id,
+      bucket: "integration-fixture",
+      objectKey: `notifications/${contentItem.id}/creative-delivery.pdf`,
+      status: "active",
+      kind: "document",
+      originalName: "creative-delivery.pdf",
+      mimeType: "application/pdf",
+      byteSize: 1,
+      createdBy: manager.id,
+    })
+    .returning();
+  if (!storageObject) throw new Error("storage object seed failed");
+  const [mediaAsset] = await db
+    .insert(schema.mediaAssets)
+    .values({
+      agencyId: agency.id,
+      ownerWorkspaceId: workspace.id,
+      storageObjectId: storageObject.id,
+      title: "Integration creative delivery",
+      visibility: "workspace",
+      status: "ready",
+      sourceType: "browser_file",
+      createdBy: manager.id,
+      updatedBy: manager.id,
+    })
+    .returning();
+  if (!mediaAsset) throw new Error("media asset seed failed");
+  return { workspace, contentItem, manager, mediaAsset };
 }
 
 describe("buildActionUrlForContentItem (helper URL shape)", () => {
@@ -235,7 +266,7 @@ describe("notification actionUrl writers — fix regression", () => {
     // The fix threads a slug-based URL through. We assert the
     // resulting notification row by reading the outbox payload
     // (the enqueue → dispatch path runs out-of-band).
-    const { workspace, contentItem, manager } = await seedWorkspaceAndContentItem();
+    const { workspace, contentItem, manager, mediaAsset } = await seedWorkspaceAndContentItem();
     // Make the manager a designer in the workspace so the policy
     // gate inside `submitDelivery` allows the call.
     const [membership] = await db
@@ -254,18 +285,12 @@ describe("notification actionUrl writers — fix regression", () => {
       .set({ designerId: manager.id, status: "in_design" })
       .where(sql`${schema.contentItems.id} = ${contentItem.id}`);
 
-    // Need a delivery link (SubmitDeliverySchema requires ≥1).
+    // Need a stored media asset (SubmitDeliverySchema requires ≥1).
     const { SubmitDeliverySchema, submitDelivery } = deliveries;
     const input = SubmitDeliverySchema.parse({
       contentItemId: contentItem.id,
       description: "Draft 1",
-      links: [
-        {
-          provider: "figma",
-          label: "Figma draft",
-          url: "https://figma.com/file/abc",
-        },
-      ],
+      mediaAssetIds: [mediaAsset.id],
     });
     await submitDelivery({ id: manager.id }, input);
 

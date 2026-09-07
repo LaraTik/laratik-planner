@@ -23,6 +23,7 @@ export function MediaLibraryPage({
   view,
   search,
   kind,
+  initialSource = "device",
   t,
   storageSummary,
 }: {
@@ -36,6 +37,7 @@ export function MediaLibraryPage({
   view: "grid" | "list";
   search: string;
   kind: string;
+  initialSource?: "device" | "link";
   t: (key: string, params?: Record<string, string | number>) => string;
   storageSummary: {
     mode: "managed" | "agency_owned";
@@ -108,7 +110,7 @@ export function MediaLibraryPage({
       </Card>
       {canUpload ? (
         <div id="media-upload" className="scroll-mt-4">
-          <MediaSourcePicker workspaceOptions={workspaceOptions} />
+          <MediaSourcePicker workspaceOptions={workspaceOptions} initialSource={initialSource} />
         </div>
       ) : null}
       <form
