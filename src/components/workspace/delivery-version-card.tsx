@@ -55,6 +55,8 @@ export type DeliveryVersion = {
     label: string;
     url: string;
     isPreview: boolean;
+    mediaAssetId?: string;
+    mediaKind?: string;
   }[];
 };
 
@@ -208,7 +210,15 @@ export function DeliveryVersionCard({
               className="border-border bg-surface-subtle flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] border"
               data-testid={`delivery-version-thumbnail-${version.versionNumber}-${l.id}`}
             >
-              {looksLikeDirectImage(l.url) ? (
+              {l.mediaAssetId && l.mediaKind === "image" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={l.url}
+                  alt={`${version.description} — ${l.label}`}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : looksLikeDirectImage(l.url) ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={l.url}
@@ -220,7 +230,9 @@ export function DeliveryVersionCard({
                 <div className="text-fg-muted flex flex-col items-center gap-0.5 p-1 text-center">
                   <ImageIcon className="h-4 w-4" aria-hidden="true" />
                   <span className="text-label truncate font-semibold">
-                    {t(`contentDetail.deliveries.providers.${l.provider}`)}
+                    {l.mediaAssetId
+                      ? t("contentDetail.deliveries.privateMedia")
+                      : t(`contentDetail.deliveries.providers.${l.provider}`)}
                   </span>
                 </div>
               )}

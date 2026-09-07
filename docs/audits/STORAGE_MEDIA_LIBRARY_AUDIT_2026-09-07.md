@@ -86,6 +86,22 @@ The source adapter is separate from the storage sink, so adding OAuth-backed Goo
 
 ## Remaining release gates
 
+### Delivery submission follow-up
+
+The delivery workflow now consumes the provider-neutral media catalog. A
+designer or manager can select ready workspace-owned or agency-shared assets
+from the content detail page and submit them with optional external HTTPS
+links. The submission transaction verifies agency ownership, workspace scope,
+asset readiness, and active physical storage before creating
+`media_asset_link` rows. Internal reviewers and client reviewers receive
+private delivery-asset redirects only after role and client-visible checks;
+provider credentials and object keys are never exposed. The standalone media
+library remains the place to upload a new device file or import a public
+Google Drive, OneDrive, or HTTPS source before returning to the submission.
+
+Focused regression coverage verifies media-only submissions, mixed-source
+schema behavior, unavailable-asset rejection, and transaction-safe linking.
+
 These are not hidden defects in the reviewed implementation; they are explicitly documented capability/evidence gates that still need external integration or operational UAT:
 
 1. Malware scanning before a browser-uploaded object becomes `ready`.

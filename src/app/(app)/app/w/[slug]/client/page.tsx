@@ -6,7 +6,15 @@ import { Calendar, Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
-import { approvalRequests, contentItems, deliveryLinks, deliveryVersions } from "@/lib/db/schema";
+import {
+  approvalRequests,
+  contentItems,
+  deliveryLinks,
+  deliveryVersions,
+  mediaAssetLinks,
+  mediaAssets,
+  storageObjects,
+} from "@/lib/db/schema";
 import { getClientWorkspace } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";
 
@@ -70,6 +78,28 @@ export default async function ClientReviewPortalPage({
         .from(deliveryLinks)
         .where(inArray(deliveryLinks.deliveryVersionId, versionIds))
     : [];
+  const mediaLinks = versionIds.length
+    ? await db
+        .select({
+          id: mediaAssetLinks.id,
+          deliveryVersionId: mediaAssetLinks.targetId,
+          label: mediaAssets.title,
+        })
+        .from(mediaAssetLinks)
+        .innerJoin(mediaAssets, eq(mediaAssets.id, mediaAssetLinks.mediaAssetId))
+        .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
+        .where(
+          and(
+            eq(mediaAssetLinks.targetType, "delivery"),
+            eq(mediaAssetLinks.clientVisible, true),
+            eq(mediaAssetLinks.workspaceId, workspace.id),
+            eq(mediaAssetLinks.agencyId, workspace.agencyId),
+            inArray(mediaAssetLinks.targetId, versionIds),
+            eq(mediaAssets.status, "ready"),
+            eq(storageObjects.status, "active"),
+          ),
+        )
+    : [];
   return (
     <div className="space-y-6" data-testid="workspace-client-review">
       <PageHeader
@@ -107,7 +137,16 @@ export default async function ClientReviewPortalPage({
             deliveryVersion={row.deliveryVersion}
             plannedPublishAt={row.plannedPublishAt.toISOString()}
             overdue={Boolean(row.dueAt && row.dueAt < new Date())}
-            links={links.filter((link) => link.deliveryVersionId === row.deliveryVersionId)}
+            links={[
+              ...links.filter((link) => link.deliveryVersionId === row.deliveryVersionId),
+              ...mediaLinks
+                .filter((link) => link.deliveryVersionId === row.deliveryVersionId)
+                .map((link) => ({
+                  id: link.id,
+                  label: link.label,
+                  url: `/api/deliveries/assets/${encodeURIComponent(link.id)}`,
+                })),
+            ]}
           />
         ))}
       </div>

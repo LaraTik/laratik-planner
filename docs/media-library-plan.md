@@ -249,9 +249,16 @@ Required states and behavior:
 
 ### Phase C — product integration
 
-- Link-management UI for content items, comments, deliveries, and Brand Kit assets.
-- Attachment picker embedded in planning, review, delivery, and Brand Kit flows.
-- Client-visible links with explicit visibility and authorization tests.
+- Delivery submission now accepts ready Media Library assets alongside external
+  HTTPS links. Selected assets create explicit `media_asset_link` rows with
+  client-visible delivery access and are served through the private signed
+  delivery-asset route.
+- Standalone link-management UI for content items, comments, and Brand Kit
+  assets remains future work; the existing Brand Kit and discussion attachment
+  flows continue to use their current contracts.
+- Client-visible delivery assets are filtered by link visibility, asset/object
+  readiness, workspace membership, and reviewer role before a short-lived URL
+  is issued.
 - Search/tag/filter improvements and bulk actions after authorization review.
 
 ### Phase D — provider connectors

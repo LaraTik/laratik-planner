@@ -65,7 +65,8 @@ type BatchCreateFields = "rows";
 type TransitionFields = "action" | "reason";
 type AssignDesignerFields = "designerId";
 type ApplyAiDraftFields = "draftText" | "mode";
-type SubmitDeliveryFields = "description" | "designerNote" | "linkLabel" | "linkUrl";
+type SubmitDeliveryFields =
+  "description" | "designerNote" | "linkLabel" | "linkUrl" | "mediaAssetId";
 type DecideApprovalFields = "decision" | "feedback";
 type RecordPublicationFields =
   "contentItemChannelId" | "status" | "publishedUrl" | "note" | "failureReason";
@@ -439,6 +440,18 @@ export async function submitDeliveryAction(
   const urls = formData.getAll("linkUrl").map((v) => String(v));
   const providers = formData.getAll("linkProvider").map((v) => String(v));
   const previews = formData.getAll("linkPreview").map((v) => String(v));
+  const mediaAssetIds = formData.getAll("mediaAssetId").map((v) => String(v));
+  const hasIncompleteLink = labels.some((label, i) => {
+    const hasLabel = Boolean(label.trim());
+    const hasUrl = Boolean(urls[i]?.trim());
+    return (hasLabel || hasUrl) && !(hasLabel && hasUrl);
+  });
+  if (hasIncompleteLink) {
+    return {
+      error: "delivery.link_incomplete",
+      fieldErrors: { linkLabel: "delivery.link_incomplete" },
+    };
+  }
   const links = labels
     .map((label, i: number) => ({
       provider: (providers[i] ?? "other") as
@@ -454,6 +467,7 @@ export async function submitDeliveryAction(
     description: formData.get("description"),
     designerNote: formData.get("designerNote") ?? undefined,
     links,
+    ...(mediaAssetIds.length ? { mediaAssetIds } : {}),
   });
   if (!parsed.success) {
     return fieldErrorsFromZod<SubmitDeliveryFields>(parsed.error);

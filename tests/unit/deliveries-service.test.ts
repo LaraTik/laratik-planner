@@ -227,6 +227,19 @@ describe("SubmitDeliverySchema", () => {
     const result = SubmitDeliverySchema.safeParse({ ...baseInput, description: "" });
     expect(result.success).toBe(true);
   });
+
+  it("accepts a submission containing only verified media assets", () => {
+    const result = SubmitDeliverySchema.safeParse({
+      contentItemId,
+      mediaAssetIds: ["1e4c2d66-0e8e-4d2a-9f5b-5c4f7c2d1a90"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("requires an external link or a media asset", () => {
+    const result = SubmitDeliverySchema.safeParse({ contentItemId });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("submitDelivery", () => {
@@ -334,6 +347,67 @@ describe("submitDelivery", () => {
 
     const result = await submitDelivery(actor, input);
     expect(result.versionNumber).toBe(1);
+  });
+
+  it("persists selected media assets as client-visible delivery links", async () => {
+    const mediaAssetId = "1e4c2d66-0e8e-4d2a-9f5b-5c4f7c2d1a90";
+    dbMock.state.selectResults.push([
+      { agencyId: "agency-1", workspaceId: "ws-1", status: "in_design", changeRequestGate: null },
+    ]);
+    dbMock.state.selectResults.push([
+      {
+        id: mediaAssetId,
+        agencyId: "agency-1",
+        ownerWorkspaceId: "ws-1",
+        visibility: "workspace",
+        status: "ready",
+        objectStatus: "active",
+      },
+    ]);
+    dbMock.state.selectResults.push([{ max: 0 }]);
+    dbMock.state.insertReturningIds.push({ id: "v-1" });
+
+    const result = await submitDelivery(actor, {
+      contentItemId,
+      mediaAssetIds: [mediaAssetId],
+    });
+
+    expect(result).toEqual({ deliveryVersionId: "v-1", versionNumber: 1 });
+    const mediaLinkInsert = dbMock.state.insertCalls.find((call) => {
+      const values = call.values as Array<{ mediaAssetId?: string }>;
+      return Array.isArray(values) && values.some((value) => value.mediaAssetId === mediaAssetId);
+    });
+    expect(mediaLinkInsert).toBeDefined();
+    expect(mediaLinkInsert?.values).toEqual([
+      expect.objectContaining({
+        mediaAssetId,
+        targetType: "delivery",
+        targetId: "v-1",
+        clientVisible: true,
+      }),
+    ]);
+  });
+
+  it("rejects a selected media asset that is not ready or not shared with the workspace", async () => {
+    const mediaAssetId = "1e4c2d66-0e8e-4d2a-9f5b-5c4f7c2d1a90";
+    dbMock.state.selectResults.push([
+      { agencyId: "agency-1", workspaceId: "ws-1", status: "in_design", changeRequestGate: null },
+    ]);
+    dbMock.state.selectResults.push([
+      {
+        id: mediaAssetId,
+        agencyId: "agency-1",
+        ownerWorkspaceId: "ws-2",
+        visibility: "workspace",
+        status: "processing",
+        objectStatus: "active",
+      },
+    ]);
+
+    await expect(
+      submitDelivery(actor, { contentItemId, mediaAssetIds: [mediaAssetId] }),
+    ).rejects.toThrow(/media assets are unavailable/i);
+    expect(dbMock.state.transactionCalls).toBe(0);
   });
 });
 

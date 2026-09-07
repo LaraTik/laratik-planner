@@ -8,7 +8,11 @@ import {
   contentItems,
   deliveryLinks,
   deliveryVersions,
+  mediaAssetLinks,
+  mediaAssets,
+  storageObjects,
   users,
+  workspaces,
   workspaceSettings,
 } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
@@ -26,7 +30,8 @@ import {
  * Delivery service (Goal 9 — master prompt §8 + §10).
  *
  * Workflow:
- *  1. Designer submits a delivery version (with at least one link)
+ *  1. Designer submits a delivery version (with a verified media asset or
+ *     at least one external link)
  *  2. Content moves to creative_review (via transitionContent "submit_delivery")
  *  3. Internal reviewer approves → ready_to_publish (or "request_creative_changes")
  *  4. If workspace has client_reviewer + internal_then_client mode, an
@@ -34,47 +39,50 @@ import {
  *  5. When all gates approve, item moves to ready_to_publish
  */
 
-export const SubmitDeliverySchema = z.object({
-  contentItemId: z.string().uuid(),
-  // P0a (2026-09-03, /ui-ux-pro-max): description is optional. A
-  // designer submitting a Figma/Canva link with no narrative
-  // description used to have to invent one to pass the gate. The
-  // DB column is already nullable; we just relax the Zod check.
-  description: z.string().max(500).optional(),
-  designerNote: z.string().max(2000).optional(),
-  links: z
-    .array(
-      z.object({
-        provider: z.enum([
-          "google_drive",
-          "dropbox",
-          "onedrive",
-          "frame_io",
-          "figma",
-          "canva",
-          "other",
-        ]),
-        label: z.string().min(1).max(120),
-        url: z
-          .string()
-          .url()
-          .refine((u) => u.startsWith("https://"), "URL must be https"),
-        isPreview: z.boolean().default(false),
-      }),
-    )
-    .min(1, "At least one delivery link is required"),
+const DeliveryLinkSchema = z.object({
+  provider: z.enum(["google_drive", "dropbox", "onedrive", "frame_io", "figma", "canva", "other"]),
+  label: z.string().min(1).max(120),
+  url: z
+    .string()
+    .url()
+    .refine((u) => u.startsWith("https://"), "URL must be https"),
+  isPreview: z.boolean().default(false),
 });
+
+export const SubmitDeliverySchema = z
+  .object({
+    contentItemId: z.string().uuid(),
+    // P0a (2026-09-03, /ui-ux-pro-max): description is optional. A
+    // designer submitting a Figma/Canva link with no narrative
+    // description used to have to invent one to pass the gate. The
+    // DB column is already nullable; we just relax the Zod check.
+    description: z.string().max(500).optional(),
+    designerNote: z.string().max(2000).optional(),
+    links: z.array(DeliveryLinkSchema).max(20).optional(),
+    mediaAssetIds: z.array(z.string().uuid()).max(20).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (!(value.links?.length || value.mediaAssetIds?.length)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["links"],
+        message: "At least one delivery link or media asset is required",
+      });
+    }
+  });
 
 export type SubmitDeliveryInput = z.infer<typeof SubmitDeliverySchema>;
 
 export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
   const [item] = await db
     .select({
+      agencyId: workspaces.agencyId,
       workspaceId: contentItems.workspaceId,
       status: contentItems.status,
       changeRequestGate: contentItems.changeRequestGate,
     })
     .from(contentItems)
+    .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
     .where(eq(contentItems.id, input.contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
@@ -89,6 +97,34 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
       item.changeRequestGate === "creative_client");
   if (item.status !== "in_design" && !isCreativeRevision) {
     throw new Error(`Cannot submit a delivery while content is ${item.status}`);
+  }
+
+  const mediaAssetIds = [...new Set(input.mediaAssetIds ?? [])];
+  const mediaRows = mediaAssetIds.length
+    ? await db
+        .select({
+          id: mediaAssets.id,
+          agencyId: mediaAssets.agencyId,
+          ownerWorkspaceId: mediaAssets.ownerWorkspaceId,
+          visibility: mediaAssets.visibility,
+          status: mediaAssets.status,
+          objectStatus: storageObjects.status,
+        })
+        .from(mediaAssets)
+        .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
+        .where(inArray(mediaAssets.id, mediaAssetIds))
+    : [];
+  if (
+    mediaRows.length !== mediaAssetIds.length ||
+    mediaRows.some(
+      (row) =>
+        row.agencyId !== item.agencyId ||
+        row.status !== "ready" ||
+        row.objectStatus !== "active" ||
+        (row.ownerWorkspaceId !== item.workspaceId && row.visibility !== "agency"),
+    )
+  ) {
+    throw new Error("One or more selected media assets are unavailable for this workspace");
   }
 
   return await db.transaction(async (tx) => {
@@ -134,7 +170,7 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
       .returning({ id: deliveryVersions.id });
 
     await tx.insert(deliveryLinks).values(
-      input.links.map((l) => ({
+      (input.links ?? []).map((l) => ({
         deliveryVersionId: created!.id,
         provider: l.provider,
         label: l.label,
@@ -142,6 +178,20 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
         isPreview: l.isPreview,
       })),
     );
+
+    if (mediaAssetIds.length > 0) {
+      await tx.insert(mediaAssetLinks).values(
+        mediaAssetIds.map((mediaAssetId) => ({
+          agencyId: mediaRows[0]!.agencyId,
+          workspaceId: item.workspaceId,
+          mediaAssetId,
+          targetType: "delivery",
+          targetId: created!.id,
+          clientVisible: true,
+          createdBy: actor.id,
+        })),
+      );
+    }
 
     // Open an internal creative-review request
     await tx.insert(approvalRequests).values({
@@ -248,8 +298,9 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
 
   // Resolve workspace for policy check
   const [item] = await db
-    .select({ workspaceId: contentItems.workspaceId })
+    .select({ workspaceId: contentItems.workspaceId, agencyId: workspaces.agencyId })
     .from(contentItems)
+    .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
     .where(eq(contentItems.id, req.contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
@@ -502,6 +553,8 @@ export type DeliveryListItem = {
     label: string;
     url: string;
     isPreview: boolean;
+    mediaAssetId?: string;
+    mediaKind?: string;
   }[];
 };
 
@@ -510,8 +563,9 @@ export async function listDeliveriesForItem(
   contentItemId: string,
 ): Promise<DeliveryListItem[]> {
   const [item] = await db
-    .select({ workspaceId: contentItems.workspaceId })
+    .select({ workspaceId: contentItems.workspaceId, agencyId: workspaces.agencyId })
     .from(contentItems)
+    .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
     .where(eq(contentItems.id, contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
@@ -560,6 +614,29 @@ export async function listDeliveriesForItem(
     .where(inArray(deliveryLinks.deliveryVersionId, versionIds))
     .orderBy(sql`${deliveryLinks.createdAt} ASC`);
 
+  const mediaLinkRows = await db
+    .select({
+      id: mediaAssetLinks.id,
+      deliveryVersionId: mediaAssetLinks.targetId,
+      label: mediaAssets.title,
+      mediaAssetId: mediaAssets.id,
+      mediaKind: storageObjects.kind,
+    })
+    .from(mediaAssetLinks)
+    .innerJoin(mediaAssets, eq(mediaAssets.id, mediaAssetLinks.mediaAssetId))
+    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
+    .where(
+      and(
+        eq(mediaAssetLinks.targetType, "delivery"),
+        inArray(mediaAssetLinks.targetId, versionIds),
+        ...(item.agencyId ? [eq(mediaAssetLinks.agencyId, item.agencyId)] : []),
+        eq(mediaAssetLinks.workspaceId, item.workspaceId),
+        eq(mediaAssets.status, "ready"),
+        eq(storageObjects.status, "active"),
+      ),
+    )
+    .orderBy(sql`${mediaAssetLinks.createdAt} ASC`);
+
   const linksByVersion = new Map<string, DeliveryListItem["links"]>();
   for (const link of linkRows) {
     const list = linksByVersion.get(link.deliveryVersionId) ?? [];
@@ -572,7 +649,19 @@ export async function listDeliveriesForItem(
     });
     linksByVersion.set(link.deliveryVersionId, list);
   }
-
+  for (const link of mediaLinkRows) {
+    const list = linksByVersion.get(link.deliveryVersionId) ?? [];
+    list.push({
+      id: link.id,
+      provider: "other",
+      label: link.label,
+      url: `/api/deliveries/assets/${encodeURIComponent(link.id)}`,
+      isPreview: link.mediaKind === "image" || link.mediaKind === "video",
+      mediaAssetId: link.mediaAssetId,
+      mediaKind: link.mediaKind,
+    });
+    linksByVersion.set(link.deliveryVersionId, list);
+  }
   return versionRows.map((v) => ({
     id: v.id,
     versionNumber: v.versionNumber,
@@ -622,6 +711,8 @@ export type DeliveryVersionListItem = {
     label: string;
     url: string;
     isPreview: boolean;
+    mediaAssetId?: string;
+    mediaKind?: string;
   }[];
 };
 
@@ -633,8 +724,9 @@ export async function listDeliveryVersionsForItem(
   const isClientReviewer = Boolean(opts.isClientReviewer);
 
   const [item] = await db
-    .select({ workspaceId: contentItems.workspaceId })
+    .select({ workspaceId: contentItems.workspaceId, agencyId: workspaces.agencyId })
     .from(contentItems)
+    .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
     .where(eq(contentItems.id, contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
@@ -685,6 +777,30 @@ export async function listDeliveryVersionsForItem(
     .where(inArray(deliveryLinks.deliveryVersionId, versionIds))
     .orderBy(sql`${deliveryLinks.createdAt} ASC`);
 
+  const mediaLinkRows = await db
+    .select({
+      id: mediaAssetLinks.id,
+      deliveryVersionId: mediaAssetLinks.targetId,
+      label: mediaAssets.title,
+      mediaAssetId: mediaAssets.id,
+      mediaKind: storageObjects.kind,
+    })
+    .from(mediaAssetLinks)
+    .innerJoin(mediaAssets, eq(mediaAssets.id, mediaAssetLinks.mediaAssetId))
+    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
+    .where(
+      and(
+        eq(mediaAssetLinks.targetType, "delivery"),
+        inArray(mediaAssetLinks.targetId, versionIds),
+        ...(item.agencyId ? [eq(mediaAssetLinks.agencyId, item.agencyId)] : []),
+        eq(mediaAssetLinks.workspaceId, item.workspaceId),
+        eq(mediaAssets.status, "ready"),
+        eq(storageObjects.status, "active"),
+        ...(isClientReviewer ? [eq(mediaAssetLinks.clientVisible, true)] : []),
+      ),
+    )
+    .orderBy(sql`${mediaAssetLinks.createdAt} ASC`);
+
   const linksByVersion = new Map<string, DeliveryVersionListItem["links"]>();
   for (const link of linkRows) {
     const list = linksByVersion.get(link.deliveryVersionId) ?? [];
@@ -694,6 +810,19 @@ export async function listDeliveryVersionsForItem(
       label: link.label,
       url: link.url,
       isPreview: link.isPreview,
+    });
+    linksByVersion.set(link.deliveryVersionId, list);
+  }
+  for (const link of mediaLinkRows) {
+    const list = linksByVersion.get(link.deliveryVersionId) ?? [];
+    list.push({
+      id: link.id,
+      provider: "other",
+      label: link.label,
+      url: `/api/deliveries/assets/${encodeURIComponent(link.id)}`,
+      isPreview: link.mediaKind === "image" || link.mediaKind === "video",
+      mediaAssetId: link.mediaAssetId,
+      mediaKind: link.mediaKind,
     });
     linksByVersion.set(link.deliveryVersionId, list);
   }
