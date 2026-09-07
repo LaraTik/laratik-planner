@@ -293,29 +293,21 @@ test.describe("Content: Quick Create + workflow transitions", () => {
 
       // ─── 5. Designer: submit a delivery → creative_review ───
       await bootstrapRoleSession(designerPage, "designer");
-      // Open the panel through its supported deep link and wait for the
-      // stateful tab shell to activate it. Clicking immediately after
-      // navigation can race the shell's initial hash synchronisation and
-      // leave the overview panel mounted.
-      await designerPage.goto(`${detailUrl}#content`);
-      await expect(designerPage.getByTestId("workspace-tab-content")).toHaveAttribute(
+      // Delivery is a dedicated task-oriented tab. Open it through its
+      // supported deep link and wait for the stateful tab shell to activate
+      // it before interacting with the submission form.
+      await designerPage.goto(`${detailUrl}#delivery`);
+      await expect(designerPage.getByTestId("workspace-tab-delivery")).toHaveAttribute(
         "data-active",
         "true",
         { timeout: 10_000 },
       );
-      await expect(designerPage.getByTestId("workspace-tab-panel-content")).toBeVisible({
+      await expect(designerPage.getByTestId("workspace-tab-panel-delivery")).toBeVisible({
         timeout: 10_000,
       });
-      // The delivery form starts open when the content is in_design
-      // and no past deliveries exist. We assert the form is reachable
-      // and fill it.
+      // The delivery form starts open when the content is in_design and no
+      // past deliveries exist. We assert the form is reachable and fill it.
       const deliveryForm = designerPage.getByTestId("delivery-submit-form");
-      const deliveryCta = designerPage.getByTestId("delivery-submit-cta");
-      // Either the form is already open OR the CTA is the entry point.
-      const ctaVisible = await deliveryCta.isVisible().catch(() => false);
-      if (ctaVisible) {
-        await deliveryCta.getByRole("button", { name: /Submit delivery/i }).click();
-      }
       await expect(deliveryForm).toBeVisible({ timeout: 10_000 });
       await deliveryForm.locator('input[name="description"]').fill("V1 creatives");
       // New deliveries select only media that is already stored in the

@@ -19,8 +19,9 @@ paths use the same destination, storage, validation, and catalog contracts.
 
 1. Browser files request a short-lived signed intent from `/api/uploads/sign`.
 2. The browser sends bytes directly to the agency's configured private storage provider.
-3. `/api/uploads/complete` verifies provider metadata against the intent.
-4. `/api/media/assets` registers the verified object in the logical catalog as `processing`; it becomes downloadable only after bounded content validation succeeds. Legacy migration records remain `ready` for compatibility.
+3. If a provider CORS rule blocks the browser PUT, the client retries the same intent through the same-origin streaming `/api/uploads/proxy` route. The fallback does not buffer the file in application memory.
+4. `/api/uploads/complete` verifies provider metadata against the intent.
+5. `/api/media/assets` registers the verified object in the logical catalog as `processing`; it becomes downloadable only after bounded content validation succeeds. Legacy migration records remain `ready` for compatibility.
 
 The source boundary also supports server-mediated imports:
 

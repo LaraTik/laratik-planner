@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { Readable } from "node:stream";
 import { R2ObjectStorageAdapter } from "@/lib/storage/r2-adapter";
 
 describe("R2 object storage adapter", () => {
@@ -63,6 +64,31 @@ describe("R2 object storage adapter", () => {
       checksumSha256: "checksum",
       etag: '"etag"',
     });
+    expect(JSON.stringify(send.mock.calls)).not.toContain("secret-key");
+  });
+
+  it("streams a same-origin fallback upload through the configured bucket", async () => {
+    const send = vi.fn(async () => ({}));
+    const adapter = new R2ObjectStorageAdapter(
+      {
+        accountId: "account-1",
+        endpoint: "https://account-1.r2.cloudflarestorage.com",
+        bucket: "planner-media",
+        accessKeyId: "access-key",
+        secretAccessKey: "secret-key",
+        storageClass: "standard",
+      },
+      { client: { send }, signUrl: vi.fn() },
+    );
+
+    await adapter.uploadObject({
+      objectKey: "agencies/a/workspaces/w/assets/o.png",
+      contentType: "image/png",
+      contentLength: 3,
+      body: Readable.from([Buffer.from("abc")]),
+    });
+
+    expect(send).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(send.mock.calls)).not.toContain("secret-key");
   });
 

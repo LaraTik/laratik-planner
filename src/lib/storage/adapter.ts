@@ -1,3 +1,5 @@
+import type { Readable } from "node:stream";
+
 export type StorageProvider = "r2";
 export type StorageConfigStatus = "pending" | "healthy" | "unhealthy" | "disabled";
 export type StorageObjectStatus = "pending" | "active" | "soft_deleted" | "deleted";
@@ -24,6 +26,13 @@ export interface ObjectStorageAdapter {
     checksumSha256?: string;
     expiresInSeconds?: number;
   }): Promise<UploadIntent>;
+  uploadObject(input: {
+    objectKey: string;
+    contentType: string;
+    contentLength: number;
+    body: Readable;
+    checksumSha256?: string;
+  }): Promise<void>;
   completeUpload(input: { objectKey: string }): Promise<ObjectMetadata>;
   headObject(input: { objectKey: string }): Promise<ObjectMetadata>;
   createReadUrl(input: { objectKey: string; expiresInSeconds?: number }): Promise<string>;

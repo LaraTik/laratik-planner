@@ -27,7 +27,7 @@ vi.mock("@/components/planning/discussion-drawer", () => ({
 /**
  * WorkspaceTabs — the in-page tab strip for the content detail
  * page. The contract:
- *  - Six tabs in a fixed order: overview / content / copy / preview /
+ *  - Seven tabs in a fixed order: overview / content / copy / delivery / preview /
  *    publishing / activity. The Preview tab is the dedicated
  *    home for the platform simulator (master prompt §7 +
  *    AGENTS.md §B + §C).
@@ -44,6 +44,7 @@ const tabs: WorkspaceTab[] = [
   { id: "overview", label: "Overview" },
   { id: "content", label: "Content" },
   { id: "copy", label: "Copy" },
+  { id: "delivery", label: "Delivery" },
   { id: "preview", label: "Preview" },
   { id: "publishing", label: "Publishing" },
   { id: "activity", label: "Activity" },
@@ -65,6 +66,7 @@ function TabsHost({ initial = "overview" as WorkspaceTabId }) {
           overview: <div data-testid="panel-overview">overview</div>,
           content: <div data-testid="panel-content">content</div>,
           copy: <div data-testid="panel-copy">copy</div>,
+          delivery: <div data-testid="panel-delivery">delivery</div>,
           preview: <div data-testid="panel-preview">preview</div>,
           publishing: <div data-testid="panel-publishing">publishing</div>,
           activity: <div data-testid="panel-activity">activity</div>,
@@ -75,11 +77,12 @@ function TabsHost({ initial = "overview" as WorkspaceTabId }) {
 }
 
 describe("WorkspaceTabs — Preview tab (/ui-ux-pro-max)", () => {
-  it("renders all six tabs in the canonical order", () => {
+  it("renders all seven tabs in the canonical order", () => {
     render(<TabsHost />);
     expect(screen.getByTestId("workspace-tab-overview")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-tab-content")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-tab-copy")).toBeInTheDocument();
+    expect(screen.getByTestId("workspace-tab-delivery")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-tab-preview")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-tab-publishing")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-tab-activity")).toBeInTheDocument();

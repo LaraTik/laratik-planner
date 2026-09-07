@@ -6,6 +6,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { randomUUID } from "node:crypto";
+import type { Readable } from "node:stream";
 import { getSignedUrl as defaultGetSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { ObjectStorageAdapter, ObjectMetadata, UploadIntent } from "./adapter";
 import { R2ConfigSchema, type R2Config } from "./r2-config";
@@ -97,6 +98,30 @@ export class R2ObjectStorageAdapter implements ObjectStorageAdapter {
         ...(input.checksumSha256 ? { "x-amz-checksum-sha256": input.checksumSha256 } : {}),
       },
     };
+  }
+
+  async uploadObject(input: {
+    objectKey: string;
+    contentType: string;
+    contentLength: number;
+    body: Readable;
+    checksumSha256?: string;
+  }): Promise<void> {
+    try {
+      await this.client.send(
+        new PutObjectCommand({
+          Bucket: this.config.bucket,
+          Key: input.objectKey,
+          Body: input.body,
+          ContentType: input.contentType,
+          ContentLength: input.contentLength,
+          StorageClass: "STANDARD",
+          ...(input.checksumSha256 ? { ChecksumSHA256: input.checksumSha256 } : {}),
+        }),
+      );
+    } catch {
+      throw new StorageUnavailableError("Storage provider could not accept the upload");
+    }
   }
 
   async completeUpload(input: { objectKey: string }): Promise<ObjectMetadata> {

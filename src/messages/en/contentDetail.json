@@ -5,6 +5,7 @@
     "content": "Content",
     "messages": "Messages",
     "copy": "Copy",
+    "delivery": "Delivery",
     "preview": "Preview",
     "publishing": "Publishing",
     "activity": "Activity"
@@ -579,6 +580,8 @@
     "noMediaAvailable": "No ready media is available yet. Upload or import files from the Media Library.",
     "openMediaLibrary": "Open Media Library",
     "addStoredMedia": "Add or import media in the Media Library",
+    "uploadHere": "Upload a file here",
+    "hideUploader": "Hide uploader",
     "storedOnlyNotice": "All delivery files are copied into private agency storage before review. External access links are not submitted.",
     "sourceRequired": "Select at least one stored Media Library asset.",
     "preview": "Preview",

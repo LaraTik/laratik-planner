@@ -112,9 +112,17 @@ export async function POST(req: NextRequest) {
       ...(checksumSha256 ? { checksumSha256 } : {}),
       ...(originalName ? { originalName } : {}),
     });
-    return NextResponse.json(signed, {
-      headers: { "Cache-Control": "no-store, max-age=0" },
-    });
+    return NextResponse.json(
+      {
+        ...signed,
+        // Keep direct-to-R2 as the fast path. The same-origin fallback makes
+        // uploads recoverable when a bucket CORS rule is missing or stale.
+        proxyUploadUrl: `/api/uploads/proxy?intentId=${encodeURIComponent(signed.uploadIntentId)}&workspaceId=${encodeURIComponent(workspaceId)}`,
+      },
+      {
+        headers: { "Cache-Control": "no-store, max-age=0" },
+      },
+    );
   } catch (error) {
     if (error instanceof StorageIntentError) {
       const status =

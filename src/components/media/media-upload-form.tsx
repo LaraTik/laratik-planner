@@ -30,6 +30,13 @@ type QueueItem = {
   duplicates?: DuplicateHint[];
 };
 
+export type MediaUploadResult = {
+  id: string;
+  title: string;
+  kind: MediaKind;
+  byteSize: number;
+};
+
 type DuplicateHint = {
   assetId: string;
   title: string;
@@ -112,8 +119,12 @@ function putFileWithProgress(
 
 export function MediaUploadForm({
   workspaceOptions,
+  compact = false,
+  onAssetReady,
 }: {
   workspaceOptions: { id: string; name: string }[];
+  compact?: boolean;
+  onAssetReady?: (asset: MediaUploadResult) => void;
 }) {
   const t = useLocaleT();
   const router = useRouter();
@@ -205,16 +216,35 @@ export function MediaUploadForm({
       if (!sign.ok) throw await uploadResponseError(sign, t);
       const signed = (await sign.json()) as {
         uploadUrl: string;
+        proxyUploadUrl?: string;
         uploadIntentId: string;
         requiredHeaders?: Record<string, string>;
       };
-      await putFileWithProgress(
-        signed.uploadUrl,
-        item.file,
-        signed.requiredHeaders,
-        (progress) => update(item.id, { progress }),
-        (request) => activeRequests.current.set(item.id, request),
-      );
+      try {
+        await putFileWithProgress(
+          signed.uploadUrl,
+          item.file,
+          signed.requiredHeaders,
+          (progress) => update(item.id, { progress }),
+          (request) => activeRequests.current.set(item.id, request),
+        );
+      } catch (error) {
+        // A missing/stale R2 CORS rule presents as a browser network failure,
+        // even though the server-side upload contract is healthy. Retry the
+        // same intent through the same-origin streaming transport so the user
+        // gets a recoverable upload instead of a misleading connection error.
+        if (error instanceof Error && error.message === "upload_failed" && signed.proxyUploadUrl) {
+          await putFileWithProgress(
+            signed.proxyUploadUrl,
+            item.file,
+            signed.requiredHeaders,
+            (progress) => update(item.id, { progress }),
+            (request) => activeRequests.current.set(item.id, request),
+          );
+        } else {
+          throw error;
+        }
+      }
       update(item.id, { status: "verifying" });
       const complete = await fetch("/api/uploads/complete", {
         method: "POST",
@@ -233,8 +263,19 @@ export function MediaUploadForm({
         }),
       });
       if (!register.ok) throw await uploadResponseError(register, t);
-      const registered = (await register.json()) as { asset?: { status?: string } };
-      update(item.id, { status: registered.asset?.status === "ready" ? "ready" : "processing" });
+      const registered = (await register.json()) as {
+        asset?: { id?: string; status?: string };
+      };
+      const status = registered.asset?.status === "ready" ? "ready" : "processing";
+      update(item.id, { status });
+      if (status === "ready" && registered.asset?.id) {
+        onAssetReady?.({
+          id: registered.asset.id,
+          title: sanitizeAssetTitle(item.title),
+          kind: item.kind,
+          byteSize: item.file.size,
+        });
+      }
     } catch (error) {
       update(item.id, {
         status: "failed",
@@ -260,11 +301,13 @@ export function MediaUploadForm({
   }
 
   return (
-    <Card padding="lg" data-testid="media-upload-card">
+    <Card padding={compact ? "md" : "lg"} data-testid="media-upload-card">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <CardTitle>{t("media.uploadTitle")}</CardTitle>
-          <CardDescription>{t("media.uploadDescription")}</CardDescription>
+          <CardDescription>
+            {compact ? t("media.inlineUploadDescription") : t("media.uploadDescription")}
+          </CardDescription>
         </div>
         {items.length > 0 ? (
           <div className="flex flex-wrap justify-end gap-2">

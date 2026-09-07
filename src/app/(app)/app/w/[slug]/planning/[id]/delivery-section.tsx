@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { FileImage, FileText, FileVideo, FolderOpen, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -11,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/forms/form-field";
 import { submitDeliveryAction } from "../actions";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { MediaUploadForm, type MediaUploadResult } from "@/components/media/media-upload-form";
 import {
   DeliveryVersionList,
   type DeliveryVersion,
@@ -35,6 +35,8 @@ import {
  * the head — the history is always visible above it.
  */
 export function DeliverySection({
+  workspaceId = "",
+  workspaceName = "",
   workspaceSlug,
   contentItemId,
   contentStatus,
@@ -44,6 +46,8 @@ export function DeliverySection({
   mediaAssets = [],
   viewerIsClient = false,
 }: {
+  workspaceId?: string;
+  workspaceName?: string;
   workspaceSlug: string;
   contentItemId: string;
   contentStatus: string;
@@ -65,6 +69,10 @@ export function DeliverySection({
   const [pending, start] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [availableAssets, setAvailableAssets] = useState(mediaAssets);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+  const [showUploader, setShowUploader] = useState(mediaAssets.length === 0);
+  const canUploadInline = workspaceId.length > 0;
   const canSubmit =
     (isDesigner || isManager) &&
     (contentStatus === "in_design" ||
@@ -130,7 +138,9 @@ export function DeliverySection({
                 if (Object.keys(nextErrors).length > 0) {
                   event.preventDefault();
                   const firstInvalid = Object.keys(nextErrors)[0];
-                  form.querySelector<HTMLElement>(`#${firstInvalid}`)?.focus();
+                  const targetId =
+                    firstInvalid === "deliverySources" ? "delivery-media-first" : firstInvalid;
+                  form.querySelector<HTMLElement>(`#${targetId}`)?.focus();
                 }
               }}
               action={(fd) => {
@@ -186,12 +196,53 @@ export function DeliverySection({
                 <legend className="text-body text-fg-primary font-semibold">
                   {t("contentDetail.deliveries.mediaTitle")}
                 </legend>
-                <p id="delivery-media-help" className="text-label text-fg-muted">
-                  {t("contentDetail.deliveries.mediaHelp")}
-                </p>
-                {mediaAssets.length > 0 ? (
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <p id="delivery-media-help" className="text-label text-fg-muted mt-1">
+                    {t("contentDetail.deliveries.mediaHelp")}
+                  </p>
+                  {canUploadInline ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowUploader((value) => !value)}
+                    >
+                      <Package className="h-3.5 w-3.5" aria-hidden="true" />
+                      {showUploader
+                        ? t("contentDetail.deliveries.hideUploader")
+                        : t("contentDetail.deliveries.uploadHere")}
+                    </Button>
+                  ) : null}
+                </div>
+                {showUploader && canUploadInline ? (
+                  <div className="mt-3">
+                    <MediaUploadForm
+                      compact
+                      workspaceOptions={[{ id: workspaceId, name: workspaceName }]}
+                      onAssetReady={(asset: MediaUploadResult) => {
+                        setAvailableAssets((current) =>
+                          current.some((candidate) => candidate.id === asset.id)
+                            ? current
+                            : [
+                                ...current,
+                                {
+                                  ...asset,
+                                  workspaceName,
+                                  visibility: "workspace",
+                                },
+                              ],
+                        );
+                        setSelectedAssetIds((current) =>
+                          current.includes(asset.id) ? current : [...current, asset.id],
+                        );
+                        setShowUploader(false);
+                      }}
+                    />
+                  </div>
+                ) : null}
+                {availableAssets.length > 0 ? (
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {mediaAssets.map((asset) => {
+                    {availableAssets.map((asset, index) => {
                       const Icon =
                         asset.kind === "image"
                           ? FileImage
@@ -203,7 +254,21 @@ export function DeliverySection({
                           key={asset.id}
                           className="border-border bg-surface hover:border-primary focus-within:ring-focus-ring flex min-h-16 cursor-pointer items-center gap-3 rounded-[var(--radius-control)] border p-3 transition-colors focus-within:ring-2"
                         >
-                          <Checkbox name="mediaAssetId" value={asset.id} />
+                          <Checkbox
+                            {...(index === 0 ? { id: "delivery-media-first" } : {})}
+                            name="mediaAssetId"
+                            value={asset.id}
+                            checked={selectedAssetIds.includes(asset.id)}
+                            onCheckedChange={(checked) => {
+                              setSelectedAssetIds((current) =>
+                                checked === true
+                                  ? current.includes(asset.id)
+                                    ? current
+                                    : [...current, asset.id]
+                                  : current.filter((id) => id !== asset.id),
+                              );
+                            }}
+                          />
                           <Icon className="text-primary h-5 w-5 shrink-0" aria-hidden="true" />
                           <span className="min-w-0 flex-1">
                             <span className="text-body text-fg-primary block truncate font-semibold">
@@ -219,14 +284,6 @@ export function DeliverySection({
                         </label>
                       );
                     })}
-                    <Link
-                      href={`/app/w/${workspaceSlug}/media#media-upload`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="border-border bg-surface-subtle text-body text-primary focus-visible:ring-focus-ring col-span-full inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border px-3 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
-                    >
-                      {t("contentDetail.deliveries.addStoredMedia")}
-                    </Link>
                   </div>
                 ) : (
                   <div className="border-border bg-surface-subtle flex flex-wrap items-center gap-3 rounded-[var(--radius-control)] border border-dashed p-3">
@@ -234,14 +291,6 @@ export function DeliverySection({
                     <p className="text-label text-fg-secondary min-w-0 flex-1">
                       {t("contentDetail.deliveries.noMediaAvailable")}
                     </p>
-                    <Link
-                      href={`/app/w/${workspaceSlug}/media?source=link#media-upload`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-label text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
-                    >
-                      {t("contentDetail.deliveries.openMediaLibrary")}
-                    </Link>
                   </div>
                 )}
               </fieldset>

@@ -9,6 +9,7 @@
   "upload": "Upload media",
   "uploadTitle": "Add media",
   "uploadDescription": "Choose files, review their details, then upload them to private storage.",
+  "inlineUploadDescription": "Upload here, then select the file below. You will stay on this delivery.",
   "chooseFiles": "Choose files",
   "dropFiles": "Drop files here or choose from your device",
   "dropHint": "Images up to 50 MB, videos up to 1 GB, and documents up to 25 MB.",

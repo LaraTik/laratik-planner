@@ -576,6 +576,7 @@ export default async function ContentDetailPage({
     { id: "overview", label: t("contentDetail.tabs.overview") },
     { id: "content", label: t("contentDetail.tabs.content") },
     { id: "copy", label: t("contentDetail.tabs.copy") },
+    { id: "delivery", label: t("contentDetail.tabs.delivery") },
     { id: "preview", label: t("contentDetail.tabs.preview") },
     {
       id: "publishing",
@@ -891,56 +892,50 @@ export default async function ContentDetailPage({
                     </div>
                   </div>
                 ) : null}
-
-                {/* Assets & Versions — designer submissions, version
-                  history, and feedback. Phase 3 of the planning-
-                  detail refactor (2026-08-30) merged the orphan
-                  "Creative" tab into the Content panel and
-                  renamed the user-facing copy from "Delivery" →
-                  "Assets & Versions" per spec §10 + §16. The
-                  technical model (`delivery_versions`) is
-                  unchanged; only the visible label and anchor
-                  moved. */}
-                <section
+              </section>
+            ),
+            delivery: (
+              <section
+                id="delivery"
+                className="mt-6 scroll-mt-24 space-y-4"
+                data-testid="workspace-tab-panel-delivery"
+              >
+                <PlanningSection
                   id="assets-versions"
-                  className="scroll-mt-24 space-y-4"
-                  data-testid="content-assets-versions"
+                  title={t("contentDetail.sectionAssetsTitle")}
+                  description={t("contentDetail.sectionAssetsDescription")}
                 >
-                  <PlanningSection
-                    id="delivery"
-                    title={t("contentDetail.sectionAssetsTitle")}
-                    description={t("contentDetail.sectionAssetsDescription")}
-                  >
-                    <DeliverySection
-                      workspaceSlug={slug}
-                      contentItemId={item.id}
-                      contentStatus={item.status}
-                      isDesigner={actorRoles.isDesigner}
-                      isManager={actorRoles.isManager}
-                      viewerIsClient={actorRoles.isClientReviewer}
-                      mediaAssets={deliveryMediaAssets
-                        .filter((row) => row.asset.status === "ready")
-                        .map((row) => ({
-                          id: row.asset.id,
-                          title: row.asset.title,
-                          kind: row.object.kind,
-                          byteSize: row.object.byteSize,
-                          workspaceName: row.workspaceName,
-                          visibility: row.asset.visibility,
-                        }))}
-                      deliveries={deliveries.map((d) => ({
-                        id: d.id,
-                        versionNumber: d.versionNumber,
-                        description: d.description,
-                        designerNote: d.designerNote,
-                        submittedAt: d.submittedAt.toISOString(),
-                        isFinalApproved: d.isFinalApproved,
-                        submittedBy: d.submittedBy,
-                        links: d.links,
+                  <DeliverySection
+                    workspaceId={ws.id}
+                    workspaceName={ws.name}
+                    workspaceSlug={slug}
+                    contentItemId={item.id}
+                    contentStatus={item.status}
+                    isDesigner={actorRoles.isDesigner}
+                    isManager={actorRoles.isManager}
+                    viewerIsClient={actorRoles.isClientReviewer}
+                    mediaAssets={deliveryMediaAssets
+                      .filter((row) => row.asset.status === "ready")
+                      .map((row) => ({
+                        id: row.asset.id,
+                        title: row.asset.title,
+                        kind: row.object.kind,
+                        byteSize: row.object.byteSize,
+                        workspaceName: row.workspaceName,
+                        visibility: row.asset.visibility,
                       }))}
-                    />
-                  </PlanningSection>
-                </section>
+                    deliveries={deliveries.map((d) => ({
+                      id: d.id,
+                      versionNumber: d.versionNumber,
+                      description: d.description,
+                      designerNote: d.designerNote,
+                      submittedAt: d.submittedAt.toISOString(),
+                      isFinalApproved: d.isFinalApproved,
+                      submittedBy: d.submittedBy,
+                      links: d.links,
+                    }))}
+                  />
+                </PlanningSection>
               </section>
             ),
             copy: (

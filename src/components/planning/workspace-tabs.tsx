@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   MessageCircle,
   MessageSquare,
+  Package,
   Pencil,
   Send,
   type LucideIcon,
@@ -17,11 +18,12 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
 /**
  * WorkspaceTabs — the in-page tab strip for the content detail
  * page. Reduces vertical page length by grouping the body into
- * five task-oriented views:
+ * seven task-oriented views:
  *
  *   Overview   — at-a-glance: brief, schedule, channels, readiness
  *   Content    — strategy, creative brief, format fields, AI
  *   Copy       — canonical audience-facing copy and channel readiness
+ *   Delivery   — upload, select, submit, and review delivery versions
  *   Preview    — full-width platform simulator (Feed / Reel / Story /
  *                Carousel). The old "sticky 360px right rail" was
  *                the row's biggest UX smell per AGENTS.md §B;
@@ -46,13 +48,15 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  */
 
 export type WorkspaceTabId =
-  "overview" | "content" | "copy" | "preview" | "publishing" | "activity";
+  "overview" | "content" | "copy" | "delivery" | "preview" | "publishing" | "activity";
 export type WorkspaceTabHash = WorkspaceTabId | "messages";
 
 /** `#messages` was public in shared links; keep it as a read-compatible alias. */
 export function normalizeWorkspaceTabId(value: string): WorkspaceTabId | null {
   if (value === "messages") return "copy";
-  return ["overview", "content", "copy", "preview", "publishing", "activity"].includes(value)
+  return ["overview", "content", "copy", "delivery", "preview", "publishing", "activity"].includes(
+    value,
+  )
     ? (value as WorkspaceTabId)
     : null;
 }
@@ -74,6 +78,7 @@ export const WORKSPACE_TAB_ICONS: Record<WorkspaceTabId, LucideIcon> = {
   overview: LayoutDashboard,
   content: Pencil,
   copy: MessageSquare,
+  delivery: Package,
   preview: Eye,
   publishing: Send,
   activity: History,

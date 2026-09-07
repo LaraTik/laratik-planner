@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Readable } from "node:stream";
 
 type Row = Record<string, unknown>;
 
@@ -44,6 +45,7 @@ const adapterMock = vi.hoisted(() => ({
     expiresAt: 1_800_000_000,
     requiredHeaders: { "Content-Type": "image/png" },
   })),
+  uploadObject: vi.fn(async () => undefined),
   completeUpload: vi.fn<
     () => Promise<{
       objectKey: string;
@@ -86,6 +88,7 @@ const {
   createStorageUploadIntent,
   expireStorageUploadIntents,
   purgeSoftDeletedStorageObjects,
+  uploadStorageObject,
 } = await import("@/lib/storage/intent-service");
 const { quarantineMediaObject } = await import("@/lib/media/quarantine");
 const { createStorageObjectReadUrl } = await import("@/lib/storage/read-service");
@@ -135,6 +138,7 @@ beforeEach(() => {
   capacityMock.reserveCapacity.mockClear();
   capacityMock.releaseCapacityAmount.mockClear();
   adapterMock.createUploadIntent.mockClear();
+  adapterMock.uploadObject.mockClear();
   adapterMock.completeUpload.mockClear();
   adapterMock.abortUpload.mockClear();
   adapterMock.deleteObject.mockClear();
@@ -198,6 +202,34 @@ describe("createStorageUploadIntent", () => {
     await expect(createStorageUploadIntent(validInput)).rejects.toMatchObject({
       code: "storage.quota_exceeded",
     });
+  });
+});
+
+describe("uploadStorageObject", () => {
+  it("streams through the adapter and marks the intent uploaded", async () => {
+    state.selectResults.push([intent()]);
+
+    await expect(
+      uploadStorageObject({
+        agencyId: AGENCY_ID,
+        workspaceId: WORKSPACE_ID,
+        intentId: "intent-1",
+        body: Readable.from([Buffer.from("bytes")]),
+      }),
+    ).resolves.toEqual({
+      objectId: "object-1",
+      objectKey: expect.stringContaining("agencies/agency-1/"),
+    });
+
+    expect(adapterMock.uploadObject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        objectKey: expect.stringContaining("agencies/agency-1/"),
+        contentType: "image/png",
+        contentLength: 12,
+        body: expect.any(Readable),
+      }),
+    );
+    expect(state.setCalls).toContainEqual(expect.objectContaining({ status: "uploaded" }));
   });
 });
 

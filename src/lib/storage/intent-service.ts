@@ -1,4 +1,5 @@
 import "server-only";
+import type { Readable } from "node:stream";
 import { and, eq, inArray, lt, lte } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { storageObjects, storageUploadIntents, workspaces } from "@/lib/db/schema";
@@ -16,6 +17,7 @@ export class StorageIntentError extends Error {
       | "storage.intent_not_found"
       | "storage.intent_expired"
       | "storage.object_verification_failed"
+      | "storage.unavailable"
       | "storage.intent_already_final",
     message: string,
   ) {
@@ -261,6 +263,64 @@ export async function completeStorageUpload(input: {
       "Uploaded object could not be verified",
     );
   }
+}
+
+/**
+ * Same-origin fallback for browsers that cannot PUT directly to the configured
+ * private bucket because its CORS policy is missing or stale. The body remains
+ * a stream, so the fallback does not buffer a large video in application memory.
+ */
+export async function uploadStorageObject(input: {
+  agencyId: string;
+  workspaceId: string;
+  intentId: string;
+  body: Readable;
+}) {
+  const [intent] = await db
+    .select()
+    .from(storageUploadIntents)
+    .where(
+      and(
+        eq(storageUploadIntents.id, input.intentId),
+        eq(storageUploadIntents.agencyId, input.agencyId),
+        eq(storageUploadIntents.workspaceId, input.workspaceId),
+      ),
+    )
+    .limit(1);
+  if (!intent) throw new StorageIntentError("storage.intent_not_found", "Upload intent not found");
+  if (intent.status !== "reserved" && intent.status !== "uploaded") {
+    throw new StorageIntentError(
+      "storage.intent_already_final",
+      "Upload intent is no longer active",
+    );
+  }
+  if (intent.uploadExpiresAt.getTime() <= Date.now()) {
+    await failStorageUpload(input, "expired");
+    throw new StorageIntentError("storage.intent_expired", "Upload intent has expired");
+  }
+
+  const context = await getAgencyStorageContext(input.agencyId);
+  if (!isObjectKeyInAgencyPrefix(intent.objectKey, input.agencyId, context.keyPrefix)) {
+    await failStorageUpload(input, "failed", true);
+    throw new StorageIntentError("storage.object_verification_failed", "Object prefix is invalid");
+  }
+  try {
+    await context.adapter.uploadObject({
+      objectKey: intent.objectKey,
+      contentType: intent.contentType,
+      contentLength: intent.expectedByteSize,
+      body: input.body,
+      ...(intent.checksumSha256 ? { checksumSha256: intent.checksumSha256 } : {}),
+    });
+    await db
+      .update(storageUploadIntents)
+      .set({ status: "uploaded", updatedAt: new Date() })
+      .where(eq(storageUploadIntents.id, intent.id));
+  } catch (error) {
+    await failStorageUpload(input, "failed", true);
+    throw error;
+  }
+  return { objectId: intent.objectId!, objectKey: intent.objectKey };
 }
 
 async function failStorageUpload(
