@@ -6,6 +6,7 @@ import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { canWriteToWorkspace, hasWorkspaceRole } from "@/lib/auth/policy";
 import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
 import { listMediaAssets } from "@/lib/media/service";
+import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { MediaLibraryPage } from "@/components/media/media-library-page";
 
@@ -36,6 +37,7 @@ export default async function AgencyMediaPage({
     ...(filters.kind ? { kind: filters.kind } : {}),
     includeTrashed: filters.trash === "1",
   });
+  const storageSummary = await getAgencyStorageSummary(context.agencyId);
   const writable = await Promise.all(
     options.map(async (workspace) => canWriteToWorkspace(actor, workspace.id)),
   );
@@ -61,6 +63,11 @@ export default async function AgencyMediaPage({
       search={filters.q ?? ""}
       kind={filters.kind ?? ""}
       t={t}
+      storageSummary={{
+        mode: storageSummary.mode,
+        bucket: storageSummary.bucket,
+        keyPrefix: storageSummary.keyPrefix,
+      }}
     />
   );
 }

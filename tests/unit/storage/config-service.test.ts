@@ -189,6 +189,17 @@ describe("testR2Connection and saveManagedR2Config", () => {
       "platform.console.manage",
     );
   });
+
+  it("allows platform operators to configure a non-tenant-restricted S3 endpoint", async () => {
+    state.selectResults.push([]);
+    state.returningResults.push([{ id: "provider-1" }]);
+    await expect(
+      saveManagedR2Config(actor, {
+        ...validConfig,
+        endpoint: "https://storage.example.com/",
+      }),
+    ).resolves.toEqual({ id: "provider-1" });
+  });
 });
 
 describe("getAgencyStorageContext", () => {
@@ -370,6 +381,7 @@ describe("getAgencyStorageSummary", () => {
       reservedBytes: 7,
       quotaBytes: 100,
       percentUsed: used,
+      bucket: "planner-media",
       warning,
     });
   });

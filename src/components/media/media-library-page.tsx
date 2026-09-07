@@ -24,6 +24,7 @@ export function MediaLibraryPage({
   search,
   kind,
   t,
+  storageSummary,
 }: {
   title: string;
   description: string;
@@ -36,6 +37,11 @@ export function MediaLibraryPage({
   search: string;
   kind: string;
   t: (key: string, params?: Record<string, string | number>) => string;
+  storageSummary: {
+    mode: "managed" | "agency_owned";
+    bucket: string | null;
+    keyPrefix: string;
+  };
 }) {
   const hasFilters = Boolean(search || kind || includeTrashed);
   const viewHref = (nextView: "grid" | "list") => {
@@ -67,6 +73,39 @@ export function MediaLibraryPage({
           ) : null}
         </div>
       </header>
+      <Card variant="subtle" padding="md" data-testid="media-storage-destination">
+        <div className="min-w-0">
+          <h2 className="text-title-card text-fg-primary font-semibold">
+            {t("media.storageDestinationTitle")}
+          </h2>
+          <p className="text-label text-fg-secondary mt-1 max-w-3xl">
+            {t("media.storageDestinationDescription")}
+          </p>
+        </div>
+        <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="min-w-0">
+            <dt className="text-label text-fg-muted">{t("media.storageMode")}</dt>
+            <dd className="text-body text-fg-primary mt-1 font-semibold">
+              {storageSummary.mode === "agency_owned"
+                ? t("storage.ownedMode")
+                : t("storage.managedMode")}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-label text-fg-muted">{t("media.storageBucket")}</dt>
+            <dd className="text-body text-fg-primary mt-1 font-semibold break-all" dir="ltr">
+              {storageSummary.bucket ?? t("storage.notConfiguredShort")}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-label text-fg-muted">{t("media.storagePrefix")}</dt>
+            <dd className="text-body text-fg-primary mt-1 font-mono text-sm break-all" dir="ltr">
+              {storageSummary.keyPrefix}
+            </dd>
+          </div>
+        </dl>
+        <p className="text-label text-fg-muted mt-4">{t("media.storageFileNameRule")}</p>
+      </Card>
       {canUpload ? (
         <div id="media-upload" className="scroll-mt-4">
           <MediaSourcePicker workspaceOptions={workspaceOptions} />

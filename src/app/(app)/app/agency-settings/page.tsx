@@ -90,7 +90,12 @@ export default async function AgencySettingsPage() {
     getAgencyStorageSummary(agencyId),
     getSocialStatus(actor, agencyId),
   ]);
-  const storageReady = storageSummary.enabled && storageSummary.status === "healthy";
+  const storageProviderReady =
+    storageSummary.providerConfigured &&
+    storageSummary.providerEnabled &&
+    storageSummary.providerStatus === "healthy";
+  const storageReady =
+    storageProviderReady && storageSummary.enabled && storageSummary.status === "healthy";
   const storageNeedsAttention = storageSummary.enabled && !storageReady;
 
   return (

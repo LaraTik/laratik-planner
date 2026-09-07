@@ -70,6 +70,20 @@ function assertUploadInput(input: {
   }
 }
 
+async function assertWorkspaceBelongsToAgency(
+  workspaceId: string,
+  agencyId: string,
+): Promise<void> {
+  const [workspace] = await db
+    .select({ agencyId: workspaces.agencyId })
+    .from(workspaces)
+    .where(eq(workspaces.id, workspaceId))
+    .limit(1);
+  if (!workspace || workspace.agencyId !== agencyId) {
+    throw new StorageIntentError("storage.workspace_not_found", "Workspace not found");
+  }
+}
+
 export async function createStorageUploadIntent(input: {
   agencyId: string;
   workspaceId: string;
@@ -82,6 +96,9 @@ export async function createStorageUploadIntent(input: {
   originalName?: string;
 }) {
   assertUploadInput(input);
+  // Confirm tenancy before resolving a provider or creating a presigned URL.
+  // A mismatched workspace must not trigger any provider-side side effect.
+  await assertWorkspaceBelongsToAgency(input.workspaceId, input.agencyId);
   const context = await getAgencyStorageContext(input.agencyId);
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
   const safeExtension =
@@ -104,14 +121,6 @@ export async function createStorageUploadIntent(input: {
 
   try {
     return await db.transaction(async (tx) => {
-      const [workspace] = await tx
-        .select({ agencyId: workspaces.agencyId })
-        .from(workspaces)
-        .where(eq(workspaces.id, input.workspaceId))
-        .limit(1);
-      if (!workspace || workspace.agencyId !== input.agencyId) {
-        throw new StorageIntentError("storage.workspace_not_found", "Workspace not found");
-      }
       await reserveCapacity(tx, input.agencyId, [
         { resource: "storage_bytes", increase: input.expectedByteSize },
       ]);

@@ -101,7 +101,10 @@ export async function testAgencyOwnedR2Connection(rawInput: unknown): Promise<vo
 
 export async function saveManagedR2Config(actor: Actor, rawInput: unknown) {
   await requirePlatformPermission(actor, "platform.console.manage");
-  const input = AgencyOwnedR2ConfigSchema.parse(rawInput);
+  // Platform operators may use Cloudflare R2 or another HTTPS S3-compatible
+  // endpoint. The tenant-owned path remains stricter because it makes a
+  // server-side request to user-supplied infrastructure.
+  const input = R2ConfigSchema.parse(rawInput);
   // Rotation is a two-phase operation: prove the new credential can perform
   // the probe before replacing the active encrypted credential in PostgreSQL.
   await testR2Connection(input);
@@ -519,6 +522,7 @@ export async function getAgencyStorageSummary(agencyId: string, database: NodePg
         .select({
           enabled: platformStorageProviderConfigs.enabled,
           status: platformStorageProviderConfigs.status,
+          bucket: platformStorageProviderConfigs.bucket,
         })
         .from(platformStorageProviderConfigs)
         .where(eq(platformStorageProviderConfigs.provider, "r2"))
@@ -591,7 +595,7 @@ export async function getAgencyStorageSummary(agencyId: string, database: NodePg
     mode,
     keyPrefix: config?.keyPrefix ?? `agencies/${agencyId}`,
     accountId: mode === "agency_owned" ? (config?.accountId ?? null) : null,
-    bucket: mode === "agency_owned" ? (config?.bucketOverride ?? null) : null,
+    bucket: mode === "agency_owned" ? (config?.bucketOverride ?? null) : (provider?.bucket ?? null),
     endpoint: mode === "agency_owned" ? (config?.endpointOverride ?? null) : null,
     accessKeyLastFour: mode === "agency_owned" ? (config?.accessKeyLastFour ?? null) : null,
     secretAccessKeyLastFour:

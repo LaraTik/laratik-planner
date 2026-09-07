@@ -45,7 +45,6 @@ export default async function PlatformStoragePage() {
     .limit(1);
   const copy = {
     platformTitle: t("storage.platformTitle"),
-    platformDescription: t("storage.platformDescription"),
     accountId: t("storage.accountId"),
     endpoint: t("storage.endpoint"),
     bucket: t("storage.bucket"),
