@@ -44,7 +44,7 @@ export function TrendCard({
       data-testid="trend-card"
       data-platform={signal.platform}
       data-source-key={signal.sourceKey}
-      className="border-border bg-surface-card flex h-full flex-col gap-3 rounded-[var(--radius-card)] border p-4 shadow-xs"
+      className="border-border bg-surface-card focus-within:ring-focus-ring flex h-full flex-col gap-3 rounded-[var(--radius-card)] border p-4 shadow-xs transition-shadow duration-200 focus-within:ring-2 hover:shadow-md"
     >
       <header className="flex items-center justify-between gap-2">
         <span className="text-label text-fg-muted font-semibold tracking-wide uppercase">

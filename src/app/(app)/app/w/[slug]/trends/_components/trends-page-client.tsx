@@ -130,8 +130,8 @@ export function TrendsPageClient({
       ) : null}
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <TabsList>
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="explore" data-testid="trends-tab-explore">
               <Compass className="h-4 w-4" aria-hidden="true" />
               {t("trends.tabs.explore") || "Explore"}

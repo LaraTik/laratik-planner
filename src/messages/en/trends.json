@@ -64,6 +64,7 @@
     "noKey": "No key needed",
     "selected": "{count} selected",
     "confirm": "Start exploring",
+    "submitting": "Saving…",
     "error": "Could not save your selection. Try again.",
     "adminOnly": "Only agency admins can change the global source list. Contact them to add more."
   },

@@ -126,7 +126,7 @@ export function TrendsSettingsClient({
           rows.map((source) => (
             <li
               key={source.key}
-              className="border-border bg-surface-subtle flex items-center justify-between gap-3 rounded border p-3"
+              className="border-border bg-surface-subtle flex flex-col gap-3 rounded border p-3 transition-colors duration-200 sm:flex-row sm:items-center sm:justify-between"
               data-testid={`optout-row-${source.key}`}
             >
               <div>

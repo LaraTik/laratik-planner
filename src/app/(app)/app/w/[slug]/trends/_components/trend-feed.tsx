@@ -49,7 +49,8 @@ export function TrendFeed({
     return (
       <div
         data-testid="trends-empty-state"
-        className="border-border bg-surface-subtle rounded-[var(--radius-card)] border p-8 text-center"
+        role="status"
+        className="border-border bg-surface-subtle rounded-[var(--radius-card)] border p-6 text-center sm:p-8"
       >
         <TrendingUp className="text-fg-muted mx-auto h-10 w-10" aria-hidden="true" />
         <h2 className="text-title-card text-fg-primary mt-3 font-semibold">
@@ -59,13 +60,13 @@ export function TrendFeed({
           {t("trends.empty.body") ||
             "Once your sources sync, fresh signals appear here. Most sources run on a 6–24h cadence."}
         </p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <Button asChild variant="outline" size="sm">
+        <div className="mt-4 flex flex-col justify-center gap-2 sm:flex-row sm:flex-wrap">
+          <Button asChild variant="outline">
             <Link href="/app/agency-settings/trend-sources">
               {t("trends.empty.manageSources") || "Manage sources"}
             </Link>
           </Button>
-          <Button asChild size="sm" data-testid="trends-empty-create">
+          <Button asChild data-testid="trends-empty-create">
             <Link href={`/app/w/${workspaceSlug}/planning/new`}>
               <FileText className="h-4 w-4" aria-hidden="true" />
               {t("trends.empty.createBrief") || "Start a brief"}
@@ -79,7 +80,11 @@ export function TrendFeed({
   return (
     <div data-testid="trends-feed" className="space-y-3">
       {optouts.length > 0 ? (
-        <div className="flex flex-wrap gap-2" data-testid="trends-optout-badges">
+        <div
+          className="flex flex-wrap gap-2"
+          data-testid="trends-optout-badges"
+          aria-label={t("trends.optoutBadge") || "Opted out sources"}
+        >
           {optouts.map((o) => (
             <span
               key={o.sourceKey}
@@ -91,7 +96,7 @@ export function TrendFeed({
           ))}
         </div>
       ) : null}
-      <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {signals.map((signal) => (
           <li key={signal.id}>
             <TrendCard signal={signal} onUseInBrief={() => onUseInBrief(signal)} />

@@ -183,7 +183,7 @@ export function TrendSourcesAdmin({
         });
         return (
           <TabsContent key={tab} value={tab} className="space-y-3">
-            <ul className="grid gap-3 md:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {filtered.map((def) => {
                 const row = byKey.get(def.key);
                 const health = healthByKey.get(def.key);
@@ -193,7 +193,7 @@ export function TrendSourcesAdmin({
                   <li
                     key={def.key}
                     data-testid={`source-card-${def.key}`}
-                    className="border-border bg-surface-card flex flex-col gap-2 rounded-[var(--radius-card)] border p-4 shadow-xs"
+                    className="border-border bg-surface-card flex flex-col gap-2 rounded-[var(--radius-card)] border p-4 shadow-xs transition-shadow duration-200 hover:shadow-md"
                   >
                     <header className="flex items-start justify-between gap-2">
                       <div>
