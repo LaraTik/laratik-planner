@@ -17,6 +17,7 @@ export type RateLimitScope =
   | "media_import"
   | "media_import_inspect"
   | "media_duplicate_lookup"
+  | "media_public_view"
   | "support_access_request"
   | "support_access_decision";
 
@@ -61,6 +62,9 @@ const RULES: Record<RateLimitScope, { limit: number; windowSeconds: number }> = 
   // bounded so a leaked authenticated session cannot turn it into an
   // unbounded checksum oracle.
   media_duplicate_lookup: { limit: 120, windowSeconds: 60 * 60 },
+  // Anonymous public media routes are bounded per token and source IP so a
+  // leaked link cannot become an unbounded storage bandwidth proxy.
+  media_public_view: { limit: 120, windowSeconds: 15 * 60 },
   // M3 — platform admins can file a support access request up to
   // 10 times per hour; the agency admin can decide up to 30 times
   // per hour. Both are tunable in production if abuse appears.

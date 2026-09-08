@@ -81,6 +81,10 @@ export async function proxy(req: NextRequest) {
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/auth/") ||
+    // Anonymous, token-authorized media shares must reach their route
+    // handler without being redirected to the sign-in screen. The handler
+    // performs token, expiry, lifecycle, and rate-limit checks itself.
+    pathname.startsWith("/api/share/media/") ||
     // Bypass the entire /api/health tree (live + ready + bare alias). The
     // Docker HEALTHCHECK and Traefik loadbalancer probe both hit
     // /api/health/{live,ready}, and they must not be redirected to

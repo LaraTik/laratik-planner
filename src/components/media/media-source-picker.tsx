@@ -12,9 +12,11 @@ import { MediaUploadForm } from "./media-upload-form";
  */
 export function MediaSourcePicker({
   workspaceOptions,
+  folderOptionsByWorkspace,
   initialSource = "device",
 }: {
   workspaceOptions: { id: string; name: string }[];
+  folderOptionsByWorkspace: Record<string, { id: string; name: string }[]>;
   initialSource?: "device" | "link";
 }) {
   const t = useLocaleT();
@@ -41,7 +43,10 @@ export function MediaSourcePicker({
           </TabsTrigger>
         </TabsList>
         <TabsContent value="device">
-          <MediaUploadForm workspaceOptions={workspaceOptions} />
+          <MediaUploadForm
+            workspaceOptions={workspaceOptions}
+            folderOptionsByWorkspace={folderOptionsByWorkspace}
+          />
         </TabsContent>
         <TabsContent value="link">
           <MediaLinkImporter workspaceOptions={workspaceOptions} />

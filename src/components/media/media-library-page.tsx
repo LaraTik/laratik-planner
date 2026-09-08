@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MediaAssetActions } from "./media-asset-actions";
+import { MediaFolderSidebar } from "./media-folder-sidebar";
 import { MediaSourcePicker } from "./media-source-picker";
 import type { MediaKind, MediaSourceType } from "@/lib/media/contract";
 import type { listMediaAssets } from "@/lib/media/service";
@@ -16,6 +17,13 @@ export function MediaLibraryPage({
   description,
   rows,
   workspaceOptions,
+  folderWorkspaceOptions,
+  folderOptionsByWorkspace,
+  basePath,
+  selectedWorkspaceId,
+  selectedFolderId,
+  sharedOnly,
+  preserveParams,
   canUpload,
   managerWorkspaceIds,
   includeTrashed,
@@ -30,6 +38,13 @@ export function MediaLibraryPage({
   description: string;
   rows: MediaRow[];
   workspaceOptions: { id: string; name: string }[];
+  folderWorkspaceOptions: { id: string; name: string }[];
+  folderOptionsByWorkspace: Record<string, { id: string; name: string }[]>;
+  basePath: string;
+  selectedWorkspaceId: string;
+  selectedFolderId: string;
+  sharedOnly: boolean;
+  preserveParams: Record<string, string>;
   canUpload: boolean;
   managerWorkspaceIds: string[];
   includeTrashed: boolean;
@@ -44,12 +59,15 @@ export function MediaLibraryPage({
     keyPrefix: string;
   };
 }) {
-  const hasFilters = Boolean(search || kind || includeTrashed);
+  const hasFilters = Boolean(search || kind || includeTrashed || selectedFolderId || sharedOnly);
   const viewHref = (nextView: "grid" | "list") => {
     const params = new URLSearchParams();
     if (search) params.set("q", search);
     if (kind) params.set("kind", kind);
     if (includeTrashed) params.set("trash", "1");
+    if (selectedWorkspaceId) params.set("workspace", selectedWorkspaceId);
+    if (selectedFolderId) params.set("folder", selectedFolderId);
+    if (sharedOnly) params.set("shared", "1");
     params.set("view", nextView);
     return `?${params.toString()}`;
   };
@@ -109,117 +127,165 @@ export function MediaLibraryPage({
       </Card>
       {canUpload ? (
         <div id="media-upload" className="scroll-mt-4">
-          <MediaSourcePicker workspaceOptions={workspaceOptions} initialSource={initialSource} />
+          <MediaSourcePicker
+            workspaceOptions={workspaceOptions}
+            folderOptionsByWorkspace={folderOptionsByWorkspace}
+            initialSource={initialSource}
+          />
         </div>
       ) : null}
-      <form
-        method="get"
-        className="border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-card)] border p-4 sm:flex-row sm:flex-wrap sm:items-end"
-      >
-        <label
-          className="text-body text-fg-primary min-w-0 flex-1 font-semibold"
-          htmlFor="media-search"
-        >
-          {t("media.searchPlaceholder")}
-          <input
-            id="media-search"
-            name="q"
-            type="search"
-            defaultValue={search}
-            placeholder={t("media.searchPlaceholder")}
-            className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block min-h-11 w-full rounded-[var(--radius-control)] border px-3 font-normal focus-visible:ring-2"
-          />
-        </label>
-        <label className="text-body text-fg-primary font-semibold" htmlFor="media-kind">
-          {t("media.allTypes")}
-          <select
-            id="media-kind"
-            name="kind"
-            defaultValue={kind}
-            className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block min-h-11 w-full rounded-[var(--radius-control)] border px-3 font-normal focus-visible:ring-2"
-          >
-            <option value="">{t("media.allTypes")}</option>
-            <option value="image">{t("media.images")}</option>
-            <option value="video">{t("media.videos")}</option>
-            <option value="document">{t("media.documents")}</option>
-          </select>
-        </label>
-        <label
-          className="text-body text-fg-primary inline-flex min-h-11 items-center gap-2 font-semibold"
-          htmlFor="media-trash"
-        >
-          <Checkbox id="media-trash" name="trash" value="1" defaultChecked={includeTrashed} />
-          {t("media.showTrashed")}
-        </label>
-        <input type="hidden" name="view" value={view} />
-        <button
-          type="submit"
-          className="bg-primary hover:bg-primary-hover focus-visible:ring-focus-ring text-button inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] px-4 font-semibold text-white focus:outline-none focus-visible:ring-2"
-        >
-          {t("media.searchPlaceholder")}
-        </button>
-        {hasFilters ? (
-          <Link
-            href="."
-            className="text-primary focus-visible:ring-focus-ring text-button inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] px-3 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
-          >
-            {t("media.clearFilters")}
-          </Link>
-        ) : null}
-      </form>
-      <div className="flex justify-end" aria-label={t("media.viewOptions")}>
-        <div className="border-border bg-surface inline-flex rounded-[var(--radius-control)] border p-1">
-          <Link
-            href={viewHref("grid")}
-            aria-current={view === "grid" ? "page" : undefined}
-            aria-label={t("media.gridView")}
-            className={`focus-visible:ring-focus-ring inline-flex min-h-10 min-w-10 items-center justify-center rounded-[var(--radius-control)] px-2 focus:outline-none focus-visible:ring-2 ${view === "grid" ? "bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface-subtle"}`}
-          >
-            <Grid2X2 className="h-4 w-4" aria-hidden="true" />
-          </Link>
-          <Link
-            href={viewHref("list")}
-            aria-current={view === "list" ? "page" : undefined}
-            aria-label={t("media.listView")}
-            className={`focus-visible:ring-focus-ring inline-flex min-h-10 min-w-10 items-center justify-center rounded-[var(--radius-control)] px-2 focus:outline-none focus-visible:ring-2 ${view === "list" ? "bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface-subtle"}`}
-          >
-            <List className="h-4 w-4" aria-hidden="true" />
-          </Link>
-        </div>
-      </div>
-      {rows.length === 0 ? (
-        <Card padding="lg">
-          <EmptyState
-            icon={<ImageIcon className="h-8 w-8" aria-hidden="true" />}
-            title={hasFilters ? t("media.noResultsTitle") : t("media.emptyTitle")}
-            description={hasFilters ? t("media.noResultsDescription") : t("media.emptyDescription")}
-          />
-        </Card>
-      ) : view === "grid" ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {rows.map((row) => (
-            <MediaCard
-              key={row.asset.id}
-              row={row}
-              t={t}
-              canManage={managerWorkspaceIds.includes(row.asset.ownerWorkspaceId)}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+        <div className="grid gap-3 lg:w-56 lg:shrink-0">
+          {folderWorkspaceOptions.map((workspace) => (
+            <MediaFolderSidebar
+              key={workspace.id}
+              basePath={basePath}
+              preserveParams={preserveParams}
+              workspaceId={workspace.id}
+              workspaceName={workspace.name}
+              folders={folderOptionsByWorkspace[workspace.id] ?? []}
+              activeFolder={selectedWorkspaceId === workspace.id ? selectedFolderId : ""}
+              sharedOnly={selectedWorkspaceId === workspace.id && sharedOnly}
+              canManage={managerWorkspaceIds.includes(workspace.id)}
+              labels={{
+                folders: t("media.folders"),
+                allMedia: t("media.allMedia"),
+                unfiled: t("media.unfiled"),
+                agencyShared: t("media.agencySharedFilter"),
+                newFolder: t("media.newFolder"),
+                folderName: t("media.folderName"),
+                folderPlaceholder: t("media.folderNamePlaceholder"),
+                createFolder: t("media.createFolder"),
+                folderError: t("media.folderError"),
+                renameFolder: t("media.renameFolder"),
+                archiveFolder: t("media.archiveFolder"),
+                archiveConfirm: t("media.archiveConfirm"),
+              }}
             />
           ))}
         </div>
-      ) : (
-        <div className="border-border bg-surface overflow-hidden rounded-[var(--radius-card)] border">
-          <ul className="divide-border divide-y">
-            {rows.map((row) => (
-              <MediaListRow
-                key={row.asset.id}
-                row={row}
-                t={t}
-                canManage={managerWorkspaceIds.includes(row.asset.ownerWorkspaceId)}
+        <div className="min-w-0 flex-1">
+          <form
+            method="get"
+            className="border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-card)] border p-4 sm:flex-row sm:flex-wrap sm:items-end"
+          >
+            <label
+              className="text-body text-fg-primary min-w-0 flex-1 font-semibold"
+              htmlFor="media-search"
+            >
+              {t("media.searchPlaceholder")}
+              <input
+                id="media-search"
+                name="q"
+                type="search"
+                defaultValue={search}
+                placeholder={t("media.searchPlaceholder")}
+                className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block min-h-11 w-full rounded-[var(--radius-control)] border px-3 font-normal focus-visible:ring-2"
               />
-            ))}
-          </ul>
+            </label>
+            <label className="text-body text-fg-primary font-semibold" htmlFor="media-kind">
+              {t("media.allTypes")}
+              <select
+                id="media-kind"
+                name="kind"
+                defaultValue={kind}
+                className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block min-h-11 w-full rounded-[var(--radius-control)] border px-3 font-normal focus-visible:ring-2"
+              >
+                <option value="">{t("media.allTypes")}</option>
+                <option value="image">{t("media.images")}</option>
+                <option value="video">{t("media.videos")}</option>
+                <option value="document">{t("media.documents")}</option>
+              </select>
+            </label>
+            <label
+              className="text-body text-fg-primary inline-flex min-h-11 items-center gap-2 font-semibold"
+              htmlFor="media-trash"
+            >
+              <Checkbox id="media-trash" name="trash" value="1" defaultChecked={includeTrashed} />
+              {t("media.showTrashed")}
+            </label>
+            <input type="hidden" name="view" value={view} />
+            {selectedWorkspaceId ? (
+              <input type="hidden" name="workspace" value={selectedWorkspaceId} />
+            ) : null}
+            {selectedFolderId ? (
+              <input type="hidden" name="folder" value={selectedFolderId} />
+            ) : null}
+            {sharedOnly ? <input type="hidden" name="shared" value="1" /> : null}
+            <button
+              type="submit"
+              className="bg-primary hover:bg-primary-hover focus-visible:ring-focus-ring text-button inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] px-4 font-semibold text-white focus:outline-none focus-visible:ring-2"
+            >
+              {t("media.searchPlaceholder")}
+            </button>
+            {hasFilters ? (
+              <Link
+                href="."
+                className="text-primary focus-visible:ring-focus-ring text-button inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] px-3 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
+              >
+                {t("media.clearFilters")}
+              </Link>
+            ) : null}
+          </form>
+          <div className="flex justify-end" aria-label={t("media.viewOptions")}>
+            <div className="border-border bg-surface inline-flex rounded-[var(--radius-control)] border p-1">
+              <Link
+                href={viewHref("grid")}
+                aria-current={view === "grid" ? "page" : undefined}
+                aria-label={t("media.gridView")}
+                className={`focus-visible:ring-focus-ring inline-flex min-h-10 min-w-10 items-center justify-center rounded-[var(--radius-control)] px-2 focus:outline-none focus-visible:ring-2 ${view === "grid" ? "bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface-subtle"}`}
+              >
+                <Grid2X2 className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <Link
+                href={viewHref("list")}
+                aria-current={view === "list" ? "page" : undefined}
+                aria-label={t("media.listView")}
+                className={`focus-visible:ring-focus-ring inline-flex min-h-10 min-w-10 items-center justify-center rounded-[var(--radius-control)] px-2 focus:outline-none focus-visible:ring-2 ${view === "list" ? "bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface-subtle"}`}
+              >
+                <List className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+          {rows.length === 0 ? (
+            <Card padding="lg">
+              <EmptyState
+                icon={<ImageIcon className="h-8 w-8" aria-hidden="true" />}
+                title={hasFilters ? t("media.noResultsTitle") : t("media.emptyTitle")}
+                description={
+                  hasFilters ? t("media.noResultsDescription") : t("media.emptyDescription")
+                }
+              />
+            </Card>
+          ) : view === "grid" ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {rows.map((row) => (
+                <MediaCard
+                  key={row.asset.id}
+                  row={row}
+                  t={t}
+                  canManage={managerWorkspaceIds.includes(row.asset.ownerWorkspaceId)}
+                  folderOptions={folderOptionsByWorkspace[row.asset.ownerWorkspaceId] ?? []}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="border-border bg-surface overflow-hidden rounded-[var(--radius-card)] border">
+              <ul className="divide-border divide-y">
+                {rows.map((row) => (
+                  <MediaListRow
+                    key={row.asset.id}
+                    row={row}
+                    t={t}
+                    canManage={managerWorkspaceIds.includes(row.asset.ownerWorkspaceId)}
+                    folderOptions={folderOptionsByWorkspace[row.asset.ownerWorkspaceId] ?? []}
+                  />
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -228,10 +294,12 @@ function MediaCard({
   row,
   t,
   canManage,
+  folderOptions,
 }: {
   row: MediaRow;
   t: (key: string, params?: Record<string, string | number>) => string;
   canManage: boolean;
+  folderOptions: { id: string; name: string }[];
 }) {
   const kind = row.object.kind as MediaKind;
   const Icon = kind === "image" ? ImageIcon : kind === "video" ? Video : FileText;
@@ -312,11 +380,19 @@ function MediaCard({
           <span>
             {row.asset.visibility === "agency" ? t("media.agencyShared") : t("media.workspaceOnly")}
           </span>
+          <span>
+            <span className="sr-only">{t("media.folder")}: </span>
+            {row.folder?.name ?? t("media.unfiled")}
+          </span>
         </div>
         <MediaAssetActions
           assetId={row.asset.id}
           title={row.asset.title}
+          kind={kind}
           trashed={row.asset.status === "trashed"}
+          visibility={row.asset.visibility as "workspace" | "agency"}
+          folderId={row.asset.folderId}
+          folderOptions={folderOptions}
           canManage={canManage}
         />
       </div>
@@ -334,10 +410,12 @@ function MediaListRow({
   row,
   t,
   canManage,
+  folderOptions,
 }: {
   row: MediaRow;
   t: (key: string, params?: Record<string, string | number>) => string;
   canManage: boolean;
+  folderOptions: { id: string; name: string }[];
 }) {
   const kind = row.object.kind as MediaKind;
   const Icon = kind === "image" ? ImageIcon : kind === "video" ? Video : FileText;
@@ -405,12 +483,20 @@ function MediaListRow({
         <span>
           {row.asset.visibility === "agency" ? t("media.agencyShared") : t("media.workspaceOnly")}
         </span>
+        <span>
+          <span className="sr-only">{t("media.folder")}: </span>
+          {row.folder?.name ?? t("media.unfiled")}
+        </span>
       </div>
       <Badge variant={mediaStatusVariant(row.asset.status)}>{statusLabel}</Badge>
       <MediaAssetActions
         assetId={row.asset.id}
         title={row.asset.title}
+        kind={kind}
         trashed={row.asset.status === "trashed"}
+        visibility={row.asset.visibility as "workspace" | "agency"}
+        folderId={row.asset.folderId}
+        folderOptions={folderOptions}
         canManage={canManage}
       />
     </li>

@@ -7,6 +7,7 @@ import { downloadFilename } from "@/lib/media/contract";
 import {
   mediaAssetForActor,
   MediaPermissionError,
+  moveMediaAsset,
   renameMediaAsset,
   restoreMediaAsset,
   setMediaAssetVisibility,
@@ -19,6 +20,7 @@ export const runtime = "nodejs";
 const PatchBody = z.object({
   title: z.string().trim().min(1).max(160).optional(),
   visibility: z.enum(["workspace", "agency"]).optional(),
+  folderId: z.string().uuid().nullable().optional(),
 });
 
 /** Issues a short-lived preview/download URL only after media authorization. */
@@ -72,13 +74,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const actor = await currentActor();
   if (!actor) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   const parsed = PatchBody.safeParse(await req.json().catch(() => null));
-  if (!parsed.success || (!parsed.data.title && !parsed.data.visibility)) {
+  if (
+    !parsed.success ||
+    (parsed.data.title === undefined &&
+      parsed.data.visibility === undefined &&
+      parsed.data.folderId === undefined)
+  ) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
   const { id } = await params;
   try {
     if (parsed.data.title) await renameMediaAsset(actor, id, parsed.data.title);
-    if (parsed.data.visibility) await setMediaAssetVisibility(actor, id, parsed.data.visibility);
+    if (parsed.data.visibility !== undefined)
+      await setMediaAssetVisibility(actor, id, parsed.data.visibility);
+    if (parsed.data.folderId !== undefined) await moveMediaAsset(actor, id, parsed.data.folderId);
     return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof MediaPermissionError)

@@ -14,6 +14,7 @@ const Body = z.object({
   workspaceId: z.string().uuid(),
   storageObjectId: z.string().uuid(),
   title: z.string().trim().min(1).max(160),
+  folderId: z.string().uuid().nullable().optional(),
   visibility: z.enum(["workspace", "agency"]).default("workspace"),
 });
 
@@ -93,10 +94,12 @@ export async function POST(req: NextRequest) {
     .limit(1);
   if (!workspace) return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
   try {
+    const { folderId, ...assetInput } = parsed.data;
     const asset = await registerUploadedMediaAsset({
       actor: { id: session.user.id },
       agencyId: workspace.agencyId,
-      ...parsed.data,
+      ...assetInput,
+      ...(folderId !== undefined ? { folderId } : {}),
     });
     return NextResponse.json({ asset }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {

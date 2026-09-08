@@ -37,6 +37,8 @@ export type MediaUploadResult = {
   byteSize: number;
 };
 
+type FolderOption = { id: string; name: string };
+
 type DuplicateHint = {
   assetId: string;
   title: string;
@@ -119,16 +121,19 @@ function putFileWithProgress(
 
 export function MediaUploadForm({
   workspaceOptions,
+  folderOptionsByWorkspace,
   compact = false,
   onAssetReady,
 }: {
   workspaceOptions: { id: string; name: string }[];
+  folderOptionsByWorkspace?: Record<string, FolderOption[]>;
   compact?: boolean;
   onAssetReady?: (asset: MediaUploadResult) => void;
 }) {
   const t = useLocaleT();
   const router = useRouter();
   const [workspaceId, setWorkspaceId] = React.useState(workspaceOptions[0]?.id ?? "");
+  const [folderId, setFolderId] = React.useState("");
   const [items, setItems] = React.useState<QueueItem[]>([]);
   const [dragging, setDragging] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
@@ -260,6 +265,7 @@ export function MediaUploadForm({
           workspaceId,
           storageObjectId: result.objectId,
           title: sanitizeAssetTitle(item.title),
+          ...(folderId ? { folderId } : {}),
         }),
       });
       if (!register.ok) throw await uploadResponseError(register, t);
@@ -345,7 +351,10 @@ export function MediaUploadForm({
           <select
             id={`${inputId}-workspace`}
             value={workspaceId}
-            onChange={(event) => setWorkspaceId(event.target.value)}
+            onChange={(event) => {
+              setWorkspaceId(event.target.value);
+              setFolderId("");
+            }}
             className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block min-h-11 w-full rounded-[var(--radius-control)] border px-3 font-normal focus-visible:ring-2 sm:max-w-sm"
           >
             <option value="" disabled>
@@ -354,6 +363,27 @@ export function MediaUploadForm({
             {workspaceOptions.map((workspace) => (
               <option key={workspace.id} value={workspace.id}>
                 {workspace.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      {folderOptionsByWorkspace ? (
+        <label
+          className="text-body text-fg-primary mt-5 block font-semibold"
+          htmlFor={`${inputId}-folder`}
+        >
+          {t("media.folder")}
+          <select
+            id={`${inputId}-folder`}
+            value={folderId}
+            onChange={(event) => setFolderId(event.target.value)}
+            className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block min-h-11 w-full rounded-[var(--radius-control)] border px-3 font-normal focus-visible:ring-2 sm:max-w-sm"
+          >
+            <option value="">{t("media.unfiled")}</option>
+            {(folderOptionsByWorkspace[workspaceId] ?? []).map((folder) => (
+              <option key={folder.id} value={folder.id}>
+                {folder.name}
               </option>
             ))}
           </select>

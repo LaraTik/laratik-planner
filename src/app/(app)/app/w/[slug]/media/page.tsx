@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { canWriteToWorkspace, hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
-import { listMediaAssets } from "@/lib/media/service";
+import { listMediaAssets, listMediaFolders } from "@/lib/media/service";
 import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { MediaLibraryPage } from "@/components/media/media-library-page";
@@ -27,6 +27,8 @@ export default async function WorkspaceMediaPage({
     trash?: string;
     view?: string;
     source?: string;
+    folder?: string;
+    shared?: string;
   }>;
 }) {
   const { t } = await tForActive();
@@ -37,11 +39,20 @@ export default async function WorkspaceMediaPage({
   const workspace = await getAccessibleWorkspace(actor, slug);
   if (!workspace) notFound();
   const filters = await searchParams;
+  const folders = await listMediaFolders(actor, {
+    agencyId: workspace.agencyId,
+    workspaceId: workspace.id,
+  });
+  const selectedFolderId = filters.folder ?? "";
   const rows = await listMediaAssets(actor, {
     agencyId: workspace.agencyId,
     workspaceId: workspace.id,
     ...(filters.q ? { query: filters.q } : {}),
     ...(filters.kind ? { kind: filters.kind } : {}),
+    ...(selectedFolderId
+      ? { folderId: selectedFolderId === "unfiled" ? null : selectedFolderId }
+      : {}),
+    ...(filters.shared === "1" ? { sharedOnly: true } : {}),
     includeTrashed: filters.trash === "1",
   });
   const storageSummary = await getAgencyStorageSummary(workspace.agencyId);
@@ -52,6 +63,19 @@ export default async function WorkspaceMediaPage({
       description={t("media.workspaceDescription", { workspace: workspace.name })}
       rows={rows}
       workspaceOptions={[workspace]}
+      folderWorkspaceOptions={[workspace]}
+      folderOptionsByWorkspace={{ [workspace.id]: folders }}
+      basePath={`/app/w/${workspace.slug}/media`}
+      selectedWorkspaceId={workspace.id}
+      selectedFolderId={selectedFolderId}
+      sharedOnly={filters.shared === "1"}
+      preserveParams={{
+        ...(filters.q ? { q: filters.q } : {}),
+        ...(filters.kind ? { kind: filters.kind } : {}),
+        ...(filters.trash === "1" ? { trash: "1" } : {}),
+        ...(filters.view ? { view: filters.view } : {}),
+        ...(filters.source ? { source: filters.source } : {}),
+      }}
       managerWorkspaceIds={
         (await hasWorkspaceRole(actor, workspace.id, ["workspace_manager"])) ? [workspace.id] : []
       }

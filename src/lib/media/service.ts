@@ -1,8 +1,11 @@
 import "server-only";
-import { and, asc, desc, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   mediaAssets,
+  mediaFolders,
+  mediaShareLinks,
+  securityAuditEvents,
   storageObjects,
   workspaceMembershipRoles,
   workspaceMemberships,
@@ -30,6 +33,8 @@ import {
   completeStorageUpload,
   createStorageUploadIntent,
 } from "@/lib/storage/intent-service";
+import { createMediaShareToken, hashMediaShareToken, MEDIA_SHARE_TTL_MS } from "./share-token";
+import { normalizeMediaFolderName } from "./folders";
 
 const MEDIA_READ_ROLES = [
   "workspace_manager",
@@ -51,6 +56,8 @@ type ListInput = {
   workspaceId?: string;
   query?: string;
   kind?: string;
+  folderId?: string | null;
+  sharedOnly?: boolean;
   includeTrashed?: boolean;
   limit?: number;
 };
@@ -108,6 +115,9 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
       : inArray(mediaAssets.status, ["processing", "ready", "failed"]),
   ];
   if (input.kind) conditions.push(eq(storageObjects.kind, input.kind));
+  if (input.folderId === null) conditions.push(isNull(mediaAssets.folderId));
+  if (input.folderId) conditions.push(eq(mediaAssets.folderId, input.folderId));
+  if (input.sharedOnly) conditions.push(eq(mediaAssets.visibility, "agency"));
   const query = input.query?.trim();
   if (query) {
     conditions.push(
@@ -131,10 +141,15 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
       },
       workspaceName: workspaces.name,
       workspaceSlug: workspaces.slug,
+      folder: {
+        id: mediaFolders.id,
+        name: mediaFolders.name,
+      },
     })
     .from(mediaAssets)
     .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
     .innerJoin(workspaces, eq(workspaces.id, mediaAssets.ownerWorkspaceId))
+    .leftJoin(mediaFolders, eq(mediaFolders.id, mediaAssets.folderId))
     .where(and(...conditions))
     .orderBy(desc(mediaAssets.createdAt))
     .limit(Math.min(Math.max(input.limit ?? 60, 1), 100));
@@ -245,6 +260,7 @@ export async function registerUploadedMediaAsset(input: {
   workspaceId: string;
   storageObjectId: string;
   title: string;
+  folderId?: string | null;
   visibility?: "workspace" | "agency";
   sourceType?: MediaSourceType;
   sourceProvider?: string;
@@ -268,6 +284,22 @@ export async function registerUploadedMediaAsset(input: {
     )
     .limit(1);
   if (!object) throw new MediaPermissionError("The uploaded object is not available.");
+
+  if (input.folderId) {
+    const [folder] = await db
+      .select({ id: mediaFolders.id })
+      .from(mediaFolders)
+      .where(
+        and(
+          eq(mediaFolders.id, input.folderId),
+          eq(mediaFolders.agencyId, input.agencyId),
+          eq(mediaFolders.workspaceId, input.workspaceId),
+          isNull(mediaFolders.archivedAt),
+        ),
+      )
+      .limit(1);
+    if (!folder) throw new MediaPermissionError("The selected media folder is not available.");
+  }
 
   const [existing] = await db
     .select({ id: mediaAssets.id })
@@ -321,6 +353,7 @@ export async function registerUploadedMediaAsset(input: {
         agencyId: input.agencyId,
         ownerWorkspaceId: input.workspaceId,
         storageObjectId: input.storageObjectId,
+        ...(input.folderId ? { folderId: input.folderId } : {}),
         title: sanitizeAssetTitle(input.title),
         visibility: input.visibility ?? "workspace",
         status,
@@ -410,6 +443,239 @@ export async function processPendingMediaAssets(limit = 50) {
     }
   }
   return { checked: rows.length, ready, failed, pending } as const;
+}
+
+async function mediaAssetForManagement(assetId: string) {
+  const [row] = await db
+    .select({
+      asset: mediaAssets,
+      object: storageObjects,
+      workspace: { id: workspaces.id, agencyId: workspaces.agencyId },
+    })
+    .from(mediaAssets)
+    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
+    .innerJoin(workspaces, eq(workspaces.id, mediaAssets.ownerWorkspaceId))
+    .where(eq(mediaAssets.id, assetId))
+    .limit(1);
+  return row ?? null;
+}
+
+async function assertMediaManager(actor: Actor, assetId: string) {
+  const row = await mediaAssetForManagement(assetId);
+  if (!row || !(await hasWorkspaceRole(actor, row.asset.ownerWorkspaceId, ["workspace_manager"]))) {
+    throw new MediaPermissionError();
+  }
+  return row;
+}
+
+export async function listMediaFolders(
+  actor: Actor,
+  input: { agencyId: string; workspaceId: string },
+) {
+  const accessible = await accessibleWorkspaceIds(actor, input.agencyId);
+  if (!accessible.includes(input.workspaceId)) return [];
+  return db
+    .select()
+    .from(mediaFolders)
+    .where(
+      and(
+        eq(mediaFolders.agencyId, input.agencyId),
+        eq(mediaFolders.workspaceId, input.workspaceId),
+        isNull(mediaFolders.archivedAt),
+      ),
+    )
+    .orderBy(asc(mediaFolders.sortOrder), asc(mediaFolders.name));
+}
+
+export async function createMediaFolder(
+  actor: Actor,
+  input: { agencyId: string; workspaceId: string; name: string },
+) {
+  if (!(await hasWorkspaceRole(actor, input.workspaceId, ["workspace_manager"]))) {
+    throw new MediaPermissionError("Only workspace managers can manage media folders.");
+  }
+  const name = normalizeMediaFolderName(input.name);
+  if (!name) throw new MediaPermissionError("The folder name is invalid.");
+  const [folder] = await db
+    .insert(mediaFolders)
+    .values({
+      agencyId: input.agencyId,
+      workspaceId: input.workspaceId,
+      name,
+      createdBy: actor.id,
+    })
+    .returning();
+  return folder ?? null;
+}
+
+export async function renameMediaFolder(actor: Actor, folderId: string, name: string) {
+  const [folder] = await db
+    .select()
+    .from(mediaFolders)
+    .where(eq(mediaFolders.id, folderId))
+    .limit(1);
+  if (!folder || !(await hasWorkspaceRole(actor, folder.workspaceId, ["workspace_manager"]))) {
+    throw new MediaPermissionError("Only workspace managers can manage media folders.");
+  }
+  const trimmed = normalizeMediaFolderName(name);
+  if (!trimmed) throw new MediaPermissionError("The folder name is invalid.");
+  const [updated] = await db
+    .update(mediaFolders)
+    .set({ name: trimmed, updatedAt: new Date() })
+    .where(and(eq(mediaFolders.id, folderId), isNull(mediaFolders.archivedAt)))
+    .returning();
+  return updated ?? null;
+}
+
+export async function archiveMediaFolder(actor: Actor, folderId: string) {
+  const [folder] = await db
+    .select()
+    .from(mediaFolders)
+    .where(eq(mediaFolders.id, folderId))
+    .limit(1);
+  if (!folder || !(await hasWorkspaceRole(actor, folder.workspaceId, ["workspace_manager"]))) {
+    throw new MediaPermissionError("Only workspace managers can manage media folders.");
+  }
+  const now = new Date();
+  const updated = await db.transaction(async (tx) => {
+    const [archived] = await tx
+      .update(mediaFolders)
+      .set({ archivedAt: now, archivedBy: actor.id, updatedAt: now })
+      .where(and(eq(mediaFolders.id, folderId), isNull(mediaFolders.archivedAt)))
+      .returning();
+    if (archived) {
+      await tx
+        .update(mediaAssets)
+        .set({ folderId: null, updatedBy: actor.id, updatedAt: now })
+        .where(eq(mediaAssets.folderId, folderId));
+    }
+    return archived;
+  });
+  return updated ?? null;
+}
+
+export async function moveMediaAsset(actor: Actor, assetId: string, folderId: string | null) {
+  const row = await assertMediaManager(actor, assetId);
+  if (folderId) {
+    const [folder] = await db
+      .select({ id: mediaFolders.id })
+      .from(mediaFolders)
+      .where(
+        and(
+          eq(mediaFolders.id, folderId),
+          eq(mediaFolders.agencyId, row.asset.agencyId),
+          eq(mediaFolders.workspaceId, row.asset.ownerWorkspaceId),
+          isNull(mediaFolders.archivedAt),
+        ),
+      )
+      .limit(1);
+    if (!folder) throw new MediaPermissionError("The selected media folder is not available.");
+  }
+  const [updated] = await db
+    .update(mediaAssets)
+    .set({ folderId, updatedBy: actor.id, updatedAt: new Date() })
+    .where(eq(mediaAssets.id, assetId))
+    .returning();
+  return updated ?? null;
+}
+
+export async function activeMediaShareForActor(actor: Actor, assetId: string) {
+  const row = await assertMediaManager(actor, assetId);
+  const [share] = await db
+    .select({ id: mediaShareLinks.id, expiresAt: mediaShareLinks.expiresAt })
+    .from(mediaShareLinks)
+    .where(
+      and(
+        eq(mediaShareLinks.mediaAssetId, assetId),
+        isNull(mediaShareLinks.revokedAt),
+        gt(mediaShareLinks.expiresAt, new Date()),
+      ),
+    )
+    .limit(1);
+  return { asset: row.asset, share: share ?? null };
+}
+
+export async function createPublicMediaShare(actor: Actor, assetId: string) {
+  const row = await assertMediaManager(actor, assetId);
+  if (
+    row.asset.status !== "ready" ||
+    row.object.status !== "active" ||
+    row.object.kind !== "image"
+  ) {
+    throw new MediaPermissionError("Only ready images can be shared publicly.");
+  }
+
+  const token = createMediaShareToken();
+  const expiresAt = new Date(Date.now() + MEDIA_SHARE_TTL_MS);
+  const now = new Date();
+  const share = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`media-share:${assetId}`}))`);
+    await tx
+      .update(mediaShareLinks)
+      .set({ revokedAt: now, updatedAt: now })
+      .where(and(eq(mediaShareLinks.mediaAssetId, assetId), isNull(mediaShareLinks.revokedAt)));
+    const [created] = await tx
+      .insert(mediaShareLinks)
+      .values({
+        mediaAssetId: assetId,
+        tokenHash: hashMediaShareToken(token),
+        expiresAt,
+        createdBy: actor.id,
+      })
+      .returning({ id: mediaShareLinks.id, expiresAt: mediaShareLinks.expiresAt });
+    await tx.insert(securityAuditEvents).values({
+      actorId: actor.id,
+      action: "media.public_share.create",
+      targetType: "media_asset",
+      targetId: assetId,
+      outcome: "success",
+      metadata: { expiresAt: expiresAt.toISOString(), rotated: true },
+    });
+    return created;
+  });
+  if (!share) throw new Error("Public media link could not be created");
+  return { token, expiresAt: share.expiresAt };
+}
+
+export async function revokePublicMediaShare(actor: Actor, assetId: string) {
+  await assertMediaManager(actor, assetId);
+  const now = new Date();
+  const updated = await db
+    .update(mediaShareLinks)
+    .set({ revokedAt: now, updatedAt: now })
+    .where(and(eq(mediaShareLinks.mediaAssetId, assetId), isNull(mediaShareLinks.revokedAt)))
+    .returning({ id: mediaShareLinks.id });
+  if (updated.length > 0) {
+    await db.insert(securityAuditEvents).values({
+      actorId: actor.id,
+      action: "media.public_share.revoke",
+      targetType: "media_asset",
+      targetId: assetId,
+      outcome: "success",
+    });
+  }
+  return { revoked: updated.length > 0 };
+}
+
+export async function publicMediaAssetForToken(token: string) {
+  const tokenHash = hashMediaShareToken(token);
+  const [row] = await db
+    .select({ asset: mediaAssets, object: storageObjects })
+    .from(mediaShareLinks)
+    .innerJoin(mediaAssets, eq(mediaAssets.id, mediaShareLinks.mediaAssetId))
+    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
+    .where(
+      and(
+        eq(mediaShareLinks.tokenHash, tokenHash),
+        isNull(mediaShareLinks.revokedAt),
+        gt(mediaShareLinks.expiresAt, new Date()),
+        eq(mediaAssets.status, "ready"),
+        eq(storageObjects.status, "active"),
+        eq(storageObjects.kind, "image"),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
 }
 
 export async function renameMediaAsset(actor: Actor, assetId: string, title: string) {

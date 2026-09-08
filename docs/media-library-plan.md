@@ -1,6 +1,6 @@
 # Media Library — final implementation plan
 
-Status date: 2026-09-07
+Status date: 2026-09-08
 
 This plan is the refined implementation contract for LaraTik Planner's agency/workspace media library. It incorporates the workspace-based navigation decision, direct-to-storage uploads, third-party imports, safe naming, legacy compatibility, bilingual UI, and production-readiness evidence.
 
@@ -144,6 +144,8 @@ Implemented tables:
 
 - `media_asset`: ownership, title/description/tags/alt text, source metadata, visibility, lifecycle status, trash timestamps, and failure code.
 - `media_asset_link`: explicit links from media to content items, comments, deliveries, or Brand Kit assets, with client-visible state.
+- `media_folder`: workspace-owned, one-level folders; `folder_id = NULL` is the safe `Unfiled` area and archived folders release their assets back to it.
+- `media_share_link`: one revocable, expiring public grant per image; only the SHA-256 token hash is stored.
 - Existing `storage_object`: provider state, object key, MIME, size, checksum, original name, and upload intent lifecycle.
 
 Lifecycle:
@@ -216,6 +218,9 @@ Required states and behavior:
 - Icon actions use accessible labels and Lucide icons; no emoji-only controls.
 - Layout evidence is required at 375, 768, 1024, 1280, and 1440+ widths.
 - Every visible string comes from the English/Arabic catalogs; filenames, URLs, IDs, hashtags, and provider values remain direction-isolated.
+- Folder navigation keeps workspace ownership visible through `Workspace / Folder` provenance, offers desktop navigation and a mobile selector, and preserves `Unfiled` as the default destination for existing assets.
+- Internal agency sharing is a reversible visibility toggle with inline pending/success/error feedback; it is separate from public sharing.
+- Public sharing is image-only, manager/admin-only, defaults to 30 days, rotates the previous grant, and streams through a token-authorized same-origin route with generic unavailable responses, `no-store`, `noindex`, safe content headers, and rate limiting. The public viewer intentionally omits agency, workspace, folder, and catalog details.
 
 ## 8. Delivery phases
 
