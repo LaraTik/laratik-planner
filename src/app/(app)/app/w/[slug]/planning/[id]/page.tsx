@@ -73,7 +73,6 @@ import { PublishPackageForm } from "./publish/publish-package-form";
 import { getMetaPublishingReadinessForWorkspace } from "@/lib/social/publishing-readiness-service";
 import { metaPublishingReadinessCopy } from "@/lib/social/publishing-readiness-copy";
 import { designerEditableFieldsFor } from "@/lib/content/production-fields";
-import { listMediaAssets } from "@/lib/media/service";
 
 export async function generateMetadata({
   params,
@@ -148,15 +147,6 @@ export default async function ContentDetailPage({
     isClientReviewer: roles.has("client_reviewer"),
     isPublisher: roles.has("publisher"),
   };
-
-  const deliveryMediaAssets =
-    actorRoles.isDesigner || actorRoles.isManager
-      ? await listMediaAssets(actor, {
-          agencyId: ws.agencyId,
-          workspaceId: ws.id,
-          limit: 50,
-        })
-      : [];
 
   const [
     approvals,
@@ -914,16 +904,6 @@ export default async function ContentDetailPage({
                     isDesigner={actorRoles.isDesigner}
                     isManager={actorRoles.isManager}
                     viewerIsClient={actorRoles.isClientReviewer}
-                    mediaAssets={deliveryMediaAssets
-                      .filter((row) => row.asset.status === "ready")
-                      .map((row) => ({
-                        id: row.asset.id,
-                        title: row.asset.title,
-                        kind: row.object.kind,
-                        byteSize: row.object.byteSize,
-                        workspaceName: row.workspaceName,
-                        visibility: row.asset.visibility,
-                      }))}
                     deliveries={deliveries.map((d) => ({
                       id: d.id,
                       versionNumber: d.versionNumber,

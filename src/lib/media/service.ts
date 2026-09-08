@@ -127,6 +127,7 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
         height: storageObjects.height,
         durationMs: storageObjects.durationMs,
         kind: storageObjects.kind,
+        status: storageObjects.status,
       },
       workspaceName: workspaces.name,
       workspaceSlug: workspaces.slug,

@@ -186,6 +186,32 @@ describe("DeliveryVersionCard", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("renders an inline video preview for stored video assets", () => {
+    render(
+      <DeliveryVersionList
+        versions={[
+          baseVersion({
+            links: [
+              {
+                id: "l-video",
+                provider: "other",
+                label: "Reel preview",
+                url: "/api/deliveries/assets/l-video",
+                isPreview: true,
+                mediaAssetId: "asset-video",
+                mediaKind: "video",
+              },
+            ],
+          }),
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByTestId("delivery-version-thumbnail-1-l-video").querySelector("video"),
+    ).toBeInTheDocument();
+  });
+
   it("renders an Approve button when showApprove is set and the version is not approved", () => {
     render(<DeliveryVersionList versions={[baseVersion()]} showApprove onApprove={vi.fn()} />);
     expect(screen.getByTestId("delivery-version-approve-1")).toBeInTheDocument();

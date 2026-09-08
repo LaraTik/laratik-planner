@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
   Link as LinkIcon,
   PenSquare,
+  Video,
 } from "lucide-react";
 import { DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
@@ -196,10 +197,9 @@ export function DeliveryVersionCard({
       </header>
 
       {/* Thumbnail strip — one tile per stored asset. Legacy links remain
-          readable for historical versions. When the asset is
-          a previewable image we render an <img> so the planner
-          can see the asset at a glance; otherwise we fall back
-          to a provider-icon tile. */}
+          readable for historical versions. Stored images and videos
+          render inline previews; legacy share links fall back to a
+          provider-icon tile. */}
       {version.links.length > 0 ? (
         <ol
           className="mt-3 flex flex-wrap gap-2"
@@ -219,6 +219,26 @@ export function DeliveryVersionCard({
                   className="h-full w-full object-cover"
                   loading="lazy"
                 />
+              ) : l.mediaAssetId && l.mediaKind === "video" ? (
+                <video
+                  controls
+                  playsInline
+                  preload="metadata"
+                  aria-label={`${version.description} — ${l.label}`}
+                  className="h-full w-full object-cover"
+                >
+                  <source src={l.url} />
+                </video>
+              ) : looksLikeDirectVideo(l.url) ? (
+                <video
+                  controls
+                  playsInline
+                  preload="metadata"
+                  aria-label={`${version.description} — ${l.label}`}
+                  className="h-full w-full object-cover"
+                >
+                  <source src={l.url} />
+                </video>
               ) : looksLikeDirectImage(l.url) ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -229,7 +249,11 @@ export function DeliveryVersionCard({
                 />
               ) : (
                 <div className="text-fg-muted flex flex-col items-center gap-0.5 p-1 text-center">
-                  <ImageIcon className="h-4 w-4" aria-hidden="true" />
+                  {looksLikeDirectVideo(l.url) ? (
+                    <Video className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <ImageIcon className="h-4 w-4" aria-hidden="true" />
+                  )}
                   <span className="text-label truncate font-semibold">
                     {l.mediaAssetId
                       ? t("contentDetail.deliveries.privateMedia")
@@ -372,6 +396,15 @@ function looksLikeDirectImage(url: string): boolean {
     const u = new URL(url);
     if (u.pathname === "/") return false;
     return /\.(png|jpe?g|gif|webp|avif|heic|heif|bmp|svg)(\?.*)?$/i.test(u.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function looksLikeDirectVideo(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return /\.(mp4|mov|webm|m4v)(\?.*)?$/i.test(u.pathname);
   } catch {
     return false;
   }

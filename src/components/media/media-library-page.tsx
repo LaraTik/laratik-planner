@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { FileText, Grid2X2, Image as ImageIcon, List, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -242,15 +241,30 @@ function MediaCard({
     downloadable && kind === "image" ? (
       <>
         <span className="sr-only">{t("media.download")}</span>
-        <Image
+        {/* The media route is private. A browser request keeps the session
+            cookie available; next/image's optimizer cannot authenticate it. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={`/api/media/assets/${encodeURIComponent(row.asset.id)}`}
           alt={row.asset.altText ?? row.asset.title}
-          fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
-          className="object-cover"
-          unoptimized
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
         />
       </>
+    ) : downloadable && kind === "video" ? (
+      <video
+        controls
+        playsInline
+        preload="metadata"
+        aria-label={row.asset.altText ?? row.asset.title}
+        className="h-full w-full object-cover"
+      >
+        <source
+          src={`/api/media/assets/${encodeURIComponent(row.asset.id)}`}
+          type={row.object.mimeType}
+        />
+      </video>
     ) : (
       <>
         <Icon className="h-12 w-12" aria-hidden="true" />
@@ -261,7 +275,7 @@ function MediaCard({
     "bg-surface-subtle text-fg-muted focus-visible:ring-focus-ring relative flex aspect-[4/3] items-center justify-center focus-visible:ring-2";
   return (
     <article className="border-border bg-surface overflow-hidden rounded-[var(--radius-card)] border">
-      {downloadable ? (
+      {downloadable && kind !== "video" ? (
         <a
           href={`/api/media/assets/${encodeURIComponent(row.asset.id)}?download=1`}
           className={`${thumbnailClassName} focus-visible:outline-none`}
@@ -269,6 +283,8 @@ function MediaCard({
         >
           {thumbnail}
         </a>
+      ) : downloadable && kind === "video" ? (
+        <div className={thumbnailClassName}>{thumbnail}</div>
       ) : (
         <div className={thumbnailClassName} role="status" aria-label={statusLabel}>
           {thumbnail}
@@ -329,14 +345,27 @@ function MediaListRow({
   const statusLabel = mediaStatusLabel(row, t);
   const thumbnail =
     downloadable && kind === "image" ? (
-      <Image
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
         src={`/api/media/assets/${encodeURIComponent(row.asset.id)}`}
         alt={row.asset.altText ?? row.asset.title}
-        fill
-        sizes="56px"
-        className="rounded-[var(--radius-control)] object-cover"
-        unoptimized
+        loading="lazy"
+        decoding="async"
+        className="h-full w-full rounded-[var(--radius-control)] object-cover"
       />
+    ) : downloadable && kind === "video" ? (
+      <video
+        controls
+        playsInline
+        preload="metadata"
+        aria-label={row.asset.altText ?? row.asset.title}
+        className="h-full w-full rounded-[var(--radius-control)] object-cover"
+      >
+        <source
+          src={`/api/media/assets/${encodeURIComponent(row.asset.id)}`}
+          type={row.object.mimeType}
+        />
+      </video>
     ) : (
       <>
         <Icon className="h-6 w-6" aria-hidden="true" />
@@ -347,7 +376,7 @@ function MediaListRow({
     "bg-surface-subtle text-fg-muted relative flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)]";
   return (
     <li className="flex flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap">
-      {downloadable ? (
+      {downloadable && kind !== "video" ? (
         <a
           href={`/api/media/assets/${encodeURIComponent(row.asset.id)}?download=1`}
           className={`${thumbnailClassName} focus-visible:ring-focus-ring focus:outline-none focus-visible:ring-2`}
@@ -355,6 +384,8 @@ function MediaListRow({
         >
           {thumbnail}
         </a>
+      ) : downloadable && kind === "video" ? (
+        <div className={thumbnailClassName}>{thumbnail}</div>
       ) : (
         <div className={thumbnailClassName} role="status" aria-label={statusLabel}>
           {thumbnail}

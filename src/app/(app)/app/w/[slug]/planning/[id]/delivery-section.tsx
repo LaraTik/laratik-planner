@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { FileImage, FileText, FileVideo, FolderOpen, Package } from "lucide-react";
+import { FileText, FolderOpen, Package, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,17 @@ import {
   DeliveryVersionList,
   type DeliveryVersion,
 } from "@/components/workspace/delivery-version-card";
+
+type DeliveryMediaAsset = {
+  id: string;
+  title: string;
+  kind: string;
+  mimeType?: string;
+  byteSize: number;
+  workspaceName: string;
+  visibility: string;
+  altText?: string | null;
+};
 
 /**
  * STUDIOFLOW_MASTER_PROMPT.md §10 — Delivery history + submit form.
@@ -54,14 +65,7 @@ export function DeliverySection({
   isDesigner: boolean;
   isManager: boolean;
   deliveries: DeliveryVersion[];
-  mediaAssets?: {
-    id: string;
-    title: string;
-    kind: string;
-    byteSize: number;
-    workspaceName: string;
-    visibility: string;
-  }[];
+  mediaAssets?: DeliveryMediaAsset[];
   viewerIsClient?: boolean;
 }) {
   const t = useLocaleT();
@@ -71,13 +75,63 @@ export function DeliverySection({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [availableAssets, setAvailableAssets] = useState(mediaAssets);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
-  const [showUploader, setShowUploader] = useState(mediaAssets.length === 0);
+  const [showUploader, setShowUploader] = useState(false);
+  const [showMediaSearch, setShowMediaSearch] = useState(false);
+  const [mediaQuery, setMediaQuery] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searchingMedia, setSearchingMedia] = useState(false);
+  const [mediaSearchError, setMediaSearchError] = useState<string | null>(null);
   const canUploadInline = workspaceId.length > 0;
   const canSubmit =
     (isDesigner || isManager) &&
     (contentStatus === "in_design" ||
       contentStatus === "creative_review" ||
       contentStatus === "changes_requested");
+
+  async function searchMediaLibrary() {
+    const query = mediaQuery.trim();
+    setHasSearched(Boolean(query));
+    setMediaSearchError(null);
+    if (!query) {
+      setAvailableAssets((current) =>
+        current.filter((asset) => selectedAssetIds.includes(asset.id)),
+      );
+      return;
+    }
+
+    setSearchingMedia(true);
+    try {
+      const params = new URLSearchParams({ workspaceId, q: query });
+      const response = await fetch(`/api/media/assets?${params.toString()}`, {
+        headers: { Accept: "application/json" },
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        assets?: DeliveryMediaAsset[];
+        error?: string;
+      } | null;
+      if (!response.ok) throw new Error(payload?.error ?? "Media search failed");
+      const results = payload?.assets ?? [];
+      setAvailableAssets((current) => {
+        const selected = current.filter((asset) => selectedAssetIds.includes(asset.id));
+        const seen = new Set(selected.map((asset) => asset.id));
+        return [...selected, ...results.filter((asset) => !seen.has(asset.id))];
+      });
+    } catch {
+      setMediaSearchError(t("contentDetail.deliveries.mediaSearchFailed"));
+      setAvailableAssets((current) =>
+        current.filter((asset) => selectedAssetIds.includes(asset.id)),
+      );
+    } finally {
+      setSearchingMedia(false);
+    }
+  }
+
+  function clearMediaSearch() {
+    setMediaQuery("");
+    setHasSearched(false);
+    setMediaSearchError(null);
+    setAvailableAssets((current) => current.filter((asset) => selectedAssetIds.includes(asset.id)));
+  }
 
   return (
     <div className="space-y-4">
@@ -200,20 +254,91 @@ export function DeliverySection({
                   <p id="delivery-media-help" className="text-label text-fg-muted mt-1">
                     {t("contentDetail.deliveries.mediaHelp")}
                   </p>
-                  {canUploadInline ? (
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
-                      onClick={() => setShowUploader((value) => !value)}
+                      onClick={() => setShowMediaSearch((value) => !value)}
                     >
-                      <Package className="h-3.5 w-3.5" aria-hidden="true" />
-                      {showUploader
-                        ? t("contentDetail.deliveries.hideUploader")
-                        : t("contentDetail.deliveries.uploadHere")}
+                      <Search className="h-3.5 w-3.5" aria-hidden="true" />
+                      {showMediaSearch
+                        ? t("contentDetail.deliveries.closeMediaSearch")
+                        : t("contentDetail.deliveries.searchMediaLibrary")}
                     </Button>
-                  ) : null}
+                    {canUploadInline ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowUploader((value) => !value)}
+                      >
+                        <Package className="h-3.5 w-3.5" aria-hidden="true" />
+                        {showUploader
+                          ? t("contentDetail.deliveries.hideUploader")
+                          : t("contentDetail.deliveries.uploadHere")}
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
+                {showMediaSearch ? (
+                  <div className="border-border bg-surface-subtle mt-3 space-y-3 rounded-[var(--radius-control)] border p-3">
+                    <label
+                      htmlFor="delivery-media-search"
+                      className="text-label text-fg-primary block font-semibold"
+                    >
+                      {t("contentDetail.deliveries.searchMediaLabel")}
+                    </label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        id="delivery-media-search"
+                        value={mediaQuery}
+                        onChange={(event) => setMediaQuery(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            void searchMediaLibrary();
+                          }
+                        }}
+                        placeholder={t("contentDetail.deliveries.searchMediaPlaceholder")}
+                        className="min-h-11 flex-1"
+                        autoFocus
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="min-h-11"
+                        onClick={() => void searchMediaLibrary()}
+                        disabled={searchingMedia}
+                      >
+                        <Search className="h-3.5 w-3.5" aria-hidden="true" />
+                        {searchingMedia
+                          ? t("contentDetail.deliveries.searchingMedia")
+                          : t("contentDetail.deliveries.searchMedia")}
+                      </Button>
+                      {hasSearched || mediaQuery ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="min-h-11"
+                          onClick={clearMediaSearch}
+                          aria-label={t("contentDetail.deliveries.clearMediaSearch")}
+                        >
+                          <X className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                      ) : null}
+                    </div>
+                    <p className="text-label text-fg-muted">
+                      {t("contentDetail.deliveries.searchMediaHint")}
+                    </p>
+                    {mediaSearchError ? (
+                      <p role="alert" className="text-label text-danger font-semibold">
+                        {mediaSearchError}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
                 {showUploader && canUploadInline ? (
                   <div className="mt-3">
                     <MediaUploadForm
@@ -235,27 +360,23 @@ export function DeliverySection({
                         setSelectedAssetIds((current) =>
                           current.includes(asset.id) ? current : [...current, asset.id],
                         );
+                        setHasSearched(false);
                         setShowUploader(false);
                       }}
                     />
                   </div>
                 ) : null}
-                {availableAssets.length > 0 ? (
+                {availableAssets.length > 0 && (hasSearched || selectedAssetIds.length > 0) ? (
                   <div className="grid gap-2 sm:grid-cols-2">
                     {availableAssets.map((asset, index) => {
-                      const Icon =
-                        asset.kind === "image"
-                          ? FileImage
-                          : asset.kind === "video"
-                            ? FileVideo
-                            : FileText;
+                      const checkboxId = `delivery-media-${asset.id}`;
                       return (
-                        <label
+                        <div
                           key={asset.id}
-                          className="border-border bg-surface hover:border-primary focus-within:ring-focus-ring flex min-h-16 cursor-pointer items-center gap-3 rounded-[var(--radius-control)] border p-3 transition-colors focus-within:ring-2"
+                          className="border-border bg-surface hover:border-primary focus-within:ring-focus-ring flex min-h-20 items-center gap-3 rounded-[var(--radius-control)] border p-3 transition-colors focus-within:ring-2"
                         >
                           <Checkbox
-                            {...(index === 0 ? { id: "delivery-media-first" } : {})}
+                            id={index === 0 ? "delivery-media-first" : checkboxId}
                             name="mediaAssetId"
                             value={asset.id}
                             checked={selectedAssetIds.includes(asset.id)}
@@ -269,11 +390,14 @@ export function DeliverySection({
                               );
                             }}
                           />
-                          <Icon className="text-primary h-5 w-5 shrink-0" aria-hidden="true" />
+                          <MediaAssetPreview asset={asset} />
                           <span className="min-w-0 flex-1">
-                            <span className="text-body text-fg-primary block truncate font-semibold">
+                            <label
+                              htmlFor={index === 0 ? "delivery-media-first" : checkboxId}
+                              className="text-body text-fg-primary block cursor-pointer truncate font-semibold"
+                            >
                               {asset.title}
-                            </span>
+                            </label>
                             <span className="text-label text-fg-muted block truncate">
                               {formatBytes(asset.byteSize)} · {asset.workspaceName}
                               {asset.visibility === "agency"
@@ -281,18 +405,32 @@ export function DeliverySection({
                                 : ""}
                             </span>
                           </span>
-                        </label>
+                        </div>
                       );
                     })}
                   </div>
-                ) : (
+                ) : showMediaSearch && hasSearched ? (
                   <div className="border-border bg-surface-subtle flex flex-wrap items-center gap-3 rounded-[var(--radius-control)] border border-dashed p-3">
                     <FolderOpen className="text-fg-muted h-5 w-5 shrink-0" aria-hidden="true" />
                     <p className="text-label text-fg-secondary min-w-0 flex-1">
-                      {t("contentDetail.deliveries.noMediaAvailable")}
+                      {t("contentDetail.deliveries.noMediaSearchResults")}
                     </p>
                   </div>
-                )}
+                ) : showMediaSearch ? (
+                  <div className="border-border bg-surface-subtle flex flex-wrap items-center gap-3 rounded-[var(--radius-control)] border border-dashed p-3">
+                    <Search className="text-fg-muted h-5 w-5 shrink-0" aria-hidden="true" />
+                    <p className="text-label text-fg-secondary min-w-0 flex-1">
+                      {t("contentDetail.deliveries.searchMediaPrompt")}
+                    </p>
+                  </div>
+                ) : selectedAssetIds.length === 0 ? (
+                  <div className="border-border bg-surface-subtle flex flex-wrap items-center gap-3 rounded-[var(--radius-control)] border border-dashed p-3">
+                    <FolderOpen className="text-fg-muted h-5 w-5 shrink-0" aria-hidden="true" />
+                    <p className="text-label text-fg-secondary min-w-0 flex-1">
+                      {t("contentDetail.deliveries.mediaSearchClosed")}
+                    </p>
+                  </div>
+                ) : null}
               </fieldset>
 
               <p className="border-border bg-surface-subtle text-label text-fg-secondary rounded-[var(--radius-control)] border p-3">
@@ -347,4 +485,47 @@ function formatBytes(value: number): string {
   if (value < 1024 ** 2) return `${Math.max(1, Math.round(value / 1024))} KB`;
   if (value < 1024 ** 3) return `${(value / 1024 ** 2).toFixed(1)} MB`;
   return `${(value / 1024 ** 3).toFixed(1)} GB`;
+}
+
+function MediaAssetPreview({ asset }: { asset: DeliveryMediaAsset }) {
+  const src = `/api/media/assets/${encodeURIComponent(asset.id)}`;
+  const label = asset.altText ?? asset.title;
+
+  if (asset.kind === "image") {
+    return (
+      <div className="bg-surface-subtle h-14 w-16 shrink-0 overflow-hidden rounded-[var(--radius-control)]">
+        {/* Authenticated same-origin media request; do not use next/image here. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={label}
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  if (asset.kind === "video") {
+    return (
+      <div className="bg-surface-subtle h-14 w-16 shrink-0 overflow-hidden rounded-[var(--radius-control)]">
+        <video
+          controls
+          playsInline
+          preload="metadata"
+          aria-label={label}
+          className="h-full w-full object-cover"
+        >
+          <source src={src} type={asset.mimeType} />
+        </video>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-primary-subtle text-primary flex h-14 w-16 shrink-0 items-center justify-center rounded-[var(--radius-control)]">
+      <FileText className="h-5 w-5" aria-hidden="true" />
+    </div>
+  );
 }
