@@ -58,8 +58,8 @@ test.describe("auth gate: protected /api/* routes return JSON 401/redirect", () 
 
 test.describe("auth gate: signed-in users skip /signin", () => {
   test("GET /signin while authed → 307 → /app", async ({ page }) => {
-    const { devSignIn } = await import("./_helpers");
-    await devSignIn(page.request);
+    const { setAuthCookie } = await import("./_helpers");
+    await setAuthCookie(page, page.request);
     const res = await page.goto("/signin", { waitUntil: "domcontentloaded" });
     // The /signin page issues a 307 redirect to /app (or /setup) when
     // the visitor is already signed in. We accept either the redirect
@@ -72,8 +72,8 @@ test.describe("auth gate: signed-in users skip /signin", () => {
 
 test.describe("auth gate: authenticated entry", () => {
   test("GET / sends a signed-in user directly to /app", async ({ page }) => {
-    const { devSignIn } = await import("./_helpers");
-    await devSignIn(page.request);
+    const { setAuthCookie } = await import("./_helpers");
+    await setAuthCookie(page, page.request);
     const home = await page.goto("/", { waitUntil: "domcontentloaded" });
     expect([200, 307]).toContain(home?.status() ?? 0);
     await expect(page).toHaveURL(/\/app(?:$|\?)/);
