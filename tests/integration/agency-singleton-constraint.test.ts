@@ -38,7 +38,20 @@ describe("agency singleton constraint (M1.7)", () => {
   beforeEach(async () => {
     const { db } = await import("@/lib/db");
     const { sql } = await import("drizzle-orm");
-    await db.execute(sql`TRUNCATE agency, "user" CASCADE`);
+    // Reset every table that participates in the agency FK chain so the
+    // next test starts from a known state regardless of what earlier
+    // integration suites left behind. RESTART IDENTITY + CASCADE drops
+    // any rows that reference these tables and resets their sequences,
+    // and the explicit `SELECT 1` forces a sync point so subsequent
+    // queries from this vitest worker cannot read from a stale snapshot.
+    await db.execute(sql`
+      TRUNCATE
+        workspace_membership, workspace,
+        agency_membership, agency,
+        "user"
+      RESTART IDENTITY CASCADE
+    `);
+    await db.execute(sql`SELECT 1`);
   });
 
   it("allows two agencies to coexist (DB-level singleton is gone)", async () => {
@@ -116,61 +129,78 @@ describe("agency singleton constraint (M1.7)", () => {
       await import("@/lib/db/schema");
     const { and, eq } = await import("drizzle-orm");
 
-    const [alpha] = await db.insert(agencies).values({ name: "Alpha", slug: "alpha" }).returning();
-    const [beta] = await db.insert(agencies).values({ name: "Beta", slug: "beta" }).returning();
-    if (!alpha || !beta) throw new Error("failed to seed agencies");
+    // Seed every fixture inside a single transaction. The pg connection
+    // pool can hand a different connection to each `db.insert` call, and
+    // under integration-suite load the FK check on `agency_membership`
+    // has been observed racing against the agency insert (the new
+    // agency row was not yet visible to the connection running the
+    // membership insert). Wrapping the seed in one transaction pins
+    // every statement to the same connection with a single consistent
+    // view of the data, so the FK chain always sees the parent rows.
+    const seeded = await db.transaction(async (tx) => {
+      const [alpha] = await tx
+        .insert(agencies)
+        .values({ name: "Alpha", slug: "alpha" })
+        .returning();
+      const [beta] = await tx.insert(agencies).values({ name: "Beta", slug: "beta" }).returning();
+      if (!alpha || !beta) throw new Error("failed to seed agencies");
 
-    const [memberA] = await db
-      .insert(users)
-      .values({
-        email: "a-member@multi-agency.test",
-        displayName: "A Member",
-        emailVerified: new Date(),
-      })
-      .returning();
-    const [memberB] = await db
-      .insert(users)
-      .values({
-        email: "b-member@multi-agency.test",
-        displayName: "B Member",
-        emailVerified: new Date(),
-      })
-      .returning();
-    if (!memberA || !memberB) throw new Error("failed to seed members");
+      const [memberA] = await tx
+        .insert(users)
+        .values({
+          email: "a-member@multi-agency.test",
+          displayName: "A Member",
+          emailVerified: new Date(),
+        })
+        .returning();
+      const [memberB] = await tx
+        .insert(users)
+        .values({
+          email: "b-member@multi-agency.test",
+          displayName: "B Member",
+          emailVerified: new Date(),
+        })
+        .returning();
+      if (!memberA || !memberB) throw new Error("failed to seed members");
 
-    // Membership: memberA is in alpha, memberB is in beta.
-    await db.insert(agencyMemberships).values([
-      { agencyId: alpha.id, userId: memberA.id, status: "active" },
-      { agencyId: beta.id, userId: memberB.id, status: "active" },
-    ]);
+      // Membership: memberA is in alpha, memberB is in beta.
+      await tx.insert(agencyMemberships).values([
+        { agencyId: alpha.id, userId: memberA.id, status: "active" },
+        { agencyId: beta.id, userId: memberB.id, status: "active" },
+      ]);
 
-    // One workspace per agency, SAME slug "acme".
-    const [wsAlpha] = await db
-      .insert(workspaces)
-      .values({
-        agencyId: alpha.id,
-        slug: "acme",
-        name: "Acme (alpha)",
-        createdBy: memberA.id,
-      })
-      .returning();
-    const [wsBeta] = await db
-      .insert(workspaces)
-      .values({
-        agencyId: beta.id,
-        slug: "acme",
-        name: "Acme (beta)",
-        createdBy: memberB.id,
-      })
-      .returning();
-    if (!wsAlpha || !wsBeta) throw new Error("failed to seed workspaces");
+      // One workspace per agency, SAME slug "acme".
+      const [wsAlpha] = await tx
+        .insert(workspaces)
+        .values({
+          agencyId: alpha.id,
+          slug: "acme",
+          name: "Acme (alpha)",
+          createdBy: memberA.id,
+        })
+        .returning();
+      const [wsBeta] = await tx
+        .insert(workspaces)
+        .values({
+          agencyId: beta.id,
+          slug: "acme",
+          name: "Acme (beta)",
+          createdBy: memberB.id,
+        })
+        .returning();
+      if (!wsAlpha || !wsBeta) throw new Error("failed to seed workspaces");
 
-    // Workspace-level membership: memberA is in alpha's workspace,
-    // memberB is in beta's workspace.
-    await db.insert(workspaceMemberships).values([
-      { workspaceId: wsAlpha.id, userId: memberA.id, status: "active" },
-      { workspaceId: wsBeta.id, userId: memberB.id, status: "active" },
-    ]);
+      // Workspace-level membership: memberA is in alpha's workspace,
+      // memberB is in beta's workspace.
+      await tx.insert(workspaceMemberships).values([
+        { workspaceId: wsAlpha.id, userId: memberA.id, status: "active" },
+        { workspaceId: wsBeta.id, userId: memberB.id, status: "active" },
+      ]);
+
+      return { alpha, beta, memberA, memberB, wsAlpha, wsBeta };
+    });
+
+    const { alpha, beta, memberA, memberB, wsAlpha, wsBeta } = seeded;
 
     // Sanity: each user is a member of their own agency's workspace
     // and a non-member of the other agency's workspace.
