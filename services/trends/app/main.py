@@ -3,7 +3,8 @@
 Lifespan responsibilities (in order):
   1. Configure logging (structlog → JSON to stdout).
   2. Initialise Sentry (when DSN is set).
-  3. Open the async SQLAlchemy engine and run `create_all()`.
+  3. Open the async SQLAlchemy engine. Schema changes are applied by the
+     Next.js Drizzle migrator before this service starts.
   4. Warm the embedding model (all-MiniLM-L6-v2) so /v1/embed is fast.
   5. Start the APScheduler and register the default-on sources.
 
@@ -29,7 +30,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from app.config import get_settings
-from app.db import create_all, dispose_engine, init_engine
+from app.db import dispose_engine, init_engine
 from app.observability import (
     configure_logging,
     get_logger,
@@ -53,15 +54,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging()
     init_sentry()
 
-    # Database
+    # Database. Schema ownership stays with the Next.js Drizzle migrator;
+    # the sidecar must never create or mutate production tables on startup.
     init_engine()
-    try:
-        await create_all()
-    except Exception as exc:  # noqa: BLE001
-        # We log and continue: the sidecar should still come up so the
-        # /healthz endpoint can report degraded. The scheduler will fail
-        # loudly on its first tick.
-        logger.error("db.create_all.failed", error=str(exc))
 
     # Embedding model warmup (5s; cheaper than the first /v1/embed hit).
     try:
@@ -74,10 +69,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Scheduler
     from app.db import get_session_factory
 
-    try:
-        await start_scheduler(get_session_factory())
-    except Exception as exc:  # noqa: BLE001
-        logger.error("scheduler.start.failed", error=str(exc))
+    if settings.TRENDS_RADAR_ENABLED:
+        try:
+            await start_scheduler(get_session_factory())
+        except Exception as exc:  # noqa: BLE001
+            logger.error("scheduler.start.failed", error=str(exc))
+    else:
+        logger.info("scheduler.disabled_by_config")
 
     app.state.model_loaded = True
     logger.info(

@@ -100,6 +100,7 @@ export async function quickCreateAction(
     brief: formData.get("brief") ?? undefined,
     plannedPublishAt: formData.get("plannedPublishAt"),
     channelIds: channelIdsRaw.length > 0 ? channelIdsRaw : undefined,
+    trendSignalId: formData.get("trendSignalId") || undefined,
   });
   if (!parsed.success) {
     return fieldErrorsFromZod<QuickCreateFields>(parsed.error);

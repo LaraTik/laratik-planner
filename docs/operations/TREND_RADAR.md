@@ -17,6 +17,17 @@ The v1 ships four planner tabs that consume the same data:
 
 It also ships a single **admin Sources** page (`/app/agency-settings/trend-sources`) that lists every supported extractor, lets a workspace manager enable / configure / disable each one, and shows per-source health (circuit state, 24h success rate, cost, avg duration).
 
+## How to use it
+
+1. An agency admin enables `trend_radar` and configures at least one source on the Sources page. Complete the source's terms acknowledgement and add a key when the source requires one.
+2. Open **Trends** inside a workspace. **Discover** is the broad feed; use the vertical filter and saved filters to narrow it to the audience or topic you are planning for.
+3. Use **For You** when you want the highest-velocity signals for that workspace. Treat the score as a prioritisation hint, not a guarantee of performance.
+4. Create a **Board** for a campaign, client, or recurring content theme and keep the signals you want to revisit there.
+5. From a promising signal, choose **Use in brief**. LaraTik opens Quick Create with the trend title and short brief prefilled and records the trend-to-content relationship.
+6. Use **Briefs** to review those relationships later. The content item remains editable through the normal planning and approval flow; Trend Radar never publishes automatically.
+
+If no signals appear, check the workspace opt-out list, source health, the signal's seven-day expiry window, and whether the source has completed at least one successful sync.
+
 ## What it isn't
 
 It is **not** a social listening / brand-monitoring tool, and it is **not** a content auto-publisher. We do not track brand mentions, and we do not post on behalf of the agency. If you want social listening, point [Mention](https://mention.com) at your handles and call it a day.
@@ -172,8 +183,8 @@ The sidecar's `app/extractor/apify.py` reads the actor ID + input, calls the Api
 
 - **Trend labels and source URLs are never sent to Sentry.** The `_scrub_sentry_event` filter in `app/observability.py` walks every event and replaces any `label`, `source_url`, `raw_payload`, `embedding`, or `sourceId` key with `"[redacted]"`.
 - **The audit log retains nothing personal.** `security_audit_event.metadata` for trend operations carries source key + counts, never user data.
-- **GDPR delete** — the workspace settings page has a "Delete my trend data" button. Clicking it cascades to delete from: `trend_signals`, `trend_boards`, `trend_board_items`, `trend_briefs`, `trend_feedback`, `trend_source_health`, `trend_source_activity` for the workspace. The action is recorded in `security_audit_event`.
-- **Retention**: trend signals are kept for 7 days by default (`expires_at` column). Boards, briefs, and feedback are kept until the workspace deletes them. Audit rows are kept for 7 years per the standard commercial / tax record retention.
+- **GDPR delete** — the workspace settings page has a "Delete my trend data" button. Clicking it deletes workspace-owned rows from `trend_signals`, `trend_boards`, `trend_board_items`, `trend_briefs`, and `trend_feedback`. Agency-scoped source health and activity remain intact for operational monitoring. The action is recorded in `security_audit_event`.
+- **Retention**: trend signals are kept for 7 days by default (`expires_at` column) and expired rows are excluded from feed and signal-detail queries. Boards, briefs, and feedback are kept until the workspace deletes them. Audit rows are kept for 7 years per the standard commercial / tax record retention.
 
 ## On-call runbook
 

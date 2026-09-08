@@ -47,6 +47,11 @@ class Settings(BaseSettings):
         description="Default per-source sync cadence in minutes (6h).",
     )
 
+    TRENDS_RADAR_ENABLED: bool = Field(
+        True,
+        description="Master switch for the sidecar scheduler and trend writes.",
+    )
+
     # ─── Circuit breaker ───────────────────────────────────────────────────
     CIRCUIT_BREAKER_THRESHOLD: int = Field(
         5,

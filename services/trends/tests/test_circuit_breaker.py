@@ -50,13 +50,39 @@ class _StubHealth:
     ) -> None:
         self.source_key = source_key
         self.agency_id = agency_id
+        self.status = "healthy"
         self.circuit_state = state
-        self.consecutive_errors = consecutive_errors
-        self.cooldown_until = cooldown_until
-        self.opened_at = None
-        self.last_error_at = None
+        self.last_error = {"consecutiveErrors": consecutive_errors} if consecutive_errors else None
+        if cooldown_until is not None:
+            self.last_error = {**(self.last_error or {}), "cooldownUntil": cooldown_until.isoformat()}
+        self.circuit_opened_at = None
         self.last_success_at = None
-        self.updated_at = None
+        self.checked_at = None
+
+    @property
+    def consecutive_errors(self):
+        return int((self.last_error or {}).get("consecutiveErrors", 0))
+
+    @consecutive_errors.setter
+    def consecutive_errors(self, value):
+        self.last_error = {**(self.last_error or {}), "consecutiveErrors": value}
+
+    @property
+    def cooldown_until(self):
+        raw = (self.last_error or {}).get("cooldownUntil")
+        return datetime.fromisoformat(raw) if raw else None
+
+    @cooldown_until.setter
+    def cooldown_until(self, value):
+        self.last_error = {**(self.last_error or {}), "cooldownUntil": value.isoformat()} if value else self.last_error
+
+    @property
+    def opened_at(self):
+        return self.circuit_opened_at
+
+    @opened_at.setter
+    def opened_at(self, value):
+        self.circuit_opened_at = value
 
 
 def _session_with(health: Optional[_StubHealth]) -> AsyncMock:

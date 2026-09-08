@@ -31,16 +31,15 @@ type Source = {
  * (≥ 4 chars) so the audit log carries a human-readable motivation.
  */
 export function TrendsSettingsClient({
-  workspaceId: _workspaceId,
-  workspaceSlug: _workspaceSlug,
+  workspaceId,
+  workspaceSlug,
   sources,
 }: {
   workspaceId: string;
   workspaceSlug: string;
   sources: Source[];
 }) {
-  void _workspaceId;
-  void _workspaceSlug;
+  void workspaceId;
   const t = useLocaleT();
   const [rows, setRows] = React.useState<Source[]>(sources);
   const [pending, setPending] = React.useState<Set<string>>(new Set());
@@ -48,14 +47,18 @@ export function TrendsSettingsClient({
   const [reason, setReason] = React.useState("");
 
   const toggle = async (source: Source) => {
-    if (!source.optedOut) {
-      // Enabling (removing opt-out) is silent; only opting out
+    if (source.optedOut) {
+      // Re-enabling (removing opt-out) is silent; only opting out
       // needs a confirm dialog with a reason.
       setPending((p) => new Set(p).add(source.key));
       try {
-        const res = await fetch(`/api/trends/sources/${source.key}/optout`, {
-          method: "DELETE",
-        });
+        const res = await fetch(
+          `/api/trends/sources/${source.key}/optout?workspaceSlug=${encodeURIComponent(workspaceSlug)}`,
+          {
+            method: "DELETE",
+            headers: { "content-type": "application/json" },
+          },
+        );
         if (res.ok) {
           setRows((prev) =>
             prev.map((r) =>
@@ -82,7 +85,7 @@ export function TrendsSettingsClient({
       const res = await fetch(`/api/trends/sources/${confirmKey}/optout`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({ workspaceSlug, reason }),
       });
       if (res.ok) {
         setRows((prev) =>

@@ -39,6 +39,24 @@ async function main() {
         .join(", ");
       await pool.query(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE`);
     }
+
+    // Some integration fixtures recreate the migration-seeded plan rows
+    // after the migration ledger has already recorded 0040. Restore the
+    // shipped Trend Radar capability in the disposable reference data so
+    // later isolated browser specs do not depend on test ordering.
+    await pool.query(`
+      UPDATE "platform_plan_template"
+         SET "default_limits" = jsonb_set(
+           "default_limits",
+           '{enabled_capabilities}',
+           COALESCE("default_limits"->'enabled_capabilities', '[]'::jsonb)
+             || '["trend_radar"]'::jsonb,
+           true
+         )
+       WHERE "default_limits" IS NOT NULL
+         AND NOT COALESCE("default_limits"->'enabled_capabilities', '[]'::jsonb)
+           @> '["trend_radar"]'::jsonb
+    `);
   } finally {
     await pool.end();
   }

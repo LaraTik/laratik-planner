@@ -37,32 +37,9 @@ const VERTICALS: ReadonlyArray<{ value: Vertical; label: string }> = [
 type SavedFilter = {
   id: string;
   name: string;
-  shareScope: "private" | "workspace";
-  payload: { vertical: Vertical | "all" };
+  shareScope: "me" | "workspace" | "agency";
+  filters: { vertical?: Vertical | "all" };
 };
-
-const STORAGE_KEY = "laratik.trends.savedFilters";
-
-function readSaved(): SavedFilter[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as SavedFilter[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeSaved(filters: SavedFilter[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
-  } catch {
-    /* ignore quota errors */
-  }
-}
 
 /**
  * Saved Filters — three controls: filters button, save button, and
@@ -70,38 +47,55 @@ function writeSaved(filters: SavedFilter[]): void {
  * (the API route in `app/api/trends/saved-filters/route.ts` exposes
  * the server shape for future persistence).
  */
-export function SavedFilters() {
+export function SavedFilters({
+  workspaceSlug,
+  onVerticalChange,
+}: {
+  workspaceSlug: string;
+  onVerticalChange: (vertical: Vertical | "all") => void;
+}) {
   const t = useLocaleT();
   const [vertical, setVertical] = React.useState<Vertical | "all">("all");
-  const [saved, setSaved] = React.useState<SavedFilter[]>(() => readSaved());
+  const [saved, setSaved] = React.useState<SavedFilter[]>([]);
   const [saveOpen, setSaveOpen] = React.useState(false);
   const [filterName, setFilterName] = React.useState("");
-  const [shareConfirmed, setShareConfirmed] = React.useState<string | null>(null);
-  void shareConfirmed;
+  React.useEffect(() => {
+    void fetch(`/api/trends/saved-filters?workspace=${encodeURIComponent(workspaceSlug)}`)
+      .then((response) => (response.ok ? response.json() : { filters: [] }))
+      .then((body: { filters?: SavedFilter[] }) => setSaved(body.filters ?? []))
+      .catch(() => setSaved([]));
+  }, [workspaceSlug]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!filterName.trim()) return;
-    const next: SavedFilter = {
-      id: crypto.randomUUID(),
-      name: filterName.trim(),
-      shareScope: "private",
-      payload: { vertical },
-    };
-    const updated = [next, ...saved].slice(0, 20);
-    setSaved(updated);
-    writeSaved(updated);
+    const response = await fetch("/api/trends/saved-filters", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        workspaceSlug,
+        name: filterName.trim(),
+        shareScope: "me",
+        filters: { vertical },
+      }),
+    });
+    if (!response.ok) return;
+    const body = (await response.json()) as { filter?: SavedFilter };
+    if (body.filter) setSaved((current) => [body.filter!, ...current].slice(0, 20));
     setFilterName("");
     setSaveOpen(false);
   };
 
   const handleShare = (id: string) => {
-    const updated = saved.map((f) =>
-      f.id === id ? { ...f, shareScope: "workspace" as const } : f,
-    );
-    setSaved(updated);
-    writeSaved(updated);
-    setShareConfirmed(id);
-    setTimeout(() => setShareConfirmed(null), 2_500);
+    void fetch("/api/trends/saved-filters", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, workspaceSlug, shareScope: "workspace" }),
+    }).then((response) => {
+      if (!response.ok) return;
+      setSaved((current) =>
+        current.map((f) => (f.id === id ? { ...f, shareScope: "workspace" } : f)),
+      );
+    });
   };
 
   return (
@@ -118,7 +112,11 @@ export function SavedFilters() {
           <select
             data-testid="filter-vertical"
             value={vertical}
-            onChange={(e) => setVertical(e.target.value as Vertical | "all")}
+            onChange={(e) => {
+              const next = e.target.value as Vertical | "all";
+              setVertical(next);
+              onVerticalChange(next);
+            }}
             className="border-border bg-surface-card mx-1 w-[calc(100%-0.5rem)] rounded border px-2 py-1 text-sm"
           >
             <option value="all">{t("trends.filters.all") || "All verticals"}</option>
@@ -165,9 +163,9 @@ export function SavedFilters() {
               >
                 <span className="text-body text-fg-primary font-medium">{f.name}</span>
                 <span className="text-label text-fg-muted text-xs">
-                  {f.payload.vertical} · {f.shareScope}
+                  {f.filters.vertical ?? "all"} · {f.shareScope}
                 </span>
-                {f.shareScope === "private" ? (
+                {f.shareScope === "me" ? (
                   <Button
                     type="button"
                     size="sm"

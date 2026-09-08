@@ -33,7 +33,8 @@
     "saveTitle": "Save filter",
     "saveBody": "Name this filter so you can apply it again later.",
     "name": "Name",
-    "namePlaceholder": "My fashion pulse"
+    "namePlaceholder": "My fashion pulse",
+    "noMatches": "No trends match this filter."
   },
   "savedFilters": {
     "title": "Saved",
@@ -74,7 +75,8 @@
   },
   "boards": {
     "title": "Boards",
-    "body": "Group trends into boards to plan campaigns, pitch ideas, and share with clients. Coming next sprint."
+    "body": "Create workspace collections for pitches, campaigns, or client reviews.",
+    "namePlaceholder": "Board name"
   },
   "briefs": {
     "title": "Closed-loop briefs",
@@ -90,7 +92,13 @@
     "statusEnabled": "Enabled",
     "statusDisabled": "Disabled",
     "hasKey": "Key set",
-    "apiKeyLabel": "API key"
+    "apiKeyLabel": "API key",
+    "error": {
+      "api_key_required": "Add an API key before enabling this source.",
+      "request_failed": "Could not update this source. Try again.",
+      "key_save_failed": "Could not save the API key. Try again.",
+      "tos_acknowledgement_required": "Terms acknowledgement is required before enabling this source."
+    }
   },
   "settings": {
     "title": "Trends settings",

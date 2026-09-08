@@ -1,18 +1,27 @@
 import { redirect } from "next/navigation";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
-import { trendSignals, workspaceSourceOptouts, trendSources } from "@/lib/db/schema";
+import {
+  trendSignals,
+  trendBoards,
+  trendBoardItems,
+  trendBriefs,
+  trendFeedbacks,
+  workspaceSourceOptouts,
+  trendSources,
+} from "@/lib/db/schema";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { serverEnv } from "@/lib/validation/env";
 import { TrendsSettingsClient } from "./_components/trends-settings-client";
 import { DeleteTrendDataSection } from "./delete-trend-data-section";
 import { listEnabledSourceKeysForWorkspace } from "@/lib/trends/enabled-sources";
+import { loadEnabledCapabilities } from "@/lib/ai/governance";
 
 /**
  * Workspace settings → Trends.
@@ -47,6 +56,8 @@ export default async function TrendsSettingsPage({
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) redirect("/setup");
+  if (!(await loadEnabledCapabilities(agencyId)).has("trend_radar"))
+    redirect(`/app/w/${slug}/settings`);
 
   const ws = await getAccessibleWorkspace(actor, slug);
   if (!ws) redirect("/app");
@@ -76,22 +87,30 @@ export default async function TrendsSettingsPage({
     : [];
 
   // Per-table counts for the GDPR delete preview.
-  const [signalCount] = await db
-    .select({ count: trendSignals.id })
-    .from(trendSignals)
-    .where(eq(trendSignals.workspaceId, ws.id))
-    .limit(1)
-    .then(() => [{ count: 0 }]);
+  const [[signalCount], [boardCount], [boardItemCount], [briefCount], [feedbackCount]] =
+    await Promise.all([
+      db.select({ count: count() }).from(trendSignals).where(eq(trendSignals.workspaceId, ws.id)),
+      db.select({ count: count() }).from(trendBoards).where(eq(trendBoards.workspaceId, ws.id)),
+      db
+        .select({ count: count() })
+        .from(trendBoardItems)
+        .innerJoin(trendBoards, eq(trendBoardItems.boardId, trendBoards.id))
+        .where(eq(trendBoards.workspaceId, ws.id)),
+      db.select({ count: count() }).from(trendBriefs).where(eq(trendBriefs.workspaceId, ws.id)),
+      db
+        .select({ count: count() })
+        .from(trendFeedbacks)
+        .where(eq(trendFeedbacks.workspaceId, ws.id)),
+    ]);
   const counts = {
-    trendSignals: 0,
-    trendBoards: 0,
-    trendBoardItems: 0,
-    trendBriefs: 0,
-    trendFeedback: 0,
+    trendSignals: signalCount?.count ?? 0,
+    trendBoards: boardCount?.count ?? 0,
+    trendBoardItems: boardItemCount?.count ?? 0,
+    trendBriefs: briefCount?.count ?? 0,
+    trendFeedback: feedbackCount?.count ?? 0,
     trendSourceHealth: 0,
     trendSourceActivity: 0,
   } as const;
-  void signalCount;
 
   return (
     <div className="space-y-6" data-testid="trends-settings-page">

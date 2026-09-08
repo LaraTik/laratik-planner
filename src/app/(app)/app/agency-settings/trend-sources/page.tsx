@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
@@ -10,6 +10,7 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { serverEnv } from "@/lib/validation/env";
 import { TrendSourcesAdmin } from "./_components/trend-sources-admin";
+import { loadEnabledCapabilities } from "@/lib/ai/governance";
 
 /**
  * Agency-admin surface for the Trend Radar source catalog.
@@ -34,6 +35,8 @@ export default async function TrendSourcesAdminPage() {
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) redirect("/setup");
+  if (!(await loadEnabledCapabilities(agencyId)).has("trend_radar"))
+    redirect("/app/agency-settings/ai");
   if (!(await isAgencyAdmin(actor, agencyId))) redirect("/app/agency-settings/ai");
 
   const { t } = await tForActive();
@@ -49,7 +52,12 @@ export default async function TrendSourcesAdminPage() {
     ? await db
         .select()
         .from(trendSourceHealth)
-        .where(inArray(trendSourceHealth.sourceKey, sourceKeys))
+        .where(
+          and(
+            eq(trendSourceHealth.agencyId, agencyId),
+            inArray(trendSourceHealth.sourceKey, sourceKeys),
+          ),
+        )
         .orderBy(desc(trendSourceHealth.checkedAt))
         .limit(100)
     : [];

@@ -31,7 +31,13 @@ const bodySchema = z.object({
   keys: z.array(z.string().min(1)).min(1).max(50),
 });
 
-const GREY_AREA_SOURCES = new Set(["twikit", "instaloader", "tomquirk", "kawsarlog"]);
+const GREY_AREA_SOURCES = new Set([
+  "tiktok_tamnd_cli",
+  "x_twikit",
+  "instagram_instaloader",
+  "linkedin_tomquirk",
+  "kawsarlog_threads",
+]);
 
 export async function POST(req: NextRequest) {
   try {
@@ -125,6 +131,8 @@ export async function POST(req: NextRequest) {
           target: [trendSources.agencyId, trendSources.sourceKey],
           set: {
             enabled: true,
+            enabledBy: actor.id,
+            enabledAt: now,
             updatedAt: now,
           },
         });

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { bootstrapTestSession } from "./_helpers";
 
 /**
  * Source-degraded E2E — when a source's circuit breaker is OPEN,
@@ -16,6 +17,11 @@ import { test, expect, type Page } from "@playwright/test";
  */
 
 test.describe("Trend Radar — degraded source UX", () => {
+  const workspaceSlug = "trend-degraded";
+  test.beforeEach(async ({ page }) => {
+    await bootstrapTestSession(page, { agencySlug: "trend-degraded-agency", workspaceSlug });
+  });
+
   test("circuit-open source shows degraded banner, not a crash", async ({
     page,
   }: {
@@ -24,16 +30,14 @@ test.describe("Trend Radar — degraded source UX", () => {
     // Step 1: seed the health row. The admin route is gated to the
     // platform role; the auth fixture should provide that.
     const seed = await page.request.post("/api/dev/trend-source/force-open", {
-      data: { sourceKey: "tiktok_tamnd", agencyId: "demo" },
+      data: { sourceKey: "tiktok_creative_center" },
     });
-    // 404 is acceptable in CI if the dev route isn't deployed yet;
-    // the assertion is on the page UX, not the seed call.
-    if (!seed.ok() && seed.status() !== 404) {
+    if (!seed.ok()) {
       throw new Error(`Failed to seed circuit-open: ${seed.status()}`);
     }
 
     // Step 2: visit the page.
-    await page.goto("/app/w/demo/trends");
+    await page.goto(`/app/w/${workspaceSlug}/trends`);
 
     // Step 3: degraded banner is visible.
     const banner = page.getByTestId("trends-degraded-banner");

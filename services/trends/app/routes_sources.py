@@ -2,8 +2,7 @@
 
 Health shape (per the plan §13.5):
   - circuit state (closed | open | half_open)
-  - last_success_at / last_error_at
-  - consecutive_errors
+  - last_success_at / last error payload
   - 24h success rate
   - avg duration_ms
   - total cost_cents
@@ -32,9 +31,9 @@ router = APIRouter(prefix="/v1/sources", tags=["sources"])
 # ─── Response models ────────────────────────────────────────────────────────
 class SourceHealthCard(BaseModel):
     source_key: str
-    agency_id: Optional[uuid.UUID] = None
-    circuit_state: str
-    consecutive_errors: int
+    agency_id: uuid.UUID
+    circuit_state: str = "closed"
+    consecutive_errors: int = 0
     last_success_at: Optional[datetime] = None
     last_error_at: Optional[datetime] = None
     cooldown_until: Optional[datetime] = None
@@ -79,16 +78,15 @@ async def list_source_health(
         # 24h rollup from the activity log.
         act_stmt = (
             select(
-                func.count().filter(TrendSourceActivity.outcome == "success").label("success"),
+                func.count().filter(TrendSourceActivity.event_type == "sync_completed").label("success"),
                 func.count().label("total"),
                 func.coalesce(func.avg(TrendSourceActivity.duration_ms), 0).label("avg_dur"),
-                func.coalesce(func.sum(TrendSourceActivity.cost_cents), 0).label("cost"),
+                func.coalesce(func.sum(TrendSourceActivity.metadata["costCents"].as_integer()), 0).label("cost"),
             )
             .where(TrendSourceActivity.source_key == h.source_key)
+            .where(TrendSourceActivity.agency_id == h.agency_id)
             .where(TrendSourceActivity.created_at >= cutoff)
         )
-        if h.agency_id is not None:
-            act_stmt = act_stmt.where(TrendSourceActivity.agency_id == h.agency_id)
         row = (await session.execute(act_stmt)).one()
         success = int(row.success or 0)
         total = int(row.total or 0)
@@ -97,11 +95,11 @@ async def list_source_health(
             SourceHealthCard(
                 source_key=h.source_key,
                 agency_id=h.agency_id,
-                circuit_state=h.circuit_state,
-                consecutive_errors=h.consecutive_errors,
+                circuit_state=h.circuit_state or "closed",
+                consecutive_errors=int((h.last_error or {}).get("consecutiveErrors", 0)),
                 last_success_at=h.last_success_at,
-                last_error_at=h.last_error_at,
-                cooldown_until=h.cooldown_until,
+                last_error_at=datetime.fromisoformat(h.last_error["at"]) if h.last_error and h.last_error.get("at") else None,
+                cooldown_until=datetime.fromisoformat(h.last_error["cooldownUntil"]) if h.last_error and h.last_error.get("cooldownUntil") else None,
                 success_rate_24h=round(rate, 4),
                 avg_duration_ms_24h=round(float(row.avg_dur or 0.0), 2),
                 cost_cents_24h=int(row.cost or 0),

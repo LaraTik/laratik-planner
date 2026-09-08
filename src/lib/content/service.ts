@@ -13,6 +13,8 @@ import {
   workspaceMembershipRoles,
   workspaceMemberships,
   workspaceSettings,
+  trendBriefs,
+  trendSignals,
 } from "@/lib/db/schema";
 import {
   canAccessInternalWorkspace,
@@ -84,6 +86,7 @@ export const QuickCreateSchema = z.object({
   campaignId: z.string().uuid().optional(),
   contentPillarId: z.string().uuid().optional(),
   designerId: z.string().uuid().optional(),
+  trendSignalId: z.string().uuid().optional(),
 });
 
 export type QuickCreateInput = z.infer<typeof QuickCreateSchema>;
@@ -124,6 +127,23 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
     .from(workspaceSettings)
     .where(eq(workspaceSettings.workspaceId, input.workspaceId))
     .limit(1);
+
+  const trendSignal = input.trendSignalId
+    ? (
+        await db
+          .select({ id: trendSignals.id, velocity: trendSignals.velocity })
+          .from(trendSignals)
+          .where(
+            and(
+              eq(trendSignals.id, input.trendSignalId),
+              eq(trendSignals.workspaceId, input.workspaceId),
+            ),
+          )
+          .limit(1)
+      )[0]
+    : null;
+  if (input.trendSignalId && !trendSignal)
+    throw new Error("Trend signal not found in this workspace");
 
   // Auto-select active channels if not provided
   let channelIds = input.channelIds;
@@ -176,6 +196,15 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
           socialChannelId: channelId,
         })),
       );
+    }
+
+    if (trendSignal) {
+      await tx.insert(trendBriefs).values({
+        contentItemId: created!.id,
+        signalId: trendSignal.id,
+        workspaceId: input.workspaceId,
+        velocityAtSchedule: trendSignal.velocity,
+      });
     }
 
     // Assignment history

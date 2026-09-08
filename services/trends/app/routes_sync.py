@@ -12,11 +12,11 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_session
-from app.models import TrendFetchJob
+from app.db import get_session, get_session_factory
+from app.models import TrendFetchJob, TrendSource
 from app.observability import FEED_QUERIES_TOTAL, get_logger
 from app.scheduler import trigger_now
 
@@ -66,13 +66,19 @@ async def queue_sync(
     runs in the scheduler. Poll `GET /v1/sync/{jobId}` for status.
     """
     job_id = uuid.uuid4()
+    workspace_row = (
+        await session.execute(
+            text("SELECT id FROM workspace WHERE agency_id = :agency_id AND archived_at IS NULL LIMIT 1"),
+            {"agency_id": body.agencyId},
+        )
+    ).first()
+    if workspace_row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="agency_has_no_workspace")
     job = TrendFetchJob(
         id=job_id,
-        agency_id=body.agencyId,
-        source_key=body.sourceKey,
-        trigger="manual",
+        workspace_id=workspace_row[0],
+        source_key=body.sourceKey or "__all__",
         status="queued",
-        platforms=[],
     )
     session.add(job)
     await session.flush()
@@ -93,7 +99,13 @@ async def queue_sync(
 async def _run_job(job_id: uuid.UUID, agency_id: uuid.UUID, source_key: Optional[str]) -> None:
     """Background task — call the scheduler and let it write the outcome."""
     try:
-        await trigger_now(source_key or "__all__", agency_id=agency_id)
+        if source_key:
+            await trigger_now(source_key, agency_id=agency_id, job_id=job_id)
+        else:
+            async with get_session_factory()() as session:
+                keys = list((await session.execute(select(TrendSource.source_key).where(TrendSource.agency_id == agency_id, TrendSource.enabled.is_(True)))).scalars().all())
+            for key in keys:
+                await trigger_now(key, agency_id=agency_id, job_id=job_id)
     except Exception as exc:  # noqa: BLE001 — recorded by the scheduler
         logger.warning("sync.background.error", job_id=str(job_id), error=str(exc))
 

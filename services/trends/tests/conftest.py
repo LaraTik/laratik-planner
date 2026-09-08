@@ -126,14 +126,14 @@ def sample_source(sample_agency_id: uuid.UUID) -> TrendSource:
     src = TrendSource(
         id=uuid.uuid4(),
         agency_id=sample_agency_id,
-        source_key="reddit",
-        platform="reddit",
-        label="Reddit",
+        source_key="reddit_json",
+        display_name="Reddit (JSON endpoint)",
         enabled=True,
-        default_on=True,
-        cadence_minutes=360,
+        tier="free",
+        tos_class="clean",
+        region="XX",
         config={},
-        last_synced_at=None,
+        max_signals_per_cycle=200,
     )
     return src
 

@@ -25,17 +25,19 @@ const initial: { error?: string; fieldErrors?: Record<string, string> } = {};
 export function QuickCreateForm({
   workspaceSlug,
   channels,
+  trendSignal,
 }: {
   workspaceSlug: string;
   channels: { id: string; accountName: string; platform: string }[];
+  trendSignal?: { id: string; label: string };
 }) {
   const t = useLocaleT();
   const locale = useLocaleCode();
   const boundAction = quickCreateAction.bind(null, workspaceSlug);
   const [state, formAction] = useActionState(boundAction, initial);
   const formRef = React.useRef<HTMLFormElement | null>(null);
-  const [title, setTitle] = React.useState("");
-  const [brief, setBrief] = React.useState("");
+  const [title, setTitle] = React.useState(trendSignal?.label ?? "");
+  const [brief, setBrief] = React.useState(trendSignal ? `Trend angle: ${trendSignal.label}` : "");
 
   // Default the planned date to tomorrow 9am
   const tomorrow = new Date();
@@ -72,6 +74,17 @@ export function QuickCreateForm({
       noValidate
       data-testid="quick-create-form"
     >
+      {trendSignal ? <input type="hidden" name="trendSignalId" value={trendSignal.id} /> : null}
+      {trendSignal ? (
+        <aside className="border-accent/30 bg-accent/10 text-fg-primary rounded-[var(--radius-control)] border p-3">
+          <p className="text-label font-semibold">
+            {t("trends.card.useInBrief") || "Use in brief"}
+          </p>
+          <p className="text-body mt-1">
+            <bdi>{trendSignal.label}</bdi>
+          </p>
+        </aside>
+      ) : null}
       <FormSummary
         {...(state?.error ? { error: state.error } : {})}
         {...(state?.fieldErrors ? { fieldErrors: state.fieldErrors } : {})}

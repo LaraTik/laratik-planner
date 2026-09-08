@@ -11,6 +11,7 @@ admin UI can show the full chain.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable, Optional
 from uuid import UUID
@@ -171,12 +172,6 @@ async def write_attempts_to_job(
     job = (await session.execute(stmt)).scalar_one_or_none()
     if job is None:
         return
-    # The Drizzle `trend_fetch_job` does not have a dedicated `attempts`
-    # column; stash the chain into raw_payload-style metadata on the row's
-    # existing JSON fields. We use the `platforms` JSONB to also carry the
-    # chain log so a single column holds both.
     chain_log = {"attempts": attempts, "logged_at": datetime.now(timezone.utc).isoformat()}
-    existing = list(job.platforms or [])
-    existing.append(chain_log)
-    job.platforms = existing  # type: ignore[assignment]
+    job.error_message = json.dumps(chain_log, separators=(",", ":"))[:2000]
     await session.flush()

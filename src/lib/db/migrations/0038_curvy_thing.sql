@@ -1,0 +1,1 @@
+ALTER TABLE "trend_source" ALTER COLUMN "api_key_ref" SET DATA TYPE text;

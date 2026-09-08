@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { bootstrapTestSession } from "./_helpers";
 
 /**
  * First-run wizard → enable 4 sources → see trends on the page.
@@ -20,8 +21,13 @@ import { test, expect, type Page } from "@playwright/test";
  */
 
 test.describe("Trend Radar — first-run onboarding", () => {
+  const workspaceSlug = "trend-onboarding";
+  test.beforeEach(async ({ page }) => {
+    await bootstrapTestSession(page, { agencySlug: "trend-onboarding-agency", workspaceSlug });
+  });
+
   test("wizard → 4 sources → trends page", async ({ page }: { page: Page }) => {
-    await page.goto("/app/w/demo/trends");
+    await page.goto(`/app/w/${workspaceSlug}/trends`);
 
     // 1. Wizard surface — data-testid pinned here so the test survives
     //    copy changes.
@@ -29,7 +35,7 @@ test.describe("Trend Radar — first-run onboarding", () => {
     await expect(wizard).toBeVisible({ timeout: 10_000 });
 
     // 2. Pick 4 free sources by their stable test ids.
-    for (const key of ["reddit", "youtube", "tiktok_tamnd", "google_trends"]) {
+    for (const key of ["reddit_json", "reddit_praw", "tiktok_creative_center"]) {
       const card = wizard.getByTestId(`source-card-${key}`);
       await expect(card).toBeVisible();
       await card.getByRole("button", { name: /enable/i }).click();

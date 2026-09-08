@@ -17,6 +17,7 @@ import type { PlatformRole } from "../../src/lib/auth/platform-access-types";
 // the dev-sign-in contract test (e2e/auth-gate) will surface it
 // before this constant drifts.
 const DEV_SESSION_COOKIE_NAME = "authjs.session-token";
+const ACTIVE_AGENCY_COOKIE_NAME = "laratik_active_agency";
 
 const DEFAULT_EMAIL = "test@laratik.local";
 const DEFAULT_NAME = "Test User";
@@ -128,6 +129,8 @@ export type SeedResult = {
   contentItemId: string;
   /** Ready private media fixture used by the stored-delivery E2E journey. */
   deliveryMediaAssetId?: string;
+  /** Signed agency context returned by the dev seed endpoint. */
+  activeAgencyCookie?: string;
 };
 
 /**
@@ -191,8 +194,32 @@ export async function devSeed(
       const text = await res.text();
       throw new Error(`devSeed failed: ${res.status()} ${text}`);
     }
-    return (await res.json()) as SeedResult;
+    const result = (await res.json()) as SeedResult;
+    const setCookie = res.headers()["set-cookie"];
+    const activeAgencyCookie = setCookie?.match(
+      new RegExp(`(?:^|,\\s*)${ACTIVE_AGENCY_COOKIE_NAME}=([^;]+)`),
+    )?.[1];
+    return activeAgencyCookie
+      ? { ...result, activeAgencyCookie: decodeURIComponent(activeAgencyCookie) }
+      : result;
   }, "devSeed");
+}
+
+async function applySeededAgencyContext(page: Page, result: SeedResult) {
+  if (!result.activeAgencyCookie) {
+    throw new Error(`devSeed did not return a ${ACTIVE_AGENCY_COOKIE_NAME} cookie`);
+  }
+  await page.context().addCookies([
+    {
+      name: ACTIVE_AGENCY_COOKIE_NAME,
+      value: result.activeAgencyCookie,
+      domain: "localhost",
+      path: "/",
+      httpOnly: true,
+      secure: false,
+      sameSite: "Lax",
+    },
+  ]);
 }
 
 /**
@@ -214,6 +241,7 @@ export async function bootstrapTestSession(
 ): Promise<SeedResult> {
   const result = await devSeed(page.request, options);
   await setAuthCookie(page, page.request, options.email ? { email: options.email } : {});
+  await applySeededAgencyContext(page, result);
   return result;
 }
 
@@ -326,5 +354,6 @@ export async function bootstrapRoleSession(
     email,
     role: role === "agency_admin" ? "agency_admin" : "user",
   });
+  await applySeededAgencyContext(page, result);
   return result;
 }

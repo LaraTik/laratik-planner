@@ -543,7 +543,7 @@ Postgres (Drizzle ORM)               ▼
       persisted to `trend_source_health` so it survives process
       restarts.
 - [x] Per-platform fallback chain (primary → fallback 1 → fallback 2
-      → last-good cache), recorded in `trend_fetch_job.platforms`.
+      → last-good cache), recorded in the fetch-job error/attempt log.
 - [x] GDPR "Delete my trend data" action with typed-phrase
       confirmation, per-table delete counts, and a single
       `security_audit_event` row.
@@ -587,6 +587,20 @@ Postgres (Drizzle ORM)               ▼
   has its own signal table).
 - The 7 stubbed extractors graduating from `experimental` to
   `paid` or `free` (per the per-source guides).
+
+**Release evidence recorded for 2026-09-08:**
+
+- [x] Drizzle migrations `0037`–`0040` are registered and exercised by
+      `pnpm migration-drill` (from-zero, skipped-migration repair, in-place,
+      backup/restore, and failed-migration abort paths).
+- [x] `pnpm verify` passes on the release candidate: format, lint, strict
+      typecheck, 351 unit files / 3,312 tests, and production build.
+- [x] Workspace feed queries exclude expired signals and enforce workspace
+      scope; the sidecar uses Drizzle-owned migrations rather than startup
+      `create_all()`.
+- [x] Quick Create records the `trend_brief` relationship, saved filters are
+      server-persisted and workspace-scoped, and the four planner tabs have
+      functional data paths.
 
 **Outstanding:**
 

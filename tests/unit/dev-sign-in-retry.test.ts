@@ -30,6 +30,7 @@ function makeResponse(status: number, body: unknown = {}): APIResponse {
   return {
     ok: () => status >= 200 && status < 300,
     status: () => status,
+    headers: () => ({}),
     text: () => Promise.resolve(typeof body === "string" ? body : JSON.stringify(body)),
     json: () => Promise.resolve(body),
   } as unknown as APIResponse;

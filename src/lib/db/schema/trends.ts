@@ -14,7 +14,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { idColumn, timestamps } from "./_helpers";
-import { users } from "./identity";
+import { agencies, users } from "./identity";
 import { workspaces } from "./workspaces";
 import { contentItems } from "./content";
 
@@ -61,7 +61,7 @@ export const trendSources = pgTable(
     id: idColumn(),
     agencyId: uuid("agency_id")
       .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
+      .references(() => agencies.id, { onDelete: "restrict" }),
     sourceKey: text("source_key").notNull(),
     displayName: text("display_name").notNull(),
     enabled: boolean("enabled").notNull().default(false),
@@ -74,7 +74,9 @@ export const trendSources = pgTable(
       .default(sql`'[]'::jsonb`),
     cadenceOverride: text("cadence_override"),
     maxSignalsPerCycle: integer("max_signals_per_cycle").notNull().default(200),
-    apiKeyRef: uuid("api_key_ref"),
+    // Encrypted provider references are opaque `keyVersion:lastFour`
+    // handles, not Postgres ids. The ciphertext never lives here.
+    apiKeyRef: text("api_key_ref"),
     config: jsonb("config")
       .$type<Record<string, unknown>>()
       .notNull()
@@ -308,7 +310,7 @@ export const trendSourceHealth = pgTable(
     id: idColumn(),
     agencyId: uuid("agency_id")
       .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
+      .references(() => agencies.id, { onDelete: "restrict" }),
     sourceKey: text("source_key").notNull(),
     status: text("status").notNull(), // 'healthy' | 'degraded' | 'down' | 'disabled' | 'rate_limited' | 'quota_exhausted'
     lastSuccessAt: timestamp("last_success_at", { withTimezone: true, mode: "date" }),
@@ -350,7 +352,7 @@ export const trendSourceAudits = pgTable(
     id: idColumn(),
     agencyId: uuid("agency_id")
       .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
+      .references(() => agencies.id, { onDelete: "restrict" }),
     sourceKey: text("source_key").notNull(),
     actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
     action: text("action").notNull(), // 'enable' | 'disable' | 'configure' | 'test' | 'break' | 'recover'
@@ -387,7 +389,7 @@ export const trendSourceActivities = pgTable(
     id: idColumn(),
     agencyId: uuid("agency_id")
       .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
+      .references(() => agencies.id, { onDelete: "restrict" }),
     sourceKey: text("source_key").notNull(),
     eventType: text("event_type").notNull(),
     message: text("message").notNull(),

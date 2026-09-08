@@ -82,8 +82,8 @@ class CircuitBreaker:
         row = TrendSourceHealth(
             source_key=self.source_key,
             agency_id=self.agency_id,
+            status="healthy",
             circuit_state=CircuitState.CLOSED.value,
-            consecutive_errors=0,
         )
         self._session.add(row)
         await self._session.flush()
@@ -97,13 +97,17 @@ class CircuitBreaker:
         opened_at: Optional[datetime] = None,
         cooldown_until: Optional[datetime] = None,
     ) -> None:
-        old_state = row.circuit_state
+        old_state = row.circuit_state or CircuitState.CLOSED.value
         row.circuit_state = new_state.value
+        row.status = "down" if new_state is CircuitState.OPEN else "healthy"
         if opened_at is not None:
-            row.opened_at = opened_at
+            row.circuit_opened_at = opened_at
         if cooldown_until is not None:
-            row.cooldown_until = cooldown_until
-        row.updated_at = datetime.now(timezone.utc)
+            row.last_error = {
+                **(row.last_error or {}),
+                "cooldownUntil": cooldown_until.isoformat(),
+            }
+        row.checked_at = datetime.now(timezone.utc)
         await self._session.flush()
         if old_state != new_state.value:
             CIRCUIT_BREAKER_STATE_CHANGES.labels(
@@ -127,8 +131,10 @@ class CircuitBreaker:
         if row is None:
             return CircuitState.CLOSED
         current = CircuitState(row.circuit_state)
-        if current is CircuitState.OPEN and row.cooldown_until is not None:
-            if datetime.now(timezone.utc) >= row.cooldown_until:
+        cooldown_raw = (row.last_error or {}).get("cooldownUntil") if row.last_error else None
+        cooldown_until = datetime.fromisoformat(cooldown_raw) if cooldown_raw else None
+        if current is CircuitState.OPEN and cooldown_until is not None:
+            if datetime.now(timezone.utc) >= cooldown_until:
                 await self._set_state(row, CircuitState.HALF_OPEN)
                 return CircuitState.HALF_OPEN
         return current
@@ -154,7 +160,9 @@ class CircuitBreaker:
         if state is CircuitState.OPEN:
             row = await self._load_health()
             assert row is not None  # state() ensures it
-            raise CircuitOpen(self.source_key, row.cooldown_until or datetime.now(timezone.utc))
+            cooldown_raw = (row.last_error or {}).get("cooldownUntil") if row.last_error else None
+            cooldown_until = datetime.fromisoformat(cooldown_raw) if cooldown_raw else datetime.now(timezone.utc)
+            raise CircuitOpen(self.source_key, cooldown_until or datetime.now(timezone.utc))
 
         try:
             result = func(*args, **kwargs)
@@ -170,23 +178,33 @@ class CircuitBreaker:
     # ─── internal transitions ───────────────────────────────────────────
     async def _record_success(self) -> None:
         row = await self._ensure_health_row()
-        row.consecutive_errors = 0
-        row.last_success_at = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc)
+        row.last_success_at = now
+        row.last_error = None
+        row.status = "healthy"
+        row.checked_at = now
         if row.circuit_state != CircuitState.CLOSED.value:
             await self._set_state(row, CircuitState.CLOSED)
         else:
-            row.updated_at = datetime.now(timezone.utc)
+            row.checked_at = now
             await self._session.flush()
 
     async def _record_error(self, exc: BaseException) -> None:
         row = await self._ensure_health_row()
         now = datetime.now(timezone.utc)
-        row.consecutive_errors += 1
-        row.last_error_at = now
-        row.updated_at = now
+        previous = row.last_error or {}
+        consecutive_errors = int(previous.get("consecutiveErrors", 0)) + 1
+        row.last_error = {
+            "code": exc.__class__.__name__,
+            "message": str(exc)[:500],
+            "at": now.isoformat(),
+            "consecutiveErrors": consecutive_errors,
+        }
+        row.status = "degraded"
+        row.checked_at = now
 
         threshold = self._settings.CIRCUIT_BREAKER_THRESHOLD
-        if row.consecutive_errors >= threshold and row.circuit_state != CircuitState.OPEN.value:
+        if consecutive_errors >= threshold and row.circuit_state != CircuitState.OPEN.value:
             cooldown_until = now + timedelta(minutes=self._settings.CIRCUIT_BREAKER_COOLDOWN_MINUTES)
             await self._set_state(
                 row,
@@ -231,8 +249,8 @@ async def force_close(
     """
     breaker = CircuitBreaker(session, source_key, agency_id=agency_id)
     row = await breaker._ensure_health_row()
-    row.consecutive_errors = 0
-    row.cooldown_until = None
-    row.opened_at = None
+    row.last_error = None
+    row.status = "healthy"
+    row.circuit_opened_at = None
     await breaker._set_state(row, CircuitState.CLOSED)
     return row

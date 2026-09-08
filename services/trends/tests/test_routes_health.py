@@ -28,8 +28,9 @@ def _health_row(source_key: str = "reddit", state: str = "closed") -> Any:
     row = MagicMock()
     row.source_key = source_key
     row.agency_id = uuid.uuid4()
+    row.status = "healthy"
     row.circuit_state = state
-    row.consecutive_errors = 0
+    row.last_error = None
     row.last_success_at = datetime.now(timezone.utc)
     row.last_error_at = None
     row.cooldown_until = None

@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
-import { socialChannels } from "@/lib/db/schema";
+import { socialChannels, trendSignals } from "@/lib/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { Button } from "@/components/ui/button";
@@ -18,8 +18,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return { title: t("quickCreate.metaTitle", { slug }) };
 }
 
-export default async function QuickCreatePage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function QuickCreatePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ trendSignalId?: string }>;
+}) {
   const { slug } = await params;
+  const query = (await searchParams) ?? {};
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
 
@@ -44,6 +51,16 @@ export default async function QuickCreatePage({ params }: { params: Promise<{ sl
       </div>
     );
   }
+
+  const trendSignal = query.trendSignalId
+    ? (
+        await db
+          .select({ id: trendSignals.id, label: trendSignals.label })
+          .from(trendSignals)
+          .where(and(eq(trendSignals.id, query.trendSignalId), eq(trendSignals.workspaceId, ws.id)))
+          .limit(1)
+      )[0]
+    : null;
 
   const channels = await db
     .select({
@@ -74,7 +91,11 @@ export default async function QuickCreatePage({ params }: { params: Promise<{ sl
           </>
         }
       />
-      <QuickCreateForm workspaceSlug={slug} channels={channels} />
+      <QuickCreateForm
+        workspaceSlug={slug}
+        channels={channels}
+        {...(trendSignal ? { trendSignal } : {})}
+      />
     </div>
   );
 }

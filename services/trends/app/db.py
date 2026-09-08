@@ -8,8 +8,9 @@ Postgres cluster. Column names here match the Drizzle migration column names
 Notes:
 - We convert `postgresql://` → `postgresql+asyncpg://` so the standard
   DATABASE_URL you already have in .env works without changes.
-- `create_all()` is called on startup. v2 will replace it with Alembic once
-  the schema stabilises; until then, mismatched columns raise loudly.
+- The sidecar never runs `create_all()` on startup. The Next.js Drizzle
+  migrator owns production schema changes; `create_all()` remains a local
+  development helper only.
 - A single `AsyncEngine` is process-wide; the `AsyncSessionLocal` factory
   is a `sessionmaker` not a session.
 """

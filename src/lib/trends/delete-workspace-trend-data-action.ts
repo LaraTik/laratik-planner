@@ -12,9 +12,6 @@ import {
   trendBriefs,
   trendFeedbacks,
   trendSignals,
-  trendSourceActivities,
-  trendSourceHealth,
-  workspaces,
 } from "@/lib/db/schema";
 import { currentActor } from "@/lib/auth/current-actor";
 import { requirePlatformPermission } from "@/lib/auth/platform-access";
@@ -31,11 +28,10 @@ import { captureError } from "@/lib/observability/sentry";
  *     schema's onDelete: "cascade")
  *   - trend_briefs
  *   - trend_feedback
- *   - trend_source_health
- *   - trend_source_activity
  *
  * It does NOT delete:
- *   - trend_source (the agency's source enablement + config).
+ *   - trend_source / trend_source_health / trend_source_activity (agency
+ *     operational data, not workspace-owned user data).
  *     Configuration is operational data, not user data, so it
  *     survives a GDPR delete. The agency re-enables sources
  *     explicitly if they want to.
@@ -195,17 +191,6 @@ export async function deleteWorkspaceTrendDataAction(
   };
   try {
     await db.transaction(async (tx) => {
-      // Resolve the agency id for the workspace (trend_source_health /
-      // trend_source_activity are agency-scoped, not workspace-scoped).
-      const wsRow = (
-        await tx
-          .select({ agencyId: workspaces.agencyId })
-          .from(workspaces)
-          .where(eq(workspaces.id, workspace.id))
-          .limit(1)
-      )[0];
-      const agencyId = wsRow?.agencyId ?? workspace.id;
-
       // trend_signals (workspace-scoped)
       const signalRows = await tx
         .select({ id: trendSignals.id })
@@ -278,38 +263,6 @@ export async function deleteWorkspaceTrendDataAction(
           inArray(
             trendFeedbacks.id,
             feedbackRows.map((r) => r.id),
-          ),
-        );
-      }
-
-      // trend_source_health (agency-scoped; cascade to the agency's
-      // health rows. Workspace-level opt-out is preserved; the
-      // health snapshot is regenerated on the next sync cycle.)
-      const healthRows = await tx
-        .select({ id: trendSourceHealth.id })
-        .from(trendSourceHealth)
-        .where(eq(trendSourceHealth.agencyId, agencyId));
-      counts.trend_source_health = healthRows.length;
-      if (healthRows.length > 0) {
-        await tx.delete(trendSourceHealth).where(
-          inArray(
-            trendSourceHealth.id,
-            healthRows.map((r) => r.id),
-          ),
-        );
-      }
-
-      // trend_source_activity (agency-scoped; same reasoning)
-      const activityRows = await tx
-        .select({ id: trendSourceActivities.id })
-        .from(trendSourceActivities)
-        .where(eq(trendSourceActivities.agencyId, agencyId));
-      counts.trend_source_activity = activityRows.length;
-      if (activityRows.length > 0) {
-        await tx.delete(trendSourceActivities).where(
-          inArray(
-            trendSourceActivities.id,
-            activityRows.map((r) => r.id),
           ),
         );
       }

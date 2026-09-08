@@ -2,12 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { and, asc, eq, or } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { savedFilters, workspaceMemberships } from "@/lib/db/schema";
+import { savedFilters } from "@/lib/db/schema";
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { captureError } from "@/lib/observability/sentry";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { publicProviderError } from "@/lib/security/public-error";
+import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import { hasWorkspaceRole } from "@/lib/auth/policy";
 
 /**
  * GET /api/trends/saved-filters?workspace=<slug>
@@ -23,7 +25,7 @@ import { publicProviderError } from "@/lib/security/public-error";
  * "agency"). Filters are stored as jsonb in the `filters` column.
  */
 const querySchema = z.object({
-  workspace: z.string().min(1).optional(),
+  workspace: z.string().min(1),
   scope: z.enum(["me", "workspace", "agency", "all"]).optional(),
 });
 
@@ -31,7 +33,7 @@ const createSchema = z.object({
   name: z.string().min(1).max(80),
   shareScope: z.enum(["me", "workspace", "agency"]),
   filters: z.record(z.unknown()),
-  workspaceId: z.string().min(1),
+  workspaceSlug: z.string().min(1),
 });
 
 export async function GET(req: NextRequest) {
@@ -65,34 +67,31 @@ export async function GET(req: NextRequest) {
     }
 
     // Find the user's workspaces in the agency.
-    const memberships = await db
-      .select({ workspaceId: workspaceMemberships.workspaceId })
-      .from(workspaceMemberships)
-      .where(eq(workspaceMemberships.userId, actor.id));
-    const workspaceIds = memberships.map((m) => m.workspaceId);
-    if (workspaceIds.length === 0) {
-      return NextResponse.json({ filters: [] }, { status: 200, headers: mutatingApiHeaders() });
-    }
+    const workspace = await getAccessibleWorkspace(actor, parsed.data.workspace, agency.agencyId);
+    if (!workspace)
+      return NextResponse.json(
+        { error: "workspace_not_accessible" },
+        { status: 403, headers: mutatingApiHeaders() },
+      );
 
     // The planner surfaces both the user's own filters and any
     // workspace-shared ones. The test fixture requests `?workspace=
     // demo` and expects workspace-shared filters to be present.
-    const conditions = [
-      or(
-        eq(savedFilters.userId, actor.id),
-        eq(savedFilters.shareScope, "workspace"),
-        eq(savedFilters.shareScope, "agency"),
-      )!,
-    ];
+    const conditions = [eq(savedFilters.workspaceId, workspace.id)];
     if (parsed.data.scope === "me") {
-      conditions.length = 0;
       conditions.push(eq(savedFilters.userId, actor.id));
     } else if (parsed.data.scope === "workspace") {
-      conditions.length = 0;
       conditions.push(eq(savedFilters.shareScope, "workspace"));
     } else if (parsed.data.scope === "agency") {
-      conditions.length = 0;
       conditions.push(eq(savedFilters.shareScope, "agency"));
+    } else {
+      conditions.push(
+        or(
+          eq(savedFilters.userId, actor.id),
+          eq(savedFilters.shareScope, "workspace"),
+          eq(savedFilters.shareScope, "agency"),
+        )!,
+      );
     }
 
     const rows = await db
@@ -150,10 +149,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const workspace = await getAccessibleWorkspace(
+      actor,
+      parsed.data.workspaceSlug,
+      agency.agencyId,
+    );
+    if (!workspace)
+      return NextResponse.json(
+        { error: "workspace_not_accessible" },
+        { status: 403, headers: mutatingApiHeaders() },
+      );
+    if (!(await hasWorkspaceRole(actor, workspace.id, ["workspace_manager", "content_planner"]))) {
+      return NextResponse.json(
+        { error: "forbidden" },
+        { status: 403, headers: mutatingApiHeaders() },
+      );
+    }
+
     const [row] = await db
       .insert(savedFilters)
       .values({
-        workspaceId: parsed.data.workspaceId,
+        workspaceId: workspace.id,
         userId: actor.id,
         name: parsed.data.name,
         shareScope: parsed.data.shareScope,
@@ -172,4 +188,59 @@ export async function POST(req: NextRequest) {
       { status: 500, headers: mutatingApiHeaders() },
     );
   }
+}
+
+export async function PATCH(req: NextRequest) {
+  const json = await req.json().catch(() => ({}));
+  const parsed = z
+    .object({
+      id: z.string().uuid(),
+      workspaceSlug: z.string().min(1),
+      shareScope: z.enum(["me", "workspace", "agency"]),
+    })
+    .safeParse(json);
+  if (!parsed.success)
+    return NextResponse.json(
+      { error: "invalid_body" },
+      { status: 400, headers: mutatingApiHeaders() },
+    );
+  const actor = await currentActor();
+  if (!actor)
+    return NextResponse.json(
+      { error: "unauthorized" },
+      { status: 401, headers: mutatingApiHeaders() },
+    );
+  const agency = await resolveActiveAgencyContext({ actor });
+  if (!agency)
+    return NextResponse.json(
+      { error: "no_active_agency" },
+      { status: 403, headers: mutatingApiHeaders() },
+    );
+  const workspace = await getAccessibleWorkspace(actor, parsed.data.workspaceSlug, agency.agencyId);
+  if (!workspace || !(await hasWorkspaceRole(actor, workspace.id, ["workspace_manager"]))) {
+    return NextResponse.json(
+      { error: "forbidden" },
+      { status: 403, headers: mutatingApiHeaders() },
+    );
+  }
+  const [row] = await db
+    .update(savedFilters)
+    .set({ shareScope: parsed.data.shareScope, updatedAt: new Date() })
+    .where(
+      and(
+        eq(savedFilters.id, parsed.data.id),
+        eq(savedFilters.workspaceId, workspace.id),
+        eq(savedFilters.userId, actor.id),
+      ),
+    )
+    .returning({ id: savedFilters.id, shareScope: savedFilters.shareScope });
+  if (!row)
+    return NextResponse.json(
+      { error: "filter_not_found" },
+      { status: 404, headers: mutatingApiHeaders() },
+    );
+  return NextResponse.json(
+    { ok: true, filter: row },
+    { status: 200, headers: mutatingApiHeaders() },
+  );
 }

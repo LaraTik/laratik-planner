@@ -30,13 +30,11 @@ export function OnboardingWizard({
   // lazy initializer to avoid a setState in an effect (which
   // triggers a cascading render and breaks React 19's strict-mode
   // invariants).
-  const [selected, setSelected] = React.useState<Set<string>>(
-    () => new Set(["reddit", "youtube", "tiktok_tamnd", "google_trends"].slice(0, 4)),
-  );
+  const [selected, setSelected] = React.useState<Set<string>>(() => new Set());
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
-  const freeSources = TREND_SOURCE_CATALOG.filter((s) => s.tier === "free" || s.tier === "paid");
+  const freeSources = TREND_SOURCE_CATALOG.filter((s) => s.tier === "free");
 
   const toggle = (source: SourceDefinition) => {
     setSelected((prev) => {

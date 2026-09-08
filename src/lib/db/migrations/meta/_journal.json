@@ -260,6 +260,34 @@
       "when": 1790010000000,
       "tag": "0036_media_sharing",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1790020000000,
+      "tag": "0037_whole_quicksilver",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1790020000001,
+      "tag": "0038_curvy_thing",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1790020000002,
+      "tag": "0039_enable_trend_radar_capability",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1790020000003,
+      "tag": "0040_ensure_trend_radar_capability",
+      "breakpoints": true
     }
   ]
 }

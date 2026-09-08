@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { bootstrapTestSession } from "./_helpers";
 
 /**
  * Paid source with no API key — graceful error.
@@ -9,7 +10,14 @@ import { test, expect, type Page } from "@playwright/test";
  */
 
 test.describe("Trend Radar — paid source without key", () => {
-  test("enabling tiktok_research without a key shows a graceful error", async ({
+  test.beforeEach(async ({ page }) => {
+    await bootstrapTestSession(page, {
+      agencySlug: "trend-paid-agency",
+      workspaceSlug: "trend-paid",
+    });
+  });
+
+  test("enabling youtube_data_api without a key shows a graceful error", async ({
     page,
   }: {
     page: Page;
@@ -18,7 +26,7 @@ test.describe("Trend Radar — paid source without key", () => {
     await page.goto("/app/agency-settings/trend-sources");
 
     // The TikTok Research card exists.
-    const card = page.getByTestId("source-card-tiktok_research");
+    const card = page.getByTestId("source-card-youtube_data_api");
     await expect(card).toBeVisible();
 
     // The "Enable" button is rendered, but clicking surfaces a "missing

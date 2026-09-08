@@ -88,7 +88,9 @@ export function TrendSourcesAdmin({
         body: JSON.stringify({ enabled: isEnabling }),
       });
       if (!res.ok) {
-        setErrors((prev) => ({ ...prev, [def.key]: "request_failed" }));
+        const payload = (await res.json().catch(() => null)) as { error?: unknown } | null;
+        const errorCode = typeof payload?.error === "string" ? payload.error : "request_failed";
+        setErrors((prev) => ({ ...prev, [def.key]: errorCode }));
         return;
       }
       setRows((prev) => {

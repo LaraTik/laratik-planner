@@ -32,7 +32,13 @@ import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 
 const bodySchema = z.object({}).strict();
 
-const GREY_AREA_SOURCES = new Set(["twikit", "instaloader", "tomquirk", "kawsarlog"]);
+const GREY_AREA_SOURCES = new Set([
+  "tiktok_tamnd_cli",
+  "x_twikit",
+  "instagram_instaloader",
+  "linkedin_tomquirk",
+  "kawsarlog_threads",
+]);
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ key: string }> }) {
   try {

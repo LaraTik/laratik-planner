@@ -94,12 +94,18 @@ export function TrendCard({
       </div>
 
       <footer className="mt-auto flex items-center gap-2">
-        <Button type="button" size="sm" onClick={onUseInBrief} data-testid="trend-use-in-brief">
+        <Button
+          type="button"
+          size="sm"
+          className="min-h-11"
+          onClick={onUseInBrief}
+          data-testid="trend-use-in-brief"
+        >
           <FileText className="h-4 w-4" aria-hidden="true" />
           {t("trends.card.useInBrief") || "Use in brief"}
         </Button>
         {signal.sourceUrl ? (
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="ghost" size="sm" className="min-h-11">
             <a
               href={signal.sourceUrl}
               target="_blank"

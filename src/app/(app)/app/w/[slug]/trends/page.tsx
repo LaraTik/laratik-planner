@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
@@ -10,6 +10,7 @@ import { trendSignals, workspaceSourceOptouts, trendSourceHealth } from "@/lib/d
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { serverEnv } from "@/lib/validation/env";
+import { loadEnabledCapabilities } from "@/lib/ai/governance";
 import { listEnabledSourceKeysForWorkspace } from "@/lib/trends/enabled-sources";
 import { TrendsPageClient } from "./_components/trends-page-client";
 
@@ -44,6 +45,8 @@ export default async function TrendsPage({ params }: { params: Promise<{ slug: s
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) redirect("/setup");
+  const capabilities = await loadEnabledCapabilities(agencyId);
+  if (!capabilities.has("trend_radar")) redirect("/app");
 
   const ws = await getAccessibleWorkspace(actor, slug);
   if (!ws) redirect("/app");
@@ -90,9 +93,14 @@ export default async function TrendsPage({ params }: { params: Promise<{ slug: s
         .select()
         .from(trendSignals)
         .where(
-          and(eq(trendSignals.workspaceId, ws.id), inArray(trendSignals.sourceKey, enabledKeys)),
+          and(
+            eq(trendSignals.workspaceId, ws.id),
+            inArray(trendSignals.sourceKey, enabledKeys),
+            // Expired signals must never be presented as current trends.
+            sql`${trendSignals.expiresAt} > now()`,
+          ),
         )
-        .orderBy(desc(trendSignals.fetchedAt))
+        .orderBy(desc(trendSignals.score), desc(trendSignals.fetchedAt))
         .limit(50)
     : [];
 

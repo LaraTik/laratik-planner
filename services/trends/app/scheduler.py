@@ -1,7 +1,7 @@
 """APScheduler 3.x — periodic sync jobs.
 
-One AsyncIOScheduler instance, process-wide. On startup, every default-on
-`trend_source` row gets a job registered at its `cadence_minutes`
+One AsyncIOScheduler instance, process-wide. On startup, every enabled
+`trend_source` row gets a job registered at its configured cadence
 (default: SYNC_DEFAULT_CADENCE_MINUTES = 360 = 6h). The job function:
 
   1. Reads the source from the DB (live, in case it changed).
@@ -20,13 +20,13 @@ used by `/v1/sync` and the source-test endpoint.
 from __future__ import annotations
 
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.circuit_breaker import CircuitBreaker, CircuitOpen
 from app.config import get_settings
@@ -37,6 +37,7 @@ from app.models import (
     TrendSignal,
     TrendSource,
     TrendSourceActivity,
+    WorkspaceSourceOptout,
 )
 from app.observability import (
     SYNC_DURATION_SECONDS,
@@ -76,7 +77,7 @@ async def start_scheduler(session_factory: Any) -> AsyncIOScheduler:
 
     scheduler.start()
     logger.info("scheduler.started")
-    await _schedule_all_default_on(session_factory)
+    await _schedule_all_enabled(session_factory)
     return scheduler
 
 
@@ -87,22 +88,22 @@ async def stop_scheduler() -> None:
         logger.info("scheduler.stopped")
 
 
-async def _schedule_all_default_on(session_factory: Any) -> None:
-    """Walk every default-on trend_source and register a job for it.
+async def _schedule_all_enabled(session_factory: Any) -> None:
+    """Walk every enabled trend_source and register a job for it.
 
-    Sources with `default_on=False` (opt-in) are NOT auto-scheduled; the
-    agency admin triggers them manually via `/v1/sync`.
+    Only agency rows explicitly enabled by an admin are scheduled.
     """
     scheduler = get_scheduler()
     async with session_factory() as session:
-        stmt = select(TrendSource).where(TrendSource.default_on.is_(True))
+        stmt = select(TrendSource).where(TrendSource.enabled.is_(True))
         rows = (await session.execute(stmt)).scalars().all()
 
     settings = get_settings()
     for source in rows:
-        cadence = source.cadence_minutes or settings.SYNC_DEFAULT_CADENCE_MINUTES
+        cadence_map = {"1h": 60, "3h": 180, "6h": 360, "12h": 720, "24h": 1440}
+        cadence = cadence_map.get(source.cadence_override or "", settings.SYNC_DEFAULT_CADENCE_MINUTES)
         _register_job(source.source_key, source.agency_id, cadence)
-    logger.info("scheduler.scheduled_default_on", count=len(rows))
+    logger.info("scheduler.scheduled_enabled", count=len(rows))
 
 
 def _register_job(
@@ -147,7 +148,6 @@ async def _run_sync_cycle(
     from app.db import get_session_factory  # local import avoids cycle at import time
 
     started_at = datetime.now(timezone.utc)
-    settings = get_settings()
     factory = get_session_factory()
 
     job_row_id = job_id or uuid4()
@@ -155,35 +155,70 @@ async def _run_sync_cycle(
 
     try:
         async with factory() as session:
+            # Look up the source row.
+            stmt = select(TrendSource).where(TrendSource.source_key == source_key, TrendSource.enabled.is_(True))
+            if agency_id is not None:
+                stmt = stmt.where(TrendSource.agency_id == agency_id)
+            source = (await session.execute(stmt)).scalars().first()
+            if source is None:
+                if job_id is not None:
+                    job = (await session.execute(select(TrendFetchJob).where(TrendFetchJob.id == job_id))).scalar_one_or_none()
+                    if job is not None:
+                        job.status = "error"
+                        job.error_message = f"source_not_enabled: {source_key}"
+                        job.completed_at = datetime.now(timezone.utc)
+                logger.info("scheduler.job.skipped", source_key=source_key)
+                return
+
+            workspace_rows = await session.execute(
+                text("SELECT id FROM workspace WHERE agency_id = :agency_id AND archived_at IS NULL"),
+                {"agency_id": source.agency_id},
+            )
+            workspace_ids = list(workspace_rows.scalars().all())
+            if workspace_ids:
+                optout_rows = await session.execute(
+                    select(WorkspaceSourceOptout.workspace_id).where(
+                        WorkspaceSourceOptout.source_key == source_key,
+                        WorkspaceSourceOptout.workspace_id.in_(workspace_ids),
+                    )
+                )
+                opted_out = set(optout_rows.scalars().all())
+                workspace_ids = [workspace_id for workspace_id in workspace_ids if workspace_id not in opted_out]
+            if not workspace_ids:
+                if job_id is not None:
+                    job = (await session.execute(select(TrendFetchJob).where(TrendFetchJob.id == job_id))).scalar_one_or_none()
+                    if job is not None:
+                        job.status = "success"
+                        job.signals_added = 0
+                        job.completed_at = datetime.now(timezone.utc)
+                logger.info("scheduler.job.skipped_no_workspaces", source_key=source_key, agency_id=str(source.agency_id))
+                return
+
+            job: TrendFetchJob | None = None
             if created_job_row:
                 job = TrendFetchJob(
                     id=job_row_id,
-                    agency_id=agency_id or uuid4(),  # global sources get a synthetic agency
+                    workspace_id=workspace_ids[0],
                     source_key=source_key,
-                    trigger="cron",
                     status="running",
-                    platforms=[],
                     started_at=started_at,
                 )
                 session.add(job)
                 await session.flush()
-
-            # Look up the source row.
-            stmt = select(TrendSource).where(TrendSource.source_key == source_key)
-            if agency_id is not None:
-                stmt = stmt.where(TrendSource.agency_id == agency_id)
-            source = (await session.execute(stmt)).scalars().first()
-            if source is None or not source.enabled:
-                if created_job_row:
-                    job.status = "skipped"
-                    job.completed_at = datetime.now(timezone.utc)
-                    job.error_message = "source not configured or disabled"
-                logger.info("scheduler.job.skipped", source_key=source_key)
-                return
+            else:
+                job = (await session.execute(select(TrendFetchJob).where(TrendFetchJob.id == job_id))).scalar_one_or_none()
+                if job is not None:
+                    job.status = "running"
+                    job.started_at = started_at
+                    job.error_message = None
+                    await session.flush()
 
             # Run the extractor's fetch() under the circuit breaker.
-            extractor_cls = get_source(source.platform, source.source_key)
-            breaker = CircuitBreaker(session, source_key, agency_id=agency_id)
+            from app.extractor.base import all_sources
+            extractor_cls = next((candidate for candidate in all_sources() if candidate.source_key == source.source_key), None)
+            if extractor_cls is None:
+                raise LookupError(f"no extractor registered for source_key={source.source_key!r}")
+            breaker = CircuitBreaker(session, source_key, agency_id=source.agency_id)
 
             async def _do_fetch() -> list[RawSignal]:
                 instance = extractor_cls()  # type: ignore[abstract]
@@ -192,8 +227,8 @@ async def _run_sync_cycle(
             try:
                 raw_signals = await breaker.call(_do_fetch)
             except CircuitOpen as exc:
-                if created_job_row:
-                    job.status = "skipped"
+                if job is not None:
+                    job.status = "degraded"
                     job.error_message = str(exc)
                     job.completed_at = datetime.now(timezone.utc)
                 SYNC_TOTAL.labels(source_key=source_key, outcome="circuit_open").inc()
@@ -203,17 +238,16 @@ async def _run_sync_cycle(
                 err_msg = str(exc)[:500]
                 SYNC_ERRORS_TOTAL.labels(source_key=source_key, error_class=err_class).inc()
                 SYNC_TOTAL.labels(source_key=source_key, outcome="error").inc()
-                if created_job_row:
+                if job is not None:
                     job.status = "error"
                     job.error_message = f"{err_class}: {err_msg}"
                     job.completed_at = datetime.now(timezone.utc)
                 activity = TrendSourceActivity(
                     source_key=source_key,
-                    agency_id=agency_id,
-                    outcome="error",
-                    signals_count=0,
-                    error_class=err_class,
-                    error_message=err_msg,
+                    agency_id=source.agency_id,
+                    event_type="sync_failed",
+                    message=err_msg,
+                    metadata={"errorClass": err_class},
                     duration_ms=int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000),
                 )
                 session.add(activity)
@@ -229,53 +263,52 @@ async def _run_sync_cycle(
             # is deferred to the analysis worker; here we just store the raw
             # signal so the feed is queryable.
             signals_added = 0
-            for raw in raw_signals:
-                normalized = normalize_label(raw.label)
-                signal_row = TrendSignal(
-                    workspace_id=source.agency_id,  # signal is per-agency in v1
-                    platform=raw.platform,
-                    type=raw.type,
-                    label=raw.label,
-                    normalized_label=normalized,
-                    language=raw.language,
-                    region=raw.region,
-                    score=raw.score,
-                    raw_score=raw.score,
-                    raw_payload=raw.raw_payload or {},
-                    source_id=raw.source_id,
-                    source_url=raw.source_url,
-                    source_key=source_key,
-                    expires_at=raw.fetched_at.replace(tzinfo=timezone.utc)
-                    if raw.fetched_at.tzinfo
-                    else datetime.now(timezone.utc),
-                )
-                keep = await should_keep(session, signal_row)
-                if not keep:
-                    continue
-                session.add(signal_row)
-                signals_added += 1
-                SYNC_SIGNALS_TOTAL.labels(
-                    source_key=source_key, platform=raw.platform
-                ).inc()
+            for workspace_id in workspace_ids:
+                for raw in raw_signals[: source.max_signals_per_cycle]:
+                    normalized = normalize_label(raw.label)
+                    fetched_at = raw.fetched_at.replace(tzinfo=timezone.utc) if raw.fetched_at.tzinfo is None else raw.fetched_at
+                    signal_row = TrendSignal(
+                        workspace_id=workspace_id,
+                        platform=raw.platform,
+                        type=raw.type,
+                        label=raw.label,
+                        normalized_label=normalized,
+                        language=raw.language,
+                        region=raw.region,
+                        score=raw.score,
+                        raw_score=raw.score,
+                        raw_payload=raw.raw_payload or {},
+                        source_id=raw.source_id,
+                        source_url=raw.source_url,
+                        source_key=source_key,
+                        fetched_at=fetched_at,
+                        expires_at=fetched_at + timedelta(days=7),
+                    )
+                    keep = await should_keep(session, signal_row)
+                    if not keep:
+                        continue
+                    session.add(signal_row)
+                    signals_added += 1
+                    SYNC_SIGNALS_TOTAL.labels(source_key=source_key, platform=raw.platform).inc()
 
-            if created_job_row:
+            if job is not None:
                 job.status = "success"
-                job.signals_added = signals_added
+                job.signals_added = (job.signals_added or 0) + signals_added if not created_job_row else signals_added
                 job.completed_at = datetime.now(timezone.utc)
                 job.duration_ms = int(
                     (datetime.now(timezone.utc) - started_at).total_seconds() * 1000
                 )
             activity = TrendSourceActivity(
                 source_key=source_key,
-                agency_id=agency_id,
-                outcome="success",
-                signals_count=signals_added,
+                agency_id=source.agency_id,
+                event_type="sync_completed",
+                message=f"Stored {signals_added} signals across {len(workspace_ids)} workspaces",
+                metadata={"signalsCount": signals_added, "workspaceCount": len(workspace_ids)},
                 duration_ms=int(
                     (datetime.now(timezone.utc) - started_at).total_seconds() * 1000
                 ),
             )
             session.add(activity)
-            source.last_synced_at = datetime.now(timezone.utc)
             SYNC_TOTAL.labels(source_key=source_key, outcome="success").inc()
             SYNC_DURATION_SECONDS.labels(source_key=source_key).observe(
                 (datetime.now(timezone.utc) - started_at).total_seconds()
@@ -306,6 +339,7 @@ async def _run_sync_cycle(
 async def trigger_now(
     source_key: str,
     agency_id: Optional[UUID] = None,
+    job_id: Optional[UUID] = None,
 ) -> UUID:
     """Run a sync cycle for `source_key` immediately and return the job id.
 
@@ -316,7 +350,7 @@ async def trigger_now(
     from app.db import get_session_factory
 
     factory = get_session_factory()
-    job_id = uuid4()
+    job_id = job_id or uuid4()
     # Use the same path as the cron job, but with a pre-allocated job id
     # so we can return it synchronously.
     await _run_sync_cycle(source_key, agency_id, job_id)

@@ -11,7 +11,7 @@ from __future__ import annotations
 import base64
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -101,7 +101,8 @@ def _decode_cursor(cursor: str) -> dict[str, Any]:
 # ─── Routes ─────────────────────────────────────────────────────────────────
 @router.get("", response_model=FeedResponse)
 async def list_feed(
-    agencyId: uuid.UUID = Query(..., description="Agency ID — the feed is per-agency in v1."),
+    workspaceId: Optional[uuid.UUID] = Query(None, description="Workspace id for tenancy scoping."),
+    agencyId: Optional[uuid.UUID] = Query(None, description="Deprecated alias for workspaceId."),
     platform: Optional[str] = Query(None, description="Comma-separated platform list."),
     region: Optional[str] = Query(None),
     type: Optional[str] = Query(None),
@@ -112,8 +113,15 @@ async def list_feed(
     cursor: Optional[str] = Query(None),
     session: AsyncSession = Depends(get_session),
 ) -> FeedResponse:
-    """Paginated feed. `agencyId` is required; the rest are filters."""
-    filters = [TrendSignal.workspace_id == agencyId]
+    """Paginated feed. A workspace id is required; `agencyId` remains a
+    backwards-compatible alias for existing internal callers."""
+    scope_id = workspaceId or agencyId
+    if scope_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workspace_id_required")
+    allowed_sort_columns = {"score", "velocity", "fetched_at", "label"}
+    if sortBy not in allowed_sort_columns:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_sort")
+    filters = [TrendSignal.workspace_id == scope_id, TrendSignal.expires_at > datetime.now(timezone.utc)]
     if platform:
         filters.append(TrendSignal.platform.in_(platform.split(",")))
     if region:
@@ -177,8 +185,12 @@ async def get_signal(
     session: AsyncSession = Depends(get_session),
 ) -> WhyPayload:
     """Return a single signal + the 'why' drawer payload."""
+    if workspaceId is None and agencyId is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workspace_id_required")
     stmt = select(TrendSignal).where(
-        TrendSignal.id == signal_id, TrendSignal.workspace_id == agencyId
+        TrendSignal.id == signal_id,
+        TrendSignal.workspace_id == (workspaceId or agencyId),
+        TrendSignal.expires_at > datetime.now(timezone.utc),
     )
     signal = (await session.execute(stmt)).scalar_one_or_none()
     if signal is None:
@@ -191,6 +203,8 @@ async def get_signal(
             TrendSignal.normalized_label == signal.normalized_label,
             TrendSignal.id != signal.id,
             TrendSignal.platform != signal.platform,
+            TrendSignal.workspace_id == signal.workspace_id,
+            TrendSignal.expires_at > datetime.now(timezone.utc),
         )
         .order_by(TrendSignal.fetched_at.desc())
         .limit(10)
@@ -207,6 +221,8 @@ async def get_signal(
             .where(
                 TrendSignal.platform == signal.platform,
                 TrendSignal.id != signal.id,
+                TrendSignal.workspace_id == signal.workspace_id,
+                TrendSignal.expires_at > datetime.now(timezone.utc),
             )
             .order_by(TrendSignal.fetched_at.desc())
             .limit(200)

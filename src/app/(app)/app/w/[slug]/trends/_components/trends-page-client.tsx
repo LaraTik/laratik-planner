@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, Compass, Sparkles, LayoutGrid, FileText, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -49,10 +50,9 @@ type Optout = {
  *   - The first-run onboarding wizard (if no sources are enabled).
  *   - The trend feed (Explore tab default).
  *
- * The "Use in brief" CTA on each card opens the global QuickCreate
- * drawer (rendered globally in the workspace layout) and pre-fills
- * its topic field with the trend label. The drawer is a separate
- * surface; here we just dispatch a custom event the drawer picks up.
+ * The "Use in brief" CTA opens Quick Create with a validated trend
+ * signal id. The server creates the trend_brief link in the same
+ * transaction as the draft, so the Briefs tab has a real audit trail.
  */
 export function TrendsPageClient({
   workspaceSlug,
@@ -72,9 +72,11 @@ export function TrendsPageClient({
   showOnboarding: boolean;
 }) {
   const t = useLocaleT();
+  const router = useRouter();
   const [tab, setTab] = React.useState<"explore" | "for-you" | "boards" | "briefs">("explore");
   const [wizardOpen, setWizardOpen] = React.useState(showOnboarding);
   const [tosSource, setTosSource] = React.useState<SourceDefinition | null>(null);
+  const [vertical, setVertical] = React.useState<string>("all");
   void _enabledKeys;
 
   // Sources whose circuit breaker is OPEN.
@@ -86,17 +88,14 @@ export function TrendsPageClient({
     setTosSource(source);
   }, []);
 
-  // Quick-create dispatch — the global QuickCreate drawer listens for
-  // `trends:use-in-brief` events and opens with the topic pre-filled.
-  const handleUseInBrief = React.useCallback((trend: TrendSignal) => {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("trends:use-in-brief", {
-          detail: { topic: trend.label, sourceKey: trend.sourceKey },
-        }),
+  const handleUseInBrief = React.useCallback(
+    (trend: TrendSignal) => {
+      router.push(
+        `/app/w/${encodeURIComponent(workspaceSlug)}/planning/new?trendSignalId=${encodeURIComponent(trend.id)}`,
       );
-    }
-  }, []);
+    },
+    [router, workspaceSlug],
+  );
 
   return (
     <div className="space-y-5">
@@ -150,7 +149,7 @@ export function TrendsPageClient({
             </TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
-            <SavedFilters />
+            <SavedFilters workspaceSlug={workspaceSlug} onVerticalChange={setVertical} />
             {isAdmin ? (
               <Button asChild variant="outline" size="sm" data-testid="trends-sources-link">
                 <Link href="/app/agency-settings/trend-sources">
@@ -166,13 +165,14 @@ export function TrendsPageClient({
           <TrendFeed
             workspaceSlug={workspaceSlug}
             signals={signals}
+            vertical={vertical}
             optouts={optouts}
             onUseInBrief={handleUseInBrief}
             isEmpty={!showOnboarding && signals.length === 0}
           />
         </TabsContent>
         <TabsContent value="for-you">
-          <TrendsForYouTab />
+          <TrendsForYouTab signals={signals} onUseInBrief={handleUseInBrief} />
         </TabsContent>
         <TabsContent value="boards">
           <TrendsBoardsTab workspaceSlug={workspaceSlug} />
