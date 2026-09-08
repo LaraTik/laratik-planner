@@ -5,6 +5,13 @@ import { MoreHorizontal, Pencil, Archive, RotateCcw } from "lucide-react";
 import { DestructiveConfirmDialog } from "@/components/forms/destructive-confirm-dialog";
 import { DiscussionDrawer } from "@/components/planning/discussion-drawer";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   DiscussionTrigger,
   WorkspacePanels,
   WorkspaceTabs,
@@ -178,9 +185,7 @@ export function WorkspaceShell({
             mentionCount={mentionCount}
             onClick={() => setDrawerOpen(true)}
           />
-          {canResetIdea ? (
-            <OverflowMenu onReset={() => setResetOpen(true)} contentItemId={contentItemId} t={t} />
-          ) : null}
+          {canResetIdea ? <OverflowMenu onReset={() => setResetOpen(true)} t={t} /> : null}
         </div>
       </div>
 
@@ -217,57 +222,48 @@ function OverflowMenu({
   t,
 }: {
   onReset: () => void;
-  contentItemId: string;
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
-  // Native <details>/<summary> — accessible, no JS focus
-  // management, closes on outside click via the standard browser
-  // behaviour. The menu is intentionally small (operator-only
-  // actions) and lives under `•••` in the header.
+  // Radix portals the menu outside the sticky header and any panel
+  // clipping/stacking contexts, while also providing the expected
+  // menu keyboard and focus behavior. The menu is intentionally
+  // small (operator-only actions) and lives under `•••` in the header.
   return (
-    <details className="relative" data-testid="workspace-overflow-menu">
-      <summary
-        className="border-border bg-surface text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-[var(--radius-control)] border focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none [&::-webkit-details-marker]:hidden"
-        aria-label="More actions"
-        data-testid="workspace-overflow-trigger"
-      >
-        <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-      </summary>
-      <div
-        className="border-border bg-surface absolute end-0 z-30 mt-1 w-56 rounded-[var(--radius-control)] border p-1 shadow-lg"
-        role="menu"
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="border-border bg-surface text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-[var(--radius-control)] border focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+          aria-label="More actions"
+          data-testid="workspace-overflow-trigger"
+        >
+          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        sideOffset={4}
+        className="w-56"
         data-testid="workspace-overflow-content"
       >
-        <button
-          type="button"
-          disabled
-          className="text-body text-fg-muted flex w-full cursor-not-allowed items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-start"
-          title={t("planning.comingSoon")}
-        >
+        <DropdownMenuItem disabled title={t("planning.comingSoon")} className="text-fg-muted">
           <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
           Duplicate
-        </button>
-        <button
-          type="button"
-          disabled
-          className="text-body text-fg-muted flex w-full cursor-not-allowed items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-start"
-          title={t("planning.comingSoon")}
-        >
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled title={t("planning.comingSoon")} className="text-fg-muted">
           <Archive className="h-3.5 w-3.5" aria-hidden="true" />
           Archive
-        </button>
-        <hr className="border-border my-1" />
-        <button
-          type="button"
-          onClick={onReset}
-          className="text-body text-danger hover:bg-danger-subtle focus-visible:ring-focus-ring flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-start focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-          role="menuitem"
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={onReset}
+          variant="destructive"
           data-testid="workspace-overflow-reset"
         >
           <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
           Reset content
-        </button>
-      </div>
-    </details>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

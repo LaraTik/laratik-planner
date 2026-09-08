@@ -133,6 +133,50 @@ describe("WorkspaceTabs — Preview tab (/ui-ux-pro-max)", () => {
 });
 
 describe("WorkspaceShell — initial hash handoff", () => {
+  it("opens the operator menu in a portal above the workspace panel", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <WorkspaceShell
+        workspaceSlug="acme"
+        contentItemId="content-1"
+        ideaTitle="Summer launch"
+        comments={[]}
+        currentUserId="user-1"
+        roles={{
+          isManager: true,
+          isPlanner: false,
+          isDesigner: false,
+          isInternalReviewer: false,
+          isClientReviewer: false,
+          isPublisher: false,
+        }}
+        canPostInternal={true}
+        canPostClientVisible={false}
+        tabs={tabs}
+        panels={{
+          overview: <div data-testid="shell-panel-overview">overview</div>,
+        }}
+        canResetIdea={true}
+        resetCounts={EMPTY_RESET_IDEA_COUNTS}
+        activityCount={0}
+        openCommentCount={0}
+        mentionCount={0}
+      />,
+    );
+
+    const trigger = screen.getByTestId("workspace-overflow-trigger");
+    expect(trigger).toHaveAttribute("aria-haspopup", "menu");
+
+    await user.click(trigger);
+
+    const menu = screen.getByTestId("workspace-overflow-content");
+    expect(menu).toBeInTheDocument();
+    const portal = menu.closest("[data-radix-popper-content-wrapper]");
+    expect(portal?.parentElement).toBe(document.body);
+    expect(screen.getByRole("menuitem", { name: "Reset content" })).toBeInTheDocument();
+  });
+
   it("keeps a user-selected tab after hydration has finished", async () => {
     window.location.hash = "";
     const user = userEvent.setup();
