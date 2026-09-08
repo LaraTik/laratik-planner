@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — Trends · Mobile (390px)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.mobile-frame { width: 390px; min-height: 800px; margin: 0 auto; border: 1px solid #DDE1E6; border-radius: 32px; overflow: hidden; box-shadow: 0 4px 24px rgba(19, 28, 43, 0.08); }
+.bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
+</style>
+</head>
+<body class="bg-canvas text-on-surface p-4">
+<!-- Mobile frame 390px -->
+<div class="mobile-frame bg-surface flex flex-col">
+
+  <!-- Status bar -->
+  <div class="h-[44px] flex items-center justify-between px-6 text-[13px] font-semibold">
+    <span>9:41</span>
+    <div class="flex items-center gap-1">
+      <span class="material-symbols-outlined text-[16px]">signal_cellular_alt</span>
+      <span class="material-symbols-outlined text-[16px]">wifi</span>
+      <span class="material-symbols-outlined text-[16px]">battery_full</span>
+    </div>
+  </div>
+
+  <!-- Top app bar -->
+  <div class="h-[56px] flex items-center justify-between px-4 border-b border-border">
+    <button class="text-on-surface-variant">
+      <span class="material-symbols-outlined text-[24px]">menu</span>
+    </button>
+    <h1 class="text-[16px] font-semibold">Trends</h1>
+    <button class="text-primary">
+      <span class="material-symbols-outlined text-[24px]">refresh</span>
+    </button>
+  </div>
+
+  <!-- Page header -->
+  <div class="px-4 pt-4 pb-2">
+    <h2 class="text-[22px] font-semibold">Trends</h2>
+    <p class="text-[12px] text-text-muted mt-0.5">Last 24 hours · Last sync 14m ago</p>
+  </div>
+
+  <!-- Filter chips (horizontal scroll) -->
+  <div class="px-4 py-2 overflow-x-auto">
+    <div class="flex items-center gap-2 min-w-min">
+      <button class="h-8 px-3 rounded-full bg-primary text-white text-[12px] font-semibold whitespace-nowrap">All (47)</button>
+      <button class="h-8 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold whitespace-nowrap">X (12)</button>
+      <button class="h-8 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold whitespace-nowrap">Reddit (9)</button>
+      <button class="h-8 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold whitespace-nowrap">TikTok (14)</button>
+      <button class="h-8 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold whitespace-nowrap">YouTube (6)</button>
+    </div>
+  </div>
+
+  <!-- Trends list (1-column on mobile) -->
+  <div class="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+    <div class="bg-surface rounded-xl border border-border p-4 active:bg-surface-subtle">
+      <div class="flex items-center justify-between mb-2">
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-subtle text-text-muted text-[11px] font-semibold">
+          <span class="material-symbols-outlined text-[12px]">alternate_email</span>X
+        </span>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning-subtle text-warning text-[12px] font-semibold">🔥 87</span>
+      </div>
+      <div class="text-[15px] font-semibold leading-5 mb-1">#AIRevolution</div>
+      <div class="text-[11px] text-text-muted mb-3">Hashtag · 12.4K posts in 6h</div>
+      <button class="w-full h-9 rounded-lg bg-primary text-white text-[13px] font-semibold">Use in brief</button>
+    </div>
+
+    <div class="bg-surface rounded-xl border border-border p-4">
+      <div class="flex items-center justify-between mb-2">
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-subtle text-text-muted text-[11px] font-semibold">
+          <span class="material-symbols-outlined text-[12px]">music_note</span>TikTok
+        </span>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning-subtle text-warning text-[12px] font-semibold">🔥 84</span>
+      </div>
+      <div class="text-[15px] font-semibold leading-5 mb-1">"Original sound" — Alex Hormozi</div>
+      <div class="text-[11px] text-text-muted mb-3">Audio · 4.2K Reels / 24h</div>
+      <button class="w-full h-9 rounded-lg bg-primary text-white text-[13px] font-semibold">Use in brief</button>
+    </div>
+
+    <div class="bg-surface rounded-xl border border-border p-4">
+      <div class="flex items-center justify-between mb-2">
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-subtle text-text-muted text-[11px] font-semibold">
+          <span class="material-symbols-outlined text-[12px]">forum</span>Reddit
+        </span>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning-subtle text-warning text-[12px] font-semibold">🔥 79</span>
+      </div>
+      <div class="text-[15px] font-semibold leading-5 mb-1">r/coffee — Latte art for IG Reels</div>
+      <div class="text-[11px] text-text-muted mb-3">Topic · 2.1K upvotes / 24h</div>
+      <button class="w-full h-9 rounded-lg bg-primary text-white text-[13px] font-semibold">Use in brief</button>
+    </div>
+
+    <div class="bg-surface rounded-xl border border-border p-4">
+      <div class="flex items-center justify-between mb-2">
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-subtle text-text-muted text-[11px] font-semibold">
+          <span class="material-symbols-outlined text-[12px]">play_circle</span>YouTube
+        </span>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning-subtle text-warning text-[12px] font-semibold">🔥 71</span>
+      </div>
+      <div class="text-[15px] font-semibold leading-5 mb-1">"How we sourced our Yemeni beans"</div>
+      <div class="text-[11px] text-text-muted mb-3">Topic · 180K views / 24h</div>
+      <button class="w-full h-9 rounded-lg bg-primary text-white text-[13px] font-semibold">Use in brief</button>
+    </div>
+  </div>
+
+  <!-- Bottom nav (mobile) -->
+  <div class="bottom-nav h-[64px] bg-surface border-t border-border flex items-center justify-around">
+    <a class="flex flex-col items-center gap-0.5 text-text-muted" href="#">
+      <span class="material-symbols-outlined text-[22px]">space_dashboard</span>
+      <span class="text-[10px]">Overview</span>
+    </a>
+    <a class="flex flex-col items-center gap-0.5 text-text-muted" href="#">
+      <span class="material-symbols-outlined text-[22px]">calendar_month</span>
+      <span class="text-[10px]">Planning</span>
+    </a>
+    <a class="flex flex-col items-center gap-0.5 text-primary" href="#">
+      <span class="material-symbols-outlined text-[22px] icon-fill">radar</span>
+      <span class="text-[10px] font-semibold">Trends</span>
+    </a>
+    <a class="flex flex-col items-center gap-0.5 text-text-muted" href="#">
+      <span class="material-symbols-outlined text-[22px]">rate_review</span>
+      <span class="text-[10px]">Reviews</span>
+    </a>
+    <a class="flex flex-col items-center gap-0.5 text-text-muted" href="#">
+      <span class="material-symbols-outlined text-[22px]">group</span>
+      <span class="text-[10px]">Team</span>
+    </a>
+  </div>
+</div>
+</body></html>

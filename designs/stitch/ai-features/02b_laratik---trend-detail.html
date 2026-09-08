@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — Trend Detail Drawer ("Why this trend?")</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+  "info-subtle": "#F0F9FF",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.spark { stroke: #3525cd; stroke-width: 1.5; fill: rgba(53, 37, 205, 0.08); }
+.spark-predict { stroke: #B45309; stroke-width: 1.5; stroke-dasharray: 3 2; fill: none; }
+</style>
+</head>
+<body class="bg-canvas text-on-surface">
+
+<!-- Backdrop with the trends page dimmed -->
+<div class="fixed inset-0 bg-on-surface/30 flex items-stretch justify-end" style="z-index: 50;">
+
+  <!-- Trends page (dimmed in background) -->
+  <div class="flex-1 bg-canvas p-6 opacity-30 pointer-events-none">
+    <div class="bg-surface rounded-xl border border-border p-4 h-full">
+      <div class="h-6 w-32 bg-surface-subtle rounded mb-3"></div>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-surface-subtle rounded-xl h-48"></div>
+        <div class="bg-surface-subtle rounded-xl h-48"></div>
+        <div class="bg-surface-subtle rounded-xl h-48"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRAWER (right, 560px) -->
+  <div class="w-[560px] bg-surface h-full flex flex-col border-l border-border shadow-2xl">
+
+    <!-- Header -->
+    <div class="px-5 py-4 border-b border-border">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+          <span class="material-symbols-outlined text-[11px]">alternate_email</span>X
+        </span>
+        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+          <span class="material-symbols-outlined text-[10px]">trending_up</span>Emerging
+        </span>
+        <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-text-muted text-[10px] font-semibold">
+          <span class="material-symbols-outlined text-[11px]">tag</span>Hashtag
+        </span>
+        <button class="ml-auto text-text-muted hover:text-on-surface">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <h2 class="text-[22px] font-semibold leading-7">#AIRevolution</h2>
+      <div class="flex items-center gap-2 text-[12px] text-text-muted mt-1">
+        <span>12.4K posts in last 6h</span>
+        <span>·</span>
+        <span class="text-success font-semibold">+340% vs 24h avg</span>
+        <span>·</span>
+        <span>🔥 87 score</span>
+      </div>
+    </div>
+
+    <!-- Body (scrollable) -->
+    <div class="flex-1 overflow-y-auto">
+
+      <!-- Why this fits (Fit breakdown) -->
+      <div class="px-5 py-4 border-b border-border">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-[14px] font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[16px] text-primary">target</span>Why this fits you
+          </h3>
+          <div class="flex items-center gap-1">
+            <span class="text-[24px] font-bold text-success">96</span>
+            <span class="text-[11px] text-text-muted">/100</span>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex items-center gap-2 p-2 rounded-lg bg-surface-subtle">
+            <div class="w-24 text-[12px] text-on-surface-variant">Vertical</div>
+            <div class="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
+              <div class="h-full bg-primary" style="width: 94%"></div>
+            </div>
+            <div class="w-8 text-[12px] font-semibold text-right">94</div>
+          </div>
+          <p class="text-[11px] text-text-muted pl-1 -mt-1">Coffee + lifestyle — your workspace verticals are coffee, food, lifestyle. Tagged coffee (BART-MNLI 0.94).</p>
+
+          <div class="flex items-center gap-2 p-2 rounded-lg bg-surface-subtle">
+            <div class="w-24 text-[12px] text-on-surface-variant">Audience</div>
+            <div class="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
+              <div class="h-full bg-primary" style="width: 84%"></div>
+            </div>
+            <div class="w-8 text-[12px] font-semibold text-right">84</div>
+          </div>
+          <p class="text-[11px] text-text-muted pl-1 -mt-1">84% of this trend's audience overlaps with your top 12% segment (SparkToro-style affinity inference).</p>
+
+          <div class="flex items-center gap-2 p-2 rounded-lg bg-surface-subtle">
+            <div class="w-24 text-[12px] text-on-surface-variant">Voice</div>
+            <div class="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
+              <div class="h-full bg-primary" style="width: 92%"></div>
+            </div>
+            <div class="w-8 text-[12px] font-semibold text-right">92</div>
+          </div>
+          <p class="text-[11px] text-text-muted pl-1 -mt-1">Matches your brand voice "authoritative, witty, no emojis" against the trend's dominant voice.</p>
+
+          <div class="flex items-center gap-2 p-2 rounded-lg bg-surface-subtle">
+            <div class="w-24 text-[12px] text-on-surface-variant">Platform</div>
+            <div class="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
+              <div class="h-full bg-primary" style="width: 100%"></div>
+            </div>
+            <div class="w-8 text-[12px] font-semibold text-right">100</div>
+          </div>
+          <p class="text-[11px] text-text-muted pl-1 -mt-1">Hot on Instagram + TikTok — your agency posts on both.</p>
+
+          <div class="flex items-center gap-2 p-2 rounded-lg bg-surface-subtle">
+            <div class="w-24 text-[12px] text-on-surface-variant">Competitive</div>
+            <div class="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
+              <div class="h-full bg-success" style="width: 100%"></div>
+            </div>
+            <div class="w-8 text-[12px] font-semibold text-right text-success">100</div>
+          </div>
+          <p class="text-[11px] text-text-muted pl-1 -mt-1"><strong>First-mover</strong> — your top 3 competitors have not yet posted about this trend.</p>
+        </div>
+      </div>
+
+      <!-- Velocity chart (enlarged sparkline) -->
+      <div class="px-5 py-4 border-b border-border">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-[14px] font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[16px] text-primary">show_chart</span>Velocity
+          </h3>
+          <div class="flex items-center gap-1 text-[11px] text-text-muted">
+            <button class="px-1.5 py-0.5 rounded text-on-surface font-semibold">14d</button>
+            <button class="px-1.5 py-0.5 rounded">30d</button>
+            <button class="px-1.5 py-0.5 rounded">90d</button>
+          </div>
+        </div>
+
+        <div class="bg-surface-subtle rounded-lg p-3">
+          <svg class="w-full h-32" viewBox="0 0 500 120" preserveAspectRatio="none">
+            <!-- Grid lines -->
+            <line x1="0" y1="30" x2="500" y2="30" stroke="#DDE1E6" stroke-width="0.5" stroke-dasharray="2 2"/>
+            <line x1="0" y1="60" x2="500" y2="60" stroke="#DDE1E6" stroke-width="0.5" stroke-dasharray="2 2"/>
+            <line x1="0" y1="90" x2="500" y2="90" stroke="#DDE1E6" stroke-width="0.5" stroke-dasharray="2 2"/>
+            <!-- Historical (solid) -->
+            <path class="spark" d="M0,100 L35,95 L70,88 L105,78 L140,68 L175,55 L210,42 L245,28 L280,15 L315,8 L350,5 L385,3 L420,2 L455,1 L500,1"/>
+            <!-- Prediction (dashed) -->
+            <path class="spark-predict" d="M420,2 L455,2 L500,3 L545,5"/>
+            <!-- Markers -->
+            <circle cx="500" cy="1" r="3" fill="#3525cd"/>
+            <text x="500" y="-5" text-anchor="end" font-size="9" fill="#7B8495">now</text>
+            <circle cx="245" cy="28" r="3" fill="#3525cd"/>
+            <text x="245" y="22" text-anchor="middle" font-size="9" fill="#7B8495">7d ago</text>
+          </svg>
+          <div class="flex items-center justify-between text-[10px] text-text-muted mt-1">
+            <span>14d ago</span>
+            <span class="flex items-center gap-2">
+              <span class="flex items-center gap-1"><span class="w-2 h-0.5 bg-primary"></span>Historical</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-0.5 bg-warning" style="border-top: 1px dashed"></span>Predicted (next 7d)</span>
+            </span>
+            <span>Next 7d</span>
+          </div>
+        </div>
+        <p class="text-[12px] text-on-surface mt-2">
+          <strong>Prediction:</strong> if you ride this trend in the next 24-48h, projected velocity at publish is <strong class="text-success">+95%</strong>. After 5d, the prediction drops to <strong class="text-warning">+18%</strong>.
+        </p>
+      </div>
+
+      <!-- Lifecycle S-curve -->
+      <div class="px-5 py-4 border-b border-border">
+        <h3 class="text-[14px] font-semibold flex items-center gap-2 mb-3">
+          <span class="material-symbols-outlined text-[16px] text-primary">timeline</span>Lifecycle
+        </h3>
+        <div class="bg-surface-subtle rounded-lg p-3">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="flex-1 flex items-center gap-1">
+              <div class="flex-1 h-1.5 bg-success/30 rounded-full"></div>
+              <div class="flex-1 h-1.5 bg-warning/30 rounded-full"></div>
+              <div class="flex-1 h-1.5 bg-text-muted/20 rounded-full"></div>
+            </div>
+            <span class="text-[10px] text-success font-semibold">You are here</span>
+          </div>
+          <div class="flex justify-between text-[10px] text-text-muted">
+            <span>🌱 Emerging</span>
+            <span>📈 Peaking (now)</span>
+            <span>📉 Declining</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cross-platform spread -->
+      <div class="px-5 py-4 border-b border-border">
+        <h3 class="text-[14px] font-semibold flex items-center gap-2 mb-3">
+          <span class="material-symbols-outlined text-[16px] text-primary">hub</span>Cross-platform spread
+        </h3>
+        <div class="space-y-1.5">
+          <div class="flex items-center gap-2 text-[12px]">
+            <span class="w-20 text-text-muted">X (primary)</span>
+            <div class="flex-1 h-1.5 bg-surface-subtle rounded-full overflow-hidden">
+              <div class="h-full bg-success" style="width: 100%"></div>
+            </div>
+            <span class="text-text-muted">12.4K / 6h</span>
+          </div>
+          <div class="flex items-center gap-2 text-[12px]">
+            <span class="w-20 text-text-muted">Reddit</span>
+            <div class="flex-1 h-1.5 bg-surface-subtle rounded-full overflow-hidden">
+              <div class="h-full bg-warning" style="width: 38%"></div>
+            </div>
+            <span class="text-text-muted">2.1K / 24h</span>
+          </div>
+          <div class="flex items-center gap-2 text-[12px]">
+            <span class="w-20 text-text-muted">TikTok</span>
+            <div class="flex-1 h-1.5 bg-surface-subtle rounded-full overflow-hidden">
+              <div class="h-full bg-success" style="width: 18%"></div>
+            </div>
+            <span class="text-text-muted">820 / 24h</span>
+          </div>
+          <div class="flex items-center gap-2 text-[12px]">
+            <span class="w-20 text-text-muted">Instagram</span>
+            <div class="flex-1 h-1.5 bg-surface-subtle rounded-full overflow-hidden">
+              <div class="h-full bg-success" style="width: 12%"></div>
+            </div>
+            <span class="text-text-muted">510 / 24h</span>
+          </div>
+          <div class="flex items-center gap-2 text-[12px]">
+            <span class="w-20 text-text-muted">YouTube</span>
+            <div class="flex-1 h-1.5 bg-surface-subtle rounded-full overflow-hidden">
+              <div class="h-full bg-text-muted" style="width: 4%"></div>
+            </div>
+            <span class="text-text-muted">190 / 24h</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top accounts -->
+      <div class="px-5 py-4 border-b border-border">
+        <h3 class="text-[14px] font-semibold flex items-center gap-2 mb-3">
+          <span class="material-symbols-outlined text-[16px] text-primary">group</span>Top accounts riding this
+        </h3>
+        <div class="space-y-2">
+          <div class="flex items-center gap-2 text-[12px]">
+            <div class="w-7 h-7 rounded-full bg-primary text-white text-[10px] font-semibold flex items-center justify-center">W</div>
+            <div class="flex-1">
+              <div class="font-semibold">@wellness_coffee_ig</div>
+              <div class="text-[10px] text-text-muted">Instagram · 1.2M followers</div>
+            </div>
+            <span class="text-[10px] text-text-muted">+3 posts / 24h</span>
+          </div>
+          <div class="flex items-center gap-2 text-[12px]">
+            <div class="w-7 h-7 rounded-full bg-secondary text-white text-[10px] font-semibold flex items-center justify-center">E</div>
+            <div class="flex-1">
+              <div class="font-semibold">@espresso_snob</div>
+              <div class="text-[10px] text-text-muted">TikTok · 480K followers</div>
+            </div>
+            <span class="text-[10px] text-text-muted">+5 Reels / 24h</span>
+          </div>
+          <div class="flex items-center gap-2 text-[12px]">
+            <div class="w-7 h-7 rounded-full bg-tertiary text-white text-[10px] font-semibold flex items-center justify-center">D</div>
+            <div class="flex-1">
+              <div class="font-semibold">@dailybrew_tiktok</div>
+              <div class="text-[10px] text-text-muted">TikTok · 720K followers</div>
+            </div>
+            <span class="text-[10px] text-text-muted">+2 Reels / 24h</span>
+          </div>
+        </div>
+        <p class="text-[11px] text-text-muted mt-2">Combined reach: <strong>2.4M</strong> · all in your vertical overlap.</p>
+      </div>
+
+      <!-- Related trends -->
+      <div class="px-5 py-4 border-b border-border">
+        <h3 class="text-[14px] font-semibold flex items-center gap-2 mb-3">
+          <span class="material-symbols-outlined text-[16px] text-primary">link</span>Related trends
+        </h3>
+        <div class="space-y-1.5">
+          <div class="flex items-center gap-2 p-2 rounded hover:bg-surface-subtle text-[12px]">
+            <span class="text-[10px] text-text-muted w-12">0.92</span>
+            <span class="font-semibold flex-1">#coffeeinnovation</span>
+            <span class="text-[10px] text-text-muted">emerging</span>
+            <span class="font-semibold">🔥 71</span>
+          </div>
+          <div class="flex items-center gap-2 p-2 rounded hover:bg-surface-subtle text-[12px]">
+            <span class="text-[10px] text-text-muted w-12">0.84</span>
+            <span class="font-semibold flex-1">#sustainablebeans</span>
+            <span class="text-[10px] text-text-muted">peaking</span>
+            <span class="font-semibold">🔥 64</span>
+          </div>
+          <div class="flex items-center gap-2 p-2 rounded hover:bg-surface-subtle text-[12px]">
+            <span class="text-[10px] text-text-muted w-12">0.79</span>
+            <span class="font-semibold flex-1">@yemeni_coffee_origin</span>
+            <span class="text-[10px] text-text-muted">creator</span>
+            <span class="font-semibold">🔥 58</span>
+          </div>
+        </div>
+        <p class="text-[11px] text-text-muted mt-2">Cosine similarity (all-MiniLM-L6-v2) &gt; 0.78.</p>
+      </div>
+
+      <!-- Brand safety -->
+      <div class="px-5 py-4 border-b border-border">
+        <h3 class="text-[14px] font-semibold flex items-center gap-2 mb-3">
+          <span class="material-symbols-outlined text-[16px] text-primary">verified_user</span>Brand safety
+        </h3>
+        <div class="grid grid-cols-3 gap-2">
+          <div class="bg-success-subtle rounded-lg p-2 text-center">
+            <div class="text-[10px] text-success font-semibold mb-1">Sentiment</div>
+            <div class="text-[18px] font-bold text-success">+0.62</div>
+            <div class="text-[10px] text-success">positive</div>
+          </div>
+          <div class="bg-success-subtle rounded-lg p-2 text-center">
+            <div class="text-[10px] text-success font-semibold mb-1">Toxicity</div>
+            <div class="text-[18px] font-bold text-success">0.04</div>
+            <div class="text-[10px] text-success">low</div>
+          </div>
+          <div class="bg-success-subtle rounded-lg p-2 text-center">
+            <div class="text-[10px] text-success font-semibold mb-1">Safe</div>
+            <div class="text-[18px] font-bold text-success">✓</div>
+            <div class="text-[10px] text-success">to amplify</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Source URLs -->
+      <div class="px-5 py-4">
+        <h3 class="text-[14px] font-semibold flex items-center gap-2 mb-3">
+          <span class="material-symbols-outlined text-[16px] text-primary">link</span>Sources
+        </h3>
+        <div class="space-y-1">
+          <a href="#" class="flex items-center gap-2 text-[12px] text-primary hover:underline">
+            <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+            x.com/search?q=%23AIRevolution
+          </a>
+          <a href="#" class="flex items-center gap-2 text-[12px] text-primary hover:underline">
+            <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+            reddit.com/r/coffee/search?q=AI
+          </a>
+          <a href="#" class="flex items-center gap-2 text-[12px] text-primary hover:underline">
+            <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+            tiktok.com/discover/coffee-AI
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer (sticky) -->
+    <div class="border-t border-border p-4 flex items-center gap-2 flex-shrink-0">
+      <button class="h-10 px-4 rounded-lg border border-border text-[14px] font-semibold flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">bookmark</span>Save
+      </button>
+      <button class="h-10 px-4 rounded-lg border border-border text-danger text-[14px] font-semibold flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">close</span>Dismiss
+      </button>
+      <button class="flex-1 h-10 rounded-lg bg-primary text-white text-[14px] font-semibold flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>Use in brief
+      </button>
+    </div>
+  </div>
+</div>
+</body></html>

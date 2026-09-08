@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — 3-variant Caption Drafts (Improvement A)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495", "focus-ring": "#6366F1",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.card-shadow { box-shadow: 0 1px 2px 0 rgba(19, 28, 43, 0.04); }
+.tab-active { background-color: #FFFFFF; color: #3525cd; box-shadow: 0 1px 2px 0 rgba(19, 28, 43, 0.06); }
+.voice-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+</style>
+</head>
+<body class="bg-canvas text-on-surface p-8">
+<div class="max-w-[800px] mx-auto space-y-6">
+
+  <!-- Header -->
+  <div class="flex items-center gap-2">
+    <span class="material-symbols-outlined text-[20px] text-primary icon-fill">edit_note</span>
+    <h2 class="text-[20px] font-semibold">Draft caption</h2>
+    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-subtle text-primary text-[11px] font-semibold">3 variants</span>
+    <span class="ml-auto text-[11px] text-text-muted">Brand voice applied: authoritative, witty, no emojis</span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="inline-flex p-1 rounded-lg bg-surface-subtle">
+    <button class="tab-active h-8 px-4 rounded-md text-[13px] font-semibold">Variant 1 — punchy</button>
+    <button class="h-8 px-4 rounded-md text-[13px] text-text-muted">Variant 2 — warm</button>
+    <button class="h-8 px-4 rounded-md text-[13px] text-text-muted">Variant 3 — data-led</button>
+  </div>
+
+  <!-- Variant 1 card -->
+  <div class="bg-surface rounded-xl border border-border p-5 card-shadow">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <span class="voice-tag bg-primary-subtle text-primary">HOOK</span>
+        <span class="voice-tag bg-surface-subtle text-text-muted">BODY</span>
+        <span class="voice-tag bg-success-subtle text-success">CTA</span>
+        <span class="ml-2 text-[12px] text-text-muted">temperature 0.7 · 2.1s</span>
+      </div>
+      <button class="text-text-muted hover:text-on-surface" title="Why these differ?">
+        <span class="material-symbols-outlined text-[18px]">help</span>
+      </button>
+    </div>
+    <div class="text-[14px] leading-6 space-y-3">
+      <div>
+        <span class="text-[11px] uppercase tracking-wide font-semibold text-text-muted">Hook</span>
+        <p class="mt-1 font-semibold">The bean is older than your espresso machine.</p>
+      </div>
+      <div>
+        <span class="text-[11px] uppercase tracking-wide font-semibold text-text-muted">Body</span>
+        <p class="mt-1">Our Yemeni Heirloom is harvested at 2,200m by a fourth-generation farmer we know by name. It tastes like dried apricot, black tea, and a kind of patience you can't fake.</p>
+      </div>
+      <div>
+        <span class="text-[11px] uppercase tracking-wide font-semibold text-text-muted">CTA</span>
+        <p class="mt-1 text-primary">Tap the link to read how it got from his village to your cup.</p>
+      </div>
+    </div>
+    <div class="mt-4 pt-3 border-t border-border flex items-center justify-between">
+      <div class="text-[12px] text-text-muted">186 characters · IG, 2 hashtags</div>
+      <div class="flex items-center gap-2">
+        <button class="h-8 px-3 rounded-lg border border-border text-[12px]">Copy</button>
+        <button class="h-8 px-3 rounded-lg border border-border text-[12px]">Replace</button>
+        <button class="h-8 px-3 rounded-lg bg-primary text-white text-[12px] font-semibold flex items-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">arrow_forward</span>Insert
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant 2 (preview - inactive) -->
+  <div class="bg-surface rounded-xl border border-border p-5 card-shadow opacity-70">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <span class="voice-tag bg-primary-subtle text-primary">HOOK</span>
+        <span class="voice-tag bg-surface-subtle text-text-muted">BODY</span>
+        <span class="voice-tag bg-success-subtle text-success">CTA</span>
+        <span class="ml-2 text-[12px] text-text-muted">temperature 0.9 · 2.4s</span>
+      </div>
+    </div>
+    <div class="text-[14px] leading-6 space-y-3">
+      <div>
+        <span class="text-[11px] uppercase tracking-wide font-semibold text-text-muted">Hook</span>
+        <p class="mt-1 font-semibold">Meet the farmer behind your favorite pour-over.</p>
+      </div>
+      <div class="h-12 rounded shimmer"></div>
+    </div>
+  </div>
+
+  <!-- Variant 3 (preview - inactive) -->
+  <div class="bg-surface rounded-xl border border-border p-5 card-shadow opacity-70">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <span class="voice-tag bg-primary-subtle text-primary">HOOK</span>
+        <span class="voice-tag bg-surface-subtle text-text-muted">BODY</span>
+        <span class="voice-tag bg-success-subtle text-success">CTA</span>
+        <span class="ml-2 text-[12px] text-text-muted">temperature 1.1 · 2.8s</span>
+      </div>
+    </div>
+    <div class="text-[14px] leading-6 space-y-3">
+      <div>
+        <span class="text-[11px] uppercase tracking-wide font-semibold text-text-muted">Hook</span>
+        <p class="mt-1 font-semibold">4,200 meters of elevation. 14 days of drying. 1 farmer, 4 generations.</p>
+      </div>
+      <div class="h-12 rounded shimmer"></div>
+    </div>
+  </div>
+
+  <!-- Try again row -->
+  <div class="flex items-center justify-between pt-2">
+    <div class="text-[12px] text-text-muted flex items-center gap-2">
+      <span class="material-symbols-outlined text-[14px]">shield</span>
+      Brand voice rules respected: no emojis, no "just/simply", no exclamation marks after first sentence.
+    </div>
+    <button class="h-9 px-3 rounded-lg border border-border text-[13px] flex items-center gap-1">
+      <span class="material-symbols-outlined text-[16px]">refresh</span>Try again
+    </button>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — AI States: Empty / Loading / Error</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.shimmer { background: linear-gradient(90deg, #f1f3f5 0%, #e7eeff 50%, #f1f3f5 100%); background-size: 200% 100%; animation: shim 1.5s linear infinite; }
+@keyframes shim { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+</head>
+<body class="bg-canvas text-on-surface p-6">
+<div class="max-w-[1280px] mx-auto space-y-8">
+
+  <div>
+    <h1 class="text-[28px] font-semibold">AI states — empty / loading / error</h1>
+    <p class="text-[14px] text-text-muted mt-1">Every new feature has 3 critical states. None of them should ever look "broken" — they should feel intentional and explainable.</p>
+  </div>
+
+  <div class="grid grid-cols-2 gap-6">
+
+    <!-- ==================== TRENDS: EMPTY ==================== -->
+    <div class="bg-surface rounded-xl border border-border overflow-hidden">
+      <div class="bg-surface-subtle px-4 py-2 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Trends · Empty (no signals yet)</div>
+      <div class="p-12 flex flex-col items-center justify-center text-center min-h-[360px]">
+        <div class="w-20 h-20 rounded-full bg-primary-subtle flex items-center justify-center mb-4">
+          <span class="material-symbols-outlined text-[36px] text-primary icon-fill">radar</span>
+        </div>
+        <h3 class="text-[18px] font-semibold mb-1">No trends yet</h3>
+        <p class="text-[13px] text-text-muted mb-5 max-w-[320px]">Trends appear within 10 minutes of your first sync. We pull from X, Reddit, TikTok, YouTube, and the platforms you enabled in settings.</p>
+        <button class="h-10 px-4 rounded-lg bg-primary text-white text-[14px] font-semibold flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px]">sync</span>Sync now
+        </button>
+        <a href="#" class="mt-3 text-[12px] text-primary hover:underline">Configure trend sources →</a>
+      </div>
+    </div>
+
+    <!-- ==================== TRENDS: LOADING ==================== -->
+    <div class="bg-surface rounded-xl border border-border overflow-hidden">
+      <div class="bg-surface-subtle px-4 py-2 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Trends · Loading (syncing 6 platforms)</div>
+      <div class="p-6 min-h-[360px]">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-[18px] text-primary spin">progress_activity</span>
+          <span class="text-[13px] font-semibold">Fetching from 6 platforms…</span>
+          <span class="text-[12px] text-text-muted ml-auto">2/6</span>
+        </div>
+        <div class="space-y-3">
+          <div class="bg-surface-subtle rounded-xl p-4">
+            <div class="h-3 w-12 rounded shimmer mb-2"></div>
+            <div class="h-5 w-3/4 rounded shimmer mb-1"></div>
+            <div class="h-3 w-1/2 rounded shimmer"></div>
+          </div>
+          <div class="bg-surface-subtle rounded-xl p-4">
+            <div class="h-3 w-12 rounded shimmer mb-2"></div>
+            <div class="h-5 w-2/3 rounded shimmer mb-1"></div>
+            <div class="h-3 w-1/3 rounded shimmer"></div>
+          </div>
+          <div class="bg-surface-subtle rounded-xl p-4">
+            <div class="h-3 w-12 rounded shimmer mb-2"></div>
+            <div class="h-5 w-3/5 rounded shimmer mb-1"></div>
+            <div class="h-3 w-1/2 rounded shimmer"></div>
+          </div>
+          <div class="bg-surface-subtle rounded-xl p-4">
+            <div class="h-3 w-12 rounded shimmer mb-2"></div>
+            <div class="h-5 w-4/5 rounded shimmer mb-1"></div>
+            <div class="h-3 w-1/2 rounded shimmer"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== GENERATE IMAGE: NO BRAND KIT ==================== -->
+    <div class="bg-surface rounded-xl border border-border overflow-hidden">
+      <div class="bg-surface-subtle px-4 py-2 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Generate Image · Empty (no Brand Kit)</div>
+      <div class="p-12 flex flex-col items-center justify-center text-center min-h-[360px]">
+        <div class="w-20 h-20 rounded-full bg-primary-subtle flex items-center justify-center mb-4">
+          <span class="material-symbols-outlined text-[36px] text-primary icon-fill">palette</span>
+        </div>
+        <h3 class="text-[18px] font-semibold mb-1">Set up your Brand Kit first</h3>
+        <p class="text-[13px] text-text-muted mb-5 max-w-[320px]">AI image generation works best with at least 3 hero brand assets. We'll use them as style references via IP-Adapter so the output matches your visual identity.</p>
+        <button class="h-10 px-4 rounded-lg bg-primary text-white text-[14px] font-semibold flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>Open Brand Kit
+        </button>
+        <a href="#" class="mt-3 text-[12px] text-text-muted hover:underline">Generate without brand references →</a>
+      </div>
+    </div>
+
+    <!-- ==================== GENERATE IMAGE: PROVIDER REJECTED ==================== -->
+    <div class="bg-surface rounded-xl border border-border overflow-hidden">
+      <div class="bg-surface-subtle px-4 py-2 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Generate Image · Provider rejected</div>
+      <div class="p-12 flex flex-col items-center justify-center text-center min-h-[360px]">
+        <div class="w-20 h-20 rounded-full bg-danger-subtle flex items-center justify-center mb-4">
+          <span class="material-symbols-outlined text-[36px] text-danger">block</span>
+        </div>
+        <h3 class="text-[18px] font-semibold mb-1">Provider rejected this prompt</h3>
+        <p class="text-[13px] text-text-muted mb-2 max-w-[400px]">Replicate · flux-1.1-pro returned: <code class="text-[12px] bg-surface-subtle px-1 rounded">"Content policy violation: detected recognizable face in the prompt."</code></p>
+        <p class="text-[12px] text-text-muted mb-5 max-w-[400px]">Your AI credit was refunded. This isn't a bug — the provider enforces content rules on every request.</p>
+        <div class="flex items-center gap-2">
+          <button class="h-10 px-4 rounded-lg border border-border text-[14px] font-semibold">Edit prompt</button>
+          <button class="h-10 px-4 rounded-lg bg-primary text-white text-[14px] font-semibold">Try a different provider</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MAKE REEL: NO FORMAT MATCH ==================== -->
+    <div class="bg-surface rounded-xl border border-border overflow-hidden">
+      <div class="bg-surface-subtle px-4 py-2 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Make Reel · Not available for this format</div>
+      <div class="p-12 flex flex-col items-center justify-center text-center min-h-[360px]">
+        <div class="w-20 h-20 rounded-full bg-warning-subtle flex items-center justify-center mb-4">
+          <span class="material-symbols-outlined text-[36px] text-warning">movie_filter</span>
+        </div>
+        <h3 class="text-[18px] font-semibold mb-1">Reels are for video formats</h3>
+        <p class="text-[13px] text-text-muted mb-5 max-w-[360px]">This content item is a <code class="text-[12px] bg-surface-subtle px-1 rounded">static_post</code>. Change the format to short_form_video or long_form_video, or use the AI Subtitle button on any uploaded video instead.</p>
+        <button class="h-10 px-4 rounded-lg border border-border text-[14px] font-semibold">Change format</button>
+      </div>
+    </div>
+
+    <!-- ==================== SIDE CAR: FAILED STEP ==================== -->
+    <div class="bg-surface rounded-xl border border-border overflow-hidden">
+      <div class="bg-surface-subtle px-4 py-2 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Reel Generator · Step failed (recoverable)</div>
+      <div class="p-6 min-h-[360px]">
+        <div class="rounded-lg border border-danger bg-danger-subtle p-4 mb-4">
+          <div class="flex items-start gap-2">
+            <span class="material-symbols-outlined text-[20px] text-danger">error</span>
+            <div class="flex-1">
+              <div class="text-[14px] font-semibold text-danger">Step 3 (Voice) failed</div>
+              <div class="text-[12px] text-on-surface mt-1">ElevenLabs returned 502: "Service temporarily unavailable." Steps 1–2 succeeded; we kept the script and B-roll.</div>
+            </div>
+          </div>
+        </div>
+        <div class="space-y-1.5">
+          <div class="flex items-center gap-2 text-[12px]">
+            <span class="material-symbols-outlined text-[14px] text-success">check_circle</span>
+            <span class="text-success line-through opacity-60">1. Script (LLM)</span>
+            <span class="ml-auto text-text-muted">1.2s</span>
+          </div>
+          <div class="flex items-center gap-2 text-[12px]">
+            <span class="material-symbols-outlined text-[14px] text-success">check_circle</span>
+            <span class="text-success line-through opacity-60">2. B-roll (Pexels)</span>
+            <span class="ml-auto text-text-muted">2.4s</span>
+          </div>
+          <div class="flex items-center gap-2 text-[12px]">
+            <span class="material-symbols-outlined text-[14px] text-danger">error</span>
+            <span class="font-semibold text-danger">3. Voice (ElevenLabs) — 502</span>
+            <span class="ml-auto text-text-muted">8.1s</span>
+          </div>
+          <div class="flex items-center gap-2 text-[12px] text-text-muted">
+            <span class="material-symbols-outlined text-[14px]">radio_button_unchecked</span>
+            <span>4. Music</span>
+          </div>
+          <div class="flex items-center gap-2 text-[12px] text-text-muted">
+            <span class="material-symbols-outlined text-[14px]">radio_button_unchecked</span>
+            <span>5-9 (skipped, no voice)</span>
+          </div>
+        </div>
+        <div class="mt-4 flex items-center gap-2">
+          <button class="h-9 px-3 rounded-lg bg-primary text-white text-[12px] font-semibold flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">refresh</span>Retry step 3
+          </button>
+          <button class="h-9 px-3 rounded-lg border border-border text-[12px] flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">mic_off</span>Skip voice
+          </button>
+          <button class="h-9 px-3 rounded-lg border border-border text-[12px]">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== AI SUBTITLE: PROCESSING ==================== -->
+    <div class="bg-surface rounded-xl border border-border overflow-hidden">
+      <div class="bg-surface-subtle px-4 py-2 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">AI Subtitle · Processing (3 steps)</div>
+      <div class="p-6 min-h-[360px]">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-16 h-16 rounded-lg bg-on-surface flex items-center justify-center">
+            <span class="material-symbols-outlined text-[28px] text-white">play_circle</span>
+          </div>
+          <div>
+            <div class="text-[14px] font-semibold">hero-promo-30s.mp4</div>
+            <div class="text-[12px] text-text-muted">30.2s · 1080×1920 · Processing…</div>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <div class="flex items-center justify-between text-[12px] mb-1">
+              <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[14px] text-success">check_circle</span>1. Extract audio (ffmpeg)</span>
+              <span class="text-text-muted tabular-nums">1.4s</span>
+            </div>
+            <div class="h-1.5 bg-surface-subtle rounded-full overflow-hidden">
+              <div class="h-full bg-success" style="width: 100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-[12px] mb-1">
+              <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[14px] text-primary spin">progress_activity</span>2. Transcribe (faster-whisper large-v3)</span>
+              <span class="text-text-muted tabular-nums">12.1s</span>
+            </div>
+            <div class="h-1.5 bg-surface-subtle rounded-full overflow-hidden">
+              <div class="h-full bg-primary" style="width: 65%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-[12px] mb-1 text-text-muted">
+              <span>3. Burn in captions (ffmpeg)</span>
+            </div>
+            <div class="h-1.5 bg-surface-subtle rounded-full"></div>
+          </div>
+        </div>
+        <p class="mt-4 text-[11px] text-text-muted">Free · self-hosted · auto-detect language</p>
+      </div>
+    </div>
+
+    <!-- ==================== BUDGET EXHAUSTED ==================== -->
+    <div class="bg-surface rounded-xl border border-border overflow-hidden">
+      <div class="bg-surface-subtle px-4 py-2 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">All AI features · Budget exhausted</div>
+      <div class="p-12 flex flex-col items-center justify-center text-center min-h-[360px]">
+        <div class="w-20 h-20 rounded-full bg-warning-subtle flex items-center justify-center mb-4">
+          <span class="material-symbols-outlined text-[36px] text-warning icon-fill">tune</span>
+        </div>
+        <h3 class="text-[18px] font-semibold mb-1">Your agency hit its monthly AI cap</h3>
+        <p class="text-[13px] text-text-muted mb-1">$30.00 / $30.00 spent on 142 image generations + 8 Reels this month.</p>
+        <p class="text-[12px] text-text-muted mb-5">Resets on 2026-10-01, or upgrade your plan for more.</p>
+        <div class="flex items-center gap-2">
+          <button class="h-10 px-4 rounded-lg border border-border text-[14px] font-semibold">View usage</button>
+          <button class="h-10 px-4 rounded-lg bg-primary text-white text-[14px] font-semibold">Upgrade plan</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body></html>

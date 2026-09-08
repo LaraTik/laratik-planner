@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — Trends · Explore (v2 with sparklines + Fit score)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+  "info-subtle": "#F0F9FF",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.card-shadow { box-shadow: 0 1px 2px 0 rgba(19, 28, 43, 0.04); }
+.spark { stroke: #3525cd; stroke-width: 1.5; fill: rgba(53, 37, 205, 0.08); }
+.spark-decline { stroke: #7B8495; stroke-width: 1.5; fill: rgba(123, 132, 149, 0.06); }
+.spark-warn { stroke: #B45309; stroke-width: 1.5; fill: rgba(180, 83, 9, 0.08); }
+</style>
+</head>
+<body class="bg-canvas text-on-surface">
+<div class="flex min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="w-[248px] bg-surface border-r border-border flex flex-col flex-shrink-0">
+    <div class="h-[64px] flex items-center px-6 border-b border-border gap-3">
+      <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white text-[14px] font-semibold">L</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-[14px] font-semibold truncate">Northstar Coffee</div>
+        <div class="text-[11px] text-text-muted">Workspace · MENA</div>
+      </div>
+    </div>
+    <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">space_dashboard</span>Overview
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">calendar_month</span>Planning
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] font-semibold bg-primary-subtle text-primary" href="#">
+        <span class="material-symbols-outlined text-[20px] icon-fill">radar</span>Trends
+        <span class="ml-auto inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[10px] font-semibold">47</span>
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">event</span>Calendar
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">rate_review</span>Reviews
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">share</span>Social Channels
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">palette</span>Brand Kit
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">group</span>Team
+      </a>
+    </nav>
+    <div class="p-3 border-t border-border">
+      <button class="w-full h-10 rounded-lg bg-primary text-white text-[14px] font-semibold flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">add</span>Create content
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 flex flex-col min-w-0">
+    <!-- Top bar -->
+    <header class="h-[64px] bg-surface border-b border-border flex items-center justify-between px-6 flex-shrink-0">
+      <div class="flex items-center gap-2 text-[13px] text-text-muted">
+        <span>Northstar Coffee</span><span>/</span><span class="text-on-surface font-semibold">Trends</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-[13px] text-text-muted">Last sync: 14m ago · 6 platforms</span>
+        <button class="h-9 px-3 rounded-lg border border-border text-[13px] font-semibold flex items-center gap-1">
+          <span class="material-symbols-outlined text-[16px]">refresh</span>Sync now
+        </button>
+      </div>
+    </header>
+
+    <div class="p-6 space-y-5 max-w-[1440px]">
+
+      <!-- TAB BAR -->
+      <div class="inline-flex p-1 rounded-lg bg-surface-subtle">
+        <button class="h-8 px-4 rounded-md bg-surface text-[13px] font-semibold text-on-surface shadow-sm flex items-center gap-2">
+          <span class="material-symbols-outlined text-[16px]">travel_explore</span>Explore
+        </button>
+        <button class="h-8 px-4 rounded-md text-[13px] text-text-muted flex items-center gap-2 hover:bg-surface">
+          <span class="material-symbols-outlined text-[16px] icon-fill text-primary">auto_awesome</span>For You
+          <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-white text-[9px] font-semibold">20</span>
+        </button>
+        <button class="h-8 px-4 rounded-md text-[13px] text-text-muted flex items-center gap-2 hover:bg-surface">
+          <span class="material-symbols-outlined text-[16px]">bookmark</span>Boards
+        </button>
+        <button class="h-8 px-4 rounded-md text-[13px] text-text-muted flex items-center gap-2 hover:bg-surface">
+          <span class="material-symbols-outlined text-[16px]">edit_note</span>Briefs
+          <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-surface text-text-muted text-[9px] font-semibold">3</span>
+        </button>
+      </div>
+
+      <!-- Time-bucket score cards (Pattern 5) -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow">
+          <div class="flex items-center justify-between mb-1">
+            <div class="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wide">Trending now</div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[11px] font-semibold">
+              <span class="material-symbols-outlined text-[12px]">trending_up</span>+24 vs 7d
+            </span>
+          </div>
+          <div class="flex items-end gap-3">
+            <div class="text-[32px] font-semibold leading-9">142</div>
+            <svg class="w-24 h-7" viewBox="0 0 120 28" preserveAspectRatio="none">
+              <path class="spark" d="M0,20 L15,18 L30,15 L45,12 L60,10 L75,7 L90,5 L105,3 L120,2"/>
+            </svg>
+          </div>
+          <div class="text-[11px] text-text-muted mt-1">Last hour, all platforms</div>
+        </div>
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow">
+          <div class="flex items-center justify-between mb-1">
+            <div class="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wide">New this week</div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-info-subtle text-primary text-[11px] font-semibold">
+              <span class="material-symbols-outlined text-[12px]">new_releases</span>12 new
+            </span>
+          </div>
+          <div class="flex items-end gap-3">
+            <div class="text-[32px] font-semibold leading-9">387</div>
+            <svg class="w-24 h-7" viewBox="0 0 120 28" preserveAspectRatio="none">
+              <path class="spark" d="M0,22 L20,20 L40,18 L60,14 L80,12 L100,10 L120,8"/>
+            </svg>
+          </div>
+          <div class="text-[11px] text-text-muted mt-1">Last 7 days · Emerging + Peaking</div>
+        </div>
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow">
+          <div class="flex items-center justify-between mb-1">
+            <div class="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wide">Declining</div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-subtle text-text-muted text-[11px] font-semibold">
+              <span class="material-symbols-outlined text-[12px]">trending_down</span>4 faded
+            </span>
+          </div>
+          <div class="flex items-end gap-3">
+            <div class="text-[32px] font-semibold leading-9 text-text-muted">12</div>
+            <svg class="w-24 h-7" viewBox="0 0 120 28" preserveAspectRatio="none">
+              <path class="spark-decline" d="M0,8 L20,9 L40,11 L60,14 L80,17 L100,20 L120,22"/>
+            </svg>
+          </div>
+          <div class="text-[11px] text-text-muted mt-1">Cooling down · review for next cycle</div>
+        </div>
+      </div>
+
+      <!-- Time chips + filter row -->
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <div class="flex items-center gap-1 p-1 rounded-lg bg-surface-subtle">
+          <button class="h-7 px-3 rounded-md text-[12px] font-semibold bg-surface shadow-sm">Today</button>
+          <button class="h-7 px-3 rounded-md text-[12px] text-text-muted">7d</button>
+          <button class="h-7 px-3 rounded-md text-[12px] text-text-muted">30d</button>
+          <button class="h-7 px-3 rounded-md text-[12px] text-text-muted">Custom</button>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-[12px] text-text-muted">Showing</span>
+          <button class="h-7 px-3 rounded-full bg-primary text-white text-[12px] font-semibold">All (47)</button>
+          <button class="h-7 px-3 rounded-full bg-surface border border-border text-[12px]">🔥 Emerging (8)</button>
+          <button class="h-7 px-3 rounded-full bg-surface border border-border text-[12px]">📈 Peaking (24)</button>
+          <button class="h-7 px-3 rounded-full bg-surface border border-border text-[12px]">📉 Declining (4)</button>
+          <button class="h-7 px-3 rounded-full bg-surface border border-border text-[12px]">= Stable (11)</button>
+          <span class="text-text-muted">·</span>
+          <button class="h-7 px-3 rounded-full bg-surface border border-border text-[12px]"># Hashtag (22)</button>
+          <button class="h-7 px-3 rounded-full bg-surface border border-border text-[12px]">♪ Sound (8)</button>
+          <button class="h-7 px-3 rounded-full bg-surface border border-border text-[12px]">@ Creator (12)</button>
+          <button class="h-7 px-3 rounded-full bg-surface border border-border text-[12px]">★ Topic (5)</button>
+        </div>
+      </div>
+
+      <!-- Trends grid (3-col desktop) -->
+      <div class="grid grid-cols-3 gap-4">
+
+        <!-- TREND CARD 1: high fit, emerging, hashtag -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow hover:border-primary transition-colors">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[11px]">alternate_email</span>X
+              </span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[10px]">trending_up</span>Emerging
+              </span>
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-text-muted text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[11px]">tag</span>Hashtag
+              </span>
+            </div>
+            <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning text-[11px] font-semibold">🔥 87</div>
+          </div>
+
+          <div class="text-[15px] font-semibold leading-5 mb-1">#AIRevolution</div>
+          <div class="flex items-center gap-2 text-[10px] text-text-muted mb-2">
+            <span>Hashtag</span><span>·</span><span>12.4K posts / 6h</span><span>·</span><span class="text-primary font-semibold">+340% vs 24h</span>
+          </div>
+
+          <!-- Sparkline -->
+          <div class="mb-2 bg-surface-subtle rounded-md p-2">
+            <div class="flex items-center justify-between text-[10px] text-text-muted mb-1">
+              <span>14-day velocity</span>
+              <span>peak: 24h ago</span>
+            </div>
+            <svg class="w-full h-7" viewBox="0 0 280 28" preserveAspectRatio="none">
+              <path class="spark" d="M0,24 L20,23 L40,22 L60,20 L80,18 L100,15 L120,12 L140,8 L160,5 L180,4 L200,3 L220,2 L240,2 L260,1 L280,1"/>
+            </svg>
+          </div>
+
+          <!-- Fit + sentiment row -->
+          <div class="flex items-center gap-2 mb-3 flex-wrap">
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-text-muted">🎯</span>
+              <span class="text-[12px] font-bold text-success">96</span>
+              <span class="text-[10px] text-text-muted">fit</span>
+            </div>
+            <span class="text-text-muted text-[10px]">·</span>
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-text-muted">☺</span>
+              <span class="text-[12px] font-semibold text-success">+0.62</span>
+            </div>
+            <span class="text-text-muted text-[10px]">·</span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">verified</span>Safe
+            </span>
+            <button class="ml-auto text-[10px] text-primary hover:underline">Why this fits →</button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button class="flex-1 h-9 rounded-lg bg-primary text-white text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">arrow_forward</span>Use in brief
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Save to board">
+              <span class="material-symbols-outlined text-[16px]">bookmark</span>
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Why this trend?">
+              <span class="material-symbols-outlined text-[16px]">info</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TREND CARD 2: medium fit, peaking, sound -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow hover:border-primary transition-colors">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[11px]">music_note</span>TikTok
+              </span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[10px]">local_fire_department</span>Peaking
+              </span>
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-text-muted text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[11px]">music_note</span>Sound
+              </span>
+            </div>
+            <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning text-[11px] font-semibold">🔥 84</div>
+          </div>
+
+          <div class="text-[15px] font-semibold leading-5 mb-1">"Original sound" — Alex Hormozi</div>
+          <div class="flex items-center gap-2 text-[10px] text-text-muted mb-2">
+            <span>Audio</span><span>·</span><span>4.2K Reels / 24h</span><span>·</span><span class="text-warning font-semibold">+180% vs 24h</span>
+          </div>
+
+          <div class="mb-2 bg-surface-subtle rounded-md p-2">
+            <div class="flex items-center justify-between text-[10px] text-text-muted mb-1">
+              <span>14-day velocity</span>
+              <span>peak: now</span>
+            </div>
+            <svg class="w-full h-7" viewBox="0 0 280 28" preserveAspectRatio="none">
+              <path class="spark" d="M0,22 L20,20 L40,18 L60,16 L80,14 L100,12 L120,10 L140,8 L160,6 L180,5 L200,4 L220,3 L240,2 L260,2 L280,1"/>
+            </svg>
+          </div>
+
+          <div class="flex items-center gap-2 mb-3 flex-wrap">
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-text-muted">🎯</span>
+              <span class="text-[12px] font-bold text-warning">34</span>
+              <span class="text-[10px] text-text-muted">fit</span>
+            </div>
+            <span class="text-text-muted text-[10px]">·</span>
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-text-muted">☺</span>
+              <span class="text-[12px] font-semibold text-success">+0.71</span>
+            </div>
+            <span class="text-text-muted text-[10px]">·</span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">verified</span>Safe
+            </span>
+            <button class="ml-auto text-[10px] text-primary hover:underline">Why this fits →</button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button class="flex-1 h-9 rounded-lg bg-primary text-white text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">arrow_forward</span>Use in brief
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center">
+              <span class="material-symbols-outlined text-[16px]">bookmark</span>
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center">
+              <span class="material-symbols-outlined text-[16px]">info</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TREND CARD 3: high fit, peaking, topic -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow hover:border-primary transition-colors">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[11px]">forum</span>Reddit
+              </span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[10px]">local_fire_department</span>Peaking
+              </span>
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-text-muted text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[11px]">topic</span>Topic
+              </span>
+            </div>
+            <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning text-[11px] font-semibold">🔥 79</div>
+          </div>
+
+          <div class="text-[15px] font-semibold leading-5 mb-1">r/coffee — Latte art for IG Reels</div>
+          <div class="flex items-center gap-2 text-[10px] text-text-muted mb-2">
+            <span>Topic</span><span>·</span><span>2.1K upvotes / 24h</span><span>·</span><span class="text-warning font-semibold">+95% vs 24h</span>
+          </div>
+
+          <div class="mb-2 bg-surface-subtle rounded-md p-2">
+            <div class="flex items-center justify-between text-[10px] text-text-muted mb-1">
+              <span>14-day velocity</span>
+              <span>peak: now</span>
+            </div>
+            <svg class="w-full h-7" viewBox="0 0 280 28" preserveAspectRatio="none">
+              <path class="spark" d="M0,20 L20,19 L40,18 L60,16 L80,14 L100,12 L120,10 L140,8 L160,7 L180,6 L200,5 L220,4 L240,3 L260,2 L280,2"/>
+            </svg>
+          </div>
+
+          <div class="flex items-center gap-2 mb-3 flex-wrap">
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-text-muted">🎯</span>
+              <span class="text-[12px] font-bold text-success">98</span>
+              <span class="text-[10px] text-text-muted">fit</span>
+            </div>
+            <span class="text-text-muted text-[10px]">·</span>
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-text-muted">☺</span>
+              <span class="text-[12px] font-semibold text-success">+0.88</span>
+            </div>
+            <span class="text-text-muted text-[10px]">·</span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">verified</span>Safe
+            </span>
+            <button class="ml-auto text-[10px] text-primary hover:underline">Why this fits →</button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button class="flex-1 h-9 rounded-lg bg-primary text-white text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">arrow_forward</span>Use in brief
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center">
+              <span class="material-symbols-outlined text-[16px]">bookmark</span>
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center">
+              <span class="material-symbols-outlined text-[16px]">info</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TREND CARD 4: emerging creator on Instagram -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow hover:border-primary transition-colors">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[11px]">photo_camera</span>Instagram
+              </span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[10px]">trending_up</span>Emerging
+              </span>
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-text-muted text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[11px]">alternate_email</span>Creator
+              </span>
+            </div>
+            <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning text-[11px] font-semibold">🔥 71</div>
+          </div>
+
+          <div class="text-[15px] font-semibold leading-5 mb-1">@specialtycoffeehour — pour-over</div>
+          <div class="flex items-center gap-2 text-[10px] text-text-muted mb-2">
+            <span>Creator</span><span>·</span><span>+340% engagement</span><span>·</span><span class="text-success font-semibold">+200% vs 24h</span>
+          </div>
+
+          <div class="mb-2 bg-surface-subtle rounded-md p-2">
+            <div class="flex items-center justify-between text-[10px] text-text-muted mb-1">
+              <span>14-day velocity</span>
+              <span>peak: 12h ago</span>
+            </div>
+            <svg class="w-full h-7" viewBox="0 0 280 28" preserveAspectRatio="none">
+              <path class="spark" d="M0,24 L20,23 L40,22 L60,20 L80,18 L100,15 L120,12 L140,9 L160,6 L180,4 L200,3 L220,2 L240,2 L260,1 L280,1"/>
+            </svg>
+          </div>
+
+          <div class="flex items-center gap-2 mb-3 flex-wrap">
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-text-muted">🎯</span>
+              <span class="text-[12px] font-bold text-success">92</span>
+              <span class="text-[10px] text-text-muted">fit</span>
+            </div>
+            <span class="text-text-muted text-[10px]">·</span>
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-text-muted">☺</span>
+              <span class="text-[12px] font-semibold text-success">+0.74</span>
+            </div>
+            <span class="text-text-muted text-[10px]">·</span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">verified</span>Safe
+            </span>
+            <button class="ml-auto text-[10px] text-primary hover:underline">Why this fits →</button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button class="flex-1 h-9 rounded-lg bg-primary text-white text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">arrow_forward</span>Use in brief
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center">
+              <span class="material-symbols-outlined text-[16px]">bookmark</span>
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center">
+              <span class="material-symbols-outlined text-[16px]">info</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TREND CARD 5: declining, off-vertical, low fit -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow hover:border-primary transition-colors">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[11px]">play_circle</span>YouTube
+              </span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-subtle text-text-muted text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[10px]">trending_down</span>Declining
+              </span>
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-text-muted text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[11px]">topic</span>Topic
+              </span>
+            </div>
+            <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-surface-subtle text-text-muted text-[11px] font-semibold">↓ 22</div>
+          </div>
+
+          <div class="text-[15px] font-semibold leading-5 mb-1 text-text-muted">"Mukbang ASMR" — food challenge</div>
+          <div class="flex items-center gap-2 text-[10px] text-text-muted mb-2">
+            <span>Topic</span><span>·</span><span>60K views / 24h</span><span>·</span><span class="text-danger font-semibold">−68% vs 24h</span>
+          </div>
+
+          <div class="mb-2 bg-surface-subtle rounded-md p-2">
+            <div class="flex items-center justify-between text-[10px] text-text-muted mb-1">
+              <span>14-day velocity</span>
+              <span>peak: 14d ago</span>
+            </div>
+            <svg class="w-full h-7" viewBox="0 0 280 28" preserveAspectRatio="none">
+              <path class="spark-decline" d="M0,2 L20,3 L40,5 L60,8 L80,11 L100,13 L120,15 L140,17 L160,19 L180,20 L200,22 L220,23 L240,24 L260,25 L280,26"/>
+            </svg>
+          </div>
+
+          <div class="flex items-center gap-2 mb-3 flex-wrap">
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-text-muted">🎯</span>
+              <span class="text-[12px] font-bold text-text-muted">12</span>
+              <span class="text-[10px] text-text-muted">fit</span>
+            </div>
+            <span class="text-text-muted text-[10px]">·</span>
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] text-text-muted">☺</span>
+              <span class="text-[12px] font-semibold text-text-muted">+0.21</span>
+            </div>
+            <span class="text-text-muted text-[10px]">·</span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">flag</span>Off-vertical
+            </span>
+            <button class="ml-auto text-[10px] text-primary hover:underline">Why this fits →</button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button class="flex-1 h-9 rounded-lg border border-border text-on-surface-variant text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">arrow_forward</span>Stretch: try anyway
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-danger flex items-center justify-center" title="Dismiss">
+              <span class="material-symbols-outlined text-[16px]">close</span>
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center">
+              <span class="material-symbols-outlined text-[16px]">info</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TREND CARD 6: skeleton (loading) -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow">
+          <div class="h-5 w-24 rounded shimmer mb-3"></div>
+          <div class="h-6 w-3/4 rounded shimmer mb-2"></div>
+          <div class="h-3 w-1/2 rounded shimmer mb-3"></div>
+          <div class="h-12 w-full rounded shimmer mb-3"></div>
+          <div class="h-8 w-32 rounded shimmer ml-auto"></div>
+        </div>
+      </div>
+
+      <!-- Footer info bar -->
+      <div class="rounded-lg border border-border bg-surface-subtle p-3 flex items-center justify-between text-[12px] text-text-muted">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[14px] text-primary">auto_awesome</span>
+          Trends auto-feed into <code class="bg-surface px-1 rounded">campaign_ideas</code> + <code class="bg-surface px-1 rounded">related_format_ideas</code> as context. <a href="#" class="text-primary hover:underline">Learn how</a>
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="#" class="text-primary hover:underline">Show brand-unsafe (4)</a>
+          <a href="#" class="text-primary hover:underline">Configure sources</a>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<style>
+.shimmer { background: linear-gradient(90deg, #f1f3f5 0%, #e7eeff 50%, #f1f3f5 100%); background-size: 200% 100%; animation: shim 1.5s linear infinite; }
+@keyframes shim { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+</style>
+</body></html>

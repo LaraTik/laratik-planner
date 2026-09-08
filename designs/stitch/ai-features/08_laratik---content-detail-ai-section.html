@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — Content Detail · AI Section (updated)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495", "focus-ring": "#6366F1",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.card-shadow { box-shadow: 0 1px 2px 0 rgba(19, 28, 43, 0.04); }
+</style>
+</head>
+<body class="bg-canvas text-on-surface p-6">
+<div class="max-w-[820px] mx-auto space-y-5">
+
+  <!-- Content header -->
+  <div class="flex items-center gap-3">
+    <a class="text-text-muted hover:text-on-surface" href="#">
+      <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+    </a>
+    <div class="flex-1 min-w-0">
+      <div class="text-[12px] text-text-muted">Northstar Coffee / Planning /</div>
+      <h1 class="text-[24px] font-semibold leading-7">Yemeni Coffee Story</h1>
+    </div>
+    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning-subtle text-warning text-[11px] font-semibold">In review</span>
+  </div>
+
+  <!-- Brief panel -->
+  <div class="bg-surface rounded-xl border border-border p-5 card-shadow">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-[14px] font-semibold">Brief</h2>
+      <span class="text-[11px] text-text-muted">Format: short_form_video · Channels: TikTok, Instagram</span>
+    </div>
+    <p class="text-[14px] leading-6 text-on-surface">
+      Hook on the <span class="font-semibold">#AIRevolution</span> trend + the Yemeni beans story.
+      CTA: link in bio for the full feature.
+    </p>
+  </div>
+
+  <!-- AI ASSISTANCE — THE NEW SECTION -->
+  <div class="bg-surface rounded-xl border border-border p-5 card-shadow">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[20px] text-primary icon-fill">auto_awesome</span>
+        <h2 class="text-[16px] font-semibold">AI assistance</h2>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-subtle text-primary text-[11px] font-semibold">9 capabilities</span>
+      </div>
+      <div class="flex items-center gap-2 text-[12px] text-text-muted">
+        <span>Brand voice: <strong class="text-on-surface">authoritative, witty, no emojis</strong></span>
+        <a href="#" class="text-primary hover:underline">Edit</a>
+      </div>
+    </div>
+
+    <!-- 6 master-prompt §15 capabilities (text) -->
+    <div>
+      <div class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide mb-2">Content drafting</div>
+      <div class="grid grid-cols-3 gap-2">
+        <button class="h-9 px-3 rounded-lg border border-border text-[12px] flex items-center gap-2 hover:border-primary">
+          <span class="material-symbols-outlined text-[16px] text-text-muted">lightbulb</span>Campaign ideas
+        </button>
+        <button class="h-9 px-3 rounded-lg border border-border text-[12px] flex items-center gap-2 hover:border-primary">
+          <span class="material-symbols-outlined text-[16px] text-text-muted">edit_note</span>Improve brief
+        </button>
+        <button class="h-9 px-3 rounded-lg border border-border text-[12px] flex items-center gap-2 hover:border-primary">
+          <span class="material-symbols-outlined text-[16px] text-text-muted">edit_note</span>Draft caption
+          <span class="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary-subtle text-primary text-[10px] font-semibold">×3</span>
+        </button>
+        <button class="h-9 px-3 rounded-lg border border-border text-[12px] flex items-center gap-2 hover:border-primary">
+          <span class="material-symbols-outlined text-[16px] text-text-muted">swap_horiz</span>Adapt to platform
+        </button>
+        <button class="h-9 px-3 rounded-lg border border-border text-[12px] flex items-center gap-2 hover:border-primary">
+          <span class="material-symbols-outlined text-[16px] text-text-muted">format_list_bulleted</span>Related formats
+          <span class="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">scored</span>
+        </button>
+        <button class="h-9 px-3 rounded-lg border border-border text-[12px] flex items-center gap-2 hover:border-primary">
+          <span class="material-symbols-outlined text-[16px] text-text-muted">verified</span>Completeness
+        </button>
+      </div>
+    </div>
+
+    <!-- 3 new image / reel / trend capabilities -->
+    <div class="mt-4 pt-4 border-t border-border">
+      <div class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide mb-2 flex items-center gap-2">
+        <span>Media generation</span>
+        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary-subtle text-primary text-[10px] font-semibold">NEW</span>
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <button class="h-9 px-3 rounded-lg border border-primary bg-primary-subtle text-primary text-[12px] font-semibold flex items-center gap-2">
+          <span class="material-symbols-outlined text-[16px] icon-fill">image</span>Generate image
+          <span class="ml-auto text-[10px] text-text-muted">$0.04</span>
+        </button>
+        <button class="h-9 px-3 rounded-lg border border-border text-[12px] flex items-center gap-2 hover:border-primary">
+          <span class="material-symbols-outlined text-[16px]">movie_filter</span>Make Reel
+          <span class="ml-auto text-[10px] text-text-muted">$0.10</span>
+        </button>
+        <button class="h-9 px-3 rounded-lg border border-border text-[12px] flex items-center gap-2 hover:border-primary">
+          <span class="material-symbols-outlined text-[16px]">closed_caption</span>Add subtitles
+          <span class="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">FREE</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 1 trend capability (now) -->
+    <div class="mt-4 pt-4 border-t border-border">
+      <div class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide mb-2 flex items-center gap-2">
+        <span>Trend context</span>
+        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary-subtle text-primary text-[10px] font-semibold">NEW</span>
+      </div>
+      <div class="rounded-lg border border-border bg-surface-subtle p-3">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="material-symbols-outlined text-[16px] text-primary icon-fill">radar</span>
+          <span class="text-[12px] font-semibold">3 trends attached to this brief</span>
+          <a href="#" class="ml-auto text-[11px] text-primary hover:underline">View all 47</a>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning-subtle text-warning text-[11px] font-semibold">🔥 87 · #AIRevolution (X)</span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning-subtle text-warning text-[11px] font-semibold">🔥 84 · Alex Hormozi (TikTok)</span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning-subtle text-warning text-[11px] font-semibold">🔥 79 · Latte art Reels (Reddit)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer: usage -->
+    <div class="mt-4 pt-4 border-t border-border flex items-center justify-between text-[12px]">
+      <div class="text-text-muted">
+        Today's usage: <strong class="text-on-surface">3 / 30 image</strong> · <strong class="text-on-surface">0 / 5 Reels</strong> · <strong class="text-on-surface">$0.12 / $30 monthly</strong>
+      </div>
+      <a href="#" class="text-primary hover:underline">Usage detail →</a>
+    </div>
+  </div>
+
+  <!-- Workflow footer (existing) -->
+  <div class="bg-surface rounded-xl border border-border p-5 card-shadow flex items-center justify-between">
+    <div>
+      <div class="text-[14px] font-semibold">Next action</div>
+      <div class="text-[12px] text-text-muted mt-0.5">Design review · Due in 2 days · Assigned to Mike</div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="h-10 px-4 rounded-lg border border-border text-[14px] font-semibold">Request changes</button>
+      <button class="h-10 px-4 rounded-lg bg-primary text-white text-[14px] font-semibold">Move to internal review</button>
+    </div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — AI Reel Generator</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-hover": "#4338CA", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff", "on-primary-container": "#dad7ff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "outline": "#777587",
+  "text-muted": "#7B8495", "focus-ring": "#6366F1",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+spacing: { "base": "4px", "screen-padding": "24px", "card-padding": "16px", "gutter": "16px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.card-shadow { box-shadow: 0 4px 12px 0 rgba(19, 28, 43, 0.08); }
+.tier-active { border-color: #4f46e5; box-shadow: 0 0 0 2px #EEF2FF; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+</head>
+<body class="bg-canvas text-on-surface">
+<div class="fixed inset-0 bg-on-surface/40 flex items-center justify-center p-4" style="z-index: 50;">
+  <div class="bg-surface rounded-xl w-[640px] max-h-[92vh] flex flex-col card-shadow">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-border">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[20px] text-primary icon-fill">movie_filter</span>
+        <h2 class="text-[18px] font-semibold">Make Reel</h2>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-subtle text-text-muted text-[11px] font-semibold">Content: "Yemeni Coffee Story"</span>
+      </div>
+      <button class="text-text-muted hover:text-on-surface">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+
+      <!-- Duration -->
+      <div>
+        <label class="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wide">Duration</label>
+        <div class="mt-2 inline-flex p-1 rounded-lg bg-surface-subtle">
+          <button class="h-8 px-4 rounded-md text-[13px] font-semibold text-text-muted">15s</button>
+          <button class="h-8 px-4 rounded-md bg-surface text-[13px] font-semibold text-on-surface shadow-sm">30s</button>
+          <button class="h-8 px-4 rounded-md text-[13px] font-semibold text-text-muted">60s</button>
+        </div>
+      </div>
+
+      <!-- Tier -->
+      <div>
+        <label class="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wide">Tier</label>
+        <div class="mt-2 grid grid-cols-2 gap-3">
+          <div class="tier-active border-2 border-border rounded-xl p-4 cursor-pointer">
+            <div class="flex items-center justify-between mb-1">
+              <div class="text-[14px] font-semibold">Cheap</div>
+              <span class="text-[20px] font-semibold text-success">$0.10</span>
+            </div>
+            <div class="text-[12px] text-text-muted leading-relaxed">Pexels B-roll + Suno + ElevenLabs + faster-whisper. 30s typical.</div>
+            <div class="mt-2 flex flex-wrap gap-1">
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-success-subtle text-success">Recommended</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-subtle text-text-muted">Free B-roll</span>
+            </div>
+          </div>
+          <div class="border-2 border-border rounded-xl p-4 cursor-pointer hover:tier-active">
+            <div class="flex items-center justify-between mb-1">
+              <div class="text-[14px] font-semibold">Premium</div>
+              <span class="text-[20px] font-semibold text-warning">$2.50+</span>
+            </div>
+            <div class="text-[12px] text-text-muted leading-relaxed">AI B-roll via Replicate (Veo 3 / Sora 2 / Kling 2.1). 30s typical.</div>
+            <div class="mt-2 flex flex-wrap gap-1">
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-warning-subtle text-warning">AI visuals</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-subtle text-text-muted">Cost cap: $500/mo</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Voice -->
+      <div>
+        <label class="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wide">Voice</label>
+        <div class="mt-2 space-y-2">
+          <label class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-subtle cursor-pointer">
+            <input type="radio" name="voice">
+            <span class="material-symbols-outlined text-[18px] text-text-muted">mic_off</span>
+            <span class="text-[13px]">None (text-only captions)</span>
+          </label>
+          <label class="flex items-center gap-3 p-2 rounded-lg bg-primary-subtle cursor-pointer">
+            <input type="radio" name="voice" checked>
+            <span class="material-symbols-outlined text-[18px] text-primary icon-fill">record_voice_over</span>
+            <div class="flex-1">
+              <div class="text-[13px] font-semibold">ElevenLabs — Sarah</div>
+              <div class="text-[11px] text-text-muted">Detected language: en · Calm, professional</div>
+            </div>
+            <span class="text-[11px] text-text-muted">$0.05</span>
+          </label>
+          <label class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-subtle cursor-pointer">
+            <input type="radio" name="voice">
+            <span class="material-symbols-outlined text-[18px] text-text-muted">upload</span>
+            <span class="text-[13px]">Upload my own (MP3 / WAV)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Music -->
+      <div>
+        <label class="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wide">Music</label>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button class="h-8 px-3 rounded-full border border-border text-[12px]">None</button>
+          <button class="h-8 px-3 rounded-full bg-primary text-white text-[12px] font-semibold flex items-center gap-1">
+            <span class="material-symbols-outlined text-[12px]">music_note</span>Suno v4
+          </button>
+          <button class="h-8 px-3 rounded-full border border-border text-[12px] flex items-center gap-1">
+            <span class="material-symbols-outlined text-[12px]">upload</span>Upload
+          </button>
+        </div>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <span class="text-[11px] text-text-muted">Genre:</span>
+          <button class="h-6 px-2 rounded-full bg-surface-subtle text-[11px]">Acoustic</button>
+          <button class="h-6 px-2 rounded-full bg-primary-subtle text-primary text-[11px] font-semibold">Lo-fi</button>
+          <button class="h-6 px-2 rounded-full bg-surface-subtle text-[11px]">Cinematic</button>
+          <button class="h-6 px-2 rounded-full bg-surface-subtle text-[11px]">Upbeat</button>
+        </div>
+      </div>
+
+      <!-- B-roll (cheap tier) -->
+      <div>
+        <label class="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wide">B-roll source</label>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button class="h-8 px-3 rounded-full bg-primary text-white text-[12px] font-semibold">Pexels (free)</button>
+          <button class="h-8 px-3 rounded-full border border-border text-[12px]">Pixabay</button>
+          <button class="h-8 px-3 rounded-full border border-border text-[12px] opacity-50 cursor-not-allowed" disabled>Replicate (premium only)</button>
+        </div>
+      </div>
+
+      <!-- Captions -->
+      <div>
+        <label class="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wide">Captions</label>
+        <div class="mt-2 p-3 rounded-lg border border-border space-y-2">
+          <label class="flex items-center gap-2 text-[13px]">
+            <input type="checkbox" checked>Burn in kinetic captions (faster-whisper, free)
+          </label>
+          <div class="flex items-center gap-2 text-[12px] text-text-muted">
+            <span>Position:</span>
+            <button class="h-6 px-2 rounded-full bg-surface-subtle text-[11px]">Top</button>
+            <button class="h-6 px-2 rounded-full bg-surface-subtle text-[11px]">Center</button>
+            <button class="h-6 px-2 rounded-full bg-primary-subtle text-primary text-[11px] font-semibold">Bottom</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cost preview -->
+      <div class="rounded-xl border border-border bg-surface-subtle p-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-[11px] text-text-muted uppercase tracking-wide font-semibold">Estimated cost</div>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-[24px] font-semibold">$0.10</span>
+              <span class="text-[12px] text-text-muted">Final may vary ±20%</span>
+            </div>
+          </div>
+          <div class="text-right text-[11px] text-text-muted">
+            <div>Script (LLM) $0.001</div>
+            <div>Voice (ElevenLabs) $0.05</div>
+            <div>Music (Suno) $0.05</div>
+            <div>Captions (whisper) $0.00</div>
+            <div>B-roll (Pexels) $0.00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="border-t border-border px-6 py-4 flex items-center justify-between">
+      <span class="text-[11px] text-text-muted">Job typically takes 60–90s. You can close this and we'll notify you.</span>
+      <div class="flex items-center gap-2">
+        <button class="h-10 px-4 rounded-lg border border-border text-[14px] font-semibold">Cancel</button>
+        <button class="h-10 px-4 rounded-lg bg-primary text-white text-[14px] font-semibold flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px] icon-fill">movie_filter</span>Generate
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- PROGRESS PANEL (shown after Generate) -->
+<!-- ============================== -->
+<div style="position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60;">
+  <div class="bg-surface rounded-xl border border-border p-4 card-shadow w-[480px]">
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-[13px] font-semibold flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px] text-primary spin">progress_activity</span>
+        Generating your Reel…
+      </div>
+      <span class="text-[12px] text-text-muted tabular-nums">12.3s</span>
+    </div>
+    <div class="space-y-1.5">
+      <div class="flex items-center gap-2 text-[12px]">
+        <span class="material-symbols-outlined text-[14px] text-success">check_circle</span>
+        <span class="text-success line-through opacity-60">1. Script (LLM)</span>
+        <span class="ml-auto text-text-muted">1.2s</span>
+      </div>
+      <div class="flex items-center gap-2 text-[12px]">
+        <span class="material-symbols-outlined text-[14px] text-success">check_circle</span>
+        <span class="text-success line-through opacity-60">2. B-roll (Pexels)</span>
+        <span class="ml-auto text-text-muted">2.4s</span>
+      </div>
+      <div class="flex items-center gap-2 text-[12px]">
+        <span class="material-symbols-outlined text-[14px] text-primary spin">progress_activity</span>
+        <span class="font-semibold">3. Voice (ElevenLabs)</span>
+        <span class="ml-auto text-text-muted">running…</span>
+      </div>
+      <div class="flex items-center gap-2 text-[12px] text-text-muted">
+        <span class="material-symbols-outlined text-[14px]">radio_button_unchecked</span>
+        <span>4. Music (Suno)</span>
+      </div>
+      <div class="flex items-center gap-2 text-[12px] text-text-muted">
+        <span class="material-symbols-outlined text-[14px]">radio_button_unchecked</span>
+        <span>5. Avatar</span>
+      </div>
+      <div class="flex items-center gap-2 text-[12px] text-text-muted">
+        <span class="material-symbols-outlined text-[14px]">radio_button_unchecked</span>
+        <span>6. Transcribe</span>
+      </div>
+      <div class="flex items-center gap-2 text-[12px] text-text-muted">
+        <span class="material-symbols-outlined text-[14px]">radio_button_unchecked</span>
+        <span>7. Stitch</span>
+      </div>
+      <div class="flex items-center gap-2 text-[12px] text-text-muted">
+        <span class="material-symbols-outlined text-[14px]">radio_button_unchecked</span>
+        <span>8. Align captions</span>
+      </div>
+      <div class="flex items-center gap-2 text-[12px] text-text-muted">
+        <span class="material-symbols-outlined text-[14px]">radio_button_unchecked</span>
+        <span>9. Render</span>
+      </div>
+    </div>
+    <div class="mt-3 pt-3 border-t border-border flex items-center justify-between">
+      <button class="text-[12px] text-text-muted hover:text-danger">Cancel job</button>
+      <span class="text-[11px] text-text-muted">Job ID: reel_a3f2b1c…</span>
+    </div>
+  </div>
+</div>
+</body></html>

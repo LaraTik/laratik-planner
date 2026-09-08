@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — Platform Adaptation Rules (Improvement E)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495", "focus-ring": "#6366F1",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"], "table-dense": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.card-shadow { box-shadow: 0 1px 2px 0 rgba(19, 28, 43, 0.04); }
+</style>
+</head>
+<body class="bg-canvas text-on-surface">
+<div class="max-w-[1280px] mx-auto p-6 space-y-5">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-[28px] font-semibold leading-9">Platform adaptation rules</h1>
+      <p class="text-[14px] text-text-muted mt-1">Per-platform rules used by the AI when adapting a draft caption. Defaults are system-wide; agency overrides win.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="h-10 px-4 rounded-lg border border-border text-[14px] font-semibold flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">restart_alt</span>Reset all to defaults
+      </button>
+      <button class="h-10 px-4 rounded-lg bg-primary text-white text-[14px] font-semibold flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">add</span>Add override
+      </button>
+    </div>
+  </div>
+
+  <!-- Info banner -->
+  <div class="bg-info-subtle border border-info-subtle rounded-lg p-3 flex items-start gap-2">
+    <span class="material-symbols-outlined text-[18px] text-primary">info</span>
+    <div class="text-[13px] text-on-surface">
+      These rules are the input to the <code class="text-[12px] bg-surface px-1 rounded">platform_adaptation</code> §15 capability. The planner sees "Why this rewrite?" with the rule applied when they pick a target platform.
+      <a href="#" class="text-primary hover:underline ml-1">View the prompt that uses these rules →</a>
+    </div>
+  </div>
+
+  <!-- Data table -->
+  <div class="bg-surface rounded-xl border border-border overflow-hidden card-shadow">
+    <table class="w-full text-[13px]">
+      <thead>
+        <tr class="bg-surface-subtle text-left">
+          <th class="px-4 py-3 font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">Platform</th>
+          <th class="px-4 py-3 font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">Max length</th>
+          <th class="px-4 py-3 font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">Hashtag density</th>
+          <th class="px-4 py-3 font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">Hook rule</th>
+          <th class="px-4 py-3 font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">Paragraph style</th>
+          <th class="px-4 py-3 font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">Link rule</th>
+          <th class="px-4 py-3 font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">Override</th>
+          <th class="px-4 py-3 font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        <tr class="hover:bg-surface-subtle">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">close</span>
+              <span class="font-semibold">X</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 tabular-nums">280</td>
+          <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full bg-surface-subtle text-[11px]">Low · 0-2</span></td>
+          <td class="px-4 py-3 text-text-muted">Front-load</td>
+          <td class="px-4 py-3 text-text-muted">Single</td>
+          <td class="px-4 py-3"><span class="text-success text-[12px] font-semibold">Allowed</span></td>
+          <td class="px-4 py-3"><span class="text-text-muted text-[12px]">—</span></td>
+          <td class="px-4 py-3 text-right">
+            <button class="text-primary text-[12px] font-semibold hover:underline">Add override</button>
+          </td>
+        </tr>
+        <tr class="hover:bg-surface-subtle">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">work</span>
+              <span class="font-semibold">LinkedIn</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 tabular-nums">3000</td>
+          <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full bg-surface-subtle text-[11px]">Low · 3-5</span></td>
+          <td class="px-4 py-3 text-text-muted">First-line insight</td>
+          <td class="px-4 py-3 text-text-muted">Short paragraphs (1-3 lines)</td>
+          <td class="px-4 py-3"><span class="text-success text-[12px] font-semibold">Allowed</span></td>
+          <td class="px-4 py-3"><span class="text-text-muted text-[12px]">—</span></td>
+          <td class="px-4 py-3 text-right">
+            <button class="text-primary text-[12px] font-semibold hover:underline">Add override</button>
+          </td>
+        </tr>
+        <tr class="hover:bg-surface-subtle">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">photo_camera</span>
+              <span class="font-semibold">Instagram</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 tabular-nums">2200</td>
+          <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full bg-primary-subtle text-primary text-[11px] font-semibold">High · 5-15</span></td>
+          <td class="px-4 py-3 text-text-muted">First 125 chars (see more)</td>
+          <td class="px-4 py-3 text-text-muted">Line-broken</td>
+          <td class="px-4 py-3"><span class="text-warning text-[12px] font-semibold">Not in caption</span></td>
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-1">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning-subtle text-warning text-[11px] font-semibold">Custom</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <button class="text-text-muted text-[12px] hover:underline">Edit</button>
+            <button class="text-danger text-[12px] hover:underline ml-2">Clear</button>
+          </td>
+        </tr>
+        <tr class="hover:bg-surface-subtle">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">music_note</span>
+              <span class="font-semibold">TikTok</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 tabular-nums">4000</td>
+          <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full bg-primary-subtle text-primary text-[11px] font-semibold">High · 3-5</span></td>
+          <td class="px-4 py-3 text-text-muted">Spoken delivery (short sentences)</td>
+          <td class="px-4 py-3 text-text-muted">Short sentences</td>
+          <td class="px-4 py-3"><span class="text-warning text-[12px] font-semibold">Not in caption</span></td>
+          <td class="px-4 py-3"><span class="text-text-muted text-[12px]">—</span></td>
+          <td class="px-4 py-3 text-right">
+            <button class="text-primary text-[12px] font-semibold hover:underline">Add override</button>
+          </td>
+        </tr>
+        <tr class="hover:bg-surface-subtle">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">thumb_up</span>
+              <span class="font-semibold">Facebook</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 tabular-nums">5000</td>
+          <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full bg-surface-subtle text-[11px]">Low · 1-3</span></td>
+          <td class="px-4 py-3 text-text-muted">Question or stat</td>
+          <td class="px-4 py-3 text-text-muted">Single paragraph</td>
+          <td class="px-4 py-3"><span class="text-success text-[12px] font-semibold">Allowed</span></td>
+          <td class="px-4 py-3"><span class="text-text-muted text-[12px]">—</span></td>
+          <td class="px-4 py-3 text-right">
+            <button class="text-primary text-[12px] font-semibold hover:underline">Add override</button>
+          </td>
+        </tr>
+        <tr class="hover:bg-surface-subtle">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">play_circle</span>
+              <span class="font-semibold">YouTube</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 tabular-nums">5000 (description)</td>
+          <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full bg-surface-subtle text-[11px]">Mid · 3-5</span></td>
+          <td class="px-4 py-3 text-text-muted">Title + first 2 lines</td>
+          <td class="px-4 py-3 text-text-muted">Structured</td>
+          <td class="px-4 py-3"><span class="text-text-muted text-[12px]">In description</span></td>
+          <td class="px-4 py-3"><span class="text-text-muted text-[12px]">—</span></td>
+          <td class="px-4 py-3 text-right">
+            <button class="text-primary text-[12px] font-semibold hover:underline">Add override</button>
+          </td>
+        </tr>
+        <tr class="hover:bg-surface-subtle">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">forum</span>
+              <span class="font-semibold">Threads</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 tabular-nums">500</td>
+          <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full bg-surface-subtle text-[11px]">Low · 0-2</span></td>
+          <td class="px-4 py-3 text-text-muted">Single thought</td>
+          <td class="px-4 py-3 text-text-muted">Single</td>
+          <td class="px-4 py-3"><span class="text-warning text-[12px] font-semibold">Not in body</span></td>
+          <td class="px-4 py-3"><span class="text-text-muted text-[12px]">—</span></td>
+          <td class="px-4 py-3 text-right">
+            <button class="text-primary text-[12px] font-semibold hover:underline">Add override</button>
+          </td>
+        </tr>
+        <tr class="hover:bg-surface-subtle">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">push_pin</span>
+              <span class="font-semibold">Pinterest</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 tabular-nums">500</td>
+          <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full bg-primary-subtle text-primary text-[11px] font-semibold">High · 5-10</span></td>
+          <td class="px-4 py-3 text-text-muted">Keyword-front</td>
+          <td class="px-4 py-3 text-text-muted">Structured</td>
+          <td class="px-4 py-3"><span class="text-text-muted text-[12px]">In description</span></td>
+          <td class="px-4 py-3"><span class="text-text-muted text-[12px]">—</span></td>
+          <td class="px-4 py-3 text-right">
+            <button class="text-primary text-[12px] font-semibold hover:underline">Add override</button>
+          </td>
+        </tr>
+        <tr class="hover:bg-surface-subtle">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">chat</span>
+              <span class="font-semibold">Snapchat</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 tabular-nums">200</td>
+          <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full bg-surface-subtle text-[11px]">Low · 0-1</span></td>
+          <td class="px-4 py-3 text-text-muted">First 30 chars</td>
+          <td class="px-4 py-3 text-text-muted">Single</td>
+          <td class="px-4 py-3"><span class="text-warning text-[12px] font-semibold">Not in caption</span></td>
+          <td class="px-4 py-3"><span class="text-text-muted text-[12px]">—</span></td>
+          <td class="px-4 py-3 text-right">
+            <button class="text-primary text-[12px] font-semibold hover:underline">Add override</button>
+          </td>
+        </tr>
+        <tr class="hover:bg-surface-subtle">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">more_horiz</span>
+              <span class="font-semibold">Other</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 tabular-nums">2200</td>
+          <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full bg-surface-subtle text-[11px]">Mid · 3-5</span></td>
+          <td class="px-4 py-3 text-text-muted">Flexible</td>
+          <td class="px-4 py-3 text-text-muted">Flexible</td>
+          <td class="px-4 py-3"><span class="text-success text-[12px] font-semibold">Allowed</span></td>
+          <td class="px-4 py-3"><span class="text-text-muted text-[12px]">—</span></td>
+          <td class="px-4 py-3 text-right">
+            <button class="text-primary text-[12px] font-semibold hover:underline">Add override</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Edit drawer (inline preview) -->
+  <div class="bg-surface rounded-xl border border-border p-5 card-shadow">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-[14px] font-semibold">Override Instagram for this agency</h3>
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning-subtle text-warning text-[11px] font-semibold">Custom</span>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Max length</label>
+        <input value="1500" class="mt-1 w-full h-9 px-3 rounded-lg border border-border text-[13px] tabular-nums">
+      </div>
+      <div>
+        <label class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Hashtag density</label>
+        <select class="mt-1 w-full h-9 px-3 rounded-lg border border-border text-[13px]">
+          <option>Low · 0-2</option>
+          <option>Low · 3-5</option>
+          <option selected>High · 5-15</option>
+          <option>None</option>
+        </select>
+      </div>
+      <div class="col-span-2">
+        <label class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Hook rule (free text)</label>
+        <input value="First 125 chars = the 'see more' cutoff. Front-load the hook." class="mt-1 w-full h-9 px-3 rounded-lg border border-border text-[13px]">
+      </div>
+      <div>
+        <label class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Paragraph style</label>
+        <select class="mt-1 w-full h-9 px-3 rounded-lg border border-border text-[13px]">
+          <option selected>Line-broken</option>
+          <option>Single paragraph</option>
+          <option>Short paragraphs (1-3 lines)</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Link rule</label>
+        <select class="mt-1 w-full h-9 px-3 rounded-lg border border-border text-[13px]">
+          <option>Allowed</option>
+          <option selected>Not in caption</option>
+          <option>In description</option>
+        </select>
+      </div>
+    </div>
+    <div class="mt-3 flex items-center justify-between">
+      <span class="text-[11px] text-text-muted">Saved by Sarah on 2026-09-07 · 1 user, 2 workspaces use this override.</span>
+      <div class="flex items-center gap-2">
+        <button class="h-9 px-3 rounded-lg border border-border text-[12px]">Cancel</button>
+        <button class="h-9 px-3 rounded-lg bg-primary text-white text-[12px] font-semibold">Save override</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

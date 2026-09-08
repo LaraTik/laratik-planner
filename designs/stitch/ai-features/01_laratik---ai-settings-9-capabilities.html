@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — Agency AI Settings (9 capabilities)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = {
+  darkMode: "class",
+  theme: { extend: { colors: {
+    "primary": "#3525cd", "primary-hover": "#4338CA", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+    "on-primary": "#ffffff", "on-primary-container": "#dad7ff", "primary-fixed": "#e2dfff", "on-primary-fixed": "#0f0069",
+    "secondary": "#555e74", "secondary-container": "#d7dff9", "on-secondary-container": "#5a6278",
+    "tertiary": "#004c77", "tertiary-container": "#00659c", "on-tertiary-container": "#bfdfff",
+    "success": "#15803D", "success-subtle": "#ECFDF3",
+    "warning": "#B45309", "warning-subtle": "#FFF7E6",
+    "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+    "info-subtle": "#F0F9FF",
+    "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5", "surface-variant": "#dae3f8",
+    "background": "#f9f9ff", "on-background": "#131c2b", "on-surface": "#131c2b", "on-surface-variant": "#464555",
+    "border": "#DDE1E6", "outline": "#777587", "outline-variant": "#c7c4d8",
+    "text-muted": "#7B8495", "focus-ring": "#6366F1",
+  }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+  spacing: { "base": "4px", "screen-padding": "24px", "card-padding": "16px", "gutter": "16px",
+    "sidebar-expanded": "248px", "sidebar-collapsed": "72px", "topbar-height": "64px" },
+  fontFamily: { "body": ["Inter"], "section-title": ["Inter"], "label": ["Inter"], "card-title": ["Inter"],
+    "table-dense": ["Inter"], "button": ["Inter"], "page-title": ["Inter"] }
+}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.card-shadow { box-shadow: 0 1px 2px 0 rgba(19, 28, 43, 0.04); }
+.toggle-on { background-color: #4f46e5; }
+.toggle-on .dot { transform: translateX(20px); }
+.toggle-off { background-color: #d1daef; }
+.toggle-dot { transition: transform 0.15s ease; }
+</style>
+</head>
+<body class="bg-canvas text-on-surface">
+<div class="flex min-h-screen">
+  <!-- Sidebar (collapsed for compactness) -->
+  <aside class="w-[248px] bg-surface border-r border-border flex flex-col">
+    <div class="h-[64px] flex items-center px-6 border-b border-border">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white text-[14px] font-semibold">L</div>
+        <span class="text-[16px] font-semibold text-on-surface">laratik-planner</span>
+      </div>
+    </div>
+    <nav class="flex-1 py-4 px-3 space-y-1">
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">dashboard</span>My Work
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">workspaces</span>Workspaces
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] font-semibold bg-primary-subtle text-primary" href="#">
+        <span class="material-symbols-outlined text-[20px] icon-fill">settings</span>Agency Settings
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 flex flex-col">
+    <!-- Top bar -->
+    <header class="h-[64px] bg-surface border-b border-border flex items-center justify-between px-6">
+      <div class="flex items-center gap-3">
+        <span class="text-[13px] text-text-muted">Agency Settings</span>
+        <span class="text-text-muted">/</span>
+        <span class="text-[14px] font-semibold">AI</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 text-[13px] text-text-muted">
+          <span class="material-symbols-outlined text-[16px]">verified</span>
+          <span>Connection OK · MiniMax · M3 · 142ms</span>
+        </div>
+        <button class="h-9 px-3 rounded-lg border border-border text-[13px] font-semibold text-on-surface-variant hover:bg-surface-subtle">Test connection</button>
+      </div>
+    </header>
+
+    <div class="flex flex-1">
+      <!-- Section nav -->
+      <nav class="w-[200px] border-r border-border bg-surface py-6 px-3 space-y-1">
+        <a class="block px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">General</a>
+        <a class="block px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">Brand Kit</a>
+        <a class="block px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">Team</a>
+        <a class="block px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">Plans &amp; Billing</a>
+        <a class="block px-3 py-2 rounded-lg text-[14px] font-semibold bg-primary-subtle text-primary" href="#">AI</a>
+        <a class="block px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">Social Channels</a>
+      </nav>
+
+      <!-- Content -->
+      <div class="flex-1 p-6 max-w-[960px] space-y-6">
+        <!-- Header card -->
+        <div class="bg-surface rounded-xl border border-border p-6 card-shadow">
+          <div class="flex items-start justify-between mb-2">
+            <div>
+              <h1 class="text-[28px] font-semibold leading-9">AI capabilities</h1>
+              <p class="text-[14px] text-on-surface-variant mt-1">Enable the AI features your agency can use. Each capability has its own daily and monthly budget.</p>
+            </div>
+            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-success-subtle text-success text-[12px] font-semibold">
+              <span class="material-symbols-outlined text-[14px]">check_circle</span>AI feature on
+            </span>
+          </div>
+          <div class="flex items-center gap-4 text-[13px] text-text-muted mt-4">
+            <span>Provider: <strong class="text-on-surface">MiniMax</strong> · M3</span>
+            <span>·</span>
+            <span>Monthly usage: <strong class="text-on-surface">$18.40 / $30.00</strong></span>
+            <span>·</span>
+            <a href="#" class="text-primary hover:underline">View usage detail →</a>
+          </div>
+        </div>
+
+        <!-- Existing §15 capabilities -->
+        <div class="bg-surface rounded-xl border border-border p-6 card-shadow">
+          <h2 class="text-[20px] font-semibold mb-1">Content drafting</h2>
+          <p class="text-[13px] text-text-muted mb-4">The 6 master-prompt §15 capabilities. Wired and tested.</p>
+          <div class="divide-y divide-border">
+            <div class="flex items-center justify-between py-3">
+              <div class="flex-1 pr-4">
+                <div class="text-[14px] font-semibold">Campaign ideas</div>
+                <div class="text-[12px] text-text-muted">Generate 3–5 campaign ideas that ladder up to the active brief.</div>
+              </div>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[11px] font-semibold">
+                <span class="material-symbols-outlined text-[12px]">check</span>On
+              </span>
+            </div>
+            <div class="flex items-center justify-between py-3">
+              <div class="flex-1 pr-4">
+                <div class="text-[14px] font-semibold">Improve brief</div>
+                <div class="text-[12px] text-text-muted">Tighten a vague brief into Hook → Main message → CTA. 3 variants.</div>
+              </div>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[11px] font-semibold">
+                <span class="material-symbols-outlined text-[12px]">check</span>On
+              </span>
+            </div>
+            <div class="flex items-center justify-between py-3">
+              <div class="flex-1 pr-4">
+                <div class="text-[14px] font-semibold">Draft caption</div>
+                <div class="text-[12px] text-text-muted">Draft a caption with platform-aware tone. <strong>Now produces 3 variants</strong> (Improvement A).</div>
+              </div>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[11px] font-semibold">
+                <span class="material-symbols-outlined text-[12px] icon-fill">auto_awesome</span>3 variants
+              </span>
+            </div>
+            <div class="flex items-center justify-between py-3">
+              <div class="flex-1 pr-4">
+                <div class="text-[14px] font-semibold">Adapt to platform</div>
+                <div class="text-[12px] text-text-muted">Rewrite for the target platform's conventions. <strong>Per-platform rules now data-driven</strong> (Improvement E).</div>
+              </div>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[11px] font-semibold">
+                <span class="material-symbols-outlined text-[12px]">check</span>On
+              </span>
+            </div>
+            <div class="flex items-center justify-between py-3">
+              <div class="flex-1 pr-4">
+                <div class="text-[14px] font-semibold">Related format ideas</div>
+                <div class="text-[12px] text-text-muted">Suggest adjacent formats. <strong>Now ranked by viral potential</strong> (Improvement C).</div>
+              </div>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[11px] font-semibold">
+                <span class="material-symbols-outlined text-[12px] icon-fill">trending_up</span>Scored
+              </span>
+            </div>
+            <div class="flex items-center justify-between py-3">
+              <div class="flex-1 pr-4">
+                <div class="text-[14px] font-semibold">Check completeness</div>
+                <div class="text-[12px] text-text-muted">Score 0–100. <strong>Now penalizes brand-voice violations</strong> (Improvement D).</div>
+              </div>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[11px] font-semibold">
+                <span class="material-symbols-outlined text-[12px]">check</span>On
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- New: Image generation -->
+        <div class="bg-surface rounded-xl border-2 border-primary-subtle p-6 card-shadow">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-[18px] text-primary icon-fill">auto_awesome</span>
+            <h2 class="text-[20px] font-semibold">Image generation</h2>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-subtle text-primary text-[11px] font-semibold">NEW</span>
+          </div>
+          <p class="text-[13px] text-on-surface-variant mb-4">Generate on-brand images for any content item. Default: Replicate (Flux + Qwen-Image). OpenAI gpt-image-1 and Recraft are opt-in per agency.</p>
+          <div class="flex items-center justify-between py-3 border-t border-border">
+            <div class="flex-1 pr-4">
+              <div class="text-[14px] font-semibold">Generate image</div>
+              <div class="text-[12px] text-text-muted">Per agency: 500 generations/mo, $30/mo. Per user: 30/day.</div>
+            </div>
+            <button class="w-11 h-6 rounded-full toggle-on relative">
+              <span class="dot absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white toggle-dot"></span>
+            </button>
+          </div>
+          <div class="grid grid-cols-3 gap-3 mt-3">
+            <div class="border border-border rounded-lg p-3 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-text-muted">check_box</span>
+              <div>
+                <div class="text-[13px] font-semibold">Replicate (default)</div>
+                <div class="text-[11px] text-text-muted">Flux + Qwen-Image</div>
+              </div>
+            </div>
+            <div class="border border-border rounded-lg p-3 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-text-muted">check_box_outline_blank</span>
+              <div>
+                <div class="text-[13px] font-semibold">OpenAI gpt-image-1</div>
+                <div class="text-[11px] text-text-muted">Best text-in-image</div>
+              </div>
+            </div>
+            <div class="border border-border rounded-lg p-3 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-text-muted">check_box_outline_blank</span>
+              <div>
+                <div class="text-[13px] font-semibold">Recraft V4</div>
+                <div class="text-[11px] text-text-muted">Vector + brand palette</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- New: Reel generation -->
+        <div class="bg-surface rounded-xl border-2 border-primary-subtle p-6 card-shadow">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-[18px] text-primary icon-fill">movie_filter</span>
+            <h2 class="text-[20px] font-semibold">Reel generation</h2>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-subtle text-primary text-[11px] font-semibold">NEW</span>
+          </div>
+          <p class="text-[13px] text-on-surface-variant mb-4">Turn a content item into a vertical Reel. Cheap tier $0.10/Reel (Pexels + Suno + ElevenLabs + faster-whisper). Premium tier $2.50+/Reel (Replicate Veo 3 / Sora 2 / Kling 2.1).</p>
+          <div class="flex items-center justify-between py-3 border-t border-border">
+            <div class="flex-1 pr-4">
+              <div class="text-[14px] font-semibold">Make Reel</div>
+              <div class="text-[12px] text-text-muted">Per agency: 50 Reels/mo (cheap), $50/mo cost cap. Premium: $500/mo cap.</div>
+            </div>
+            <button class="w-11 h-6 rounded-full toggle-off relative">
+              <span class="dot absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white toggle-dot"></span>
+            </button>
+          </div>
+          <div class="flex items-center justify-between py-3 border-t border-border">
+            <div class="flex-1 pr-4">
+              <div class="text-[14px] font-semibold">Add subtitles (free, self-hosted)</div>
+              <div class="text-[12px] text-text-muted">faster-whisper. No monthly cap. Always available when Reel is on.</div>
+            </div>
+            <button class="w-11 h-6 rounded-full toggle-on relative">
+              <span class="dot absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white toggle-dot"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- New: Trend Radar -->
+        <div class="bg-surface rounded-xl border-2 border-primary-subtle p-6 card-shadow">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-[18px] text-primary icon-fill">radar</span>
+            <h2 class="text-[20px] font-semibold">Trend Radar</h2>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-subtle text-primary text-[11px] font-semibold">NEW</span>
+          </div>
+          <p class="text-[13px] text-on-surface-variant mb-4">Real-time trend ingestion from X, Reddit, TikTok, YouTube, Instagram. Auto-feeds <code class="text-[12px] bg-surface-subtle px-1 rounded">campaign_ideas</code> and <code class="text-[12px] bg-surface-subtle px-1 rounded">related_format_ideas</code>.</p>
+          <div class="flex items-center justify-between py-3 border-t border-border">
+            <div class="flex-1 pr-4">
+              <div class="text-[14px] font-semibold">Trend Radar</div>
+              <div class="text-[12px] text-text-muted">Per user: 20 syncs/day. Per agency: 500 syncs/mo. Reads (feed) are free.</div>
+            </div>
+            <button class="w-11 h-6 rounded-full toggle-on relative">
+              <span class="dot absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white toggle-dot"></span>
+            </button>
+          </div>
+          <div class="grid grid-cols-4 gap-2 mt-3">
+            <label class="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px]"><input type="checkbox" checked> X</label>
+            <label class="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px]"><input type="checkbox" checked> Reddit</label>
+            <label class="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px]"><input type="checkbox" checked> TikTok</label>
+            <label class="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px]"><input type="checkbox" checked> YouTube</label>
+            <label class="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px]"><input type="checkbox"> Instagram</label>
+            <label class="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px]"><input type="checkbox"> LinkedIn</label>
+            <label class="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px]"><input type="checkbox"> Threads</label>
+            <label class="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px]"><input type="checkbox"> Bilibili</label>
+          </div>
+        </div>
+
+        <!-- Save bar -->
+        <div class="sticky bottom-0 -mx-6 -mb-6 bg-surface border-t border-border p-4 flex items-center justify-end gap-3">
+          <span class="text-[13px] text-text-muted">Last saved 2 minutes ago</span>
+          <button class="h-10 px-4 rounded-lg border border-border text-[14px] font-semibold">Cancel</button>
+          <button class="h-10 px-4 rounded-lg bg-primary text-white text-[14px] font-semibold">Save changes</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body></html>

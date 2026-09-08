@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — AI Usage Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"], "table-dense": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+</style>
+</head>
+<body class="bg-canvas text-on-surface p-6">
+<div class="max-w-[1280px] mx-auto space-y-5">
+
+  <!-- Header -->
+  <div>
+    <h1 class="text-[28px] font-semibold leading-9">AI usage</h1>
+    <p class="text-[14px] text-text-muted mt-1">Per-agency cost + per-user daily usage. Reset date, capability breakdown, and audit log.</p>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="grid grid-cols-4 gap-4">
+    <div class="bg-surface rounded-xl border border-border p-5">
+      <div class="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wide">This month</div>
+      <div class="text-[28px] font-semibold leading-9 mt-1">$18.40</div>
+      <div class="text-[11px] text-text-muted">of $30.00 cap</div>
+      <div class="mt-2 h-1.5 bg-surface-subtle rounded-full overflow-hidden">
+        <div class="h-full bg-primary" style="width: 61%"></div>
+      </div>
+    </div>
+    <div class="bg-surface rounded-xl border border-border p-5">
+      <div class="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wide">Resets in</div>
+      <div class="text-[28px] font-semibold leading-9 mt-1">23 days</div>
+      <div class="text-[11px] text-text-muted">2026-10-01 (UTC)</div>
+    </div>
+    <div class="bg-surface rounded-xl border border-border p-5">
+      <div class="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wide">Generations (mo)</div>
+      <div class="text-[28px] font-semibold leading-9 mt-1">142</div>
+      <div class="text-[11px] text-text-muted">+18% vs last month</div>
+    </div>
+    <div class="bg-surface rounded-xl border border-border p-5">
+      <div class="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wide">Acceptance rate</div>
+      <div class="text-[28px] font-semibold leading-9 mt-1">78%</div>
+      <div class="text-[11px] text-text-muted">% of drafts the planner kept (target ≥70%)</div>
+    </div>
+  </div>
+
+  <!-- Capability breakdown -->
+  <div class="bg-surface rounded-xl border border-border overflow-hidden">
+    <div class="px-5 py-3 border-b border-border flex items-center justify-between">
+      <h2 class="text-[16px] font-semibold">By capability</h2>
+      <div class="flex items-center gap-2">
+        <select class="h-8 px-2 rounded border border-border text-[12px]">
+          <option>This month</option>
+          <option>Last 7 days</option>
+          <option>Last 24 hours</option>
+        </select>
+      </div>
+    </div>
+    <table class="w-full text-[13px]">
+      <thead>
+        <tr class="bg-surface-subtle text-left">
+          <th class="px-5 py-3 font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">Capability</th>
+          <th class="px-5 py-3 font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide text-right">Generations</th>
+          <th class="px-5 py-3 font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide text-right">Cost</th>
+          <th class="px-5 py-3 font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide text-right">Avg latency</th>
+          <th class="px-5 py-3 font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide text-right">Errors</th>
+          <th class="px-5 py-3 font-semibold text-on-surface-variant text-[12px] uppercase tracking-wide">Top provider</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        <tr>
+          <td class="px-5 py-3 font-semibold">Draft caption</td>
+          <td class="px-5 py-3 text-right tabular-nums">42</td>
+          <td class="px-5 py-3 text-right tabular-nums">$0.84</td>
+          <td class="px-5 py-3 text-right tabular-nums">1.8s</td>
+          <td class="px-5 py-3 text-right"><span class="text-success text-[12px]">0%</span></td>
+          <td class="px-5 py-3">MiniMax M3</td>
+        </tr>
+        <tr>
+          <td class="px-5 py-3 font-semibold">Improve brief</td>
+          <td class="px-5 py-3 text-right tabular-nums">28</td>
+          <td class="px-5 py-3 text-right tabular-nums">$1.12</td>
+          <td class="px-5 py-3 text-right tabular-nums">2.4s</td>
+          <td class="px-5 py-3 text-right"><span class="text-success text-[12px]">0%</span></td>
+          <td class="px-5 py-3">MiniMax M3</td>
+        </tr>
+        <tr>
+          <td class="px-5 py-3 font-semibold">Generate image</td>
+          <td class="px-5 py-3 text-right tabular-nums">68</td>
+          <td class="px-5 py-3 text-right tabular-nums">$3.40</td>
+          <td class="px-5 py-3 text-right tabular-nums">4.2s</td>
+          <td class="px-5 py-3 text-right"><span class="text-warning text-[12px]">2.1%</span></td>
+          <td class="px-5 py-3">Replicate flux-1.1-pro (84%)</td>
+        </tr>
+        <tr class="bg-primary-subtle/30">
+          <td class="px-5 py-3 font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[16px] text-primary">auto_awesome</span>Generate image — new
+          </td>
+          <td class="px-5 py-3 text-right tabular-nums">22</td>
+          <td class="px-5 py-3 text-right tabular-nums">$1.10</td>
+          <td class="px-5 py-3 text-right tabular-nums">3.8s</td>
+          <td class="px-5 py-3 text-right"><span class="text-success text-[12px]">0%</span></td>
+          <td class="px-5 py-3">Replicate (auto)</td>
+        </tr>
+        <tr>
+          <td class="px-5 py-3 font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[16px] text-primary">movie_filter</span>Make Reel
+          </td>
+          <td class="px-5 py-3 text-right tabular-nums">4</td>
+          <td class="px-5 py-3 text-right tabular-nums">$0.40</td>
+          <td class="px-5 py-3 text-right tabular-nums">62.4s</td>
+          <td class="px-5 py-3 text-right"><span class="text-warning text-[12px]">25%</span></td>
+          <td class="px-5 py-3">Pexels + Suno + ElevenLabs (cheap)</td>
+        </tr>
+        <tr>
+          <td class="px-5 py-3 font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[16px] text-primary">closed_caption</span>Add subtitles
+          </td>
+          <td class="px-5 py-3 text-right tabular-nums">12</td>
+          <td class="px-5 py-3 text-right tabular-nums text-success font-semibold">$0.00</td>
+          <td class="px-5 py-3 text-right tabular-nums">18.2s</td>
+          <td class="px-5 py-3 text-right"><span class="text-success text-[12px]">0%</span></td>
+          <td class="px-5 py-3">faster-whisper (self-host)</td>
+        </tr>
+        <tr>
+          <td class="px-5 py-3 font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[16px] text-primary">radar</span>Trend sync
+          </td>
+          <td class="px-5 py-3 text-right tabular-nums">—</td>
+          <td class="px-5 py-3 text-right tabular-nums text-success font-semibold">$0.00</td>
+          <td class="px-5 py-3 text-right tabular-nums">—</td>
+          <td class="px-5 py-3 text-right"><span class="text-text-muted text-[12px]">2%</span></td>
+          <td class="px-5 py-3">Agent-Reach MCP (free)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Top users -->
+  <div class="grid grid-cols-2 gap-4">
+    <div class="bg-surface rounded-xl border border-border overflow-hidden">
+      <div class="px-5 py-3 border-b border-border">
+        <h2 class="text-[16px] font-semibold">Top users (this month)</h2>
+      </div>
+      <div class="divide-y divide-border">
+        <div class="px-5 py-3 flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-primary text-white text-[12px] font-semibold flex items-center justify-center">SM</div>
+          <div class="flex-1">
+            <div class="text-[13px] font-semibold">Sarah M.</div>
+            <div class="text-[11px] text-text-muted">Planner</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[13px] font-semibold tabular-nums">38</div>
+            <div class="text-[11px] text-text-muted">$8.20</div>
+          </div>
+        </div>
+        <div class="px-5 py-3 flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-secondary text-white text-[12px] font-semibold flex items-center justify-center">JK</div>
+          <div class="flex-1">
+            <div class="text-[13px] font-semibold">James K.</div>
+            <div class="text-[11px] text-text-muted">Manager</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[13px] font-semibold tabular-nums">24</div>
+            <div class="text-[11px] text-text-muted">$5.10</div>
+          </div>
+        </div>
+        <div class="px-5 py-3 flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-tertiary text-white text-[12px] font-semibold flex items-center justify-center">AL</div>
+          <div class="flex-1">
+            <div class="text-[13px] font-semibold">Aisha L.</div>
+            <div class="text-[11px] text-text-muted">Reviewer</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[13px] font-semibold tabular-nums">8</div>
+            <div class="text-[11px] text-text-muted">$1.20</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent activity -->
+    <div class="bg-surface rounded-xl border border-border overflow-hidden">
+      <div class="px-5 py-3 border-b border-border flex items-center justify-between">
+        <h2 class="text-[16px] font-semibold">Recent activity</h2>
+        <a href="#" class="text-[12px] text-primary hover:underline">View full audit →</a>
+      </div>
+      <div class="divide-y divide-border max-h-[280px] overflow-y-auto">
+        <div class="px-5 py-3 text-[12px]">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[14px] text-primary">auto_awesome</span>
+            <span class="font-semibold">Generate image</span>
+            <span class="text-text-muted">Sarah M. · 4m ago</span>
+          </div>
+          <div class="text-text-muted mt-1 truncate">flux-1.1-pro · $0.05 · "Hero shot of a Yemeni coffee farmer…"</div>
+        </div>
+        <div class="px-5 py-3 text-[12px]">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[14px] text-success">closed_caption</span>
+            <span class="font-semibold">Add subtitles</span>
+            <span class="text-text-muted">James K. · 12m ago</span>
+          </div>
+          <div class="text-text-muted mt-1">faster-whisper large-v3 · 18.2s · 99% accuracy</div>
+        </div>
+        <div class="px-5 py-3 text-[12px]">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[14px] text-primary">movie_filter</span>
+            <span class="font-semibold">Make Reel</span>
+            <span class="text-text-muted">Sarah M. · 24m ago</span>
+          </div>
+          <div class="text-text-muted mt-1">cheap tier · $0.10 · 30s · success</div>
+        </div>
+        <div class="px-5 py-3 text-[12px]">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[14px] text-danger">error</span>
+            <span class="font-semibold">Generate image · rejected</span>
+            <span class="text-text-muted">Aisha L. · 1h ago</span>
+          </div>
+          <div class="text-text-muted mt-1">flux-1.1-pro · "Content policy: recognizable face" · refunded</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — AI Subtitle (free, self-hosted)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495", "focus-ring": "#6366F1",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.card-shadow { box-shadow: 0 1px 2px 0 rgba(19, 28, 43, 0.04); }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.kinetic {
+  font-family: 'Inter';
+  font-weight: 800;
+  color: white;
+  text-shadow: -2px 0 black, 0 2px black, 2px 0 black, 0 -2px black;
+  letter-spacing: -0.02em;
+}
+</style>
+</head>
+<body class="bg-canvas text-on-surface p-6">
+<div class="max-w-[1100px] mx-auto">
+
+  <!-- Top: asset + actions -->
+  <div class="flex items-center gap-3 mb-4">
+    <button class="text-text-muted hover:text-on-surface">
+      <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+    </button>
+    <h1 class="text-[20px] font-semibold">hero-promo-30s.mp4</h1>
+    <span class="text-[13px] text-text-muted">· 30.2s · 1080×1920 · 12.4 MB</span>
+    <span class="ml-auto text-[12px] text-text-muted">Owner: Sarah M.</span>
+  </div>
+
+  <div class="grid grid-cols-3 gap-5">
+
+    <!-- Left: video preview -->
+    <div class="col-span-2 space-y-3">
+      <div class="bg-surface rounded-xl border border-border overflow-hidden card-shadow">
+        <div class="relative bg-on-surface aspect-[9/16] max-h-[600px] mx-auto flex items-center justify-center">
+          <!-- Video placeholder with kinetic captions -->
+          <div class="absolute inset-0 bg-gradient-to-b from-stone-700 via-amber-800 to-stone-900"></div>
+          <!-- Fake scene text -->
+          <div class="absolute top-6 left-6 right-6 text-white text-[13px] font-semibold leading-snug">
+            <span class="bg-black/40 px-2 py-1 rounded">0:00 / 0:30</span>
+          </div>
+          <!-- Kinetic captions (word highlighted) -->
+          <div class="absolute bottom-12 left-4 right-4 text-center">
+            <div class="kinetic text-[28px] leading-tight">
+              <span>The</span> <span class="text-yellow-300">bean</span> <span>is older than your espresso machine</span>
+            </div>
+          </div>
+          <!-- Bottom controls -->
+          <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3 flex items-center gap-2">
+            <button class="w-8 h-8 rounded-full bg-white/20 backdrop-blur text-white flex items-center justify-center">
+              <span class="material-symbols-outlined text-[18px]">play_arrow</span>
+            </button>
+            <div class="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
+              <div class="h-full w-1/3 bg-primary"></div>
+            </div>
+            <span class="text-white text-[11px] tabular-nums">0:10 / 0:30</span>
+            <button class="w-8 h-8 rounded-full bg-white/20 backdrop-blur text-white flex items-center justify-center">
+              <span class="material-symbols-outlined text-[18px] icon-fill">volume_up</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result actions -->
+      <div class="bg-surface rounded-xl border border-border p-4 card-shadow flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[12px] font-semibold">
+            <span class="material-symbols-outlined text-[14px]">check_circle</span>Done · 18.2s
+          </span>
+          <span class="text-[12px] text-text-muted">faster-whisper large-v3 · auto-detect: en · 99% accuracy</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="h-9 px-3 rounded-lg border border-border text-[13px]">Download SRT</button>
+          <button class="h-9 px-3 rounded-lg border border-border text-[13px]">Download VTT</button>
+          <button class="h-9 px-3 rounded-lg bg-primary text-white text-[13px] font-semibold flex items-center gap-1">
+            <span class="material-symbols-outlined text-[16px]">download</span>Download MP4
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: settings + transcript -->
+    <div class="space-y-3">
+
+      <!-- Settings -->
+      <div class="bg-surface rounded-xl border border-border p-4 card-shadow space-y-3">
+        <h3 class="text-[14px] font-semibold">Subtitle settings</h3>
+        <div>
+          <label class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Language</label>
+          <select class="mt-1 w-full h-9 px-3 rounded-lg border border-border text-[13px]">
+            <option selected>Auto-detect</option>
+            <option>English</option>
+            <option>Arabic (Gulf)</option>
+            <option>Spanish</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Model</label>
+          <select class="mt-1 w-full h-9 px-3 rounded-lg border border-border text-[13px]">
+            <option>faster-whisper tiny (CPU, 1s)</option>
+            <option>faster-whisper base (CPU, 2s)</option>
+            <option selected>faster-whisper large-v3 (CPU, 18s)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Style</label>
+          <div class="mt-1 grid grid-cols-2 gap-2">
+            <button class="h-16 rounded-lg border-2 border-primary bg-primary-subtle p-2 flex flex-col items-center justify-center">
+              <span class="text-[11px] font-semibold text-primary">Kinetic</span>
+              <span class="text-[10px] text-text-muted">word-by-word</span>
+            </button>
+            <button class="h-16 rounded-lg border-2 border-border p-2 flex flex-col items-center justify-center hover:border-primary">
+              <span class="text-[11px] font-semibold">Subtitle</span>
+              <span class="text-[10px] text-text-muted">standard bar</span>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Position</label>
+          <div class="mt-1 grid grid-cols-3 gap-1">
+            <button class="h-8 rounded-md border border-border text-[11px]">Top</button>
+            <button class="h-8 rounded-md border border-border text-[11px]">Center</button>
+            <button class="h-8 rounded-md bg-primary-subtle border-2 border-primary text-[11px] font-semibold text-primary">Bottom</button>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-border">
+          <span class="material-symbols-outlined text-[16px] text-success">verified</span>
+          <span class="text-[12px] text-text-muted">Self-hosted. <strong>$0.00</strong> per job. No API.</span>
+        </div>
+      </div>
+
+      <!-- Transcript -->
+      <div class="bg-surface rounded-xl border border-border p-4 card-shadow">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-[14px] font-semibold">Transcript</h3>
+          <span class="text-[11px] text-text-muted">12 cues</span>
+        </div>
+        <div class="space-y-2 max-h-[280px] overflow-y-auto">
+          <div class="flex items-start gap-2 p-2 rounded-md hover:bg-surface-subtle cursor-pointer bg-primary-subtle">
+            <span class="text-[10px] tabular-nums text-text-muted mt-0.5">0:01.2</span>
+            <p class="text-[12px] flex-1">The bean is older than your espresso machine.</p>
+          </div>
+          <div class="flex items-start gap-2 p-2 rounded-md hover:bg-surface-subtle cursor-pointer">
+            <span class="text-[10px] tabular-nums text-text-muted mt-0.5">0:04.8</span>
+            <p class="text-[12px] flex-1">Our Yemeni Heirloom is harvested at two thousand two hundred meters.</p>
+          </div>
+          <div class="flex items-start gap-2 p-2 rounded-md hover:bg-surface-subtle cursor-pointer">
+            <span class="text-[10px] tabular-nums text-text-muted mt-0.5">0:08.2</span>
+            <p class="text-[12px] flex-1">By a fourth generation farmer we know by name.</p>
+          </div>
+          <div class="flex items-start gap-2 p-2 rounded-md hover:bg-surface-subtle cursor-pointer">
+            <span class="text-[10px] tabular-nums text-text-muted mt-0.5">0:11.5</span>
+            <p class="text-[12px] flex-1">It tastes like dried apricot, black tea, and a kind of patience.</p>
+          </div>
+          <div class="flex items-start gap-2 p-2 rounded-md hover:bg-surface-subtle cursor-pointer">
+            <span class="text-[10px] tabular-nums text-text-muted mt-0.5">0:15.9</span>
+            <p class="text-[12px] flex-1">A patience you can't fake.</p>
+          </div>
+          <div class="flex items-start gap-2 p-2 rounded-md hover:bg-surface-subtle cursor-pointer opacity-60">
+            <span class="text-[10px] tabular-nums text-text-muted mt-0.5">0:18.1</span>
+            <p class="text-[12px] flex-1">[ambient — coffee shop]</p>
+          </div>
+        </div>
+        <button class="mt-2 w-full h-8 rounded-lg border border-border text-[12px] flex items-center justify-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">edit</span>Edit transcript
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

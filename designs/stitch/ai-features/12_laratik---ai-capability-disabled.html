@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — Onboarding + Disabled + Permission states</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+  "info-subtle": "#F0F9FF",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+</style>
+</head>
+<body class="bg-canvas text-on-surface p-6">
+<div class="max-w-[1280px] mx-auto space-y-8">
+
+  <div>
+    <h1 class="text-[28px] font-semibold">AI surfaces — onboarding / disabled / permission</h1>
+    <p class="text-[14px] text-text-muted mt-1">Three states every planner will see at least once. They must be self-explanatory.</p>
+  </div>
+
+  <div class="grid grid-cols-2 gap-6">
+
+    <!-- ==================== ONBOARDING: AI FEATURE FIRST RUN ==================== -->
+    <div class="bg-surface rounded-xl border border-border overflow-hidden">
+      <div class="bg-surface-subtle px-4 py-2 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">First-run onboarding · 4 steps</div>
+      <div class="p-8">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-[20px] text-primary icon-fill">auto_awesome</span>
+          <h2 class="text-[18px] font-semibold">Set up AI for your agency</h2>
+        </div>
+        <!-- Stepper -->
+        <div class="flex items-center gap-2 mb-6">
+          <div class="flex items-center gap-2 flex-1">
+            <div class="w-7 h-7 rounded-full bg-primary text-white text-[12px] font-semibold flex items-center justify-center">1</div>
+            <div class="flex-1 h-1 bg-primary rounded-full"></div>
+          </div>
+          <div class="flex items-center gap-2 flex-1">
+            <div class="w-7 h-7 rounded-full bg-primary text-white text-[12px] font-semibold flex items-center justify-center">2</div>
+            <div class="flex-1 h-1 bg-surface-subtle rounded-full"></div>
+          </div>
+          <div class="flex items-center gap-2 flex-1">
+            <div class="w-7 h-7 rounded-full bg-surface-subtle border border-border text-text-muted text-[12px] font-semibold flex items-center justify-center">3</div>
+            <div class="flex-1 h-1 bg-surface-subtle rounded-full"></div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full bg-surface-subtle border border-border text-text-muted text-[12px] font-semibold flex items-center justify-center">4</div>
+          </div>
+        </div>
+
+        <h3 class="text-[16px] font-semibold mb-1">Step 2 of 4: Configure providers</h3>
+        <p class="text-[13px] text-text-muted mb-4">Pick which AI providers your agency can use. You can change this anytime from Agency Settings → AI.</p>
+
+        <div class="space-y-2">
+          <label class="flex items-start gap-3 p-3 rounded-lg border border-border hover:border-primary cursor-pointer">
+            <input type="checkbox" checked class="mt-1">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <span class="text-[14px] font-semibold">Replicate (recommended)</span>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">Default</span>
+              </div>
+              <div class="text-[12px] text-text-muted mt-0.5">Flux + Qwen-Image. Best for hero shots and text-heavy posts.</div>
+              <div class="text-[11px] text-text-muted mt-1">$0.04 / standard · $0.20 / hero</div>
+            </div>
+          </label>
+          <label class="flex items-start gap-3 p-3 rounded-lg border border-border hover:border-primary cursor-pointer">
+            <input type="checkbox" class="mt-1">
+            <div class="flex-1">
+              <div class="text-[14px] font-semibold">OpenAI gpt-image-1</div>
+              <div class="text-[12px] text-text-muted mt-0.5">Best text-in-image. Sends prompts to OpenAI.</div>
+              <div class="text-[11px] text-text-muted mt-1">$0.04 / standard · $0.17 / hero</div>
+            </div>
+          </label>
+          <label class="flex items-start gap-3 p-3 rounded-lg border border-border hover:border-primary cursor-pointer">
+            <input type="checkbox" class="mt-1">
+            <div class="flex-1">
+              <div class="text-[14px] font-semibold">Recraft V4</div>
+              <div class="text-[12px] text-text-muted mt-0.5">Vector + brand color palette. Best for repeatable brand visuals.</div>
+              <div class="text-[11px] text-text-muted mt-1">$0.08 / standard · $0.25 / hero</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="mt-6 flex items-center justify-between">
+          <button class="h-9 px-3 rounded-lg border border-border text-[13px]">← Back</button>
+          <div class="flex items-center gap-2">
+            <button class="h-9 px-3 rounded-lg border border-border text-[13px]">Skip for now</button>
+            <button class="h-9 px-4 rounded-lg bg-primary text-white text-[13px] font-semibold">Continue →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== DISABLED: AI FEATURE OFF ==================== -->
+    <div class="bg-surface rounded-xl border border-border overflow-hidden">
+      <div class="bg-surface-subtle px-4 py-2 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">AI feature off · capability not enabled</div>
+      <div class="p-6 space-y-4 min-h-[420px]">
+        <!-- Content detail snippet -->
+        <div class="bg-surface rounded-xl border border-border p-5">
+          <div class="text-[12px] text-text-muted">Content: "Yemeni Coffee Story"</div>
+          <h2 class="text-[18px] font-semibold mt-1">AI assistance</h2>
+          <div class="mt-3 space-y-2">
+            <div class="flex items-center justify-between py-2">
+              <div class="text-[13px]">Draft caption</div>
+              <button class="h-8 px-3 rounded-lg border border-border text-[12px] flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">edit_note</span>Generate
+              </button>
+            </div>
+            <div class="flex items-center justify-between py-2 opacity-50">
+              <div class="text-[13px]">Generate image</div>
+              <span class="inline-flex items-center gap-1 text-[12px] text-text-muted">
+                <span class="material-symbols-outlined text-[14px]">lock</span>Off in your agency
+              </span>
+            </div>
+            <div class="flex items-center justify-between py-2 opacity-50">
+              <div class="text-[13px]">Make Reel</div>
+              <span class="inline-flex items-center gap-1 text-[12px] text-text-muted">
+                <span class="material-symbols-outlined text-[14px]">lock</span>Off in your agency
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notice -->
+        <div class="rounded-lg border border-warning bg-warning-subtle p-4">
+          <div class="flex items-start gap-2">
+            <span class="material-symbols-outlined text-[20px] text-warning">info</span>
+            <div class="flex-1">
+              <div class="text-[13px] font-semibold text-warning">Image generation and Reels are off in your agency</div>
+              <p class="text-[12px] mt-1">Your agency admin hasn't enabled these capabilities yet. Ask them to turn them on in <strong>Agency Settings → AI</strong>, or contact <a href="mailto:support@laratik.com" class="underline">support@laratik.com</a>.</p>
+              <div class="mt-3 flex items-center gap-2">
+                <button class="h-8 px-3 rounded-lg bg-warning text-white text-[12px] font-semibold">Request access</button>
+                <a href="#" class="text-[12px] text-warning underline">View plans</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== PERMISSION: WORKSPACE MEMBER NOT IN WRITE GROUP ==================== -->
+    <div class="bg-surface rounded-xl border border-border overflow-hidden">
+      <div class="bg-surface-subtle px-4 py-2 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Permission · Read-only role</div>
+      <div class="p-6 min-h-[420px]">
+        <div class="bg-surface rounded-xl border border-border p-5">
+          <h2 class="text-[16px] font-semibold mb-3">AI assistance</h2>
+          <div class="text-[12px] text-text-muted mb-3">You have <strong>Reviewer</strong> access in this workspace. AI capabilities are limited to read-only scoring.</div>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between py-2 opacity-50">
+              <div class="text-[13px]">Draft caption</div>
+              <span class="text-[12px] text-text-muted">Requires Planner+</span>
+            </div>
+            <div class="flex items-center justify-between py-2">
+              <div class="text-[13px]">Check completeness</div>
+              <button class="h-8 px-3 rounded-lg border border-border text-[12px] flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">verified</span>Check
+              </button>
+            </div>
+            <div class="flex items-center justify-between py-2 opacity-50">
+              <div class="text-[13px]">Generate image</div>
+              <span class="text-[12px] text-text-muted">Requires Manager+</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== PROVIDER NOT CONFIGURED ==================== -->
+    <div class="bg-surface rounded-xl border border-border overflow-hidden">
+      <div class="bg-surface-subtle px-4 py-2 text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide">Provider key missing · Replicate</div>
+      <div class="p-6 min-h-[420px]">
+        <div class="bg-info-subtle border border-info-subtle rounded-xl p-4">
+          <div class="flex items-start gap-2">
+            <span class="material-symbols-outlined text-[20px] text-primary">key</span>
+            <div class="flex-1">
+              <div class="text-[14px] font-semibold">Replicate API key not configured</div>
+              <p class="text-[12px] text-text-muted mt-1">Add a managed secret in Agency Settings → AI → Secrets. The key is encrypted at rest with a per-agency data key and never logged.</p>
+              <button class="mt-3 h-9 px-3 rounded-lg bg-primary text-white text-[12px] font-semibold">Add Replicate key</button>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 bg-surface rounded-xl border border-border p-4">
+          <div class="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wide mb-2">Fallback providers</div>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between p-2 rounded hover:bg-surface-subtle">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px] text-success">check_circle</span>
+                <div>
+                  <div class="text-[13px]">MiniMax (text LLM)</div>
+                  <div class="text-[11px] text-text-muted">Configured by environment</div>
+                </div>
+              </div>
+              <span class="text-[11px] text-success">Active</span>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded hover:bg-surface-subtle opacity-50">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px] text-text-muted">cancel</span>
+                <div>
+                  <div class="text-[13px]">OpenAI gpt-image-1</div>
+                  <div class="text-[11px] text-text-muted">No key configured</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>
