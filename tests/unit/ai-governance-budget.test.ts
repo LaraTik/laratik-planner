@@ -143,6 +143,7 @@ const entitlementMock = vi.hoisted(() => ({
     "platform_adaptation",
     "related_format_ideas",
     "completeness_check",
+    "trend_radar",
   ]) as Set<string>,
 }));
 
@@ -192,6 +193,7 @@ function resetState() {
     "platform_adaptation",
     "related_format_ideas",
     "completeness_check",
+    "trend_radar",
   ]);
   recordUsageMock.mockReset();
   recordUsageMock.mockResolvedValue(undefined);
@@ -350,7 +352,7 @@ describe("loadEnabledCapabilities", () => {
   it("returns the full effective set when the agency has no explicit row", async () => {
     // No row queued → empty result → null branch.
     const out = await loadEnabledCapabilities(agencyId);
-    expect(out.size).toBe(6);
+    expect(out.size).toBe(7);
     for (const cap of AI_CAPABILITIES) {
       expect(out.has(cap)).toBe(true);
     }

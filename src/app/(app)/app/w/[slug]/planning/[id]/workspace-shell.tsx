@@ -112,6 +112,8 @@ export function WorkspaceShell({
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [resetOpen, setResetOpen] = React.useState(false);
   const initialHashAdoptedRef = React.useRef(false);
+  const primaryTabs = tabs.filter((tab) => tab.id !== "preview" && tab.id !== "activity");
+  const secondaryTabs = tabs.filter((tab) => tab.id === "preview" || tab.id === "activity");
 
   // Adopt a deep-link hash after hydration. This is deliberately
   // separate from the URL-sync effect below: React Strict Mode may
@@ -173,8 +175,10 @@ export function WorkspaceShell({
     <>
       <div className="border-border bg-surface sticky top-0 z-20 -mx-1 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border px-2 py-1.5 backdrop-blur-sm">
         <WorkspaceTabs
-          tabs={tabs}
-          ariaLabel="Content workspace sections"
+          tabs={primaryTabs}
+          secondaryTabs={secondaryTabs}
+          secondaryLabel={t("contentDetail.navigation.moreSections")}
+          ariaLabel={t("contentDetail.navigation.workspaceSections")}
           value={activeId}
           onValueChange={setActiveId}
           className="static border-b-0"
@@ -234,7 +238,7 @@ function OverflowMenu({
         <button
           type="button"
           className="border-border bg-surface text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-[var(--radius-control)] border focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-          aria-label="More actions"
+          aria-label={t("contentDetail.navigation.moreActions")}
           data-testid="workspace-overflow-trigger"
         >
           <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
@@ -248,11 +252,11 @@ function OverflowMenu({
       >
         <DropdownMenuItem disabled title={t("planning.comingSoon")} className="text-fg-muted">
           <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-          Duplicate
+          {t("contentDetail.navigation.duplicate")}
         </DropdownMenuItem>
         <DropdownMenuItem disabled title={t("planning.comingSoon")} className="text-fg-muted">
           <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-          Archive
+          {t("contentDetail.navigation.archive")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -261,7 +265,7 @@ function OverflowMenu({
           data-testid="workspace-overflow-reset"
         >
           <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-          Reset content
+          {t("contentDetail.navigation.reset")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

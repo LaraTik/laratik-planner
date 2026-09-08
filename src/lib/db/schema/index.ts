@@ -42,3 +42,8 @@ export * from "./social-publishing";
 export * from "./cron";
 export * from "./storage";
 export * from "./media";
+// Trend Radar (§13–§20) — 12 additive tables for trend discovery,
+// closed-loop brief measurement, source health, and per-workspace
+// source opt-out. Imported after content (for `contentItems` FK on
+// `trend_brief`) and after identity (for the `users` FKs).
+export * from "./trends";

@@ -2,13 +2,21 @@
   "metaTitle": "Content · {id}",
   "tabs": {
     "overview": "Overview",
-    "content": "Content",
+    "content": "Creative brief",
     "messages": "Messages",
-    "copy": "Copy",
-    "delivery": "Delivery",
+    "copy": "Audience copy",
+    "delivery": "Assets",
     "preview": "Preview",
-    "publishing": "Publishing",
+    "publishing": "Publish",
     "activity": "Activity"
+  },
+  "navigation": {
+    "workspaceSections": "Planning workspace sections",
+    "moreSections": "More sections",
+    "moreActions": "More actions",
+    "duplicate": "Duplicate",
+    "archive": "Archive",
+    "reset": "Reset content"
   },
   "aiAssistance": "AI assistance",
   "aiAssistancePanel": {
@@ -280,15 +288,16 @@
     "emptyBody": "Activity appears here as this item moves through creation, review and publishing."
   },
   "readiness": {
-    "rowContent": "Content",
+    "rowContent": "Creative brief",
     "rowContentReady": "Brief and format fields are filled in",
     "rowContentEmpty": "Brief is empty",
-    "rowAssets": "Assets & versions",
+    "rowAssets": "Assets",
     "rowAssetsReady": "An approved version is on file",
     "rowAssetsEmpty": "No design versions yet",
     "rowAssetsUnapprovedOne": "{count} version, none approved",
     "rowAssetsUnapprovedMany": "{count} versions, none approved",
-    "rowPublishing": "Publishing",
+    "rowPublishing": "Publishing setup",
+    "rowPublishingUpcoming": "Available after content and assets are approved",
     "rowPublishingReady": "Channels configured",
     "rowPublishingNoChannels": "No channels",
     "rowPublishingBlockerOne": "{count} blocker",
@@ -378,9 +387,9 @@
     "backToPlanning": "Back to planning"
   },
   "sectionCreativeTitle": "Creative brief",
-  "sectionCreativeDescription": "Strategy and creative direction for this format. Audience copy is maintained in the Copy tab.",
-  "sectionAssetsTitle": "Assets & versions",
-  "sectionAssetsDescription": "Design versions uploaded by the designer, plus the final-copy approval.",
+  "sectionCreativeDescription": "Turn the idea into direction a writer, designer, and reviewer can act on. Audience copy is maintained in the Copy tab.",
+  "sectionAssetsTitle": "Assets",
+  "sectionAssetsDescription": "Add approved media versions when the brief is ready for design review.",
   "previewShortcut": "Previewing on {platform} · {account}",
   "previewShortcutNoAccount": "no channel",
   "openPreview": "Open preview",
@@ -563,6 +572,8 @@
   },
   "deliveries": {
     "title": "Deliveries",
+    "notReadyTitle": "Assets are waiting for an earlier step",
+    "notReadyBody": "Complete the creative brief and move the idea to design review. A designer or manager can add and submit the first asset version afterward.",
     "emptyBody": "No deliveries yet. Add stored media to advance to creative review.",
     "versionOne": "{count} version on file",
     "versionMany": "{count} versions on file",

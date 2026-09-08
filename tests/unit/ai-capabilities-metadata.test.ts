@@ -22,7 +22,7 @@ import {
  * can't quietly re-introduce it.
  */
 describe("AI capabilities metadata (single source of truth)", () => {
-  it("lists exactly the six §15 capabilities", () => {
+  it("lists exactly the §15 capabilities plus Trend Radar", () => {
     expect(AI_CAPABILITY_METADATA.map((c) => c.id)).toEqual([
       "campaign_ideas",
       "brief_improvement",
@@ -30,6 +30,7 @@ describe("AI capabilities metadata (single source of truth)", () => {
       "platform_adaptation",
       "related_format_ideas",
       "completeness_check",
+      "trend_radar",
     ]);
   });
 
@@ -46,15 +47,22 @@ describe("AI capabilities metadata (single source of truth)", () => {
     }
   });
 
-  it("enables every capability on the content detail page (FEAT-03)", () => {
+  it("enables every per-content capability on the content detail page (FEAT-03)", () => {
     // FEAT-03 wired up campaign_ideas, platform_adaptation, and
-    // related_format_ideas; if a future capability is added but
-    // is not yet reached on the planner surface, the test should
-    // call that out explicitly by flipping this expectation (the
-    // page is no longer the place to hide unwired work).
+    // related_format_ideas. Trend Radar (trend_radar) is a
+    // workspace-level surface and intentionally NOT rendered on
+    // the planner's content detail page; the assertion below
+    // skips that capability explicitly.
     for (const cap of AI_CAPABILITY_METADATA) {
+      if (cap.id === "trend_radar") continue;
       expect(cap.enabledOnContentDetail).toBe(true);
     }
+  });
+
+  it("marks trend_radar as a workspace-level surface (not a per-content button)", () => {
+    const cap = getAiCapabilityMetadata("trend_radar");
+    expect(cap).not.toBeNull();
+    expect(cap?.enabledOnContentDetail).toBe(false);
   });
 
   it("exposes both planner and admin lists with the same shape", () => {

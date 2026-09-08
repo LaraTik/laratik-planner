@@ -110,6 +110,7 @@ export function QuickCreateForm({
         <FormField
           id="format"
           label={t("quickCreate.form.format")}
+          hint={t("quickCreate.form.formatHint")}
           required
           {...(state?.fieldErrors?.format ? { error: state.fieldErrors.format } : {})}
         >
@@ -136,6 +137,7 @@ export function QuickCreateForm({
         <FormField
           id="plannedPublishAt"
           label={t("quickCreate.form.plannedPublish")}
+          hint={t("quickCreate.form.plannedPublishHint")}
           required
           {...(state?.fieldErrors?.plannedPublishAt
             ? { error: state.fieldErrors.plannedPublishAt }
@@ -178,6 +180,7 @@ export function QuickCreateForm({
           <legend className="text-body text-fg-primary font-semibold">
             {t("quickCreate.form.channelsDefault")}
           </legend>
+          <p className="text-label text-fg-muted">{t("quickCreate.form.channelsHint")}</p>
           <div className="border-border bg-surface grid grid-cols-1 gap-2 rounded-[var(--radius-control)] border p-3 md:grid-cols-2">
             {channels.map((c) => (
               <div
@@ -203,6 +206,16 @@ export function QuickCreateForm({
           ) : null}
         </fieldset>
       ) : null}
+
+      <aside
+        className="border-primary/25 bg-primary-subtle/30 text-fg-secondary rounded-[var(--radius-control)] border p-3"
+        data-testid="quick-create-what-next"
+      >
+        <p className="text-body text-fg-primary font-semibold">
+          {t("quickCreate.form.whatNextTitle")}
+        </p>
+        <p className="text-label mt-1">{t("quickCreate.form.whatNextBody")}</p>
+      </aside>
 
       <div className="flex items-center gap-3 pt-2">
         <FormSubmitButton

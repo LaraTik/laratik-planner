@@ -363,7 +363,11 @@
     "monthly_ai_input_tokens": "AI input tokens / month",
     "monthly_ai_output_tokens": "AI output tokens / month",
     "daily_ai_requests_per_user": "AI requests / user / day",
-    "max_output_tokens_per_request": "Output tokens / request"
+    "max_output_tokens_per_request": "Output tokens / request",
+    "trend_radar_sync_per_day": "Trend Radar syncs / user / day",
+    "trend_radar_sync_per_month": "Trend Radar syncs / month",
+    "trend_radar_cost_cents_per_month": "Trend Radar cost cents / month",
+    "trend_radar_workspaces_enabled_max": "Trend Radar workspaces enabled (max)"
   },
   "usageLevel": {
     "healthy": "healthy",
@@ -377,7 +381,8 @@
     "caption_drafts": "caption drafts",
     "platform_adaptation": "platform adaptation",
     "related_format_ideas": "related format ideas",
-    "completeness_check": "completeness check"
+    "completeness_check": "completeness check",
+    "trend_radar": "trend radar"
   },
   "platformKey": {
     "instagram": "instagram",

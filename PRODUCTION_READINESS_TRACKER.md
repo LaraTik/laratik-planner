@@ -1,5 +1,16 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-09-08 Trend Radar v1 ships (Milestone 8)** — Multi-platform
+> trend intelligence lands behind the new `trend_radar` capability
+> flag and the existing `AI_FEATURE_ENABLED` gate. 12 additive trend
+> tables in `src/lib/db/schema/trends.ts`; Python sidecar in
+> `services/trends/`; 4 planner tabs (Discover / For You / Boards /
+> Briefs) and 1 admin Sources page. Full details + outstanding
+> follow-ups are in the "Milestone 8" section at the bottom of
+> this file. Independent-reviewer sign-off, visual-matrix rerun on
+> the new surfaces, and Trend Radar UAT steps in
+> `docs/production-readiness/UAT_RELEASE.md` remain open.
+
 > **2026-09-04 analytics reliability amendment** — The approved analytics
 > refactor adds migration `0031_social_metric_workspace_dates` to backfill
 > daily social metric dates from `observed_at` in each workspace timezone;
@@ -473,3 +484,118 @@ activity`. `data-testid="app-sidebar"` added to the Sidebar
 > surfaces; the 30-step UAT in
 > `docs/production-readiness/UAT_RELEASE.md` is still Task 13
 > (independent reviewer).
+
+## Milestone 8 — Trend Radar (multi-platform trend intelligence)
+
+> **2026-09-08** — v1 ships. The Python sidecar `services/trends/`
+> owns extraction, scoring, and analysis; the Next.js app owns the
+> planner UI and the admin Sources page. The 12 additive trend
+> tables are in `src/lib/db/schema/trends.ts`; no existing column
+> is altered. The capability is gated behind the existing
+> `AI_FEATURE_ENABLED` flag and the new `trend_radar` capability
+> flag.
+
+**Architecture (per `docs/operations/TREND_RADAR.md`):**
+
+```
+Next.js planner UI ──HTTP──► services/trends (FastAPI + asyncpg)
+        │                            │
+        │ reads/writes 12            │ scrapes, normalises, scores
+        │ trend tables               │ (BART-MNLI, VADER, Detoxify,
+        ▼                            │  sentence-transformers, MiniLM)
+Postgres (Drizzle ORM)               ▼
+                              ML models cached in
+                              /app/data/models
+```
+
+**12 additive tables** (source of truth:
+`src/lib/db/schema/trends.ts`):
+
+| #   | Table                     | Purpose                                         |
+| --- | ------------------------- | ----------------------------------------------- |
+| 1   | `trend_source`            | Per-agency source enablement + config           |
+| 2   | `trend_signal`            | Normalised trend data + embeddings              |
+| 3   | `trend_board`             | User-curated collections                        |
+| 4   | `trend_board_item`        | Board ↔ signal link with feedback               |
+| 5   | `trend_brief`             | Closed-loop: trend → published content item     |
+| 6   | `trend_fetch_job`         | Sync job log                                    |
+| 7   | `trend_source_health`     | Per-source health snapshot (circuit state)      |
+| 8   | `trend_source_audit`      | Append-only audit of source-config changes      |
+| 9   | `trend_source_activity`   | Per-source activity feed (capped at 100/source) |
+| 10  | `trend_feedback`          | User feedback events for Fit score training     |
+| 11  | `saved_filter`            | Saved Trends filters (per-user)                 |
+| 12  | `workspace_source_optout` | Per-workspace opt-out override                  |
+
+**Planned vs shipped (v1):**
+
+- [x] 12 additive tables (Drizzle + SQLAlchemy mirror).
+- [x] Python sidecar scaffold: FastAPI + asyncpg + APScheduler.
+- [x] 5 first-class extractors (TikTok via tamnd, YouTube Data API v3,
+      Reddit OAuth, Meta Ads Library, Google Trends via SerpAPI).
+- [x] 7 stubbed extractors (X, Instagram, Threads, LinkedIn, Pinterest,
+      Spotify, Apify).
+- [x] Analysis pipeline: `compute_velocity`, `apply_bayesian_smoothing`,
+      `wilson_lower_bound`, `compute_lifecycle`, `classify_lifecycle`,
+      `dedupe_and_correlate`, `analyze_sentiment` (VADER + Detoxify),
+      `classify_vertical` (BART-MNLI), `compute_fit`,
+      `update_workspace_weights`.
+- [x] 3-state circuit breaker (CLOSED → OPEN → HALF_OPEN → CLOSED),
+      persisted to `trend_source_health` so it survives process
+      restarts.
+- [x] Per-platform fallback chain (primary → fallback 1 → fallback 2
+      → last-good cache), recorded in `trend_fetch_job.platforms`.
+- [x] GDPR "Delete my trend data" action with typed-phrase
+      confirmation, per-table delete counts, and a single
+      `security_audit_event` row.
+- [x] ToS acknowledgement modal for grey-area sources (twikit,
+      instaloader, tomquirk, kawsarlog) → `trend_source_audit`.
+- [x] Bilingual EN/AR strings (71 keys each, registered in
+      `src/messages/{en,ar}/trends.json`).
+- [x] Sentry tags (`capability=trend_radar`, `platform`, `source`,
+      `costCents`) on both Next.js and the sidecar.
+- [x] Prometheus metrics
+      (`ai_trend_signals_total{platform, source, status}`,
+      `ai_trend_extraction_duration_seconds{platform, source}`,
+      `ai_trend_cost_cents_total{platform, source}`,
+      `ai_trend_source_status{agency_id, source, status}`) in the
+      sidecar's `app.observability`.
+- [x] Operator manual (`docs/operations/TREND_RADAR.md`, ~2,000 words).
+- [x] 12 per-source setup guides under `docs/operations/trend-sources/`.
+- [x] 11 Python unit-test files under `services/trends/tests/`.
+- [x] 7 E2E test files under `tests/e2e/trends-*.spec.ts`.
+
+**Privacy & retention (plan §18):**
+
+- `_scrub_sentry_event` in `services/trends/app/observability.py`
+  strips every trend label, source URL, raw payload, and embedding
+  from Sentry breadcrumbs.
+- `security_audit_event.metadata` for trend operations carries source
+  key + counts only — never user data.
+- Trend signals carry an `expires_at` (7 days default); the cron
+  prunes expired rows on the daily cycle.
+- Source enablement (`trend_source`), source audit
+  (`trend_source_audit`), saved filters (`saved_filter`), and
+  per-workspace opt-outs (`workspace_source_optout`) are
+  operational, not user data, and survive the GDPR delete.
+
+**Out of scope for v1 (planned for v2):**
+
+- Bass-diffusion fit instead of the velocity + accel heuristic.
+- Auto-pilot: the sidecar proposes a content item when a trend
+  crosses the Fit threshold; the human accepts or dismisses.
+- Cross-workspace trend deduplication (currently each workspace
+  has its own signal table).
+- The 7 stubbed extractors graduating from `experimental` to
+  `paid` or `free` (per the per-source guides).
+
+**Outstanding:**
+
+- Independent-reviewer sign-off on the 12 new tables, the GDPR
+  delete action, and the 5 first-class extractor contracts.
+- Visual matrix rerun on the Trends page, Sources page, and the
+  per-source modals (current HEAD did not change those surfaces,
+  but the brand-new testids need a fresh `pnpm test:visual:update`
+  pass).
+- The 30-step UAT in `docs/production-readiness/UAT_RELEASE.md`
+  needs Trend Radar-specific steps appended (Task 13, independent
+  reviewer).

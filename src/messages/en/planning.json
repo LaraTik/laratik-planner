@@ -23,7 +23,7 @@
   "emptyFilterTitle": "No items match your filters",
   "emptyFilterDescription": "No items match {filter}. Try clearing the filter to see everything planned for this month.",
   "emptyNothingTitle": "Nothing planned for this month",
-  "emptyNothingDescription": "Use Quick Create to add a draft — it'll show up here ready to schedule.",
+  "emptyNothingDescription": "Create an idea to start a draft. You can add the brief, assets, and publishing setup as it moves through the workflow.",
   "clearFilters": "Clear filters",
   "outOfRangeTitle": "Page {page} is past the end of the list",
   "outOfRangeDescriptionOne": "The current filters match {count} item across {pages} page. Jump back to the first page to keep browsing.",

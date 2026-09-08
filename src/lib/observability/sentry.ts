@@ -154,6 +154,27 @@ export function captureError(scope: string, err: unknown, ctx: Record<string, un
   if (!sentry) return;
   const tags: Record<string, string> = { scope };
   if (requestId) tags["requestId"] = requestId;
+  // Trend Radar capability (plan §25) — when the caller passed
+  // `trendRadarTags` through `ctx`, lift the canonical tag set into
+  // the Sentry tags payload so the on-call view can filter by
+  // capability, platform, source, and costCents.
+  const trendRadarTags = ctxWithRequest["trendRadarTags"];
+  if (
+    trendRadarTags &&
+    typeof trendRadarTags === "object" &&
+    (trendRadarTags as { capability?: string }).capability === "trend_radar"
+  ) {
+    const t = trendRadarTags as {
+      capability: string;
+      platform?: string;
+      source?: string;
+      costCents?: number;
+    };
+    if (t.platform) tags["platform"] = String(t.platform);
+    if (t.source) tags["source"] = String(t.source);
+    if (typeof t.costCents === "number") tags["costCents"] = String(t.costCents);
+    tags["capability"] = t.capability;
+  }
   // Use a require-shaped path: @sentry/nextjs's captureException
   // signature is (e, hint?). Our wrapper accepts a SentryLike with
   // an `extra`-shaped second arg, so we adapt tags + extra into

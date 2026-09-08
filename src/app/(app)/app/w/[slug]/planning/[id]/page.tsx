@@ -406,6 +406,21 @@ export default async function ContentDetailPage({
       : "ready";
 
   const channelsNotConfigured = item.channels.length - configuredChannelCount;
+  const publishingIsFuture = [
+    "draft",
+    "content_review",
+    "changes_requested",
+    "approved_for_design",
+    "in_design",
+    "creative_review",
+  ].includes(item.status);
+  // Publishing readiness is intentionally not presented as a current
+  // blocker while an item is still being planned, reviewed, or designed.
+  // The publishing surface remains available through its deep link, but
+  // Overview should tell the user what they can do now.
+  const overviewBlockers = publishingIsFuture
+    ? Math.max(0, readiness.blockers - publishingBlockers)
+    : readiness.blockers;
   const overviewReadinessLines = [
     {
       id: "content",
@@ -438,9 +453,10 @@ export default async function ContentDetailPage({
     {
       id: "publishing",
       label: t("contentDetail.readiness.rowPublishing"),
-      status: publishingReadinessStatus,
-      detail:
-        publishingReadinessStatus === "ready"
+      status: publishingIsFuture ? "neutral" : publishingReadinessStatus,
+      detail: publishingIsFuture
+        ? t("contentDetail.readiness.rowPublishingUpcoming")
+        : publishingReadinessStatus === "ready"
           ? item.channels.length === 0
             ? t("contentDetail.readiness.rowPublishingNoChannels")
             : t("contentDetail.readiness.rowPublishingReady")
@@ -707,7 +723,7 @@ export default async function ContentDetailPage({
                     };
                   })}
                   ownerName={owner?.displayName ?? null}
-                  readinessBlockers={readiness.blockers}
+                  readinessBlockers={overviewBlockers}
                   readinessCanPublish={readiness.canPublish}
                   readiness={overviewReadinessLines}
                   deliveryCount={deliveryCount}

@@ -11,6 +11,7 @@ import {
   ListChecks,
   Globe2,
   Link2,
+  Radar,
   AlertTriangle,
   Check,
   X,
@@ -52,6 +53,12 @@ const ICON_BY_ID = {
   platform_adaptation: Globe2,
   related_format_ideas: Link2,
   completeness_check: ListChecks,
+  // trend_radar is a workspace-level surface and is filtered out
+  // of `PLANNER_CAPABILITIES` below (it has
+  // `enabledOnContentDetail: false`), but the type system still
+  // requires the index to exist for the full `AiCapabilityId`
+  // union. The icon is referenced only as a safety net.
+  trend_radar: Radar,
 } as const;
 
 // The planner-detail surface lists AI capabilities that

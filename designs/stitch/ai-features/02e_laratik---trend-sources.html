@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — Trends · Sources</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+  "info-subtle": "#F0F9FF",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.card-shadow { box-shadow: 0 1px 2px 0 rgba(19, 28, 43, 0.04); }
+</style>
+</head>
+<body class="bg-canvas text-on-surface">
+<div class="flex min-h-screen">
+
+  <!-- Sidebar (collapsed variant — same as 02) -->
+  <aside class="w-[248px] bg-surface border-r border-border flex flex-col flex-shrink-0">
+    <div class="h-[64px] flex items-center px-6 border-b border-border gap-3">
+      <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white text-[14px] font-semibold">L</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-[14px] font-semibold truncate">Northstar Coffee</div>
+        <div class="text-[11px] text-text-muted">Workspace · MENA</div>
+      </div>
+    </div>
+    <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">space_dashboard</span>Overview
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">calendar_month</span>Planning
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] font-semibold bg-primary-subtle text-primary" href="#">
+        <span class="material-symbols-outlined text-[20px] icon-fill">radar</span>Trends
+        <span class="ml-auto inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[10px] font-semibold">47</span>
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">event</span>Calendar
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">rate_review</span>Reviews
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">share</span>Social Channels
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">palette</span>Brand Kit
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#">
+        <span class="material-symbols-outlined text-[20px]">group</span>Team
+      </a>
+    </nav>
+    <div class="p-3 border-t border-border">
+      <button class="w-full h-10 rounded-lg bg-primary text-white text-[14px] font-semibold flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">add</span>Create content
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 flex flex-col min-w-0">
+    <!-- Top bar -->
+    <header class="h-[64px] bg-surface border-b border-border flex items-center justify-between px-6 flex-shrink-0">
+      <div class="flex items-center gap-2 text-[13px] text-text-muted">
+        <span>Northstar Coffee</span><span>/</span><span>Trends</span><span>/</span><span class="text-on-surface font-semibold">Sources</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-[13px] text-text-muted">12 sources · 9 enabled</span>
+        <button class="h-9 px-3 rounded-lg border border-border text-[13px] font-semibold flex items-center gap-1">
+          <span class="material-symbols-outlined text-[16px]">help</span>Docs
+        </button>
+      </div>
+    </header>
+
+    <div class="p-6 space-y-5 max-w-[1440px]">
+
+      <!-- STATUS BANNER -->
+      <div class="rounded-xl border border-warning-subtle bg-warning-subtle p-4 flex items-start gap-3">
+        <span class="material-symbols-outlined text-[22px] text-warning icon-fill mt-0.5">warning</span>
+        <div class="flex-1 min-w-0">
+          <div class="text-[14px] font-semibold text-on-surface">Last sync across all enabled sources: 14m ago.</div>
+          <div class="text-[13px] text-on-surface-variant mt-0.5">
+            <span class="inline-flex items-center gap-1 font-semibold text-success">
+              <span class="material-symbols-outlined text-[14px]">check_circle</span>9 sources healthy
+            </span>
+            <span class="mx-2 text-text-muted">·</span>
+            <span class="inline-flex items-center gap-1 font-semibold text-warning">
+              <span class="material-symbols-outlined text-[14px]">error</span>1 degraded (X · twikit, fallback active)
+            </span>
+            <span class="mx-2 text-text-muted">·</span>
+            <span class="inline-flex items-center gap-1 font-semibold text-danger">
+              <span class="material-symbols-outlined text-[14px]">cancel</span>1 down (Google Trends · 401)
+            </span>
+            <span class="mx-2 text-text-muted">·</span>
+            <span class="inline-flex items-center gap-1 font-semibold text-text-muted">
+              <span class="material-symbols-outlined text-[14px]">remove_circle</span>2 not enabled (Pinterest, LinkedIn)
+            </span>
+          </div>
+        </div>
+        <button class="h-9 px-3 rounded-lg bg-surface border border-border text-[13px] font-semibold flex items-center gap-1 flex-shrink-0">
+          <span class="material-symbols-outlined text-[16px]">visibility</span>View health
+        </button>
+      </div>
+
+      <!-- PAGE HEADER + ACTIONS -->
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 class="text-[28px] font-semibold leading-9">Sources</h1>
+          <p class="text-[14px] text-on-surface-variant mt-1">12 platforms wired into Trend Radar. Enable, disable, or test each one. Per-workspace keys live in <a class="text-primary hover:underline" href="#">API key management</a>.</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button class="h-10 px-4 rounded-lg border border-border bg-surface text-[14px] font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">play_circle</span>Test all enabled
+          </button>
+          <button class="h-10 px-4 rounded-lg bg-primary text-white text-[14px] font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">add</span>Add custom source
+          </button>
+        </div>
+      </div>
+
+      <!-- VIEW TOGGLE + FILTERS -->
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-1 p-1 rounded-lg bg-surface-subtle">
+          <button class="h-9 px-3 rounded-md bg-surface text-[13px] font-semibold flex items-center gap-2 shadow-sm">
+            <span class="material-symbols-outlined text-[16px]">grid_view</span>Card view
+          </button>
+          <button class="h-9 px-3 rounded-md text-[13px] text-text-muted flex items-center gap-2 hover:bg-surface">
+            <span class="material-symbols-outlined text-[16px]">view_list</span>List view
+          </button>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-[12px] text-text-muted">Filter</span>
+          <button class="h-9 px-3 rounded-full bg-primary text-white text-[12px] font-semibold">All (12)</button>
+          <button class="h-9 px-3 rounded-full bg-surface border border-border text-[12px] flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px] text-success">check_circle</span>Enabled (9)
+          </button>
+          <button class="h-9 px-3 rounded-full bg-surface border border-border text-[12px] flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px] text-warning">error</span>Degraded (1)
+          </button>
+          <button class="h-9 px-3 rounded-full bg-surface border border-border text-[12px] flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px] text-danger">cancel</span>Down (1)
+          </button>
+          <button class="h-9 px-3 rounded-full bg-surface border border-border text-[12px] flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px] text-text-muted">remove_circle</span>Disabled (1)
+          </button>
+        </div>
+      </div>
+
+      <!-- SOURCE GRID 4×3 -->
+      <div class="grid grid-cols-4 gap-4">
+
+        <!-- 1. TikTok — HEALTHY -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow flex flex-col">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-lg bg-surface-subtle flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">music_note</span>
+              </div>
+              <div>
+                <div class="text-[14px] font-semibold leading-tight">TikTok</div>
+                <div class="text-[11px] text-text-muted">tamnd/tiktok-cli</div>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">check_circle</span>Healthy
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1 flex-wrap mb-2">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">tag</span>Hashtag
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">music_note</span>Sound
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">person</span>Creator
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap text-[10px] text-text-muted mb-3">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning font-semibold" title="Uses unofficial API — may violate ToS">
+              <span class="material-symbols-outlined text-[11px]">gavel</span>ToS grey
+            </span>
+            <a class="text-primary hover:underline flex items-center gap-0.5" href="#">
+              <span class="material-symbols-outlined text-[11px]">open_in_new</span>Docs
+            </a>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-[11px] mb-3 mt-auto">
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Coverage</div>
+              <div class="text-[13px] font-semibold">2.4K/day</div>
+            </div>
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Cost (mo)</div>
+              <div class="text-[13px] font-semibold text-success">$0.00</div>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-text-muted mb-3">Last sync 14m ago · 387 signals · 1.4s</div>
+
+          <div class="flex items-center gap-1.5">
+            <button class="flex-1 h-9 rounded-lg border border-border text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">settings</span>Configure
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Disable">
+              <span class="material-symbols-outlined text-[16px]">pause</span>
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Test now">
+              <span class="material-symbols-outlined text-[16px]">refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. YouTube — HEALTHY -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow flex flex-col">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-lg bg-surface-subtle flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">play_circle</span>
+              </div>
+              <div>
+                <div class="text-[14px] font-semibold leading-tight">YouTube</div>
+                <div class="text-[11px] text-text-muted">Data API v3</div>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">check_circle</span>Healthy
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1 flex-wrap mb-2">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">topic</span>Topic
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">person</span>Creator
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">movie</span>Format
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap text-[10px] text-text-muted mb-3">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold" title="Official API">
+              <span class="material-symbols-outlined text-[11px]">verified</span>ToS ok
+            </span>
+            <a class="text-primary hover:underline flex items-center gap-0.5" href="#">
+              <span class="material-symbols-outlined text-[11px]">open_in_new</span>Docs
+            </a>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-[11px] mb-3 mt-auto">
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Coverage</div>
+              <div class="text-[13px] font-semibold">1.1K/day</div>
+            </div>
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Quota 24h</div>
+              <div class="text-[13px] font-semibold">3.2K / 10K</div>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-text-muted mb-3">Last sync 18m ago · 220 signals · 0.8s</div>
+
+          <div class="flex items-center gap-1.5">
+            <button class="flex-1 h-9 rounded-lg border border-border text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">settings</span>Configure
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Disable">
+              <span class="material-symbols-outlined text-[16px]">pause</span>
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Test now">
+              <span class="material-symbols-outlined text-[16px]">refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. Reddit — HEALTHY -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow flex flex-col">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-lg bg-surface-subtle flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">forum</span>
+              </div>
+              <div>
+                <div class="text-[14px] font-semibold leading-tight">Reddit</div>
+                <div class="text-[11px] text-text-muted">PRAW · OAuth</div>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">check_circle</span>Healthy
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1 flex-wrap mb-2">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">topic</span>Topic
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">tag</span>Hashtag
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap text-[10px] text-text-muted mb-3">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">verified</span>ToS ok
+            </span>
+            <a class="text-primary hover:underline flex items-center gap-0.5" href="#">
+              <span class="material-symbols-outlined text-[11px]">open_in_new</span>Docs
+            </a>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-[11px] mb-3 mt-auto">
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Coverage</div>
+              <div class="text-[13px] font-semibold">3.8K/day</div>
+            </div>
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Cost (mo)</div>
+              <div class="text-[13px] font-semibold text-success">$0.00</div>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-text-muted mb-3">Last sync 9m ago · 510 signals · 0.6s</div>
+
+          <div class="flex items-center gap-1.5">
+            <button class="flex-1 h-9 rounded-lg border border-border text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">settings</span>Configure
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Disable">
+              <span class="material-symbols-outlined text-[16px]">pause</span>
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Test now">
+              <span class="material-symbols-outlined text-[16px]">refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4. X (twikit) — DEGRADED -->
+        <div class="bg-surface rounded-xl border-2 border-warning-subtle p-4 card-shadow flex flex-col">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-lg bg-warning-subtle flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">alternate_email</span>
+              </div>
+              <div>
+                <div class="text-[14px] font-semibold leading-tight">X · twikit</div>
+                <div class="text-[11px] text-text-muted">Unofficial, cookie auth</div>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning-subtle text-warning text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">error</span>Degraded
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1 flex-wrap mb-2">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">tag</span>Hashtag
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">person</span>Creator
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap text-[10px] text-text-muted mb-3">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning font-semibold">
+              <span class="material-symbols-outlined text-[11px]">gavel</span>ToS grey
+            </span>
+            <a class="text-primary hover:underline flex items-center gap-0.5" href="#">
+              <span class="material-symbols-outlined text-[11px]">open_in_new</span>Docs
+            </a>
+          </div>
+
+          <div class="rounded-md bg-warning-subtle px-2 py-1.5 text-[11px] text-warning mb-3 flex items-start gap-1.5">
+            <span class="material-symbols-outlined text-[13px] mt-0.5">sync_problem</span>
+            <span>Cookie rotated 2h ago. Falling back to cached trends (last 6h).</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-[11px] mb-3 mt-auto">
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Coverage</div>
+              <div class="text-[13px] font-semibold">820/day</div>
+            </div>
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Success 24h</div>
+              <div class="text-[13px] font-semibold text-warning">62%</div>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-text-muted mb-3">Last sync 22m ago · 142 signals · 2.1s</div>
+
+          <div class="flex items-center gap-1.5">
+            <button class="flex-1 h-9 rounded-lg border border-warning text-warning text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">cookie</span>Re-authenticate
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Test now">
+              <span class="material-symbols-outlined text-[16px]">refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 5. Facebook Ads — HEALTHY -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow flex flex-col">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-lg bg-surface-subtle flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">campaign</span>
+              </div>
+              <div>
+                <div class="text-[14px] font-semibold leading-tight">Facebook Ads</div>
+                <div class="text-[11px] text-text-muted">Meta Ad Library API</div>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">check_circle</span>Healthy
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1 flex-wrap mb-2">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">movie</span>Format
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">topic</span>Topic
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap text-[10px] text-text-muted mb-3">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">verified</span>ToS ok
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-[11px] mb-3 mt-auto">
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Coverage</div>
+              <div class="text-[13px] font-semibold">640/day</div>
+            </div>
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Cost (mo)</div>
+              <div class="text-[13px] font-semibold text-success">$0.00</div>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-text-muted mb-3">Last sync 1h ago · 88 signals · 1.1s</div>
+
+          <div class="flex items-center gap-1.5">
+            <button class="flex-1 h-9 rounded-lg border border-border text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">settings</span>Configure
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Disable">
+              <span class="material-symbols-outlined text-[16px]">pause</span>
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Test now">
+              <span class="material-symbols-outlined text-[16px]">refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 6. X v2 — PAID, NOT CONFIGURED -->
+        <div class="bg-surface rounded-xl border-2 border-warning border-dashed p-4 card-shadow flex flex-col">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-lg bg-surface-subtle flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">alternate_email</span>
+              </div>
+              <div>
+                <div class="text-[14px] font-semibold leading-tight">X · API v2</div>
+                <div class="text-[11px] text-text-muted">Official, pay-per-use</div>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-subtle text-text-muted text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">vpn_key_off</span>Not configured
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1 flex-wrap mb-2">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">tag</span>Hashtag
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">person</span>Creator
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap text-[10px] text-text-muted mb-3">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning font-semibold">
+              <span class="material-symbols-outlined text-[11px]">payments</span>PAID · $5/1k search
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">verified</span>ToS ok
+            </span>
+          </div>
+
+          <div class="rounded-md bg-warning-subtle px-2 py-1.5 text-[11px] text-warning mb-3 flex items-start gap-1.5">
+            <span class="material-symbols-outlined text-[13px] mt-0.5">key</span>
+            <span>Add an API token to enable. Charged per call to your X developer account.</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-[11px] mb-3 mt-auto">
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Est. coverage</div>
+              <div class="text-[13px] font-semibold">~5K/day</div>
+            </div>
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Est. cost</div>
+              <div class="text-[13px] font-semibold text-text-muted">$0–$50/mo</div>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-text-muted mb-3">No sync yet · API key required</div>
+
+          <div class="flex items-center gap-1.5">
+            <button class="flex-1 h-9 rounded-lg bg-warning text-white text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">add_circle</span>Add API key
+            </button>
+            <a class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Docs" href="#">
+              <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 7. Instagram — HEALTHY -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow flex flex-col">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-lg bg-surface-subtle flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">photo_camera</span>
+              </div>
+              <div>
+                <div class="text-[14px] font-semibold leading-tight">Instagram</div>
+                <div class="text-[11px] text-text-muted">Graph API · business</div>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">check_circle</span>Healthy
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1 flex-wrap mb-2">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">tag</span>Hashtag
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">person</span>Creator
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">movie</span>Format
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap text-[10px] text-text-muted mb-3">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">verified</span>ToS ok
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-[11px] mb-3 mt-auto">
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Coverage</div>
+              <div class="text-[13px] font-semibold">1.6K/day</div>
+            </div>
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Cost (mo)</div>
+              <div class="text-[13px] font-semibold text-success">$0.00</div>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-text-muted mb-3">Last sync 16m ago · 198 signals · 1.0s</div>
+
+          <div class="flex items-center gap-1.5">
+            <button class="flex-1 h-9 rounded-lg border border-border text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">settings</span>Configure
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Disable">
+              <span class="material-symbols-outlined text-[16px]">pause</span>
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Test now">
+              <span class="material-symbols-outlined text-[16px]">refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 8. Threads — EXPERIMENTAL (BETA) -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow flex flex-col">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-lg bg-surface-subtle flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">tag</span>
+              </div>
+              <div>
+                <div class="text-[14px] font-semibold leading-tight">Threads</div>
+                <div class="text-[11px] text-text-muted">Threads API · kawsarlog</div>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px] icon-fill">science</span>Beta
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1 flex-wrap mb-2">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">tag</span>Hashtag
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">person</span>Creator
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap text-[10px] text-text-muted mb-3">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary-subtle text-primary font-semibold">
+              <span class="material-symbols-outlined text-[11px] icon-fill">science</span>Experimental
+            </span>
+          </div>
+
+          <div class="rounded-md bg-primary-subtle px-2 py-1.5 text-[11px] text-primary mb-3 flex items-start gap-1.5">
+            <span class="material-symbols-outlined text-[13px] mt-0.5">info</span>
+            <span>Beta: signal volume is low. Expect &lt;100 signals/day until v1.1.</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-[11px] mb-3 mt-auto">
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Coverage</div>
+              <div class="text-[13px] font-semibold">78/day</div>
+            </div>
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Cost (mo)</div>
+              <div class="text-[13px] font-semibold text-success">$0.00</div>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-text-muted mb-3">Last sync 32m ago · 12 signals · 0.9s</div>
+
+          <div class="flex items-center gap-1.5">
+            <button class="flex-1 h-9 rounded-lg border border-border text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">settings</span>Configure
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Disable">
+              <span class="material-symbols-outlined text-[16px]">pause</span>
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Test now">
+              <span class="material-symbols-outlined text-[16px]">refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 9. Google Trends — DOWN -->
+        <div class="bg-surface rounded-xl border-2 border-danger-subtle p-4 card-shadow flex flex-col">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-lg bg-danger-subtle flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">travel_explore</span>
+              </div>
+              <div>
+                <div class="text-[14px] font-semibold leading-tight">Google Trends</div>
+                <div class="text-[11px] text-text-muted">SerpAPI · paid</div>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger-subtle text-danger text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">cancel</span>Down
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1 flex-wrap mb-2">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">tag</span>Hashtag
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">topic</span>Topic
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap text-[10px] text-text-muted mb-3">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning font-semibold">
+              <span class="material-symbols-outlined text-[11px]">payments</span>PAID · $10/1k
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">verified</span>ToS ok
+            </span>
+          </div>
+
+          <div class="rounded-md bg-danger-subtle px-2 py-1.5 text-[11px] text-danger mb-3 flex items-start gap-1.5">
+            <span class="material-symbols-outlined text-[13px] mt-0.5">block</span>
+            <span>401 Unauthorized — API key expired 2 days ago. Renew in SerpAPI dashboard.</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-[11px] mb-3 mt-auto">
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Coverage</div>
+              <div class="text-[13px] font-semibold text-text-muted">—</div>
+            </div>
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Cost (mo)</div>
+              <div class="text-[13px] font-semibold text-text-muted">$0 (paused)</div>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-text-muted mb-3">Last failed 14m ago · error 401</div>
+
+          <div class="flex items-center gap-1.5">
+            <button class="flex-1 h-9 rounded-lg bg-danger text-white text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">key</span>Update API key
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Disable">
+              <span class="material-symbols-outlined text-[16px]">pause</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 10. Spotify — HEALTHY -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow flex flex-col">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-lg bg-surface-subtle flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">album</span>
+              </div>
+              <div>
+                <div class="text-[14px] font-semibold leading-tight">Spotify</div>
+                <div class="text-[11px] text-text-muted">Web API · audio signals</div>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">check_circle</span>Healthy
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1 flex-wrap mb-2">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">music_note</span>Sound
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">person</span>Creator
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap text-[10px] text-text-muted mb-3">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">verified</span>ToS ok
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-[11px] mb-3 mt-auto">
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Coverage</div>
+              <div class="text-[13px] font-semibold">420/day</div>
+            </div>
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Cost (mo)</div>
+              <div class="text-[13px] font-semibold text-success">$0.00</div>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-text-muted mb-3">Last sync 1h ago · 64 signals · 0.4s</div>
+
+          <div class="flex items-center gap-1.5">
+            <button class="flex-1 h-9 rounded-lg border border-border text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">settings</span>Configure
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Disable">
+              <span class="material-symbols-outlined text-[16px]">pause</span>
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Test now">
+              <span class="material-symbols-outlined text-[16px]">refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 11. Pinterest — DISABLED -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow flex flex-col opacity-60">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-lg bg-surface-subtle flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">push_pin</span>
+              </div>
+              <div>
+                <div class="text-[14px] font-semibold leading-tight">Pinterest</div>
+                <div class="text-[11px] text-text-muted">API v5</div>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-subtle text-text-muted text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">remove_circle</span>Disabled
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1 flex-wrap mb-2">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">tag</span>Hashtag
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">movie</span>Format
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap text-[10px] text-text-muted mb-3">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">verified</span>ToS ok
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-[11px] mb-3 mt-auto">
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Coverage</div>
+              <div class="text-[13px] font-semibold text-text-muted">—</div>
+            </div>
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Cost (mo)</div>
+              <div class="text-[13px] font-semibold text-text-muted">$0.00</div>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-text-muted mb-3">Last sync 3w ago · disabled by you</div>
+
+          <div class="flex items-center gap-1.5">
+            <button class="flex-1 h-9 rounded-lg bg-primary text-white text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">play_circle</span>Enable
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Configure">
+              <span class="material-symbols-outlined text-[16px]">settings</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 12. LinkedIn — DISABLED, ToS grey -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow flex flex-col opacity-60">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-lg bg-surface-subtle flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">work</span>
+              </div>
+              <div>
+                <div class="text-[14px] font-semibold leading-tight">LinkedIn</div>
+                <div class="text-[11px] text-text-muted">Marketing API · review</div>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-subtle text-text-muted text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">remove_circle</span>Disabled
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1 flex-wrap mb-2">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">topic</span>Topic
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">person</span>Creator
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap text-[10px] text-text-muted mb-3">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success font-semibold">
+              <span class="material-symbols-outlined text-[11px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning font-semibold">
+              <span class="material-symbols-outlined text-[11px]">gavel</span>ToS grey
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-[11px] mb-3 mt-auto">
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Coverage</div>
+              <div class="text-[13px] font-semibold text-text-muted">—</div>
+            </div>
+            <div class="bg-surface-subtle rounded-md p-2">
+              <div class="text-text-muted">Cost (mo)</div>
+              <div class="text-[13px] font-semibold text-text-muted">$0.00</div>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-text-muted mb-3">Not enabled · requires app review</div>
+
+          <div class="flex items-center gap-1.5">
+            <button class="flex-1 h-9 rounded-lg bg-primary text-white text-[12px] font-semibold flex items-center justify-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">play_circle</span>Enable
+            </button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center" title="Configure">
+              <span class="material-symbols-outlined text-[16px]">settings</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BOTTOM: DOCS + GLOBAL ACTIONS -->
+      <div class="bg-surface rounded-xl border border-border p-5 card-shadow">
+        <div class="flex items-start justify-between gap-4 flex-wrap mb-3">
+          <div>
+            <h3 class="text-[16px] font-semibold">Documentation &amp; global actions</h3>
+            <p class="text-[12px] text-text-muted mt-0.5">How Trend Radar works, what it costs, and how to keep it healthy.</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-4 gap-3">
+          <a href="#" class="flex items-start gap-3 p-3 rounded-lg border border-border hover:border-primary transition-colors">
+            <span class="material-symbols-outlined text-[22px] text-primary">menu_book</span>
+            <div>
+              <div class="text-[13px] font-semibold">How Trend Radar works</div>
+              <div class="text-[11px] text-text-muted mt-0.5">Architecture, signals, scoring</div>
+            </div>
+          </a>
+          <a href="#" class="flex items-start gap-3 p-3 rounded-lg border border-border hover:border-primary transition-colors">
+            <span class="material-symbols-outlined text-[22px] text-primary">calculate</span>
+            <div>
+              <div class="text-[13px] font-semibold">Cost calculator</div>
+              <div class="text-[11px] text-text-muted mt-0.5">Estimate monthly cost by plan</div>
+            </div>
+          </a>
+          <a href="#" class="flex items-start gap-3 p-3 rounded-lg border border-border hover:border-primary transition-colors">
+            <span class="material-symbols-outlined text-[22px] text-primary">privacy_tip</span>
+            <div>
+              <div class="text-[13px] font-semibold">Privacy &amp; data retention</div>
+              <div class="text-[11px] text-text-muted mt-0.5">24h expiry, PII handling</div>
+            </div>
+          </a>
+          <a href="#" class="flex items-start gap-3 p-3 rounded-lg border border-border hover:border-primary transition-colors">
+            <span class="material-symbols-outlined text-[22px] text-primary">vpn_key</span>
+            <div>
+              <div class="text-[13px] font-semibold">API key management</div>
+              <div class="text-[11px] text-text-muted mt-0.5">Rotate, audit, revoke</div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+</body></html>

@@ -31,6 +31,10 @@ const EN_USAGE_RESOURCE_LABELS: Record<string, string> = {
   monthly_ai_output_tokens: "AI output tokens / month",
   daily_ai_requests_per_user: "AI requests / user / day",
   max_output_tokens_per_request: "Output tokens / request",
+  trend_radar_sync_per_day: "Trend Radar syncs / user / day",
+  trend_radar_sync_per_month: "Trend Radar syncs / month",
+  trend_radar_cost_cents_per_month: "Trend Radar cost cents / month",
+  trend_radar_workspaces_enabled_max: "Trend Radar workspaces enabled (max)",
 };
 
 const EN_USAGE_LEVEL_LABELS: Record<string, string> = {
@@ -235,6 +239,26 @@ export async function PlanAiSections({
                   label={tr("platform.usageResource.max_output_tokens_per_request")}
                   field="max_output_tokens_per_request"
                   value={overrides.max_output_tokens_per_request}
+                />
+                <LimitInput
+                  label={tr("platform.usageResource.trend_radar_sync_per_day")}
+                  field="trend_radar_sync_per_day"
+                  value={overrides.trend_radar_sync_per_day}
+                />
+                <LimitInput
+                  label={tr("platform.usageResource.trend_radar_sync_per_month")}
+                  field="trend_radar_sync_per_month"
+                  value={overrides.trend_radar_sync_per_month}
+                />
+                <LimitInput
+                  label={tr("platform.usageResource.trend_radar_cost_cents_per_month")}
+                  field="trend_radar_cost_cents_per_month"
+                  value={overrides.trend_radar_cost_cents_per_month}
+                />
+                <LimitInput
+                  label={tr("platform.usageResource.trend_radar_workspaces_enabled_max")}
+                  field="trend_radar_workspaces_enabled_max"
+                  value={overrides.trend_radar_workspaces_enabled_max}
                 />
               </div>
               <fieldset className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">

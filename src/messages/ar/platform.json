@@ -363,7 +363,11 @@
     "monthly_ai_input_tokens": "رموز إدخال الذكاء الاصطناعي / شهر",
     "monthly_ai_output_tokens": "رموز إخراج الذكاء الاصطناعي / شهر",
     "daily_ai_requests_per_user": "طلبات الذكاء الاصطناعي / مستخدم / يوم",
-    "max_output_tokens_per_request": "رموز الإخراج / طلب"
+    "max_output_tokens_per_request": "رموز الإخراج / طلب",
+    "trend_radar_sync_per_day": "مزامنات رادار الترندات / مستخدم / يوم",
+    "trend_radar_sync_per_month": "مزامنات رادار الترندات / شهر",
+    "trend_radar_cost_cents_per_month": "تكلفة رادار الترندات بالسنتات / شهر",
+    "trend_radar_workspaces_enabled_max": "مساحات عمل رادار الترندات المفعّلة (الحد الأقصى)"
   },
   "usageLevel": {
     "healthy": "سليم",
@@ -377,7 +381,8 @@
     "caption_drafts": "مسودات التعليقات",
     "platform_adaptation": "تكييف المنصة",
     "related_format_ideas": "أفكار الصيغ ذات الصلة",
-    "completeness_check": "فحص الاكتمال"
+    "completeness_check": "فحص الاكتمال",
+    "trend_radar": "رادار الترندات"
   },
   "platformKey": {
     "instagram": "إنستغرام",

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — Trends · Saved filters</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+  "info-subtle": "#F0F9FF",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.card-shadow { box-shadow: 0 1px 2px 0 rgba(19, 28, 43, 0.04); }
+.spark { stroke: #3525cd; stroke-width: 1.5; fill: rgba(53, 37, 205, 0.08); }
+.spark-decline { stroke: #7B8495; stroke-width: 1.5; fill: rgba(123, 132, 149, 0.06); }
+</style>
+</head>
+<body class="bg-canvas text-on-surface">
+<div class="flex min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="w-[248px] bg-surface border-r border-border flex flex-col flex-shrink-0">
+    <div class="h-[64px] flex items-center px-6 border-b border-border gap-3">
+      <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white text-[14px] font-semibold">L</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-[14px] font-semibold truncate">Northstar Coffee</div>
+        <div class="text-[11px] text-text-muted">Workspace · MENA</div>
+      </div>
+    </div>
+    <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#"><span class="material-symbols-outlined text-[20px]">space_dashboard</span>Overview</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#"><span class="material-symbols-outlined text-[20px]">calendar_month</span>Planning</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] font-semibold bg-primary-subtle text-primary" href="#">
+        <span class="material-symbols-outlined text-[20px] icon-fill">radar</span>Trends
+        <span class="ml-auto inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[10px] font-semibold">47</span>
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#"><span class="material-symbols-outlined text-[20px]">event</span>Calendar</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#"><span class="material-symbols-outlined text-[20px]">rate_review</span>Reviews</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#"><span class="material-symbols-outlined text-[20px]">share</span>Social Channels</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#"><span class="material-symbols-outlined text-[20px]">palette</span>Brand Kit</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#"><span class="material-symbols-outlined text-[20px]">group</span>Team</a>
+    </nav>
+    <div class="p-3 border-t border-border">
+      <button class="w-full h-10 rounded-lg bg-primary text-white text-[14px] font-semibold flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">add</span>Create content
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 flex flex-col min-w-0">
+    <!-- Top bar -->
+    <header class="h-[64px] bg-surface border-b border-border flex items-center justify-between px-6 flex-shrink-0">
+      <div class="flex items-center gap-2 text-[13px] text-text-muted">
+        <span>Northstar Coffee</span><span>/</span><span class="text-on-surface font-semibold">Trends</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-[13px] text-text-muted">Last sync: 14m ago · 6 platforms</span>
+        <button class="h-9 px-3 rounded-lg border border-border text-[13px] font-semibold flex items-center gap-1">
+          <span class="material-symbols-outlined text-[16px]">refresh</span>Sync now
+        </button>
+      </div>
+    </header>
+
+    <div class="flex flex-1">
+      <!-- Filter rail (collapsed variant — same shape as 02) -->
+      <aside class="w-[260px] border-r border-border bg-surface p-4 overflow-y-auto flex-shrink-0">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-[13px] font-semibold uppercase tracking-wide text-on-surface-variant">Filters</h3>
+          <button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[18px]">chevron_left</span></button>
+        </div>
+
+        <!-- SAVED FILTERS section (NEW) -->
+        <div class="mb-5">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Saved filters</span>
+            <button class="text-primary hover:underline text-[11px] font-semibold flex items-center gap-0.5">
+              <span class="material-symbols-outlined text-[12px]">add</span>Save current
+            </button>
+          </div>
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-1.5 px-2 h-9 rounded-md bg-primary-subtle border border-primary text-[12px] font-semibold text-primary">
+              <span class="material-symbols-outlined text-[14px]">target</span>
+              <span class="flex-1 truncate">My Coffee Daily</span>
+              <button class="text-primary/70 hover:text-primary"><span class="material-symbols-outlined text-[14px]">close</span></button>
+            </div>
+            <div class="flex items-center gap-1.5 px-2 h-9 rounded-md bg-surface-subtle text-[12px] text-on-surface-variant hover:bg-surface">
+              <span class="material-symbols-outlined text-[14px]">public</span>
+              <span class="flex-1 truncate">MENA B2B</span>
+              <button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[14px]">close</span></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time -->
+        <div class="mb-5">
+          <span class="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Time</span>
+          <div class="mt-2 grid grid-cols-2 gap-1.5">
+            <button class="h-8 rounded-md text-[12px] bg-primary text-white font-semibold">Today</button>
+            <button class="h-8 rounded-md text-[12px] bg-surface-subtle">7d</button>
+            <button class="h-8 rounded-md text-[12px] bg-surface-subtle">30d</button>
+            <button class="h-8 rounded-md text-[12px] bg-surface-subtle">Custom</button>
+          </div>
+        </div>
+
+        <!-- Platform -->
+        <div class="mb-5">
+          <span class="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Platform</span>
+          <div class="mt-2 space-y-1.5 text-[12px]">
+            <label class="flex items-center justify-between gap-2 px-2 h-8 rounded hover:bg-surface-subtle"><span class="flex items-center gap-2"><input type="checkbox" checked> X</span></label>
+            <label class="flex items-center justify-between gap-2 px-2 h-8 rounded hover:bg-surface-subtle"><span class="flex items-center gap-2"><input type="checkbox" checked> TikTok</span></label>
+            <label class="flex items-center justify-between gap-2 px-2 h-8 rounded hover:bg-surface-subtle"><span class="flex items-center gap-2"><input type="checkbox" checked> Reddit</span></label>
+            <label class="flex items-center justify-between gap-2 px-2 h-8 rounded hover:bg-surface-subtle"><span class="flex items-center gap-2"><input type="checkbox"> YouTube</span></label>
+          </div>
+        </div>
+
+        <!-- Trend type -->
+        <div class="mb-5">
+          <span class="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Type</span>
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            <button class="h-7 px-2.5 rounded-full bg-primary text-white text-[11px] font-semibold">All</button>
+            <button class="h-7 px-2.5 rounded-full bg-surface-subtle text-[11px]">#</button>
+            <button class="h-7 px-2.5 rounded-full bg-surface-subtle text-[11px]">♪</button>
+            <button class="h-7 px-2.5 rounded-full bg-surface-subtle text-[11px]">@</button>
+          </div>
+        </div>
+
+        <!-- Region -->
+        <div class="mb-5">
+          <span class="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Region</span>
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            <button class="h-7 px-2.5 rounded-full bg-primary text-white text-[11px] font-semibold">Worldwide</button>
+            <button class="h-7 px-2.5 rounded-full bg-surface-subtle text-[11px]">MENA</button>
+            <button class="h-7 px-2.5 rounded-full bg-surface-subtle text-[11px]">US</button>
+            <button class="h-7 px-2.5 rounded-full bg-surface-subtle text-[11px]">UK</button>
+          </div>
+        </div>
+
+        <button class="w-full h-9 rounded-lg border border-border text-[12px] font-semibold flex items-center justify-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">restart_alt</span>Reset filters
+        </button>
+      </aside>
+
+      <!-- Content -->
+      <div class="flex-1 p-6 max-w-[1100px] space-y-5 min-w-0">
+
+        <!-- HEADER + saved filter row + Save button -->
+        <div>
+          <h1 class="text-[28px] font-semibold leading-9">Trends</h1>
+          <p class="text-[14px] text-on-surface-variant mt-1">12 trends match <strong class="text-on-surface">"My Coffee Daily"</strong> — your daily specialty-coffee feed across X, TikTok, Reddit.</p>
+        </div>
+
+        <!-- SAVED FILTER CHIPS ROW (the inline save UI) -->
+        <div class="rounded-xl border border-border bg-surface p-3 card-shadow">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Active saved filter</span>
+              <div class="flex items-center gap-1.5 px-3 h-8 rounded-full bg-primary text-white text-[12px] font-semibold">
+                <span class="material-symbols-outlined text-[14px]">target</span>
+                My Coffee Daily
+                <button class="text-white/80 hover:text-white ml-1"><span class="material-symbols-outlined text-[14px]">close</span></button>
+              </div>
+              <div class="flex items-center gap-1.5 px-3 h-8 rounded-full bg-surface-subtle border border-border text-[12px] text-on-surface-variant">
+                <span class="material-symbols-outlined text-[14px]">public</span>
+                MENA B2B
+                <button class="text-text-muted hover:text-on-surface ml-1"><span class="material-symbols-outlined text-[14px]">close</span></button>
+              </div>
+            </div>
+            <button class="h-9 px-3 rounded-lg border border-border text-[12px] font-semibold flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[14px]">bookmark_add</span>Save current filter
+            </button>
+          </div>
+        </div>
+
+        <!-- FILTER TEMPLATES panel -->
+        <div class="bg-surface rounded-xl border border-border p-4 card-shadow">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-[14px] font-semibold">Filter templates</h3>
+              <p class="text-[11px] text-text-muted mt-0.5">One-click starting points. Each one saves you 30 seconds of filter setup.</p>
+            </div>
+            <a href="#" class="text-[11px] text-primary hover:underline flex items-center gap-0.5">
+              <span class="material-symbols-outlined text-[12px]">edit</span>Edit templates
+            </a>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button class="h-9 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[14px] text-primary">local_cafe</span>Niche Daily
+            </button>
+            <button class="h-9 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[14px] text-primary">public</span>Broad Daily
+            </button>
+            <button class="h-9 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[14px] text-primary">business</span>B2B Pulse
+            </button>
+            <button class="h-9 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[14px] text-primary">location_on</span>MENA Local
+            </button>
+            <button class="h-9 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[14px] text-primary">rocket_launch</span>First-mover
+            </button>
+            <button class="h-9 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[14px] text-primary">trending_down</span>Closing Down
+            </button>
+            <button class="h-9 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[14px] text-primary">album</span>Audio-only
+            </button>
+          </div>
+        </div>
+
+        <!-- Sample trend cards (3) so the page is realistic -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-surface rounded-xl border border-border p-4 card-shadow">
+            <div class="flex items-center gap-1.5 mb-2">
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[11px]">alternate_email</span>X
+              </span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[10px]">trending_up</span>Emerging
+              </span>
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-text-muted text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[11px]">tag</span>Hashtag
+              </span>
+              <span class="ml-auto text-[11px] text-text-muted">🔥 87</span>
+            </div>
+            <div class="text-[15px] font-semibold leading-5">#SpecialtyCoffeeHour</div>
+            <div class="text-[11px] text-text-muted mb-2">Hashtag · 3.2K posts / 6h · +240%</div>
+            <div class="flex items-center gap-1.5">
+              <button class="flex-1 h-9 rounded-lg bg-primary text-white text-[12px] font-semibold">Use in brief</button>
+              <button class="h-9 w-9 rounded-lg border border-border text-text-muted"><span class="material-symbols-outlined text-[16px]">bookmark</span></button>
+            </div>
+          </div>
+          <div class="bg-surface rounded-xl border border-border p-4 card-shadow">
+            <div class="flex items-center gap-1.5 mb-2">
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[11px]">music_note</span>TikTok
+              </span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[10px]">local_fire_department</span>Peaking
+              </span>
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-text-muted text-[10px] font-semibold">
+                <span class="material-symbols-outlined text-[11px]">music_note</span>Sound
+              </span>
+              <span class="ml-auto text-[11px] text-text-muted">🔥 79</span>
+            </div>
+            <div class="text-[15px] font-semibold leading-5">"Espresso shot pulled by barista" trend</div>
+            <div class="text-[11px] text-text-muted mb-2">Audio · 5.4K Reels / 24h · +180%</div>
+            <div class="flex items-center gap-1.5">
+              <button class="flex-1 h-9 rounded-lg bg-primary text-white text-[12px] font-semibold">Use in brief</button>
+              <button class="h-9 w-9 rounded-lg border border-border text-text-muted"><span class="material-symbols-outlined text-[16px]">bookmark</span></button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- SAVE FILTER MODAL (overlaid on the page) -->
+<div class="fixed inset-0 flex items-center justify-center p-6 bg-on-surface/30" style="z-index: 50;">
+  <div class="w-full max-w-[480px] bg-surface rounded-2xl shadow-2xl border border-border overflow-hidden">
+
+    <div class="px-6 py-4 border-b border-border flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-primary-subtle flex items-center justify-center">
+          <span class="material-symbols-outlined text-[20px] text-primary icon-fill">bookmark_add</span>
+        </div>
+        <div>
+          <div class="text-[15px] font-semibold">Save current filter</div>
+          <div class="text-[11px] text-text-muted">12 trends match this filter right now</div>
+        </div>
+      </div>
+      <button class="text-text-muted hover:text-on-surface"><span class="material-symbols-outlined text-[20px]">close</span></button>
+    </div>
+
+    <div class="px-6 py-5 space-y-4">
+      <div>
+        <label class="text-[12px] font-semibold text-on-surface-variant block mb-1.5">Filter name</label>
+        <input type="text" value="My Coffee Daily" class="w-full h-10 px-3 rounded-lg border border-border text-[13px] focus:outline-none focus:border-primary">
+      </div>
+      <div>
+        <label class="text-[12px] font-semibold text-on-surface-variant block mb-1.5">Description <span class="font-normal text-text-muted">(optional)</span></label>
+        <textarea rows="2" class="w-full px-3 py-2 rounded-lg border border-border text-[13px] focus:outline-none focus:border-primary">Daily specialty-coffee signals across X, TikTok, Reddit.</textarea>
+      </div>
+      <div>
+        <label class="text-[12px] font-semibold text-on-surface-variant block mb-1.5">Share with</label>
+        <select class="w-full h-10 px-3 rounded-lg border border-border text-[13px] focus:outline-none focus:border-primary bg-surface">
+          <option>Just me</option>
+          <option selected>My workspaces</option>
+          <option>All agency workspaces</option>
+        </select>
+      </div>
+
+      <!-- Filter summary preview -->
+      <div class="rounded-lg bg-surface-subtle p-3">
+        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-muted mb-1.5">Filter summary</div>
+        <div class="flex items-center gap-1.5 flex-wrap text-[11px]">
+          <span class="px-1.5 py-0.5 rounded bg-surface text-on-surface-variant">Today</span>
+          <span class="px-1.5 py-0.5 rounded bg-surface text-on-surface-variant">X</span>
+          <span class="px-1.5 py-0.5 rounded bg-surface text-on-surface-variant">TikTok</span>
+          <span class="px-1.5 py-0.5 rounded bg-surface text-on-surface-variant">Reddit</span>
+          <span class="px-1.5 py-0.5 rounded bg-surface text-on-surface-variant">Hashtag</span>
+          <span class="px-1.5 py-0.5 rounded bg-surface text-on-surface-variant">Sound</span>
+          <span class="px-1.5 py-0.5 rounded bg-surface text-on-surface-variant">Worldwide</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-6 py-4 border-t border-border flex items-center justify-end gap-2">
+      <button class="h-10 px-4 rounded-lg border border-border text-[13px] font-semibold">Cancel</button>
+      <button class="h-10 px-4 rounded-lg bg-primary text-white text-[13px] font-semibold flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[16px]">bookmark</span>Save filter
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!--
+  EMPTY STATE VARIANT (toggle by swapping the body content):
+  ===============================================================
+  <div class="bg-surface rounded-xl border border-dashed border-border p-8 text-center">
+    <span class="material-symbols-outlined text-[40px] text-text-muted">bookmarks</span>
+    <h3 class="text-[16px] font-semibold mt-2">No saved filters</h3>
+    <p class="text-[12px] text-text-muted mt-1 max-w-[400px] mx-auto">Save your current filter to come back to it later. Saved filters sync across your workspaces and can be shared with your team.</p>
+    <div class="flex items-center justify-center gap-2 mt-4">
+      <a href="#" class="h-9 px-3 rounded-lg border border-border text-[12px] font-semibold flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[14px]">help</span>How to use filters
+      </a>
+      <button class="h-9 px-3 rounded-lg bg-primary text-white text-[12px] font-semibold flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[14px]">bookmark_add</span>Save current filter
+      </button>
+    </div>
+  </div>
+-->
+</body></html>

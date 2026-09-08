@@ -74,6 +74,10 @@
     "completeness_check": {
       "adminLabel": "Brief completeness check",
       "description": "Score how ready a brief is for creative handoff and flag the missing pieces."
+    },
+    "trend_radar": {
+      "adminLabel": "Trend Radar",
+      "description": "Real-time trend intelligence from 12+ platforms, ranked by fit to your brand."
     }
   },
   "managedSecret": {

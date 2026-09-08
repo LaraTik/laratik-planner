@@ -122,6 +122,64 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  # Trend Radar sidecar (STUDIOFLOW_MASTER_PROMPT.md §16, §18).
+  # Python 3.12 + FastAPI service that fetches from the 12 trend
+  # sources, normalizes signals, scores them, and persists to the
+  # same Postgres as the Next.js app. Runs as a worker — no HTTP
+  # listener published to Traefik, only an internal healthcheck
+  # port (8088) for `autoheal`. The Next.js app reads signals from
+  # the shared `trend_signal` table; the sidecar writes them.
+  #
+  # Why a separate service:
+  #   - Each extractor is a long-running network task (praw client,
+  #     twikit session, google trends polling loop) that does not
+  #     belong in the Next.js runtime.
+  #   - The cadence scheduler (6h / 12h / 24h) needs to keep
+  #     running independent of the app's request lifecycle.
+  #   - Failure isolation: a hung extractor cannot bring down the
+  #     planner UI; the circuit breaker + autoheal restart covers
+  #     the sidecar itself.
+  trends-sidecar:
+    image: ${TRENDS_SIDECAR_IMAGE:-ghcr.io/laratik/laratik-planner-trends-sidecar:${IMAGE_TAG:-latest}}
+    pull_policy: always
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      LOG_LEVEL: ${TRENDS_SIDECAR_LOG_LEVEL:-INFO}
+      # The sidecar never publishes trends without explicit
+      # enablement in the agency admin surface. Off by default.
+      TRENDS_RADAR_ENABLED: ${TRENDS_RADAR_ENABLED:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+    healthcheck:
+      # Internal-only port (8088). The FastAPI app exposes
+      # /health/live + /health/ready. autoheal restarts the
+      # sidecar on sustained liveness failures.
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8088/health/live', timeout=2).status==200 else 1)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    labels:
+      - autoheal=true
+      - autoheal.timeout=30
+      - autoheal.restart=true
+
 volumes:
   pgdata:
     name: laratik-planner-pgdata

@@ -2,13 +2,21 @@
   "metaTitle": "المحتوى · {id}",
   "tabs": {
     "overview": "نظرة عامة",
-    "content": "المحتوى",
+    "content": "الموجز الإبداعي",
     "messages": "الرسائل",
-    "copy": "النسخة",
-    "delivery": "التسليم",
+    "copy": "نسخة الجمهور",
+    "delivery": "الأصول",
     "preview": "المعاينة",
     "publishing": "النشر",
     "activity": "النشاط"
+  },
+  "navigation": {
+    "workspaceSections": "أقسام مساحة التخطيط",
+    "moreSections": "أقسام إضافية",
+    "moreActions": "إجراءات إضافية",
+    "duplicate": "تكرار",
+    "archive": "أرشفة",
+    "reset": "إعادة ضبط المحتوى"
   },
   "aiAssistance": "مساعدة الذكاء الاصطناعي",
   "aiAssistancePanel": {
@@ -280,15 +288,16 @@
     "emptyBody": "يظهر النشاط هنا أثناء انتقال هذا العنصر عبر الإنشاء والمراجعة والنشر."
   },
   "readiness": {
-    "rowContent": "المحتوى",
+    "rowContent": "الموجز الإبداعي",
     "rowContentReady": "تم ملء حقول الموجز وحقول التنسيق",
     "rowContentEmpty": "الموجز فارغ",
-    "rowAssets": "الأصول والإصدارات",
+    "rowAssets": "الأصول",
     "rowAssetsReady": "توجد نسخة معتمدة في الملف",
     "rowAssetsEmpty": "لا توجد إصدارات تصميم بعد",
     "rowAssetsUnapprovedOne": "{count} إصدار، لم يُعتمد أي منها",
     "rowAssetsUnapprovedMany": "{count} إصدارات، لم يُعتمد أي منها",
-    "rowPublishing": "النشر",
+    "rowPublishing": "إعدادات النشر",
+    "rowPublishingUpcoming": "متاح بعد اعتماد المحتوى والأصول",
     "rowPublishingReady": "تم إعداد القنوات",
     "rowPublishingNoChannels": "لا توجد قنوات",
     "rowPublishingBlockerOne": "{count} مانع",
@@ -378,9 +387,9 @@
     "backToPlanning": "العودة إلى التخطيط"
   },
   "sectionCreativeTitle": "الموجز الإبداعي",
-  "sectionCreativeDescription": "الاستراتيجية والتوجيه الإبداعي لهذا التنسيق. تُدار نسخة الجمهور في علامة تبويب النسخة.",
-  "sectionAssetsTitle": "الأصول والإصدارات",
-  "sectionAssetsDescription": "إصدارات التصميم التي رفعها المصمم، بالإضافة إلى الموافقة على النسخة النهائية.",
+  "sectionCreativeDescription": "حوّل الفكرة إلى توجيه يمكن للكاتب والمصمم والمراجع العمل عليه. تُدار نسخة الجمهور في علامة تبويب النسخة.",
+  "sectionAssetsTitle": "الأصول",
+  "sectionAssetsDescription": "أضف إصدارات الوسائط المعتمدة عندما يصبح الموجز جاهزًا لمراجعة التصميم.",
   "previewShortcut": "معاينة على {platform} · {account}",
   "previewShortcutNoAccount": "لا توجد قناة",
   "openPreview": "فتح المعاينة",
@@ -563,6 +572,8 @@
   },
   "deliveries": {
     "title": "التسليمات",
+    "notReadyTitle": "الأصول بانتظار خطوة سابقة",
+    "notReadyBody": "أكمل الموجز الإبداعي وانقل الفكرة إلى مراجعة التصميم. يمكن للمصمم أو المدير إضافة أول إصدار من الأصول وإرساله بعد ذلك.",
     "emptyBody": "لا توجد تسليمات بعد. أضف وسائط مخزنة للمتابعة إلى المراجعة الإبداعية.",
     "versionOne": "يوجد إصدار واحد من أصل {count}",
     "versionMany": "يوجد {count} إصدارات",

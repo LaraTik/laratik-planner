@@ -23,6 +23,7 @@ export const AI_CAPABILITIES = [
   "platform_adaptation",
   "related_format_ideas",
   "completeness_check",
+  "trend_radar",
 ] as const;
 
 /**

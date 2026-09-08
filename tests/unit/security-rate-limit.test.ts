@@ -127,6 +127,10 @@ describe("rateLimitRuleFor", () => {
       limit: 20,
       windowSeconds: 3600,
     });
+    expect(rateLimit.rateLimitRuleFor("media_public_view")).toEqual({
+      limit: 120,
+      windowSeconds: 900,
+    });
     expect(rateLimit.rateLimitRuleFor("magic_link_request")).toEqual({
       limit: 5,
       windowSeconds: 3600,

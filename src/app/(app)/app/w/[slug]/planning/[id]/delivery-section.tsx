@@ -166,6 +166,15 @@ export function DeliverySection({
         </Card>
       ) : null}
 
+      {deliveries.length === 0 && !canSubmit ? (
+        <Card data-testid="delivery-not-ready" className="border-border bg-surface-subtle">
+          <CardTitle>{t("contentDetail.deliveries.notReadyTitle")}</CardTitle>
+          <p className="text-body text-fg-secondary mt-2 max-w-2xl">
+            {t("contentDetail.deliveries.notReadyBody")}
+          </p>
+        </Card>
+      ) : null}
+
       {/* Submit form — open by default when there is no history yet AND
           the user can submit; otherwise tucked behind a button. */}
       {canSubmit ? (

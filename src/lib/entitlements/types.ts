@@ -49,9 +49,11 @@ export type PlatformKey =
   | "other";
 
 /**
- * The 6 AI capabilities defined in master prompt §15. The platform
- * console's AI tab (M2.8) displays this list; the allowlist is
- * computed as the intersection of plan defaults and agency overrides.
+ * The AI capabilities defined in master prompt §15 plus Trend Radar
+ * (a workspace-level surface, not a per-content field). The
+ * platform console's AI tab (M2.8) displays this list; the
+ * allowlist is computed as the intersection of plan defaults and
+ * agency overrides.
  */
 export type AiCapability =
   | "campaign_ideas"
@@ -59,10 +61,11 @@ export type AiCapability =
   | "caption_drafts"
   | "platform_adaptation"
   | "related_format_ideas"
-  | "completeness_check";
+  | "completeness_check"
+  | "trend_radar";
 
 /**
- * The default 6-capability set. Used when neither the plan default
+ * The default capability set. Used when neither the plan default
  * nor the agency override lists capabilities — an empty
  * intersection is not the same as "no capabilities configured"; the
  * agency has simply not been constrained.
@@ -74,6 +77,7 @@ export const ALL_AI_CAPABILITIES: ReadonlyArray<AiCapability> = [
   "platform_adaptation",
   "related_format_ideas",
   "completeness_check",
+  "trend_radar",
 ] as const;
 
 /**
@@ -88,6 +92,7 @@ const AI_CAPABILITY_VALUES = [
   "platform_adaptation",
   "related_format_ideas",
   "completeness_check",
+  "trend_radar",
 ] as const;
 
 const GRACE_POLICY_VALUES = ["block", "allow_grace"] as const;
@@ -131,6 +136,29 @@ export interface EffectiveEntitlement {
   maxMonthlyAiOutputTokens: number | null;
   maxDailyAiRequestsPerUser: number | null;
   maxOutputTokensPerRequest: number | null;
+  /**
+   * Trend Radar — per-user daily cap on manual sync runs. Enforced
+   * by the trend-radar sync route; `null` means no per-user cap
+   * (only the monthly / cost caps below still apply).
+   */
+  maxTrendRadarSyncPerDay: number | null;
+  /**
+   * Trend Radar — per-agency monthly cap on sync runs. Enforced by
+   * the trend-radar sync route; `null` means no monthly cap.
+   */
+  maxTrendRadarSyncPerMonth: number | null;
+  /**
+   * Trend Radar — per-agency monthly cost cap in cents (USD). The
+   * sync route reserves the estimated cost before talking to the
+   * provider; `null` means no cost cap.
+   */
+  maxTrendRadarCostCentsPerMonth: number | null;
+  /**
+   * Trend Radar — max number of workspaces within the agency that
+   * may opt-in to the feature. `null` means unlimited; a positive
+   * integer caps opt-in at that count.
+   */
+  maxTrendRadarWorkspacesEnabled: number | null;
   /**
    * The intersection of plan-default capabilities and agency-override
    * capabilities. The platform's `/api/ai/generate` route is the
@@ -311,6 +339,10 @@ export const OverrideShapeSchema = z.object({
   monthly_ai_output_tokens: z.number().int().nonnegative().nullable().optional(),
   daily_ai_requests_per_user: z.number().int().nonnegative().nullable().optional(),
   max_output_tokens_per_request: z.number().int().nonnegative().nullable().optional(),
+  trend_radar_sync_per_day: z.number().int().nonnegative().nullable().optional(),
+  trend_radar_sync_per_month: z.number().int().nonnegative().nullable().optional(),
+  trend_radar_cost_cents_per_month: z.number().int().nonnegative().nullable().optional(),
+  trend_radar_workspaces_enabled_max: z.number().int().nonnegative().nullable().optional(),
   enabled_capabilities: z.array(z.enum(AI_CAPABILITY_VALUES)).nullable().optional(),
   grace_policy: z.enum(GRACE_POLICY_VALUES).nullable().optional(),
 });

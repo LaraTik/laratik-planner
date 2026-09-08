@@ -36,7 +36,8 @@ export type AiCapabilityId =
   | "caption_drafts"
   | "platform_adaptation"
   | "related_format_ideas"
-  | "completeness_check";
+  | "completeness_check"
+  | "trend_radar";
 
 export interface AiCapabilityMetadata {
   /** Server-side identifier — matches the §15 enum and the `aiFeatureSettings.enabledCapabilities` allowlist. */
@@ -170,6 +171,18 @@ export const AI_CAPABILITY_METADATA: ReadonlyArray<AiCapabilityMetadata> = [
     // Read-only diagnostic — nothing is written.
     willUpdate: [],
     willNotChange: ["title", "brief", "format", "channels", "schedule", "format payload"],
+  },
+  {
+    id: "trend_radar",
+    label: "Trend Radar",
+    adminLabel: "Trend Radar",
+    description: "Real-time trend intelligence from 12+ platforms, ranked by fit to your brand.",
+    // Workspace-level surface — there is no per-content button for
+    // this capability, so the planner page must not render one.
+    enabledOnContentDetail: false,
+    hint: "12+ sources, 5-tuple Fit score, 4 tabs (Explore, For You, Boards, Briefs).",
+    willUpdate: [],
+    willNotChange: [],
   },
 ] as const;
 

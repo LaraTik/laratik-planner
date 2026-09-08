@@ -29,20 +29,20 @@ import {
  */
 describe("M3.3 — AI governance pure helpers (unit)", () => {
   describe("resolveEnabledCapabilities", () => {
-    const allSix = new Set(AI_CAPABILITIES);
+    const allCapabilities = new Set(AI_CAPABILITIES);
 
     it("returns the effective set when the agency has no explicit capabilities", () => {
       const out = resolveEnabledCapabilities({
-        effectiveCapabilities: allSix,
+        effectiveCapabilities: allCapabilities,
         agencyExplicitCapabilities: null,
       });
-      expect(out.size).toBe(6);
+      expect(out.size).toBe(AI_CAPABILITIES.length);
       expect(out.has("campaign_ideas")).toBe(true);
     });
 
     it("returns the intersection when the agency has an explicit set", () => {
       const out = resolveEnabledCapabilities({
-        effectiveCapabilities: allSix,
+        effectiveCapabilities: allCapabilities,
         agencyExplicitCapabilities: ["caption_drafts", "brief_improvement"],
       });
       expect(out.size).toBe(2);
@@ -73,7 +73,7 @@ describe("M3.3 — AI governance pure helpers (unit)", () => {
 
     it("treats an empty agency list as 'agency wants nothing'", () => {
       const out = resolveEnabledCapabilities({
-        effectiveCapabilities: allSix,
+        effectiveCapabilities: allCapabilities,
         agencyExplicitCapabilities: [],
       });
       expect(out.size).toBe(0);

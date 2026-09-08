@@ -31,6 +31,10 @@ function overridesFromForm(formData: FormData) {
       "monthly_ai_output_tokens",
       "daily_ai_requests_per_user",
       "max_output_tokens_per_request",
+      "trend_radar_sync_per_day",
+      "trend_radar_sync_per_month",
+      "trend_radar_cost_cents_per_month",
+      "trend_radar_workspaces_enabled_max",
     ] as const;
     const numeric = Object.fromEntries(
       numericKeys.flatMap((key) => {

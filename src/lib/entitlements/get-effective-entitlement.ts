@@ -87,6 +87,22 @@ export function mergeEntitlement(input: MergeInput): EffectiveEntitlement {
       overrides.max_output_tokens_per_request,
       defaults?.max_output_tokens_per_request,
     ),
+    maxTrendRadarSyncPerDay: pickLimit(
+      overrides.trend_radar_sync_per_day,
+      defaults?.trend_radar_sync_per_day,
+    ),
+    maxTrendRadarSyncPerMonth: pickLimit(
+      overrides.trend_radar_sync_per_month,
+      defaults?.trend_radar_sync_per_month,
+    ),
+    maxTrendRadarCostCentsPerMonth: pickLimit(
+      overrides.trend_radar_cost_cents_per_month,
+      defaults?.trend_radar_cost_cents_per_month,
+    ),
+    maxTrendRadarWorkspacesEnabled: pickLimit(
+      overrides.trend_radar_workspaces_enabled_max,
+      defaults?.trend_radar_workspaces_enabled_max,
+    ),
     enabledAiCapabilities: intersectCapabilities(
       overrides.enabled_capabilities,
       defaults?.enabled_capabilities,

@@ -397,6 +397,22 @@ const NUMERIC_LIMIT_FIELDS = [
     resource: "max_output_tokens_per_request",
     get: (m: EffectiveEntitlement) => m.maxOutputTokensPerRequest,
   },
+  {
+    resource: "trend_radar_sync_per_day",
+    get: (m: EffectiveEntitlement) => m.maxTrendRadarSyncPerDay,
+  },
+  {
+    resource: "trend_radar_sync_per_month",
+    get: (m: EffectiveEntitlement) => m.maxTrendRadarSyncPerMonth,
+  },
+  {
+    resource: "trend_radar_cost_cents_per_month",
+    get: (m: EffectiveEntitlement) => m.maxTrendRadarCostCentsPerMonth,
+  },
+  {
+    resource: "trend_radar_workspaces_enabled_max",
+    get: (m: EffectiveEntitlement) => m.maxTrendRadarWorkspacesEnabled,
+  },
 ] as const;
 
 /**

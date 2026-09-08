@@ -26,6 +26,16 @@ afterEach(() => {
 });
 
 describe("DeliverySection media search", () => {
+  it("explains why assets are not actionable while an idea is still a draft", () => {
+    render(
+      <DeliverySection {...baseProps} contentStatus="draft" isDesigner={false} isManager={false} />,
+    );
+
+    expect(screen.getByTestId("delivery-not-ready")).toBeInTheDocument();
+    expect(screen.getByText("Assets are waiting for an earlier step")).toBeInTheDocument();
+    expect(screen.queryByTestId("delivery-submit-form")).not.toBeInTheDocument();
+  });
+
   it("does not render the existing media library until the user searches", async () => {
     const user = userEvent.setup();
     render(

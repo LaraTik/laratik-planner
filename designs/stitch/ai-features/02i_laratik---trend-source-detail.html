@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — Trends · Configure source</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+  "info-subtle": "#F0F9FF",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.card-shadow { box-shadow: 0 1px 2px 0 rgba(19, 28, 43, 0.04); }
+</style>
+</head>
+<body class="bg-on-surface/30 text-on-surface">
+
+<!-- Backdrop with dimmed app behind -->
+<div class="fixed inset-0 flex justify-end">
+
+  <!-- Right-side drawer (560px) -->
+  <div class="w-[560px] bg-surface flex flex-col shadow-2xl border-l border-border h-full">
+
+    <!-- Header -->
+    <div class="px-6 py-4 border-b border-border flex items-start justify-between">
+      <div class="flex items-start gap-3 flex-1 min-w-0">
+        <div class="w-10 h-10 rounded-lg bg-surface-subtle flex items-center justify-center flex-shrink-0">
+          <span class="material-symbols-outlined text-[22px]">music_note</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[17px] font-semibold leading-tight">Configure TikTok (tamnd/tiktok-cli)</div>
+          <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">savings</span>Free
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-surface-subtle text-text-muted text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">dns</span>Self-host
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">gavel</span>ToS grey
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">check_circle</span>Healthy
+            </span>
+          </div>
+        </div>
+      </div>
+      <button class="text-text-muted hover:text-on-surface flex-shrink-0 ml-3">
+        <span class="material-symbols-outlined text-[22px]">close</span>
+      </button>
+    </div>
+
+    <!-- Body (scrollable) -->
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
+      <!-- UNIVERSAL FIELDS section -->
+      <section>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-[14px] font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-primary">tune</span>Universal
+          </h3>
+          <span class="text-[10px] text-text-muted uppercase tracking-wide">Same on every source</span>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Display name -->
+          <div>
+            <label class="text-[12px] font-semibold text-on-surface-variant block mb-1.5">Display name</label>
+            <input type="text" value="TikTok (tamnd)" class="w-full h-10 px-3 rounded-lg border border-border text-[13px] focus:outline-none focus:border-primary">
+            <div class="text-[11px] text-text-muted mt-1">How this source appears in filters and the feed.</div>
+          </div>
+
+          <!-- Region -->
+          <div>
+            <label class="text-[12px] font-semibold text-on-surface-variant block mb-1.5">Region</label>
+            <select class="w-full h-10 px-3 rounded-lg border border-border text-[13px] focus:outline-none focus:border-primary bg-surface">
+              <option>Worldwide</option>
+              <option>United States</option>
+              <option>United Kingdom</option>
+              <option selected>MENA (UAE, SA, EG, JO)</option>
+              <option>Custom…</option>
+            </select>
+            <div class="text-[11px] text-text-muted mt-1">Affects Creative Center locale and hashtag reach.</div>
+          </div>
+
+          <!-- Language filter chips -->
+          <div>
+            <label class="text-[12px] font-semibold text-on-surface-variant block mb-1.5">Language filter</label>
+            <div class="rounded-lg border border-border p-2 min-h-[40px] flex items-center gap-1.5 flex-wrap">
+              <span class="inline-flex items-center gap-1 px-2 h-7 rounded-full bg-primary-subtle text-primary text-[11px] font-semibold">
+                <span>en</span>
+                <button class="text-primary/70 hover:text-primary"><span class="material-symbols-outlined text-[12px]">close</span></button>
+              </span>
+              <span class="inline-flex items-center gap-1 px-2 h-7 rounded-full bg-primary-subtle text-primary text-[11px] font-semibold">
+                <span>ar-AE</span>
+                <button class="text-primary/70 hover:text-primary"><span class="material-symbols-outlined text-[12px]">close</span></button>
+              </span>
+              <span class="inline-flex items-center gap-1 px-2 h-7 rounded-full bg-primary-subtle text-primary text-[11px] font-semibold">
+                <span>ar-SA</span>
+                <button class="text-primary/70 hover:text-primary"><span class="material-symbols-outlined text-[12px]">close</span></button>
+              </span>
+              <button class="inline-flex items-center gap-1 px-2 h-7 rounded-full border border-dashed border-border text-text-muted text-[11px] hover:border-primary hover:text-primary">
+                <span class="material-symbols-outlined text-[12px]">add</span>Add
+              </button>
+            </div>
+            <div class="text-[11px] text-text-muted mt-1">Only signals in these languages count toward this workspace.</div>
+          </div>
+
+          <!-- Cadence -->
+          <div>
+            <label class="text-[12px] font-semibold text-on-surface-variant block mb-1.5">Sync cadence</label>
+            <div class="inline-flex p-1 rounded-lg bg-surface-subtle gap-0.5">
+              <button class="h-8 px-3 rounded-md text-[12px] text-text-muted hover:bg-surface">1h</button>
+              <button class="h-8 px-3 rounded-md text-[12px] text-text-muted hover:bg-surface">3h</button>
+              <button class="h-8 px-3 rounded-md text-[12px] bg-surface font-semibold shadow-sm">6h</button>
+              <button class="h-8 px-3 rounded-md text-[12px] text-text-muted hover:bg-surface">12h</button>
+              <button class="h-8 px-3 rounded-md text-[12px] text-text-muted hover:bg-surface">24h</button>
+              <button class="h-8 px-3 rounded-md text-[12px] text-text-muted hover:bg-surface">Manual</button>
+            </div>
+            <div class="text-[11px] text-text-muted mt-1">Default 6h. Override to sync more (or less) often for this source.</div>
+          </div>
+
+          <!-- Max signals -->
+          <div>
+            <label class="text-[12px] font-semibold text-on-surface-variant block mb-1.5">Max signals per cycle</label>
+            <div class="flex items-center gap-2">
+              <input type="number" value="200" class="w-32 h-10 px-3 rounded-lg border border-border text-[13px] focus:outline-none focus:border-primary">
+              <input type="range" min="50" max="1000" step="50" value="200" class="flex-1 accent-primary">
+            </div>
+            <div class="text-[11px] text-text-muted mt-1">Cap the number of new signals ingested each cycle. Helps control API cost.</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="border-t border-border"></div>
+
+      <!-- SOURCE-SPECIFIC section -->
+      <section>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-[14px] font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-primary">code</span>Source-specific
+          </h3>
+          <a href="#" class="text-[11px] text-primary hover:underline flex items-center gap-0.5">
+            <span class="material-symbols-outlined text-[12px]">open_in_new</span>Docs
+          </a>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Binary path -->
+          <div>
+            <label class="text-[12px] font-semibold text-on-surface-variant block mb-1.5 flex items-center gap-1">
+              Binary path override
+              <span class="material-symbols-outlined text-[14px] text-text-muted">info</span>
+            </label>
+            <input type="text" value="/usr/local/bin/tt" class="w-full h-10 px-3 rounded-lg border border-border text-[13px] font-mono focus:outline-none focus:border-primary">
+            <div class="text-[11px] text-text-muted mt-1">Path to the tamnd/tiktok-cli binary on the sidecar. Leave default if unsure.</div>
+          </div>
+
+          <!-- Seed video ID -->
+          <div>
+            <label class="text-[12px] font-semibold text-on-surface-variant block mb-1.5">Default seed video ID <span class="font-normal text-text-muted">(optional)</span></label>
+            <input type="text" placeholder="e.g. 7234567890123456789" class="w-full h-10 px-3 rounded-lg border border-border text-[13px] focus:outline-none focus:border-primary">
+            <div class="text-[11px] text-text-muted mt-1">When set, this video's "similar sounds" seed the trend extraction for each cycle.</div>
+          </div>
+
+          <!-- Output language -->
+          <div>
+            <label class="text-[12px] font-semibold text-on-surface-variant block mb-1.5">Output language</label>
+            <select class="w-full h-10 px-3 rounded-lg border border-border text-[13px] focus:outline-none focus:border-primary bg-surface">
+              <option>Auto-detect</option>
+              <option selected>English</option>
+              <option>Arabic</option>
+              <option>Spanish</option>
+            </select>
+            <div class="text-[11px] text-text-muted mt-1">How label text is normalized before sentiment + vertical scoring.</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="border-t border-border"></div>
+
+      <!-- ToS ACKNOWLEDGEMENT (yellow warning, because grey ToS) -->
+      <section class="rounded-xl border border-warning-subtle bg-warning-subtle p-4">
+        <div class="flex items-start gap-3">
+          <span class="material-symbols-outlined text-[24px] text-warning icon-fill mt-0.5">gavel</span>
+          <div class="flex-1 min-w-0">
+            <h3 class="text-[14px] font-semibold text-on-surface">ToS acknowledgement required</h3>
+            <p class="text-[12px] text-on-surface-variant mt-1">
+              This source uses an <strong>unofficial API</strong> that may violate TikTok's Terms of Service. Your account may be restricted, rate-limited, or banned if TikTok detects automated traffic.
+            </p>
+            <ul class="text-[12px] text-on-surface-variant mt-2 space-y-1 list-disc pl-4">
+              <li>laratik-planner uses <code class="text-[11px] bg-surface px-1 rounded">tamnd/tiktok-cli</code> via your own account cookies.</li>
+              <li>Cadence is throttled to &lt;1 req/sec. We do not bypass rate limits.</li>
+              <li>You can disable this source at any time — Trend Radar falls back to Creative Center HTML scrape.</li>
+            </ul>
+            <div class="flex items-center gap-2 mt-3">
+              <button class="h-9 px-3 rounded-lg bg-warning text-white text-[12px] font-semibold flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[14px]">check</span>I understand, enable anyway
+              </button>
+              <button class="h-9 px-3 rounded-lg border border-border bg-surface text-[12px] font-semibold">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Footer (sticky) -->
+    <div class="px-6 py-3 border-t border-border flex items-center justify-between gap-2 bg-surface">
+      <button class="h-10 px-3 rounded-lg border border-border text-[13px] font-semibold flex items-center gap-1.5 text-text-muted">
+        <span class="material-symbols-outlined text-[16px]">play_circle</span>Test connection
+      </button>
+      <div class="flex items-center gap-2">
+        <button class="h-10 px-4 rounded-lg border border-border text-[13px] font-semibold">Cancel</button>
+        <button class="h-10 px-4 rounded-lg bg-primary text-white text-[13px] font-semibold flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px]">save</span>Save
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body></html>

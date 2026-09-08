@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — Trend Radar · Onboarding</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+  "info-subtle": "#F0F9FF",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.card-shadow { box-shadow: 0 1px 2px 0 rgba(19, 28, 43, 0.04); }
+</style>
+</head>
+<body class="bg-on-surface/30 text-on-surface">
+
+<!-- Backdrop (dimmed app) -->
+<div class="fixed inset-0 flex items-center justify-center p-6">
+
+  <!-- Modal full-screen overlay -->
+  <div class="w-full max-w-[1080px] max-h-[880px] bg-surface rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden">
+
+    <!-- STEP INDICATOR HEADER -->
+    <div class="px-8 py-5 border-b border-border flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center text-white">
+          <span class="material-symbols-outlined text-[20px] icon-fill">radar</span>
+        </div>
+        <div>
+          <div class="text-[15px] font-semibold">Set up Trend Radar</div>
+          <div class="text-[11px] text-text-muted">Step 2 of 4 · Source catalog</div>
+        </div>
+      </div>
+      <button class="text-text-muted hover:text-on-surface flex items-center gap-1 text-[12px] font-semibold h-9 px-3 rounded-lg">
+        <span class="material-symbols-outlined text-[16px]">close</span>Skip for now
+      </button>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="px-8 pt-4 pb-2">
+      <div class="flex items-center gap-1.5">
+        <div class="flex-1 h-1 rounded-full bg-primary"></div>
+        <div class="flex-1 h-1 rounded-full bg-primary"></div>
+        <div class="flex-1 h-1 rounded-full bg-surface-subtle"></div>
+        <div class="flex-1 h-1 rounded-full bg-surface-subtle"></div>
+      </div>
+      <div class="flex items-center justify-between mt-2 text-[10px] font-semibold uppercase tracking-wide">
+        <span class="text-primary">1. Welcome</span>
+        <span class="text-primary">2. Sources</span>
+        <span class="text-text-muted">3. API keys</span>
+        <span class="text-text-muted">4. Test all</span>
+      </div>
+    </div>
+
+    <!-- STEP CONTENT -->
+    <div class="flex-1 overflow-y-auto px-8 py-5 space-y-5">
+
+      <!-- STEP 2 BODY: Source catalog grid 4×3 -->
+      <div>
+        <h2 class="text-[22px] font-semibold leading-7">Choose your sources</h2>
+        <p class="text-[13px] text-on-surface-variant mt-1">10 free sources are pre-selected. Untick anything you don't want, or enable paid ones below.</p>
+      </div>
+
+      <div class="grid grid-cols-4 gap-3">
+
+        <!-- TikTok — checked -->
+        <label class="rounded-lg border-2 border-primary bg-primary-subtle p-3 cursor-pointer block">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">music_note</span>
+              <span class="text-[13px] font-semibold">TikTok</span>
+            </div>
+            <input type="checkbox" checked class="w-4 h-4 accent-primary">
+          </div>
+          <div class="flex items-center gap-1 flex-wrap mb-1">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">gavel</span>ToS grey
+            </span>
+          </div>
+          <div class="text-[11px] text-on-surface-variant">Hashtags, sounds, creators via tamnd CLI.</div>
+        </label>
+
+        <!-- YouTube — checked -->
+        <label class="rounded-lg border-2 border-primary bg-primary-subtle p-3 cursor-pointer block">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">play_circle</span>
+              <span class="text-[13px] font-semibold">YouTube</span>
+            </div>
+            <input type="checkbox" checked class="w-4 h-4 accent-primary">
+          </div>
+          <div class="flex items-center gap-1 flex-wrap mb-1">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">verified</span>ToS ok
+            </span>
+          </div>
+          <div class="text-[11px] text-on-surface-variant">Topics, creators, formats via Data API v3.</div>
+        </label>
+
+        <!-- Reddit — checked -->
+        <label class="rounded-lg border-2 border-primary bg-primary-subtle p-3 cursor-pointer block">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">forum</span>
+              <span class="text-[13px] font-semibold">Reddit</span>
+            </div>
+            <input type="checkbox" checked class="w-4 h-4 accent-primary">
+          </div>
+          <div class="flex items-center gap-1 flex-wrap mb-1">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">verified</span>ToS ok
+            </span>
+          </div>
+          <div class="text-[11px] text-on-surface-variant">Topics &amp; subreddits via PRAW OAuth.</div>
+        </label>
+
+        <!-- Facebook Ads — checked -->
+        <label class="rounded-lg border-2 border-primary bg-primary-subtle p-3 cursor-pointer block">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">campaign</span>
+              <span class="text-[13px] font-semibold">Facebook Ads</span>
+            </div>
+            <input type="checkbox" checked class="w-4 h-4 accent-primary">
+          </div>
+          <div class="flex items-center gap-1 flex-wrap mb-1">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">verified</span>ToS ok
+            </span>
+          </div>
+          <div class="text-[11px] text-on-surface-variant">Top performing ad formats globally.</div>
+        </label>
+
+        <!-- X (twikit) — checked -->
+        <label class="rounded-lg border-2 border-primary bg-primary-subtle p-3 cursor-pointer block">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">alternate_email</span>
+              <span class="text-[13px] font-semibold">X · twikit</span>
+            </div>
+            <input type="checkbox" checked class="w-4 h-4 accent-primary">
+          </div>
+          <div class="flex items-center gap-1 flex-wrap mb-1">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">gavel</span>ToS grey
+            </span>
+          </div>
+          <div class="text-[11px] text-on-surface-variant">Hashtags &amp; creators via unofficial API.</div>
+        </label>
+
+        <!-- Instagram — checked -->
+        <label class="rounded-lg border-2 border-primary bg-primary-subtle p-3 cursor-pointer block">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">photo_camera</span>
+              <span class="text-[13px] font-semibold">Instagram</span>
+            </div>
+            <input type="checkbox" checked class="w-4 h-4 accent-primary">
+          </div>
+          <div class="flex items-center gap-1 flex-wrap mb-1">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">verified</span>ToS ok
+            </span>
+          </div>
+          <div class="text-[11px] text-on-surface-variant">Business Graph API for hashtags, creators.</div>
+        </label>
+
+        <!-- Threads — checked -->
+        <label class="rounded-lg border-2 border-primary bg-primary-subtle p-3 cursor-pointer block">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">tag</span>
+              <span class="text-[13px] font-semibold">Threads</span>
+            </div>
+            <input type="checkbox" checked class="w-4 h-4 accent-primary">
+          </div>
+          <div class="flex items-center gap-1 flex-wrap mb-1">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary-subtle text-primary text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px] icon-fill">science</span>Beta
+            </span>
+          </div>
+          <div class="text-[11px] text-on-surface-variant">Hashtags via Threads API (kawsarlog).</div>
+        </label>
+
+        <!-- Spotify — checked -->
+        <label class="rounded-lg border-2 border-primary bg-primary-subtle p-3 cursor-pointer block">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">album</span>
+              <span class="text-[13px] font-semibold">Spotify</span>
+            </div>
+            <input type="checkbox" checked class="w-4 h-4 accent-primary">
+          </div>
+          <div class="flex items-center gap-1 flex-wrap mb-1">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">verified</span>ToS ok
+            </span>
+          </div>
+          <div class="text-[11px] text-on-surface-variant">Trending audio &amp; emerging sounds.</div>
+        </label>
+
+        <!-- Google Trends — checked -->
+        <label class="rounded-lg border-2 border-primary bg-primary-subtle p-3 cursor-pointer block">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">travel_explore</span>
+              <span class="text-[13px] font-semibold">Google Trends</span>
+            </div>
+            <input type="checkbox" checked class="w-4 h-4 accent-primary">
+          </div>
+          <div class="flex items-center gap-1 flex-wrap mb-1">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">payments</span>PAID
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">verified</span>ToS ok
+            </span>
+          </div>
+          <div class="text-[11px] text-on-surface-variant">Search volume trends via SerpAPI.</div>
+        </label>
+
+        <!-- Pinterest — unchecked -->
+        <label class="rounded-lg border border-border bg-surface p-3 cursor-pointer block">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">push_pin</span>
+              <span class="text-[13px] font-semibold">Pinterest</span>
+            </div>
+            <input type="checkbox" class="w-4 h-4 accent-primary">
+          </div>
+          <div class="flex items-center gap-1 flex-wrap mb-1">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">verified</span>ToS ok
+            </span>
+          </div>
+          <div class="text-[11px] text-on-surface-variant">Visual trends via Pinterest API v5.</div>
+        </label>
+
+        <!-- LinkedIn — unchecked (ToS grey, opt-in) -->
+        <label class="rounded-lg border border-border bg-surface p-3 cursor-pointer block">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">work</span>
+              <span class="text-[13px] font-semibold">LinkedIn</span>
+            </div>
+            <input type="checkbox" class="w-4 h-4 accent-primary">
+          </div>
+          <div class="flex items-center gap-1 flex-wrap mb-1">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">savings</span>FREE
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">gavel</span>ToS grey
+            </span>
+          </div>
+          <div class="text-[11px] text-on-surface-variant">B2B topics via tomquirk/linkedin.</div>
+        </label>
+
+        <!-- X v2 — unchecked (PAID) -->
+        <label class="rounded-lg border border-border bg-surface p-3 cursor-pointer block">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">alternate_email</span>
+              <span class="text-[13px] font-semibold">X · API v2</span>
+            </div>
+            <input type="checkbox" class="w-4 h-4 accent-primary">
+          </div>
+          <div class="flex items-center gap-1 flex-wrap mb-1">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-warning-subtle text-warning text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">payments</span>PAID
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[9px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">verified</span>ToS ok
+            </span>
+          </div>
+          <div class="text-[11px] text-on-surface-variant">$5/1k search results via official API.</div>
+        </label>
+
+      </div>
+
+      <!-- Summary -->
+      <div class="rounded-lg bg-surface-subtle p-3 flex items-center justify-between text-[12px]">
+        <div class="flex items-center gap-2 text-on-surface-variant">
+          <span class="material-symbols-outlined text-[16px] text-primary">info</span>
+          9 sources selected · est. cost <strong class="text-on-surface">$0–$50/mo</strong> · 24h trend feed
+        </div>
+        <a href="#" class="text-primary hover:underline flex items-center gap-0.5 font-semibold">
+          <span class="material-symbols-outlined text-[14px]">calculate</span>Cost calculator
+        </a>
+      </div>
+    </div>
+
+    <!-- FOOTER ACTIONS -->
+    <div class="px-8 py-4 border-t border-border flex items-center justify-between">
+      <button class="h-11 px-5 rounded-lg border border-border text-[14px] font-semibold flex items-center gap-2">
+        <span class="material-symbols-outlined text-[16px]">arrow_back</span>Back
+      </button>
+      <div class="flex items-center gap-3">
+        <span class="text-[12px] text-text-muted">Step 2 of 4</span>
+        <button class="h-11 px-6 rounded-lg bg-primary text-white text-[14px] font-semibold flex items-center gap-2">
+          Next<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- REFERENCE: other 3 steps (commented for the Stitch design, the live page swaps) -->
+<!--
+STEP 1 — Welcome
+  <div>Big radar icon</div>
+  <h2>Welcome to Trend Radar</h2>
+  <p>12+ platforms, ranked by brand fit. Let's set it up in 3 minutes.</p>
+  Buttons: [Skip] [Next →]
+
+STEP 3 — API keys (only because step 2 has paid sources selected)
+  Fields: X v2 API token (with "Get a key ↗" link), Spotify client secret (if needed)
+  Buttons: [Back] [Next →]
+
+STEP 4 — Test all
+  List with ✓/✗ per source:
+    TikTok: ✓ 20 trends in 1.4s
+    YouTube: ✓ 50 videos in 0.8s
+    X (twikit): ✗ Failed (cookies invalid)
+  Final: "✓ All set. Trend Radar will sync every 6 hours."
+  Buttons: [Open Sources] [Done]
+-->
+
+</body></html>

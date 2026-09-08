@@ -12,6 +12,146 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — Trend Radar v1 (2026-09-08)
+
+Multi-platform trend intelligence ships behind the new `trend_radar` capability
+flag and the existing `AI_FEATURE_ENABLED` gate. The Python sidecar
+`services/trends/` owns extraction, scoring, and analysis; the Next.js app
+owns the planner UI and the admin Sources page.
+
+**12 new additive tables** (source of truth: `src/lib/db/schema/trends.ts`):
+`trend_source`, `trend_signal`, `trend_board`, `trend_board_item`,
+`trend_brief`, `trend_fetch_job`, `trend_source_health`, `trend_source_audit`,
+`trend_source_activity`, `trend_feedback`, `saved_filter`,
+`workspace_source_optout`. No existing column is altered.
+
+**4 planner tabs** consume the normalised signal table:
+
+1. **Discover** — open feed, ranked by Fit score (per-workspace, 5-tuple weighted).
+2. **For You** — same feed, ranked by velocity + recency.
+3. **Boards** — user-curated collections with per-signal feedback events.
+4. **Briefs** — closed-loop view: which content items rode which trend.
+
+**1 admin Sources page** at `/app/agency-settings/trend-sources` lists every
+supported extractor, lets a workspace manager enable / configure / disable
+each one, and shows per-source health (circuit state, 24h success rate,
+cost, avg duration).
+
+**12+ extractors in v1**: 5 first-class (TikTok, YouTube, Reddit, Meta Ads
+Library, Google Trends via SerpAPI) with full per-source setup guides in
+`docs/operations/trend-sources/`; 7 stubbed (X, Instagram, Threads, LinkedIn,
+Pinterest, Spotify, Apify) with "Coming soon" pages.
+
+**Privacy & retention**:
+
+- `_scrub_sentry_event` in `services/trends/app/observability.py` strips every
+  trend label, source URL, raw payload, and embedding from Sentry breadcrumbs.
+- `security_audit_event.metadata` for trend operations carries source key +
+  counts only — never user data.
+- GDPR "Delete my trend data" action cascades through 7 trend tables
+  (`trend_signals`, `trend_boards`, `trend_briefs`, `trend_feedback`,
+  `trend_source_health`, `trend_source_activity`, plus `trend_board_items`
+  via FK cascade) and records the per-table counts in a single audit row.
+- Trend signals carry an `expires_at` (7 days default); the cron prunes
+  expired rows on the daily cycle.
+
+**Observability**:
+
+- Sentry tags: `capability=trend_radar`, `platform`, `source`, `costCents`
+  (per plan §25). Surface errors go through
+  `src/lib/observability/trend-radar-tags.ts` so the Next.js app and the
+  Python sidecar land in Sentry under the same tag set.
+- Prometheus metrics in `services/trends/app/observability.py`:
+  `ai_trend_signals_total{platform, source, status}`,
+  `ai_trend_extraction_duration_seconds{platform, source}`,
+  `ai_trend_cost_cents_total{platform, source}`,
+  `ai_trend_source_status{agency_id, source, status}`.
+
+**Operator manual**: `docs/operations/TREND_RADAR.md` (architecture, cost
+calculator, monitoring + alerts, common operations, on-call runbook) plus
+12 per-source setup guides under `docs/operations/trend-sources/`.
+
+**Tests**:
+
+- `services/trends/tests/`: 12 unit-test files (plus `conftest.py`) for the
+  Python sidecar (scoring, lifecycle, correlation, sentiment, vertical,
+  circuit-breaker, fallback, dedupe, fit score, config schema, route
+  handlers).
+- `tests/e2e/trends-*.spec.ts`: 7 E2E tests for the planner UI
+  (onboarding, degraded, paid-no-key, opt-out, use-in-brief, saved filters,
+  sources page).
+
+**Planner UI (Next.js) — ship-ready in v1**:
+
+- `src/app/(app)/app/w/[slug]/trends/page.tsx` — server component, gated
+  on `AI_FEATURE_ENABLED`. Renders 4 planner tabs (Explore / For You /
+  Boards / Briefs) over a single feed component, a degraded-source
+  banner that surfaces `circuit_state=open` rows, and the first-run
+  onboarding wizard.
+- `_components/trends-page-client.tsx` — top-level planner shell, 4-tab
+  Radix tab switcher, header CTA that opens the QuickCreate drawer on
+  "Use in brief".
+- `_components/onboarding-wizard.tsx` — first-run wizard. Pre-selects the
+  4 canonical free sources (`reddit`, `youtube`, `tiktok_tamnd`,
+  `google_trends`) via the lazy `useState` initializer. Grey-area
+  sources route through the existing `TrendSourceTosModal` for
+  acknowledgement before being added. Confirm hits
+  `POST /api/trends/sources/bulk-enable` and reloads.
+- `_components/trend-feed.tsx` + `_components/trend-card.tsx` — feed
+  - card. Honors the `data-testid` contract the e2e specs pin
+    (`trends-feed`, `trends-empty-state`, `trend-card`,
+    `trend-label`, `trend-use-in-brief`, `trends-optout-badge-{key}`).
+- `_components/saved-filters.tsx` — vertical filter, save-as-named,
+  share-with-workspace. v1 persists to `localStorage` (the API route
+  `/api/trends/saved-filters` exposes the server shape for future
+  persistence). Stable shells for the For You / Boards / Briefs tabs
+  explain the current "training in progress" / "coming next sprint"
+  posture without empty state.
+- `src/app/(app)/app/agency-settings/trend-sources/page.tsx` +
+  `_components/trend-sources-admin.tsx` — agency-admin source catalog
+  with All / Enabled / Paid / Grey tabs, per-source enable/disable,
+  configure (API-key entry, encrypted via the existing platform KEK),
+  ToS acknowledgement for grey-area sources, status pill, circuit-state
+  readout. Honors the e2e testids
+  `source-card-{key}` / `source-status-{key}` /
+  `source-config-{key}-key` / `admin-source-toggle-{key}`.
+- `src/app/(app)/app/w/[slug]/settings/trends/page.tsx` +
+  `_components/trends-settings-client.tsx` — workspace-level
+  per-source opt-out. Two-stage friction: confirm dialog requires
+  reason ≥ 4 chars before the destructive button enables. Honors
+  the e2e testids `optout-toggle-{key}` / `optout-confirm` /
+  `trends-optout-badge-{key}`.
+- `src/lib/trends/source-catalog.ts` — TS mirror of
+  `services/trends/app/extractor/catalog.py`. 18 source definitions
+  with tier / tos class / cadence / platform. The UI renders from
+  this; the Python sidecar reads the same definitions at runtime.
+- `src/lib/trends/enabled-sources.ts` — `listEnabledSourceKeysForWorkspace`
+  helper used by the planner feed and the opt-out page to apply
+  per-workspace opt-outs on top of agency defaults.
+
+**Trend API routes** (Next.js):
+
+- `POST /api/trends/sources/bulk-enable` — onboarding wizard endpoint.
+  Validates against the catalog, rejects grey-area sources that
+  haven't been acknowledged, and writes a `trend_source_audit` row
+  per source.
+- `POST /api/trends/sources/{key}/enable` — agency-admin toggle. Refuses
+  to enable a paid source without an `apiKeyRef`.
+- `POST /api/trends/sources/{key}/key` — agency-admin API-key entry.
+  Encrypts via `encryptForAgency` and stores `keyVersion:lastFour` on
+  `trend_source.api_key_ref`. Audited.
+- `POST/DELETE /api/trends/sources/{key}/optout` — workspace-manager
+  per-workspace opt-out (POST sets + reason, DELETE removes). Audited
+  via `workspace_source_optout`.
+- `GET/POST /api/trends/saved-filters` — read/append the workspace's
+  saved filters with `shareScope ∈ {me, workspace, agency}`. Used by
+  the planner dropdown.
+
+**docker-compose.yml**: new `trends-sidecar` service. Same `internal`
+network as the Next.js app, autoheal restart on liveness failure,
+internal-only healthcheck port (8088). The Python sidecar is gated on
+`TRENDS_RADAR_ENABLED` (defaults to `false` — opt-in per stack).
+
 ### Fixed — Analytics probe: clarify `unsupported` vs `error` on the operator card (2026-09-05)
 
 The probe card rendered every non-`available` metric with the same

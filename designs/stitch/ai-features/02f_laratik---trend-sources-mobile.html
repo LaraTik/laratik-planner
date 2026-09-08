@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — Trends · Sources (Mobile 390px)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+  "info-subtle": "#F0F9FF",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.mobile-frame { width: 390px; min-height: 800px; margin: 0 auto; border: 1px solid #DDE1E6; border-radius: 32px; overflow: hidden; box-shadow: 0 4px 24px rgba(19, 28, 43, 0.08); }
+.card-shadow { box-shadow: 0 1px 2px 0 rgba(19, 28, 43, 0.04); }
+.bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
+</style>
+</head>
+<body class="bg-canvas text-on-surface p-4">
+<div class="mobile-frame bg-surface flex flex-col">
+
+  <!-- Status bar -->
+  <div class="h-[44px] flex items-center justify-between px-6 text-[13px] font-semibold">
+    <span>9:41</span>
+    <div class="flex items-center gap-1">
+      <span class="material-symbols-outlined text-[16px]">signal_cellular_alt</span>
+      <span class="material-symbols-outlined text-[16px]">wifi</span>
+      <span class="material-symbols-outlined text-[16px]">battery_full</span>
+    </div>
+  </div>
+
+  <!-- Top app bar -->
+  <div class="h-[56px] flex items-center justify-between px-4 border-b border-border">
+    <button class="text-on-surface-variant">
+      <span class="material-symbols-outlined text-[24px]">arrow_back</span>
+    </button>
+    <h1 class="text-[16px] font-semibold">Sources</h1>
+    <button class="text-primary">
+      <span class="material-symbols-outlined text-[24px]">add</span>
+    </button>
+  </div>
+
+  <!-- Status banner (condensed) -->
+  <div class="m-3 rounded-lg border border-warning-subtle bg-warning-subtle p-3">
+    <div class="flex items-start gap-2">
+      <span class="material-symbols-outlined text-[18px] text-warning icon-fill mt-0.5">warning</span>
+      <div class="flex-1 min-w-0">
+        <div class="text-[12px] font-semibold text-on-surface">9 healthy · 1 degraded · 1 down</div>
+        <div class="text-[11px] text-on-surface-variant mt-0.5">X (twikit) fallback active · Google Trends down since 2d</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter row -->
+  <div class="px-4 py-2 overflow-x-auto">
+    <div class="flex items-center gap-2 min-w-min">
+      <button class="h-8 px-3 rounded-full bg-primary text-white text-[12px] font-semibold whitespace-nowrap">All (12)</button>
+      <button class="h-8 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold whitespace-nowrap">Enabled (9)</button>
+      <button class="h-8 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold whitespace-nowrap">Free (8)</button>
+      <button class="h-8 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold whitespace-nowrap">Paid (2)</button>
+      <button class="h-8 px-3 rounded-full bg-surface border border-border text-[12px] font-semibold whitespace-nowrap">Beta (1)</button>
+    </div>
+  </div>
+
+  <!-- Source cards (single column) -->
+  <div class="flex-1 overflow-y-auto px-4 py-2 space-y-3">
+
+    <!-- TikTok (healthy) -->
+    <div class="bg-surface rounded-xl border border-border p-4 card-shadow">
+      <div class="flex items-start justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-lg bg-surface-subtle flex items-center justify-center">
+            <span class="material-symbols-outlined text-[18px]">music_note</span>
+          </div>
+          <div>
+            <div class="text-[14px] font-semibold leading-tight">TikTok</div>
+            <div class="text-[11px] text-text-muted">tamnd/tiktok-cli</div>
+          </div>
+        </div>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+          <span class="material-symbols-outlined text-[11px]">check_circle</span>Healthy
+        </span>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-[11px] mb-3">
+        <div class="bg-surface-subtle rounded-md p-2">
+          <div class="text-text-muted">Coverage</div>
+          <div class="text-[12px] font-semibold">2.4K / day</div>
+        </div>
+        <div class="bg-surface-subtle rounded-md p-2">
+          <div class="text-text-muted">Cost / mo</div>
+          <div class="text-[12px] font-semibold text-success">$0</div>
+        </div>
+      </div>
+      <div class="text-[10px] text-text-muted mb-3">Last sync 14m ago · 387 signals</div>
+      <div class="flex items-center gap-2">
+        <button class="flex-1 h-10 rounded-lg border border-border text-[12px] font-semibold flex items-center justify-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">settings</span>Configure
+        </button>
+        <button class="h-10 w-10 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center">
+          <span class="material-symbols-outlined text-[16px]">refresh</span>
+        </button>
+        <button class="h-10 w-10 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center">
+          <span class="material-symbols-outlined text-[16px]">pause</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- YouTube (healthy) -->
+    <div class="bg-surface rounded-xl border border-border p-4 card-shadow">
+      <div class="flex items-start justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-lg bg-surface-subtle flex items-center justify-center">
+            <span class="material-symbols-outlined text-[18px]">play_circle</span>
+          </div>
+          <div>
+            <div class="text-[14px] font-semibold leading-tight">YouTube</div>
+            <div class="text-[11px] text-text-muted">Data API v3</div>
+          </div>
+        </div>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+          <span class="material-symbols-outlined text-[11px]">check_circle</span>Healthy
+        </span>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-[11px] mb-3">
+        <div class="bg-surface-subtle rounded-md p-2">
+          <div class="text-text-muted">Coverage</div>
+          <div class="text-[12px] font-semibold">1.1K / day</div>
+        </div>
+        <div class="bg-surface-subtle rounded-md p-2">
+          <div class="text-text-muted">Quota 24h</div>
+          <div class="text-[12px] font-semibold">3.2K / 10K</div>
+        </div>
+      </div>
+      <div class="text-[10px] text-text-muted mb-3">Last sync 18m ago · 220 signals</div>
+      <div class="flex items-center gap-2">
+        <button class="flex-1 h-10 rounded-lg border border-border text-[12px] font-semibold flex items-center justify-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">settings</span>Configure
+        </button>
+        <button class="h-10 w-10 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center">
+          <span class="material-symbols-outlined text-[16px]">refresh</span>
+        </button>
+        <button class="h-10 w-10 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center">
+          <span class="material-symbols-outlined text-[16px]">pause</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- X twikit (degraded) -->
+    <div class="bg-surface rounded-xl border-2 border-warning-subtle p-4 card-shadow">
+      <div class="flex items-start justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-lg bg-warning-subtle flex items-center justify-center">
+            <span class="material-symbols-outlined text-[18px]">alternate_email</span>
+          </div>
+          <div>
+            <div class="text-[14px] font-semibold leading-tight">X · twikit</div>
+            <div class="text-[11px] text-text-muted">Unofficial</div>
+          </div>
+        </div>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning-subtle text-warning text-[10px] font-semibold">
+          <span class="material-symbols-outlined text-[11px]">error</span>Degraded
+        </span>
+      </div>
+      <div class="rounded-md bg-warning-subtle px-2 py-1.5 text-[11px] text-warning mb-3 flex items-start gap-1.5">
+        <span class="material-symbols-outlined text-[13px] mt-0.5">sync_problem</span>
+        <span>Cookie rotated 2h ago. Falling back to cached trends.</span>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-[11px] mb-3">
+        <div class="bg-surface-subtle rounded-md p-2">
+          <div class="text-text-muted">Coverage</div>
+          <div class="text-[12px] font-semibold">820 / day</div>
+        </div>
+        <div class="bg-surface-subtle rounded-md p-2">
+          <div class="text-text-muted">Success 24h</div>
+          <div class="text-[12px] font-semibold text-warning">62%</div>
+        </div>
+      </div>
+      <div class="text-[10px] text-text-muted mb-3">Last sync 22m ago · 142 signals</div>
+      <div class="flex items-center gap-2">
+        <button class="flex-1 h-10 rounded-lg border border-warning text-warning text-[12px] font-semibold flex items-center justify-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">cookie</span>Re-authenticate
+        </button>
+        <button class="h-10 w-10 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center">
+          <span class="material-symbols-outlined text-[16px]">refresh</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Google Trends (down) -->
+    <div class="bg-surface rounded-xl border-2 border-danger-subtle p-4 card-shadow">
+      <div class="flex items-start justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-lg bg-danger-subtle flex items-center justify-center">
+            <span class="material-symbols-outlined text-[18px]">travel_explore</span>
+          </div>
+          <div>
+            <div class="text-[14px] font-semibold leading-tight">Google Trends</div>
+            <div class="text-[11px] text-text-muted">SerpAPI · paid</div>
+          </div>
+        </div>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger-subtle text-danger text-[10px] font-semibold">
+          <span class="material-symbols-outlined text-[11px]">cancel</span>Down
+        </span>
+      </div>
+      <div class="rounded-md bg-danger-subtle px-2 py-1.5 text-[11px] text-danger mb-3 flex items-start gap-1.5">
+        <span class="material-symbols-outlined text-[13px] mt-0.5">block</span>
+        <span>401 Unauthorized — API key expired 2 days ago.</span>
+      </div>
+      <div class="text-[10px] text-text-muted mb-3">Last failed 14m ago</div>
+      <div class="flex items-center gap-2">
+        <button class="flex-1 h-10 rounded-lg bg-danger text-white text-[12px] font-semibold flex items-center justify-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">key</span>Update API key
+        </button>
+        <button class="h-10 w-10 rounded-lg border border-border text-text-muted hover:text-on-surface flex items-center justify-center">
+          <span class="material-symbols-outlined text-[16px]">pause</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="text-center py-3 text-[12px] text-text-muted">+ 8 more sources</div>
+  </div>
+
+  <!-- Sticky bottom action -->
+  <div class="bottom-nav p-3 bg-surface border-t border-border">
+    <button class="w-full h-12 rounded-lg bg-primary text-white text-[14px] font-semibold flex items-center justify-center gap-2">
+      <span class="material-symbols-outlined text-[18px]">play_circle</span>Test all enabled (9)
+    </button>
+  </div>
+</div>
+</body></html>

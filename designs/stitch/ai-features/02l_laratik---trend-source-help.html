@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html class="antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>laratik-planner — Set up YouTube Data API v3</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+  "primary": "#3525cd", "primary-subtle": "#EEF2FF", "primary-container": "#4f46e5",
+  "on-primary": "#ffffff",
+  "success": "#15803D", "success-subtle": "#ECFDF3",
+  "warning": "#B45309", "warning-subtle": "#FFF7E6",
+  "danger": "#B91C1C", "danger-subtle": "#FEF2F2",
+  "info-subtle": "#F0F9FF",
+  "canvas": "#F7F7F5", "surface": "#FFFFFF", "surface-subtle": "#F1F3F5",
+  "on-surface": "#131c2b", "on-surface-variant": "#464555",
+  "border": "#DDE1E6", "text-muted": "#7B8495",
+}, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+fontFamily: { "body": ["Inter"], "page-title": ["Inter"], "card-title": ["Inter"], "button": ["Inter"], "label": ["Inter"] }
+}}}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.icon-fill { font-variation-settings: 'FILL' 1, 'wght' 500; }
+.card-shadow { box-shadow: 0 1px 2px 0 rgba(19, 28, 43, 0.04); }
+.spark { stroke: #3525cd; stroke-width: 1.5; fill: rgba(53, 37, 205, 0.08); }
+.placeholder-shot { background: linear-gradient(135deg, #F1F3F5 0%, #E2DFFF 100%); }
+</style>
+</head>
+<body class="bg-canvas text-on-surface">
+<div class="flex min-h-screen">
+
+  <!-- Sidebar (compact) -->
+  <aside class="w-[248px] bg-surface border-r border-border flex flex-col flex-shrink-0">
+    <div class="h-[64px] flex items-center px-6 border-b border-border gap-3">
+      <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white text-[14px] font-semibold">L</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-[14px] font-semibold truncate">Northstar Coffee</div>
+        <div class="text-[11px] text-text-muted">Workspace · MENA</div>
+      </div>
+    </div>
+    <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#"><span class="material-symbols-outlined text-[20px]">space_dashboard</span>Overview</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#"><span class="material-symbols-outlined text-[20px]">calendar_month</span>Planning</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] font-semibold bg-primary-subtle text-primary" href="#">
+        <span class="material-symbols-outlined text-[20px] icon-fill">radar</span>Trends
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#"><span class="material-symbols-outlined text-[20px]">event</span>Calendar</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#"><span class="material-symbols-outlined text-[20px]">rate_review</span>Reviews</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#"><span class="material-symbols-outlined text-[20px]">share</span>Social Channels</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#"><span class="material-symbols-outlined text-[20px]">palette</span>Brand Kit</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] text-on-surface-variant hover:bg-surface-subtle" href="#"><span class="material-symbols-outlined text-[20px]">group</span>Team</a>
+    </nav>
+    <div class="p-3 border-t border-border">
+      <button class="w-full h-10 rounded-lg bg-primary text-white text-[14px] font-semibold flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">add</span>Create content
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 flex flex-col min-w-0">
+    <header class="h-[64px] bg-surface border-b border-border flex items-center justify-between px-6 flex-shrink-0">
+      <div class="flex items-center gap-2 text-[13px] text-text-muted">
+        <span>Northstar Coffee</span><span>/</span><span>Trends</span><span>/</span><a href="#" class="hover:text-on-surface">Sources</a><span>/</span><span class="text-on-surface font-semibold">Help: YouTube</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <button class="h-9 px-3 rounded-lg border border-border text-[13px] font-semibold flex items-center gap-1">
+          <span class="material-symbols-outlined text-[16px]">arrow_back</span>Back to Sources
+        </button>
+      </div>
+    </header>
+
+    <div class="p-6 max-w-[920px] mx-auto space-y-5 pb-20">
+
+      <!-- HEADER -->
+      <div>
+        <div class="flex items-center gap-2 mb-2">
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[11px] font-semibold">
+            <span class="material-symbols-outlined text-[12px]">savings</span>Free
+          </span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-subtle text-success text-[11px] font-semibold">
+            <span class="material-symbols-outlined text-[12px]">verified</span>ToS ok
+          </span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-subtle text-on-surface-variant text-[11px] font-semibold">
+            <span class="material-symbols-outlined text-[12px]">bolt</span>10,000 units / day
+          </span>
+        </div>
+        <h1 class="text-[32px] font-semibold leading-10">Set up YouTube Data API v3</h1>
+        <p class="text-[15px] text-on-surface-variant mt-2">YouTube's official API. Free for 10,000 units per day, which is plenty for trend extraction. This guide walks you through getting a key and wiring it into laratik-planner.</p>
+      </div>
+
+      <!-- STEP 1: What this source gives you -->
+      <section class="bg-surface rounded-xl border border-border p-6 card-shadow">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-[14px] font-semibold">1</div>
+          <h2 class="text-[20px] font-semibold">What this source gives you</h2>
+        </div>
+        <p class="text-[14px] text-on-surface-variant mb-4">YouTube surfaces three kinds of trend signals that are useful for social-media planners:</p>
+        <ul class="text-[14px] text-on-surface-variant space-y-1.5 list-disc pl-5 mb-5">
+          <li><strong>Trending topics</strong> — the top 30 trending videos in any region, refreshed every 15 min.</li>
+          <li><strong>Emerging creators</strong> — channels with rapid subscriber growth in your verticals.</li>
+          <li><strong>Format signals</strong> — vertical shorts, long-form essays, podcast-style videos — useful as format references for your Reels and TikToks.</li>
+        </ul>
+        <p class="text-[14px] text-on-surface-variant mb-5">Example of a signal that lands in your Trends feed:</p>
+
+        <!-- Sample card -->
+        <div class="max-w-[420px] bg-surface border border-border rounded-xl p-4 card-shadow">
+          <div class="flex items-center gap-1.5 mb-2">
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-on-surface-variant text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">play_circle</span>YouTube
+            </span>
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-success-subtle text-success text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[10px]">trending_up</span>Emerging
+            </span>
+            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-subtle text-text-muted text-[10px] font-semibold">
+              <span class="material-symbols-outlined text-[11px]">topic</span>Topic
+            </span>
+            <span class="ml-auto text-[11px] text-text-muted">🔥 71</span>
+          </div>
+          <div class="text-[15px] font-semibold leading-5">"How we source our Yemeni beans" — Mokha 1452</div>
+          <div class="text-[11px] text-text-muted mb-2">Topic · 180K views / 24h · +260%</div>
+          <div class="bg-surface-subtle rounded-md p-2 mb-3">
+            <svg class="w-full h-6" viewBox="0 0 280 24" preserveAspectRatio="none">
+              <path class="spark" d="M0,20 L20,18 L40,16 L60,14 L80,11 L100,9 L120,7 L140,5 L160,4 L180,3 L200,2 L220,2 L240,1 L260,1 L280,1"/>
+            </svg>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button class="flex-1 h-9 rounded-lg bg-primary text-white text-[12px] font-semibold">Use in brief</button>
+            <button class="h-9 w-9 rounded-lg border border-border text-text-muted"><span class="material-symbols-outlined text-[16px]">bookmark</span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 2: Free vs paid -->
+      <section class="bg-surface rounded-xl border border-border p-6 card-shadow">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-[14px] font-semibold">2</div>
+          <h2 class="text-[20px] font-semibold">Free vs paid</h2>
+        </div>
+        <p class="text-[14px] text-on-surface-variant mb-4">YouTube's Data API v3 uses a unit-based quota. The default is generous.</p>
+        <div class="overflow-x-auto rounded-lg border border-border">
+          <table class="w-full text-[13px]">
+            <thead>
+              <tr class="bg-surface-subtle text-left">
+                <th class="px-4 py-3 font-semibold text-on-surface-variant text-[11px] uppercase tracking-wide">Plan</th>
+                <th class="px-4 py-3 font-semibold text-on-surface-variant text-[11px] uppercase tracking-wide">Quota</th>
+                <th class="px-4 py-3 font-semibold text-on-surface-variant text-[11px] uppercase tracking-wide">Cost</th>
+                <th class="px-4 py-3 font-semibold text-on-surface-variant text-[11px] uppercase tracking-wide">Enough for…</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <tr>
+                <td class="px-4 py-3 font-semibold">Free (default)</td>
+                <td class="px-4 py-3">10,000 units / day</td>
+                <td class="px-4 py-3 text-success font-semibold">$0</td>
+                <td class="px-4 py-3 text-on-surface-variant">~1,100 trend extractions / day</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-semibold">Paid extra</td>
+                <td class="px-4 py-3">+1M units / day on request</td>
+                <td class="px-4 py-3">$7 / 1M extra units</td>
+                <td class="px-4 py-3 text-on-surface-variant">Multi-region + high-frequency use</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-[12px] text-text-muted mt-3 flex items-start gap-1.5">
+          <span class="material-symbols-outlined text-[14px] mt-0.5">info</span>
+          Each trending-videos call costs ~5 units. Each channel search costs ~100. laratik-planner uses 1,500–2,000 units/day on a typical 6-hour cadence.
+        </p>
+      </section>
+
+      <!-- STEP 3: How to get a key -->
+      <section class="bg-surface rounded-xl border border-border p-6 card-shadow">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-[14px] font-semibold">3</div>
+          <h2 class="text-[20px] font-semibold">How to get a key</h2>
+        </div>
+        <p class="text-[14px] text-on-surface-variant mb-5">Takes about 5 minutes. You'll need a Google account.</p>
+
+        <ol class="space-y-5">
+          <li class="flex items-start gap-4">
+            <div class="w-7 h-7 rounded-full bg-primary-subtle text-primary flex items-center justify-center text-[13px] font-semibold flex-shrink-0">a</div>
+            <div class="flex-1">
+              <div class="text-[15px] font-semibold mb-1">Create a project in Google Cloud Console</div>
+              <div class="text-[13px] text-on-surface-variant mb-2">Open <a href="#" class="text-primary hover:underline font-semibold">console.cloud.google.com</a> → New project → name it "laratik-planner trends".</div>
+              <div class="placeholder-shot rounded-lg border border-border h-[140px] flex items-center justify-center">
+                <span class="text-[12px] text-text-muted flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[16px]">image</span>Screenshot: New project dialog
+                </span>
+              </div>
+            </div>
+          </li>
+          <li class="flex items-start gap-4">
+            <div class="w-7 h-7 rounded-full bg-primary-subtle text-primary flex items-center justify-center text-[13px] font-semibold flex-shrink-0">b</div>
+            <div class="flex-1">
+              <div class="text-[15px] font-semibold mb-1">Enable the YouTube Data API v3</div>
+              <div class="text-[13px] text-on-surface-variant mb-2">Library → search "YouTube Data API v3" → Enable. Wait for the green checkmark.</div>
+              <div class="placeholder-shot rounded-lg border border-border h-[140px] flex items-center justify-center">
+                <span class="text-[12px] text-text-muted flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[16px]">image</span>Screenshot: API library with YouTube Data API v3 enabled
+                </span>
+              </div>
+            </div>
+          </li>
+          <li class="flex items-start gap-4">
+            <div class="w-7 h-7 rounded-full bg-primary-subtle text-primary flex items-center justify-center text-[13px] font-semibold flex-shrink-0">c</div>
+            <div class="flex-1">
+              <div class="text-[15px] font-semibold mb-1">Create an API key credential</div>
+              <div class="text-[13px] text-on-surface-variant mb-2">Credentials → Create credentials → API key. Restrict it to "YouTube Data API v3" (recommended for safety).</div>
+              <div class="placeholder-shot rounded-lg border border-border h-[140px] flex items-center justify-center">
+                <span class="text-[12px] text-text-muted flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[16px]">image</span>Screenshot: Create API key dialog
+                </span>
+              </div>
+            </div>
+          </li>
+          <li class="flex items-start gap-4">
+            <div class="w-7 h-7 rounded-full bg-primary-subtle text-primary flex items-center justify-center text-[13px] font-semibold flex-shrink-0">d</div>
+            <div class="flex-1">
+              <div class="text-[15px] font-semibold mb-1">Copy the key into laratik-planner</div>
+              <div class="text-[13px] text-on-surface-variant mb-2">Back in this app, paste the key into the field below. It is encrypted at rest with workspace-scoped KMS.</div>
+              <div class="rounded-lg border border-border p-3 bg-surface-subtle flex items-center gap-2">
+                <input type="text" value="AIzaSyD…(your key here)" class="flex-1 h-10 px-3 rounded-lg border border-border bg-surface text-[13px] font-mono focus:outline-none focus:border-primary">
+                <button class="h-10 px-4 rounded-lg bg-primary text-white text-[13px] font-semibold">Save key</button>
+              </div>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <!-- STEP 4: Test it -->
+      <section class="bg-surface rounded-xl border border-border p-6 card-shadow">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-[14px] font-semibold">4</div>
+          <h2 class="text-[20px] font-semibold">How to test it from laratik-planner</h2>
+        </div>
+        <p class="text-[14px] text-on-surface-variant mb-4">Click below to run a live test against YouTube. The first call may take 2–3 seconds.</p>
+        <div class="flex items-center gap-3">
+          <button class="h-11 px-5 rounded-lg bg-primary text-white text-[14px] font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">play_circle</span>Test connection
+          </button>
+          <span class="text-[12px] text-text-muted">Last test: <strong class="text-on-surface">14m ago · ✓ 50 videos in 0.8s</strong></span>
+        </div>
+        <div class="mt-4 rounded-lg bg-surface-subtle p-3 text-[12px] font-mono text-on-surface-variant">
+          GET <span class="text-primary">https://www.googleapis.com/youtube/v3/videos</span>?part=snippet,statistics&amp;chart=mostPopular&amp;regionCode=AE&amp;maxResults=50&amp;key=<span class="text-text-muted">AIzaSyD…</span>
+        </div>
+      </section>
+
+      <!-- STEP 5: Common errors -->
+      <section class="bg-surface rounded-xl border border-border p-6 card-shadow">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-[14px] font-semibold">5</div>
+          <h2 class="text-[20px] font-semibold">Common errors and fixes</h2>
+        </div>
+        <div class="overflow-x-auto rounded-lg border border-border">
+          <table class="w-full text-[13px]">
+            <thead>
+              <tr class="bg-surface-subtle text-left">
+                <th class="px-4 py-3 font-semibold text-on-surface-variant text-[11px] uppercase tracking-wide">Error code</th>
+                <th class="px-4 py-3 font-semibold text-on-surface-variant text-[11px] uppercase tracking-wide">Likely cause</th>
+                <th class="px-4 py-3 font-semibold text-on-surface-variant text-[11px] uppercase tracking-wide">Fix</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <tr>
+                <td class="px-4 py-3 font-mono text-danger">400 · API key not valid</td>
+                <td class="px-4 py-3">Key was deleted, regenerated, or restricted to the wrong API.</td>
+                <td class="px-4 py-3">Re-paste the key from Cloud Console. Make sure restrictions allow YouTube Data API v3.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-danger">403 · quotaExceeded</td>
+                <td class="px-4 py-3">You hit the 10K unit / day cap.</td>
+                <td class="px-4 py-3">Wait until midnight Pacific, or request a quota increase from Cloud Console.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-danger">403 · accessNotConfigured</td>
+                <td class="px-4 py-3">YouTube Data API v3 is not enabled in your project.</td>
+                <td class="px-4 py-3">Cloud Console → Library → YouTube Data API v3 → Enable.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-warning">404 · videoNotFound</td>
+                <td class="px-4 py-3">A video was deleted between extraction and analysis.</td>
+                <td class="px-4 py-3">Nothing to do — laratik-planner auto-skips and retries next cycle.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-warning">500 · backendError</td>
+                <td class="px-4 py-3">YouTube-side issue (rare).</td>
+                <td class="px-4 py-3">laratik-planner retries with backoff (max 3x). Check <a href="#" class="text-primary hover:underline">Google status dashboard</a> if persistent.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- STEP 6: When the source breaks -->
+      <section class="bg-surface rounded-xl border border-border p-6 card-shadow">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-[14px] font-semibold">6</div>
+          <h2 class="text-[20px] font-semibold">What to do when the source breaks</h2>
+        </div>
+        <ol class="space-y-3 text-[14px] text-on-surface-variant">
+          <li class="flex items-start gap-3">
+            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary-subtle text-primary text-[12px] font-semibold flex-shrink-0">a</span>
+            <span><strong class="text-on-surface">Check the health dashboard.</strong> Go to Trends → Sources → Health. Look at the success rate over the last 24h. Below 95% means something is off.</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary-subtle text-primary text-[12px] font-semibold flex-shrink-0">b</span>
+            <span><strong class="text-on-surface">Run a single test.</strong> Click "Test connection" in step 4 above. The error code from this test maps directly to a row in step 5.</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary-subtle text-primary text-[12px] font-semibold flex-shrink-0">c</span>
+            <span><strong class="text-on-surface">Still broken? Reach out.</strong> Use the in-app help → "Contact support". Include the workspace ID and the timestamp of the first failure — we'll pull the logs.</span>
+          </li>
+        </ol>
+      </section>
+
+      <!-- RELATED + BACK -->
+      <div class="flex items-center justify-between gap-3 pt-3">
+        <a href="#" class="h-11 px-4 rounded-lg border border-border text-[14px] font-semibold flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px]">arrow_back</span>Back to Sources
+        </a>
+        <a href="#" class="h-11 px-4 rounded-lg border border-border text-[14px] font-semibold flex items-center gap-2">
+          Next: Reddit (PRAW)
+          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+        </a>
+      </div>
+
+    </div>
+  </main>
+</div>
+</body></html>
