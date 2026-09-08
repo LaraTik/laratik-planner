@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * ToS acknowledgement modal for grey-area trend sources.
@@ -43,6 +44,7 @@ export function TrendSourceTosModal({
   /** Fires after the server has recorded the acknowledgement. */
   onAcknowledged?: () => void;
 }) {
+  const t = useLocaleT();
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -81,10 +83,13 @@ export function TrendSourceTosModal({
         <DialogHeader>
           <div className="text-warning flex items-center gap-2">
             <TriangleAlert className="h-5 w-5" aria-hidden="true" />
-            <DialogTitle>⚠ This source uses an unofficial API</DialogTitle>
+            <DialogTitle>
+              {t("trends.tos.title") || "⚠ This source uses an unofficial API"}
+            </DialogTitle>
           </div>
           <DialogDescription>
-            You are about to enable <strong>{sourceLabel}</strong> ({sourceKey}).
+            {t("trends.tos.enabling", { label: sourceLabel, key: sourceKey }) ||
+              `You are about to enable ${sourceLabel} (${sourceKey}).`}
           </DialogDescription>
         </DialogHeader>
 
@@ -94,11 +99,12 @@ export function TrendSourceTosModal({
         >
           <ShieldAlert className="text-warning mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
           <p>
-            This source uses an unofficial API that may violate the platform&apos;s Terms of
-            Service. Your account may be restricted.{" "}
-            <strong>
-              laratik-planner is not responsible for consequences to your platform accounts.
-            </strong>
+            {t("trends.tos.body", {
+              disclaimer:
+                t("trends.tos.disclaimer") ||
+                "laratik-planner is not responsible for consequences to your platform accounts.",
+            }) ||
+              "This source uses an unofficial API that may violate the platform's Terms of Service. Your account may be restricted. laratik-planner is not responsible for consequences to your platform accounts."}
           </p>
         </div>
 
@@ -120,7 +126,7 @@ export function TrendSourceTosModal({
             disabled={submitting}
             data-testid="trend-source-tos-cancel"
           >
-            Cancel
+            {t("trends.tos.cancel") || "Cancel"}
           </Button>
           <Button
             type="button"
@@ -129,7 +135,9 @@ export function TrendSourceTosModal({
             disabled={submitting}
             data-testid="trend-source-tos-confirm"
           >
-            {submitting ? "Recording…" : "I understand, enable anyway"}
+            {submitting
+              ? t("trends.tos.submitting") || "Recording…"
+              : t("trends.tos.confirm") || "I understand, enable anyway"}
           </Button>
         </DialogFooter>
       </DialogContent>

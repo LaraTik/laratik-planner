@@ -108,6 +108,15 @@
     "optoutReasonPlaceholder": "e.g. brand-safety",
     "optoutConfirmSubmit": "Opt out"
   },
+  "tos": {
+    "title": "⚠ This source uses an unofficial API",
+    "enabling": "You are about to enable {label} ({key}).",
+    "body": "This source uses an unofficial API that may violate the platform's Terms of Service. Your account may be restricted. {disclaimer}",
+    "disclaimer": "laratik-planner is not responsible for consequences to your platform accounts.",
+    "cancel": "Cancel",
+    "confirm": "I understand, enable anyway",
+    "submitting": "Recording…"
+  },
   "deleteData": {
     "title": "Delete my trend data",
     "blurb": "GDPR delete. Permanently delete every trend signal, board, brief, and feedback event for this workspace. Source enablement and audit logs are preserved.",
