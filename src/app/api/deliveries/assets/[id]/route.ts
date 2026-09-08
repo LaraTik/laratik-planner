@@ -12,7 +12,7 @@ import {
   storageObjects,
   workspaces,
 } from "@/lib/db/schema";
-import { createStorageObjectReadUrl } from "@/lib/storage/read-service";
+import { fetchStorageObject } from "@/lib/storage/read-service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -23,7 +23,7 @@ export const runtime = "nodejs";
  * lived; no provider credentials or object keys leave the server.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   {
     params,
   }: {
@@ -81,16 +81,29 @@ export async function GET(
     return NextResponse.json({ error: "Delivery asset not found" }, { status: 404 });
   }
 
-  const url = await createStorageObjectReadUrl({
+  const remote = await fetchStorageObject({
     agencyId: row.agencyId,
     workspaceId: row.workspaceId,
     objectId: row.objectId,
     expiresInSeconds: 300,
+    ...(request.headers.get("range") ? { headers: { Range: request.headers.get("range")! } } : {}),
   });
-  if (!url) return NextResponse.json({ error: "Delivery asset not found" }, { status: 404 });
+  if (!remote) return NextResponse.json({ error: "Delivery asset not found" }, { status: 404 });
 
-  return NextResponse.redirect(url, {
-    status: 307,
-    headers: { "Cache-Control": "private, max-age=300" },
+  const headers = new Headers({
+    "Cache-Control": "private, max-age=300",
+    "X-Content-Type-Options": "nosniff",
   });
+  for (const name of [
+    "content-type",
+    "content-length",
+    "content-range",
+    "accept-ranges",
+    "etag",
+    "last-modified",
+  ]) {
+    const value = remote.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+  return new NextResponse(remote.body, { status: remote.status, headers });
 }

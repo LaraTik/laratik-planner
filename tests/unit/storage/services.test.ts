@@ -91,7 +91,8 @@ const {
   uploadStorageObject,
 } = await import("@/lib/storage/intent-service");
 const { quarantineMediaObject } = await import("@/lib/media/quarantine");
-const { createStorageObjectReadUrl } = await import("@/lib/storage/read-service");
+const { createStorageObjectReadUrl, fetchStorageObject } =
+  await import("@/lib/storage/read-service");
 
 const AGENCY_ID = "agency-1";
 const WORKSPACE_ID = "workspace-1";
@@ -471,6 +472,31 @@ describe("createStorageObjectReadUrl", () => {
     expect(adapterMock.createReadUrl).toHaveBeenLastCalledWith({
       objectKey: "agencies/agency-1/key",
     });
+  });
+});
+
+describe("fetchStorageObject", () => {
+  it("fetches the signed object server-side and forwards request headers", async () => {
+    state.selectResults.push([{ objectKey: "agencies/agency-1/key", bucket: "planner-media" }]);
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("image-bytes", { status: 206 }));
+
+    try {
+      const response = await fetchStorageObject({
+        agencyId: AGENCY_ID,
+        workspaceId: WORKSPACE_ID,
+        objectId: "object-1",
+        headers: { Range: "bytes=0-99" },
+      });
+
+      expect(response?.status).toBe(206);
+      expect(fetchSpy).toHaveBeenCalledWith("https://signed.example/read", {
+        headers: { Range: "bytes=0-99" },
+      });
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 });
 

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
-import { createStorageObjectReadUrl } from "@/lib/storage/read-service";
+import { fetchStorageObject } from "@/lib/storage/read-service";
 import { downloadFilename } from "@/lib/media/contract";
 import {
   mediaAssetForActor,
@@ -22,7 +22,7 @@ const PatchBody = z.object({
 });
 
 /** Issues a short-lived preview/download URL only after media authorization. */
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   const { id } = await params;
@@ -30,37 +30,42 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!row || row.asset.status !== "ready") {
     return NextResponse.json({ error: "Media asset not found" }, { status: 404 });
   }
-  const url = await createStorageObjectReadUrl({
+  const remote = await fetchStorageObject({
     agencyId: row.asset.agencyId,
     workspaceId: row.asset.ownerWorkspaceId,
     objectId: row.object.id,
     expiresInSeconds: 300,
+    ...(req.headers.get("range") ? { headers: { Range: req.headers.get("range")! } } : {}),
   });
-  if (!url) return NextResponse.json({ error: "Media asset not found" }, { status: 404 });
-  if (_req.nextUrl.searchParams.get("download") === "1") {
-    const remote = await fetch(url);
-    if (!remote.ok || !remote.body)
-      return NextResponse.json({ error: "Media asset not found" }, { status: 404 });
+  if (!remote) return NextResponse.json({ error: "Media asset not found" }, { status: 404 });
+  const download = req.nextUrl.searchParams.get("download") === "1";
+  const headers = new Headers({
+    "Content-Type": row.object.mimeType,
+    "Cache-Control": "private, max-age=300",
+    "X-Content-Type-Options": "nosniff",
+  });
+  if (download) {
     const filename = downloadFilename(
       row.asset.title,
       row.object.originalName,
       row.object.mimeType,
     );
-    return new NextResponse(remote.body, {
-      status: 200,
-      headers: {
-        "Content-Type": row.object.mimeType,
-        "Content-Length": String(row.object.byteSize),
-        "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
-        "Cache-Control": "private, max-age=300",
-        "X-Content-Type-Options": "nosniff",
-      },
-    });
+    headers.set(
+      "Content-Disposition",
+      `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+    );
   }
-  return NextResponse.redirect(url, {
-    status: 307,
-    headers: { "Cache-Control": "private, max-age=300" },
-  });
+  for (const name of [
+    "content-length",
+    "content-range",
+    "accept-ranges",
+    "etag",
+    "last-modified",
+  ]) {
+    const value = remote.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+  return new NextResponse(remote.body, { status: remote.status, headers });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

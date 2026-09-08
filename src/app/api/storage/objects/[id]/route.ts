@@ -4,7 +4,7 @@ import { canAccessWorkspace } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { storageObjects } from "@/lib/db/schema";
-import { createStorageObjectReadUrl } from "@/lib/storage/read-service";
+import { fetchStorageObject } from "@/lib/storage/read-service";
 import { StorageConfigurationError } from "@/lib/storage/r2-adapter";
 
 export const dynamic = "force-dynamic";
@@ -24,17 +24,30 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   try {
-    const url = await createStorageObjectReadUrl({
+    const remote = await fetchStorageObject({
       agencyId: object.agencyId,
       workspaceId: object.workspaceId,
       objectId: id,
       expiresInSeconds: 300,
+      ...(req.headers.get("range") ? { headers: { Range: req.headers.get("range")! } } : {}),
     });
-    if (!url) return NextResponse.json({ error: "Object not found" }, { status: 404 });
-    return NextResponse.redirect(url, {
-      status: 307,
-      headers: { "Cache-Control": "private, max-age=300" },
+    if (!remote) return NextResponse.json({ error: "Object not found" }, { status: 404 });
+    const headers = new Headers({
+      "Cache-Control": "private, max-age=300",
+      "X-Content-Type-Options": "nosniff",
     });
+    for (const name of [
+      "content-type",
+      "content-length",
+      "content-range",
+      "accept-ranges",
+      "etag",
+      "last-modified",
+    ]) {
+      const value = remote.headers.get(name);
+      if (value) headers.set(name, value);
+    }
+    return new NextResponse(remote.body, { status: remote.status, headers });
   } catch (error) {
     if (error instanceof StorageConfigurationError) {
       return NextResponse.json({ error: "Storage is not configured" }, { status: 503 });

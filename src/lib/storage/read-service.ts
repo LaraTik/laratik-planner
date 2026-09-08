@@ -30,3 +30,29 @@ export async function createStorageObjectReadUrl(input: {
     ...(input.expiresInSeconds ? { expiresInSeconds: input.expiresInSeconds } : {}),
   });
 }
+
+/**
+ * Fetch a private object server-side so browser previews stay same-origin.
+ * Redirecting an authenticated page to the provider URL makes the browser
+ * enforce the page CSP against the provider host and breaks image/video
+ * elements even though the signed URL itself is valid.
+ */
+export async function fetchStorageObject(input: {
+  agencyId: string;
+  workspaceId: string;
+  objectId: string;
+  expiresInSeconds?: number;
+  headers?: HeadersInit;
+}): Promise<Response | null> {
+  const url = await createStorageObjectReadUrl(input);
+  if (!url) return null;
+  try {
+    const response = await fetch(url, {
+      ...(input.headers ? { headers: input.headers } : {}),
+    });
+    if (!response.ok || !response.body) return null;
+    return response;
+  } catch {
+    return null;
+  }
+}
