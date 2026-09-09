@@ -3,6 +3,30 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Re-baseline — 2026-09-09, advisory-gate implementation @ `7c03ea8`
+
+Verification was run against the exact implementation commit after the
+pre-commit hook completed. No database migration was introduced.
+
+| Command / check                                         | Result                                                                                                                                         | Release interpretation                                                                                                         |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm format:check`                                     | Pass                                                                                                                                           | Formatting remains a required deploy gate.                                                                                     |
+| `pnpm lint`                                             | Pass (`--max-warnings=0`)                                                                                                                      | Lint remains a required deploy gate.                                                                                           |
+| `pnpm typecheck`                                        | Pass                                                                                                                                           | Strict TypeScript remains a required deploy gate.                                                                              |
+| `pnpm test:unit`                                        | Pass (359 files, 3,337 passed, 4 todo)                                                                                                         | Unit correctness remains a required deploy gate.                                                                               |
+| `pnpm exec vitest run tests/unit/coverage-diff.test.ts` | Pass (2/2)                                                                                                                                     | Changed-line reporting is covered.                                                                                             |
+| `pnpm test:coverage:advisory`                           | Pass (359 files, 3,337 passed, 4 todo)                                                                                                         | Per-push coverage produces artifacts without absolute-threshold blocking.                                                      |
+| `pnpm test:coverage`                                    | **Failed existing strict floors**: `src/lib/content` branches 78.13% < 80%; `src/lib/ai` lines/statements 66.91% < 85%; functions 80.95% < 85% | Strict coverage remains blocking for nightly and release-candidate audits; this baseline debt is visible and was not weakened. |
+| `actionlint`, `zizmor`, `shellcheck`                    | Pass; zizmor reported no findings                                                                                                              | Workflow and local-hook safety checks remain required.                                                                         |
+| `git diff --check`                                      | Pass                                                                                                                                           | No whitespace errors.                                                                                                          |
+
+The GitHub-only rollout evidence is still pending: three consecutive `main`
+pushes and one scheduled full run must validate SHA attribution, disposable
+database protection, retry behavior, artifact/summary links, issue
+deduplication and recovery, and deployment independence from advisory
+failures. Those checks require Actions execution and cannot be completed from
+this local workspace.
+
 ## Re-baseline — 2026-08-19, `main` @ `e589219`
 
 Captured on local dev (macOS, Node 20, pnpm 10, Postgres 16 reachable at `127.0.0.1:5432`).
