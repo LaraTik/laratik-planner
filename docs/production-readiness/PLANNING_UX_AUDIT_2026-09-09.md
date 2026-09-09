@@ -1,6 +1,6 @@
 # Planning UX Audit — 2026-09-09
 
-Status: implementation pass in progress on `codex/planning-ux-audit`.
+Status: Variant 1 approved and promoted in Stitch on 2026-09-10; implementation pass merged to `main`.
 
 This is a decision-ready audit of the planning journey from list and creation through editing, review, delivery, copy, and publishing. The supplied screenshots are treated as current-state evidence. They are not implementation instructions. Product behavior is reconciled against the repository, the StudioFlow master prompt, the i18n contract, and the captured/live Stitch screens.
 
@@ -14,7 +14,7 @@ The highest-value changes are:
 2. Keep exactly one dominant workflow action visible for the current role/state. Move `Cancel` and `Block` into a labeled `More actions` disclosure; the existing reason dialogs remain the confirmation boundary.
 3. Show the contextual next action in the Overview card and keep blocker rows linked to the section that resolves them.
 4. Preserve explicit Save for creative brief, audience copy, and publishing packages; preserve immediate feedback for low-risk inline metadata edits. Keep dirty-state and navigation protection.
-5. Treat Stitch review variants as review evidence only. Do not promote them to canonical screens until product/design review accepts a direction.
+5. Variant 1 is the approved direction. Promote it as the accepted Content Detail design while preserving the prior source screen for traceability.
 
 ## Sources and authority
 
@@ -27,6 +27,8 @@ The highest-value changes are:
 - Canonical product rules: `STUDIOFLOW_MASTER_PROMPT.md`, `AGENTS.md`, `docs/i18n/CONTRACT.md`, `docs/production-readiness/SCREEN_PARITY.md`.
 - Local Stitch captures: `designs/stitch/` and `designs/stitch/DESIGN.md`.
 - Live Stitch project: `5403097764334458790`, StudioFlow design system `assets/e2bbd2e84f524a5eb7e1aa20a22d7531`.
+- Approved/promoted Stitch screen: `bc684ce1e1cb472aba8fa17e9e90cf48`, `StudioFlow — Content Detail (Variant 1 Promoted)`.
+- Local promoted review artifacts: `designs/stitch/bc684ce1_studioflow---content-detail-variant-1-promoted.png` and the matching `.html` capture.
 - Live Stitch source screens reviewed: content detail `f7159c3ea90242d88d7dc15ea6a3fd02`, quick create `9794f1aaedf4415ca45ea078ef9f1a27`, monthly planning `96f0dd19cc194373a56b78f813388750`, batch add `129bd2e9495a40e49f7bd67790a1e247`, delivery review `06a9382e78c44fd5b80e60ac005363e6`, publishing confirmation `9cf65ebdff874456bbf5317161783dac`.
 
 ## Current-state reconciliation
@@ -208,9 +210,9 @@ Workflow rail / mobile sheet
 
 Preview and Activity remain secondary sections. Discussion remains a contextual drawer utility, not a production-stage tab.
 
-## Stitch review variants
+## Stitch review variants and approval
 
-The live Stitch project was used for a read-only comparison and then for review-only variants. No canonical screen was overwritten.
+The live Stitch project was used for a read-only comparison and then for review-only variants. After product approval of Variant 1, Stitch generated the accepted Content Detail design as a new promoted screen; the prior source screen was preserved rather than overwritten.
 
 Generation session: `3509913119376141661`.
 
@@ -221,7 +223,7 @@ Generation session: `3509913119376141661`.
 - Variant 3 — `StudioFlow — Content Detail Review (Variant 3: Readiness Checklist & Publish Prep)`.
   - Useful for the later publishing pre-flight pass: readiness percentage, channel verification, reviewer SLA, and guarded administrative actions.
 
-Decision: use Variant 1 as the interaction reference for the current code pass, borrow Variant 2’s asset/discussion patterns for the next pass, and do not promote any variant to canonical until review approval.
+Decision: Variant 1 is approved and promoted as the accepted Content Detail direction. The implementation in `main` follows its task hierarchy, readiness handoff, compact stepper, and guarded administrative-action model. Variant 2 remains a future reference for the Assets/Discussion pass; it was not promoted.
 
 ## Implementation status in this pass
 
@@ -236,7 +238,7 @@ Decision: use Variant 1 as the interaction reference for the current code pass, 
 - Added a unit contract for the five primary tabs and two secondary utilities.
 - No database schema or external API changes.
 
-Remaining follow-up work is limited to final visual-baseline acceptance after the reviewed Stitch direction is approved; existing reference snapshots are intentionally not rewritten automatically.
+Remaining follow-up work is limited to the next-pass Assets/Discussion refinements and any deliberate visual snapshot updates that differ from the existing multi-surface Stitch matrix. The approved Stitch direction is now recorded and promoted; existing unrelated reference snapshots were not rewritten automatically.
 
 ## Verification matrix
 
@@ -250,7 +252,7 @@ Remaining follow-up work is limited to final visual-baseline acceptance after th
 | Accessibility       | Keyboard, focus, 44px targets, dialogs, axe                           | 197/200 passed; 3 server-availability failures, no axe finding |
 | Responsive          | 375, 768, 1024, 1280, 1440                                            | Visual matrix 57/112 passed; 55 reference deltas retained      |
 | Role journey        | Planner, reviewer, designer, publisher, client reviewer, unauthorized | Planning E2E and role-denial coverage passed                   |
-| Exact clean commit  | Verify after final diff/commit                                        | `pnpm verify` passed on this working tree                      |
+| Exact clean commit  | Verify after final diff/commit                                        | `pnpm verify` passed on merged commit `e69165ce`               |
 
 ### Verification notes
 
@@ -258,4 +260,4 @@ Remaining follow-up work is limited to final visual-baseline acceptance after th
 - Targeted planning/workflow tests passed: 16 focused tests; the second slice added KPI, delivery, publish-link, and catalog coverage; broader planning, publishing, delivery, content, and i18n set passed 365 tests.
 - Guarded Chromium planning/content browser flows passed: content-flow 6/6 and publish-package 2/2 after the publishing dirty-state guard was corrected to avoid an input-capture re-render.
 - The 200-case accessibility run completed with 197 passes. The three failures were infrastructure failures: one mobile-Chrome `ECONNRESET` while seeding the workspace overview and two mobile-Safari server disconnects after the test server reported a memory-threshold restart. They were not axe violations; the touched planning list, detail, publishing, quick-create, batch, monthly, RTL, and destructive-dialog checks passed.
-- The 112-case visual run completed with 57 passes and 55 reference deltas. The reference set is intentionally not rewritten in this pass. The planning deltas are evidence for the approved follow-up Stitch review, not automatic snapshot acceptance.
+- The 112-case visual run completed with 57 passes and 55 reference deltas before approval. The approved/promoted Stitch screen is now the accepted design direction; the existing reference set remains unchanged until each affected baseline is intentionally reviewed and updated.
