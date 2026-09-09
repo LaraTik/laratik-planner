@@ -1098,49 +1098,57 @@ function ActionButtons({
         "creative_review",
         "ready_to_publish",
       ].includes(status) && isManager ? (
-        <ReasonDialog
-          trigger={
-            <Button size="sm" variant="destructive" disabled={pending}>
-              <Ban className="h-3.5 w-3.5" aria-hidden="true" />
-              {tr("contentDetail.workflow.cancel", "Cancel")}
-            </Button>
-          }
-          title={tr("contentDetail.workflow.cancelTitle", "Cancel content item")}
-          description={tr(
-            "contentDetail.workflow.cancelDescription",
-            "This removes the item from the active workflow. Record why it is being cancelled.",
-          )}
-          confirmLabel={tr("contentDetail.workflow.cancelConfirm", "Cancel item")}
-          destructive
-          disabled={pending}
-          onConfirm={(reason) => onExecuteTransition("cancel", reason)}
-          {...(t ? { closeAriaLabel: t("common.dialogCloseAria") } : {})}
-        />
-      ) : null}
-      {[
-        "draft",
-        "content_review",
-        "approved_for_design",
-        "in_design",
-        "creative_review",
-        "ready_to_publish",
-      ].includes(status) && isManager ? (
-        <ReasonDialog
-          trigger={
-            <Button size="sm" variant="secondary" disabled={pending}>
-              {tr("contentDetail.workflow.block", "Block")}
-            </Button>
-          }
-          title={tr("contentDetail.workflow.blockTitle", "Block content item")}
-          description={tr(
-            "contentDetail.workflow.blockDescription",
-            "Explain what is preventing progress so the team can resolve it.",
-          )}
-          confirmLabel={tr("contentDetail.workflow.blockConfirm", "Block item")}
-          disabled={pending}
-          onConfirm={(reason) => onExecuteTransition("block", reason)}
-          {...(t ? { closeAriaLabel: t("common.dialogCloseAria") } : {})}
-        />
+        <details
+          className="border-border rounded-[var(--radius-control)] border"
+          data-testid="workflow-destructive-actions"
+        >
+          <summary className="text-label text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-[var(--radius-control)] px-3 py-2 font-semibold focus-visible:ring-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+            <span>{tr("contentDetail.workflow.moreActions", "More actions")}</span>
+            <span aria-hidden="true">⌄</span>
+          </summary>
+          <div className="border-border space-y-1.5 border-t p-2">
+            <p className="text-label text-fg-muted px-1 pb-1">
+              {tr(
+                "contentDetail.workflow.destructiveActionsHint",
+                "These actions stop or remove the item from the active workflow.",
+              )}
+            </p>
+            <ReasonDialog
+              trigger={
+                <Button size="sm" variant="destructive" disabled={pending} className="w-full">
+                  <Ban className="h-3.5 w-3.5" aria-hidden="true" />
+                  {tr("contentDetail.workflow.cancel", "Cancel")}
+                </Button>
+              }
+              title={tr("contentDetail.workflow.cancelTitle", "Cancel content item")}
+              description={tr(
+                "contentDetail.workflow.cancelDescription",
+                "This removes the item from the active workflow. Record why it is being cancelled.",
+              )}
+              confirmLabel={tr("contentDetail.workflow.cancelConfirm", "Cancel item")}
+              destructive
+              disabled={pending}
+              onConfirm={(reason) => onExecuteTransition("cancel", reason)}
+              {...(t ? { closeAriaLabel: t("common.dialogCloseAria") } : {})}
+            />
+            <ReasonDialog
+              trigger={
+                <Button size="sm" variant="secondary" disabled={pending} className="w-full">
+                  {tr("contentDetail.workflow.block", "Block")}
+                </Button>
+              }
+              title={tr("contentDetail.workflow.blockTitle", "Block content item")}
+              description={tr(
+                "contentDetail.workflow.blockDescription",
+                "Explain what is preventing progress so the team can resolve it.",
+              )}
+              confirmLabel={tr("contentDetail.workflow.blockConfirm", "Block item")}
+              disabled={pending}
+              onConfirm={(reason) => onExecuteTransition("block", reason)}
+              {...(t ? { closeAriaLabel: t("common.dialogCloseAria") } : {})}
+            />
+          </div>
+        </details>
       ) : null}
     </div>
   );

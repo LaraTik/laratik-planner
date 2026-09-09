@@ -15,6 +15,8 @@ import {
   DiscussionTrigger,
   WorkspacePanels,
   WorkspaceTabs,
+  PRIMARY_WORKSPACE_TAB_IDS,
+  SECONDARY_WORKSPACE_TAB_IDS,
   type WorkspaceTab,
   type WorkspaceTabId,
   normalizeWorkspaceTabId,
@@ -112,8 +114,10 @@ export function WorkspaceShell({
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [resetOpen, setResetOpen] = React.useState(false);
   const initialHashAdoptedRef = React.useRef(false);
-  const primaryTabs = tabs.filter((tab) => tab.id !== "preview" && tab.id !== "activity");
-  const secondaryTabs = tabs.filter((tab) => tab.id === "preview" || tab.id === "activity");
+  const primaryTabs = tabs.filter((tab) => PRIMARY_WORKSPACE_TAB_IDS.some((id) => id === tab.id));
+  const secondaryTabs = tabs.filter((tab) =>
+    SECONDARY_WORKSPACE_TAB_IDS.some((id) => id === tab.id),
+  );
 
   // Adopt a deep-link hash after hydration. This is deliberately
   // separate from the URL-sync effect below: React Strict Mode may

@@ -396,10 +396,18 @@ export default async function PlanningPage({
         baseHref={`/app/w/${slug}/planning`}
         currentQuery={
           new URLSearchParams(
-            Object.entries({ month: monthParam(0) }).filter(([, v]) => v != null) as [
-              string,
-              string,
-            ][],
+            Object.entries({
+              month: monthParam(0),
+              ...(selectedStatus ? { status: selectedStatus } : {}),
+              ...(selectedStage ? { stage: selectedStage } : {}),
+              ...(selectedFormat ? { format: selectedFormat } : {}),
+              ...(ownerFilter ? { owner: ownerFilter } : {}),
+              ...(channelFilter ? { channel: channelFilter } : {}),
+              ...(healthFilter.length > 0 ? { health: healthFilter.join(",") } : {}),
+              ...(parsedFilters.risk ? { risk: parsedFilters.risk } : {}),
+              ...(searchTerm ? { search: searchTerm } : {}),
+              ...(density === "compact" ? { density: "compact" } : {}),
+            }) as [string, string][],
           )
         }
         t={t}

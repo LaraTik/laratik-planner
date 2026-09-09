@@ -4,6 +4,8 @@ import { render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import {
   WORKSPACE_TAB_ICONS,
+  PRIMARY_WORKSPACE_TAB_IDS,
+  SECONDARY_WORKSPACE_TAB_IDS,
   WorkspacePanels,
   WorkspaceTabs,
   initialActiveTabFromHash,
@@ -77,6 +79,17 @@ function TabsHost({ initial = "overview" as WorkspaceTabId }) {
 }
 
 describe("WorkspaceTabs — Preview tab (/ui-ux-pro-max)", () => {
+  it("keeps five task tabs primary and utilities secondary", () => {
+    expect(PRIMARY_WORKSPACE_TAB_IDS).toEqual([
+      "overview",
+      "content",
+      "copy",
+      "delivery",
+      "publishing",
+    ]);
+    expect(SECONDARY_WORKSPACE_TAB_IDS).toEqual(["preview", "activity"]);
+  });
+
   it("renders all seven tabs in the canonical order", () => {
     render(<TabsHost />);
     expect(screen.getByTestId("workspace-tab-overview")).toBeInTheDocument();

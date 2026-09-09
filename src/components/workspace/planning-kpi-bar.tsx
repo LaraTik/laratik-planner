@@ -74,7 +74,7 @@ export function PlanningKpiBar({
       label: tr("workspaceOverviewDashboard.planningKpiTotal", "Total Planned"),
       value: total,
       icon: ListTodo,
-      href: buildHref(baseHref, currentQuery, { risk: null }),
+      href: buildHref(baseHref, currentQuery, { risk: null, status: null }),
       accent: "default",
     },
     {
@@ -82,7 +82,7 @@ export function PlanningKpiBar({
       label: tr("workspaceOverviewDashboard.planningKpiAtRisk", "At Risk"),
       value: atRisk,
       icon: Clock,
-      href: buildHref(baseHref, currentQuery, { risk: "at_risk" }),
+      href: buildHref(baseHref, currentQuery, { risk: "at_risk", status: null }),
       accent: "warning",
     },
     {
@@ -90,7 +90,7 @@ export function PlanningKpiBar({
       label: tr("workspaceOverviewDashboard.planningKpiNeedsReview", "Needs Review"),
       value: needsReview,
       icon: ClipboardCheck,
-      href: buildHref(baseHref, currentQuery, { status: "content_review" }),
+      href: buildHref(baseHref, currentQuery, { status: "content_review", risk: null }),
       accent: "info",
     },
     {
@@ -98,7 +98,7 @@ export function PlanningKpiBar({
       label: tr("workspaceOverviewDashboard.planningKpiReady", "Ready"),
       value: ready,
       icon: Rocket,
-      href: buildHref(baseHref, currentQuery, { status: "ready_to_publish" }),
+      href: buildHref(baseHref, currentQuery, { status: "ready_to_publish", risk: null }),
       accent: "success",
     },
     {
@@ -106,7 +106,7 @@ export function PlanningKpiBar({
       label: tr("workspaceOverviewDashboard.planningKpiNotStarted", "Not started"),
       value: notStarted,
       icon: FileEdit,
-      href: buildHref(baseHref, currentQuery, { status: "draft" }),
+      href: buildHref(baseHref, currentQuery, { status: "draft", risk: null }),
       accent: "muted",
     },
   ];

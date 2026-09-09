@@ -51,6 +51,28 @@ export type WorkspaceTabId =
   "overview" | "content" | "copy" | "delivery" | "preview" | "publishing" | "activity";
 export type WorkspaceTabHash = WorkspaceTabId | "messages";
 
+/**
+ * The task workspace has five primary destinations. Preview and Activity
+ * remain available without competing with the production flow; callers place
+ * them in the secondary menu using these stable ids.
+ *
+ * Keep the internal ids unchanged: deep links and saved browser history use
+ * `content`, `copy`, `delivery`, and `publishing` even though the visible
+ * labels are more task-oriented.
+ */
+export const PRIMARY_WORKSPACE_TAB_IDS = [
+  "overview",
+  "content",
+  "copy",
+  "delivery",
+  "publishing",
+] as const satisfies readonly WorkspaceTabId[];
+
+export const SECONDARY_WORKSPACE_TAB_IDS = [
+  "preview",
+  "activity",
+] as const satisfies readonly WorkspaceTabId[];
+
 /** `#messages` was public in shared links; keep it as a read-compatible alias. */
 export function normalizeWorkspaceTabId(value: string): WorkspaceTabId | null {
   if (value === "messages") return "copy";

@@ -99,6 +99,8 @@ export interface DeliveryVersionCardProps {
   approving?: boolean;
   /** Assets introduced compared with the immediately older version. */
   newAssetIds?: string[];
+  /** True for the newest submitted version in the history. */
+  isLatest?: boolean;
 }
 
 function deriveStatus(
@@ -147,6 +149,7 @@ export function DeliveryVersionCard({
   onApprove,
   approving = false,
   newAssetIds = [],
+  isLatest = false,
 }: DeliveryVersionCardProps) {
   const locale = useLocaleCode();
   const t = useLocaleT();
@@ -189,14 +192,21 @@ export function DeliveryVersionCard({
             V{version.versionNumber}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-body text-fg-primary font-semibold" dir="auto">
-              {version.description ||
-                (isV1
-                  ? t("contentDetail.deliveries.firstVersion")
-                  : t("contentDetail.deliveries.versionNumber", {
-                      count: version.versionNumber,
-                    }))}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-body text-fg-primary font-semibold" dir="auto">
+                {version.description ||
+                  (isV1
+                    ? t("contentDetail.deliveries.firstVersion")
+                    : t("contentDetail.deliveries.versionNumber", {
+                        count: version.versionNumber,
+                      }))}
+              </p>
+              {isLatest ? (
+                <span className="text-label text-primary bg-primary-subtle rounded-full px-2 py-0.5 font-semibold">
+                  {t("contentDetail.deliveries.latestVersion")}
+                </span>
+              ) : null}
+            </div>
             <p className="text-label text-fg-muted">
               <time dateTime={version.submittedAt}>
                 {formatDate(version.submittedAt, locale, DateFormat.dateTime)}
@@ -542,6 +552,7 @@ export function DeliveryVersionList({
             {...(showApprove ? { showApprove: true } : {})}
             {...(onApprove ? { onApprove } : {})}
             approving={approvingVersionId === v.id}
+            isLatest={index === 0}
           />
         </li>
       ))}
