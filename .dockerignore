@@ -43,8 +43,15 @@ dist/
 tmp/
 designs/
 
-# docs (operators read these from the repo, not from the image)
-docs/
+# docs (operators read these from the repo, not from the image). The
+# canonical planning-pack manifest is imported by the server bundle, so
+# keep only that build-time input in the Docker context.
+docs/*
+!docs/ai-planning/
+docs/ai-planning/*
+!docs/ai-planning/defaults/
+docs/ai-planning/defaults/*
+!docs/ai-planning/defaults/manifest.json
 *.md
 !instrumentation*.md
 
