@@ -2,8 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
-import { socialChannels, trendSignals } from "@/lib/db/schema";
-import { and, eq, isNull } from "drizzle-orm";
+import { trendSignals } from "@/lib/db/schema";
+import { and, eq } from "drizzle-orm";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -62,21 +62,6 @@ export default async function QuickCreatePage({
       )[0]
     : null;
 
-  const channels = await db
-    .select({
-      id: socialChannels.id,
-      accountName: socialChannels.accountName,
-      platform: socialChannels.platform,
-    })
-    .from(socialChannels)
-    .where(
-      and(
-        eq(socialChannels.workspaceId, ws.id),
-        eq(socialChannels.isActive, true),
-        isNull(socialChannels.archivedAt),
-      ),
-    );
-
   return (
     <div className="mx-auto max-w-2xl space-y-6" data-testid="workspace-planning-new">
       <PageHeader
@@ -91,11 +76,7 @@ export default async function QuickCreatePage({
           </>
         }
       />
-      <QuickCreateForm
-        workspaceSlug={slug}
-        channels={channels}
-        {...(trendSignal ? { trendSignal } : {})}
-      />
+      <QuickCreateForm workspaceSlug={slug} {...(trendSignal ? { trendSignal } : {})} />
     </div>
   );
 }

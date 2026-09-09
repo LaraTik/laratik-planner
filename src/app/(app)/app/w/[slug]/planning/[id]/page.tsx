@@ -283,6 +283,14 @@ export default async function ContentDetailPage({
       }
     : null;
 
+  const visiblePendingApprovalGates = approvals
+    .filter(
+      (approval) =>
+        approval.status === "pending" &&
+        (!actorRoles.isClientReviewer || approval.gate === "creative_client"),
+    )
+    .map((approval) => approval.gate);
+
   const [designerRow] = item.designerId
     ? await db
         .select({ id: users.id, displayName: users.displayName, name: users.name })
@@ -962,6 +970,7 @@ export default async function ContentDetailPage({
                       name: folder.name,
                       parentId: folder.parentId,
                     }))}
+                    approvalGates={visiblePendingApprovalGates}
                     deliveries={deliveries.map((d) => ({
                       id: d.id,
                       versionNumber: d.versionNumber,

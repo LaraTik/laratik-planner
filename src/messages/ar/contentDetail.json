@@ -220,6 +220,7 @@
     "drawer": {
       "backdropAria": "إغلاق المناقشة",
       "title": "المناقشة",
+      "description": "راجع التعليقات والردود والإشارات والقرارات الخاصة بعنصر المحتوى هذا.",
       "openCount": "({count} مفتوحة)",
       "closeAria": "إغلاق",
       "mentionForYouOne": "إشارة واحدة لك",
@@ -594,6 +595,34 @@
     "emptyBody": "لا توجد تسليمات بعد. أضف وسائط مخزنة للمتابعة إلى المراجعة الإبداعية.",
     "versionOne": "يوجد إصدار واحد من أصل {count}",
     "versionMany": "يوجد {count} إصدارات",
+    "reviewHandoffTitle": "تسليم المراجعة",
+    "reviewHandoffStatus": {
+      "not_started": "لم يتم إرسال إصدار",
+      "awaiting": "بانتظار المراجعة الإبداعية",
+      "changes_requested": "التعديلات مطلوبة",
+      "approved": "تمت الموافقة للنشر"
+    },
+    "reviewHandoffBody": {
+      "not_started": "أضف وسائط موثقة، ثم أرسل الإصدار الأول للمراجعة الإبداعية.",
+      "awaiting": "الإصدار الحالي جاهز للمراجع المعيّن للموافقة أو طلب التعديلات.",
+      "changes_requested": "حدّث التسليم وفق ملاحظات المراجعة، ثم أرسل إصداراً جديداً.",
+      "approved": "يمكن اختيار الإصدار الموافق عليه من قسم النشر عند تجهيز حزمة القناة."
+    },
+    "reviewHandoffNext": {
+      "not_started": "اختر وسائط محفوظة وأرسل تسليماً.",
+      "awaiting": "يوافق المراجع على هذا الإصدار أو يطلب تعديلات.",
+      "changes_requested": "عالج الملاحظات وأرسل إصداراً جديداً.",
+      "approved": "جهّز حزم القنوات في قسم النشر."
+    },
+    "currentVersionLabel": "الإصدار الحالي",
+    "currentVersion": "V{count}",
+    "noCurrentVersion": "لا يوجد بعد",
+    "reviewerLabel": "مسؤول المراجعة",
+    "reviewerInternal": "المراجع الداخلي",
+    "reviewerClient": "مراجع العميل",
+    "reviewerBoth": "المراجع الداخلي ومراجع العميل",
+    "reviewerPending": "المراجع المعيّن",
+    "nextStepLabel": "الخطوة التالية",
     "latestVersion": "الأحدث",
     "submitNewVersion": "إرسال إصدار جديد",
     "submitTitle": "إرسال تسليم",
@@ -685,6 +714,9 @@
   },
   "publishReadiness": {
     "title": "متطلبات النشر",
+    "fixInAssets": "المعالجة في الأصول",
+    "fixInWorkflow": "فتح سير العمل",
+    "fixInPublishing": "المعالجة في النشر",
     "missing_payload": "احفظ حزمة نشر هذه القناة أولًا.",
     "missing_platform": "منصة حزمة النشر غير محددة.",
     "invalid_payload": "حزمة النشر غير صالحة لهذه المنصة.",

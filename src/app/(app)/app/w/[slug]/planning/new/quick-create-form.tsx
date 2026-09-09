@@ -8,7 +8,6 @@ import { DirAwareInput, DirAwareTextarea } from "@/components/forms/dir-aware-te
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { FormSummary } from "@/components/forms/form-summary";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { focusFirstInvalid } from "@/lib/forms/focus-first-invalid";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
@@ -24,11 +23,9 @@ const initial: { error?: string; fieldErrors?: Record<string, string> } = {};
 
 export function QuickCreateForm({
   workspaceSlug,
-  channels,
   trendSignal,
 }: {
   workspaceSlug: string;
-  channels: { id: string; accountName: string; platform: string }[];
   trendSignal?: { id: string; label: string };
 }) {
   const t = useLocaleT();
@@ -182,43 +179,6 @@ export function QuickCreateForm({
           locale={locale}
         />
       </FormField>
-
-      {channels.length > 0 ? (
-        <fieldset
-          className="space-y-2"
-          {...(state?.fieldErrors?.channelIds
-            ? { "aria-invalid": true, "aria-describedby": "channelIds-error" }
-            : {})}
-        >
-          <legend className="text-body text-fg-primary font-semibold">
-            {t("quickCreate.form.channelsDefault")}
-          </legend>
-          <p className="text-label text-fg-muted">{t("quickCreate.form.channelsHint")}</p>
-          <div className="border-border bg-surface grid grid-cols-1 gap-2 rounded-[var(--radius-control)] border p-3 md:grid-cols-2">
-            {channels.map((c) => (
-              <div
-                key={c.id}
-                className="text-body text-fg-primary flex min-h-11 items-center gap-2"
-              >
-                <Checkbox
-                  id={`quick-create-channel-${c.id}`}
-                  name="channelIds"
-                  value={c.id}
-                  defaultChecked
-                />
-                <label htmlFor={`quick-create-channel-${c.id}`} className="cursor-pointer">
-                  {t(`platform.platformKey.${c.platform}`)} · <bdi>{c.accountName}</bdi>
-                </label>
-              </div>
-            ))}
-          </div>
-          {state?.fieldErrors?.channelIds ? (
-            <p id="channelIds-error" role="alert" className="text-label text-danger font-semibold">
-              {state.fieldErrors.channelIds}
-            </p>
-          ) : null}
-        </fieldset>
-      ) : null}
 
       <aside
         className="border-primary/25 bg-primary-subtle/30 text-fg-secondary rounded-[var(--radius-control)] border p-3"

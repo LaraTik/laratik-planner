@@ -290,12 +290,21 @@ export default async function PlanningPage({
         <div
           role="status"
           aria-live="polite"
-          className="border-success/30 bg-success-container text-on-success-container flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold"
+          className="border-success/30 bg-success-container text-on-success-container flex flex-wrap items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold"
         >
           <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-          {t(batchCreated === 1 ? "batchAdd.form.successOne" : "batchAdd.form.successMany", {
-            count: batchCreated,
-          })}
+          <span className="flex-1">
+            {t(batchCreated === 1 ? "batchAdd.form.successOne" : "batchAdd.form.successMany", {
+              count: batchCreated,
+            })}
+          </span>
+          <Link
+            href={`?month=${monthParam(0)}&status=draft`}
+            className="text-label focus-visible:ring-focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-2 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            data-testid="planning-batch-success-view-drafts"
+          >
+            {t("batchAdd.form.viewDrafts")}
+          </Link>
         </div>
       ) : null}
       <PageHeader

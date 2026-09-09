@@ -220,6 +220,7 @@
     "drawer": {
       "backdropAria": "Close discussion",
       "title": "Discussion",
+      "description": "Review comments, replies, mentions, and decisions for this content item.",
       "openCount": "({count} open)",
       "closeAria": "Close",
       "mentionForYouOne": "1 mention for you",
@@ -594,6 +595,34 @@
     "emptyBody": "No deliveries yet. Add stored media to advance to creative review.",
     "versionOne": "{count} version on file",
     "versionMany": "{count} versions on file",
+    "reviewHandoffTitle": "Review handoff",
+    "reviewHandoffStatus": {
+      "not_started": "No version submitted",
+      "awaiting": "Awaiting creative review",
+      "changes_requested": "Changes requested",
+      "approved": "Approved for publishing"
+    },
+    "reviewHandoffBody": {
+      "not_started": "Add verified media, then submit the first version for creative review.",
+      "awaiting": "The current version is ready for the assigned reviewer to approve or return with changes.",
+      "changes_requested": "Update the delivery using the review feedback, then submit a new version.",
+      "approved": "The approved version can now be selected in Publish when the channel package is ready."
+    },
+    "reviewHandoffNext": {
+      "not_started": "Select stored media and submit a delivery.",
+      "awaiting": "A reviewer approves this version or requests changes.",
+      "changes_requested": "Resolve the feedback and submit a new version.",
+      "approved": "Prepare the channel packages in Publish."
+    },
+    "currentVersionLabel": "Current version",
+    "currentVersion": "V{count}",
+    "noCurrentVersion": "None yet",
+    "reviewerLabel": "Review owner",
+    "reviewerInternal": "Internal reviewer",
+    "reviewerClient": "Client reviewer",
+    "reviewerBoth": "Internal and client reviewers",
+    "reviewerPending": "Assigned reviewer",
+    "nextStepLabel": "Next step",
     "latestVersion": "Latest",
     "submitNewVersion": "Submit new version",
     "submitTitle": "Submit a delivery",
@@ -685,6 +714,9 @@
   },
   "publishReadiness": {
     "title": "Publishing requirements",
+    "fixInAssets": "Resolve in Assets",
+    "fixInWorkflow": "Open workflow",
+    "fixInPublishing": "Resolve in Publish",
     "missing_payload": "Save this channel's publishing package first.",
     "missing_platform": "The publishing package is missing its platform.",
     "invalid_payload": "The publishing package is not valid for this platform.",

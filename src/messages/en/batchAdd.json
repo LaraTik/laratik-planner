@@ -47,6 +47,7 @@
     "importRows": "Import rows",
     "successOne": "Created {count} draft successfully.",
     "successMany": "Created {count} drafts successfully.",
+    "viewDrafts": "View drafts",
     "selectFormat": "Select format",
     "titleForRow": "Title for row {row}",
     "formatForRow": "Format for row {row}",

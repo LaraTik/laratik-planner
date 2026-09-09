@@ -131,10 +131,12 @@ describe("WorkspaceTabs — Preview tab (/ui-ux-pro-max)", () => {
     window.location.hash = "";
   });
 
-  it("keeps #messages as a backward-compatible alias for Copy", () => {
+  it("keeps legacy readiness and workflow hashes backward-compatible", () => {
     window.location.hash = "#messages";
     expect(normalizeWorkspaceTabId("messages")).toBe("copy");
     expect(initialActiveTabFromHash([...tabs, { id: "copy", label: "Copy" }])).toBe("copy");
+    expect(normalizeWorkspaceTabId("assets-versions")).toBe("delivery");
+    expect(normalizeWorkspaceTabId("workflow")).toBe("overview");
     window.location.hash = "";
   });
 

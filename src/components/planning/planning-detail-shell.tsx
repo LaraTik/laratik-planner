@@ -126,6 +126,7 @@ export function PlanningDetailShell({
             column. */}
         <aside
           className="sticky top-16 hidden self-start lg:block"
+          id="workflow"
           data-testid="planning-detail-rail"
           aria-label={t("common.workflowRail")}
         >
